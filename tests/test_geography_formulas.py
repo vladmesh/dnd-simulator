@@ -4,9 +4,12 @@ from dnd_simulator.layers.geography.formulas import (
     apply_weather_temperature_modifier,
     calculate_base_temperature,
     calculate_daylight_hours,
+    calculate_distance_km,
+    calculate_travel_hours,
     get_season,
+    is_daylight,
 )
-from dnd_simulator.layers.geography.models import Season, WeatherCondition
+from dnd_simulator.layers.geography.models import Season, TerrainType, WeatherCondition
 
 
 class TestGetSeason:
@@ -85,3 +88,51 @@ class TestDaylightHours:
     def test_polar_night(self) -> None:
         hours = calculate_daylight_hours(80.0, 12)
         assert hours == 0.0
+
+
+class TestIsDaylight:
+    def test_noon_is_day(self) -> None:
+        assert is_daylight(45.0, 6, 12) is True
+
+    def test_midnight_is_night(self) -> None:
+        assert is_daylight(45.0, 6, 0) is False
+
+    def test_polar_midnight_sun(self) -> None:
+        assert is_daylight(80.0, 6, 0) is True
+
+    def test_polar_night(self) -> None:
+        assert is_daylight(80.0, 12, 12) is False
+
+
+class TestDistanceKm:
+    def test_same_point_is_zero(self) -> None:
+        assert calculate_distance_km(45.0, 10.0, 45.0, 10.0) == 0.0
+
+    def test_known_distance(self) -> None:
+        # Moscow (55.75, 37.62) to Saint Petersburg (59.93, 30.32) ~634 km
+        dist = calculate_distance_km(55.75, 37.62, 59.93, 30.32)
+        assert 600 < dist < 700
+
+    def test_symmetry(self) -> None:
+        d1 = calculate_distance_km(45.0, 10.0, 48.0, 10.5)
+        d2 = calculate_distance_km(48.0, 10.5, 45.0, 10.0)
+        assert d1 == d2
+
+
+class TestTravelHours:
+    def test_plains_fastest(self) -> None:
+        plains = calculate_travel_hours(100.0, TerrainType.PLAINS, WeatherCondition.CLEAR)
+        mountains = calculate_travel_hours(100.0, TerrainType.MOUNTAINS, WeatherCondition.CLEAR)
+        assert plains < mountains
+
+    def test_storm_slows_travel(self) -> None:
+        clear = calculate_travel_hours(100.0, TerrainType.PLAINS, WeatherCondition.CLEAR)
+        storm = calculate_travel_hours(100.0, TerrainType.PLAINS, WeatherCondition.STORM)
+        assert storm > clear
+
+    def test_elevation_gain_adds_time(self) -> None:
+        flat = calculate_travel_hours(50.0, TerrainType.HILLS, WeatherCondition.CLEAR, elevation_diff=0.0)
+        uphill = calculate_travel_hours(50.0, TerrainType.HILLS, WeatherCondition.CLEAR, elevation_diff=1000.0)
+        assert uphill > flat
+        # 1000m gain should add ~2 hours (Naismith's rule: 1h per 500m)
+        assert uphill - flat > 1.5

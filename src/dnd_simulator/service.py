@@ -91,7 +91,10 @@ class GameService:
         """Save game state. Returns the save name."""
         session = self._get_session(session_id)
         save_name = name or f"save_{session_id}"
-        data: dict[str, Any] = session.world.save()
+        data: dict[str, Any] = {
+            "world": session.world.save(),
+            "player": {"location": session.player_location},
+        }
         self._store.save(save_name, data)
         return save_name
 
@@ -99,7 +102,15 @@ class GameService:
         """Load game state into session."""
         session = self._get_session(session_id)
         data = self._store.load(name)
-        session.world.load(data)
+
+        # Support both old format (flat world data) and new format (world + player)
+        if "world" in data:
+            session.world.load(data["world"])
+            player_data = data.get("player", {})
+            assert isinstance(player_data, dict)
+            session.player_location = str(player_data.get("location", session.player_location))
+        else:
+            session.world.load(data)
 
     def list_saves(self) -> list[str]:
         """List available saves."""
@@ -128,7 +139,14 @@ class GameService:
             "Paths:",
         ]
         for c in conns.value:
-            lines.append(f"  {c['direction'].upper()} → {c['target_id']}")
+            travel = world.query_layer(
+                "geography",
+                Query(question="travel_time", params={"from_id": loc, "to_id": c["target_id"]}),
+            )
+            lines.append(
+                f"  {c['direction'].upper()} → {c['target_id']}"
+                f"  ({travel.value['distance_km']} km, ~{travel.value['hours']}h)"
+            )
 
         return MasterResponse(text="\n".join(lines))
 
@@ -168,19 +186,29 @@ class GameService:
 
         for c in conns.value:
             if c["direction"] == direction.lower():
+                # Calculate actual travel time
+                travel = world.query_layer(
+                    "geography",
+                    Query(
+                        question="travel_time",
+                        params={"from_id": session.player_location, "to_id": c["target_id"]},
+                    ),
+                )
+                travel_hours = int(travel.value["hours"])
+                travel_hours = max(1, travel_hours)  # minimum 1 hour
+
                 session.player_location = c["target_id"]
-                # Travel takes time
-                events = world.advance_time(TimeDelta(hours=4))
+                events = world.advance_time(TimeDelta(hours=travel_hours))
                 look = self._cmd_look(session)
+
+                header = f"You travel {direction.upper()} for ~{travel_hours}h ({travel.value['distance_km']} km)..."
                 travel_notes = [e.description for e in events if e.description]
                 if travel_notes:
                     return MasterResponse(
-                        text=f"You travel {direction.upper()}...\n"
-                        + "\n".join(f"  • {n}" for n in travel_notes)
-                        + f"\n\n{look.text}",
+                        text=header + "\n" + "\n".join(f"  • {n}" for n in travel_notes) + f"\n\n{look.text}",
                         events_summary=travel_notes,
                     )
-                return MasterResponse(text=f"You travel {direction.upper()}...\n\n{look.text}")
+                return MasterResponse(text=f"{header}\n\n{look.text}")
 
         valid = ", ".join(c["direction"].upper() for c in conns.value)
         return MasterResponse(text=f"You can't go {direction.upper()}. Available: {valid}")

@@ -10,6 +10,8 @@ from dnd_simulator.layers.geography.formulas import (
     apply_weather_temperature_modifier,
     calculate_base_temperature,
     calculate_daylight_hours,
+    calculate_distance_km,
+    calculate_travel_hours,
     get_season,
 )
 from dnd_simulator.layers.geography.models import (
@@ -101,6 +103,7 @@ class GeographyLayer(Layer):
         Supported queries:
         - "weather": params={region_id} -> condition and temperature
         - "connections": params={region_id} -> connected regions with directions
+        - "travel_time": params={from_id, to_id} -> travel hours, distance
         - "daylight": params={region_id, month?} -> hours of daylight
         - "region_info": params={region_id} -> full region data
         - "regions": -> list of all region IDs
@@ -122,6 +125,17 @@ class GeographyLayer(Layer):
             region = self.get_region(params["region_id"])
             return Answer(
                 value=[{"target_id": c.target_id, "direction": c.direction.value} for c in region.connections],
+            )
+
+        if q == "travel_time":
+            origin = self.get_region(params["from_id"])
+            dest = self.get_region(params["to_id"])
+            distance = calculate_distance_km(origin.latitude, origin.longitude, dest.latitude, dest.longitude)
+            elevation_diff = max(0.0, dest.elevation - origin.elevation)
+            hours = calculate_travel_hours(distance, dest.terrain, dest.weather, elevation_diff)
+            return Answer(
+                value={"hours": hours, "distance_km": distance},
+                description=f"{distance} km, ~{hours} hours on foot",
             )
 
         if q == "daylight":

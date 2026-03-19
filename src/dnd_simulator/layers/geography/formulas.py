@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 
-from dnd_simulator.layers.geography.models import Season, WeatherCondition
+from dnd_simulator.layers.geography.models import Season, TerrainType, WeatherCondition
 
 
 def get_season(month: int, latitude: float) -> Season:
@@ -101,6 +101,72 @@ def calculate_daylight_hours(latitude: float, month: int) -> float:
 
     hour_angle = math.degrees(math.acos(cos_hour_angle))
     return round(2.0 * hour_angle / 15.0, 1)
+
+
+_EARTH_RADIUS_KM = 6371.0
+
+
+def calculate_distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Calculate distance between two points using the Haversine formula."""
+    lat1_r, lon1_r = math.radians(lat1), math.radians(lon1)
+    lat2_r, lon2_r = math.radians(lat2), math.radians(lon2)
+
+    dlat = lat2_r - lat1_r
+    dlon = lon2_r - lon1_r
+
+    a = math.sin(dlat / 2) ** 2 + math.cos(lat1_r) * math.cos(lat2_r) * math.sin(dlon / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    return round(_EARTH_RADIUS_KM * c, 1)
+
+
+_BASE_WALKING_SPEED_KMH = 5.0
+
+_TERRAIN_SPEED_MODIFIERS: dict[TerrainType, float] = {
+    TerrainType.PLAINS: 1.0,
+    TerrainType.COAST: 0.9,
+    TerrainType.FOREST: 0.7,
+    TerrainType.HILLS: 0.6,
+    TerrainType.DESERT: 0.6,
+    TerrainType.SWAMP: 0.5,
+    TerrainType.MOUNTAINS: 0.4,
+    TerrainType.TUNDRA: 0.7,
+}
+
+_WEATHER_SPEED_MODIFIERS: dict[WeatherCondition, float] = {
+    WeatherCondition.CLEAR: 1.0,
+    WeatherCondition.CLOUDY: 1.0,
+    WeatherCondition.FOG: 0.8,
+    WeatherCondition.LIGHT_RAIN: 0.85,
+    WeatherCondition.HEAVY_RAIN: 0.7,
+    WeatherCondition.STORM: 0.5,
+    WeatherCondition.SNOW: 0.6,
+    WeatherCondition.BLIZZARD: 0.3,
+}
+
+
+def calculate_travel_hours(
+    distance_km: float,
+    terrain: TerrainType,
+    weather: WeatherCondition,
+    elevation_diff: float = 0.0,
+) -> float:
+    """Calculate travel time in hours.
+
+    Accounts for terrain, weather, and elevation gain.
+    Elevation gain adds 1 hour per 500m climbed (Naismith's rule).
+    """
+    terrain_mod = _TERRAIN_SPEED_MODIFIERS.get(terrain, 1.0)
+    weather_mod = _WEATHER_SPEED_MODIFIERS.get(weather, 1.0)
+    speed = _BASE_WALKING_SPEED_KMH * terrain_mod * weather_mod
+
+    hours = distance_km / speed
+
+    # Elevation gain penalty (only when climbing)
+    if elevation_diff > 0:
+        hours += elevation_diff / 500.0
+
+    return round(hours, 1)
 
 
 def is_daylight(latitude: float, month: int, hour: int) -> bool:
