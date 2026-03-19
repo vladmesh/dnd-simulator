@@ -1,9 +1,17 @@
-"""Politics layer — factions, borders, and diplomacy.
+"""Politics layer — nations, diplomacy, warfare, economy."""
 
-Models the political landscape built on top of geography:
-- Factions/kingdoms with territories (which regions they control)
-- Inter-faction relations (alliances, wars, trade agreements)
-- Laws and governance that affect player interactions
+from dnd_simulator.layers.politics.layer import PoliticsLayer
+from dnd_simulator.layers.politics.models import (
+    DiplomaticStatus,
+    Leader,
+    LeaderTrait,
+    Nation,
+)
 
-Depends on: geography (borders follow terrain, resources drive conflict).
-"""
+__all__ = [
+    "DiplomaticStatus",
+    "Leader",
+    "LeaderTrait",
+    "Nation",
+    "PoliticsLayer",
+]
