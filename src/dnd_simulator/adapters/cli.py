@@ -14,8 +14,11 @@ def run_cli() -> None:
 
     print("=== D&D Simulator ===")
     print(f"Session: {session.session_id}")
-    print(f"Year: {session.world.time.year}")
-    print("Type 'quit' to exit, 'save' to save, 'saves' to list saves.\n")
+    print("Commands: look, map, go <direction>, wait, save, saves, quit\n")
+
+    # Show starting location
+    response = service.player_action(session.session_id, "look")
+    print(f"{response.text}\n")
 
     while True:
         try:

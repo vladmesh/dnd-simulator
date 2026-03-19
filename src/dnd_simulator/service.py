@@ -2,11 +2,17 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
-from dnd_simulator.core.models import GameDateTime
+from dnd_simulator.content_loader import load_world
+from dnd_simulator.core.models import GameDateTime, Query, TimeDelta
 from dnd_simulator.core.world import World
+from dnd_simulator.layers.geography.formulas import is_daylight
+from dnd_simulator.layers.geography.layer import GeographyLayer
 from dnd_simulator.storage.store import SaveStore
+
+DEFAULT_CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
 
 
 @dataclass
@@ -23,38 +29,59 @@ class GameSession:
 
     session_id: str
     world: World
+    player_location: str = ""
 
 
 class GameService:
     """Main interface to the game. Transport-agnostic."""
 
-    def __init__(self, store: SaveStore) -> None:
+    def __init__(
+        self,
+        store: SaveStore,
+        content_dir: Path = DEFAULT_CONTENT_DIR,
+    ) -> None:
         self._sessions: dict[str, GameSession] = {}
         self._store = store
+        self._content_dir = content_dir
 
-    def start_game(self) -> GameSession:
-        """Create a new game session with default world."""
+    def start_game(self, world_file: str = "test_world.yaml") -> GameSession:
+        """Create a new game session with a world loaded from content."""
         session_id = uuid.uuid4().hex[:8]
 
-        # TODO: initialize layers, load content
-        world = World(layers=[], time=GameDateTime(year=1490))
+        regions = load_world(self._content_dir / "worlds" / world_file)
+        geography = GeographyLayer(regions=regions)
+        world = World(layers=[geography], time=GameDateTime(year=1490, month=6, day=1, hour=10))
 
-        session = GameSession(session_id=session_id, world=world)
+        # Initial tick to set weather/temperature
+        world.advance_time(TimeDelta(hours=0))
+
+        session = GameSession(
+            session_id=session_id,
+            world=world,
+            player_location=regions[0].id if regions else "",
+        )
         self._sessions[session_id] = session
         return session
 
     def player_action(self, session_id: str, text: str) -> MasterResponse:
         """Process player input and return DM response."""
         session = self._get_session(session_id)
+        cmd = text.strip().lower()
 
-        # TODO: pass to master LLM, which will:
-        # 1. interpret player action
-        # 2. query/update relevant layers
-        # 3. decide time advancement
-        # 4. compose narrative response
-        _ = session
+        # Simple command parser until we have a real Master
+        if cmd == "look":
+            return self._cmd_look(session)
 
-        return MasterResponse(text=f"[TODO: Master will process: '{text}']")
+        if cmd == "map":
+            return self._cmd_map(session)
+
+        if cmd == "wait":
+            return self._cmd_wait(session)
+
+        if cmd.startswith("go "):
+            return self._cmd_go(session, cmd[3:].strip())
+
+        return MasterResponse(text=f"Unknown command: '{text}'. Try: look, map, go <direction>, wait")
 
     def get_session(self, session_id: str) -> GameSession:
         """Get session info."""
@@ -77,6 +104,86 @@ class GameService:
     def list_saves(self) -> list[str]:
         """List available saves."""
         return self._store.list_saves()
+
+    # -- simple commands (placeholder until Master exists) --
+
+    def _cmd_look(self, session: GameSession) -> MasterResponse:
+        """Describe current location."""
+        world = session.world
+        loc = session.player_location
+
+        info = world.query_layer("geography", Query(question="region_info", params={"region_id": loc}))
+        weather = world.query_layer("geography", Query(question="weather", params={"region_id": loc}))
+        conns = world.query_layer("geography", Query(question="connections", params={"region_id": loc}))
+
+        lat = float(info.value["latitude"])
+        day_or_night = "Day" if is_daylight(lat, world.time.month, world.time.hour) else "Night"
+
+        lines = [
+            f"=== {info.value['name']} ===",
+            f"Terrain: {info.value['terrain']}  |  Elevation: {info.value['elevation']}m",
+            f"Weather: {weather.value['condition'].replace('_', ' ')}  |  {weather.value['temperature']}°C",
+            f"Time: {world.time.hour:02d}:{world.time.minute:02d} ({day_or_night})",
+            "",
+            "Paths:",
+        ]
+        for c in conns.value:
+            lines.append(f"  {c['direction'].upper()} → {c['target_id']}")
+
+        return MasterResponse(text="\n".join(lines))
+
+    def _cmd_map(self, session: GameSession) -> MasterResponse:
+        """List all regions with weather."""
+        world = session.world
+        regions = world.query_layer("geography", Query(question="regions", params={}))
+
+        lines = [f"=== World Map (Year {world.time.year}, Month {world.time.month}, Day {world.time.day}) ==="]
+        for rid in regions.value:
+            weather = world.query_layer("geography", Query(question="weather", params={"region_id": rid}))
+            marker = " ← you are here" if rid == session.player_location else ""
+            lines.append(
+                f"  {rid}: {weather.value['condition'].replace('_', ' ')}, {weather.value['temperature']}°C{marker}"
+            )
+
+        return MasterResponse(text="\n".join(lines))
+
+    def _cmd_wait(self, session: GameSession) -> MasterResponse:
+        """Wait a few hours, advancing time."""
+        events = session.world.advance_time(TimeDelta(hours=4))
+        t = session.world.time
+
+        lines = [f"Time passes... It is now {t.hour:02d}:{t.minute:02d}, day {t.day}, month {t.month}."]
+        for e in events:
+            if e.description:
+                lines.append(f"  • {e.description}")
+
+        return MasterResponse(text="\n".join(lines), events_summary=[e.description for e in events])
+
+    def _cmd_go(self, session: GameSession, direction: str) -> MasterResponse:
+        """Move to a connected region."""
+        world = session.world
+        conns = world.query_layer(
+            "geography", Query(question="connections", params={"region_id": session.player_location})
+        )
+
+        for c in conns.value:
+            if c["direction"] == direction.lower():
+                session.player_location = c["target_id"]
+                # Travel takes time
+                events = world.advance_time(TimeDelta(hours=4))
+                look = self._cmd_look(session)
+                travel_notes = [e.description for e in events if e.description]
+                if travel_notes:
+                    return MasterResponse(
+                        text=f"You travel {direction.upper()}...\n"
+                        + "\n".join(f"  • {n}" for n in travel_notes)
+                        + f"\n\n{look.text}",
+                        events_summary=travel_notes,
+                    )
+                return MasterResponse(text=f"You travel {direction.upper()}...\n\n{look.text}")
+
+        valid = ", ".join(c["direction"].upper() for c in conns.value)
+        return MasterResponse(text=f"You can't go {direction.upper()}. Available: {valid}")
 
     def _get_session(self, session_id: str) -> GameSession:
         if session_id not in self._sessions:
