@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -9,15 +9,20 @@ from dnd_simulator.content_loader import (
     extract_region_adjacency,
     extract_region_terrains,
     load_nations,
+    load_npcs,
     load_settlements,
     load_world,
 )
+from dnd_simulator.core.character import build_awareness
 from dnd_simulator.core.models import GameDateTime, Query, TimeDelta
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.geography.formulas import is_daylight
 from dnd_simulator.layers.geography.layer import GeographyLayer
+from dnd_simulator.layers.npcs.layer import NpcLayer
 from dnd_simulator.layers.politics.layer import PoliticsLayer
 from dnd_simulator.layers.settlements.layer import SettlementsLayer
+from dnd_simulator.llm.client import LlmClient
+from dnd_simulator.llm.prompts import build_npc_system_prompt
 from dnd_simulator.storage.store import SaveStore
 
 DEFAULT_CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
@@ -38,6 +43,8 @@ class GameSession:
     session_id: str
     world: World
     player_location: str = ""
+    talking_to: str | None = None
+    conversation_messages: list[dict[str, str]] = field(default_factory=list)
 
 
 class GameService:
@@ -47,10 +54,12 @@ class GameService:
         self,
         store: SaveStore,
         content_dir: Path = DEFAULT_CONTENT_DIR,
+        llm: LlmClient | None = None,
     ) -> None:
         self._sessions: dict[str, GameSession] = {}
         self._store = store
         self._content_dir = content_dir
+        self._llm = llm
 
     def start_game(self, world_file: str = "test_world.yaml") -> GameSession:
         """Create a new game session with a world loaded from content."""
@@ -62,6 +71,8 @@ class GameService:
         settlements = load_settlements(world_path)
 
         region_terrains = extract_region_terrains(regions)
+        npcs = load_npcs(world_path)
+
         geography = GeographyLayer(regions=regions)
         settlements_layer = SettlementsLayer(settlements=settlements, region_terrains=region_terrains)
         politics = PoliticsLayer(
@@ -70,9 +81,10 @@ class GameService:
             region_adjacency=extract_region_adjacency(regions),
             region_income_fn=settlements_layer.get_region_income,
         )
+        npc_layer = NpcLayer(npcs=npcs)
 
         world = World(
-            layers=[geography, settlements_layer, politics],
+            layers=[geography, settlements_layer, politics, npc_layer],
             time=GameDateTime(year=1490, month=6, day=1, hour=10),
         )
 
@@ -90,6 +102,14 @@ class GameService:
     def player_action(self, session_id: str, text: str) -> MasterResponse:
         """Process player input and return DM response."""
         session = self._get_session(session_id)
+
+        # Conversation mode — forward input to NPC
+        if session.talking_to:
+            cmd_lower = text.strip().lower()
+            if cmd_lower in ("bye", "leave", "exit"):
+                return self._end_conversation(session)
+            return self._continue_talk(session, text.strip())
+
         cmd = text.strip().lower()
 
         # Simple command parser until we have a real Master
@@ -122,9 +142,12 @@ class GameService:
         if cmd == "settlements":
             return self._cmd_settlements(session)
 
+        if cmd.startswith("talk "):
+            return self._cmd_talk(session, cmd[5:].strip())
+
         return MasterResponse(
             text=f"Unknown command: '{text}'. "
-            "Try: look, map, go <direction>, wait [hours], nations, nation <id>, settlements"
+            "Try: look, map, go <dir>, wait [hours], nations, nation <id>, settlements, talk <npc>"
         )
 
     def get_session(self, session_id: str) -> GameSession:
@@ -198,6 +221,13 @@ class GameService:
             lines.append("Settlements:")
             for s in settlements.value:
                 lines.append(f"  {s['name']} ({s['type']}, pop {s['population']}, prosperity {s['prosperity']:.0f})")
+
+        npcs = world.query_layer("npcs", Query(question="npcs_in_region", params={"region_id": loc}))
+        if npcs.value:
+            lines.append("")
+            lines.append("People:")
+            for npc in npcs.value:
+                lines.append(f"  {npc['name']} ({npc['role']}) - {npc['activity']}, at {npc['location_label']}")
 
         lines.append("")
         lines.append("Paths:")
@@ -334,6 +364,80 @@ class GameService:
                 lines.append(f"  {other_info.value['name']}: {status_str}")
 
         return MasterResponse(text="\n".join(lines))
+
+    def _cmd_talk(self, session: GameSession, npc_query: str) -> MasterResponse:
+        """Talk to an NPC. Finds NPC by name or id in current region."""
+        world = session.world
+        loc = session.player_location
+
+        npcs = world.query_layer("npcs", Query(question="npcs_in_region", params={"region_id": loc}))
+
+        # Find NPC by id or partial name match
+        target = None
+        for npc in npcs.value:
+            if npc["id"] == npc_query or npc_query.lower() in npc["name"].lower():
+                target = npc
+                break
+
+        if not target:
+            names = ", ".join(f"{n['name']} ({n['id']})" for n in npcs.value)
+            if names:
+                return MasterResponse(text=f"No one called '{npc_query}' here. Present: {names}")
+            return MasterResponse(text="There's no one here to talk to.")
+
+        # Check if NPC is sleeping
+        if target["activity"] == "sleeping":
+            return MasterResponse(text=f"{target['name']} is sleeping. Best not to disturb.")
+
+        if not self._llm:
+            return MasterResponse(text="(LLM not configured — cannot start conversation)")
+
+        # Get full NPC info and build prompt
+        info = world.query_layer("npcs", Query(question="npc_info", params={"npc_id": target["id"]}))
+        npc_data = info.value
+        awareness = build_awareness(world, loc)
+        system_prompt = build_npc_system_prompt(npc_data, awareness)
+
+        # Enter conversation mode
+        session.talking_to = target["id"]
+        session.conversation_messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": "К тебе подходит незнакомец. Поприветствуй его в образе."},
+        ]
+
+        response = self._llm.generate(session.conversation_messages)
+        session.conversation_messages.append({"role": "assistant", "content": response})
+
+        return MasterResponse(
+            text=f"You approach {npc_data['name']} at the {npc_data['location_label']}.\n\n"
+            f"{npc_data['name']}: {response}\n\n"
+            "(type 'bye' to end conversation)"
+        )
+
+    def _continue_talk(self, session: GameSession, text: str) -> MasterResponse:
+        """Continue a conversation with an NPC."""
+        assert session.talking_to
+        assert self._llm
+
+        npc_info = session.world.query_layer("npcs", Query(question="npc_info", params={"npc_id": session.talking_to}))
+        npc_name = npc_info.value["name"]
+
+        session.conversation_messages.append({"role": "user", "content": text})
+        response = self._llm.generate(session.conversation_messages)
+        session.conversation_messages.append({"role": "assistant", "content": response})
+
+        return MasterResponse(text=f"{npc_name}: {response}")
+
+    def _end_conversation(self, session: GameSession) -> MasterResponse:
+        """End the current conversation."""
+        assert session.talking_to
+
+        npc_info = session.world.query_layer("npcs", Query(question="npc_info", params={"npc_id": session.talking_to}))
+        npc_name = npc_info.value["name"]
+
+        session.talking_to = None
+        session.conversation_messages.clear()
+        return MasterResponse(text=f"You end your conversation with {npc_name}.")
 
     def _cmd_settlements(self, session: GameSession) -> MasterResponse:
         """List all settlements in current region."""

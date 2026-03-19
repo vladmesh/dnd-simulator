@@ -13,6 +13,7 @@ from dnd_simulator.layers.geography.models import (
     Region,
     TerrainType,
 )
+from dnd_simulator.layers.npcs.models import DEFAULT_SCHEDULES, Npc
 from dnd_simulator.layers.politics.models import Leader, LeaderTrait, Nation
 from dnd_simulator.layers.settlements.models import Settlement, SettlementType
 
@@ -106,6 +107,33 @@ def load_settlements(path: Path) -> list[Settlement]:
             )
 
     return settlements
+
+
+def load_npcs(path: Path) -> list[Npc]:
+    """Load NPCs from a world YAML file."""
+    with path.open() as f:
+        data: dict[str, Any] = yaml.safe_load(f)
+
+    npcs_data: dict[str, Any] = data.get("npcs", {})
+    npcs: list[Npc] = []
+
+    for npc_id, ndata in npcs_data.items():
+        role = str(ndata.get("role", ""))
+        schedule = list(DEFAULT_SCHEDULES.get(role, []))
+
+        npcs.append(
+            Npc(
+                id=str(npc_id),
+                name=str(ndata["name"]),
+                region_id=str(ndata["region_id"]),
+                role=role,
+                personality=str(ndata.get("personality", "")),
+                settlement_id=str(ndata.get("settlement_id", "")),
+                schedule=schedule,
+            )
+        )
+
+    return npcs
 
 
 def extract_region_adjacency(regions: list[Region]) -> dict[str, list[str]]:

@@ -199,3 +199,34 @@ nations:
       trait: diplomat
 
   # greenwood is independent — no nation controls it
+
+npcs:
+  edgar:
+    name: Edgar the Smith
+    region_id: silverport
+    settlement_id: silverport_city
+    role: blacksmith
+    personality: >
+      Gruff but fair. Takes pride in his craft.
+      Worried about iron supply from Iron Peaks since
+      relations with Ironmark are tense.
+
+  marta:
+    name: Marta
+    region_id: silverport
+    settlement_id: silverport_city
+    role: tavern_keeper
+    personality: >
+      Cheerful and gossipy. Knows everyone's business
+      in Silverport. Loves a good story and always has
+      a rumor to share.
+
+  rodrik:
+    name: Guard Captain Rodrik
+    region_id: silverport
+    settlement_id: silverport_city
+    role: guard
+    personality: >
+      Disciplined, loyal to King Aldric. Suspicious of
+      strangers. Veteran of border skirmishes with Ironmark.
+      Quietly worried about the kingdom's small military.

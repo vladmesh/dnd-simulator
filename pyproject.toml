@@ -9,6 +9,8 @@ description = "D&D text RPG with multi-level LLM simulation"
 requires-python = ">=3.12"
 dependencies = [
     "pyyaml>=6.0.3",
+    "openai>=1.0",
+    "python-dotenv>=1.0",
 ]
 
 [dependency-groups]

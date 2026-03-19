@@ -1,9 +1,11 @@
-"""NPCs layer — individual characters as LLM agents.
+"""NPCs layer — non-player characters with daily routines and LLM dialog."""
 
-The most concrete and most expensive simulation layer:
-- Authored NPCs: hand-crafted backstories, traits, and goals (loaded from content/)
-- Procedural NPCs: generated on demand from settlement/region context
-- Each NPC is an LLM agent with its own system prompt and memory
+from dnd_simulator.layers.npcs.layer import NpcLayer
+from dnd_simulator.layers.npcs.models import (
+    DEFAULT_SCHEDULES,
+    Npc,
+    NpcActivity,
+    ScheduleEntry,
+)
 
-Depends on: all lower layers (an NPC's behavior is shaped by the world around them).
-"""
+__all__ = ["DEFAULT_SCHEDULES", "Npc", "NpcActivity", "NpcLayer", "ScheduleEntry"]
