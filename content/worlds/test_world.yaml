@@ -200,6 +200,24 @@ nations:
 
   # greenwood is independent — no nation controls it
 
+player:
+  name: Kael
+  race: tiefling
+  class: fighter
+  level: 1
+  alignment: chaotic_good
+  appearance: "высокий, с тёмно-красной кожей и обломанными рогами, в потрёпанной кольчуге"
+  ability_scores:
+    str: 16
+    dex: 12
+    con: 14
+    int: 10
+    wis: 13
+    cha: 8
+  hp: 12
+  gold: 50
+  start_region: silverport
+
 npcs:
   edgar:
     name: Edgar the Smith
@@ -219,7 +237,10 @@ npcs:
     personality: >
       Cheerful and gossipy. Knows everyone's business
       in Silverport. Loves a good story and always has
-      a rumor to share.
+      a rumor to share. Has a soft spot for tieflings —
+      her late husband was one. Always eager to help
+      any tiefling she meets, offers them free drinks
+      and goes out of her way to assist them.
 
   rodrik:
     name: Guard Captain Rodrik
@@ -230,3 +251,6 @@ npcs:
       Disciplined, loyal to King Aldric. Suspicious of
       strangers. Veteran of border skirmishes with Ironmark.
       Quietly worried about the kingdom's small military.
+      Deeply distrusts tieflings — believes their infernal
+      blood makes them untrustworthy. Will refuse to speak
+      with tieflings and may order them to leave.

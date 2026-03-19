@@ -10,11 +10,13 @@ from dnd_simulator.content_loader import (
     extract_region_terrains,
     load_nations,
     load_npcs,
+    load_player,
     load_settlements,
     load_world,
 )
-from dnd_simulator.core.character import build_awareness
+from dnd_simulator.core.character import Ability, build_awareness
 from dnd_simulator.core.models import GameDateTime, Query, TimeDelta
+from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.geography.formulas import is_daylight
 from dnd_simulator.layers.geography.layer import GeographyLayer
@@ -42,9 +44,19 @@ class GameSession:
 
     session_id: str
     world: World
-    player_location: str = ""
+    player: PlayerCharacter | None = None
     talking_to: str | None = None
     conversation_messages: list[dict[str, str]] = field(default_factory=list)
+
+    @property
+    def player_location(self) -> str:
+        """Shortcut for player's current region."""
+        return self.player.region_id if self.player else ""
+
+    @player_location.setter
+    def player_location(self, value: str) -> None:
+        if self.player:
+            self.player.region_id = value
 
 
 class GameService:
@@ -69,6 +81,7 @@ class GameService:
         regions = load_world(world_path)
         nations = load_nations(world_path)
         settlements = load_settlements(world_path)
+        player = load_player(world_path)
 
         region_terrains = extract_region_terrains(regions)
         npcs = load_npcs(world_path)
@@ -91,10 +104,14 @@ class GameService:
         # Initial tick to set weather/temperature
         world.advance_time(TimeDelta(hours=0))
 
+        # Fall back to first region if player has no start_region
+        if not player.region_id and regions:
+            player.region_id = regions[0].id
+
         session = GameSession(
             session_id=session_id,
             world=world,
-            player_location=regions[0].id if regions else "",
+            player=player,
         )
         self._sessions[session_id] = session
         return session
@@ -145,9 +162,12 @@ class GameService:
         if cmd.startswith("talk "):
             return self._cmd_talk(session, cmd[5:].strip())
 
+        if cmd == "status":
+            return self._cmd_status(session)
+
         return MasterResponse(
             text=f"Unknown command: '{text}'. "
-            "Try: look, map, go <dir>, wait [hours], nations, nation <id>, settlements, talk <npc>"
+            "Try: look, map, go <dir>, wait [hours], nations, nation <id>, settlements, talk <npc>, status"
         )
 
     def get_session(self, session_id: str) -> GameSession:
@@ -160,7 +180,7 @@ class GameService:
         save_name = name or f"save_{session_id}"
         data: dict[str, Any] = {
             "world": session.world.save(),
-            "player": {"location": session.player_location},
+            "player": session.player.to_save_data() if session.player else {},
         }
         self._store.save(save_name, data)
         return save_name
@@ -175,7 +195,8 @@ class GameService:
             session.world.load(data["world"])
             player_data = data.get("player", {})
             assert isinstance(player_data, dict)
-            session.player_location = str(player_data.get("location", session.player_location))
+            if session.player:
+                session.player.load_save_data(player_data)
         else:
             session.world.load(data)
 
@@ -398,11 +419,22 @@ class GameService:
         awareness = build_awareness(world, loc)
         system_prompt = build_npc_system_prompt(npc_data, awareness)
 
+        # Build player impression through NPC perception
+        npc_obj = self._get_npc_object(session, target["id"])
+        impression = ""
+        if session.player and npc_obj:
+            impression = npc_obj.perceive(session.player)
+        greeting_prompt = (
+            f"К тебе подходит {impression}. Поприветствуй его в образе."
+            if impression
+            else ("К тебе подходит незнакомец. Поприветствуй его в образе.")
+        )
+
         # Enter conversation mode
         session.talking_to = target["id"]
         session.conversation_messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": "К тебе подходит незнакомец. Поприветствуй его в образе."},
+            {"role": "user", "content": greeting_prompt},
         ]
 
         response = self._llm.generate(session.conversation_messages)
@@ -439,6 +471,29 @@ class GameService:
         session.conversation_messages.clear()
         return MasterResponse(text=f"You end your conversation with {npc_name}.")
 
+    def _cmd_status(self, session: GameSession) -> MasterResponse:
+        """Show player character info."""
+        p = session.player
+        if not p:
+            return MasterResponse(text="No player character.")
+
+        race_label = p.race.value.replace("_", " ").title()
+        class_label = p.char_class.value.title()
+        alignment_label = p.alignment.value.replace("_", " ").title()
+        scores = p.ability_scores
+
+        lines = [
+            f"=== {p.name} ===",
+            f"Race: {race_label}  |  Class: {class_label} {p.level}  |  Alignment: {alignment_label}",
+            f"HP: {p.current_hp}/{p.max_hp}  |  Gold: {p.gold}",
+            f"STR {scores[Ability.STR]}  DEX {scores[Ability.DEX]}  CON {scores[Ability.CON]}"
+            f"  INT {scores[Ability.INT]}  WIS {scores[Ability.WIS]}  CHA {scores[Ability.CHA]}",
+        ]
+        if p.appearance:
+            lines.append(f"Appearance: {p.appearance}")
+
+        return MasterResponse(text="\n".join(lines))
+
     def _cmd_settlements(self, session: GameSession) -> MasterResponse:
         """List all settlements in current region."""
         world = session.world
@@ -460,6 +515,13 @@ class GameService:
                 )
 
         return MasterResponse(text="\n".join(lines))
+
+    def _get_npc_object(self, session: GameSession, npc_id: str) -> Any:
+        """Get the Npc object from the NPC layer (for perceive calls)."""
+        for layer in session.world.layers:
+            if layer.name == "npcs":
+                return layer._npcs.get(npc_id)  # type: ignore[attr-defined]
+        return None
 
     def _get_session(self, session_id: str) -> GameSession:
         if session_id not in self._sessions:

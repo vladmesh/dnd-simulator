@@ -28,7 +28,10 @@ class ScheduleEntry:
 
 @dataclass
 class Npc(Character):
-    """A non-player character with role, personality, and daily routine."""
+    """A non-player character with role, personality, and daily routine.
+
+    Defaults to Human Commoner — override via YAML for special NPCs.
+    """
 
     role: str = ""
     personality: str = ""

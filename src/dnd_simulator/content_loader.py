@@ -7,6 +7,13 @@ from typing import Any
 
 import yaml
 
+from dnd_simulator.core.character import (
+    AbilityScores,
+    Alignment,
+    CharClass,
+    Race,
+)
+from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.geography.models import (
     Connection,
     Direction,
@@ -121,11 +128,16 @@ def load_npcs(path: Path) -> list[Npc]:
         role = str(ndata.get("role", ""))
         schedule = list(DEFAULT_SCHEDULES.get(role, []))
 
+        race = Race(ndata["race"]) if "race" in ndata else Race.HUMAN
+        char_class = CharClass(ndata["class"]) if "class" in ndata else CharClass.COMMONER
+
         npcs.append(
             Npc(
                 id=str(npc_id),
                 name=str(ndata["name"]),
                 region_id=str(ndata["region_id"]),
+                race=race,
+                char_class=char_class,
                 role=role,
                 personality=str(ndata.get("personality", "")),
                 settlement_id=str(ndata.get("settlement_id", "")),
@@ -134,6 +146,35 @@ def load_npcs(path: Path) -> list[Npc]:
         )
 
     return npcs
+
+
+def load_player(path: Path) -> PlayerCharacter:
+    """Load player character from a world YAML file."""
+    with path.open() as f:
+        data: dict[str, Any] = yaml.safe_load(f)
+
+    pdata: dict[str, Any] = data.get("player", {})
+
+    ability_scores = AbilityScores()
+    if "ability_scores" in pdata:
+        ability_scores = AbilityScores.from_dict(pdata["ability_scores"])
+
+    max_hp = int(pdata.get("hp", 10))
+
+    return PlayerCharacter(
+        id="player",
+        name=str(pdata.get("name", "Adventurer")),
+        region_id=str(pdata.get("start_region", "")),
+        race=Race(pdata["race"]) if "race" in pdata else Race.HUMAN,
+        char_class=CharClass(pdata["class"]) if "class" in pdata else CharClass.FIGHTER,
+        level=int(pdata.get("level", 1)),
+        alignment=Alignment(pdata["alignment"]) if "alignment" in pdata else Alignment.TRUE_NEUTRAL,
+        appearance=str(pdata.get("appearance", "")),
+        ability_scores=ability_scores,
+        max_hp=max_hp,
+        current_hp=max_hp,
+        gold=int(pdata.get("gold", 0)),
+    )
 
 
 def extract_region_adjacency(regions: list[Region]) -> dict[str, list[str]]:
