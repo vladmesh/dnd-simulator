@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.layer import Layer
@@ -71,6 +72,7 @@ class PoliticsLayer(Layer):
         region_terrains: dict[str, str] | None = None,
         region_adjacency: dict[str, list[str]] | None = None,
         seed: int | None = None,
+        region_income_fn: Callable[[str], float] | None = None,
     ) -> None:
         self._nations: dict[str, Nation] = {}
         if nations:
@@ -83,6 +85,9 @@ class PoliticsLayer(Layer):
         self._war_durations: dict[tuple[str, str], int] = {}
         self._accumulated_hours: int = 0
         self._rng = random.Random(seed)
+
+        # Income from settlements (if available), else fall back to terrain-based
+        self._region_income_fn = region_income_fn
 
     @property
     def name(self) -> str:
@@ -153,7 +158,12 @@ class PoliticsLayer(Layer):
         """Calculate income, trade, and upkeep for each nation."""
         for nation in self._nations.values():
             # Base income from controlled regions
-            income = sum(calculate_region_income(self._region_terrains.get(rid, "plains")) for rid in nation.regions)
+            if self._region_income_fn:
+                income = sum(self._region_income_fn(rid) for rid in nation.regions)
+            else:
+                income = sum(
+                    calculate_region_income(self._region_terrains.get(rid, "plains")) for rid in nation.regions
+                )
 
             # Trade income
             trade_partners = self._count_trade_partners(nation.id)

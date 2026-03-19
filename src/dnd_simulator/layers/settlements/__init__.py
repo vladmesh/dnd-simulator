@@ -1,9 +1,6 @@
-"""Settlements layer — towns, villages, and their internal life.
+"""Settlements layer — cities, towns, and villages."""
 
-Simulates communities using aggregate parameters rather than individual agents:
-- Population, morale, wealth, safety
-- Local economy (production, trade, prices)
-- Demographic shifts driven by formulas from economics and sociology
+from dnd_simulator.layers.settlements.layer import SettlementsLayer
+from dnd_simulator.layers.settlements.models import Settlement, SettlementType
 
-Depends on: geography (climate affects harvests), politics (taxes, wars).
-"""
+__all__ = ["Settlement", "SettlementType", "SettlementsLayer"]

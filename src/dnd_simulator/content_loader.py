@@ -14,6 +14,7 @@ from dnd_simulator.layers.geography.models import (
     TerrainType,
 )
 from dnd_simulator.layers.politics.models import Leader, LeaderTrait, Nation
+from dnd_simulator.layers.settlements.models import Settlement, SettlementType
 
 
 def load_world(path: Path) -> list[Region]:
@@ -80,6 +81,31 @@ def load_nations(path: Path) -> list[Nation]:
         )
 
     return nations
+
+
+def load_settlements(path: Path) -> list[Settlement]:
+    """Load settlements from a world YAML file."""
+    with path.open() as f:
+        data: dict[str, Any] = yaml.safe_load(f)
+
+    regions_data: dict[str, Any] = data.get("regions", {})
+    settlements: list[Settlement] = []
+
+    for region_id, rdata in regions_data.items():
+        for sdata in rdata.get("settlements", []):
+            settlements.append(
+                Settlement(
+                    id=str(sdata["id"]),
+                    name=str(sdata["name"]),
+                    region_id=str(region_id),
+                    type=SettlementType(sdata["type"]),
+                    population=int(sdata.get("population", 100)),
+                    prosperity=float(sdata.get("prosperity", 50.0)),
+                    defenses=float(sdata.get("defenses", 30.0)),
+                )
+            )
+
+    return settlements
 
 
 def extract_region_adjacency(regions: list[Region]) -> dict[str, list[str]]:

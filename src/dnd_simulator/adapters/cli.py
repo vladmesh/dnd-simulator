@@ -14,7 +14,10 @@ def run_cli() -> None:
 
     print("=== D&D Simulator ===")
     print(f"Session: {session.session_id}")
-    print("Commands: look, map, go <direction>, wait [hours], nations, nation <id>, save, saves, load <name>, quit\n")
+    print(
+        "Commands: look, map, go <direction>, wait [hours],"
+        " nations, nation <id>, settlements, save, saves, load <name>, quit\n"
+    )
 
     # Show starting location
     response = service.player_action(session.session_id, "look")

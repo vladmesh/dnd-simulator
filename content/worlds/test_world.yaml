@@ -18,6 +18,19 @@ regions:
         direction: e
       - target: greenwood
         direction: se
+    settlements:
+      - id: silverport_city
+        name: Silverport City
+        type: city
+        population: 5000
+        prosperity: 70
+        defenses: 60
+      - id: fishing_hamlet
+        name: Fishing Hamlet
+        type: village
+        population: 200
+        prosperity: 50
+        defenses: 10
 
   highfield:
     name: Highfield Plains
@@ -35,6 +48,19 @@ regions:
         direction: n
       - target: bogmire
         direction: e
+    settlements:
+      - id: highfield_town
+        name: Highfield Town
+        type: town
+        population: 1500
+        prosperity: 60
+        defenses: 30
+      - id: wheat_village
+        name: Wheat Village
+        type: village
+        population: 400
+        prosperity: 55
+        defenses: 5
 
   greenwood:
     name: Greenwood Forest
@@ -48,6 +74,13 @@ regions:
         direction: nw
       - target: highfield
         direction: ne
+    settlements:
+      - id: greenwood_village
+        name: Greenwood Village
+        type: village
+        population: 300
+        prosperity: 45
+        defenses: 15
 
   iron_peaks:
     name: Iron Peaks
@@ -61,6 +94,19 @@ regions:
         direction: s
       - target: frostholm
         direction: n
+    settlements:
+      - id: iron_keep
+        name: Iron Keep
+        type: town
+        population: 800
+        prosperity: 50
+        defenses: 70
+      - id: miners_rest
+        name: Miner's Rest
+        type: village
+        population: 200
+        prosperity: 40
+        defenses: 10
 
   frostholm:
     name: Frostholm
@@ -72,6 +118,13 @@ regions:
     connections:
       - target: iron_peaks
         direction: s
+    settlements:
+      - id: frostholm_outpost
+        name: Frostholm Outpost
+        type: village
+        population: 150
+        prosperity: 30
+        defenses: 40
 
   bogmire:
     name: Bogmire Marsh
@@ -85,6 +138,13 @@ regions:
         direction: w
       - target: dustmere
         direction: s
+    settlements:
+      - id: bogtown
+        name: Bogtown
+        type: village
+        population: 250
+        prosperity: 35
+        defenses: 15
 
   dustmere:
     name: Dustmere Wastes
@@ -96,6 +156,13 @@ regions:
     connections:
       - target: bogmire
         direction: n
+    settlements:
+      - id: dustmere_oasis
+        name: Dustmere Oasis
+        type: town
+        population: 600
+        prosperity: 45
+        defenses: 35
 
 nations:
   silverhold:

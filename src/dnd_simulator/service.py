@@ -9,6 +9,7 @@ from dnd_simulator.content_loader import (
     extract_region_adjacency,
     extract_region_terrains,
     load_nations,
+    load_settlements,
     load_world,
 )
 from dnd_simulator.core.models import GameDateTime, Query, TimeDelta
@@ -16,6 +17,7 @@ from dnd_simulator.core.world import World
 from dnd_simulator.layers.geography.formulas import is_daylight
 from dnd_simulator.layers.geography.layer import GeographyLayer
 from dnd_simulator.layers.politics.layer import PoliticsLayer
+from dnd_simulator.layers.settlements.layer import SettlementsLayer
 from dnd_simulator.storage.store import SaveStore
 
 DEFAULT_CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
@@ -57,17 +59,22 @@ class GameService:
         world_path = self._content_dir / "worlds" / world_file
         regions = load_world(world_path)
         nations = load_nations(world_path)
+        settlements = load_settlements(world_path)
 
+        region_terrains = extract_region_terrains(regions)
         geography = GeographyLayer(regions=regions)
+        settlements_layer = SettlementsLayer(settlements=settlements, region_terrains=region_terrains)
         politics = PoliticsLayer(
             nations=nations,
-            region_terrains=extract_region_terrains(regions),
+            region_terrains=region_terrains,
             region_adjacency=extract_region_adjacency(regions),
+            region_income_fn=settlements_layer.get_region_income,
         )
-        # Set initial diplomatic relations: all nations start at peace
-        # (wars/trade are established through gameplay or YAML extensions)
 
-        world = World(layers=[geography, politics], time=GameDateTime(year=1490, month=6, day=1, hour=10))
+        world = World(
+            layers=[geography, settlements_layer, politics],
+            time=GameDateTime(year=1490, month=6, day=1, hour=10),
+        )
 
         # Initial tick to set weather/temperature
         world.advance_time(TimeDelta(hours=0))
@@ -112,8 +119,12 @@ class GameService:
         if cmd.startswith("nation "):
             return self._cmd_nation_info(session, cmd[7:].strip())
 
+        if cmd == "settlements":
+            return self._cmd_settlements(session)
+
         return MasterResponse(
-            text=f"Unknown command: '{text}'. Try: look, map, go <direction>, wait [hours], nations, nation <id>"
+            text=f"Unknown command: '{text}'. "
+            "Try: look, map, go <direction>, wait [hours], nations, nation <id>, settlements"
         )
 
     def get_session(self, session_id: str) -> GameSession:
@@ -173,14 +184,23 @@ class GameService:
         else:
             territory = "  |  Territory: Independent"
 
+        settlements = world.query_layer("settlements", Query(question="region_settlements", params={"region_id": loc}))
+
         lines = [
             f"=== {info.value['name']} ===",
             f"Terrain: {info.value['terrain']}  |  Elevation: {info.value['elevation']}m{territory}",
             f"Weather: {weather.value['condition'].replace('_', ' ')}  |  {weather.value['temperature']}°C",
             f"Time: {world.time.hour:02d}:{world.time.minute:02d} ({day_or_night})",
-            "",
-            "Paths:",
         ]
+
+        if settlements.value:
+            lines.append("")
+            lines.append("Settlements:")
+            for s in settlements.value:
+                lines.append(f"  {s['name']} ({s['type']}, pop {s['population']}, prosperity {s['prosperity']:.0f})")
+
+        lines.append("")
+        lines.append("Paths:")
         for c in conns.value:
             travel = world.query_layer(
                 "geography",
@@ -312,6 +332,28 @@ class GameService:
                 )
                 status_str = r["status"].replace("_", " ").title()
                 lines.append(f"  {other_info.value['name']}: {status_str}")
+
+        return MasterResponse(text="\n".join(lines))
+
+    def _cmd_settlements(self, session: GameSession) -> MasterResponse:
+        """List all settlements in current region."""
+        world = session.world
+        loc = session.player_location
+
+        settlements = world.query_layer("settlements", Query(question="region_settlements", params={"region_id": loc}))
+
+        info = world.query_layer("geography", Query(question="region_info", params={"region_id": loc}))
+        lines = [f"=== Settlements in {info.value['name']} ==="]
+
+        if not settlements.value:
+            lines.append("  No settlements here.")
+        else:
+            for s in settlements.value:
+                lines.append(
+                    f"  {s['name']} ({s['type']})"
+                    f"  Pop: {s['population']}  Prosperity: {s['prosperity']:.0f}"
+                    f"  Defenses: {s['defenses']:.0f}"
+                )
 
         return MasterResponse(text="\n".join(lines))
 
