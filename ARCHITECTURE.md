@@ -20,6 +20,7 @@ Layer 3: NPCs         — individual characters as LLM agents
 New layers can be inserted between existing ones as the simulation grows in detail (e.g., a Cosmology layer above Geography for gods and planar mechanics).
 
 Every layer implements the same interface:
+- `tick_interval` — minimum seconds between ticks (0 = every call)
 - `tick(delta, world_state)` — advance simulation, return events
 - `handle_event(event)` — react to something that happened
 - `query(question)` — answer a question about current state
@@ -39,6 +40,7 @@ src/dnd_simulator/
 ├── rules/         — pure functions: D&D mechanics, physics, economics
 ├── llm/           — LLM client abstraction and model configs
 ├── adapters/      — transport layer (CLI, API, Telegram)
+├── content_loader.py — loads worlds, nations, settlements, NPCs, player from YAML
 └── service.py     — GameService: transport-agnostic game interface
 
 content/           — authored game data (YAML/JSON)
@@ -62,7 +64,28 @@ Player input
 Player sees response
 ```
 
-The Master decides when to advance time. When it does, `World.advance_time()` ticks all layers in order (0 → N), so each layer sees the already-updated state of layers below it. Events generated during ticks are propagated to all other layers.
+The Master decides when to advance time. When it does, `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
+
+## Time System
+
+Game time is tracked with second precision via `GameDateTime` (year/month/day/hour/minute/second). Time advances in `TimeDelta` increments measured in seconds, with convenience factories: `TimeDelta.from_rounds(n)` (1 round = 6 seconds, D&D standard), `TimeDelta.from_hours(n)`, `TimeDelta.from_days(n)`.
+
+Each layer declares a `tick_interval` in seconds. World tracks `_last_tick_time` per layer and only calls `tick()` when enough time has elapsed:
+- Geography, NPCs: `tick_interval = 0` (every advance_time call)
+- Settlements, Politics: `tick_interval = 2 592 000` (30 days)
+
+Calendar: 30 days/month, 12 months/year.
+
+## Entity Hierarchy
+
+```
+Entity (id, name, region_id)
+└── Character (race, class, alignment, ability_scores, HP, gold, appearance)
+    ├── PlayerCharacter (save/load mutable state)
+    └── Npc (personality, schedule, conversation memory)
+```
+
+`Character.perceive(target: Entity) -> str` — observer extracts visible traits from target (race, appearance, wounds). LLM never receives raw character data, only what the observer can perceive.
 
 ## Key Principles
 
