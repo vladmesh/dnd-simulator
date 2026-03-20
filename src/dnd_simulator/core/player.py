@@ -68,20 +68,15 @@ class PlayerCharacter(Character):
                 return
 
             if cmd.startswith("attack "):
-                parts = raw[7:].strip().split(maxsplit=1)
-                if len(parts) < 1:
-                    self.output_fn("Использование: attack <цель> [оружие]")
-                    continue
-                target_id = parts[0]
-                weapon = parts[1] if len(parts) > 1 else (self.attacks[0].name if self.attacks else "")
-                if not weapon:
-                    self.output_fn("У тебя нет оружия.")
+                target_id = raw[7:].strip().split()[0] if raw[7:].strip() else ""
+                if not target_id:
+                    self.output_fn("Использование: attack <цель>")
                     continue
                 result = world.handle_event(
                     Event(
                         event_type=EventType.ENTITY_ATTACK,
                         source_layer="entities",
-                        data={"attacker_id": self.id, "target_id": target_id, "weapon": weapon},
+                        data={"attacker_id": self.id, "target_id": target_id},
                     )
                 )
                 if not result.success:
@@ -89,7 +84,7 @@ class PlayerCharacter(Character):
                     continue
                 return
 
-            self.output_fn("Команды: look, status, say <текст>, attack <цель> [оружие], idle")
+            self.output_fn("Команды: look, status, say <текст>, attack <цель>, idle")
 
     def _cmd_look(self, world: World) -> None:
         """Describe current location, entities, and paths."""

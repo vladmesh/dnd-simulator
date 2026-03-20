@@ -104,7 +104,7 @@ def run_cli_loop() -> None:
     world.advance_time(TimeDelta(seconds=0))
 
     print("=== D&D Simulator (Turn-Based) ===")
-    print("Команды: look, status, say <текст>, attack <цель> [оружие], idle, quit\n")
+    print("Команды: look, status, say <текст>, attack <цель>, idle, quit\n")
 
     run_game_loop(world)
 

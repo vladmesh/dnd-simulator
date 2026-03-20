@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
-from dnd_simulator.core.character import Attack, Character, Creature, Entity
+from dnd_simulator.core.character import Ability, Attack, Character, Creature, DamageComponent, DamageType, Entity
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.layers.entities.models import Npc, NpcActivity
@@ -90,7 +90,6 @@ class EntitiesLayer(Layer):
         """Validate and resolve an attack: check constraints, roll dice, apply damage, log."""
         attacker_id = str(event.data.get("attacker_id", ""))
         target_id = str(event.data.get("target_id", ""))
-        weapon_name = str(event.data.get("weapon", ""))
 
         # --- Validation ---
         attacker = self._entities.get(attacker_id)
@@ -110,14 +109,11 @@ class EntitiesLayer(Layer):
         if attacker.region_id != target.region_id:
             return ActionResult(success=False, error=f"Цель '{target_id}' не в этом регионе.")
 
-        # Find the weapon
-        attack: Attack | None = None
-        for a in attacker.attacks:
-            if a.name == weapon_name:
-                attack = a
-                break
-        if attack is None:
-            return ActionResult(success=False, error=f"Оружие '{weapon_name}' не найдено.")
+        # Use equipped (first) attack, or unarmed strike
+        if attacker.attacks:
+            attack = attacker.attacks[0]
+        else:
+            attack = Attack(name="кулак", ability=Ability.STR, damage=(DamageComponent("1", DamageType.BLUDGEONING),))
 
         # --- Resolution ---
         modifier = attacker.ability_scores.modifier(attack.ability)
@@ -127,7 +123,7 @@ class EntitiesLayer(Layer):
         log_data: dict[str, Any] = {
             "attacker_id": attacker_id,
             "target_id": target_id,
-            "weapon": weapon_name,
+            "weapon": attack.name,
             "hit": result.hit,
             "critical": result.critical,
             "roll": result.attack_check.roll,

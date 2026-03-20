@@ -22,11 +22,11 @@ def _sword() -> Attack:
     )
 
 
-def _attack_event(attacker_id: str = "attacker", target_id: str = "target", weapon: str = "longsword") -> Event:
+def _attack_event(attacker_id: str = "attacker", target_id: str = "target") -> Event:
     return Event(
         event_type=EventType.ENTITY_ATTACK,
         source_layer="entities",
-        data={"attacker_id": attacker_id, "target_id": target_id, "weapon": weapon},
+        data={"attacker_id": attacker_id, "target_id": target_id},
     )
 
 
@@ -79,15 +79,22 @@ class TestAttackResolution:
         assert death_events[0].data["entity_id"] == "target"
         assert target.active is False
 
-    def test_unknown_weapon_returns_error(self) -> None:
-        attacker = Character(id="attacker", name="Fighter", region_id="r1", attacks=(_sword(),))
-        target = Character(id="target", name="Goblin", region_id="r1", max_hp=20, current_hp=20)
+    def test_unarmed_strike_when_no_weapons(self) -> None:
+        """Creatures with no attacks fall back to unarmed strike (1 bludgeoning)."""
+        scores = AbilityScores()
+        scores[Ability.STR] = 18  # +4 modifier, should hit AC 5 easily
+        attacker = Character(id="attacker", name="Monk", region_id="r1", attacks=(), ability_scores=scores)
+        target = Character(id="target", name="Goblin", region_id="r1", max_hp=20, current_hp=20, ac=5)
         layer = EntitiesLayer(entities=[attacker, target])
 
-        result = layer.handle_event(_attack_event(weapon="unknown_weapon"))
-        assert not result.success
-        assert "unknown_weapon" in result.error
-        assert target.current_hp == 20
+        hits = 0
+        for _ in range(20):
+            target.current_hp = 20
+            result = layer.handle_event(_attack_event())
+            assert result.success  # unarmed strike always valid
+            if target.current_hp < 20:
+                hits += 1
+        assert hits > 0, "No unarmed strikes hit in 20 tries"
 
     def test_nonexistent_target_returns_error(self) -> None:
         attacker = Character(id="attacker", name="Fighter", region_id="r1", attacks=(_sword(),))

@@ -10,6 +10,12 @@ from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.llm.client import LlmResponse, ToolCall
 from dnd_simulator.llm.tools import build_npc_tools
 
+_SWORD = Attack(
+    name="longsword",
+    ability=Ability.STR,
+    damage=(DamageComponent("1d8", DamageType.SLASHING),),
+)
+
 
 def _mock_world() -> MagicMock:
     """Create a mock World with enough structure for build_awareness."""
@@ -45,42 +51,19 @@ def _mock_world() -> MagicMock:
 
 
 class TestBuildNpcTools:
-    def test_always_has_say_and_idle(self) -> None:
-        tools = build_npc_tools(())
+    def test_always_has_say_idle_attack(self) -> None:
+        tools = build_npc_tools()
         names = [t["function"]["name"] for t in tools]
         assert "say" in names
         assert "idle" in names
-
-    def test_no_attack_without_attacks(self) -> None:
-        tools = build_npc_tools(())
-        names = [t["function"]["name"] for t in tools]
-        assert "attack" not in names
-
-    def test_attack_present_with_weapons(self) -> None:
-        sword = Attack(
-            name="longsword",
-            ability=Ability.STR,
-            damage=(DamageComponent("1d8", DamageType.SLASHING),),
-        )
-        tools = build_npc_tools((sword,))
-        names = [t["function"]["name"] for t in tools]
         assert "attack" in names
 
-    def test_attack_enum_lists_weapons(self) -> None:
-        sword = Attack(
-            name="longsword",
-            ability=Ability.STR,
-            damage=(DamageComponent("1d8", DamageType.SLASHING),),
-        )
-        bite = Attack(
-            name="bite",
-            ability=Ability.STR,
-            damage=(DamageComponent("1d6", DamageType.PIERCING),),
-        )
-        tools = build_npc_tools((sword, bite))
+    def test_attack_has_only_target_id(self) -> None:
+        tools = build_npc_tools()
         attack_tool = next(t for t in tools if t["function"]["name"] == "attack")
-        weapon_enum = attack_tool["function"]["parameters"]["properties"]["weapon"]["enum"]
-        assert weapon_enum == ["longsword", "bite"]
+        params = attack_tool["function"]["parameters"]["properties"]
+        assert "target_id" in params
+        assert "weapon" not in params
 
 
 class TestNpcTakeTurn:
@@ -114,15 +97,10 @@ class TestNpcTakeTurn:
         world.handle_event.assert_not_called()
 
     def test_llm_attack_sends_event(self) -> None:
-        sword = Attack(
-            name="longsword",
-            ability=Ability.STR,
-            damage=(DamageComponent("1d8", DamageType.SLASHING),),
-        )
-        npc = Npc(id="n1", name="Guard", region_id="r1", role="guard", attacks=(sword,))
+        npc = Npc(id="n1", name="Guard", region_id="r1", role="guard", attacks=(_SWORD,))
         world = _mock_world()
         mock_llm = MagicMock()
-        atk_tc = ToolCall(id="tc_1", name="attack", arguments={"target_id": "player", "weapon": "longsword"})
+        atk_tc = ToolCall(id="tc_1", name="attack", arguments={"target_id": "player"})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=atk_tc, raw_message=None)
         npc.llm = mock_llm
         npc.take_turn(world)

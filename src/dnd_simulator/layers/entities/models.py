@@ -99,7 +99,7 @@ class Npc(Character):
 
         logger.info("[NPC:%s] === начинает ход ===", self.name)
         awareness = build_awareness(world, self.region_id)
-        tools = build_npc_tools(self.attacks)
+        tools = build_npc_tools()
 
         # Build list of nearby entities with IDs so LLM knows valid targets
         entities_answer = world.query_layer(
@@ -166,7 +166,6 @@ class Npc(Character):
                     data={
                         "attacker_id": self.id,
                         "target_id": action.arguments.get("target_id", ""),
-                        "weapon": action.arguments.get("weapon", ""),
                     },
                 )
             )

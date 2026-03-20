@@ -4,14 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from dnd_simulator.core.character import Attack
 
-
-def _attack_enum(attacks: tuple[Attack, ...]) -> list[str]:
-    return [a.name for a in attacks]
-
-
-def build_npc_tools(attacks: tuple[Attack, ...]) -> list[dict[str, Any]]:
+def build_npc_tools() -> list[dict[str, Any]]:
     """Build OpenAI-compatible tool definitions for an NPC's available actions."""
     tools: list[dict[str, Any]] = [
         {
@@ -44,30 +38,24 @@ def build_npc_tools(attacks: tuple[Attack, ...]) -> list[dict[str, Any]]:
         },
     ]
 
-    if attacks:
-        tools.append(
-            {
-                "type": "function",
-                "function": {
-                    "name": "attack",
-                    "description": "Attack a target with a weapon or ability.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "target_id": {
-                                "type": "string",
-                                "description": "ID of the target entity",
-                            },
-                            "weapon": {
-                                "type": "string",
-                                "enum": _attack_enum(attacks),
-                                "description": "Which attack to use",
-                            },
+    tools.append(
+        {
+            "type": "function",
+            "function": {
+                "name": "attack",
+                "description": "Attack a target with your equipped weapon (or fists if unarmed).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "target_id": {
+                            "type": "string",
+                            "description": "ID of the target entity",
                         },
-                        "required": ["target_id", "weapon"],
                     },
+                    "required": ["target_id"],
                 },
-            }
-        )
+            },
+        }
+    )
 
     return tools
