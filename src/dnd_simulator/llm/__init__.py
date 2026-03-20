@@ -1,4 +1,4 @@
-"""LLM client and prompt builders for NPC dialog."""
+"""LLM client, prompt builders, and tool schemas for NPC dialog and actions."""
 
 from dnd_simulator.llm.client import LlmClient, LlmResponse, ToolCall
 

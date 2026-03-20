@@ -37,11 +37,12 @@ src/dnd_simulator/
 │   ├── settlements/ — towns and local economy
 │   └── entities/  — all tracked creatures (player, NPCs, named monsters)
 ├── master/        — DM orchestrator (LLM-powered)
-├── rules/         — pure functions: D&D mechanics, physics, economics
-├── llm/           — LLM client abstraction and model configs
+├── rules/         — pure functions: D&D mechanics, combat resolution, physics, economics
+├── llm/           — LLM client, prompt builders, tool schemas for NPC actions
 ├── adapters/      — transport layer (CLI, API, Telegram)
 ├── content_loader.py — loads worlds, nations, settlements, NPCs, player from YAML
-└── service.py     — GameService: transport-agnostic game interface
+├── service.py     — GameService: transport-agnostic game interface
+└── game_loop.py   — turn-based main loop: polls active creatures in order
 
 content/           — authored game data (YAML/JSON)
 ├── worlds/        — pre-built region maps
@@ -53,18 +54,15 @@ content/           — authored game data (YAML/JSON)
 ## Data Flow
 
 ```
-Player input
-    → Adapter (CLI/API/TG)
-    → GameService
-    → Master (LLM)
-        ↔ queries/events to Layers
-        ↔ rules for dice rolls, formulas
-    → GameService
-    → Adapter
-Player sees response
+Turn-based game loop (game_loop.py):
+    for each active creature:
+        creature.take_turn(world)  → perceive events → decide action (LLM/player input) → execute
+
+Player input flow (service.py, command-based):
+    Player input → Adapter (CLI/API/TG) → GameService → response
 ```
 
-The Master decides when to advance time. When it does, `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
+The game loop polls all active creatures in turn order. Each creature builds its own awareness from perceived events, decides an action (NPCs via LLM tool use, player via CLI input), and executes it through world events. `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
 
 ## Time System
 

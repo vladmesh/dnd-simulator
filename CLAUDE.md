@@ -40,12 +40,13 @@ core/              — models, Layer ABC, World, Entity/Character hierarchy (no 
   ↓
 layers/            — concrete layer implementations (depend on core only)
   ↓
+game_loop.py       — turn-based main loop: polls active creatures, each takes a turn
 service.py         — GameService: transport-agnostic API, command routing
   ↓
 adapters/          — CLI REPL (future: API, Telegram)
 
 rules/             — pure D&D mechanics functions (no deps)
-llm/               — thin OpenAI-compatible client wrapper (OpenRouter)
+llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
 storage/           — SaveStore interface, JsonFileStore
 content_loader.py  — loads worlds, nations, settlements, NPCs, player from YAML
 content/           — YAML world definitions (data, not code)
