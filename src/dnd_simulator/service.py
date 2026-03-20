@@ -18,13 +18,13 @@ from dnd_simulator.core.character import Ability, build_awareness
 from dnd_simulator.core.models import GameDateTime, Query, TimeDelta
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
-from dnd_simulator.layers.geography.formulas import is_daylight
 from dnd_simulator.layers.geography.layer import GeographyLayer
 from dnd_simulator.layers.npcs.layer import NpcLayer
 from dnd_simulator.layers.politics.layer import PoliticsLayer
 from dnd_simulator.layers.settlements.layer import SettlementsLayer
 from dnd_simulator.llm.client import LlmClient
 from dnd_simulator.llm.prompts import build_npc_system_prompt
+from dnd_simulator.rules.geography import is_daylight
 from dnd_simulator.storage.store import SaveStore
 
 DEFAULT_CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"

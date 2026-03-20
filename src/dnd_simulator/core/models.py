@@ -5,6 +5,41 @@ from enum import Enum
 from typing import Any
 
 
+class TerrainType(Enum):
+    """Types of terrain a region can have."""
+
+    PLAINS = "plains"
+    FOREST = "forest"
+    HILLS = "hills"
+    MOUNTAINS = "mountains"
+    DESERT = "desert"
+    SWAMP = "swamp"
+    COAST = "coast"
+    TUNDRA = "tundra"
+
+
+class WeatherCondition(Enum):
+    """Possible weather states."""
+
+    CLEAR = "clear"
+    CLOUDY = "cloudy"
+    LIGHT_RAIN = "light_rain"
+    HEAVY_RAIN = "heavy_rain"
+    STORM = "storm"
+    SNOW = "snow"
+    BLIZZARD = "blizzard"
+    FOG = "fog"
+
+
+class Season(Enum):
+    """Seasons of the year."""
+
+    SPRING = "spring"
+    SUMMER = "summer"
+    AUTUMN = "autumn"
+    WINTER = "winter"
+
+
 class EventType(Enum):
     """Types of events that can flow between layers."""
 

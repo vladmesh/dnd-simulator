@@ -1,6 +1,6 @@
 """Tests for settlement formulas."""
 
-from dnd_simulator.layers.settlements.formulas import (
+from dnd_simulator.rules.settlements import (
     calculate_harvest_modifier,
     calculate_population_change,
     calculate_settlement_income,

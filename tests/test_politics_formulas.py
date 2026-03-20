@@ -1,6 +1,6 @@
 """Tests for politics calculation formulas."""
 
-from dnd_simulator.layers.politics.formulas import (
+from dnd_simulator.rules.politics import (
     calculate_military_upkeep,
     calculate_region_income,
     calculate_stability_drift,

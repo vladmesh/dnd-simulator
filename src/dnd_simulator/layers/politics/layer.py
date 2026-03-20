@@ -8,7 +8,13 @@ from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import Answer, Event, EventType, Query
-from dnd_simulator.layers.politics.formulas import (
+from dnd_simulator.layers.politics.models import (
+    DiplomaticStatus,
+    Leader,
+    LeaderTrait,
+    Nation,
+)
+from dnd_simulator.rules.politics import (
     calculate_military_upkeep,
     calculate_region_income,
     calculate_stability_drift,
@@ -19,12 +25,6 @@ from dnd_simulator.layers.politics.formulas import (
     peace_chance,
     rebellion_chance,
     war_declaration_chance,
-)
-from dnd_simulator.layers.politics.models import (
-    DiplomaticStatus,
-    Leader,
-    LeaderTrait,
-    Nation,
 )
 
 if TYPE_CHECKING:

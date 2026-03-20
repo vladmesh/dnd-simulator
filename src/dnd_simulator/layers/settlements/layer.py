@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import Answer, Event, EventType, Query
-from dnd_simulator.layers.settlements.formulas import (
+from dnd_simulator.layers.settlements.models import Settlement, SettlementType
+from dnd_simulator.rules.settlements import (
     calculate_harvest_modifier,
     calculate_population_change,
     calculate_settlement_income,
@@ -14,7 +15,6 @@ from dnd_simulator.layers.settlements.formulas import (
     conquest_effects,
     prosperity_drift,
 )
-from dnd_simulator.layers.settlements.models import Settlement, SettlementType
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import TimeDelta

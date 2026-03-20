@@ -6,14 +6,6 @@ from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import Answer, Event, EventType, Query
-from dnd_simulator.layers.geography.formulas import (
-    apply_weather_temperature_modifier,
-    calculate_base_temperature,
-    calculate_daylight_hours,
-    calculate_distance_km,
-    calculate_travel_hours,
-    get_season,
-)
 from dnd_simulator.layers.geography.models import (
     Connection,
     Direction,
@@ -22,6 +14,14 @@ from dnd_simulator.layers.geography.models import (
     WeatherCondition,
 )
 from dnd_simulator.layers.geography.weather import WeatherEngine
+from dnd_simulator.rules.geography import (
+    apply_weather_temperature_modifier,
+    calculate_base_temperature,
+    calculate_daylight_hours,
+    calculate_distance_km,
+    calculate_travel_hours,
+    get_season,
+)
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import TimeDelta

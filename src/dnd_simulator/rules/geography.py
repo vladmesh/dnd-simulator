@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import math
 
-from dnd_simulator.layers.geography.models import Season, TerrainType, WeatherCondition
+from dnd_simulator.core.models import Season, TerrainType, WeatherCondition
 
 
 def get_season(month: int, latitude: float) -> Season:

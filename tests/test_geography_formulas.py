@@ -1,6 +1,7 @@
 """Tests for geography calculation formulas."""
 
-from dnd_simulator.layers.geography.formulas import (
+from dnd_simulator.layers.geography.models import Season, TerrainType, WeatherCondition
+from dnd_simulator.rules.geography import (
     apply_weather_temperature_modifier,
     calculate_base_temperature,
     calculate_daylight_hours,
@@ -9,7 +10,6 @@ from dnd_simulator.layers.geography.formulas import (
     get_season,
     is_daylight,
 )
-from dnd_simulator.layers.geography.models import Season, TerrainType, WeatherCondition
 
 
 class TestGetSeason:

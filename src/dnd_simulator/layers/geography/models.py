@@ -5,18 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
+from dnd_simulator.core.models import Season, TerrainType, WeatherCondition
 
-class TerrainType(Enum):
-    """Types of terrain a region can have."""
-
-    PLAINS = "plains"
-    FOREST = "forest"
-    HILLS = "hills"
-    MOUNTAINS = "mountains"
-    DESERT = "desert"
-    SWAMP = "swamp"
-    COAST = "coast"
-    TUNDRA = "tundra"
+# Re-export so existing `from .models import ...` still works
+__all__ = ["Connection", "Direction", "Region", "Season", "TerrainType", "WeatherCondition"]
 
 
 class Direction(Enum):
@@ -30,28 +22,6 @@ class Direction(Enum):
     SW = "sw"
     W = "w"
     NW = "nw"
-
-
-class WeatherCondition(Enum):
-    """Possible weather states."""
-
-    CLEAR = "clear"
-    CLOUDY = "cloudy"
-    LIGHT_RAIN = "light_rain"
-    HEAVY_RAIN = "heavy_rain"
-    STORM = "storm"
-    SNOW = "snow"
-    BLIZZARD = "blizzard"
-    FOG = "fog"
-
-
-class Season(Enum):
-    """Seasons of the year."""
-
-    SPRING = "spring"
-    SUMMER = "summer"
-    AUTUMN = "autumn"
-    WINTER = "winter"
 
 
 @dataclass
