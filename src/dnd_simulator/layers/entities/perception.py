@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 from dnd_simulator.core.character import Character, Entity
 from dnd_simulator.core.models import Event, EventType
+from dnd_simulator.i18n import _
 
 GetEntityFn = Callable[[str], Entity | None]
 
@@ -31,8 +32,8 @@ def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -
     if event.event_type == EventType.COMBAT_STARTED:
         return _perceive_combat_started(event, observer, get_entity)
     if event.event_type == EventType.COMBAT_ENDED:
-        return "Бой окончен."
-    return f"Что-то произошло ({event.event_type.value})"
+        return _("Combat ended.")
+    return _("Something happened ({type})").format(type=event.event_type.value)
 
 
 def _describe(observer: Character, entity_id: str, get_entity: GetEntityFn) -> str:
@@ -43,9 +44,9 @@ def _describe(observer: Character, entity_id: str, get_entity: GetEntityFn) -> s
     """
     entity = get_entity(entity_id)
     if entity is None:
-        return "кто-то"
+        return _("someone")
     if entity.id == observer.id:
-        return "ты"
+        return _("you")
     desc = observer.perceive(entity)
     return f"{desc} (id: {entity_id})"
 
@@ -58,8 +59,8 @@ def _perceive_say(event: Event, observer: Character, get_entity: GetEntityFn) ->
 
     speaker = _describe(observer, speaker_id, get_entity)
     if speaker_id == observer.id:
-        return f"Ты говоришь: «{text}»"
-    return f"{speaker} говорит: «{text}»"
+        return _('You say: "{text}"').format(text=text)
+    return _('{speaker} says: "{text}"').format(speaker=speaker, text=text)
 
 
 def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
@@ -76,17 +77,21 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
 
     weapon_str = f" ({weapon})" if weapon else ""
     if not hit:
-        outcome_str = ", промах"
+        outcome_str = _(", miss")
     elif damage is not None:
-        outcome_str = f", {damage} урона"
+        outcome_str = _(", {damage} damage").format(damage=damage)
     else:
         outcome_str = ""
 
     if attacker_id == observer.id:
-        return f"Ты атакуешь {target}{weapon_str}{outcome_str}"
+        return _("You attack {target}{weapon}{outcome}").format(target=target, weapon=weapon_str, outcome=outcome_str)
     if target_id == observer.id:
-        return f"{attacker} атакует тебя{weapon_str}{outcome_str}"
-    return f"{attacker} атакует {target}{weapon_str}{outcome_str}"
+        return _("{attacker} attacks you{weapon}{outcome}").format(
+            attacker=attacker, weapon=weapon_str, outcome=outcome_str
+        )
+    return _("{attacker} attacks {target}{weapon}{outcome}").format(
+        attacker=attacker, target=target, weapon=weapon_str, outcome=outcome_str
+    )
 
 
 def _perceive_death(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
@@ -94,9 +99,9 @@ def _perceive_death(event: Event, observer: Character, get_entity: GetEntityFn) 
     assert isinstance(entity_id, str)
 
     if entity_id == observer.id:
-        return "Ты погибаешь"
+        return _("You die")
     desc = _describe(observer, entity_id, get_entity)
-    return f"{desc} погибает"
+    return _("{entity} dies").format(entity=desc)
 
 
 def _perceive_dodge(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
@@ -104,11 +109,11 @@ def _perceive_dodge(event: Event, observer: Character, get_entity: GetEntityFn) 
     description = event.data.get("description", "")
     assert isinstance(entity_id, str)
 
-    desc_suffix = f" «{description}»" if description else ""
+    desc_suffix = f" \u00ab{description}\u00bb" if description else ""
     if entity_id == observer.id:
-        return f"Ты принимаешь защитную стойку{desc_suffix}"
+        return _("You take a defensive stance{desc}").format(desc=desc_suffix)
     desc = _describe(observer, entity_id, get_entity)
-    return f"{desc} принимает защитную стойку{desc_suffix}"
+    return _("{entity} takes a defensive stance{desc}").format(entity=desc, desc=desc_suffix)
 
 
 def _perceive_flee(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
@@ -116,11 +121,11 @@ def _perceive_flee(event: Event, observer: Character, get_entity: GetEntityFn) -
     description = event.data.get("description", "")
     assert isinstance(entity_id, str)
 
-    desc_suffix = f" «{description}»" if description else ""
+    desc_suffix = f" \u00ab{description}\u00bb" if description else ""
     if entity_id == observer.id:
-        return f"Ты пытаешься сбежать{desc_suffix}"
+        return _("You try to flee{desc}").format(desc=desc_suffix)
     desc = _describe(observer, entity_id, get_entity)
-    return f"{desc} пытается сбежать{desc_suffix}"
+    return _("{entity} tries to flee{desc}").format(entity=desc, desc=desc_suffix)
 
 
 def _perceive_move(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
@@ -142,17 +147,21 @@ def _perceive_move(event: Event, observer: Character, get_entity: GetEntityFn) -
     dir_label = direction_label(dx, dy)
 
     is_dash = event.event_type == EventType.ENTITY_DASH
-    verb = "бежит" if is_dash else "перемещается"
-    desc_suffix = f" «{description}»" if description else ""
+    verb = _("dashes") if is_dash else _("moves")
+    desc_suffix = f" \u00ab{description}\u00bb" if description else ""
 
     if entity_id == observer.id:
-        verb_self = "бежишь" if is_dash else "перемещаешься"
-        return f"Ты {verb_self} {dir_label} ({distance_ft} ft){desc_suffix}"
+        verb_self = _("dash") if is_dash else _("move")
+        return _("You {verb} {direction} ({distance} ft){desc}").format(
+            verb=verb_self, direction=dir_label, distance=distance_ft, desc=desc_suffix
+        )
     desc = _describe(observer, entity_id, get_entity)
-    return f"{desc} {verb} {dir_label} ({distance_ft} ft){desc_suffix}"
+    return _("{entity} {verb} {direction} ({distance} ft){desc}").format(
+        entity=desc, verb=verb, direction=dir_label, distance=distance_ft, desc=desc_suffix
+    )
 
 
 def _perceive_combat_started(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     names = event.data.get("turn_order_names", [])
     order_str = ", ".join(str(n) for n in names) if names else "?"
-    return f"Бой начался! Порядок инициативы: {order_str}"
+    return _("Combat started! Initiative order: {order}").format(order=order_str)

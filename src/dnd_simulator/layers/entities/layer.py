@@ -9,6 +9,7 @@ from dnd_simulator.core.character import Ability, Attack, Character, Creature, D
 from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
+from dnd_simulator.i18n import _
 from dnd_simulator.layers.entities.models import Npc, NpcActivity
 from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.rules.combat import resolve_attack, roll_initiative
@@ -101,7 +102,7 @@ class EntitiesLayer(Layer):
         # Use pre-configured battle map (with walls etc.) if available, otherwise default
         if region_id in self._battle_map_configs:
             template = self._battle_map_configs[region_id]
-            battle_map = BattleMap(width=template.width, height=template.height, walls=list(template.walls))
+            battle_map = BattleMap(width=template.width, height=template.height, walls=list(template._inner_walls))
         else:
             battle_map = BattleMap(width=60, height=60)
         battle_map.place_randomly([c.id for c in creatures])
@@ -237,16 +238,16 @@ class EntitiesLayer(Layer):
         entity_id = str(event.data.get("entity_id", ""))
         entity = self._entities.get(entity_id)
         if not isinstance(entity, Creature):
-            return ActionResult(success=False, error=f"Существо '{entity_id}' не найдено.")
+            return ActionResult(success=False, error=_("Creature '{id}' not found.").format(id=entity_id))
 
         combat = self._combats.get(entity.region_id)
         if not combat:
-            return ActionResult(success=False, error="Нет активного боя для перемещения.")
+            return ActionResult(success=False, error=_("No active combat for movement."))
 
         bm = combat.battle_map
         cur_pos = bm.get_position(entity_id)
         if cur_pos is None:
-            return ActionResult(success=False, error="Существо не на карте.")
+            return ActionResult(success=False, error=_("Creature not on the battle map."))
 
         speed = entity.speed * 2 if dash else entity.speed
 
@@ -258,20 +259,24 @@ class EntitiesLayer(Layer):
         if isinstance(toward_id, str) and toward_id:
             target_pos = bm.get_position(toward_id)
             if target_pos is None:
-                return ActionResult(success=False, error=f"Цель '{toward_id}' не на карте.")
-            new_pos = move_toward(cur_pos, target_pos, speed, bm)
+                return ActionResult(success=False, error=_("Target '{id}' not on the battle map.").format(id=toward_id))
+            new_pos = move_toward(cur_pos, target_pos, speed, bm, entity_id)
         elif isinstance(away_from_id, str) and away_from_id:
             target_pos = bm.get_position(away_from_id)
             if target_pos is None:
-                return ActionResult(success=False, error=f"Цель '{away_from_id}' не на карте.")
-            new_pos = move_away_from(cur_pos, target_pos, speed, bm)
+                return ActionResult(
+                    success=False, error=_("Target '{id}' not on the battle map.").format(id=away_from_id)
+                )
+            new_pos = move_away_from(cur_pos, target_pos, speed, bm, entity_id)
         elif isinstance(direction, str) and direction:
-            new_pos = move_direction(cur_pos, direction, speed, bm)
+            new_pos = move_direction(cur_pos, direction, speed, bm, entity_id)
         else:
-            return ActionResult(success=False, error="Укажи направление: toward, away_from или direction.")
+            return ActionResult(success=False, error=_("Specify direction: toward, away_from, or direction."))
 
         if new_pos == cur_pos:
-            return ActionResult(success=False, error="Путь заблокирован стеной.")
+            # Can't move — blocked by wall or occupied cell. Still a valid action (wasted movement).
+            # Don't log 0-ft moves — they're noise.
+            return ActionResult(success=True)
 
         bm.set_position(entity_id, new_pos)
         moved_ft = grid_distance(cur_pos, new_pos)
@@ -301,20 +306,20 @@ class EntitiesLayer(Layer):
         # --- Validation ---
         attacker = self._entities.get(attacker_id)
         if not isinstance(attacker, Creature):
-            return ActionResult(success=False, error=f"Атакующий '{attacker_id}' не найден.")
+            return ActionResult(success=False, error=_("Attacker '{id}' not found.").format(id=attacker_id))
 
         target = self._entities.get(target_id)
         if not isinstance(target, Creature):
-            return ActionResult(success=False, error=f"Цель '{target_id}' не найдена.")
+            return ActionResult(success=False, error=_("Target '{id}' not found.").format(id=target_id))
 
         if not attacker.is_alive:
-            return ActionResult(success=False, error="Ты мёртв и не можешь атаковать.")
+            return ActionResult(success=False, error=_("You are dead and cannot attack."))
 
         if not target.is_alive:
-            return ActionResult(success=False, error=f"Цель '{target_id}' уже мертва.")
+            return ActionResult(success=False, error=_("Target '{id}' is already dead.").format(id=target_id))
 
         if attacker.region_id != target.region_id:
-            return ActionResult(success=False, error=f"Цель '{target_id}' не в этом регионе.")
+            return ActionResult(success=False, error=_("Target '{id}' is not in this region.").format(id=target_id))
 
         # --- Enter combat for all creatures in the region ---
         if attacker.region_id not in self._combats:
@@ -325,7 +330,7 @@ class EntitiesLayer(Layer):
         if attacker.attacks:
             attack = attacker.attacks[0]
         else:
-            attack = Attack(name="кулак", ability=Ability.STR, damage=(DamageComponent("1", DamageType.BLUDGEONING),))
+            attack = Attack(name=_("fist"), ability=Ability.STR, damage=(DamageComponent("1", DamageType.BLUDGEONING),))
 
         # --- Reach check ---
         combat = self._combats.get(attacker.region_id)
@@ -337,7 +342,7 @@ class EntitiesLayer(Layer):
                 if dist > attack.reach:
                     return ActionResult(
                         success=False,
-                        error=f"Цель слишком далеко ({dist} ft, досягаемость {attack.reach} ft).",
+                        error=_("Target too far ({dist} ft, reach {reach} ft).").format(dist=dist, reach=attack.reach),
                     )
 
         # --- Resolution ---

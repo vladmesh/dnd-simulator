@@ -1,0 +1,120 @@
+"""Brain ABC and rule-based AI for creatures."""
+
+from __future__ import annotations
+
+import logging
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, Any
+
+from dnd_simulator.core.action import Action
+
+if TYPE_CHECKING:
+    from dnd_simulator.core.character import Creature
+    from dnd_simulator.core.world import World
+
+logger = logging.getLogger("dnd_simulator.brain")
+
+
+class Brain(ABC):
+    """Strategy for choosing actions. Injected into Creature."""
+
+    @abstractmethod
+    def choose_action(self, creature: Creature, world: World) -> Action:
+        """Decide what to do this turn. Must return a valid Action."""
+
+
+class RuleBrain(Brain):
+    """Utility-scoring combat AI. Peaceful mode = idle.
+
+    Target selection scores each enemy by distance and wound level,
+    preferring wounded targets (finish-off) and nearby targets.
+    Ranged attackers try to attack from range; melee fighters close in.
+    """
+
+    def choose_action(self, creature: Creature, world: World) -> Action:
+        if not creature.in_combat:
+            return Action(name="idle")
+
+        from dnd_simulator.core.character import Character, build_combat_awareness
+
+        if not isinstance(creature, Character):
+            return Action(name="idle")
+
+        awareness = build_combat_awareness(world, creature)
+        return self._choose_combat_action(creature, awareness)
+
+    def _choose_combat_action(self, creature: Creature, awareness: dict[str, Any]) -> Action:
+        nearby = awareness["nearby"]
+        if not nearby:
+            return Action(name="idle")
+
+        hp: int = awareness["self_hp"]
+        max_hp: int = awareness["self_max_hp"]
+        speed: int = awareness["self_speed"]
+        hp_ratio = hp / max_hp if max_hp > 0 else 0.0
+
+        primary_reach = creature.attacks[0].reach if creature.attacks else 5
+        is_ranged = primary_reach > 10
+
+        # --- Target selection: score each enemy ---
+        target = self._pick_target(nearby, primary_reach)
+        target_id = str(target["id"])
+        dist = int(str(target.get("distance_ft", 999)))
+
+        # 1. Flee if critically wounded
+        if hp_ratio < 0.15:
+            logger.info("[RuleBrain:%s] → flee (HP %.0f%%)", creature.name, hp_ratio * 100)
+            return Action(name="flee")
+
+        # 2. Dodge if badly hurt and enemy in melee reach
+        nearest_dist = min(int(str(e.get("distance_ft", 999))) for e in nearby)
+        if hp_ratio < 0.25 and nearest_dist <= 5:
+            logger.info("[RuleBrain:%s] → dodge (HP %.0f%%)", creature.name, hp_ratio * 100)
+            return Action(name="dodge")
+
+        # 3. Ranged attacker: shoot if target in range, move closer if not
+        if is_ranged and dist <= primary_reach:
+            logger.info("[RuleBrain:%s] → attack %s (ranged, dist %d ft)", creature.name, target_id, dist)
+            return Action(name="attack", params={"target_id": target_id})
+
+        # 4. Melee: attack if in weapon reach
+        if dist <= primary_reach:
+            logger.info("[RuleBrain:%s] → attack %s (dist %d ft)", creature.name, target_id, dist)
+            return Action(name="attack", params={"target_id": target_id})
+
+        # 5. Move toward if within one move + reach
+        if dist <= speed + primary_reach:
+            logger.info("[RuleBrain:%s] → move toward %s (dist %d ft)", creature.name, target_id, dist)
+            return Action(name="move", params={"toward": target_id})
+
+        # 6. Dash toward otherwise
+        logger.info("[RuleBrain:%s] → dash toward %s (dist %d ft)", creature.name, target_id, dist)
+        return Action(name="dash", params={"toward": target_id})
+
+    def _pick_target(self, nearby: list[dict[str, object]], reach: int) -> dict[str, object]:
+        """Score enemies and pick best target.
+
+        Scoring: prefer wounded targets (lower HP description → higher score),
+        then closer targets. Enemies in weapon reach get a bonus.
+        """
+        best: dict[str, object] | None = None
+        best_score = -999.0
+
+        for enemy in nearby:
+            dist = int(str(enemy.get("distance_ft", 999)))
+
+            score = 0.0
+            # Wounded targets are high priority (finish them off)
+            if enemy.get("is_wounded", False):
+                score += 50.0
+            # Prefer enemies in weapon reach (can attack this turn)
+            if dist <= reach:
+                score += 30.0
+            # Prefer closer targets (normalized: 0 at max range, 20 at melee)
+            score += max(0.0, 20.0 - dist * 0.2)
+
+            if score > best_score:
+                best_score = score
+                best = enemy
+
+        return best if best is not None else nearby[0]

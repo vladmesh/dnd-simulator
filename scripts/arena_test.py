@@ -22,9 +22,11 @@ from dnd_simulator.core.character import Creature
 from dnd_simulator.core.models import Event, EventType, GameDateTime, TimeDelta
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
+from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.geography.layer import GeographyLayer
 from dnd_simulator.layers.politics.layer import PoliticsLayer
 from dnd_simulator.layers.settlements.layer import SettlementsLayer
+from dnd_simulator.llm.brain import LlmBrain
 from dnd_simulator.llm.client import LlmClient
 
 CONTENT_DIR = Path(__file__).resolve().parents[1] / "content"
@@ -35,14 +37,6 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s", handlers=[logging.StreamHandler(sys.stderr)])
     load_dotenv()
 
-    api_key = os.getenv("OPENROUTER_API_KEY")
-    model = os.getenv("LLM_MODEL")
-    if not api_key or not model:
-        print("Error: set OPENROUTER_API_KEY and LLM_MODEL in .env")
-        sys.exit(1)
-    llm = LlmClient(api_key=api_key, model=model)
-    print(f"LLM: {model}\n")
-
     world_path = CONTENT_DIR / "worlds" / "arena.yaml"
     regions = load_world(world_path)
     nations = load_nations(world_path)
@@ -51,8 +45,19 @@ def main() -> None:
     npcs = load_npcs(world_path)
     battle_maps = load_battle_maps(world_path)
 
-    for npc in npcs:
-        npc.llm = llm
+    # Inject LLM brain only for NPCs that need it
+    needs_llm = any(isinstance(npc, Npc) and npc.ai_type == "llm" for npc in npcs)
+    if needs_llm:
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        model = os.getenv("LLM_MODEL")
+        if not api_key or not model:
+            print("Error: set OPENROUTER_API_KEY and LLM_MODEL in .env")
+            sys.exit(1)
+        llm = LlmClient(api_key=api_key, model=model)
+        print(f"LLM: {model}\n")
+        for npc in npcs:
+            if isinstance(npc, Npc) and npc.ai_type == "llm":
+                npc.brain = LlmBrain(llm)
 
     # Player auto-attacks nearest enemy (no human input needed)
     def auto_input(prompt: str) -> str:
@@ -90,7 +95,8 @@ def main() -> None:
     player.output_fn = print
 
     geography = GeographyLayer(regions=regions)
-    settlements_layer = SettlementsLayer(settlements=settlements, region_terrains={r.id: r.terrain.value for r in regions})
+    region_terrains = {r.id: r.terrain.value for r in regions}
+    settlements_layer = SettlementsLayer(settlements=settlements, region_terrains=region_terrains)
     politics = PoliticsLayer(
         nations=nations,
         region_terrains={r.id: r.terrain.value for r in regions},

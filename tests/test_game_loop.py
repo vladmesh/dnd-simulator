@@ -94,7 +94,7 @@ class TestPlayerWaitCommand:
 
         elapsed = world.time.to_total_seconds() - initial_seconds
         assert elapsed == 3600  # 1 hour
-        assert any("1 ч" in s for s in output)
+        assert any("1 h" in s for s in output)
 
     def test_wait_custom_hours(self) -> None:
         """'wait 3' advances time by 3 hours."""
@@ -113,7 +113,7 @@ class TestPlayerWaitCommand:
 
         elapsed = world.time.to_total_seconds() - initial_seconds
         assert elapsed == 3 * 3600
-        assert any("3 ч" in s for s in output)
+        assert any("3 h" in s for s in output)
 
     def test_wait_invalid_argument(self) -> None:
         """'wait abc' shows error and doesn't end turn."""
@@ -148,4 +148,4 @@ class TestPlayerWaitCommand:
         world = _make_world([player], hour=10)
 
         player.take_turn(world)
-        assert any("Минимум" in s for s in output)
+        assert any("Minimum" in s for s in output)

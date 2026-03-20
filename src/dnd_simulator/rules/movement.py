@@ -7,6 +7,7 @@ Uses DMG optional diagonal rule: first diagonal = 5 ft, second = 10 ft, alternat
 from __future__ import annotations
 
 from dnd_simulator.core.combat import BattleMap, Position
+from dnd_simulator.i18n import _
 
 # Compass direction vectors (dx, dy).  North = +y.
 _DIRECTIONS: dict[str, tuple[int, int]] = {
@@ -37,31 +38,37 @@ def grid_distance(a: Position, b: Position) -> int:
 
 
 def direction_label(dx: int, dy: int) -> str:
-    """Convert a (dx, dy) vector into a Russian compass label.
-
-    Returns e.g. "на севере", "на юго-западе", "здесь".
-    """
+    """Convert a (dx, dy) vector into a localized compass label."""
     if dx == 0 and dy == 0:
-        return "здесь"
-    ns = "север" if dy > 0 else ("юг" if dy < 0 else "")
-    ew = "восток" if dx > 0 else ("запад" if dx < 0 else "")
-    if ns and ew:
-        return f"на {ns}о-{ew}е"
-    if ns:
-        return f"на {ns}е"
-    return f"на {ew}е"
+        return _("here")
+    sx = 1 if dx > 0 else (-1 if dx < 0 else 0)
+    sy = 1 if dy > 0 else (-1 if dy < 0 else 0)
+    labels = {
+        (0, 1): _("to the north"),
+        (0, -1): _("to the south"),
+        (1, 0): _("to the east"),
+        (-1, 0): _("to the west"),
+        (1, 1): _("to the northeast"),
+        (-1, 1): _("to the northwest"),
+        (1, -1): _("to the southeast"),
+        (-1, -1): _("to the southwest"),
+    }
+    return labels.get((sx, sy), _("here"))
 
 
-def move_toward(origin: Position, target: Position, speed: int, battle_map: BattleMap) -> Position:
+def move_toward(origin: Position, target: Position, speed: int, battle_map: BattleMap, mover_id: str = "") -> Position:
     """Move from *origin* toward *target*, up to *speed* feet.
 
     Steps one 5-ft square at a time toward target, spending movement
     according to D&D 5e diagonal rules, clamped to map bounds.
+    Stops before cells occupied by other entities.
     """
-    return _step_toward(origin, target, speed, battle_map)
+    return _step_toward(origin, target, speed, battle_map, mover_id)
 
 
-def move_away_from(origin: Position, target: Position, speed: int, battle_map: BattleMap) -> Position:
+def move_away_from(
+    origin: Position, target: Position, speed: int, battle_map: BattleMap, mover_id: str = ""
+) -> Position:
     """Move from *origin* directly away from *target*, up to *speed* feet."""
     # Mirror target through origin to get an "away" destination
     dx = origin.x - target.x
@@ -72,23 +79,26 @@ def move_away_from(origin: Position, target: Position, speed: int, battle_map: B
     else:
         # Scale to put away_target far beyond origin
         away_target = Position(origin.x + dx * 100, origin.y + dy * 100)
-    return _step_toward(origin, away_target, speed, battle_map)
+    return _step_toward(origin, away_target, speed, battle_map, mover_id)
 
 
-def move_direction(origin: Position, direction: str, speed: int, battle_map: BattleMap) -> Position:
+def move_direction(origin: Position, direction: str, speed: int, battle_map: BattleMap, mover_id: str = "") -> Position:
     """Move from *origin* in a compass direction, up to *speed* feet."""
     vec = _DIRECTIONS.get(direction.lower())
     if vec is None:
         return origin
     far_target = Position(origin.x + vec[0] * speed * 2, origin.y + vec[1] * speed * 2)
-    return _step_toward(origin, far_target, speed, battle_map)
+    return _step_toward(origin, far_target, speed, battle_map, mover_id)
 
 
-def _step_toward(origin: Position, target: Position, speed: int, battle_map: BattleMap) -> Position:
+def _step_toward(origin: Position, target: Position, speed: int, battle_map: BattleMap, mover_id: str = "") -> Position:
     """Step one square at a time toward target, tracking diagonal cost."""
     cur = origin
     spent = 0
     diag_count = 0
+
+    # Cells occupied by other entities (enemies block movement in D&D 5e)
+    occupied = {pos for eid, pos in battle_map.positions.items() if eid != mover_id}
 
     while spent < speed:
         dx = target.x - cur.x
@@ -120,6 +130,8 @@ def _step_toward(origin: Position, target: Position, speed: int, battle_map: Bat
             break  # stuck at boundary
         if battle_map.is_step_blocked(cur, new_pos):
             break  # wall in the way
+        if new_pos in occupied:
+            break  # cell occupied by another entity
         cur = new_pos
         spent += cost
 

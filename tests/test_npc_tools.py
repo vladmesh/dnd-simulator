@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 from dnd_simulator.core.character import Ability, Attack, DamageComponent, DamageType
 from dnd_simulator.core.models import ActionResult, GameDateTime
 from dnd_simulator.layers.entities.models import Npc
+from dnd_simulator.llm.brain import LlmBrain
 from dnd_simulator.llm.client import LlmResponse, ToolCall
 from dnd_simulator.llm.tools import build_npc_tools
 
@@ -77,7 +78,7 @@ class TestNpcTakeTurn:
         mock_llm = MagicMock()
         say_tc = ToolCall(id="tc_1", name="say", arguments={"text": "Привет!"})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=say_tc, raw_message=None)
-        npc.llm = mock_llm
+        npc.brain = LlmBrain(mock_llm)
         npc.take_turn(world)
         world.handle_event.assert_called_once()
         event = world.handle_event.call_args[0][0]
@@ -90,7 +91,7 @@ class TestNpcTakeTurn:
         mock_llm = MagicMock()
         idle_tc = ToolCall(id="tc_1", name="idle", arguments={})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=idle_tc, raw_message=None)
-        npc.llm = mock_llm
+        npc.brain = LlmBrain(mock_llm)
         npc.take_turn(world)
         world.handle_event.assert_not_called()
 
@@ -100,7 +101,7 @@ class TestNpcTakeTurn:
         mock_llm = MagicMock()
         atk_tc = ToolCall(id="tc_1", name="attack", arguments={"target_id": "player"})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=atk_tc, raw_message=None)
-        npc.llm = mock_llm
+        npc.brain = LlmBrain(mock_llm)
         npc.take_turn(world)
         world.handle_event.assert_called_once()
         event = world.handle_event.call_args[0][0]
@@ -117,7 +118,7 @@ class TestNpcTakeTurn:
             LlmResponse(text="Hmm...", tool_call=None, raw_message=None),
             LlmResponse(text=None, tool_call=idle_tc, raw_message=None),
         ]
-        npc.llm = mock_llm
+        npc.brain = LlmBrain(mock_llm)
         npc.take_turn(world)
         assert mock_llm.generate_with_tools.call_count == 2
 
@@ -126,7 +127,7 @@ class TestNpcTakeTurn:
         world = _mock_world()
         mock_llm = MagicMock()
         mock_llm.generate_with_tools.return_value = LlmResponse(text="I don't know", tool_call=None, raw_message=None)
-        npc.llm = mock_llm
+        npc.brain = LlmBrain(mock_llm)
         npc.take_turn(world)
         assert mock_llm.generate_with_tools.call_count == 3
         world.handle_event.assert_not_called()

@@ -12,6 +12,7 @@ from dnd_simulator.core.character import (
     build_awareness,
     build_combat_awareness,
 )
+from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
     from dnd_simulator.core.world import World
@@ -82,7 +83,7 @@ class PlayerCharacter(Character):
             if cmd.startswith("attack "):
                 target_id = raw[7:].strip().split()[0] if raw[7:].strip() else ""
                 if not target_id:
-                    self.output_fn("Использование: attack <цель>")
+                    self.output_fn(_("Usage: attack <target>"))
                     continue
                 result = world.handle_event(
                     Event(
@@ -96,7 +97,7 @@ class PlayerCharacter(Character):
                     continue
                 return
 
-            self.output_fn("Команды: look, status, say <текст>, attack <цель>, wait [часы], idle")
+            self.output_fn(_("Commands: look, status, say <text>, attack <target>, wait [hours], idle"))
 
     def _combat_turn(self, world: World) -> None:
         """Combat turn: focused awareness, restricted commands."""
@@ -112,7 +113,7 @@ class PlayerCharacter(Character):
         self.output_fn(self._format_combat_awareness(combat_aw, recent_events))
 
         while True:
-            raw = self.input_fn("бой> ").strip()
+            raw = self.input_fn(_("combat> ")).strip()
             if not raw:
                 continue
 
@@ -148,7 +149,7 @@ class PlayerCharacter(Character):
             if cmd.startswith("attack "):
                 target_id = raw[7:].strip().split()[0] if raw[7:].strip() else ""
                 if not target_id:
-                    self.output_fn("Использование: attack <цель>")
+                    self.output_fn(_("Usage: attack <target>"))
                     continue
                 result = world.handle_event(
                     Event(
@@ -166,7 +167,7 @@ class PlayerCharacter(Character):
                 is_dash = cmd.startswith("dash ")
                 args = raw[5:].strip().split()
                 if not args:
-                    self.output_fn("Использование: move/dash <toward|away|north|south|...> [цель]")
+                    self.output_fn(_("Usage: move/dash <toward|away|north|south|...> [target]"))
                     continue
                 event_data: dict[str, object] = {"entity_id": self.id}
                 keyword = args[0].lower()
@@ -189,8 +190,10 @@ class PlayerCharacter(Character):
                 return
 
             self.output_fn(
-                "Команды: attack <цель>, move <направление> [цель], "
-                "dash <направление> [цель], dodge, flee, status, idle"
+                _(
+                    "Commands: attack <target>, move <direction> [target], "
+                    "dash <direction> [target], dodge, flee, status, idle"
+                )
             )
 
     def _cmd_look(self, world: World) -> None:
@@ -206,13 +209,15 @@ class PlayerCharacter(Character):
 
         lines = [f"=== {info.value['name']} ==="]
         lines.append(
-            f"Местность: {info.value['terrain']}  |  "
-            f"Погода: {weather.value['condition'].replace('_', ' ')}, {weather.value['temperature']}°C"
+            _("Terrain:")
+            + f" {info.value['terrain']}  |  "
+            + _("Weather:")
+            + f" {weather.value['condition'].replace('_', ' ')}, {weather.value['temperature']}°C"
         )
 
         others = [e for e in entities.value if e["id"] != self.id]
         if others:
-            lines.append("\nСущества:")
+            lines.append("\n" + _("Creatures:"))
             for e in others:
                 if "role" in e:
                     lines.append(f"  {e['name']} [{e['id']}] ({e['role']}) — {e['activity']}")
@@ -220,7 +225,7 @@ class PlayerCharacter(Character):
                     lines.append(f"  {e['name']} [{e['id']}]")
 
         if conns.value:
-            lines.append("\nПути:")
+            lines.append("\n" + _("Paths:"))
             for c in conns.value:
                 lines.append(f"  {c['direction'].upper()} → {c['target_id']}")
 
@@ -231,12 +236,14 @@ class PlayerCharacter(Character):
         scores = self.ability_scores
         lines = [
             f"=== {self.name} ===",
-            f"HP: {self.current_hp}/{self.max_hp}  |  AC: {self.ac}  |  Золото: {self.gold}",
+            _("HP: {hp}/{max_hp} | AC: {ac} | Gold: {gold}").format(
+                hp=self.current_hp, max_hp=self.max_hp, ac=self.ac, gold=self.gold
+            ),
             f"STR {scores[Ability.STR]}  DEX {scores[Ability.DEX]}  CON {scores[Ability.CON]}"
             f"  INT {scores[Ability.INT]}  WIS {scores[Ability.WIS]}  CHA {scores[Ability.CHA]}",
         ]
         if self.attacks:
-            lines.append("Атаки: " + ", ".join(a.name for a in self.attacks))
+            lines.append(_("Attacks:") + " " + ", ".join(a.name for a in self.attacks))
         self.output_fn("\n".join(lines))
 
     def _cmd_wait(self, cmd: str, world: World) -> None:
@@ -249,13 +256,13 @@ class PlayerCharacter(Character):
             try:
                 hours = int(parts[1])
             except ValueError:
-                self.output_fn("Использование: wait [часы]")
+                self.output_fn(_("Usage: wait [hours]"))
                 return
             if hours < 1:
-                self.output_fn("Минимум 1 час.")
+                self.output_fn(_("Minimum 1 hour."))
                 return
         world.advance_time(TimeDelta.from_hours(hours))
-        self.output_fn(f"Прошло {hours} ч.")
+        self.output_fn(_("Passed {hours} h.").format(hours=hours))
 
     def _format_combat_awareness(self, combat_aw: dict[str, Any], recent_events: list[str] | None = None) -> str:
         """Format combat awareness for display to the player."""
@@ -264,11 +271,17 @@ class PlayerCharacter(Character):
         weapon = combat_aw["self_weapon"]
         speed = combat_aw.get("self_speed", 30)
         round_num = combat_aw.get("round_number", 1)
-        lines = [f"\n--- Бой, раунд {round_num} (HP: {hp}/{max_hp}, оружие: {weapon}, скорость: {speed} ft) ---"]
+        lines = [
+            "\n--- "
+            + _("Combat, round {round} (HP: {hp}/{max_hp}, weapon: {weapon}, speed: {speed} ft)").format(
+                round=round_num, hp=hp, max_hp=max_hp, weapon=weapon, speed=speed
+            )
+            + " ---"
+        ]
 
         nearby = combat_aw.get("nearby", [])
         if nearby:
-            lines.append("\nВокруг:")
+            lines.append("\n" + _("Around:"))
             for e in nearby:
                 dist = e.get("distance_ft")
                 direction = e.get("direction")
@@ -279,13 +292,13 @@ class PlayerCharacter(Character):
 
         walls = combat_aw.get("walls", [])
         if walls:
-            lines.append("\nСтены:")
+            lines.append("\n" + _("Walls:"))
             for w in walls:
                 lines.append(f"  {w}")
 
         if recent_events:
             lines.append("")
-            lines.append("Что произошло:")
+            lines.append(_("What happened:"))
             for event_text in recent_events:
                 lines.append(f"  • {event_text}")
 
@@ -294,11 +307,17 @@ class PlayerCharacter(Character):
     def _format_awareness(self, awareness: dict[str, Any], recent_events: list[str] | None = None) -> str:
         """Format world awareness for display to the player."""
         t = awareness["time"]
-        lines = [f"\n--- Ваш ход (HP: {self.current_hp}/{self.max_hp}, время: {t['hour']:02d}:00, день {t['day']}) ---"]
+        lines = [
+            "\n--- "
+            + _("Your turn (HP: {hp}/{max_hp}, time: {hour}:00, day {day})").format(
+                hp=self.current_hp, max_hp=self.max_hp, hour=f"{t['hour']:02d}", day=t["day"]
+            )
+            + " ---"
+        ]
 
         if recent_events:
             lines.append("")
-            lines.append("Что произошло:")
+            lines.append(_("What happened:"))
             for event_text in recent_events:
                 lines.append(f"  • {event_text}")
 

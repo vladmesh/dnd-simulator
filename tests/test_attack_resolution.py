@@ -71,8 +71,8 @@ class TestAttackResolution:
 
         log = layer.get_perceived_log(target)
         assert len(log) >= 2  # combat_started + attack
-        assert "Бой начался" in log[0]
-        assert any("атакует тебя" in line for line in log)
+        assert "Combat started" in log[0]
+        assert any("attacks you" in line for line in log)
 
     def test_death_generates_event(self) -> None:
         attacker = Character(id="attacker", name="Fighter", region_id="r1", attacks=(_sword(),))
@@ -134,7 +134,7 @@ class TestAttackResolution:
 
         result = layer.handle_event(_attack_event())
         assert not result.success
-        assert "не в этом регионе" in result.error
+        assert "is not in this region" in result.error
         assert target.current_hp == 20
 
     def test_attack_dead_target_returns_error(self) -> None:
@@ -144,7 +144,7 @@ class TestAttackResolution:
 
         result = layer.handle_event(_attack_event())
         assert not result.success
-        assert "мертва" in result.error
+        assert "already dead" in result.error
 
     def test_attack_out_of_reach_returns_error(self) -> None:
         """Melee attack should fail if target is too far."""
@@ -160,4 +160,4 @@ class TestAttackResolution:
 
         result = layer.handle_event(_attack_event())
         assert not result.success
-        assert "далеко" in result.error
+        assert "too far" in result.error

@@ -2,6 +2,8 @@
 
 Includes attack resolution, initiative/combat management, event perception,
 and visibility filtering. Manages CombatState per region.
+Npc is a pure data model (personality, schedule, ai_type); decision-making
+is delegated to the brain field on Creature.
 """
 
 from dnd_simulator.layers.entities.layer import EntitiesLayer

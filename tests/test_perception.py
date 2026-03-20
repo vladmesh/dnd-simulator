@@ -24,7 +24,7 @@ class TestPerceiveEvent:
             data={"entity_id": "smith", "text": "Добро пожаловать!"},
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, speaker))
-        assert "говорит" in result
+        assert "says" in result
         assert "Добро пожаловать!" in result
         assert "dwarf" in result
 
@@ -36,7 +36,7 @@ class TestPerceiveEvent:
             data={"entity_id": "smith", "text": "Привет!"},
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
-        assert "Ты говоришь" in result
+        assert "You say" in result
 
     def test_attack_observer_is_target(self) -> None:
         observer = Character(id="smith", name="Smith", region_id="r1")
@@ -47,9 +47,9 @@ class TestPerceiveEvent:
             data={"attacker_id": "player", "target_id": "smith", "weapon": "longsword", "damage": 5},
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, attacker))
-        assert "атакует тебя" in result
+        assert "attacks you" in result
         assert "longsword" in result
-        assert "5 урона" in result
+        assert "5 damage" in result
 
     def test_attack_observer_is_attacker(self) -> None:
         observer = Character(id="player", name="Hero", region_id="r1")
@@ -60,7 +60,7 @@ class TestPerceiveEvent:
             data={"attacker_id": "player", "target_id": "smith", "weapon": "longsword"},
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, target))
-        assert "Ты атакуешь" in result
+        assert "You attack" in result
 
     def test_attack_observer_is_bystander(self) -> None:
         observer = Character(id="guard", name="Guard", region_id="r1")
@@ -74,7 +74,7 @@ class TestPerceiveEvent:
         result = perceive_event(event, observer, _get_entity_fn(observer, attacker, target))
         assert "elf" in result
         assert "dwarf" in result
-        assert "атакует" in result
+        assert "attacks" in result
 
     def test_death_other(self) -> None:
         observer = Character(id="guard", name="Guard", region_id="r1")
@@ -85,7 +85,7 @@ class TestPerceiveEvent:
             data={"entity_id": "smith"},
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, victim))
-        assert "погибает" in result
+        assert "dies" in result
         assert "dwarf" in result
 
     def test_death_self(self) -> None:
@@ -96,7 +96,7 @@ class TestPerceiveEvent:
             data={"entity_id": "smith"},
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
-        assert "Ты погибаешь" in result
+        assert "You die" in result
 
     def test_unknown_event(self) -> None:
         observer = Character(id="guard", name="Guard", region_id="r1")
@@ -106,7 +106,7 @@ class TestPerceiveEvent:
             data={},
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
-        assert "Что-то произошло" in result
+        assert "Something happened" in result
 
     def test_unknown_entity_id(self) -> None:
         observer = Character(id="guard", name="Guard", region_id="r1")
@@ -116,7 +116,7 @@ class TestPerceiveEvent:
             data={"entity_id": "unknown_npc", "text": "Бу!"},
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
-        assert "кто-то" in result
+        assert "someone" in result
         assert "Бу!" in result
 
 
@@ -234,5 +234,5 @@ class TestRegionLog:
 
         log = layer.get_perceived_log(smith)
         assert "Готовься!" in log[0]
-        assert "Бой начался" in log[1]
-        assert any("атакует тебя" in line for line in log)
+        assert "Combat started" in log[1]
+        assert any("attacks you" in line for line in log)

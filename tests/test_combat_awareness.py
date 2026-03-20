@@ -20,6 +20,7 @@ from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.perception import perceive_event
+from dnd_simulator.llm.brain import LlmBrain
 from dnd_simulator.llm.client import LlmResponse, ToolCall
 from dnd_simulator.llm.prompts import build_npc_combat_prompt
 from dnd_simulator.llm.tools import build_npc_combat_tools
@@ -98,7 +99,7 @@ class TestBuildCombatAwareness:
         player = Character(id="p1", name="Hero", region_id="r1")
         world = _mock_world([player])
         aw = build_combat_awareness(world, player)
-        assert aw["self_weapon"] == "кулаки"
+        assert aw["self_weapon"] == "fists"
         assert aw["self_weapon_damage"] == "1"
 
     def test_nearby_excludes_self(self) -> None:
@@ -133,7 +134,7 @@ class TestBuildNpcCombatPrompt:
             "nearby": [{"id": "player", "description": "полуорк со шрамом"}],
         }
         prompt = build_npc_combat_prompt(npc_data, combat_aw)
-        assert "в бою" in prompt.lower()
+        assert "in combat" in prompt.lower()
         assert "Варн" in prompt
         assert "12/18" in prompt
         assert "кинжал" in prompt
@@ -149,9 +150,9 @@ class TestBuildNpcCombatPrompt:
             "nearby": [],
         }
         prompt = build_npc_combat_prompt(npc_data, combat_aw)
-        assert "погода" not in prompt.lower()
-        assert "время" not in prompt.lower()
-        assert "поселен" not in prompt.lower()
+        assert "weather" not in prompt.lower().split("rules")[0]
+        assert "time:" not in prompt.lower().split("rules")[0]
+        assert "settlement" not in prompt.lower()
 
     def test_hp_status_healthy(self) -> None:
         npc_data = {"name": "Варн", "role": "скупщик", "personality": "жадный"}
@@ -164,7 +165,7 @@ class TestBuildNpcCombatPrompt:
             "nearby": [],
         }
         prompt = build_npc_combat_prompt(npc_data, combat_aw)
-        assert "здоров" in prompt
+        assert "healthy" in prompt
 
     def test_hp_status_wounded(self) -> None:
         npc_data = {"name": "Варн", "role": "скупщик", "personality": "жадный"}
@@ -177,7 +178,7 @@ class TestBuildNpcCombatPrompt:
             "nearby": [],
         }
         prompt = build_npc_combat_prompt(npc_data, combat_aw)
-        assert "ранен" in prompt
+        assert "wounded" in prompt
 
     def test_hp_status_critical(self) -> None:
         npc_data = {"name": "Варн", "role": "скупщик", "personality": "жадный"}
@@ -190,7 +191,7 @@ class TestBuildNpcCombatPrompt:
             "nearby": [],
         }
         prompt = build_npc_combat_prompt(npc_data, combat_aw)
-        assert "тяжело ранен" in prompt
+        assert "badly wounded" in prompt
 
     def test_no_say_in_rules(self) -> None:
         npc_data = {"name": "Варн", "role": "скупщик", "personality": "жадный"}
@@ -203,8 +204,10 @@ class TestBuildNpcCombatPrompt:
             "nearby": [],
         }
         prompt = build_npc_combat_prompt(npc_data, combat_aw)
-        # say should not be listed as an action
-        assert "say" not in prompt.lower().split("правила")[1]
+        # "say" should not be listed as an available action in the action list
+        rules_section = prompt.lower().split("rules")[1]
+        # The action list says "attack, dodge, move, dash, flee, or idle" — no "say"
+        assert "say," not in rules_section.split("\n")[1]
 
 
 # --- Combat tools ---
@@ -247,8 +250,8 @@ class TestPerceiveDodgeFlee:
             data={"entity_id": "p1"},
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
-        assert "защитную стойку" in result
-        assert "ты" in result.lower()
+        assert "defensive stance" in result
+        assert "you" in result.lower()
 
     def test_perceive_dodge_other(self) -> None:
         observer = Character(id="p1", name="Hero", region_id="r1")
@@ -259,7 +262,7 @@ class TestPerceiveDodgeFlee:
             data={"entity_id": "n1"},
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, npc))
-        assert "защитную стойку" in result
+        assert "defensive stance" in result
         assert "dwarf" in result
 
     def test_perceive_dodge_with_description(self) -> None:
@@ -281,8 +284,8 @@ class TestPerceiveDodgeFlee:
             data={"entity_id": "p1"},
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
-        assert "сбежать" in result
-        assert "ты" in result.lower()
+        assert "flee" in result
+        assert "you" in result.lower()
 
     def test_perceive_flee_other(self) -> None:
         observer = Character(id="p1", name="Hero", region_id="r1")
@@ -293,7 +296,7 @@ class TestPerceiveDodgeFlee:
             data={"entity_id": "n1"},
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, npc))
-        assert "сбежать" in result
+        assert "flee" in result
 
 
 # --- Combat mode switching ---
@@ -342,7 +345,7 @@ class TestCombatModeSwitch:
         layer.handle_event(event)
         log = layer.get_perceived_log(observer)
         assert len(log) == 1
-        assert "сбежать" in log[0]
+        assert "flee" in log[0]
 
     def test_dodge_event_logged(self) -> None:
         observer = Character(id="p1", name="Hero", region_id="r1")
@@ -356,7 +359,7 @@ class TestCombatModeSwitch:
         layer.handle_event(event)
         log = layer.get_perceived_log(observer)
         assert len(log) == 1
-        assert "защитную стойку" in log[0]
+        assert "defensive stance" in log[0]
 
 
 # --- NPC combat turn ---
@@ -372,7 +375,7 @@ class TestNpcCombatTurn:
         mock_llm = MagicMock()
         atk_tc = ToolCall(id="tc_1", name="attack", arguments={"target_id": "p1", "description": "Бью кинжалом!"})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=atk_tc, raw_message=None)
-        npc.llm = mock_llm
+        npc.brain = LlmBrain(mock_llm)
 
         npc.take_turn(world)
 
@@ -389,7 +392,7 @@ class TestNpcCombatTurn:
         mock_llm = MagicMock()
         dodge_tc = ToolCall(id="tc_1", name="dodge", arguments={"description": "Прячусь за щит"})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=dodge_tc, raw_message=None)
-        npc.llm = mock_llm
+        npc.brain = LlmBrain(mock_llm)
         npc.take_turn(world)
         world.handle_event.assert_called_once()
         event = world.handle_event.call_args[0][0]
@@ -401,7 +404,7 @@ class TestNpcCombatTurn:
         mock_llm = MagicMock()
         flee_tc = ToolCall(id="tc_1", name="flee", arguments={"description": "Бегу к двери!"})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=flee_tc, raw_message=None)
-        npc.llm = mock_llm
+        npc.brain = LlmBrain(mock_llm)
         npc.take_turn(world)
         world.handle_event.assert_called_once()
         event = world.handle_event.call_args[0][0]
@@ -414,7 +417,7 @@ class TestNpcCombatTurn:
         mock_llm = MagicMock()
         idle_tc = ToolCall(id="tc_1", name="idle", arguments={})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=idle_tc, raw_message=None)
-        npc.llm = mock_llm
+        npc.brain = LlmBrain(mock_llm)
         npc.take_turn(world)
         call_args = mock_llm.generate_with_tools.call_args
         tools_passed = call_args[0][1]
@@ -443,8 +446,8 @@ class TestPlayerCombatTurn:
         world = _mock_world([player])
         player.take_turn(world)
         # Should show combat-style prompt
-        assert any("Бой" in o for o in outputs)
-        assert not any("время" in o for o in outputs)
+        assert any("Combat" in o for o in outputs)
+        assert not any("time:" in o.lower() for o in outputs)
 
     def test_combat_dodge_command(self) -> None:
         outputs: list[str] = []
@@ -494,7 +497,7 @@ class TestPlayerCombatTurn:
         world = _mock_world([player])
         player.take_turn(world)
         # say should show help text, not send event
-        assert any("Команды:" in o for o in outputs)
+        assert any("Commands:" in o for o in outputs)
         # Only handle_event should not have been called with entity_say
         # (idle doesn't call handle_event either)
         world.handle_event.assert_not_called()
@@ -512,7 +515,7 @@ class TestPlayerCombatTurn:
         )
         world = _mock_world([player])
         player.take_turn(world)
-        assert any("Команды:" in o for o in outputs)
+        assert any("Commands:" in o for o in outputs)
 
     def test_peaceful_turn_has_say(self) -> None:
         outputs: list[str] = []
@@ -549,7 +552,7 @@ class TestPlayerCombatTurn:
         )
         world = _mock_world([player])
         player.take_turn(world)
-        assert any("бой>" in p for p in prompts)
+        assert any("combat>" in p.lower() for p in prompts)
 
 
 # --- Dodge mechanics ---

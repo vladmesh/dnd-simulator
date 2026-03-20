@@ -22,10 +22,12 @@ from dnd_simulator.content_loader import (
 from dnd_simulator.core.models import GameDateTime, TimeDelta
 from dnd_simulator.core.world import World
 from dnd_simulator.game_loop import run_game_loop
+from dnd_simulator.i18n import _
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.geography.layer import GeographyLayer
 from dnd_simulator.layers.politics.layer import PoliticsLayer
 from dnd_simulator.layers.settlements.layer import SettlementsLayer
+from dnd_simulator.llm.brain import LlmBrain
 from dnd_simulator.llm.client import LlmClient
 
 DEFAULT_CONTENT_DIR = Path(__file__).resolve().parents[3] / "content"
@@ -36,10 +38,10 @@ def _quit_input(prompt: str) -> str:
     try:
         text = input(prompt)
     except (EOFError, KeyboardInterrupt):
-        print("\nПрощай, искатель приключений.")
+        print("\n" + _("Farewell, adventurer."))
         sys.exit(0)
     if text.strip().lower() == "quit":
-        print("Прощай, искатель приключений.")
+        print(_("Farewell, adventurer."))
         sys.exit(0)
     return text
 
@@ -58,7 +60,7 @@ def run_cli_loop() -> None:
     api_key = os.getenv("OPENROUTER_API_KEY")
     model = os.getenv("LLM_MODEL")
     if not api_key or not model:
-        print("Ошибка: установите OPENROUTER_API_KEY и LLM_MODEL в .env")
+        print(_("Error: set OPENROUTER_API_KEY and LLM_MODEL in .env"))
         sys.exit(1)
     llm = LlmClient(api_key=api_key, model=model)
     print(f"LLM: {model}")
@@ -73,9 +75,10 @@ def run_cli_loop() -> None:
     npcs = load_npcs(world_path)
     battle_maps = load_battle_maps(world_path)
 
-    # Inject LLM into NPCs
+    # Inject LLM brain into NPCs that need it
     for npc in npcs:
-        npc.llm = llm
+        if npc.ai_type == "llm":
+            npc.brain = LlmBrain(llm)
 
     # Fall back to first region if player has no start_region
     if not player.region_id and regions:
@@ -105,8 +108,8 @@ def run_cli_loop() -> None:
     # Initial tick
     world.advance_time(TimeDelta(seconds=0))
 
-    print("=== D&D Simulator (Turn-Based) ===")
-    print("Команды: look, status, say <текст>, attack <цель>, idle, quit\n")
+    print(_("=== D&D Simulator (Turn-Based) ==="))
+    print(_("Commands: look, status, say <text>, attack <target>, idle, quit"))
 
     run_game_loop(world)
 

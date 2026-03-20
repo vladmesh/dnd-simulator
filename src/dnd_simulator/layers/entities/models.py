@@ -2,22 +2,10 @@
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING
 
-from dnd_simulator.core.character import Character, build_awareness, build_combat_awareness
-from dnd_simulator.llm.client import LlmClient, ToolCall
-from dnd_simulator.llm.prompts import build_npc_combat_prompt, build_npc_system_prompt
-from dnd_simulator.llm.tools import build_npc_combat_tools, build_npc_tools
-
-logger = logging.getLogger("dnd_simulator.npc")
-
-if TYPE_CHECKING:
-    from dnd_simulator.core.world import World
-
-_MAX_RETRIES = 3
+from dnd_simulator.core.character import Character
 
 
 class NpcActivity(Enum):
@@ -43,6 +31,7 @@ class Npc(Character):
     """A non-player character with role, personality, and daily routine.
 
     Defaults to Human Commoner — override via YAML for special NPCs.
+    Decision-making is delegated to the brain field (inherited from Creature).
     """
 
     role: str = ""
@@ -52,7 +41,7 @@ class Npc(Character):
     activity: NpcActivity = NpcActivity.IDLE
     location_label: str = "home"
     conversation_summary: str = ""
-    llm: LlmClient | None = field(default=None, repr=False)
+    ai_type: str = "rule_based"
 
     def on_tick(self, hour: int) -> None:
         """Update activity based on daily schedule."""
@@ -64,7 +53,8 @@ class Npc(Character):
         self.activity = NpcActivity.IDLE
         self.location_label = "wandering"
 
-    def _build_npc_data(self) -> dict[str, str]:
+    def get_npc_data(self) -> dict[str, str]:
+        """Return NPC metadata for LLM prompts."""
         return {
             "name": self.name,
             "role": self.role,
@@ -73,135 +63,6 @@ class Npc(Character):
             "location_label": self.location_label,
             "conversation_summary": self.conversation_summary,
         }
-
-    def take_turn(self, world: World) -> None:
-        """Decide what to do this turn and execute it."""
-        if self.llm is None:
-            return
-
-        from dnd_simulator.core.models import Query
-
-        logger.info("[NPC:%s] === начинает ход (%s) ===", self.name, "бой" if self.in_combat else "мир")
-
-        if self.in_combat:
-            combat_awareness = build_combat_awareness(world, self)
-            system_prompt = build_npc_combat_prompt(self._build_npc_data(), combat_awareness)
-            tools = build_npc_combat_tools()
-            retry_hint = "Ты должен выбрать действие: attack, move, dash, dodge, flee или idle."
-        else:
-            awareness = build_awareness(world, self.region_id)
-            # Build list of nearby entities with IDs so LLM knows valid targets
-            entities_answer = world.query_layer(
-                "entities", Query(question="entities_in_region", params={"region_id": self.region_id})
-            )
-            nearby: list[dict[str, str]] = []
-            for e in entities_answer.value:
-                if e["id"] != self.id:
-                    desc = self.perceive_by_id(e["id"], world)
-                    nearby.append({"id": str(e["id"]), "description": desc})
-            system_prompt = build_npc_system_prompt(self._build_npc_data(), awareness, nearby)
-            tools = build_npc_tools()
-            retry_hint = "Ты должен выбрать действие: say, attack или idle."
-
-        # Get recent events perceived by this NPC
-        log_answer = world.query_layer("entities", Query(question="perceived_log", params={"entity_id": self.id}))
-        recent_events: list[str] = log_answer.value if log_answer.value else []
-
-        turn_prompt = "Твой ход. Выбери действие."
-        if recent_events:
-            events_text = "\n".join(f"- {e}" for e in recent_events)
-            turn_prompt = f"Что произошло с твоего прошлого хода:\n{events_text}\n\nТвой ход. Выбери действие."
-
-        messages: list[dict[str, object]] = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": turn_prompt},
-        ]
-
-        for _ in range(_MAX_RETRIES):
-            response = self.llm.generate_with_tools(messages, tools)
-            if response.is_tool_call:
-                assert response.tool_call is not None
-                success = self._execute_action(response.tool_call, world)
-                if success:
-                    return
-                # Action failed (e.g. invalid target) — tell LLM and retry
-                messages.append({"role": "assistant", "content": f"[tool: {response.tool_call.name}]"})
-                messages.append({"role": "user", "content": "Действие не удалось. Выбери другое."})
-                continue
-            # No tool call — ask LLM to retry
-            messages.append({"role": "assistant", "content": response.text or ""})
-            messages.append({"role": "user", "content": retry_hint})
-
-    def _execute_action(self, action: ToolCall, world: World) -> bool:
-        """Execute a tool call against the world. Returns True if action succeeded."""
-        from dnd_simulator.core.models import Event, EventType
-
-        if action.name == "idle":
-            logger.info("[NPC:%s] → idle", self.name)
-            return True
-        if action.name == "say":
-            world.handle_event(
-                Event(
-                    event_type=EventType.ENTITY_SAY,
-                    source_layer="entities",
-                    data={"entity_id": self.id, "text": action.arguments.get("text", "")},
-                )
-            )
-            return True
-        if action.name == "attack":
-            result = world.handle_event(
-                Event(
-                    event_type=EventType.ENTITY_ATTACK,
-                    source_layer="entities",
-                    data={
-                        "attacker_id": self.id,
-                        "target_id": action.arguments.get("target_id", ""),
-                    },
-                )
-            )
-            return result.success
-        if action.name == "dodge":
-            logger.info("[NPC:%s] → dodge", self.name)
-            world.handle_event(
-                Event(
-                    event_type=EventType.ENTITY_DODGE,
-                    source_layer="entities",
-                    data={
-                        "entity_id": self.id,
-                        "description": action.arguments.get("description", ""),
-                    },
-                )
-            )
-            return True
-        if action.name == "flee":
-            logger.info("[NPC:%s] → flee", self.name)
-            world.handle_event(
-                Event(
-                    event_type=EventType.ENTITY_FLEE,
-                    source_layer="entities",
-                    data={
-                        "entity_id": self.id,
-                        "description": action.arguments.get("description", ""),
-                    },
-                )
-            )
-            return True
-        if action.name in ("move", "dash"):
-            event_type = EventType.ENTITY_DASH if action.name == "dash" else EventType.ENTITY_MOVE
-            event_data: dict[str, object] = {
-                "entity_id": self.id,
-                "description": action.arguments.get("description", ""),
-            }
-            if "toward" in action.arguments:
-                event_data["toward"] = action.arguments["toward"]
-            elif "away_from" in action.arguments:
-                event_data["away_from"] = action.arguments["away_from"]
-            elif "direction" in action.arguments:
-                event_data["direction"] = action.arguments["direction"]
-            logger.info("[NPC:%s] → %s", self.name, action.name)
-            result = world.handle_event(Event(event_type=event_type, source_layer="entities", data=event_data))
-            return result.success
-        return False
 
 
 # Default schedules by role — keeps YAML clean.

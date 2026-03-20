@@ -7,6 +7,7 @@ from typing import Any
 
 import yaml
 
+from dnd_simulator.core.brain import RuleBrain
 from dnd_simulator.core.character import (
     Ability,
     AbilityScores,
@@ -161,25 +162,30 @@ def load_npcs(path: Path) -> list[Npc]:
         if "ability_scores" in ndata:
             ability_scores = AbilityScores.from_dict(ndata["ability_scores"])
 
-        npcs.append(
-            Npc(
-                id=str(npc_id),
-                name=str(ndata["name"]),
-                region_id=str(ndata["region_id"]),
-                race=race,
-                char_class=char_class,
-                role=role,
-                personality=str(ndata.get("personality", "")),
-                settlement_id=str(ndata.get("settlement_id", "")),
-                schedule=schedule,
-                speed=int(ndata.get("speed", 30)),
-                attacks=attacks,
-                max_hp=max_hp,
-                current_hp=max_hp,
-                ac=int(ndata.get("ac", 10)),
-                ability_scores=ability_scores,
-            )
+        ai_type = str(ndata.get("ai", "rule_based"))
+
+        npc = Npc(
+            id=str(npc_id),
+            name=str(ndata["name"]),
+            region_id=str(ndata["region_id"]),
+            race=race,
+            char_class=char_class,
+            role=role,
+            personality=str(ndata.get("personality", "")),
+            settlement_id=str(ndata.get("settlement_id", "")),
+            schedule=schedule,
+            speed=int(ndata.get("speed", 30)),
+            attacks=attacks,
+            max_hp=max_hp,
+            current_hp=max_hp,
+            ac=int(ndata.get("ac", 10)),
+            ability_scores=ability_scores,
+            ai_type=ai_type,
         )
+        # Assign brain: rule_based gets RuleBrain immediately, llm gets brain injected later by adapter
+        if ai_type == "rule_based":
+            npc.brain = RuleBrain()
+        npcs.append(npc)
 
     return npcs
 

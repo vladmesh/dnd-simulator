@@ -51,25 +51,25 @@ class TestGridDistance:
 
 class TestDirectionLabel:
     def test_north(self) -> None:
-        assert direction_label(0, 1) == "на севере"
+        assert direction_label(0, 1) == "to the north"
 
     def test_south(self) -> None:
-        assert direction_label(0, -1) == "на юге"
+        assert direction_label(0, -1) == "to the south"
 
     def test_east(self) -> None:
-        assert direction_label(1, 0) == "на востоке"
+        assert direction_label(1, 0) == "to the east"
 
     def test_west(self) -> None:
-        assert direction_label(-1, 0) == "на западе"
+        assert direction_label(-1, 0) == "to the west"
 
     def test_northeast(self) -> None:
-        assert direction_label(1, 1) == "на северо-востоке"
+        assert direction_label(1, 1) == "to the northeast"
 
     def test_southwest(self) -> None:
-        assert direction_label(-1, -1) == "на юго-западе"
+        assert direction_label(-1, -1) == "to the southwest"
 
     def test_same_position(self) -> None:
-        assert direction_label(0, 0) == "здесь"
+        assert direction_label(0, 0) == "here"
 
 
 class TestMoveToward:

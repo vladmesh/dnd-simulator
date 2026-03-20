@@ -164,8 +164,8 @@ class TestWalls:
         descriptions = bm.describe_walls()
         assert len(descriptions) == 3  # arena boundary + 2 inner walls
         assert "60x60" in descriptions[0]
-        assert "вертикальная" in descriptions[1]
-        assert "горизонтальная" in descriptions[2]
+        assert "vertical wall" in descriptions[1]
+        assert "horizontal wall" in descriptions[2]
 
     def test_describe_walls_no_inner_walls(self) -> None:
         bm = BattleMap(width=40, height=40)

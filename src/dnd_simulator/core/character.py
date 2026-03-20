@@ -2,12 +2,20 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from dnd_simulator.core.models import Query
+from dnd_simulator.core.action import Action
+from dnd_simulator.core.models import Event, EventType, Query
 from dnd_simulator.core.world import World
+from dnd_simulator.i18n import _
+
+if TYPE_CHECKING:
+    from dnd_simulator.core.brain import Brain
+
+logger = logging.getLogger("dnd_simulator.creature")
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -196,10 +204,87 @@ class Creature(Entity):
     attacks: tuple[Attack, ...] = ()
     in_combat: bool = False
     is_dodging: bool = False
+    brain: Brain | None = field(default=None, repr=False)
 
     @property
     def is_alive(self) -> bool:
         return self.current_hp > 0
+
+    def take_turn(self, world: World) -> None:
+        """Delegate to brain for decision, then execute the action."""
+        if self.brain is None:
+            return
+        action = self.brain.choose_action(self, world)
+        self.execute_action(action, world)
+
+    def execute_action(self, action: Action, world: World) -> bool:
+        """Execute a chosen action against the world. Returns True if succeeded."""
+        if action.name == "idle":
+            logger.info("[%s] → idle", self.name)
+            return True
+        if action.name == "say":
+            world.handle_event(
+                Event(
+                    event_type=EventType.ENTITY_SAY,
+                    source_layer="entities",
+                    data={"entity_id": self.id, "text": action.params.get("text", "")},
+                )
+            )
+            return True
+        if action.name == "attack":
+            result = world.handle_event(
+                Event(
+                    event_type=EventType.ENTITY_ATTACK,
+                    source_layer="entities",
+                    data={
+                        "attacker_id": self.id,
+                        "target_id": action.params.get("target_id", ""),
+                    },
+                )
+            )
+            return result.success
+        if action.name == "dodge":
+            logger.info("[%s] → dodge", self.name)
+            world.handle_event(
+                Event(
+                    event_type=EventType.ENTITY_DODGE,
+                    source_layer="entities",
+                    data={
+                        "entity_id": self.id,
+                        "description": action.params.get("description", ""),
+                    },
+                )
+            )
+            return True
+        if action.name == "flee":
+            logger.info("[%s] → flee", self.name)
+            world.handle_event(
+                Event(
+                    event_type=EventType.ENTITY_FLEE,
+                    source_layer="entities",
+                    data={
+                        "entity_id": self.id,
+                        "description": action.params.get("description", ""),
+                    },
+                )
+            )
+            return True
+        if action.name in ("move", "dash"):
+            event_type = EventType.ENTITY_DASH if action.name == "dash" else EventType.ENTITY_MOVE
+            event_data: dict[str, object] = {
+                "entity_id": self.id,
+                "description": action.params.get("description", ""),
+            }
+            if "toward" in action.params:
+                event_data["toward"] = action.params["toward"]
+            elif "away_from" in action.params:
+                event_data["away_from"] = action.params["away_from"]
+            elif "direction" in action.params:
+                event_data["direction"] = action.params["direction"]
+            logger.info("[%s] → %s", self.name, action.name)
+            result = world.handle_event(Event(event_type=event_type, source_layer="entities", data=event_data))
+            return result.success
+        return False
 
     def take_damage(self, amount: int) -> int:
         """Apply damage, return actual damage dealt (after clamping to 0)."""
@@ -225,6 +310,10 @@ class Character(Creature):
     appearance: str = ""
     gold: int = 0
 
+    def get_npc_data(self) -> dict[str, str]:
+        """Return NPC metadata for LLM prompts. Override in Npc."""
+        return {}
+
     def perceive(self, target: Entity) -> str:
         """What this character sees when looking at target.
 
@@ -243,12 +332,12 @@ class Character(Creature):
                     parts.append(target.appearance)
             # Wound status
             if target.current_hp < target.max_hp // 2:
-                parts.append("выглядит раненым")
+                parts.append(_("looks wounded"))
             return ", ".join(parts)
         if isinstance(target, Creature):
             parts = [target.name]
             if target.current_hp < target.max_hp // 2:
-                parts.append("выглядит раненым")
+                parts.append(_("looks wounded"))
             return ", ".join(parts)
         return target.name
 
@@ -324,11 +413,25 @@ def build_combat_awareness(world: World, entity: Character) -> dict[str, Any]:
     battle_map_positions: dict[str, Position] = combat_answer.value.get("positions", {}) if combat_answer.value else {}
     my_pos = battle_map_positions.get(entity.id)
 
+    # Resolve entities layer for raw HP lookup
+    from dnd_simulator.layers.entities.layer import EntitiesLayer
+
+    entities_layer: EntitiesLayer | None = None
+    for layer in world.layers:
+        if isinstance(layer, EntitiesLayer):
+            entities_layer = layer
+            break
+
     nearby: list[dict[str, object]] = []
     for e in entities_answer.value:
         if e["id"] != entity.id:
             desc = entity.perceive_by_id(e["id"], world)
             entry: dict[str, object] = {"id": str(e["id"]), "description": desc}
+            # Add is_wounded flag for data-driven target selection
+            if entities_layer is not None:
+                target = entities_layer.get_entity(str(e["id"]))
+                if isinstance(target, Creature):
+                    entry["is_wounded"] = target.current_hp < target.max_hp // 2
             other_pos = battle_map_positions.get(str(e["id"]))
             if my_pos is not None and other_pos is not None:
                 entry["distance_ft"] = grid_distance(my_pos, other_pos)
@@ -337,7 +440,7 @@ def build_combat_awareness(world: World, entity: Character) -> dict[str, Any]:
                 entry["direction"] = direction_label(dx, dy)
             nearby.append(entry)
 
-    weapon_name = "кулаки"
+    weapon_name = _("fists")
     weapon_damage = "1"
     if entity.attacks:
         weapon_name = entity.attacks[0].name

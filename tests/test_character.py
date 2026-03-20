@@ -167,7 +167,7 @@ class TestPerceive:
             current_hp=5,
         )
         result = observer.perceive(target)
-        assert "ранен" in result
+        assert "wounded" in result
 
     def test_perceive_healthy_no_wound(self) -> None:
         observer = Character(id="obs", name="Observer", region_id="r1")
@@ -179,7 +179,7 @@ class TestPerceive:
             current_hp=20,
         )
         result = observer.perceive(target)
-        assert "ранен" not in result
+        assert "wounded" not in result
 
     def test_perceive_entity_returns_name(self) -> None:
         observer = Character(id="obs", name="Observer", region_id="r1")
@@ -192,14 +192,14 @@ class TestPerceive:
         target = Creature(id="wolf", name="Grey Wolf", region_id="r1", max_hp=11, current_hp=11)
         result = observer.perceive(target)
         assert "Grey Wolf" in result
-        assert "ранен" not in result
+        assert "wounded" not in result
 
     def test_perceive_creature_wounded(self) -> None:
         observer = Character(id="obs", name="Observer", region_id="r1")
         target = Creature(id="wolf", name="Grey Wolf", region_id="r1", max_hp=11, current_hp=3)
         result = observer.perceive(target)
         assert "Grey Wolf" in result
-        assert "ранен" in result
+        assert "wounded" in result
 
     def test_perceive_half_orc_label(self) -> None:
         observer = Character(id="obs", name="Observer", region_id="r1")

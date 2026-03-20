@@ -5,6 +5,8 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 
+from dnd_simulator.i18n import _
+
 
 @dataclass(frozen=True)
 class Position:
@@ -48,14 +50,14 @@ class BattleMap:
     def __post_init__(self) -> None:
         """Add perimeter walls so the arena boundary blocks movement properly."""
         w, h = self.width, self.height
-        self._inner_wall_count = len(self.walls)
+        self._inner_walls: list[Wall] = list(self.walls)
         perimeter = [
             Wall(0, 0, 0, h),  # west
             Wall(w, 0, w, h),  # east
             Wall(0, 0, w, 0),  # south
             Wall(0, h, w, h),  # north
         ]
-        self.walls = list(self.walls) + perimeter
+        self.walls = self._inner_walls + perimeter
 
     def set_position(self, entity_id: str, pos: Position) -> None:
         """Place or move an entity on the map, clamping to bounds."""
@@ -165,16 +167,20 @@ class BattleMap:
 
     def describe_walls(self) -> list[str]:
         """Human-readable wall descriptions for awareness prompts."""
-        descriptions: list[str] = [f"Арена ограничена стенами: {self.width}x{self.height} ft"]
+        descriptions: list[str] = [_("Arena bounded by walls: {w}x{h} ft").format(w=self.width, h=self.height)]
         # Only describe inner walls (not perimeter)
-        for wall in self.walls[: self._inner_wall_count]:
+        for wall in self._inner_walls:
             if wall.x1 == wall.x2:
                 descriptions.append(
-                    f"вертикальная стена x={wall.x1} от y={min(wall.y1, wall.y2)} до y={max(wall.y1, wall.y2)}"
+                    _("vertical wall x={x} from y={y1} to y={y2}").format(
+                        x=wall.x1, y1=min(wall.y1, wall.y2), y2=max(wall.y1, wall.y2)
+                    )
                 )
             elif wall.y1 == wall.y2:
                 descriptions.append(
-                    f"горизонтальная стена y={wall.y1} от x={min(wall.x1, wall.x2)} до x={max(wall.x1, wall.x2)}"
+                    _("horizontal wall y={y} from x={x1} to x={x2}").format(
+                        y=wall.y1, x1=min(wall.x1, wall.x2), x2=max(wall.x1, wall.x2)
+                    )
                 )
         return descriptions
 
