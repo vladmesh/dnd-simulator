@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test check messages compile-messages
+.PHONY: install lint format typecheck test check messages compile-messages serve
 
 install:
 	uv sync
@@ -18,6 +18,9 @@ test:
 	uv run pytest
 
 check: lint typecheck test
+
+serve:
+	uv run uvicorn dnd_simulator.adapters.api.app:app --host 0.0.0.0 --port 8000 --reload
 
 messages:
 	find src/dnd_simulator -name '*.py' | xargs pygettext3 --keyword=_ --output=src/dnd_simulator/locale/messages.pot
