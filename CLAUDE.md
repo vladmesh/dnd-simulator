@@ -66,7 +66,7 @@ content/           — YAML world definitions (data, not code)
 
 ### Entity Hierarchy
 
-`Entity` (id, name, region_id, active, on_tick) → `Creature` (ability scores, HP, AC, in_combat) → `Character` (race, class, alignment) → `PlayerCharacter` / `Npc`. The `perceive()` method controls what information an observer sees about a target — LLM prompts never receive raw character data. All tracked entities live on the `EntitiesLayer`. Combat is managed via `CombatState` (initiative order, round tracking, auto-exit after 2 idle rounds).
+`Entity` (id, name, region_id, active, on_tick) → `Creature` (ability scores, HP, AC, in_combat, is_dodging) → `Character` (race, class, alignment) → `PlayerCharacter` / `Npc`. The `perceive()` method controls what information an observer sees about a target — LLM prompts never receive raw character data. All tracked entities live on the `EntitiesLayer`. Combat is managed via `CombatState` (initiative order, round tracking, auto-exit after 2 idle rounds) and `BattleMap` (2D grid with positions, walls, and movement). Movement rules live in `rules/movement.py` (D&D 5e diagonal distance, wall collision).
 
 ## Code Style
 

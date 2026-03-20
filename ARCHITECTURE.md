@@ -37,7 +37,7 @@ src/dnd_simulator/
 │   ├── settlements/ — towns and local economy
 │   └── entities/  — all tracked creatures (player, NPCs, named monsters)
 ├── master/        — DM orchestrator (LLM-powered)
-├── rules/         — pure functions: D&D mechanics, combat/initiative resolution, physics, economics
+├── rules/         — pure functions: D&D mechanics, combat/initiative resolution, movement/pathfinding, physics, economics
 ├── llm/           — LLM client (with logging), prompt builders (peaceful + combat), tool schemas (peaceful + combat)
 ├── adapters/      — transport layer (CLI, API, Telegram)
 ├── content_loader.py — loads worlds, nations, settlements, NPCs, player from YAML
@@ -87,7 +87,7 @@ Calendar: 30 days/month, 12 months/year.
 
 ```
 Entity (id, name, region_id, active, on_tick)
-└── Creature (ability_scores, HP, AC, in_combat)
+└── Creature (ability_scores, HP, AC, in_combat, is_dodging)
     └── Character (race, class, alignment, gold, appearance, perceive_by_id)
         ├── PlayerCharacter (save/load, peaceful/combat turn modes)
         └── Npc (personality, schedule, conversation memory, LLM combat/peaceful tools)
@@ -99,13 +99,17 @@ All tracked entities live on the `EntitiesLayer`. Each entity has an `active` fl
 
 ## Combat System
 
-Combat is managed by `EntitiesLayer` through `CombatState` (defined in `core/combat.py`). No separate combat layer — it's a mode within entities.
+Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defined in `core/combat.py`). No separate combat layer — it's a mode within entities.
 
 **Entry:** First attack in a region → `roll_initiative()` for all active creatures → `CombatState` created → all creatures in region get `in_combat=True`.
 
 **Turn order:** Initiative = d20 + DEX modifier, tiebreaker by DEX score. Order is fixed for the entire combat. Game loop iterates combatants in this order.
 
-**Dual awareness:** Creatures in combat get a focused prompt (HP, weapon, nearby combatants, round number — no weather/time/politics). Peaceful creatures get full world awareness. Two separate tool sets: combat (attack/dodge/flee/idle, no say — use description for flavor) and peaceful (say/attack/idle).
+**Battle map:** Each `CombatState` owns a `BattleMap` — a 2D grid (coordinates in feet, 5-ft cells). Entities have `Position`s on the map. `Wall` segments block movement between adjacent cells. Perimeter walls auto-generated from map dimensions. Movement uses `rules/movement.py`: D&D 5e alternating diagonal cost (5/10/5/…), wall collision, move-toward/away/direction helpers.
+
+**Dual awareness:** Creatures in combat get a focused prompt (HP, weapon, nearby combatants with positions/distances, round number — no weather/time/politics). Peaceful creatures get full world awareness. Two separate tool sets: combat (attack/move/dodge/flee/idle, no say — use description for flavor) and peaceful (say/attack/idle).
+
+**Dodge:** Creatures can use the dodge action (`is_dodging` flag on `Creature`). Attackers have disadvantage against dodging targets. The flag resets at the start of the creature's next turn.
 
 **Exit conditions:**
 - 2 consecutive rounds without any attack → auto-end
