@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from pathlib import Path
@@ -44,20 +45,26 @@ def _quit_input(prompt: str) -> str:
 
 def run_cli_loop() -> None:
     """Start the game using the turn-based loop."""
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(message)s",
+        handlers=[logging.StreamHandler(sys.stderr)],
+    )
     load_dotenv()
 
     # LLM setup
     llm: LlmClient | None = None
-    api_key = os.getenv("OPENROUTER_API_KEY", "")
-    if api_key:
-        model = os.getenv("LLM_MODEL", "deepseek/deepseek-chat-v3-0324")
-        llm = LlmClient(api_key=api_key, model=model)
-        print(f"LLM: {model}")
-    else:
-        print("LLM: not configured (set OPENROUTER_API_KEY in .env)")
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    model = os.getenv("LLM_MODEL")
+    if not api_key or not model:
+        print("Ошибка: установите OPENROUTER_API_KEY и LLM_MODEL в .env")
+        sys.exit(1)
+    llm = LlmClient(api_key=api_key, model=model)
+    print(f"LLM: {model}")
 
-    # Load world
-    world_path = DEFAULT_CONTENT_DIR / "worlds" / "test_world.yaml"
+    # Load world (accept filename from argv)
+    world_file = sys.argv[1] if len(sys.argv) > 1 else "test_world.yaml"
+    world_path = DEFAULT_CONTENT_DIR / "worlds" / world_file
     regions = load_world(world_path)
     nations = load_nations(world_path)
     settlements = load_settlements(world_path)
@@ -65,9 +72,8 @@ def run_cli_loop() -> None:
     npcs = load_npcs(world_path)
 
     # Inject LLM into NPCs
-    if llm:
-        for npc in npcs:
-            npc.llm = llm
+    for npc in npcs:
+        npc.llm = llm
 
     # Fall back to first region if player has no start_region
     if not player.region_id and regions:

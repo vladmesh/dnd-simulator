@@ -156,6 +156,10 @@ def load_npcs(path: Path) -> list[Npc]:
         attacks = _parse_attacks(ndata.get("attacks", []))
         max_hp = int(ndata.get("hp", 4))
 
+        ability_scores = AbilityScores()
+        if "ability_scores" in ndata:
+            ability_scores = AbilityScores.from_dict(ndata["ability_scores"])
+
         npcs.append(
             Npc(
                 id=str(npc_id),
@@ -171,6 +175,7 @@ def load_npcs(path: Path) -> list[Npc]:
                 max_hp=max_hp,
                 current_hp=max_hp,
                 ac=int(ndata.get("ac", 10)),
+                ability_scores=ability_scores,
             )
         )
 
@@ -203,6 +208,7 @@ def load_player(path: Path) -> PlayerCharacter:
         ability_scores=ability_scores,
         max_hp=max_hp,
         current_hp=max_hp,
+        ac=int(pdata.get("ac", 10)),
         gold=int(pdata.get("gold", 0)),
         attacks=attacks,
     )

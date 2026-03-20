@@ -1,0 +1,154 @@
+name: Tavern Brawl
+description: >
+  A single tavern room. Three NPCs with strong opinions and weapons.
+  Things will get violent fast.
+
+regions:
+  tavern:
+    name: Таверна «Ржавый Клинок»
+    latitude: 45.0
+    longitude: 0.0
+    elevation: 100
+    terrain: plains
+    water_proximity: 0.0
+    connections: []
+    settlements:
+      - id: tavern_settlement
+        name: Ржавый Клинок
+        type: village
+        population: 20
+        prosperity: 30
+        defenses: 5
+
+nations: {}
+
+player:
+  name: Kael
+  race: half_orc
+  class: fighter
+  level: 3
+  alignment: chaotic_good
+  appearance: "огромный полуорк в помятых доспехах, со шрамом через всё лицо"
+  ability_scores:
+    str: 18
+    dex: 14
+    con: 16
+    int: 8
+    wis: 10
+    cha: 10
+  hp: 28
+  ac: 16
+  gold: 15
+  start_region: tavern
+  attacks:
+    - name: greataxe
+      ability: str
+      damage:
+        - dice: "1d12"
+          type: slashing
+    - name: fist
+      ability: str
+      damage:
+        - dice: "1d4"
+          type: bludgeoning
+
+npcs:
+  grok:
+    name: Грок Разбитый Нос
+    region_id: tavern
+    settlement_id: tavern_settlement
+    role: guard
+    race: half_orc
+    class: fighter
+    hp: 25
+    ac: 14
+    ability_scores:
+      str: 16
+      dex: 12
+      con: 15
+      int: 8
+      wis: 10
+      cha: 8
+    personality: >
+      Грок — вышибала в таверне. Полуорк с расплющенным носом и добрым сердцем.
+      Считает что полуорков и так все обижают, поэтому всегда заступается
+      за других полуорков если кто-то на них нападает или оскорбляет.
+      Ненавидит расизм и тех кто обижает слабых.
+      В мирное время молча стоит у двери и кивает знакомым.
+      Говорит мало, бьёт сильно.
+    attacks:
+      - name: club
+        ability: str
+        damage:
+          - dice: "1d8"
+            type: bludgeoning
+
+  varn:
+    name: Варн Чёрная Рука
+    region_id: tavern
+    settlement_id: tavern_settlement
+    role: merchant
+    race: human
+    class: rogue
+    hp: 18
+    ac: 13
+    ability_scores:
+      str: 10
+      dex: 16
+      con: 12
+      int: 14
+      wis: 12
+      cha: 14
+    personality: >
+      Варн — скупщик краденого, подлый и злобный.
+      Ненавидит полуорков — считает их тупыми животными.
+      При любой возможности оскорбляет и провоцирует полуорков.
+      Если кто-то из полуорков ответит грубо или начнёт драку —
+      Варн немедленно нападёт с кинжалом. Бьёт подло, в спину.
+      Не отступает, дерётся до конца. Любит говорить гадости во время боя.
+    attacks:
+      - name: dagger
+        ability: dex
+        damage:
+          - dice: "1d4"
+            type: piercing
+      - name: dagger_offhand
+        ability: dex
+        damage:
+          - dice: "1d4"
+            type: piercing
+
+  elara:
+    name: Элара Тихая
+    region_id: tavern
+    settlement_id: tavern_settlement
+    role: tavern_keeper
+    race: elf
+    class: ranger
+    hp: 20
+    ac: 14
+    ability_scores:
+      str: 10
+      dex: 16
+      con: 12
+      int: 12
+      wis: 16
+      cha: 12
+    personality: >
+      Элара — хозяйка таверны, молчаливая эльфийка с острым взглядом.
+      Бывшая охотница, прячет арбалет под стойкой.
+      Не любит насилие в своём заведении. Если кто-то начнёт драку —
+      предупредит один раз. Если не послушают — стреляет.
+      Стреляет в того, кто начал первым, без разбора.
+      Если на неё нападут — защищается жёстко и без жалости.
+    attacks:
+      - name: crossbow
+        ability: dex
+        damage:
+          - dice: "1d8"
+            type: piercing
+      - name: shortsword
+        ability: dex
+        damage:
+          - dice: "1d6"
+            type: piercing

@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from dnd_simulator.core.character import Character, build_awareness
+from dnd_simulator.core.character import Character, Entity, build_awareness
 from dnd_simulator.llm.client import LlmClient, ToolCall
 from dnd_simulator.llm.prompts import build_npc_system_prompt
 from dnd_simulator.llm.tools import build_npc_tools
+
+logger = logging.getLogger("dnd_simulator.npc")
 
 if TYPE_CHECKING:
     from dnd_simulator.core.world import World
@@ -61,6 +64,22 @@ class Npc(Character):
         self.activity = NpcActivity.IDLE
         self.location_label = "wandering"
 
+    def perceive_by_id(self, entity_id: str, world: World) -> str:
+        """Perceive another entity by ID, looking it up from the entities layer."""
+        from dnd_simulator.core.models import Query
+
+        answer = world.query_layer("entities", Query(question="entity_info", params={"entity_id": entity_id}))
+        # We need the actual Entity object for perceive()
+        # Use a direct query to get it
+        for layer in world.layers:
+            from dnd_simulator.layers.entities.layer import EntitiesLayer
+
+            if isinstance(layer, EntitiesLayer):
+                target = layer.get_entity(entity_id)
+                if target and isinstance(target, Entity):
+                    return self.perceive(target)
+        return str(answer.value.get("name", entity_id))
+
     def _build_npc_data(self) -> dict[str, str]:
         return {
             "name": self.name,
@@ -78,9 +97,21 @@ class Npc(Character):
 
         from dnd_simulator.core.models import Query
 
+        logger.info("[NPC:%s] === начинает ход ===", self.name)
         awareness = build_awareness(world, self.region_id)
         tools = build_npc_tools(self.attacks)
-        system_prompt = build_npc_system_prompt(self._build_npc_data(), awareness)
+
+        # Build list of nearby entities with IDs so LLM knows valid targets
+        entities_answer = world.query_layer(
+            "entities", Query(question="entities_in_region", params={"region_id": self.region_id})
+        )
+        nearby: list[dict[str, str]] = []
+        for e in entities_answer.value:
+            if e["id"] != self.id:
+                desc = self.perceive_by_id(e["id"], world)
+                nearby.append({"id": str(e["id"]), "description": desc})
+
+        system_prompt = build_npc_system_prompt(self._build_npc_data(), awareness, nearby)
 
         # Get recent events perceived by this NPC
         log_answer = world.query_layer("entities", Query(question="perceived_log", params={"entity_id": self.id}))
@@ -116,6 +147,7 @@ class Npc(Character):
         from dnd_simulator.core.models import Event, EventType
 
         if action.name == "idle":
+            logger.info("[NPC:%s] → idle", self.name)
             return True
         if action.name == "say":
             world.handle_event(

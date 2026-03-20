@@ -18,14 +18,21 @@ def _mock_world() -> MagicMock:
 
     def fake_query(layer_name: str, query: object) -> MagicMock:
         answer = MagicMock()
+        q = getattr(query, "question", "")
         if layer_name == "geography":
-            q = getattr(query, "question", "")
             if q == "weather":
                 answer.value = {"condition": "clear", "temperature": 20}
             elif q == "region_info":
                 answer.value = {"name": "Test Region"}
             else:
                 answer.value = {}
+        elif layer_name == "entities":
+            if q == "entities_in_region":
+                answer.value = []
+            elif q == "perceived_log" or q == "new_perceived_events":
+                answer.value = []
+            else:
+                answer.value = None
         elif layer_name == "settlements" or layer_name == "politics":
             answer.value = None
         else:
