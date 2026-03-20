@@ -79,7 +79,9 @@ class TestLayerBasics:
     def test_handle_event_returns_empty(self) -> None:
         layer = _make_layer()
         event = Event(event_type=EventType.WEATHER_CHANGED, source_layer="geography")
-        assert layer.handle_event(event) == []
+        result = layer.handle_event(event)
+        assert result.success
+        assert result.events == []
 
 
 class TestGetEntity:

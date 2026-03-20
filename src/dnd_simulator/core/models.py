@@ -129,6 +129,21 @@ class Event:
     source_layer: str
     data: dict[str, Any] = field(default_factory=dict)
     description: str = ""
+    observer_ids: frozenset[str] | None = None  # None = public (all in area see it)
+
+
+@dataclass
+class ActionResult:
+    """Outcome of an action submitted to the world.
+
+    success=True means the action was executed (even if attack missed).
+    success=False means it was rejected (invalid target, wrong region, etc.)
+    and the actor should try something else.
+    """
+
+    success: bool = True
+    error: str = ""
+    events: list[Event] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

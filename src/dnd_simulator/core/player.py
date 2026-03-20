@@ -77,13 +77,16 @@ class PlayerCharacter(Character):
                 if not weapon:
                     self.output_fn("У тебя нет оружия.")
                     continue
-                world.handle_event(
+                result = world.handle_event(
                     Event(
                         event_type=EventType.ENTITY_ATTACK,
                         source_layer="entities",
                         data={"attacker_id": self.id, "target_id": target_id, "weapon": weapon},
                     )
                 )
+                if not result.success:
+                    self.output_fn(result.error)
+                    continue
                 return
 
             self.output_fn("Команды: look, status, say <текст>, attack <цель> [оружие], idle")

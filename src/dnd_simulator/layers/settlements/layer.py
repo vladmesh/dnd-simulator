@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.layer import Layer
-from dnd_simulator.core.models import Answer, Event, EventType, Query
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.layers.settlements.models import Settlement, SettlementType
 from dnd_simulator.rules.settlements import (
     calculate_harvest_modifier,
@@ -117,12 +117,12 @@ class SettlementsLayer(Layer):
                 result[str(rid)] = ndata
         return result
 
-    def handle_event(self, event: Event) -> list[Event]:
+    def handle_event(self, event: Event) -> ActionResult:
         """React to conquest events from politics layer."""
         if event.data.get("type") == "region_conquered":
             region_id = str(event.data["region"])
-            return self._apply_conquest(region_id)
-        return []
+            return ActionResult(events=self._apply_conquest(region_id))
+        return ActionResult()
 
     def _apply_conquest(self, region_id: str) -> list[Event]:
         """Apply conquest damage to all settlements in a region."""

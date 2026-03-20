@@ -69,7 +69,8 @@ class TestLayerBasics:
 
         layer = _make_layer()
         result = layer.handle_event(Event(event_type=EventType.WEATHER_CHANGED, source_layer="geography"))
-        assert result == []
+        assert result.success
+        assert result.events == []
 
 
 class TestRelations:

@@ -88,7 +88,9 @@ class TestLayerBasics:
     def test_handle_event_unrelated(self) -> None:
         layer = _make_layer()
         event = Event(event_type=EventType.WEATHER_CHANGED, source_layer="geography")
-        assert layer.handle_event(event) == []
+        result = layer.handle_event(event)
+        assert result.success
+        assert result.events == []
 
 
 class TestRegionIncome:
@@ -146,9 +148,10 @@ class TestConquest:
             source_layer="politics",
             data={"type": "region_conquered", "winner": "beta", "loser": "alpha", "region": "region_a"},
         )
-        result_events = layer.handle_event(event)
+        result = layer.handle_event(event)
+        assert result.success
         # Both settlements in region_a should be damaged
-        assert len(result_events) == 2
+        assert len(result.events) == 2
 
         info = layer.query(Query(question="settlement_info", params={"settlement_id": "city_a"}))
         assert info.value["prosperity"] < 70.0  # was 70

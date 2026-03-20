@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from dnd_simulator.core.layer import Layer
-from dnd_simulator.core.models import Answer, Event, GameDateTime, Query, TimeDelta
+from dnd_simulator.core.models import ActionResult, Answer, Event, GameDateTime, Query, TimeDelta
 
 
 @dataclass
@@ -52,13 +52,15 @@ class World:
 
         return all_events
 
-    def handle_event(self, event: Event) -> list[Event]:
-        """Send an event to all layers and collect resulting events."""
+    def handle_event(self, event: Event) -> ActionResult:
+        """Send an event to all layers. Returns first failure or aggregated success."""
         all_events: list[Event] = []
         for layer in self._layers:
-            new_events = layer.handle_event(event)
-            all_events.extend(new_events)
-        return all_events
+            result = layer.handle_event(event)
+            if not result.success:
+                return result
+            all_events.extend(result.events)
+        return ActionResult(success=True, events=all_events)
 
     def query_layer(self, layer_name: str, query: Query) -> Answer:
         """Query a specific layer by name."""
@@ -68,7 +70,7 @@ class World:
         raise ValueError(f"Layer '{layer_name}' not found")
 
     def _propagate_events(self, events: list[Event], source: Layer) -> None:
-        """Send events to all layers except the source."""
+        """Send events to all layers except the source (notification, results ignored)."""
         for event in events:
             for layer in self._layers:
                 if layer is not source:

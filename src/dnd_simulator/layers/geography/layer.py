@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.layer import Layer
-from dnd_simulator.core.models import Answer, Event, EventType, Query
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.layers.geography.models import (
     Connection,
     Direction,
@@ -97,9 +97,9 @@ class GeographyLayer(Layer):
 
         return events
 
-    def handle_event(self, event: Event) -> list[Event]:
+    def handle_event(self, event: Event) -> ActionResult:
         """Geography doesn't react to external events."""
-        return []
+        return ActionResult()
 
     def query(self, query: Query) -> Answer:
         """Answer queries about the physical world.

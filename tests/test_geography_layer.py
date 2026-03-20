@@ -129,7 +129,9 @@ class TestGeographyLayer:
 
         layer = GeographyLayer()
         event = Event(event_type=EventType.WEATHER_CHANGED, source_layer="test")
-        assert layer.handle_event(event) == []
+        result = layer.handle_event(event)
+        assert result.success
+        assert result.events == []
 
 
 class TestGeographySaveLoad:

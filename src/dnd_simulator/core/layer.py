@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from dnd_simulator.core.models import Answer, Event, Query, TimeDelta
+    from dnd_simulator.core.models import ActionResult, Answer, Event, Query, TimeDelta
     from dnd_simulator.core.world import WorldState
 
 
@@ -30,8 +30,8 @@ class Layer(ABC):
         """Advance simulation by delta time. Returns events that occurred."""
 
     @abstractmethod
-    def handle_event(self, event: Event) -> list[Event]:
-        """Process an external event. May produce new events in response."""
+    def handle_event(self, event: Event) -> ActionResult:
+        """Process an external event. Returns ActionResult with success/error and cascade events."""
 
     @abstractmethod
     def query(self, query: Query) -> Answer:

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.character import Attack, Character, Creature, Entity
 from dnd_simulator.core.layer import Layer
-from dnd_simulator.core.models import Answer, Event, EventType, Query
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.layers.entities.models import Npc, NpcActivity
 from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.rules.combat import resolve_attack
@@ -74,30 +74,41 @@ class EntitiesLayer(Layer):
                 entity.on_tick(hour)
         return []
 
-    def handle_event(self, event: Event) -> list[Event]:
+    def handle_event(self, event: Event) -> ActionResult:
         """React to world events. Resolve attacks, log relevant events."""
-        result_events: list[Event] = []
-
         if event.event_type == EventType.ENTITY_ATTACK:
-            result_events = self._resolve_attack(event)
-        elif event.event_type in _LOGGED_EVENTS:
+            return self._resolve_attack(event)
+
+        if event.event_type in _LOGGED_EVENTS:
             region_id = self._event_region(event)
             if region_id:
                 self._region_log[region_id].append(event)
 
-        return result_events
+        return ActionResult()
 
-    def _resolve_attack(self, event: Event) -> list[Event]:
-        """Resolve an attack event: roll dice, apply damage, log result."""
+    def _resolve_attack(self, event: Event) -> ActionResult:
+        """Validate and resolve an attack: check constraints, roll dice, apply damage, log."""
         attacker_id = str(event.data.get("attacker_id", ""))
         target_id = str(event.data.get("target_id", ""))
         weapon_name = str(event.data.get("weapon", ""))
 
+        # --- Validation ---
         attacker = self._entities.get(attacker_id)
-        target = self._entities.get(target_id)
+        if not isinstance(attacker, Creature):
+            return ActionResult(success=False, error=f"Атакующий '{attacker_id}' не найден.")
 
-        if not isinstance(attacker, Creature) or not isinstance(target, Creature):
-            return []
+        target = self._entities.get(target_id)
+        if not isinstance(target, Creature):
+            return ActionResult(success=False, error=f"Цель '{target_id}' не найдена.")
+
+        if not attacker.is_alive:
+            return ActionResult(success=False, error="Ты мёртв и не можешь атаковать.")
+
+        if not target.is_alive:
+            return ActionResult(success=False, error=f"Цель '{target_id}' уже мертва.")
+
+        if attacker.region_id != target.region_id:
+            return ActionResult(success=False, error=f"Цель '{target_id}' не в этом регионе.")
 
         # Find the weapon
         attack: Attack | None = None
@@ -106,9 +117,9 @@ class EntitiesLayer(Layer):
                 attack = a
                 break
         if attack is None:
-            return []
+            return ActionResult(success=False, error=f"Оружие '{weapon_name}' не найдено.")
 
-        # Resolve
+        # --- Resolution ---
         modifier = attacker.ability_scores.modifier(attack.ability)
         result = resolve_attack(modifier=modifier, ac=target.ac, attack=attack)
 
@@ -138,9 +149,7 @@ class EntitiesLayer(Layer):
                     data={"entity_id": target_id},
                 )
                 result_events.append(death_event)
-                # Log death in region
-                region_id = target.region_id
-                self._region_log[region_id].append(death_event)
+                self._region_log[target.region_id].append(death_event)
 
         # Log the attack in the attacker's region
         attack_log_event = Event(
@@ -150,20 +159,26 @@ class EntitiesLayer(Layer):
         )
         self._region_log[attacker.region_id].append(attack_log_event)
 
-        return result_events
+        return ActionResult(success=True, events=result_events)
 
     def get_perceived_log(self, observer: Character) -> list[str]:
-        """Get ALL events in observer's region, formatted through their perception.
+        """Get ALL events in observer's region that the observer can see.
 
         Used for NPC LLM prompts — full history as context/memory.
+        Filters by observer_ids: events with observer_ids set are only visible
+        to listed entities.
         """
         events = self._region_log.get(observer.region_id, [])
         if not events:
             return []
-        return [perceive_event(e, observer, self.get_entity) for e in events]
+        return [
+            perceive_event(e, observer, self.get_entity)
+            for e in events
+            if e.observer_ids is None or observer.id in e.observer_ids
+        ]
 
     def get_new_perceived_events(self, observer: Character) -> list[str]:
-        """Get only events since this observer last checked.
+        """Get only events since this observer last checked that they can see.
 
         Updates the observer's index. Used for player display.
         """
@@ -173,7 +188,11 @@ class EntitiesLayer(Layer):
         observer._last_seen_log_index = len(events)
         if not new_events:
             return []
-        return [perceive_event(e, observer, self.get_entity) for e in new_events]
+        return [
+            perceive_event(e, observer, self.get_entity)
+            for e in new_events
+            if e.observer_ids is None or observer.id in e.observer_ids
+        ]
 
     def _event_region(self, event: Event) -> str | None:
         """Determine which region an event happened in."""

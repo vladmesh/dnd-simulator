@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from dnd_simulator.core.character import Ability, Attack, DamageComponent, DamageType
-from dnd_simulator.core.models import GameDateTime
+from dnd_simulator.core.models import ActionResult, GameDateTime
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.llm.client import LlmResponse, ToolCall
 from dnd_simulator.llm.tools import build_npc_tools
@@ -33,7 +33,7 @@ def _mock_world() -> MagicMock:
         return answer
 
     world.query_layer.side_effect = fake_query
-    world.handle_event.return_value = []
+    world.handle_event.return_value = ActionResult()
     return world
 
 

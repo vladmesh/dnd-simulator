@@ -10,7 +10,7 @@ from dnd_simulator.core.character import (
     DamageComponent,
     DamageType,
 )
-from dnd_simulator.core.models import Event, EventType
+from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 
 
@@ -42,7 +42,8 @@ class TestAttackResolution:
         hits = 0
         for _ in range(20):
             target.current_hp = 20  # reset
-            layer.handle_event(_attack_event())
+            result = layer.handle_event(_attack_event())
+            assert result.success
             if target.current_hp < 20:
                 hits += 1
         assert hits > 0, "No attacks hit in 20 tries"
@@ -64,32 +65,53 @@ class TestAttackResolution:
         layer = EntitiesLayer(entities=[attacker, target])
 
         # With AC 1, should hit easily; 1 HP means any damage kills
-        result_events: list[Event] = []
+        result: ActionResult = ActionResult()
         for _ in range(20):
             target.current_hp = 1
             target.active = True
-            result_events = layer.handle_event(_attack_event())
-            if result_events:
+            result = layer.handle_event(_attack_event())
+            assert result.success
+            if result.events:
                 break
 
-        death_events = [e for e in result_events if e.event_type == EventType.ENTITY_DIED]
+        death_events = [e for e in result.events if e.event_type == EventType.ENTITY_DIED]
         assert len(death_events) == 1
         assert death_events[0].data["entity_id"] == "target"
         assert target.active is False
 
-    def test_unknown_weapon_no_damage(self) -> None:
+    def test_unknown_weapon_returns_error(self) -> None:
         attacker = Character(id="attacker", name="Fighter", region_id="r1", attacks=(_sword(),))
         target = Character(id="target", name="Goblin", region_id="r1", max_hp=20, current_hp=20)
         layer = EntitiesLayer(entities=[attacker, target])
 
-        event = _attack_event(weapon="unknown_weapon")
-        layer.handle_event(event)
+        result = layer.handle_event(_attack_event(weapon="unknown_weapon"))
+        assert not result.success
+        assert "unknown_weapon" in result.error
         assert target.current_hp == 20
 
-    def test_nonexistent_target_no_crash(self) -> None:
+    def test_nonexistent_target_returns_error(self) -> None:
         attacker = Character(id="attacker", name="Fighter", region_id="r1", attacks=(_sword(),))
         layer = EntitiesLayer(entities=[attacker])
 
-        event = _attack_event(target_id="nonexistent")
-        result = layer.handle_event(event)
-        assert result == []
+        result = layer.handle_event(_attack_event(target_id="nonexistent"))
+        assert not result.success
+        assert "nonexistent" in result.error
+
+    def test_cross_region_attack_returns_error(self) -> None:
+        attacker = Character(id="attacker", name="Fighter", region_id="r1", attacks=(_sword(),))
+        target = Character(id="target", name="Goblin", region_id="r2", max_hp=20, current_hp=20)
+        layer = EntitiesLayer(entities=[attacker, target])
+
+        result = layer.handle_event(_attack_event())
+        assert not result.success
+        assert "не в этом регионе" in result.error
+        assert target.current_hp == 20
+
+    def test_attack_dead_target_returns_error(self) -> None:
+        attacker = Character(id="attacker", name="Fighter", region_id="r1", attacks=(_sword(),))
+        target = Character(id="target", name="Goblin", region_id="r1", max_hp=20, current_hp=0)
+        layer = EntitiesLayer(entities=[attacker, target])
+
+        result = layer.handle_event(_attack_event())
+        assert not result.success
+        assert "мертва" in result.error

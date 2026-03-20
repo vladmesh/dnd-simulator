@@ -100,18 +100,23 @@ class Npc(Character):
             response = self.llm.generate_with_tools(messages, tools)
             if response.is_tool_call:
                 assert response.tool_call is not None
-                self._execute_action(response.tool_call, world)
-                return
+                success = self._execute_action(response.tool_call, world)
+                if success:
+                    return
+                # Action failed (e.g. invalid target) — tell LLM and retry
+                messages.append({"role": "assistant", "content": f"[tool: {response.tool_call.name}]"})
+                messages.append({"role": "user", "content": "Действие не удалось. Выбери другое."})
+                continue
             # No tool call — ask LLM to retry
             messages.append({"role": "assistant", "content": response.text or ""})
             messages.append({"role": "user", "content": "Ты должен выбрать действие: say, attack или idle."})
 
-    def _execute_action(self, action: ToolCall, world: World) -> None:
-        """Execute a tool call against the world."""
+    def _execute_action(self, action: ToolCall, world: World) -> bool:
+        """Execute a tool call against the world. Returns True if action succeeded."""
         from dnd_simulator.core.models import Event, EventType
 
         if action.name == "idle":
-            return
+            return True
         if action.name == "say":
             world.handle_event(
                 Event(
@@ -120,9 +125,9 @@ class Npc(Character):
                     data={"entity_id": self.id, "text": action.arguments.get("text", "")},
                 )
             )
-            return
+            return True
         if action.name == "attack":
-            world.handle_event(
+            result = world.handle_event(
                 Event(
                     event_type=EventType.ENTITY_ATTACK,
                     source_layer="entities",
@@ -133,7 +138,8 @@ class Npc(Character):
                     },
                 )
             )
-            return
+            return result.success
+        return False
 
 
 # Default schedules by role — keeps YAML clean.

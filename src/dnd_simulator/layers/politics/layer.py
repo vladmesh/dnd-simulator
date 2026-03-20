@@ -7,7 +7,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.layer import Layer
-from dnd_simulator.core.models import Answer, Event, EventType, Query
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.layers.politics.models import (
     DiplomaticStatus,
     Leader,
@@ -448,9 +448,9 @@ class PoliticsLayer(Layer):
 
     # -- Layer interface --
 
-    def handle_event(self, event: Event) -> list[Event]:
+    def handle_event(self, event: Event) -> ActionResult:
         """Politics doesn't react to external events (yet)."""
-        return []
+        return ActionResult()
 
     def query(self, query: Query) -> Answer:
         """Answer queries about the political world.
