@@ -6,6 +6,7 @@ from dnd_simulator.core.character import (
     Alignment,
     Character,
     CharClass,
+    Creature,
     Entity,
     Race,
 )
@@ -80,6 +81,40 @@ class TestEntityHierarchy:
         assert c.char_class == CharClass.FIGHTER
         assert c.level == 3
 
+    def test_creature_defaults(self) -> None:
+        c = Creature(id="wolf", name="Grey Wolf", region_id="r1")
+        assert c.max_hp == 4
+        assert c.current_hp == 4
+        assert c.ac == 10
+        assert c.ability_scores.modifier(Ability.STR) == 0
+
+    def test_creature_custom_stats(self) -> None:
+        scores = AbilityScores()
+        scores[Ability.STR] = 16
+        scores[Ability.DEX] = 14
+        c = Creature(
+            id="bear",
+            name="Brown Bear",
+            region_id="r1",
+            ability_scores=scores,
+            max_hp=34,
+            current_hp=34,
+            ac=11,
+        )
+        assert c.max_hp == 34
+        assert c.ac == 11
+        assert c.ability_scores.modifier(Ability.STR) == 3
+
+    def test_character_is_creature(self) -> None:
+        c = Character(id="c1", name="John", region_id="r1")
+        assert isinstance(c, Creature)
+        assert isinstance(c, Entity)
+
+    def test_character_inherits_creature_fields(self) -> None:
+        c = Character(id="c1", name="John", region_id="r1", ac=15, max_hp=20, current_hp=20)
+        assert c.ac == 15
+        assert c.max_hp == 20
+
     def test_player_character_extends_character(self) -> None:
         p = PlayerCharacter(
             id="player",
@@ -89,6 +124,7 @@ class TestEntityHierarchy:
             char_class=CharClass.WIZARD,
         )
         assert isinstance(p, Character)
+        assert isinstance(p, Creature)
         assert isinstance(p, Entity)
 
 
@@ -143,9 +179,23 @@ class TestPerceive:
 
     def test_perceive_entity_returns_name(self) -> None:
         observer = Character(id="obs", name="Observer", region_id="r1")
-        target = Entity(id="wolf", name="Grey Wolf", region_id="r1")
+        target = Entity(id="door", name="Wooden Door", region_id="r1")
         result = observer.perceive(target)
-        assert result == "Grey Wolf"
+        assert result == "Wooden Door"
+
+    def test_perceive_creature_shows_name(self) -> None:
+        observer = Character(id="obs", name="Observer", region_id="r1")
+        target = Creature(id="wolf", name="Grey Wolf", region_id="r1", max_hp=11, current_hp=11)
+        result = observer.perceive(target)
+        assert "Grey Wolf" in result
+        assert "ранен" not in result
+
+    def test_perceive_creature_wounded(self) -> None:
+        observer = Character(id="obs", name="Observer", region_id="r1")
+        target = Creature(id="wolf", name="Grey Wolf", region_id="r1", max_hp=11, current_hp=3)
+        result = observer.perceive(target)
+        assert "Grey Wolf" in result
+        assert "ранен" in result
 
     def test_perceive_half_orc_label(self) -> None:
         observer = Character(id="obs", name="Observer", region_id="r1")

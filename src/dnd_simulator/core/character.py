@@ -110,7 +110,7 @@ class AbilityScores:
 
 
 # ---------------------------------------------------------------------------
-# Entity / Character hierarchy
+# Entity / Creature / Character hierarchy
 # ---------------------------------------------------------------------------
 
 
@@ -124,17 +124,27 @@ class Entity:
 
 
 @dataclass
-class Character(Entity):
-    """A sentient being with D&D attributes."""
+class Creature(Entity):
+    """A living being with physical stats — animals, monsters, humanoids.
+
+    Has ability scores, HP, and AC but no class, race, or alignment.
+    """
+
+    ability_scores: AbilityScores = field(default_factory=AbilityScores)
+    max_hp: int = 4
+    current_hp: int = 4
+    ac: int = 10  # natural armor; 10 = unarmored default
+
+
+@dataclass
+class Character(Creature):
+    """A sentient being with D&D class, race, and social attributes."""
 
     race: Race = Race.HUMAN
     char_class: CharClass = CharClass.COMMONER
     level: int = 1
     alignment: Alignment = Alignment.TRUE_NEUTRAL
     appearance: str = ""
-    ability_scores: AbilityScores = field(default_factory=AbilityScores)
-    max_hp: int = 4
-    current_hp: int = 4
     gold: int = 0
 
     def perceive(self, target: Entity) -> str:
@@ -152,6 +162,11 @@ class Character(Entity):
             if target.appearance:
                 parts.append(target.appearance)
             # Wound status
+            if target.current_hp < target.max_hp // 2:
+                parts.append("выглядит раненым")
+            return ", ".join(parts)
+        if isinstance(target, Creature):
+            parts = [target.name]
             if target.current_hp < target.max_hp // 2:
                 parts.append("выглядит раненым")
             return ", ".join(parts)
