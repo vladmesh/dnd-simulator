@@ -137,15 +137,47 @@ rules/ не мутирует стейт. Слой вызывает resolve → �
 ## Что реализовано
 
 ```
-rules/dice.py         ✅  roll("2d6+3"), roll_d20(advantage/disadvantage)
-rules/checks.py       ✅  attack_roll, ability_check, saving_throw, damage_roll
-core/character.py     ✅  Entity → Creature → Character → Player/Npc
-                      ✅  Attack, DamageComponent, DamageType, ResolveType
-                      ✅  take_damage(), heal(), is_alive
-llm/client.py         ✅  generate_with_tools() — tool use support
-llm/tools.py          ✅  build_npc_tools() — say, attack, idle schemas
-entities/models.py    ✅  Npc.take_turn() — LLM с tools + retry
-core/player.py        ⬜  PlayerCharacter.take_turn() с input_fn/output_fn
-world.py              ✅  handle_event() — рассылка по слоям
-game loop             ⬜  главный цикл
+rules/dice.py           ✅  roll("2d6+3"), roll_d20(advantage/disadvantage)
+rules/checks.py         ✅  attack_roll, ability_check, saving_throw, damage_roll
+rules/combat.py         ✅  resolve_attack() — multi-component damage, crits, auto-hit
+core/character.py       ✅  Entity → Creature → Character → Player/Npc
+                        ✅  Attack, DamageComponent, DamageType, ResolveType
+                        ✅  take_damage(), heal(), is_alive
+                        ✅  perceive() с распознаванием знакомых по settlement
+llm/client.py           ✅  generate_with_tools() — tool use (старый generate() удалён)
+llm/tools.py            ✅  build_npc_tools() — say, attack, idle schemas
+llm/prompts.py          ✅  промпт с idle-by-default поведением
+entities/models.py      ✅  Npc.take_turn(world) — LLM с tools + retry + execute
+entities/layer.py       ✅  handle_event(ENTITY_ATTACK) — полная резолюция боя
+                        ✅  лог региона с perceive_event() + индекс просмотра
+entities/perception.py  ✅  субъективное форматирование событий через perceive()
+core/player.py          ✅  PlayerCharacter.take_turn(world) с input_fn/output_fn
+                        ✅  парсинг команд: say, attack, idle, look, status
+game_loop.py            ✅  главный цикл: for creature in actives: take_turn(world)
+adapters/cli_loop.py    ✅  CLI адаптер с новым game loop
+content                 ✅  оружие, HP, AC для NPC и игрока в YAML
 ```
+
+## Следующие шаги
+
+### Ближайшие
+- **Знакомство с NPC** — игрок не отличает трёх humans в логе. Нужна механика
+  "представиться" / "узнать имя" чтобы perceive начал показывать имена
+- **Продвижение времени** — сейчас время не идёт между ходами. Нужно решить
+  когда вызывать advance_time (каждый ход? каждый N ходов?)
+- **Перемещение** — команда go/move для игрока, NPC тоже должны уметь перемещаться
+- **NPC ответная атака** — NPC пока не атакуют в ответ (всегда say). Нужна
+  доработка промпта или логики выбора действий
+
+### Средний горизонт
+- **Инициатива** — перемешать порядок ходов при начале боя
+- **Area-of-effect** — fireball и подобные (отдельная абстракция от Attack)
+- **Память NPC** — conversation_summary для сохранения контекста между сессиями
+- **Статистические существа** — волки, бандиты, генерируемые на лету
+- **LLM фоллбек** — произвольные действия игрока через LLM ("делаю сальто")
+
+### Дальний горизонт
+- **REST/API адаптер** — подменить input_fn/output_fn на HTTP
+- **Saving throw спеллы** — ResolveType.SAVING_THROW резолюция
+- **Resistance/Immunity** — проверка по DamageType при take_damage
+- **Smite/Hex/Sneak Attack** — extra_damage через систему эффектов
