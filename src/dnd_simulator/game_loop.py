@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dnd_simulator.core.models import TimeDelta
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 
@@ -35,3 +36,5 @@ def run_game_loop(world: World) -> None:
             if not creature.is_alive or not creature.active:
                 continue
             creature.take_turn(world)
+
+        world.advance_time(TimeDelta.from_rounds(1))

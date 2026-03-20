@@ -53,7 +53,11 @@ class PlayerCharacter(Character):
                 continue
 
             # Action commands — end turn
-            if cmd == "idle" or cmd == "wait":
+            if cmd == "idle":
+                return
+
+            if cmd == "wait" or cmd.startswith("wait "):
+                self._cmd_wait(cmd, world)
                 return
 
             if cmd.startswith("say "):
@@ -84,7 +88,7 @@ class PlayerCharacter(Character):
                     continue
                 return
 
-            self.output_fn("Команды: look, status, say <текст>, attack <цель>, idle")
+            self.output_fn("Команды: look, status, say <текст>, attack <цель>, wait [часы], idle")
 
     def _cmd_look(self, world: World) -> None:
         """Describe current location, entities, and paths."""
@@ -131,6 +135,24 @@ class PlayerCharacter(Character):
         if self.attacks:
             lines.append("Атаки: " + ", ".join(a.name for a in self.attacks))
         self.output_fn("\n".join(lines))
+
+    def _cmd_wait(self, cmd: str, world: World) -> None:
+        """Wait for N hours (default 1)."""
+        from dnd_simulator.core.models import TimeDelta
+
+        parts = cmd.split()
+        hours = 1
+        if len(parts) > 1:
+            try:
+                hours = int(parts[1])
+            except ValueError:
+                self.output_fn("Использование: wait [часы]")
+                return
+            if hours < 1:
+                self.output_fn("Минимум 1 час.")
+                return
+        world.advance_time(TimeDelta.from_hours(hours))
+        self.output_fn(f"Прошло {hours} ч.")
 
     def _format_awareness(self, awareness: dict[str, Any], recent_events: list[str] | None = None) -> str:
         """Format world awareness for display to the player."""

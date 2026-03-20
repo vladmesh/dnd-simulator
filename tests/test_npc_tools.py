@@ -33,9 +33,7 @@ def _mock_world() -> MagicMock:
             else:
                 answer.value = {}
         elif layer_name == "entities":
-            if q == "entities_in_region":
-                answer.value = []
-            elif q == "perceived_log" or q == "new_perceived_events":
+            if q == "entities_in_region" or q == "perceived_log" or q == "new_perceived_events":
                 answer.value = []
             else:
                 answer.value = None

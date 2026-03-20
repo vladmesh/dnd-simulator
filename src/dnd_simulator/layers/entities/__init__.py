@@ -1,4 +1,7 @@
-"""Entities layer — all tracked creatures: player, NPCs, named monsters. Includes attack resolution, event perception, and visibility filtering."""
+"""Entities layer — all tracked creatures: player, NPCs, named monsters.
+
+Includes attack resolution, event perception, and visibility filtering.
+"""
 
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import (

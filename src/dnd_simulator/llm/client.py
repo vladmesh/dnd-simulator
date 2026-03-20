@@ -112,7 +112,7 @@ class LlmClient:
             )
         else:
             text_preview = (msg.content or "")[:80].replace("\n", " ")
-            logger.info("[LLM] → text: \"%s\" | %.0fms%s", text_preview, elapsed_ms, tokens_info)
+            logger.info('[LLM] → text: "%s" | %.0fms%s', text_preview, elapsed_ms, tokens_info)
 
         return LlmResponse(
             text=msg.content,
