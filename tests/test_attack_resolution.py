@@ -56,8 +56,9 @@ class TestAttackResolution:
         layer.handle_event(_attack_event())
 
         log = layer.get_perceived_log(target)
-        assert len(log) >= 1
-        assert "атакует тебя" in log[0]
+        assert len(log) >= 2  # combat_started + attack
+        assert "Бой начался" in log[0]
+        assert "атакует тебя" in log[1]
 
     def test_death_generates_event(self) -> None:
         attacker = Character(id="attacker", name="Fighter", region_id="r1", attacks=(_sword(),))

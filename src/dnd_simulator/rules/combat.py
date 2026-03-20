@@ -1,6 +1,6 @@
 """Combat resolution — resolve a single-target attack into an outcome.
 
-Pure function: takes numbers in, returns result out. No state mutation.
+Pure functions: takes numbers in, returns result out. No state mutation.
 """
 
 from __future__ import annotations
@@ -8,8 +8,9 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from dnd_simulator.core.character import Attack, DamageType
+from dnd_simulator.core.character import Ability, Attack, Creature, DamageType
 from dnd_simulator.rules.checks import CheckResult, attack_roll, damage_roll
+from dnd_simulator.rules.dice import roll_d20
 
 
 @dataclass(frozen=True)
@@ -94,3 +95,27 @@ def resolve_attack(
         damage=tuple(damage_results),
         total_damage=total,
     )
+
+
+def roll_initiative(
+    creatures: list[Creature],
+    *,
+    rng: random.Random | None = None,
+) -> list[Creature]:
+    """Roll initiative for each creature: d20 + DEX modifier.
+
+    Ties broken by higher DEX score, then random tiebreaker.
+    Returns creatures sorted from highest to lowest initiative.
+    """
+    r = rng or random.Random()
+    rolls: list[tuple[Creature, int, int, int]] = []
+    for c in creatures:
+        d20 = roll_d20(rng=r)
+        modifier = c.ability_scores.modifier(Ability.DEX)
+        total = d20 + modifier
+        dex_score = c.ability_scores[Ability.DEX]
+        tiebreaker = r.randint(0, 1_000_000)
+        rolls.append((c, total, dex_score, tiebreaker))
+
+    rolls.sort(key=lambda x: (x[1], x[2], x[3]), reverse=True)
+    return [c for c, _, _, _ in rolls]

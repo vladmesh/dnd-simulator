@@ -193,6 +193,7 @@ class Creature(Entity):
     current_hp: int = 4
     ac: int = 10  # natural armor; 10 = unarmored default
     attacks: tuple[Attack, ...] = ()
+    in_combat: bool = False
 
     @property
     def is_alive(self) -> bool:
@@ -249,6 +250,17 @@ class Character(Creature):
             return ", ".join(parts)
         return target.name
 
+    def perceive_by_id(self, entity_id: str, world: World) -> str:
+        """Perceive another entity by ID, looking it up from the entities layer."""
+        from dnd_simulator.layers.entities.layer import EntitiesLayer
+
+        for layer in world.layers:
+            if isinstance(layer, EntitiesLayer):
+                target = layer.get_entity(entity_id)
+                if target and isinstance(target, Entity):
+                    return self.perceive(target)
+        return entity_id
+
     def _knows_by_name(self, target: Character) -> bool:
         """Check if this character knows the target by name."""
         # Import here to avoid circular dependency
@@ -292,4 +304,36 @@ def build_awareness(world: World, region_id: str) -> dict[str, Any]:
         "settlements": settlements.value,
         "territory": owner.value,
         "nation": nation_info.value if nation_info else None,
+    }
+
+
+def build_combat_awareness(world: World, entity: Character) -> dict[str, Any]:
+    """Gather combat-focused awareness — only what matters in a fight."""
+    entities_answer = world.query_layer(
+        "entities", Query(question="entities_in_region", params={"region_id": entity.region_id})
+    )
+    nearby: list[dict[str, str]] = []
+    for e in entities_answer.value:
+        if e["id"] != entity.id:
+            desc = entity.perceive_by_id(e["id"], world)
+            nearby.append({"id": str(e["id"]), "description": desc})
+
+    weapon_name = "кулаки"
+    weapon_damage = "1"
+    if entity.attacks:
+        weapon_name = entity.attacks[0].name
+        weapon_damage = str(entity.attacks[0].damage[0].dice)
+
+    # Round number from combat state
+    combat_answer = world.query_layer("entities", Query(question="combat_info", params={"region_id": entity.region_id}))
+    round_number = combat_answer.value["round_number"] if combat_answer.value else 1
+
+    return {
+        "self_hp": entity.current_hp,
+        "self_max_hp": entity.max_hp,
+        "self_ac": entity.ac,
+        "self_weapon": weapon_name,
+        "self_weapon_damage": weapon_damage,
+        "nearby": nearby,
+        "round_number": round_number,
     }

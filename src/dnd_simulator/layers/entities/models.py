@@ -7,10 +7,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from dnd_simulator.core.character import Character, Entity, build_awareness
+from dnd_simulator.core.character import Character, build_awareness, build_combat_awareness
 from dnd_simulator.llm.client import LlmClient, ToolCall
-from dnd_simulator.llm.prompts import build_npc_system_prompt
-from dnd_simulator.llm.tools import build_npc_tools
+from dnd_simulator.llm.prompts import build_npc_combat_prompt, build_npc_system_prompt
+from dnd_simulator.llm.tools import build_npc_combat_tools, build_npc_tools
 
 logger = logging.getLogger("dnd_simulator.npc")
 
@@ -64,22 +64,6 @@ class Npc(Character):
         self.activity = NpcActivity.IDLE
         self.location_label = "wandering"
 
-    def perceive_by_id(self, entity_id: str, world: World) -> str:
-        """Perceive another entity by ID, looking it up from the entities layer."""
-        from dnd_simulator.core.models import Query
-
-        answer = world.query_layer("entities", Query(question="entity_info", params={"entity_id": entity_id}))
-        # We need the actual Entity object for perceive()
-        # Use a direct query to get it
-        for layer in world.layers:
-            from dnd_simulator.layers.entities.layer import EntitiesLayer
-
-            if isinstance(layer, EntitiesLayer):
-                target = layer.get_entity(entity_id)
-                if target and isinstance(target, Entity):
-                    return self.perceive(target)
-        return str(answer.value.get("name", entity_id))
-
     def _build_npc_data(self) -> dict[str, str]:
         return {
             "name": self.name,
@@ -97,21 +81,27 @@ class Npc(Character):
 
         from dnd_simulator.core.models import Query
 
-        logger.info("[NPC:%s] === начинает ход ===", self.name)
-        awareness = build_awareness(world, self.region_id)
-        tools = build_npc_tools()
+        logger.info("[NPC:%s] === начинает ход (%s) ===", self.name, "бой" if self.in_combat else "мир")
 
-        # Build list of nearby entities with IDs so LLM knows valid targets
-        entities_answer = world.query_layer(
-            "entities", Query(question="entities_in_region", params={"region_id": self.region_id})
-        )
-        nearby: list[dict[str, str]] = []
-        for e in entities_answer.value:
-            if e["id"] != self.id:
-                desc = self.perceive_by_id(e["id"], world)
-                nearby.append({"id": str(e["id"]), "description": desc})
-
-        system_prompt = build_npc_system_prompt(self._build_npc_data(), awareness, nearby)
+        if self.in_combat:
+            combat_awareness = build_combat_awareness(world, self)
+            system_prompt = build_npc_combat_prompt(self._build_npc_data(), combat_awareness)
+            tools = build_npc_combat_tools()
+            retry_hint = "Ты должен выбрать действие: attack, dodge, flee или idle."
+        else:
+            awareness = build_awareness(world, self.region_id)
+            # Build list of nearby entities with IDs so LLM knows valid targets
+            entities_answer = world.query_layer(
+                "entities", Query(question="entities_in_region", params={"region_id": self.region_id})
+            )
+            nearby: list[dict[str, str]] = []
+            for e in entities_answer.value:
+                if e["id"] != self.id:
+                    desc = self.perceive_by_id(e["id"], world)
+                    nearby.append({"id": str(e["id"]), "description": desc})
+            system_prompt = build_npc_system_prompt(self._build_npc_data(), awareness, nearby)
+            tools = build_npc_tools()
+            retry_hint = "Ты должен выбрать действие: say, attack или idle."
 
         # Get recent events perceived by this NPC
         log_answer = world.query_layer("entities", Query(question="perceived_log", params={"entity_id": self.id}))
@@ -140,7 +130,7 @@ class Npc(Character):
                 continue
             # No tool call — ask LLM to retry
             messages.append({"role": "assistant", "content": response.text or ""})
-            messages.append({"role": "user", "content": "Ты должен выбрать действие: say, attack или idle."})
+            messages.append({"role": "user", "content": retry_hint})
 
     def _execute_action(self, action: ToolCall, world: World) -> bool:
         """Execute a tool call against the world. Returns True if action succeeded."""
@@ -170,6 +160,32 @@ class Npc(Character):
                 )
             )
             return result.success
+        if action.name == "dodge":
+            logger.info("[NPC:%s] → dodge", self.name)
+            world.handle_event(
+                Event(
+                    event_type=EventType.ENTITY_DODGE,
+                    source_layer="entities",
+                    data={
+                        "entity_id": self.id,
+                        "description": action.arguments.get("description", ""),
+                    },
+                )
+            )
+            return True
+        if action.name == "flee":
+            logger.info("[NPC:%s] → flee", self.name)
+            world.handle_event(
+                Event(
+                    event_type=EventType.ENTITY_FLEE,
+                    source_layer="entities",
+                    data={
+                        "entity_id": self.id,
+                        "description": action.arguments.get("description", ""),
+                    },
+                )
+            )
+            return True
         return False
 
 

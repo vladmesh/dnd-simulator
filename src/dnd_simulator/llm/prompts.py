@@ -1,4 +1,4 @@
-"""LLM prompt builders for NPC dialog."""
+"""LLM prompt builders for NPC dialog and combat."""
 
 from __future__ import annotations
 
@@ -71,4 +71,50 @@ def build_npc_system_prompt(
         f"- НЕ говори просто потому что наступил твой ход — молчание нормально\n"
         f"- Используй attack(target_id) только если у тебя есть веская причина драться.\n"
         f"  target_id — это id существа из списка рядом с тобой"
+    )
+
+
+def build_npc_combat_prompt(
+    npc_data: dict[str, Any],
+    combat_awareness: dict[str, Any],
+) -> str:
+    """Build a focused combat prompt for an NPC — no weather, politics, or schedules."""
+    hp = combat_awareness["self_hp"]
+    max_hp = combat_awareness["self_max_hp"]
+    weapon = combat_awareness["self_weapon"]
+    weapon_dmg = combat_awareness["self_weapon_damage"]
+
+    hp_status = "здоров"
+    if hp < max_hp // 2:
+        hp_status = "тяжело ранен"
+    elif hp < max_hp:
+        hp_status = "ранен"
+
+    # Nearby entities
+    entities_lines: list[str] = []
+    nearby = combat_awareness.get("nearby", [])
+    for e in nearby:
+        entities_lines.append(f"- {e['description']} (id: {e['id']})")
+
+    entities_ctx = "\nВокруг тебя:\n" + "\n".join(entities_lines) if entities_lines else "\nВокруг никого нет."
+
+    round_num = combat_awareness.get("round_number", 1)
+
+    return (
+        f"Ты — {npc_data['name']}, {npc_data['role']}. Ты в бою!\n"
+        f"\n"
+        f"Характер: {npc_data['personality'].strip()}\n"
+        f"\n"
+        f"Твоё состояние:\n"
+        f"- HP: {hp}/{max_hp} ({hp_status})\n"
+        f"- Оружие: {weapon} ({weapon_dmg})\n"
+        f"{entities_ctx}\n"
+        f"\n"
+        f"Раунд {round_num}.\n"
+        f"\n"
+        f"Правила:\n"
+        f"- Выбери одно действие: attack, dodge, flee или idle\n"
+        f"- Хочешь что-то сказать — впиши в description\n"
+        f"- Отвечай на русском языке\n"
+        f"- attack(target_id) — target_id это id существа из списка выше"
     )

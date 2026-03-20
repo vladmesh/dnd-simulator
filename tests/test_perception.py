@@ -219,6 +219,7 @@ class TestRegionLog:
         )
 
         log = layer.get_perceived_log(smith)
-        assert len(log) == 2
+        assert len(log) == 3  # say + combat_started + attack
         assert "Готовься!" in log[0]
-        assert "атакует тебя" in log[1]
+        assert "Бой начался" in log[1]
+        assert "атакует тебя" in log[2]

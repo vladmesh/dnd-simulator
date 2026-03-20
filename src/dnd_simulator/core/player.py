@@ -10,6 +10,7 @@ from dnd_simulator.core.character import (
     Ability,
     Character,
     build_awareness,
+    build_combat_awareness,
 )
 
 if TYPE_CHECKING:
@@ -25,6 +26,13 @@ class PlayerCharacter(Character):
 
     def take_turn(self, world: World) -> None:
         """Show awareness + recent events, prompt for action, execute."""
+        if self.in_combat:
+            self._combat_turn(world)
+        else:
+            self._peaceful_turn(world)
+
+    def _peaceful_turn(self, world: World) -> None:
+        """Peacetime turn: full awareness, all commands available."""
         from dnd_simulator.core.models import Event, EventType, Query
 
         awareness = build_awareness(world, self.region_id)
@@ -90,6 +98,72 @@ class PlayerCharacter(Character):
 
             self.output_fn("Команды: look, status, say <текст>, attack <цель>, wait [часы], idle")
 
+    def _combat_turn(self, world: World) -> None:
+        """Combat turn: focused awareness, restricted commands."""
+        from dnd_simulator.core.models import Event, EventType, Query
+
+        combat_aw = build_combat_awareness(world, self)
+
+        log_answer = world.query_layer(
+            "entities", Query(question="new_perceived_events", params={"entity_id": self.id})
+        )
+        recent_events: list[str] = log_answer.value if log_answer.value else []
+
+        self.output_fn(self._format_combat_awareness(combat_aw, recent_events))
+
+        while True:
+            raw = self.input_fn("бой> ").strip()
+            if not raw:
+                continue
+
+            cmd = raw.lower()
+
+            if cmd == "status":
+                self._cmd_status()
+                continue
+
+            if cmd == "idle":
+                return
+
+            if cmd == "dodge":
+                world.handle_event(
+                    Event(
+                        event_type=EventType.ENTITY_DODGE,
+                        source_layer="entities",
+                        data={"entity_id": self.id},
+                    )
+                )
+                return
+
+            if cmd == "flee":
+                world.handle_event(
+                    Event(
+                        event_type=EventType.ENTITY_FLEE,
+                        source_layer="entities",
+                        data={"entity_id": self.id},
+                    )
+                )
+                return
+
+            if cmd.startswith("attack "):
+                target_id = raw[7:].strip().split()[0] if raw[7:].strip() else ""
+                if not target_id:
+                    self.output_fn("Использование: attack <цель>")
+                    continue
+                result = world.handle_event(
+                    Event(
+                        event_type=EventType.ENTITY_ATTACK,
+                        source_layer="entities",
+                        data={"attacker_id": self.id, "target_id": target_id},
+                    )
+                )
+                if not result.success:
+                    self.output_fn(result.error)
+                    continue
+                return
+
+            self.output_fn("Команды: attack <цель>, dodge, flee, status, idle")
+
     def _cmd_look(self, world: World) -> None:
         """Describe current location, entities, and paths."""
         from dnd_simulator.core.models import Query
@@ -153,6 +227,28 @@ class PlayerCharacter(Character):
                 return
         world.advance_time(TimeDelta.from_hours(hours))
         self.output_fn(f"Прошло {hours} ч.")
+
+    def _format_combat_awareness(self, combat_aw: dict[str, Any], recent_events: list[str] | None = None) -> str:
+        """Format combat awareness for display to the player."""
+        hp = combat_aw["self_hp"]
+        max_hp = combat_aw["self_max_hp"]
+        weapon = combat_aw["self_weapon"]
+        round_num = combat_aw.get("round_number", 1)
+        lines = [f"\n--- Бой, раунд {round_num} (HP: {hp}/{max_hp}, оружие: {weapon}) ---"]
+
+        nearby = combat_aw.get("nearby", [])
+        if nearby:
+            lines.append("\nВокруг:")
+            for e in nearby:
+                lines.append(f"  {e['description']} [{e['id']}]")
+
+        if recent_events:
+            lines.append("")
+            lines.append("Что произошло:")
+            for event_text in recent_events:
+                lines.append(f"  • {event_text}")
+
+        return "\n".join(lines)
 
     def _format_awareness(self, awareness: dict[str, Any], recent_events: list[str] | None = None) -> str:
         """Format world awareness for display to the player."""

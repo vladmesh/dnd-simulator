@@ -59,3 +59,78 @@ def build_npc_tools() -> list[dict[str, Any]]:
     )
 
     return tools
+
+
+def build_npc_combat_tools() -> list[dict[str, Any]]:
+    """Build tool definitions for NPC combat actions — no say, focused on fighting."""
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": "attack",
+                "description": "Attack a target with your equipped weapon.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "target_id": {
+                            "type": "string",
+                            "description": "ID of the target entity",
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Flavor text: what you say or how you attack (optional)",
+                        },
+                    },
+                    "required": ["target_id"],
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "dodge",
+                "description": "Take a defensive stance. Harder to hit this round.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "description": {
+                            "type": "string",
+                            "description": "Flavor text (optional)",
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "flee",
+                "description": "Try to escape from combat.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "description": {
+                            "type": "string",
+                            "description": "Flavor text (optional)",
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "idle",
+                "description": "Do nothing this turn.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "description": {
+                            "type": "string",
+                            "description": "Flavor text (optional)",
+                        },
+                    },
+                },
+            },
+        },
+    ]
