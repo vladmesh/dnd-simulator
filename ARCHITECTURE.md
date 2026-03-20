@@ -22,7 +22,7 @@ New layers can be inserted between existing ones as the simulation grows in deta
 Every layer implements the same interface:
 - `tick_interval` — minimum seconds between ticks (0 = every call)
 - `tick(delta, world_state)` — advance simulation, return events
-- `handle_event(event)` — react to something that happened
+- `handle_event(event) -> ActionResult` — process an event, return success/error and cascade events
 - `query(question)` — answer a question about current state
 - `get_state() / load_state()` — serialize/deserialize for saves
 
@@ -38,7 +38,7 @@ src/dnd_simulator/
 │   └── entities/  — all tracked creatures (player, NPCs, named monsters)
 ├── master/        — DM orchestrator (LLM-powered)
 ├── rules/         — pure functions: D&D mechanics, combat resolution, physics, economics
-├── llm/           — LLM client, prompt builders, tool schemas for NPC actions
+├── llm/           — LLM client (with request/response logging), prompt builders, tool schemas for NPC actions
 ├── adapters/      — transport layer (CLI, API, Telegram)
 ├── content_loader.py — loads worlds, nations, settlements, NPCs, player from YAML
 ├── service.py     — GameService: transport-agnostic game interface
@@ -63,6 +63,10 @@ Player input flow (service.py, command-based):
 ```
 
 The game loop polls all active creatures in turn order. Each creature builds its own awareness from perceived events, decides an action (NPCs via LLM tool use, player via CLI input), and executes it through world events. `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
+
+`World.handle_event()` sends an event to all layers in order. Each layer returns an `ActionResult` — if any layer returns `success=False`, propagation stops and the failure is returned to the caller. This lets layers validate and reject actions (e.g., EntitiesLayer rejects attacks on dead targets).
+
+Events carry an optional `observer_ids` field (`frozenset[str] | None`). When `None`, the event is public — visible to all entities in the area. When set, only listed entity IDs can perceive the event. The `perception` module in `layers/entities/` converts raw events into subjective text through `observer.perceive()`, so the same event reads differently to different characters.
 
 ## Time System
 
