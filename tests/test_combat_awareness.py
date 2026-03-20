@@ -643,6 +643,6 @@ class TestDodgeMechanics:
         c2 = Character(id="c2", name="Rogue", region_id="r1", max_hp=20, current_hp=20)
         layer = EntitiesLayer([c1, c2])
         # Start and immediately end combat
-        layer._start_combat("r1")
-        layer._end_combat("r1")
+        layer._combat.start_combat("r1")
+        layer._combat._end_combat("r1")
         assert c1.is_dodging is False

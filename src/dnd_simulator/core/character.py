@@ -342,24 +342,20 @@ class Character(Creature):
         return target.name
 
     def perceive_by_id(self, entity_id: str, world: World) -> str:
-        """Perceive another entity by ID, looking it up from the entities layer."""
-        from dnd_simulator.layers.entities.layer import EntitiesLayer
-
-        for layer in world.layers:
-            if isinstance(layer, EntitiesLayer):
-                target = layer.get_entity(entity_id)
-                if target and isinstance(target, Entity):
-                    return self.perceive(target)
-        return entity_id
+        """Perceive another entity by ID, looking it up via query_layer."""
+        answer = world.query_layer(
+            "entities",
+            Query(question="perceive_entity", params={"observer_id": self.id, "target_id": entity_id}),
+        )
+        return str(answer.value) if answer.value else entity_id
 
     def _knows_by_name(self, target: Character) -> bool:
         """Check if this character knows the target by name."""
-        # Import here to avoid circular dependency
-        from dnd_simulator.layers.entities.models import Npc
-
-        # NPCs from the same settlement know each other
-        if isinstance(self, Npc) and isinstance(target, Npc):
-            return bool(self.settlement_id and self.settlement_id == target.settlement_id)
+        # NPCs from the same settlement know each other (duck typing to avoid layer import)
+        self_settlement = getattr(self, "settlement_id", None)
+        target_settlement = getattr(target, "settlement_id", None)
+        if self_settlement and target_settlement:
+            return bool(self_settlement == target_settlement)
         return False
 
 
@@ -413,25 +409,13 @@ def build_combat_awareness(world: World, entity: Character) -> dict[str, Any]:
     battle_map_positions: dict[str, Position] = combat_answer.value.get("positions", {}) if combat_answer.value else {}
     my_pos = battle_map_positions.get(entity.id)
 
-    # Resolve entities layer for raw HP lookup
-    from dnd_simulator.layers.entities.layer import EntitiesLayer
-
-    entities_layer: EntitiesLayer | None = None
-    for layer in world.layers:
-        if isinstance(layer, EntitiesLayer):
-            entities_layer = layer
-            break
-
     nearby: list[dict[str, object]] = []
     for e in entities_answer.value:
         if e["id"] != entity.id:
             desc = entity.perceive_by_id(e["id"], world)
             entry: dict[str, object] = {"id": str(e["id"]), "description": desc}
-            # Add is_wounded flag for data-driven target selection
-            if entities_layer is not None:
-                target = entities_layer.get_entity(str(e["id"]))
-                if isinstance(target, Creature):
-                    entry["is_wounded"] = target.current_hp < target.max_hp // 2
+            if "is_wounded" in e:
+                entry["is_wounded"] = e["is_wounded"]
             other_pos = battle_map_positions.get(str(e["id"]))
             if my_pos is not None and other_pos is not None:
                 entry["distance_ft"] = grid_distance(my_pos, other_pos)

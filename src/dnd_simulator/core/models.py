@@ -138,7 +138,7 @@ class Event:
     observer_ids: frozenset[str] | None = None  # None = public (all in area see it)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ActionResult:
     """Outcome of an action submitted to the world.
 
@@ -160,7 +160,7 @@ class Query:
     params: dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass
+@dataclass(frozen=True)
 class Answer:
     """Response from a layer to a query."""
 

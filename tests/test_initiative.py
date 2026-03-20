@@ -405,7 +405,7 @@ class TestGameLoopCombat:
         world = World(layers=[layer], time=GameDateTime())
 
         # Start combat manually
-        layer._start_combat("r1")
+        layer._combat.start_combat("r1")
 
         # Override turn_order to a known order
         combat = layer.get_combat("r1")
@@ -442,7 +442,7 @@ class TestGameLoopCombat:
         world = World(layers=[layer], time=GameDateTime())
 
         # Put r1 in combat
-        layer._start_combat("r1")
+        layer._combat.start_combat("r1")
         combat = layer.get_combat("r1")
         combat.turn_order = ["c1", "c2"]
 

@@ -29,7 +29,7 @@ from dnd_simulator.storage.store import SaveStore
 DEFAULT_CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
 
 
-@dataclass
+@dataclass(frozen=True)
 class MasterResponse:
     """What the DM tells the player."""
 

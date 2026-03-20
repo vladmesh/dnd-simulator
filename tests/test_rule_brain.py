@@ -43,7 +43,7 @@ def _make_world(entities: list[object], battle_map: BattleMap | None = None) -> 
     )
     if battle_map is not None:
         combat.battle_map = battle_map
-    layer._combats[combat_region] = combat
+    layer._combat._combats[combat_region] = combat
 
     def fake_query(layer_name: str, query: object) -> MagicMock:
         if layer_name == "entities":
