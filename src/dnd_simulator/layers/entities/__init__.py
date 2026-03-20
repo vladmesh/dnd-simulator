@@ -1,6 +1,7 @@
 """Entities layer — all tracked creatures: player, NPCs, named monsters.
 
-Includes attack resolution, event perception, and visibility filtering.
+Includes attack resolution, initiative/combat management, event perception,
+and visibility filtering. Manages CombatState per region.
 """
 
 from dnd_simulator.layers.entities.layer import EntitiesLayer
