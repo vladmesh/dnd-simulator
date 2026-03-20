@@ -2,126 +2,109 @@
 
 Обсуждение 2026-03-20.
 
-## Действие — базовая абстракция
+## Уровни абстракции
 
-В D&D "атака" — лишь одно из действий. Базовая единица — **Action**, не Attack.
+### Механики (rules) — атомарный фундамент
 
-Типы действий:
-- **Attack** — удар оружием/безоружный (d20 + mod vs AC)
-- **Cast a Spell** — заклинание (разные механики резолюции)
-- **Dodge, Dash, Disengage, Hide** — тактические
-- **Use an Object** — зелье, дверь, рычаг
+Вся D&D сводится к трём типам бросков:
+- **Attack roll** — d20 + modifier vs AC (nat 20 = крит, nat 1 = промах)
+- **Ability check** — d20 + modifier vs DC (нет критов по RAW)
+- **Saving throw** — d20 + modifier vs DC (механически = ability check)
 
-## Модель Action
+Плюс бросок урона: dice expression → число, с удвоением дайсов при крите.
+
+Это реализовано в `rules/dice.py` и `rules/checks.py`. Чистые функции, без состояния, детерминистичные через RNG injection.
+
+### Боевые способности — данные на Creature
+
+Что существо **умеет делать в бою**. Это не "действия" в широком смысле, а конкретный механический набор — атаки и спеллы:
 
 ```python
 @dataclass(frozen=True)
-class Action:
-    name: str
-    resolution: AttackRoll | SavingThrow | Auto
-    targeting: Single | Area | Self
-    effects: list[Effect]  # Damage, Heal, ApplyCondition
-    requirements: list[Requirement]  # HasSpellSlot, WeaponEquipped, InRange
+class WeaponAttack:
+    name: str           # "longsword", "bite", "claw"
+    ability: Ability    # STR — к броску атаки и урону
+    damage_dice: str    # "1d8", "2d6"
+    reach: int = 5      # футы (5 = melee, 150 = longbow)
 ```
 
-Примеры:
-- Меч: `Action("longsword", AttackRoll(STR), Single, [Damage("1d8", STR)])`
-- Fireball: `Action("fireball", SavingThrow(DEX, dc=15), Area(20ft), [Damage("8d6")], requires=[HasSpellSlot(3)])`
-- Magic Missile: `Action("magic missile", Auto(), Single, [Damage("1d4+1")] * 3, requires=[HasSpellSlot(1)])`
-- Dodge: `Action("dodge", Auto(), Self, [ApplyCondition(DODGING)])`
+У волка — `[bite]`. У рыцаря — `[longsword, shield_bash]`. Это просто данные о том, какие параметры подставлять в чеки из rules/.
 
-## Creature хранит список действий
+### "Действия" — два контекста
 
-```python
-class Creature(Entity):
-    ability_scores, max_hp, current_hp, ac
-    actions: list[Action]   # что вообще умеет
-```
+**Свободный режим** (narrative time) — нет action economy, нет порядка ходов:
+- "Обыскиваю комнату" → Мастер (LLM) решает: ability_check(INT, dc=15)
+- "Убеждаю стражника" → Мастер решает: ability_check(CHA, dc=12)
+- "Бью по двери" → Мастер решает: attack_roll(STR_mod, door_ac), damage_roll("1d8+3")
+- "Прячусь за бочку" → Мастер решает: ability_check(DEX, dc=10)
 
-У волка — `[bite]`. У файтера — `[longsword, dodge, dash]`. У мага — `[staff, magic_missile, fireball]`.
+Мастер интерпретирует свободный текст и вызывает нужные механики. "Действие" тут — просто текст игрока.
 
-Character наследует Creature и добавляет класс/расу/alignment. Экипировка/спеллы **генерируют** actions динамически.
+**Бой** (structured time, раунды по 6 секунд) — action economy:
+- 1 action, 1 bonus action, 1 reaction, movement за раунд
+- Attack, Cast Spell, Dodge, Dash, Hide, Help — конкретный набор
+- Резолюция автоматическая по правилам
 
-## Валидация — постфактум, не предварительная
+Тактические действия (Dodge, Dash, Hide, Help) — не способности Creature, а правила боевой системы. Любое существо может Dodge.
 
-Предварительная фильтрация (available_actions с валидными целями) перегружает интерфейс и дорога по вычислениям. Вместо этого:
+## Валидация — постфактум
 
-1. Creature знает свои действия: `creature.actions → [longsword, shortbow, magic_missile, dodge]`
-2. Игрок/LLM выбирает действие + цель свободно
-3. `resolve_action()` либо возвращает результат, либо ошибку валидации
+Creature знает свои атаки. Игрок/LLM выбирает атаку + цель свободно. Резолюция либо возвращает результат, либо ошибку:
 
-```python
-resolve_action(actor, action, target, context) → ActionResult | ActionError
-```
-
-Ошибки понятны и игроку, и LLM:
 - "Слишком далеко для рукопашной атаки"
 - "Нет spell slot 3 уровня"
 - "Вы оглушены и не можете действовать"
 
-LLM получает ошибку → пробует другое действие (паттерн уже в бэклоге).
+LLM получает ошибку → пробует другое действие. Игрок получает текст ошибки.
 
-Команда `actions` — просто dump списка без валидации. "Вот что вы умеете".
+Без предварительной фильтрации — проще, дешевле, понятнее.
 
-## Резолюция — чистая функция в rules/
+## Что уже реализовано
 
-```python
-# rules/combat.py
-def resolve_action(
-    actor: Creature,
-    action: Action,
-    target: Entity | None,
-    context: CombatContext | None,
-) -> ActionResult | ActionError:
+```
+rules/dice.py       ✅  roll("2d6+3"), roll_d20(advantage/disadvantage)
+rules/checks.py     ✅  attack_roll, ability_check, saving_throw, damage_roll
+core/character.py   ✅  Entity → Creature (HP, AC, ability_scores) → Character → Player/Npc
 ```
 
-Без побочных эффектов. Применение результата к миру — отдельно, в service/combat manager.
+## Следующий уровень: WeaponAttack + resolve
 
-## Действия вне боя
-
-`resolve_action` работает и без `CombatContext`. Мистический снаряд в дверь — тот же Action, target это Entity (дверь). Результат: урон объекту.
-
-## Кто рядом
-
-Сейчас: все в одном `region_id` — "рядом". Для боя нужна хотя бы грубая дистанция. Варианты:
-- Зоны: melee (5ft), close (30ft), far (120ft)
-- Сетка с координатами (сложнее)
-
-Решение отложено — начинаем с "все в регионе рядом".
-
-## Интерфейс
-
-**Игрок** — команды:
 ```
-> actions                              — список доступных действий
-> attack longsword goblin grunt        — действие + цель
-> cast magic missile goblin shaman     — заклинание + цель
-> dodge                                — тактическое действие
+core/combat.py      — WeaponAttack (frozen dataclass), AttackResult, AttackError
+rules/combat.py     — resolve_melee_attack(actor, weapon, target) → AttackResult | AttackError
+                       resolve_ranged_attack(actor, weapon, target) → AttackResult | AttackError
 ```
 
-Или свободным текстом через мастера:
-```
-> бью мечом ближайшего гоблина
-→ Master парсит → resolve_action()
-```
+resolve_melee_attack:
+1. Валидация (цель существует, в досягаемости — пока все в регионе "рядом")
+2. attack_roll(actor.ability_scores.modifier(weapon.ability), target.ac)
+3. Если попал: damage_roll(weapon.damage_dice + modifier, critical=result.critical)
+4. Возвращает AttackResult (hit/miss, damage, описание)
 
-**LLM (NPC в бою)** — tools:
-```json
-{"name": "attack", "params": {"weapon": "scimitar", "target": "player"}}
-```
+AttackResult — не привязан к "действиям" в целом, это конкретно результат атаки оружием. Чистый и узкий.
 
 ## Архитектура (где что живёт)
 
 ```
-core/combat.py       — модели (Action, ActionResult, ActionError, CombatContext)
-core/character.py    — Creature(Entity) с actions, Character(Creature)
-rules/combat.py      — resolve_action(), roll_initiative()
-service.py           — оркестрация, сборка nearby, применение результатов
+rules/
+├── dice.py          ✅ дайсы
+├── checks.py        ✅ три типа бросков + урон
+└── combat.py        🔜 resolve_melee_attack, resolve_ranged_attack
+
+core/
+├── character.py     ✅ Entity → Creature → Character → Player/Npc
+└── combat.py        🔜 WeaponAttack, AttackResult, AttackError
 ```
+
+Позже:
+- Боевой режим (CombatContext, инициатива, порядок ходов) — в service или отдельный модуль
+- Заклинания — отдельная модель рядом с WeaponAttack
+- Мастер вызывает ability_check/saving_throw напрямую для небоевых ситуаций
 
 ## Открытые вопросы
 
 - **Creature layer** — нужен ли отдельный слой для монстров, или они в NpcLayer?
-- **CombatContext** — режим сессии (как talking_to) или отдельный объект на GameSession?
-- **Дистанции** — зоны vs сетка vs "все рядом"
+- **CombatContext** — режим сессии (как talking_to) или отдельный объект?
+- **Дистанции** — зоны vs сетка vs "все в регионе рядом"
 - **Spell slots / ресурсы** — когда добавлять
+- **Инвентарь** — оружие как предмет генерирует WeaponAttack с нужными параметрами
