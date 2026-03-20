@@ -42,7 +42,7 @@ src/dnd_simulator/
 ├── adapters/      — transport layer (CLI, API, Telegram)
 ├── content_loader.py — loads worlds, nations, settlements, NPCs, player from YAML
 ├── service.py     — GameService: transport-agnostic game interface
-└── game_loop.py   — turn-based main loop: polls active creatures in order
+└── game_loop.py   — turn-based main loop: polls active creatures, advances time each round
 
 content/           — authored game data (YAML/JSON)
 ├── worlds/        — pre-built region maps
@@ -57,6 +57,7 @@ content/           — authored game data (YAML/JSON)
 Turn-based game loop (game_loop.py):
     for each active creature:
         creature.take_turn(world)  → perceive events → decide action (LLM/player input) → execute
+    world.advance_time(+1 round = 6 seconds)
 
 Player input flow (service.py, command-based):
     Player input → Adapter (CLI/API/TG) → GameService → response

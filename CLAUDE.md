@@ -40,7 +40,7 @@ core/              — models, Layer ABC, World, Entity/Character hierarchy (no 
   ↓
 layers/            — concrete layer implementations (depend on core only)
   ↓
-game_loop.py       — turn-based main loop: polls active creatures, each takes a turn
+game_loop.py       — turn-based main loop: polls active creatures, advances time +6s per round
 service.py         — GameService: transport-agnostic API, command routing
   ↓
 adapters/          — CLI REPL (future: API, Telegram)
