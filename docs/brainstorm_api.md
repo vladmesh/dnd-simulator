@@ -11,115 +11,137 @@
 - **FastAPI** (async, OpenAPI из коробки, WebSocket-поддержка на будущее)
 
 ### Хранение данных
-- **В оперативке**, сериализация на диск (JSON) — как сейчас
+- **В оперативке** во время сессии, **YAML на диске** как персистентный формат
 - БД не нужна: один процесс, нет конкурентного доступа, объём данных мал
-- Autosave после каждого действия, восстановление из сейва при рестарте
 - Многопользовательность на уровне сервера (каждый игрок — свой инстанс мира)
 - 10-100 игроков — без проблем (~5 MB RAM на инстанс), узкое место — LLM rate limits
+
+### Структура файлов
+
+```
+content/worlds/{world_name}/      ← шаблон мира (мастер создаёт, версионируется)
+    world.yaml                     ← мета: name, description
+    regions.yaml                   ← география (immutable после старта)
+    nations.yaml                   ← стартовые значения
+    settlements.yaml               ← стартовые значения
+    npcs.yaml                      ← стартовые NPC
+    (нет player.yaml — игрок создаётся при входе в сессию)
+
+saves/{session_id}/               ← рабочая копия запущенной сессии
+    world.yaml                     ← время, тики
+    regions.yaml                   ← копия из шаблона (read-only)
+    nations.yaml                   ← текущее состояние
+    settlements.yaml               ← текущее состояние
+    npcs.yaml                      ← ВСЕ NPC (включая добавленных мастером)
+    player.yaml                    ← создаётся игроком при входе
+```
+
+Шаблон — чистый, из него можно запускать сколько угодно сессий.
+Сессия — самодостаточная рабочая копия.
+
+### Два режима редактирования мира
+
+**Между сессиями (файлы на диске)** — основной режим. Сервер выключен или сессия не активна, никаких гонок:
+- Регионы, связи, terrain
+- Нации, поселения (полная структура)
+- NPC (полный CRUD, статблоки, personality, brain)
+- Баланс
+
+**Во время сессии (hot controls, в памяти)** — DM-импровизация за ширмой:
+- Спавн/удаление NPC
+- HP, золото, позиция
+- Переключение brain
+- Advance time
+- НЕ структурные изменения (регионы, связи)
 
 ### Аутентификация
 - Пока нет, single-user режим, два режима (мастер/игрок) без логина
 
-### Два режима
+### Создание персонажа
+- Игрок создаёт персонажа при входе в сессию, не на уровне шаблона мира
+- `POST /api/player/sessions/{id}/character` — создание персонажа
 
-**Мастер** — полный контроль над миром:
+### Два режима — эндпоинты
+
+**Мастер — шаблоны (между сессиями):**
 
 ```
-# Миры (конфигурация)
-POST   /api/master/worlds                         — создать мир
+POST   /api/master/worlds                         — создать мир (шаблон)
 GET    /api/master/worlds                         — список миров
-GET    /api/master/worlds/{id}                    — полный стейт
+GET    /api/master/worlds/{id}                    — полный шаблон
+PUT    /api/master/worlds/{id}/regions             — задать регионы
+PUT    /api/master/worlds/{id}/nations             — задать нации
+PUT    /api/master/worlds/{id}/settlements         — задать поселения
+CRUD   /api/master/worlds/{id}/npcs                — управление NPC шаблона
+```
 
-# Сессии (запущенный инстанс мира)
-POST   /api/master/sessions                       — запустить мир
+**Мастер — живая сессия (hot controls):**
+
+```
+POST   /api/master/sessions                       — запустить мир (копирует шаблон)
 DELETE /api/master/sessions/{id}                  — остановить
 GET    /api/master/sessions/{id}                  — god-mode стейт
 
-# Регионы (read-only после создания)
-GET    /api/master/sessions/{id}/regions
-GET    /api/master/sessions/{id}/regions/{rid}
+# Hot controls (память, мгновенный эффект)
+POST   /api/master/sessions/{id}/npcs              — спавн NPC
+DELETE /api/master/sessions/{id}/npcs/{nid}        — убрать NPC
+PATCH  /api/master/sessions/{id}/npcs/{nid}        — HP, позиция, brain
+PUT    /api/master/sessions/{id}/npcs/{nid}/brain  — переключить brain
+PATCH  /api/master/sessions/{id}/nations/{nid}     — wealth, military, stability
+PATCH  /api/master/sessions/{id}/settlements/{sid} — population, prosperity
+PATCH  /api/master/sessions/{id}/player            — HP, золото
+POST   /api/master/sessions/{id}/time/advance      — продвинуть время
 
-# Нации (wealth, military, stability — editable)
-GET    /api/master/sessions/{id}/nations
-PATCH  /api/master/sessions/{id}/nations/{nid}
-
-# Поселения (population, prosperity, defenses — editable)
-GET    /api/master/sessions/{id}/settlements
-PATCH  /api/master/sessions/{id}/settlements/{sid}
-
-# NPC — полный CRUD
-GET    /api/master/sessions/{id}/npcs
-POST   /api/master/sessions/{id}/npcs              — добавить на лету
-GET    /api/master/sessions/{id}/npcs/{nid}
-PATCH  /api/master/sessions/{id}/npcs/{nid}        — personality, brain, hp, gold...
-DELETE /api/master/sessions/{id}/npcs/{nid}
-
-# Brain — отдельный эндпоинт (инстанциация класса + выбор модели)
-PUT    /api/master/sessions/{id}/npcs/{nid}/brain
-       {"type": "rule_based"}
-       {"type": "llm", "model": "deepseek/deepseek-chat-v3-0324"}
-
-# Игрок
-GET    /api/master/sessions/{id}/player
-PATCH  /api/master/sessions/{id}/player
-
-# Сейвы
-GET    /api/master/sessions/{id}/saves
-POST   /api/master/sessions/{id}/saves
-POST   /api/master/sessions/{id}/saves/{name}/load
-
-# Время
-POST   /api/master/sessions/{id}/time/advance      {"hours": 6}
+# Персистентность
+POST   /api/master/sessions/{id}/save              — сбросить состояние на диск
 ```
 
-**Игрок** — только своя перспектива (через perceive(), фильтрованные события):
+**Игрок:**
 
 ```
-# Восприятие
+POST   /api/player/sessions/{id}/character         — создать персонажа
+GET    /api/player/sessions/{id}/status            — HP, золото, позиция
+POST   /api/player/sessions/{id}/action            — действие
 GET    /api/player/sessions/{id}/perception        — что видит персонаж
 GET    /api/player/sessions/{id}/events            — новые события
-GET    /api/player/sessions/{id}/status            — HP, золото, позиция
-
-# Действия
-POST   /api/player/sessions/{id}/action            — {"action": "attack goblin"}
 GET    /api/player/sessions/{id}/map               — карта связей региона
-
-# Бой
 GET    /api/player/sessions/{id}/combat            — инициатива, позиции, раунд
 ```
 
 ### Mutability
 
-| Сущность   | Immutable (при создании)          | Editable (мастер в рантайме)                    |
+| Сущность   | Immutable (при создании)          | Hot controls (в рантайме)                       |
 |------------|-----------------------------------|-------------------------------------------------|
 | Region     | terrain, lat/lon, elevation, conn | — (погода автоматическая)                       |
-| Nation     | name, regions                     | wealth, military, stability, leader             |
+| Nation     | name, regions                     | wealth, military, stability                     |
 | Settlement | name, region_id, type             | population, prosperity, defenses                |
-| NPC        | name, race, class                 | hp, ac, gold, personality, brain, attacks, region |
+| NPC        | name, race, class                 | hp, ac, gold, personality, brain, region         |
 | Player     | name, race, class, alignment      | hp, ac, gold, region_id                         |
 
 ## Итерации
 
-### Итерация 1 — Скелет
+### Итерация 1 — Скелет ✅
 - FastAPI-адаптер, базовая структура
 - SessionManager (создать/получить сессию)
 - `POST /api/player/sessions/{id}/action` — действие игрока
 - `GET /api/player/sessions/{id}/status` — статус персонажа
 - `POST /api/master/sessions` — создать сессию
 - `GET /api/master/sessions/{id}` — god-mode стейт
-- Проверить через Swagger UI
+- `make serve` — запуск сервера
 
-### Итерация 2 — Мастер CRUD
-- NPC CRUD (add/get/patch/delete)
-- Brain switching (PUT)
-- Нации, поселения (GET/PATCH)
-- Регионы (GET)
+### Итерация 2 — Мастер CRUD + структура файлов
+- Разбить монолитный YAML на отдельные файлы (world/regions/nations/settlements/npcs)
+- ContentLoader: поддержка нового формата (директория вместо одного файла)
+- Мастер: CRUD шаблонов мира (файловые операции)
+- Мастер: hot controls живой сессии (NPC спавн/удаление, HP, brain)
+- Сессия: копирование шаблона → saves/{session_id}/
+- Сессия: save (сброс памяти на диск)
 
 ### Итерация 3 — Полный игрок
+- Создание персонажа при входе в сессию
 - Perception, events, combat, map
 - Все игровые действия через REST
 
 ### Итерация 4 — Полировка
-- Сейвы через API
-- Время (advance)
 - Валидация, ошибки, i18n в ответах
+- Восстановление сессии из сейва при рестарте сервера

@@ -1,0 +1,157 @@
+silverport:
+  name: Silverport
+  latitude: 45.0
+  longitude: -2.0
+  elevation: 5
+  terrain: coast
+  water_proximity: 0.9
+  connections:
+    - target: highfield
+      direction: e
+    - target: greenwood
+      direction: se
+  settlements:
+    - id: silverport_city
+      name: Silverport City
+      type: city
+      population: 5000
+      prosperity: 70
+      defenses: 60
+    - id: fishing_hamlet
+      name: Fishing Hamlet
+      type: village
+      population: 200
+      prosperity: 50
+      defenses: 10
+
+highfield:
+  name: Highfield Plains
+  latitude: 45.5
+  longitude: 0.0
+  elevation: 150
+  terrain: plains
+  water_proximity: 0.1
+  connections:
+    - target: silverport
+      direction: w
+    - target: greenwood
+      direction: sw
+    - target: iron_peaks
+      direction: n
+    - target: bogmire
+      direction: e
+  settlements:
+    - id: highfield_town
+      name: Highfield Town
+      type: town
+      population: 1500
+      prosperity: 60
+      defenses: 30
+    - id: wheat_village
+      name: Wheat Village
+      type: village
+      population: 400
+      prosperity: 55
+      defenses: 5
+
+greenwood:
+  name: Greenwood Forest
+  latitude: 44.0
+  longitude: -1.0
+  elevation: 100
+  terrain: forest
+  water_proximity: 0.2
+  connections:
+    - target: silverport
+      direction: nw
+    - target: highfield
+      direction: ne
+  settlements:
+    - id: greenwood_village
+      name: Greenwood Village
+      type: village
+      population: 300
+      prosperity: 45
+      defenses: 15
+
+iron_peaks:
+  name: Iron Peaks
+  latitude: 48.0
+  longitude: 0.5
+  elevation: 2800
+  terrain: mountains
+  water_proximity: 0.0
+  connections:
+    - target: highfield
+      direction: s
+    - target: frostholm
+      direction: n
+  settlements:
+    - id: iron_keep
+      name: Iron Keep
+      type: town
+      population: 800
+      prosperity: 50
+      defenses: 70
+    - id: miners_rest
+      name: Miner's Rest
+      type: village
+      population: 200
+      prosperity: 40
+      defenses: 10
+
+frostholm:
+  name: Frostholm
+  latitude: 55.0
+  longitude: 1.0
+  elevation: 800
+  terrain: tundra
+  water_proximity: 0.05
+  connections:
+    - target: iron_peaks
+      direction: s
+  settlements:
+    - id: frostholm_outpost
+      name: Frostholm Outpost
+      type: village
+      population: 150
+      prosperity: 30
+      defenses: 40
+
+bogmire:
+  name: Bogmire Marsh
+  latitude: 44.5
+  longitude: 2.5
+  elevation: 20
+  terrain: swamp
+  water_proximity: 0.7
+  connections:
+    - target: highfield
+      direction: w
+    - target: dustmere
+      direction: s
+  settlements:
+    - id: bogtown
+      name: Bogtown
+      type: village
+      population: 250
+      prosperity: 35
+      defenses: 15
+
+dustmere:
+  name: Dustmere Wastes
+  latitude: 40.0
+  longitude: 3.0
+  elevation: 400
+  terrain: desert
+  water_proximity: 0.0
+  connections:
+    - target: bogmire
+      direction: n
+  settlements:
+    - id: dustmere_oasis
+      name: Dustmere Oasis
+      type: town
+      population: 600
+      prosperity: 45
+      defenses: 35

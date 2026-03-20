@@ -1,4 +1,9 @@
-"""Load authored game content from YAML files."""
+"""Load authored game content from YAML files.
+
+Supports two formats:
+- Legacy: single YAML file with all sections (regions, nations, npcs, player)
+- Directory: folder with separate files (world.yaml, regions.yaml, nations.yaml, npcs.yaml, player.yaml)
+"""
 
 from __future__ import annotations
 
@@ -31,6 +36,37 @@ from dnd_simulator.layers.politics.models import Leader, LeaderTrait, Nation
 from dnd_simulator.layers.settlements.models import Settlement, SettlementType
 
 
+def _read_yaml(path: Path) -> dict[str, Any]:
+    """Read a YAML file, returning empty dict if file doesn't exist."""
+    if not path.exists():
+        return {}
+    with path.open() as f:
+        return yaml.safe_load(f) or {}
+
+
+def _resolve_source(path: Path) -> tuple[bool, Path]:
+    """Determine if path is a directory or legacy single file.
+
+    Returns (is_directory, resolved_path).
+    """
+    if path.is_dir():
+        return True, path
+    return False, path
+
+
+def _load_section(path: Path, is_dir: bool, section: str) -> dict[str, Any]:
+    """Load a section from either directory format or legacy single file."""
+    if is_dir:
+        return _read_yaml(path / f"{section}.yaml")
+    data = _read_yaml(path)
+    section_data = data.get(section, {})
+    assert isinstance(section_data, dict)
+    return section_data
+
+
+# -- Parsing helpers --
+
+
 def _parse_attacks(attacks_data: list[dict[str, Any]]) -> tuple[Attack, ...]:
     """Parse attack definitions from YAML."""
     attacks: list[Attack] = []
@@ -49,14 +85,22 @@ def _parse_attacks(attacks_data: list[dict[str, Any]]) -> tuple[Attack, ...]:
     return tuple(attacks)
 
 
+def _parse_ability_scores(data: dict[str, Any], key: str = "ability_scores") -> AbilityScores:
+    """Parse ability scores from YAML data."""
+    if key in data:
+        return AbilityScores.from_dict(data[key])
+    return AbilityScores()
+
+
+# -- Public loaders --
+
+
 def load_world(path: Path) -> list[Region]:
-    """Load regions from a world YAML file."""
-    with path.open() as f:
-        data: dict[str, Any] = yaml.safe_load(f)
+    """Load regions from a world YAML file or directory."""
+    is_dir, path = _resolve_source(path)
+    regions_data = _load_section(path, is_dir, "regions")
 
-    regions_data: dict[str, Any] = data["regions"]
     regions: list[Region] = []
-
     for region_id, rdata in regions_data.items():
         connections = [
             Connection(
@@ -83,13 +127,11 @@ def load_world(path: Path) -> list[Region]:
 
 
 def load_nations(path: Path) -> list[Nation]:
-    """Load nations from a world YAML file."""
-    with path.open() as f:
-        data: dict[str, Any] = yaml.safe_load(f)
+    """Load nations from a world YAML file or directory."""
+    is_dir, path = _resolve_source(path)
+    nations_data = _load_section(path, is_dir, "nations")
 
-    nations_data: dict[str, Any] = data.get("nations", {})
     nations: list[Nation] = []
-
     for nation_id, ndata in nations_data.items():
         leader = None
         leader_data = ndata.get("leader")
@@ -116,13 +158,14 @@ def load_nations(path: Path) -> list[Nation]:
 
 
 def load_settlements(path: Path) -> list[Settlement]:
-    """Load settlements from a world YAML file."""
-    with path.open() as f:
-        data: dict[str, Any] = yaml.safe_load(f)
+    """Load settlements from a world YAML file or directory.
 
-    regions_data: dict[str, Any] = data.get("regions", {})
+    In directory mode, settlements are nested under regions in regions.yaml.
+    """
+    is_dir, path = _resolve_source(path)
+    regions_data = _load_section(path, is_dir, "regions")
+
     settlements: list[Settlement] = []
-
     for region_id, rdata in regions_data.items():
         for sdata in rdata.get("settlements", []):
             settlements.append(
@@ -141,66 +184,75 @@ def load_settlements(path: Path) -> list[Settlement]:
 
 
 def load_npcs(path: Path) -> list[Npc]:
-    """Load NPCs from a world YAML file."""
-    with path.open() as f:
-        data: dict[str, Any] = yaml.safe_load(f)
+    """Load NPCs from a world YAML file or directory."""
+    is_dir, path = _resolve_source(path)
+    npcs_data = _load_section(path, is_dir, "npcs")
 
-    npcs_data: dict[str, Any] = data.get("npcs", {})
     npcs: list[Npc] = []
-
     for npc_id, ndata in npcs_data.items():
-        role = str(ndata.get("role", ""))
-        schedule = list(DEFAULT_SCHEDULES.get(role, []))
-
-        race = Race(ndata["race"]) if "race" in ndata else Race.HUMAN
-        char_class = CharClass(ndata["class"]) if "class" in ndata else CharClass.COMMONER
-
-        attacks = _parse_attacks(ndata.get("attacks", []))
-        max_hp = int(ndata.get("hp", 4))
-
-        ability_scores = AbilityScores()
-        if "ability_scores" in ndata:
-            ability_scores = AbilityScores.from_dict(ndata["ability_scores"])
-
-        ai_type = str(ndata.get("ai", "rule_based"))
-
-        npc = Npc(
-            id=str(npc_id),
-            name=str(ndata["name"]),
-            region_id=str(ndata["region_id"]),
-            race=race,
-            char_class=char_class,
-            role=role,
-            personality=str(ndata.get("personality", "")),
-            settlement_id=str(ndata.get("settlement_id", "")),
-            schedule=schedule,
-            speed=int(ndata.get("speed", 30)),
-            attacks=attacks,
-            max_hp=max_hp,
-            current_hp=max_hp,
-            ac=int(ndata.get("ac", 10)),
-            ability_scores=ability_scores,
-            ai_type=ai_type,
-        )
-        # Assign brain: rule_based gets RuleBrain immediately, llm gets brain injected later by adapter
-        if ai_type == "rule_based":
-            npc.brain = RuleBrain()
-        npcs.append(npc)
+        npcs.append(parse_npc(str(npc_id), ndata))
 
     return npcs
 
 
+def parse_npc(npc_id: str, ndata: dict[str, Any]) -> Npc:
+    """Parse a single NPC from YAML data."""
+    role = str(ndata.get("role", ""))
+    schedule = list(DEFAULT_SCHEDULES.get(role, []))
+
+    race = Race(ndata["race"]) if "race" in ndata else Race.HUMAN
+    char_class = CharClass(ndata["class"]) if "class" in ndata else CharClass.COMMONER
+
+    attacks = _parse_attacks(ndata.get("attacks", []))
+    max_hp = int(ndata.get("hp", 4))
+    ai_type = str(ndata.get("ai", "rule_based"))
+
+    npc = Npc(
+        id=npc_id,
+        name=str(ndata["name"]),
+        region_id=str(ndata["region_id"]),
+        race=race,
+        char_class=char_class,
+        role=role,
+        personality=str(ndata.get("personality", "")),
+        settlement_id=str(ndata.get("settlement_id", "")),
+        schedule=schedule,
+        speed=int(ndata.get("speed", 30)),
+        attacks=attacks,
+        max_hp=max_hp,
+        current_hp=max_hp,
+        ac=int(ndata.get("ac", 10)),
+        ability_scores=_parse_ability_scores(ndata),
+        ai_type=ai_type,
+    )
+    if ai_type == "rule_based":
+        npc.brain = RuleBrain()
+    return npc
+
+
 def load_player(path: Path) -> PlayerCharacter:
-    """Load player character from a world YAML file."""
-    with path.open() as f:
-        data: dict[str, Any] = yaml.safe_load(f)
+    """Load player character from a world YAML file or directory.
 
-    pdata: dict[str, Any] = data.get("player", {})
+    Raises FileNotFoundError if no player data exists (directory format without player.yaml).
+    """
+    is_dir, path = _resolve_source(path)
+    if is_dir:
+        player_path = path / "player.yaml"
+        if not player_path.exists():
+            raise FileNotFoundError(f"No player.yaml in {path}")
+        pdata = _read_yaml(player_path)
+    else:
+        data = _read_yaml(path)
+        if "player" not in data:
+            raise KeyError("No 'player' section in world file")
+        pdata = data["player"]
+        assert isinstance(pdata, dict)
 
-    ability_scores = AbilityScores()
-    if "ability_scores" in pdata:
-        ability_scores = AbilityScores.from_dict(pdata["ability_scores"])
+    return _parse_player(pdata)
 
+
+def _parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
+    """Parse player character from YAML data dict."""
     max_hp = int(pdata.get("hp", 10))
     attacks = _parse_attacks(pdata.get("attacks", []))
 
@@ -213,7 +265,7 @@ def load_player(path: Path) -> PlayerCharacter:
         level=int(pdata.get("level", 1)),
         alignment=Alignment(pdata["alignment"]) if "alignment" in pdata else Alignment.TRUE_NEUTRAL,
         appearance=str(pdata.get("appearance", "")),
-        ability_scores=ability_scores,
+        ability_scores=_parse_ability_scores(pdata),
         max_hp=max_hp,
         current_hp=max_hp,
         ac=int(pdata.get("ac", 10)),
@@ -223,13 +275,11 @@ def load_player(path: Path) -> PlayerCharacter:
 
 
 def load_battle_maps(path: Path) -> dict[str, BattleMap]:
-    """Load per-region battle map configs (size + walls) from a world YAML file."""
-    with path.open() as f:
-        data: dict[str, Any] = yaml.safe_load(f)
+    """Load per-region battle map configs (size + walls) from a world YAML file or directory."""
+    is_dir, path = _resolve_source(path)
+    regions_data = _load_section(path, is_dir, "regions")
 
-    regions_data: dict[str, Any] = data.get("regions", {})
     result: dict[str, BattleMap] = {}
-
     for region_id, rdata in regions_data.items():
         bm_data = rdata.get("battle_map")
         if not bm_data:
@@ -244,6 +294,22 @@ def load_battle_maps(path: Path) -> dict[str, BattleMap]:
         )
 
     return result
+
+
+def load_world_meta(path: Path) -> dict[str, str]:
+    """Load world metadata (name, description) from directory format."""
+    is_dir, path = _resolve_source(path)
+    if is_dir:
+        meta = _read_yaml(path / "world.yaml")
+        return {
+            "name": str(meta.get("name", path.name)),
+            "description": str(meta.get("description", "")),
+        }
+    data = _read_yaml(path)
+    return {
+        "name": str(data.get("name", path.stem)),
+        "description": str(data.get("description", "")),
+    }
 
 
 def extract_region_adjacency(regions: list[Region]) -> dict[str, list[str]]:

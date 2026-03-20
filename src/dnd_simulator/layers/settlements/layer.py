@@ -43,6 +43,12 @@ class SettlementsLayer(Layer):
     def tick_interval(self) -> int:
         return 2_592_000  # 30 days in seconds
 
+    def get_settlement(self, settlement_id: str) -> Settlement:
+        """Get a settlement by ID. Raises KeyError if not found."""
+        if settlement_id not in self._settlements:
+            raise KeyError(f"Settlement '{settlement_id}' not found")
+        return self._settlements[settlement_id]
+
     def get_region_income(self, region_id: str) -> float:
         """Total income from all settlements in a region."""
         total = 0.0

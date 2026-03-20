@@ -1,0 +1,56 @@
+edgar:
+  name: Edgar the Smith
+  region_id: silverport
+  settlement_id: silverport_city
+  role: blacksmith
+  hp: 18
+  ac: 12
+  personality: >
+    Gruff but fair. Takes pride in his craft.
+    Worried about iron supply from Iron Peaks since
+    relations with Ironmark are tense.
+  attacks:
+    - name: hammer
+      ability: str
+      damage:
+        - dice: "1d6"
+          type: bludgeoning
+
+marta:
+  name: Marta
+  region_id: silverport
+  settlement_id: silverport_city
+  role: tavern_keeper
+  personality: >
+    Cheerful and gossipy. Knows everyone's business
+    in Silverport. Loves a good story and always has
+    a rumor to share. Has a soft spot for tieflings —
+    her late husband was one. Always eager to help
+    any tiefling she meets, offers them free drinks
+    and goes out of her way to assist them.
+
+rodrik:
+  name: Guard Captain Rodrik
+  region_id: silverport
+  settlement_id: silverport_city
+  role: guard
+  hp: 32
+  ac: 16
+  personality: >
+    Disciplined, loyal to King Aldric. Suspicious of
+    strangers. Veteran of border skirmishes with Ironmark.
+    Quietly worried about the kingdom's small military.
+    Deeply distrusts tieflings — believes their infernal
+    blood makes them untrustworthy. Will refuse to speak
+    with tieflings and may order them to leave.
+  attacks:
+    - name: longsword
+      ability: str
+      damage:
+        - dice: "1d8"
+          type: slashing
+    - name: shield_bash
+      ability: str
+      damage:
+        - dice: "1d4"
+          type: bludgeoning

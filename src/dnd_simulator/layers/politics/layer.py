@@ -96,6 +96,12 @@ class PoliticsLayer(Layer):
     def tick_interval(self) -> int:
         return 2_592_000  # 30 days in seconds
 
+    def get_nation(self, nation_id: str) -> Nation:
+        """Get a nation by ID. Raises KeyError if not found."""
+        if nation_id not in self._nations:
+            raise KeyError(f"Nation '{nation_id}' not found")
+        return self._nations[nation_id]
+
     def set_relation(self, nation_a: str, nation_b: str, status: DiplomaticStatus) -> None:
         """Set diplomatic status between two nations."""
         key = _relation_key(nation_a, nation_b)

@@ -13,12 +13,16 @@ from dnd_simulator.content_loader import (
     load_player,
     load_settlements,
     load_world,
+    load_world_meta,
+    parse_npc,
 )
-from dnd_simulator.core.character import Ability
+from dnd_simulator.core.brain import RuleBrain
+from dnd_simulator.core.character import Ability, Entity
 from dnd_simulator.core.models import GameDateTime, Query, TimeDelta
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
+from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.geography.layer import GeographyLayer
 from dnd_simulator.layers.politics.layer import PoliticsLayer
 from dnd_simulator.layers.settlements.layer import SettlementsLayer
@@ -70,22 +74,32 @@ class GameService:
         self._content_dir = content_dir
         self._llm = llm
 
-    def start_game(self, world_file: str = "test_world.yaml") -> GameSession:
-        """Create a new game session with a world loaded from content."""
+    def start_game(self, world_name: str = "test_world.yaml") -> GameSession:
+        """Create a new game session with a world loaded from content.
+
+        Accepts either a legacy filename (test_world.yaml) or a directory name (sword_vale).
+        """
         session_id = uuid.uuid4().hex[:8]
 
-        world_path = self._content_dir / "worlds" / world_file
+        world_path = self._content_dir / "worlds" / world_name
         regions = load_world(world_path)
         nations = load_nations(world_path)
         settlements = load_settlements(world_path)
-        player = load_player(world_path)
-
-        region_terrains = extract_region_terrains(regions)
         npcs = load_npcs(world_path)
+        region_terrains = extract_region_terrains(regions)
 
-        # Fall back to first region if player has no start_region
-        if not player.region_id and regions:
-            player.region_id = regions[0].id
+        # Player is optional in templates (created by player at session join)
+        player: PlayerCharacter | None = None
+        try:
+            player = load_player(world_path)
+            if player.region_id == "" and regions:
+                player.region_id = regions[0].id
+        except (KeyError, FileNotFoundError):
+            pass
+
+        entities: list[Entity] = [*npcs]
+        if player:
+            entities.append(player)
 
         geography = GeographyLayer(regions=regions)
         settlements_layer = SettlementsLayer(settlements=settlements, region_terrains=region_terrains)
@@ -95,7 +109,7 @@ class GameService:
             region_adjacency=extract_region_adjacency(regions),
             region_income_fn=settlements_layer.get_region_income,
         )
-        entities_layer = EntitiesLayer(entities=[*npcs, player])
+        entities_layer = EntitiesLayer(entities=entities)
 
         world = World(
             layers=[geography, settlements_layer, politics, entities_layer],
@@ -189,6 +203,131 @@ class GameService:
     def list_saves(self) -> list[str]:
         """List available saves."""
         return self._store.list_saves()
+
+    def list_worlds(self) -> list[dict[str, str]]:
+        """List available world templates."""
+        worlds_dir = self._content_dir / "worlds"
+        result: list[dict[str, str]] = []
+        if not worlds_dir.exists():
+            return result
+        for entry in sorted(worlds_dir.iterdir()):
+            is_world_dir = entry.is_dir() and (entry / "world.yaml").exists()
+            is_world_file = entry.suffix in (".yaml", ".yml") and entry.is_file()
+            if is_world_dir or is_world_file:
+                meta = load_world_meta(entry)
+                result.append({"id": entry.name, **meta})
+        return result
+
+    def delete_session(self, session_id: str) -> None:
+        """Stop and remove a session."""
+        self._get_session(session_id)
+        del self._sessions[session_id]
+
+    # -- Master hot controls (live session edits) --
+
+    def _get_entities_layer(self, session: GameSession) -> EntitiesLayer:
+        for layer in session.world.layers:
+            if isinstance(layer, EntitiesLayer):
+                return layer
+        raise RuntimeError("EntitiesLayer not found")
+
+    def _get_politics_layer(self, session: GameSession) -> PoliticsLayer:
+        for layer in session.world.layers:
+            if isinstance(layer, PoliticsLayer):
+                return layer
+        raise RuntimeError("PoliticsLayer not found")
+
+    def _get_settlements_layer(self, session: GameSession) -> SettlementsLayer:
+        for layer in session.world.layers:
+            if isinstance(layer, SettlementsLayer):
+                return layer
+        raise RuntimeError("SettlementsLayer not found")
+
+    def spawn_npc(self, session_id: str, npc_data: dict[str, Any]) -> Npc:
+        """Spawn an NPC into a live session."""
+        session = self._get_session(session_id)
+        npc = parse_npc(str(npc_data["id"]), npc_data)
+        self._get_entities_layer(session).add_entity(npc)
+        return npc
+
+    def remove_npc(self, session_id: str, npc_id: str) -> None:
+        """Remove an NPC from a live session."""
+        session = self._get_session(session_id)
+        layer = self._get_entities_layer(session)
+        entity = layer.get_entity(npc_id)
+        if entity is None:
+            raise ValueError(f"NPC '{npc_id}' not found")
+        layer.remove_entity(npc_id)
+
+    def patch_npc(self, session_id: str, npc_id: str, updates: dict[str, Any]) -> None:
+        """Update mutable NPC fields in a live session."""
+        session = self._get_session(session_id)
+        entity = self._get_entities_layer(session).get_entity(npc_id)
+        if entity is None or not isinstance(entity, Npc):
+            raise ValueError(f"NPC '{npc_id}' not found")
+
+        if "current_hp" in updates:
+            entity.current_hp = int(updates["current_hp"])
+        if "ac" in updates:
+            entity.ac = int(updates["ac"])
+        if "personality" in updates:
+            entity.personality = str(updates["personality"])
+        if "region_id" in updates:
+            entity.region_id = str(updates["region_id"])
+        if "gold" in updates:
+            entity.gold = int(updates["gold"])
+
+    def set_npc_brain(self, session_id: str, npc_id: str, brain_type: str, model: str = "") -> None:
+        """Switch NPC brain (rule_based or llm)."""
+        session = self._get_session(session_id)
+        entity = self._get_entities_layer(session).get_entity(npc_id)
+        if entity is None or not isinstance(entity, Npc):
+            raise ValueError(f"NPC '{npc_id}' not found")
+
+        if brain_type == "rule_based":
+            entity.brain = RuleBrain()
+            entity.ai_type = "rule_based"
+        elif brain_type == "llm":
+            if not self._llm:
+                raise ValueError("LLM not configured")
+            from dnd_simulator.llm.brain import LlmBrain
+
+            entity.brain = LlmBrain(self._llm)
+            entity.ai_type = "llm"
+        else:
+            raise ValueError(f"Unknown brain type: {brain_type}")
+
+    def patch_nation(self, session_id: str, nation_id: str, updates: dict[str, Any]) -> None:
+        """Update mutable nation fields in a live session."""
+        session = self._get_session(session_id)
+        layer = self._get_politics_layer(session)
+        nation = layer.get_nation(nation_id)
+
+        if "wealth" in updates:
+            nation.wealth = float(updates["wealth"])
+        if "military" in updates:
+            nation.military = float(updates["military"])
+        if "stability" in updates:
+            nation.stability = float(updates["stability"])
+
+    def patch_settlement(self, session_id: str, settlement_id: str, updates: dict[str, Any]) -> None:
+        """Update mutable settlement fields in a live session."""
+        session = self._get_session(session_id)
+        layer = self._get_settlements_layer(session)
+        settlement = layer.get_settlement(settlement_id)
+
+        if "population" in updates:
+            settlement.population = int(updates["population"])
+        if "prosperity" in updates:
+            settlement.prosperity = float(updates["prosperity"])
+        if "defenses" in updates:
+            settlement.defenses = float(updates["defenses"])
+
+    def advance_time(self, session_id: str, hours: int) -> list[str]:
+        """Advance game time by given hours. Returns event descriptions."""
+        session = self._get_session(session_id)
+        events = session.world.advance_time(TimeDelta.from_hours(hours))
+        return [e.description for e in events if e.description]
 
     # -- simple commands (placeholder until Master exists) --
 
