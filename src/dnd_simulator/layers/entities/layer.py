@@ -129,9 +129,10 @@ class EntitiesLayer(Layer):
             self._end_combat(region_id)
 
     def _end_combat(self, region_id: str) -> None:
-        """End combat in a region: clear in_combat flags, remove state."""
+        """End combat in a region: clear in_combat and dodge flags, remove state."""
         for c in self.active_creatures_in_region(region_id):
             c.in_combat = False
+            c.is_dodging = False
         self._combats.pop(region_id, None)
         self._attack_this_round.pop(region_id, None)
 
@@ -165,6 +166,9 @@ class EntitiesLayer(Layer):
 
     def handle_event(self, event: Event) -> ActionResult:
         """React to world events. Resolve attacks, log relevant events."""
+        if event.event_type == EventType.ENTITY_DODGE:
+            return self._resolve_dodge(event)
+
         if event.event_type == EventType.ENTITY_ATTACK:
             return self._resolve_attack(event)
 
@@ -176,6 +180,18 @@ class EntitiesLayer(Layer):
             if region_id:
                 self._region_log[region_id].append(event)
 
+        return ActionResult()
+
+    def _resolve_dodge(self, event: Event) -> ActionResult:
+        """Resolve a dodge action: set is_dodging until next turn."""
+        entity_id = str(event.data.get("entity_id", ""))
+        entity = self._entities.get(entity_id)
+        if isinstance(entity, Creature):
+            entity.is_dodging = True
+        # Log the event
+        region_id = self._event_region(event)
+        if region_id:
+            self._region_log[region_id].append(event)
         return ActionResult()
 
     def _resolve_flee(self, event: Event) -> ActionResult:
@@ -227,7 +243,7 @@ class EntitiesLayer(Layer):
 
         # --- Resolution ---
         modifier = attacker.ability_scores.modifier(attack.ability)
-        result = resolve_attack(modifier=modifier, ac=target.ac, attack=attack)
+        result = resolve_attack(modifier=modifier, ac=target.ac, attack=attack, disadvantage=target.is_dodging)
 
         # Build enriched event for the log (with damage info)
         log_data: dict[str, Any] = {

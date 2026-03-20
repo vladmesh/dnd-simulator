@@ -37,6 +37,7 @@ def run_game_loop(world: World) -> None:
             for entity_id in list(combat.turn_order):
                 entity = entities_layer.get_entity(entity_id)
                 if isinstance(entity, Creature) and entity.is_alive and entity.active and entity.in_combat:
+                    entity.is_dodging = False  # dodge lasts until start of next turn
                     entity.take_turn(world)
             # End of round — check for combat exit
             entities_layer.end_combat_round(region_id)

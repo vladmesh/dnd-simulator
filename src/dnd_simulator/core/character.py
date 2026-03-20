@@ -194,6 +194,7 @@ class Creature(Entity):
     ac: int = 10  # natural armor; 10 = unarmored default
     attacks: tuple[Attack, ...] = ()
     in_combat: bool = False
+    is_dodging: bool = False
 
     @property
     def is_alive(self) -> bool:

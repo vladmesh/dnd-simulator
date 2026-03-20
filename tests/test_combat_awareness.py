@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 from dnd_simulator.core.character import (
     Ability,
+    AbilityScores,
     Attack,
     Character,
     DamageComponent,
@@ -34,6 +35,13 @@ _DAGGER = Attack(
     ability=Ability.DEX,
     damage=(DamageComponent("1d4", DamageType.PIERCING),),
 )
+
+
+def _scores(**overrides: int) -> AbilityScores:
+    scores = dict(AbilityScores().scores)
+    for name, val in overrides.items():
+        scores[Ability[name.upper()]] = val
+    return AbilityScores(scores=scores)
 
 
 def _get_entity_fn(*entities: Entity):
@@ -542,3 +550,88 @@ class TestPlayerCombatTurn:
         world = _mock_world([player])
         player.take_turn(world)
         assert any("бой>" in p for p in prompts)
+
+
+# --- Dodge mechanics ---
+
+
+class TestDodgeMechanics:
+    def test_dodge_sets_is_dodging(self) -> None:
+        c1 = Character(id="c1", name="Fighter", region_id="r1", max_hp=20, current_hp=20)
+        layer = EntitiesLayer([c1])
+        event = Event(
+            event_type=EventType.ENTITY_DODGE,
+            source_layer="entities",
+            data={"entity_id": "c1"},
+        )
+        layer.handle_event(event)
+        assert c1.is_dodging is True
+
+    def test_dodge_gives_disadvantage_on_attacks(self) -> None:
+        """A dodging target should be harder to hit (disadvantage)."""
+        import random
+
+        attacker = Character(
+            id="c1",
+            name="Fighter",
+            region_id="r1",
+            max_hp=20,
+            current_hp=20,
+            attacks=(_SWORD,),
+            ability_scores=_scores(str=14),
+        )
+        target = Character(id="c2", name="Dodger", region_id="r1", max_hp=100, current_hp=100, ac=10)
+        layer = EntitiesLayer([attacker, target])
+
+        # Start combat first
+        layer.handle_event(
+            Event(
+                event_type=EventType.ENTITY_ATTACK,
+                source_layer="entities",
+                data={"attacker_id": "c1", "target_id": "c2"},
+            )
+        )
+
+        # Count hits without dodge
+        hits_normal = 0
+        for seed in range(200):
+            target.current_hp = 100
+            target.is_dodging = False
+            random.seed(seed)
+            layer.handle_event(
+                Event(
+                    event_type=EventType.ENTITY_ATTACK,
+                    source_layer="entities",
+                    data={"attacker_id": "c1", "target_id": "c2"},
+                )
+            )
+            if target.current_hp < 100:
+                hits_normal += 1
+
+        # Count hits with dodge
+        hits_dodging = 0
+        for seed in range(200):
+            target.current_hp = 100
+            target.is_dodging = True
+            random.seed(seed)
+            layer.handle_event(
+                Event(
+                    event_type=EventType.ENTITY_ATTACK,
+                    source_layer="entities",
+                    data={"attacker_id": "c1", "target_id": "c2"},
+                )
+            )
+            if target.current_hp < 100:
+                hits_dodging += 1
+
+        # Disadvantage should result in fewer hits
+        assert hits_dodging < hits_normal
+
+    def test_dodge_clears_on_combat_end(self) -> None:
+        c1 = Character(id="c1", name="Fighter", region_id="r1", max_hp=20, current_hp=20, is_dodging=True)
+        c2 = Character(id="c2", name="Rogue", region_id="r1", max_hp=20, current_hp=20)
+        layer = EntitiesLayer([c1, c2])
+        # Start and immediately end combat
+        layer._start_combat("r1")
+        layer._end_combat("r1")
+        assert c1.is_dodging is False
