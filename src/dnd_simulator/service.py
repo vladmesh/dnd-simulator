@@ -329,6 +329,114 @@ class GameService:
         events = session.world.advance_time(TimeDelta.from_hours(hours))
         return [e.description for e in events if e.description]
 
+    # -- Player --
+
+    def create_player(self, session_id: str, player_data: dict[str, Any]) -> PlayerCharacter:
+        """Create a player character in a session that doesn't have one yet."""
+        from dnd_simulator.content_loader import parse_player
+
+        session = self._get_session(session_id)
+        if session.player is not None:
+            raise ValueError("Session already has a player")
+
+        player = parse_player(player_data)
+
+        # Default to first region if not specified
+        if not player.region_id:
+            regions = session.world.query_layer("geography", Query(question="regions", params={}))
+            if regions.value:
+                player.region_id = str(regions.value[0])
+
+        self._get_entities_layer(session).add_entity(player)
+        session.player = player
+        return player
+
+    def get_perception(self, session_id: str) -> dict[str, Any]:
+        """Get what the player's character perceives — awareness of surroundings."""
+        from dnd_simulator.core.character import build_awareness
+
+        session = self._get_session(session_id)
+        player = self._require_player(session)
+        world = session.world
+
+        awareness = build_awareness(world, player.region_id)
+
+        # Entities in region, perceived through player's eyes
+        entities_answer = world.query_layer(
+            "entities", Query(question="entities_in_region", params={"region_id": player.region_id})
+        )
+        perceived_entities: list[dict[str, str]] = []
+        for e in entities_answer.value:
+            if e["id"] != player.id:
+                desc = player.perceive_by_id(str(e["id"]), world)
+                perceived_entities.append({"id": str(e["id"]), "description": desc})
+
+        # Connections from current region
+        conns = world.query_layer("geography", Query(question="connections", params={"region_id": player.region_id}))
+
+        return {
+            **awareness,
+            "entities": perceived_entities,
+            "connections": conns.value,
+        }
+
+    def get_new_events(self, session_id: str) -> list[str]:
+        """Get events since the player last checked."""
+        session = self._get_session(session_id)
+        player = self._require_player(session)
+        answer = session.world.query_layer(
+            "entities", Query(question="new_perceived_events", params={"entity_id": player.id})
+        )
+        result: list[str] = answer.value if answer.value else []
+        return result
+
+    def get_combat_state(self, session_id: str) -> dict[str, Any] | None:
+        """Get combat state from the player's perspective. Returns None if not in combat."""
+        from dnd_simulator.core.character import build_combat_awareness
+
+        session = self._get_session(session_id)
+        player = self._require_player(session)
+
+        if not player.in_combat:
+            return None
+
+        return build_combat_awareness(session.world, player)
+
+    def get_map(self, session_id: str) -> dict[str, Any]:
+        """Get map data: current region connections with travel info."""
+        session = self._get_session(session_id)
+        player = self._require_player(session)
+        world = session.world
+        loc = player.region_id
+
+        region_info = world.query_layer("geography", Query(question="region_info", params={"region_id": loc}))
+        conns = world.query_layer("geography", Query(question="connections", params={"region_id": loc}))
+
+        paths: list[dict[str, object]] = []
+        for c in conns.value:
+            travel = world.query_layer(
+                "geography",
+                Query(question="travel_time", params={"from_id": loc, "to_id": c["target_id"]}),
+            )
+            paths.append(
+                {
+                    "direction": c["direction"],
+                    "target_id": c["target_id"],
+                    "distance_km": travel.value["distance_km"],
+                    "travel_hours": travel.value["hours"],
+                }
+            )
+
+        return {
+            "current_region": region_info.value,
+            "paths": paths,
+        }
+
+    def _require_player(self, session: GameSession) -> PlayerCharacter:
+        if session.player is None:
+            raise ValueError("No player in this session")
+        return session.player
+
     # -- simple commands (placeholder until Master exists) --
 
     def _cmd_look(self, session: GameSession) -> MasterResponse:

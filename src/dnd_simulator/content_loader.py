@@ -87,8 +87,9 @@ def _parse_attacks(attacks_data: list[dict[str, Any]]) -> tuple[Attack, ...]:
 
 def _parse_ability_scores(data: dict[str, Any], key: str = "ability_scores") -> AbilityScores:
     """Parse ability scores from YAML data."""
-    if key in data:
-        return AbilityScores.from_dict(data[key])
+    scores = data.get(key)
+    if scores:
+        return AbilityScores.from_dict(scores)
     return AbilityScores()
 
 
@@ -248,10 +249,10 @@ def load_player(path: Path) -> PlayerCharacter:
         pdata = data["player"]
         assert isinstance(pdata, dict)
 
-    return _parse_player(pdata)
+    return parse_player(pdata)
 
 
-def _parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
+def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
     """Parse player character from YAML data dict."""
     max_hp = int(pdata.get("hp", 10))
     attacks = _parse_attacks(pdata.get("attacks", []))

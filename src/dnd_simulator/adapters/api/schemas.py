@@ -13,6 +13,20 @@ class PlayerActionRequest(BaseModel):
     action: str
 
 
+class CreatePlayerRequest(BaseModel):
+    name: str = "Adventurer"
+    race: str = "human"
+    char_class: str = "fighter"
+    level: int = 1
+    alignment: str = "true_neutral"
+    appearance: str = ""
+    hp: int = 10
+    ac: int = 10
+    gold: int = 0
+    start_region: str = ""
+    ability_scores: dict[str, int] | None = None
+
+
 class SpawnNpcRequest(BaseModel):
     id: str
     name: str
