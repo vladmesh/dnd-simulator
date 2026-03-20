@@ -34,11 +34,14 @@ class SettlementsLayer(Layer):
             for s in settlements:
                 self._settlements[s.id] = s
         self._region_terrains: dict[str, str] = region_terrains or {}
-        self._accumulated_hours: int = 0
 
     @property
     def name(self) -> str:
         return "settlements"
+
+    @property
+    def tick_interval(self) -> int:
+        return 2_592_000  # 30 days in seconds
 
     def get_region_income(self, region_id: str) -> float:
         """Total income from all settlements in a region."""
@@ -50,14 +53,15 @@ class SettlementsLayer(Layer):
         return total
 
     def tick(self, delta: TimeDelta, world_state: WorldState) -> list[Event]:
-        """Process monthly settlement updates."""
-        self._accumulated_hours += delta.total_hours
+        """Process monthly settlement updates.
 
+        World only calls this when tick_interval has elapsed,
+        so delta covers at least one month.
+        """
+        months = max(1, delta.seconds // 2_592_000)
         events: list[Event] = []
-        while self._accumulated_hours >= 720:
-            self._accumulated_hours -= 720
+        for _ in range(months):
             events.extend(self._monthly_tick(world_state))
-
         return events
 
     def _monthly_tick(self, world_state: WorldState) -> list[Event]:
@@ -215,10 +219,7 @@ class SettlementsLayer(Layer):
                 "prosperity": s.prosperity,
                 "defenses": s.defenses,
             }
-        return {
-            "settlements": settlements,
-            "accumulated_hours": self._accumulated_hours,
-        }
+        return {"settlements": settlements}
 
     def load_state(self, state: dict[str, object]) -> None:
         """Restore settlements from saved state."""
@@ -238,6 +239,3 @@ class SettlementsLayer(Layer):
                 defenses=float(sdata.get("defenses", 30.0)),
             )
 
-        acc = state.get("accumulated_hours", 0)
-        assert isinstance(acc, int)
-        self._accumulated_hours = acc

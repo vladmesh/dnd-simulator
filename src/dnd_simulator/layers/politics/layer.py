@@ -83,7 +83,6 @@ class PoliticsLayer(Layer):
         self._region_adjacency: dict[str, list[str]] = region_adjacency or {}
         self._relations: dict[tuple[str, str], DiplomaticStatus] = {}
         self._war_durations: dict[tuple[str, str], int] = {}
-        self._accumulated_hours: int = 0
         self._rng = random.Random(seed)
 
         # Income from settlements (if available), else fall back to terrain-based
@@ -92,6 +91,10 @@ class PoliticsLayer(Layer):
     @property
     def name(self) -> str:
         return "politics"
+
+    @property
+    def tick_interval(self) -> int:
+        return 2_592_000  # 30 days in seconds
 
     def set_relation(self, nation_a: str, nation_b: str, status: DiplomaticStatus) -> None:
         """Set diplomatic status between two nations."""
@@ -115,14 +118,15 @@ class PoliticsLayer(Layer):
         return None
 
     def tick(self, delta: TimeDelta, world_state: WorldState) -> list[Event]:
-        """Process monthly political updates."""
-        self._accumulated_hours += delta.total_hours
+        """Process monthly political updates.
 
+        World only calls this when tick_interval has elapsed,
+        so delta covers at least one month.
+        """
+        months = max(1, delta.seconds // 2_592_000)
         events: list[Event] = []
-        while self._accumulated_hours >= 720:  # 30 days
-            self._accumulated_hours -= 720
+        for _ in range(months):
             events.extend(self._monthly_tick())
-
         return events
 
     def _monthly_tick(self) -> list[Event]:
@@ -530,7 +534,6 @@ class PoliticsLayer(Layer):
             "nations": nations,
             "relations": relations,
             "war_durations": war_durations,
-            "accumulated_hours": self._accumulated_hours,
         }
 
     def load_state(self, state: dict[str, object]) -> None:
@@ -578,6 +581,3 @@ class PoliticsLayer(Layer):
             parts = str(key_str).split(":")
             self._war_durations[(parts[0], parts[1])] = int(months)
 
-        acc = state.get("accumulated_hours", 0)
-        assert isinstance(acc, int)
-        self._accumulated_hours = acc

@@ -46,6 +46,10 @@ class GeographyLayer(Layer):
     def name(self) -> str:
         return "geography"
 
+    @property
+    def tick_interval(self) -> int:
+        return 0  # always tick — internal step calculation handles granularity
+
     def add_region(self, region: Region) -> None:
         self._regions[region.id] = region
 

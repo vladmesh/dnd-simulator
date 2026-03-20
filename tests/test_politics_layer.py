@@ -102,23 +102,16 @@ class TestRegionOwner:
 
 
 class TestTick:
-    def test_no_tick_for_short_time(self) -> None:
-        layer = _make_layer()
-        events = layer.tick(TimeDelta(hours=24), _world_state())
-        assert events == []  # Need 720 hours for a monthly tick
-
     def test_monthly_tick_runs(self) -> None:
         layer = _make_layer()
-        # 30 days = 720 hours
-        layer.tick(TimeDelta(days=30), _world_state())
+        layer.tick(TimeDelta.from_days(30), _world_state())
         # Economy should have changed wealth
         info = layer.query(Query(question="nation_info", params={"nation_id": "alpha"}))
         assert info.value["wealth"] != 60.0  # Should have changed from income/upkeep
 
     def test_multiple_months(self) -> None:
         layer = _make_layer()
-        # 90 days = 3 months
-        layer.tick(TimeDelta(days=90), _world_state())
+        layer.tick(TimeDelta.from_days(90), _world_state())
         # Should have processed 3 monthly ticks
         info = layer.query(Query(question="nation_info", params={"nation_id": "alpha"}))
         # Wealth should have changed significantly over 3 months
@@ -134,7 +127,7 @@ class TestWarResolution:
         # Run 12 months of war
         all_events = []
         for _ in range(12):
-            events = layer.tick(TimeDelta(days=30), _world_state())
+            events = layer.tick(TimeDelta.from_days(30), _world_state())
             all_events.extend(events)
 
         # At least some conquest or political events should have occurred
@@ -150,7 +143,7 @@ class TestWarResolution:
         alpha_mil = layer.query(Query(question="nation_info", params={"nation_id": "alpha"})).value["military"]
         beta_mil = layer.query(Query(question="nation_info", params={"nation_id": "beta"})).value["military"]
 
-        layer.tick(TimeDelta(days=30), _world_state())
+        layer.tick(TimeDelta.from_days(30), _world_state())
 
         alpha_mil_after = layer.query(Query(question="nation_info", params={"nation_id": "alpha"})).value["military"]
         beta_mil_after = layer.query(Query(question="nation_info", params={"nation_id": "beta"})).value["military"]

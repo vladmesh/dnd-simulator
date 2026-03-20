@@ -102,7 +102,7 @@ class GameService:
         )
 
         # Initial tick to set weather/temperature
-        world.advance_time(TimeDelta(hours=0))
+        world.advance_time(TimeDelta(seconds=0))
 
         # Fall back to first region if player has no start_region
         if not player.region_id and regions:
@@ -281,7 +281,7 @@ class GameService:
 
     def _cmd_wait(self, session: GameSession, hours: int = 4) -> MasterResponse:
         """Wait specified hours, advancing time."""
-        events = session.world.advance_time(TimeDelta(hours=hours))
+        events = session.world.advance_time(TimeDelta.from_hours(hours))
         t = session.world.time
 
         lines = [f"Time passes... It is now {t.hour:02d}:{t.minute:02d}, day {t.day}, month {t.month}."]
@@ -312,7 +312,7 @@ class GameService:
                 travel_hours = max(1, travel_hours)  # minimum 1 hour
 
                 session.player_location = c["target_id"]
-                events = world.advance_time(TimeDelta(hours=travel_hours))
+                events = world.advance_time(TimeDelta.from_hours(travel_hours))
                 look = self._cmd_look(session)
 
                 header = f"You travel {direction.upper()} for ~{travel_hours}h ({travel.value['distance_km']} km)..."

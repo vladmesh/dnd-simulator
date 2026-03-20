@@ -20,6 +20,11 @@ class Layer(ABC):
     def name(self) -> str:
         """Unique identifier for this layer."""
 
+    @property
+    @abstractmethod
+    def tick_interval(self) -> int:
+        """Minimum seconds between ticks. 0 means tick every advance_time call."""
+
     @abstractmethod
     def tick(self, delta: TimeDelta, world_state: WorldState) -> list[Event]:
         """Advance simulation by delta time. Returns events that occurred."""

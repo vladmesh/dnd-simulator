@@ -26,6 +26,10 @@ class NpcLayer(Layer):
     def name(self) -> str:
         return "npcs"
 
+    @property
+    def tick_interval(self) -> int:
+        return 0  # tick every advance_time call
+
     def tick(self, delta: TimeDelta, world_state: WorldState) -> list[Event]:
         """Update NPC activities based on time of day."""
         hour = world_state.time.hour

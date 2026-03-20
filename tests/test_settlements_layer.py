@@ -112,16 +112,10 @@ class TestRegionIncome:
 
 
 class TestTick:
-    def test_no_tick_for_short_time(self) -> None:
-        layer = _make_layer()
-        events = layer.tick(TimeDelta(hours=24), _world_state())
-        assert events == []
-
     def test_monthly_tick_changes_population(self) -> None:
         layer = _make_layer()
         ws = _world_state()
-        # 30 days = 720 hours
-        layer.tick(TimeDelta(days=30), ws)
+        layer.tick(TimeDelta.from_days(30), ws)
         info = layer.query(Query(question="settlement_info", params={"settlement_id": "city_a"}))
         # prosperity 70 -> population should grow (2%)
         assert info.value["population"] > 5000
@@ -129,7 +123,7 @@ class TestTick:
     def test_bad_weather_hurts_village_prosperity(self) -> None:
         layer = _make_layer()
         ws = _world_state(weather_a="blizzard")
-        layer.tick(TimeDelta(days=30), ws)
+        layer.tick(TimeDelta.from_days(30), ws)
         info = layer.query(Query(question="settlement_info", params={"settlement_id": "village_a"}))
         # Blizzard should hurt village prosperity significantly
         assert info.value["prosperity"] < 50.0
@@ -137,7 +131,7 @@ class TestTick:
     def test_bad_weather_barely_affects_city(self) -> None:
         layer = _make_layer()
         ws = _world_state(weather_a="blizzard")
-        layer.tick(TimeDelta(days=30), ws)
+        layer.tick(TimeDelta.from_days(30), ws)
         info = layer.query(Query(question="settlement_info", params={"settlement_id": "city_a"}))
         # City barely affected by weather
         # Blizzard: -5.0 * 0.3 = -1.5 on prosperity, plus drift from wealth/stability

@@ -20,6 +20,7 @@ class World:
     def __init__(self, layers: list[Layer], time: GameDateTime | None = None) -> None:
         self.time = time or GameDateTime()
         self._layers = layers
+        self._last_tick_time: dict[str, GameDateTime] = {layer.name: self.time for layer in layers}
 
     @property
     def layers(self) -> list[Layer]:
@@ -33,15 +34,21 @@ class World:
         )
 
     def advance_time(self, delta: TimeDelta) -> list[Event]:
-        """Advance world time. Ticks layers in order, propagates events."""
-        self.time = self.time.advance(hours=delta.hours, days=delta.days)
+        """Advance world time. Only ticks layers whose tick_interval has elapsed."""
+        self.time = self.time.advance(seconds=delta.seconds)
+        now = self.time.to_total_seconds()
         all_events: list[Event] = []
 
         for layer in self._layers:
-            state = self.get_state()
-            events = layer.tick(delta, state)
-            all_events.extend(events)
-            self._propagate_events(events, source=layer)
+            last = self._last_tick_time[layer.name].to_total_seconds()
+            elapsed = now - last
+
+            if layer.tick_interval == 0 or elapsed >= layer.tick_interval:
+                state = self.get_state()
+                events = layer.tick(TimeDelta(seconds=elapsed), state)
+                all_events.extend(events)
+                self._propagate_events(events, source=layer)
+                self._last_tick_time[layer.name] = self.time
 
         return all_events
 
@@ -69,6 +76,17 @@ class World:
 
     def save(self) -> dict[str, object]:
         """Serialize entire world state."""
+        last_ticks: dict[str, dict[str, int]] = {}
+        for name, t in self._last_tick_time.items():
+            last_ticks[name] = {
+                "year": t.year,
+                "month": t.month,
+                "day": t.day,
+                "hour": t.hour,
+                "minute": t.minute,
+                "second": t.second,
+            }
+
         return {
             "time": {
                 "year": self.time.year,
@@ -76,7 +94,9 @@ class World:
                 "day": self.time.day,
                 "hour": self.time.hour,
                 "minute": self.time.minute,
+                "second": self.time.second,
             },
+            "last_tick_times": last_ticks,
             "layers": {layer.name: layer.get_state() for layer in self._layers},
         }
 
@@ -84,7 +104,33 @@ class World:
         """Restore world from saved data."""
         time_data = data["time"]
         assert isinstance(time_data, dict)
-        self.time = GameDateTime(**time_data)
+        # Backward compat: old saves may lack 'second'
+        self.time = GameDateTime(
+            year=int(time_data.get("year", 1)),
+            month=int(time_data.get("month", 1)),
+            day=int(time_data.get("day", 1)),
+            hour=int(time_data.get("hour", 0)),
+            minute=int(time_data.get("minute", 0)),
+            second=int(time_data.get("second", 0)),
+        )
+
+        # Restore last tick times (fallback to current time for old saves)
+        last_ticks_data = data.get("last_tick_times", {})
+        assert isinstance(last_ticks_data, dict)
+        for layer in self._layers:
+            lt = last_ticks_data.get(layer.name)
+            if lt and isinstance(lt, dict):
+                self._last_tick_time[layer.name] = GameDateTime(
+                    year=int(lt.get("year", 1)),
+                    month=int(lt.get("month", 1)),
+                    day=int(lt.get("day", 1)),
+                    hour=int(lt.get("hour", 0)),
+                    minute=int(lt.get("minute", 0)),
+                    second=int(lt.get("second", 0)),
+                )
+            else:
+                self._last_tick_time[layer.name] = self.time
+
         layers_data = data.get("layers", {})
         assert isinstance(layers_data, dict)
         for layer in self._layers:

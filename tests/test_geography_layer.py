@@ -61,7 +61,7 @@ class TestGeographyLayer:
     def test_tick_updates_temperature(self) -> None:
         layer = GeographyLayer(regions=_make_test_regions(), weather_seed=42)
         state = WorldState(time=GameDateTime(year=1490, month=7, day=15, hour=12))
-        delta = TimeDelta(hours=6)
+        delta = TimeDelta.from_hours(6)
 
         layer.tick(delta, state)
 
@@ -78,7 +78,7 @@ class TestGeographyLayer:
         # Run multiple ticks to get at least some weather changes
         all_events = []
         for _ in range(20):
-            events = layer.tick(TimeDelta(hours=6), state)
+            events = layer.tick(TimeDelta.from_hours(6), state)
             all_events.extend(events)
 
         # At least some weather changes should have occurred
@@ -139,7 +139,7 @@ class TestGeographySaveLoad:
 
         # Modify some state
         state_ws = WorldState(time=GameDateTime(year=1490, month=7, day=15, hour=12))
-        original.tick(TimeDelta(hours=6), state_ws)
+        original.tick(TimeDelta.from_hours(6), state_ws)
 
         # Save
         saved = original.get_state()
