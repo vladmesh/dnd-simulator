@@ -87,7 +87,7 @@ class Npc(Character):
             combat_awareness = build_combat_awareness(world, self)
             system_prompt = build_npc_combat_prompt(self._build_npc_data(), combat_awareness)
             tools = build_npc_combat_tools()
-            retry_hint = "Ты должен выбрать действие: attack, dodge, flee или idle."
+            retry_hint = "Ты должен выбрать действие: attack, move, dash, dodge, flee или idle."
         else:
             awareness = build_awareness(world, self.region_id)
             # Build list of nearby entities with IDs so LLM knows valid targets
@@ -186,6 +186,21 @@ class Npc(Character):
                 )
             )
             return True
+        if action.name in ("move", "dash"):
+            event_type = EventType.ENTITY_DASH if action.name == "dash" else EventType.ENTITY_MOVE
+            event_data: dict[str, object] = {
+                "entity_id": self.id,
+                "description": action.arguments.get("description", ""),
+            }
+            if "toward" in action.arguments:
+                event_data["toward"] = action.arguments["toward"]
+            elif "away_from" in action.arguments:
+                event_data["away_from"] = action.arguments["away_from"]
+            elif "direction" in action.arguments:
+                event_data["direction"] = action.arguments["direction"]
+            logger.info("[NPC:%s] → %s", self.name, action.name)
+            result = world.handle_event(Event(event_type=event_type, source_layer="entities", data=event_data))
+            return result.success
         return False
 
 

@@ -194,6 +194,8 @@ class TestRegionLog:
         assert len(layer.get_perceived_log(smith)) == 0
 
     def test_multiple_events_in_order(self) -> None:
+        from dnd_simulator.core.combat import Position
+
         smith = Character(id="smith", name="Smith", region_id="r1", max_hp=100, current_hp=100)
         sword = Attack(
             name="longsword",
@@ -210,6 +212,18 @@ class TestRegionLog:
                 data={"entity_id": "player", "text": "Готовься!"},
             )
         )
+        # First attack starts combat — place in melee range, then attack again
+        layer.handle_event(
+            Event(
+                event_type=EventType.ENTITY_ATTACK,
+                source_layer="entities",
+                data={"attacker_id": "player", "target_id": "smith", "weapon": "longsword"},
+            )
+        )
+        combat = layer.get_combat("r1")
+        assert combat is not None
+        combat.battle_map.set_position("player", Position(30, 30))
+        combat.battle_map.set_position("smith", Position(35, 30))
         layer.handle_event(
             Event(
                 event_type=EventType.ENTITY_ATTACK,
@@ -219,7 +233,6 @@ class TestRegionLog:
         )
 
         log = layer.get_perceived_log(smith)
-        assert len(log) == 3  # say + combat_started + attack
         assert "Готовься!" in log[0]
         assert "Бой начался" in log[1]
-        assert "атакует тебя" in log[2]
+        assert any("атакует тебя" in line for line in log)

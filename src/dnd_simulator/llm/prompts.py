@@ -83,6 +83,7 @@ def build_npc_combat_prompt(
     max_hp = combat_awareness["self_max_hp"]
     weapon = combat_awareness["self_weapon"]
     weapon_dmg = combat_awareness["self_weapon_damage"]
+    speed = combat_awareness.get("self_speed", 30)
 
     hp_status = "здоров"
     if hp < max_hp // 2:
@@ -90,13 +91,25 @@ def build_npc_combat_prompt(
     elif hp < max_hp:
         hp_status = "ранен"
 
-    # Nearby entities
+    # Nearby entities with distances
     entities_lines: list[str] = []
     nearby = combat_awareness.get("nearby", [])
     for e in nearby:
-        entities_lines.append(f"- {e['description']} (id: {e['id']})")
+        dist = e.get("distance_ft")
+        direction = e.get("direction")
+        if dist is not None and direction is not None:
+            entities_lines.append(f"- {e['description']} (id: {e['id']}) — {dist} ft {direction}")
+        else:
+            entities_lines.append(f"- {e['description']} (id: {e['id']})")
 
     entities_ctx = "\nВокруг тебя:\n" + "\n".join(entities_lines) if entities_lines else "\nВокруг никого нет."
+
+    # Walls
+    walls = combat_awareness.get("walls", [])
+    walls_ctx = ""
+    if walls:
+        walls_lines = "\n".join(f"- {w}" for w in walls)
+        walls_ctx = f"\nСтены на арене:\n{walls_lines}\n"
 
     round_num = combat_awareness.get("round_number", 1)
 
@@ -108,13 +121,17 @@ def build_npc_combat_prompt(
         f"Твоё состояние:\n"
         f"- HP: {hp}/{max_hp} ({hp_status})\n"
         f"- Оружие: {weapon} ({weapon_dmg})\n"
-        f"{entities_ctx}\n"
-        f"\n"
+        f"- Скорость: {speed} ft\n"
+        f"{entities_ctx}"
+        f"{walls_ctx}\n"
         f"Раунд {round_num}.\n"
         f"\n"
         f"Правила:\n"
-        f"- Выбери одно действие: attack, dodge, flee или idle\n"
+        f"- Выбери одно действие: attack, dodge, move, dash, flee или idle\n"
+        f"- attack(target_id) — ударить цель (должна быть в пределах досягаемости оружия)\n"
+        f"- move(toward/away_from/direction) — переместиться на {speed} ft\n"
+        f"- dash(toward/away_from/direction) — спринт на {speed * 2} ft (вместо атаки)\n"
+        f"- Стены блокируют движение — нельзя пройти сквозь стену\n"
         f"- Хочешь что-то сказать — впиши в description\n"
-        f"- Отвечай на русском языке\n"
-        f"- attack(target_id) — target_id это id существа из списка выше"
+        f"- Отвечай на русском языке"
     )

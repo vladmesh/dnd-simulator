@@ -1,24 +1,26 @@
-name: Tavern Brawl
+name: Blood Arena
 description: >
-  A single tavern room. Three NPCs with strong opinions and weapons.
-  Things will get violent fast.
+  A gladiatorial arena with walls. Four fighters, no allies. Last one standing wins.
 
 regions:
-  tavern:
-    name: Таверна «Ржавый Клинок»
-    latitude: 45.0
+  arena:
+    name: Кровавая Арена
+    latitude: 40.0
     longitude: 0.0
-    elevation: 100
+    elevation: 50
     terrain: plains
     water_proximity: 0.0
     connections: []
-    settlements:
-      - id: tavern_settlement
-        name: Ржавый Клинок
-        type: village
-        population: 20
-        prosperity: 30
-        defenses: 5
+    settlements: []
+    battle_map:
+      width: 80
+      height: 80
+      walls:
+        # Central cross-shaped wall with gaps
+        - [40, 0, 40, 30]    # vertical wall, south half
+        - [40, 50, 40, 80]   # vertical wall, north half (gap 30-50 in middle)
+        - [0, 40, 25, 40]    # horizontal wall, west half
+        - [55, 40, 80, 40]   # horizontal wall, east half (gap 25-55 in middle)
 
 nations: {}
 
@@ -27,8 +29,8 @@ player:
   race: half_orc
   class: fighter
   level: 3
-  alignment: chaotic_good
-  appearance: "огромный полуорк в помятых доспехах, со шрамом через всё лицо"
+  alignment: chaotic_neutral
+  appearance: "огромный полуорк в шипастых наплечниках, со шрамом через всё лицо"
   ability_scores:
     str: 18
     dex: 14
@@ -36,119 +38,107 @@ player:
     int: 8
     wis: 10
     cha: 10
-  hp: 28
+  hp: 30
   ac: 16
-  gold: 15
-  start_region: tavern
+  gold: 0
+  start_region: arena
   attacks:
     - name: greataxe
       ability: str
       damage:
         - dice: "1d12"
           type: slashing
-    - name: fist
-      ability: str
-      damage:
-        - dice: "1d4"
-          type: bludgeoning
 
 npcs:
-  grok:
-    name: Грок Разбитый Нос
-    region_id: tavern
-    settlement_id: tavern_settlement
-    role: guard
-    race: half_orc
-    class: fighter
-    hp: 25
-    ac: 14
-    ability_scores:
-      str: 16
-      dex: 12
-      con: 15
-      int: 8
-      wis: 10
-      cha: 8
-    personality: >
-      Грок — вышибала в таверне. Полуорк с расплющенным носом и добрым сердцем.
-      Считает что полуорков и так все обижают, поэтому всегда заступается
-      за других полуорков если кто-то на них нападает или оскорбляет.
-      Ненавидит расизм и тех кто обижает слабых.
-      В мирное время молча стоит у двери и кивает знакомым.
-      Говорит мало, бьёт сильно.
-    attacks:
-      - name: club
-        ability: str
-        damage:
-          - dice: "1d8"
-            type: bludgeoning
-
-  varn:
-    name: Варн Чёрная Рука
-    region_id: tavern
-    settlement_id: tavern_settlement
-    role: merchant
-    race: human
-    class: rogue
-    hp: 18
+  razor:
+    name: Разор Безумный
+    region_id: arena
+    role: gladiator
+    race: dragonborn
+    class: barbarian
+    hp: 35
     ac: 13
     ability_scores:
+      str: 18
+      dex: 12
+      con: 16
+      int: 6
+      wis: 8
+      cha: 10
+    personality: >
+      Ты — Разор, драконорождённый берсерк на Кровавой Арене.
+      Здесь каждый сам за себя. Убей или умри.
+      Ты атакуешь ближайшего врага с яростью. Никаких переговоров.
+      Если враг далеко — беги к нему. Если рядом — бей.
+      Предпочитаешь бить самого раненого — добивать слабых.
+    attacks:
+      - name: greatsword
+        ability: str
+        damage:
+          - dice: "2d6"
+            type: slashing
+
+  shadow:
+    name: Тень Ночная
+    region_id: arena
+    role: gladiator
+    race: elf
+    class: rogue
+    hp: 20
+    ac: 15
+    ability_scores:
       str: 10
-      dex: 16
+      dex: 18
       con: 12
       int: 14
-      wis: 12
-      cha: 14
+      wis: 14
+      cha: 12
     personality: >
-      Варн — скупщик краденого, подлый и злобный.
-      Ненавидит полуорков — считает их тупыми животными.
-      При любой возможности оскорбляет и провоцирует полуорков.
-      Если кто-то из полуорков ответит грубо или начнёт драку —
-      Варн немедленно нападёт с кинжалом. Бьёт подло, в спину.
-      Не отступает, дерётся до конца. Любит говорить гадости во время боя.
+      Ты — Тень, эльфийка-ассасин на Кровавой Арене.
+      Здесь каждый сам за себя. Убей или умри.
+      Ты хитрая и расчётливая. Держишься на расстоянии, стреляешь из лука.
+      Если враг подходит вплотную — отступаешь (move away).
+      Атакуешь самого опасного противника. Не лезешь в ближний бой.
+      Используй стены как укрытие — стой за стеной и стреляй через проёмы.
     attacks:
+      - name: shortbow
+        ability: dex
+        reach: 80
+        damage:
+          - dice: "1d6"
+            type: piercing
       - name: dagger
         ability: dex
         damage:
           - dice: "1d4"
             type: piercing
-      - name: dagger_offhand
-        ability: dex
-        damage:
-          - dice: "1d4"
-            type: piercing
 
-  elara:
-    name: Элара Тихая
-    region_id: tavern
-    settlement_id: tavern_settlement
-    role: tavern_keeper
-    race: elf
-    class: ranger
-    hp: 20
-    ac: 14
+  iron:
+    name: Железный Горн
+    region_id: arena
+    role: gladiator
+    race: dwarf
+    class: fighter
+    hp: 40
+    ac: 18
+    speed: 25
     ability_scores:
-      str: 10
-      dex: 16
-      con: 12
-      int: 12
-      wis: 16
-      cha: 12
+      str: 16
+      dex: 8
+      con: 18
+      int: 10
+      wis: 14
+      cha: 8
     personality: >
-      Элара — хозяйка таверны, молчаливая эльфийка с острым взглядом.
-      Бывшая охотница, прячет арбалет под стойкой.
-      Не любит насилие в своём заведении. Если кто-то начнёт драку —
-      предупредит один раз. Если не послушают — стреляет.
-      Стреляет в того, кто начал первым, без разбора.
-      Если на неё нападут — защищается жёстко и без жалости.
+      Ты — Железный Горн, дварф-танк на Кровавой Арене.
+      Здесь каждый сам за себя. Убей или умри.
+      Ты медленный но несокрушимый. Идёшь к ближайшему врагу и бьёшь.
+      Если сильно ранен — уходишь в dodge, чтобы перевести дух.
+      Потом снова идёшь в бой. Никогда не бежишь.
+      Помни про стены — обходи их через проёмы.
     attacks:
-      - name: crossbow
-        ability: dex
+      - name: warhammer
+        ability: str
         damage:
-          - dice: "1d8"
-            type: piercing
-      - name: shortsword
-        ability: dex
-        damage:
-          - dice: "1d6"
-            type: piercing
+          - dice: "1d10"
+            type: bludgeoning

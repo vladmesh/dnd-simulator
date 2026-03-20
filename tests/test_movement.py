@@ -1,0 +1,195 @@
+"""Tests for D&D 5e movement rules — diagonal distance and grid movement, including walls."""
+
+from __future__ import annotations
+
+from dnd_simulator.core.combat import BattleMap, Position, Wall
+from dnd_simulator.rules.movement import (
+    direction_label,
+    grid_distance,
+    move_away_from,
+    move_direction,
+    move_toward,
+)
+
+
+class TestGridDistance:
+    """D&D 5e DMG diagonal rule: first diag = 5, second = 10, alternating."""
+
+    def test_same_position(self) -> None:
+        assert grid_distance(Position(0, 0), Position(0, 0)) == 0
+
+    def test_straight_horizontal(self) -> None:
+        assert grid_distance(Position(0, 0), Position(30, 0)) == 30
+
+    def test_straight_vertical(self) -> None:
+        assert grid_distance(Position(0, 0), Position(0, 25)) == 25
+
+    def test_one_diagonal(self) -> None:
+        # 1 square diagonal = 5 ft
+        assert grid_distance(Position(0, 0), Position(5, 5)) == 5
+
+    def test_two_diagonals(self) -> None:
+        # 2 diagonal squares: first = 5, second = 10 → total = 15
+        assert grid_distance(Position(0, 0), Position(10, 10)) == 15
+
+    def test_three_diagonals(self) -> None:
+        # 3 diags: 5 + 10 + 5 = 20
+        assert grid_distance(Position(0, 0), Position(15, 15)) == 20
+
+    def test_four_diagonals(self) -> None:
+        # 4 diags: 5 + 10 + 5 + 10 = 30
+        assert grid_distance(Position(0, 0), Position(20, 20)) == 30
+
+    def test_mixed_diagonal_and_straight(self) -> None:
+        # dx=3 squares, dy=1 square → 1 diag + 2 straight = 5 + 10 = 15
+        assert grid_distance(Position(0, 0), Position(15, 5)) == 15
+
+    def test_symmetric(self) -> None:
+        a, b = Position(10, 20), Position(30, 5)
+        assert grid_distance(a, b) == grid_distance(b, a)
+
+
+class TestDirectionLabel:
+    def test_north(self) -> None:
+        assert direction_label(0, 1) == "на севере"
+
+    def test_south(self) -> None:
+        assert direction_label(0, -1) == "на юге"
+
+    def test_east(self) -> None:
+        assert direction_label(1, 0) == "на востоке"
+
+    def test_west(self) -> None:
+        assert direction_label(-1, 0) == "на западе"
+
+    def test_northeast(self) -> None:
+        assert direction_label(1, 1) == "на северо-востоке"
+
+    def test_southwest(self) -> None:
+        assert direction_label(-1, -1) == "на юго-западе"
+
+    def test_same_position(self) -> None:
+        assert direction_label(0, 0) == "здесь"
+
+
+class TestMoveToward:
+    def test_move_straight(self) -> None:
+        bm = BattleMap(width=100, height=100)
+        origin = Position(0, 0)
+        target = Position(50, 0)
+        result = move_toward(origin, target, speed=30, battle_map=bm)
+        assert result == Position(30, 0)
+
+    def test_move_reaches_target(self) -> None:
+        bm = BattleMap(width=100, height=100)
+        origin = Position(0, 0)
+        target = Position(10, 0)
+        result = move_toward(origin, target, speed=30, battle_map=bm)
+        assert result == target
+
+    def test_move_diagonal_costs_alternating(self) -> None:
+        bm = BattleMap(width=100, height=100)
+        origin = Position(0, 0)
+        target = Position(50, 50)
+        # speed=30: diag costs 5,10,5,10 → after 4 diags spent 30
+        result = move_toward(origin, target, speed=30, battle_map=bm)
+        assert result == Position(20, 20)
+
+    def test_clamp_to_map_bounds(self) -> None:
+        bm = BattleMap(width=30, height=30)
+        origin = Position(20, 20)
+        target = Position(100, 100)
+        result = move_toward(origin, target, speed=30, battle_map=bm)
+        assert result.x <= 30
+        assert result.y <= 30
+
+    def test_zero_speed(self) -> None:
+        bm = BattleMap(width=100, height=100)
+        origin = Position(10, 10)
+        target = Position(50, 50)
+        result = move_toward(origin, target, speed=0, battle_map=bm)
+        assert result == origin
+
+
+class TestMoveAwayFrom:
+    def test_move_away_straight(self) -> None:
+        bm = BattleMap(width=100, height=100)
+        origin = Position(50, 50)
+        threat = Position(50, 60)
+        result = move_away_from(origin, threat, speed=30, battle_map=bm)
+        # Should move south (away from north threat)
+        assert result.y < origin.y
+
+    def test_move_away_from_same_position(self) -> None:
+        bm = BattleMap(width=100, height=100)
+        origin = Position(50, 50)
+        result = move_away_from(origin, origin, speed=30, battle_map=bm)
+        # Should move somewhere (default: north)
+        assert result != origin
+
+
+class TestMoveDirection:
+    def test_move_north(self) -> None:
+        bm = BattleMap(width=100, height=100)
+        origin = Position(50, 0)
+        result = move_direction(origin, "north", speed=30, battle_map=bm)
+        assert result == Position(50, 30)
+
+    def test_move_southwest(self) -> None:
+        bm = BattleMap(width=100, height=100)
+        origin = Position(50, 50)
+        result = move_direction(origin, "southwest", speed=30, battle_map=bm)
+        assert result.x < origin.x
+        assert result.y < origin.y
+
+    def test_invalid_direction_stays(self) -> None:
+        bm = BattleMap(width=100, height=100)
+        origin = Position(50, 50)
+        result = move_direction(origin, "upward", speed=30, battle_map=bm)
+        assert result == origin
+
+    def test_clamp_to_map_edge(self) -> None:
+        bm = BattleMap(width=40, height=40)
+        origin = Position(10, 10)
+        result = move_direction(origin, "south", speed=60, battle_map=bm)
+        assert result.y >= 0
+
+
+class TestMoveWithWalls:
+    """Movement stops at walls instead of passing through."""
+
+    def test_move_toward_stops_at_vertical_wall(self) -> None:
+        bm = BattleMap(width=100, height=100, walls=[Wall(30, 0, 30, 50)])
+        origin = Position(10, 10)
+        target = Position(50, 10)
+        result = move_toward(origin, target, speed=30, battle_map=bm)
+        # Should stop at x=25 (one square before the wall at x=30)
+        assert result.x <= 25
+
+    def test_move_direction_stops_at_horizontal_wall(self) -> None:
+        bm = BattleMap(width=100, height=100, walls=[Wall(0, 40, 60, 40)])
+        origin = Position(10, 20)
+        result = move_direction(origin, "north", speed=30, battle_map=bm)
+        # Should stop at y=35 (one square before wall at y=40)
+        assert result.y <= 35
+
+    def test_move_through_gap_in_wall(self) -> None:
+        # Wall from x=0..20 and x=30..60, gap at y=20..30
+        bm = BattleMap(
+            width=100,
+            height=100,
+            walls=[Wall(40, 0, 40, 20), Wall(40, 30, 40, 60)],
+        )
+        origin = Position(30, 25)  # in the gap zone
+        target = Position(50, 25)
+        result = move_toward(origin, target, speed=30, battle_map=bm)
+        # Should pass through the gap
+        assert result.x > 30
+
+    def test_move_away_stops_at_wall(self) -> None:
+        bm = BattleMap(width=100, height=100, walls=[Wall(0, 30, 60, 30)])
+        origin = Position(10, 35)
+        threat = Position(10, 50)
+        result = move_away_from(origin, threat, speed=30, battle_map=bm)
+        # Moving south (away from north threat), should stop at wall y=30
+        assert result.y >= 30

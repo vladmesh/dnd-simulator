@@ -6,12 +6,13 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.character import Ability, Attack, Character, Creature, DamageComponent, DamageType, Entity
-from dnd_simulator.core.combat import CombatState
+from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.layers.entities.models import Npc, NpcActivity
 from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.rules.combat import resolve_attack, roll_initiative
+from dnd_simulator.rules.movement import grid_distance, move_away_from, move_direction, move_toward
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import TimeDelta
@@ -24,6 +25,8 @@ _LOGGED_EVENTS = {
     EventType.ENTITY_DIED,
     EventType.ENTITY_DODGE,
     EventType.ENTITY_FLEE,
+    EventType.ENTITY_MOVE,
+    EventType.ENTITY_DASH,
     EventType.COMBAT_STARTED,
     EventType.COMBAT_ENDED,
 }
@@ -32,11 +35,16 @@ _LOGGED_EVENTS = {
 class EntitiesLayer(Layer):
     """All tracked entities: player, NPCs, named creatures."""
 
-    def __init__(self, entities: list[Entity] | None = None) -> None:
+    def __init__(
+        self,
+        entities: list[Entity] | None = None,
+        battle_map_configs: dict[str, BattleMap] | None = None,
+    ) -> None:
         self._entities: dict[str, Entity] = {}
         self._region_log: dict[str, list[Event]] = defaultdict(list)
         self._combats: dict[str, CombatState] = {}
         self._attack_this_round: dict[str, bool] = {}
+        self._battle_map_configs: dict[str, BattleMap] = battle_map_configs or {}
         if entities:
             for e in entities:
                 self._entities[e.id] = e
@@ -86,12 +94,22 @@ class EntitiesLayer(Layer):
         return self._combats.get(region_id)
 
     def _start_combat(self, region_id: str) -> CombatState:
-        """Roll initiative and create a new combat in a region."""
+        """Roll initiative, create battle map, and start combat in a region."""
         creatures = self.active_creatures_in_region(region_id)
         ordered = roll_initiative(creatures)
+
+        # Use pre-configured battle map (with walls etc.) if available, otherwise default
+        if region_id in self._battle_map_configs:
+            template = self._battle_map_configs[region_id]
+            battle_map = BattleMap(width=template.width, height=template.height, walls=list(template.walls))
+        else:
+            battle_map = BattleMap(width=60, height=60)
+        battle_map.place_randomly([c.id for c in creatures])
+
         combat = CombatState(
             region_id=region_id,
             turn_order=[c.id for c in ordered],
+            battle_map=battle_map,
         )
         self._combats[region_id] = combat
         self._attack_this_round[region_id] = False
@@ -145,12 +163,13 @@ class EntitiesLayer(Layer):
         )
 
     def _remove_from_combat(self, region_id: str, entity_id: str) -> None:
-        """Remove an entity from combat turn order. End combat if ≤1 left."""
+        """Remove an entity from combat turn order and map. End combat if ≤1 left."""
         combat = self._combats.get(region_id)
         if not combat:
             return
         if entity_id in combat.turn_order:
             combat.turn_order.remove(entity_id)
+        combat.battle_map.remove(entity_id)
         if len(combat.turn_order) <= 1:
             self._end_combat(region_id)
 
@@ -174,6 +193,12 @@ class EntitiesLayer(Layer):
 
         if event.event_type == EventType.ENTITY_FLEE:
             return self._resolve_flee(event)
+
+        if event.event_type == EventType.ENTITY_MOVE:
+            return self._resolve_move(event)
+
+        if event.event_type == EventType.ENTITY_DASH:
+            return self._resolve_move(event, dash=True)
 
         if event.event_type in _LOGGED_EVENTS:
             region_id = self._event_region(event)
@@ -206,6 +231,67 @@ class EntitiesLayer(Layer):
         if region_id:
             self._region_log[region_id].append(event)
         return ActionResult()
+
+    def _resolve_move(self, event: Event, *, dash: bool = False) -> ActionResult:
+        """Resolve a move (or dash) action: reposition the creature on the battle map."""
+        entity_id = str(event.data.get("entity_id", ""))
+        entity = self._entities.get(entity_id)
+        if not isinstance(entity, Creature):
+            return ActionResult(success=False, error=f"Существо '{entity_id}' не найдено.")
+
+        combat = self._combats.get(entity.region_id)
+        if not combat:
+            return ActionResult(success=False, error="Нет активного боя для перемещения.")
+
+        bm = combat.battle_map
+        cur_pos = bm.get_position(entity_id)
+        if cur_pos is None:
+            return ActionResult(success=False, error="Существо не на карте.")
+
+        speed = entity.speed * 2 if dash else entity.speed
+
+        # Determine movement type
+        toward_id = event.data.get("toward")
+        away_from_id = event.data.get("away_from")
+        direction = event.data.get("direction")
+
+        if isinstance(toward_id, str) and toward_id:
+            target_pos = bm.get_position(toward_id)
+            if target_pos is None:
+                return ActionResult(success=False, error=f"Цель '{toward_id}' не на карте.")
+            new_pos = move_toward(cur_pos, target_pos, speed, bm)
+        elif isinstance(away_from_id, str) and away_from_id:
+            target_pos = bm.get_position(away_from_id)
+            if target_pos is None:
+                return ActionResult(success=False, error=f"Цель '{away_from_id}' не на карте.")
+            new_pos = move_away_from(cur_pos, target_pos, speed, bm)
+        elif isinstance(direction, str) and direction:
+            new_pos = move_direction(cur_pos, direction, speed, bm)
+        else:
+            return ActionResult(success=False, error="Укажи направление: toward, away_from или direction.")
+
+        if new_pos == cur_pos:
+            return ActionResult(success=False, error="Путь заблокирован стеной.")
+
+        bm.set_position(entity_id, new_pos)
+        moved_ft = grid_distance(cur_pos, new_pos)
+
+        event_type = EventType.ENTITY_DASH if dash else EventType.ENTITY_MOVE
+        log_event = Event(
+            event_type=event_type,
+            source_layer="entities",
+            data={
+                "entity_id": entity_id,
+                "from_x": cur_pos.x,
+                "from_y": cur_pos.y,
+                "to_x": new_pos.x,
+                "to_y": new_pos.y,
+                "distance_ft": moved_ft,
+                "description": event.data.get("description", ""),
+            },
+        )
+        self._region_log[entity.region_id].append(log_event)
+        return ActionResult(success=True)
 
     def _resolve_attack(self, event: Event) -> ActionResult:
         """Validate and resolve an attack: check constraints, roll dice, apply damage, log."""
@@ -240,6 +326,19 @@ class EntitiesLayer(Layer):
             attack = attacker.attacks[0]
         else:
             attack = Attack(name="кулак", ability=Ability.STR, damage=(DamageComponent("1", DamageType.BLUDGEONING),))
+
+        # --- Reach check ---
+        combat = self._combats.get(attacker.region_id)
+        if combat:
+            a_pos = combat.battle_map.get_position(attacker_id)
+            t_pos = combat.battle_map.get_position(target_id)
+            if a_pos is not None and t_pos is not None:
+                dist = grid_distance(a_pos, t_pos)
+                if dist > attack.reach:
+                    return ActionResult(
+                        success=False,
+                        error=f"Цель слишком далеко ({dist} ft, досягаемость {attack.reach} ft).",
+                    )
 
         # --- Resolution ---
         modifier = attacker.ability_scores.modifier(attack.ability)
@@ -368,7 +467,14 @@ class EntitiesLayer(Layer):
             region_id = params["region_id"]
             combat = self._combats.get(region_id)
             if combat:
-                return Answer(value={"round_number": combat.round_number, "turn_order": combat.turn_order})
+                return Answer(
+                    value={
+                        "round_number": combat.round_number,
+                        "turn_order": combat.turn_order,
+                        "positions": dict(combat.battle_map.positions),
+                        "wall_descriptions": combat.battle_map.describe_walls(),
+                    }
+                )
             return Answer(value=None)
 
         raise ValueError(f"Unknown entities query: {q}")

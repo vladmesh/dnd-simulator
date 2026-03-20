@@ -17,6 +17,7 @@ from dnd_simulator.core.character import (
     DamageType,
     Race,
 )
+from dnd_simulator.core.combat import BattleMap, Wall
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.models import DEFAULT_SCHEDULES, Npc
 from dnd_simulator.layers.geography.models import (
@@ -171,6 +172,7 @@ def load_npcs(path: Path) -> list[Npc]:
                 personality=str(ndata.get("personality", "")),
                 settlement_id=str(ndata.get("settlement_id", "")),
                 schedule=schedule,
+                speed=int(ndata.get("speed", 30)),
                 attacks=attacks,
                 max_hp=max_hp,
                 current_hp=max_hp,
@@ -212,6 +214,30 @@ def load_player(path: Path) -> PlayerCharacter:
         gold=int(pdata.get("gold", 0)),
         attacks=attacks,
     )
+
+
+def load_battle_maps(path: Path) -> dict[str, BattleMap]:
+    """Load per-region battle map configs (size + walls) from a world YAML file."""
+    with path.open() as f:
+        data: dict[str, Any] = yaml.safe_load(f)
+
+    regions_data: dict[str, Any] = data.get("regions", {})
+    result: dict[str, BattleMap] = {}
+
+    for region_id, rdata in regions_data.items():
+        bm_data = rdata.get("battle_map")
+        if not bm_data:
+            continue
+        walls: list[Wall] = []
+        for w in bm_data.get("walls", []):
+            walls.append(Wall(x1=int(w[0]), y1=int(w[1]), x2=int(w[2]), y2=int(w[3])))
+        result[str(region_id)] = BattleMap(
+            width=int(bm_data.get("width", 60)),
+            height=int(bm_data.get("height", 60)),
+            walls=walls,
+        )
+
+    return result
 
 
 def extract_region_adjacency(regions: list[Region]) -> dict[str, list[str]]:

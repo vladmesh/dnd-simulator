@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from dnd_simulator.content_loader import (
     extract_region_adjacency,
     extract_region_terrains,
+    load_battle_maps,
     load_nations,
     load_npcs,
     load_player,
@@ -70,6 +71,7 @@ def run_cli_loop() -> None:
     settlements = load_settlements(world_path)
     player = load_player(world_path)
     npcs = load_npcs(world_path)
+    battle_maps = load_battle_maps(world_path)
 
     # Inject LLM into NPCs
     for npc in npcs:
@@ -93,7 +95,7 @@ def run_cli_loop() -> None:
         region_adjacency=extract_region_adjacency(regions),
         region_income_fn=settlements_layer.get_region_income,
     )
-    entities_layer = EntitiesLayer(entities=[*npcs, player])
+    entities_layer = EntitiesLayer(entities=[*npcs, player], battle_map_configs=battle_maps)
 
     world = World(
         layers=[geography, settlements_layer, politics, entities_layer],

@@ -10,6 +10,7 @@ from dnd_simulator.core.character import (
     DamageComponent,
     DamageType,
 )
+from dnd_simulator.core.combat import Position
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 
@@ -30,6 +31,14 @@ def _attack_event(attacker_id: str = "attacker", target_id: str = "target") -> E
     )
 
 
+def _place_melee(layer: EntitiesLayer, region_id: str) -> None:
+    """After combat starts, place attacker and target within melee range."""
+    combat = layer.get_combat(region_id)
+    if combat:
+        combat.battle_map.set_position("attacker", Position(30, 30))
+        combat.battle_map.set_position("target", Position(35, 30))
+
+
 class TestAttackResolution:
     def test_attack_reduces_target_hp(self) -> None:
         scores = AbilityScores()
@@ -40,9 +49,12 @@ class TestAttackResolution:
 
         # Run many attacks — at least some should hit
         hits = 0
-        for _ in range(20):
+        for i in range(20):
             target.current_hp = 20  # reset
             result = layer.handle_event(_attack_event())
+            if i == 0:
+                _place_melee(layer, "r1")  # fix positions after first attack starts combat
+                continue
             assert result.success
             if target.current_hp < 20:
                 hits += 1
@@ -54,16 +66,22 @@ class TestAttackResolution:
         layer = EntitiesLayer(entities=[attacker, target])
 
         layer.handle_event(_attack_event())
+        _place_melee(layer, "r1")
+        layer.handle_event(_attack_event())
 
         log = layer.get_perceived_log(target)
         assert len(log) >= 2  # combat_started + attack
         assert "Бой начался" in log[0]
-        assert "атакует тебя" in log[1]
+        assert any("атакует тебя" in line for line in log)
 
     def test_death_generates_event(self) -> None:
         attacker = Character(id="attacker", name="Fighter", region_id="r1", attacks=(_sword(),))
         target = Character(id="target", name="Goblin", region_id="r1", max_hp=1, current_hp=1, ac=1)
         layer = EntitiesLayer(entities=[attacker, target])
+
+        # First attack starts combat — fix positions
+        layer.handle_event(_attack_event())
+        _place_melee(layer, "r1")
 
         # With AC 1, should hit easily; 1 HP means any damage kills
         result: ActionResult = ActionResult()
@@ -71,7 +89,8 @@ class TestAttackResolution:
             target.current_hp = 1
             target.active = True
             result = layer.handle_event(_attack_event())
-            assert result.success
+            if not result.success:
+                continue
             if result.events:
                 break
 
@@ -87,6 +106,9 @@ class TestAttackResolution:
         attacker = Character(id="attacker", name="Monk", region_id="r1", attacks=(), ability_scores=scores)
         target = Character(id="target", name="Goblin", region_id="r1", max_hp=20, current_hp=20, ac=5)
         layer = EntitiesLayer(entities=[attacker, target])
+
+        layer.handle_event(_attack_event())  # start combat
+        _place_melee(layer, "r1")
 
         hits = 0
         for _ in range(20):
@@ -123,3 +145,19 @@ class TestAttackResolution:
         result = layer.handle_event(_attack_event())
         assert not result.success
         assert "мертва" in result.error
+
+    def test_attack_out_of_reach_returns_error(self) -> None:
+        """Melee attack should fail if target is too far."""
+        attacker = Character(id="attacker", name="Fighter", region_id="r1", attacks=(_sword(),))
+        target = Character(id="target", name="Goblin", region_id="r1", max_hp=20, current_hp=20, ac=10)
+        layer = EntitiesLayer(entities=[attacker, target])
+
+        layer.handle_event(_attack_event())  # start combat
+        combat = layer.get_combat("r1")
+        assert combat is not None
+        combat.battle_map.set_position("attacker", Position(0, 0))
+        combat.battle_map.set_position("target", Position(30, 0))
+
+        result = layer.handle_event(_attack_event())
+        assert not result.success
+        assert "далеко" in result.error

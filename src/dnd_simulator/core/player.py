@@ -162,7 +162,36 @@ class PlayerCharacter(Character):
                     continue
                 return
 
-            self.output_fn("Команды: attack <цель>, dodge, flee, status, idle")
+            if cmd.startswith("move ") or cmd.startswith("dash "):
+                is_dash = cmd.startswith("dash ")
+                args = raw[5:].strip().split()
+                if not args:
+                    self.output_fn("Использование: move/dash <toward|away|north|south|...> [цель]")
+                    continue
+                event_data: dict[str, object] = {"entity_id": self.id}
+                keyword = args[0].lower()
+                if keyword == "toward" and len(args) > 1:
+                    event_data["toward"] = args[1]
+                elif keyword == "away" and len(args) > 1:
+                    event_data["away_from"] = args[1]
+                else:
+                    event_data["direction"] = keyword
+                result = world.handle_event(
+                    Event(
+                        event_type=EventType.ENTITY_DASH if is_dash else EventType.ENTITY_MOVE,
+                        source_layer="entities",
+                        data=event_data,
+                    )
+                )
+                if not result.success:
+                    self.output_fn(result.error)
+                    continue
+                return
+
+            self.output_fn(
+                "Команды: attack <цель>, move <направление> [цель], "
+                "dash <направление> [цель], dodge, flee, status, idle"
+            )
 
     def _cmd_look(self, world: World) -> None:
         """Describe current location, entities, and paths."""
@@ -233,14 +262,26 @@ class PlayerCharacter(Character):
         hp = combat_aw["self_hp"]
         max_hp = combat_aw["self_max_hp"]
         weapon = combat_aw["self_weapon"]
+        speed = combat_aw.get("self_speed", 30)
         round_num = combat_aw.get("round_number", 1)
-        lines = [f"\n--- Бой, раунд {round_num} (HP: {hp}/{max_hp}, оружие: {weapon}) ---"]
+        lines = [f"\n--- Бой, раунд {round_num} (HP: {hp}/{max_hp}, оружие: {weapon}, скорость: {speed} ft) ---"]
 
         nearby = combat_aw.get("nearby", [])
         if nearby:
             lines.append("\nВокруг:")
             for e in nearby:
-                lines.append(f"  {e['description']} [{e['id']}]")
+                dist = e.get("distance_ft")
+                direction = e.get("direction")
+                if dist is not None and direction is not None:
+                    lines.append(f"  {e['description']} [{e['id']}] — {dist} ft {direction}")
+                else:
+                    lines.append(f"  {e['description']} [{e['id']}]")
+
+        walls = combat_aw.get("walls", [])
+        if walls:
+            lines.append("\nСтены:")
+            for w in walls:
+                lines.append(f"  {w}")
 
         if recent_events:
             lines.append("")

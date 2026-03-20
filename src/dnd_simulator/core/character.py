@@ -192,6 +192,7 @@ class Creature(Entity):
     max_hp: int = 4
     current_hp: int = 4
     ac: int = 10  # natural armor; 10 = unarmored default
+    speed: int = 30  # movement speed in feet per turn
     attacks: tuple[Attack, ...] = ()
     in_combat: bool = False
     is_dodging: bool = False
@@ -310,14 +311,31 @@ def build_awareness(world: World, region_id: str) -> dict[str, Any]:
 
 def build_combat_awareness(world: World, entity: Character) -> dict[str, Any]:
     """Gather combat-focused awareness — only what matters in a fight."""
+    from dnd_simulator.core.combat import Position
+    from dnd_simulator.rules.movement import direction_label, grid_distance
+
     entities_answer = world.query_layer(
         "entities", Query(question="entities_in_region", params={"region_id": entity.region_id})
     )
-    nearby: list[dict[str, str]] = []
+
+    # Get battle map positions from combat info
+    combat_answer = world.query_layer("entities", Query(question="combat_info", params={"region_id": entity.region_id}))
+    round_number = combat_answer.value["round_number"] if combat_answer.value else 1
+    battle_map_positions: dict[str, Position] = combat_answer.value.get("positions", {}) if combat_answer.value else {}
+    my_pos = battle_map_positions.get(entity.id)
+
+    nearby: list[dict[str, object]] = []
     for e in entities_answer.value:
         if e["id"] != entity.id:
             desc = entity.perceive_by_id(e["id"], world)
-            nearby.append({"id": str(e["id"]), "description": desc})
+            entry: dict[str, object] = {"id": str(e["id"]), "description": desc}
+            other_pos = battle_map_positions.get(str(e["id"]))
+            if my_pos is not None and other_pos is not None:
+                entry["distance_ft"] = grid_distance(my_pos, other_pos)
+                dx = other_pos.x - my_pos.x
+                dy = other_pos.y - my_pos.y
+                entry["direction"] = direction_label(dx, dy)
+            nearby.append(entry)
 
     weapon_name = "кулаки"
     weapon_damage = "1"
@@ -325,16 +343,16 @@ def build_combat_awareness(world: World, entity: Character) -> dict[str, Any]:
         weapon_name = entity.attacks[0].name
         weapon_damage = str(entity.attacks[0].damage[0].dice)
 
-    # Round number from combat state
-    combat_answer = world.query_layer("entities", Query(question="combat_info", params={"region_id": entity.region_id}))
-    round_number = combat_answer.value["round_number"] if combat_answer.value else 1
+    wall_descriptions: list[str] = combat_answer.value.get("wall_descriptions", []) if combat_answer.value else []
 
     return {
         "self_hp": entity.current_hp,
         "self_max_hp": entity.max_hp,
         "self_ac": entity.ac,
+        "self_speed": entity.speed,
         "self_weapon": weapon_name,
         "self_weapon_damage": weapon_damage,
         "nearby": nearby,
         "round_number": round_number,
+        "walls": wall_descriptions,
     }

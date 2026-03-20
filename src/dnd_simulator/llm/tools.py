@@ -120,6 +120,68 @@ def build_npc_combat_tools() -> list[dict[str, Any]]:
         {
             "type": "function",
             "function": {
+                "name": "move",
+                "description": (
+                    "Move up to your speed (in feet). Use toward/away_from with a target ID, "
+                    "or direction (north/south/east/west/northeast/northwest/southeast/southwest)."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "toward": {
+                            "type": "string",
+                            "description": "ID of entity to move toward",
+                        },
+                        "away_from": {
+                            "type": "string",
+                            "description": "ID of entity to move away from",
+                        },
+                        "direction": {
+                            "type": "string",
+                            "description": "Compass direction: north, south, east, west, northeast, etc.",
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Flavor text (optional)",
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "dash",
+                "description": (
+                    "Sprint: move up to DOUBLE your speed. Uses your action — you cannot attack this turn. "
+                    "Same parameters as move."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "toward": {
+                            "type": "string",
+                            "description": "ID of entity to dash toward",
+                        },
+                        "away_from": {
+                            "type": "string",
+                            "description": "ID of entity to dash away from",
+                        },
+                        "direction": {
+                            "type": "string",
+                            "description": "Compass direction: north, south, east, west, northeast, etc.",
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "Flavor text (optional)",
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "type": "function",
+            "function": {
                 "name": "idle",
                 "description": "Do nothing this turn.",
                 "parameters": {

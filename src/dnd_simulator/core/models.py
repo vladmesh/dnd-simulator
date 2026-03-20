@@ -48,6 +48,8 @@ class EventType(Enum):
     ENTITY_ATTACK = "entity_attack"
     ENTITY_DODGE = "entity_dodge"
     ENTITY_FLEE = "entity_flee"
+    ENTITY_MOVE = "entity_move"
+    ENTITY_DASH = "entity_dash"
     COMBAT_STARTED = "combat_started"
     COMBAT_ENDED = "combat_ended"
     WEATHER_CHANGED = "weather_changed"

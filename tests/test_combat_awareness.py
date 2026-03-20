@@ -214,7 +214,7 @@ class TestBuildNpcCombatTools:
     def test_has_combat_actions(self) -> None:
         tools = build_npc_combat_tools()
         names = {t["function"]["name"] for t in tools}
-        assert names == {"attack", "dodge", "flee", "idle"}
+        assert names == {"attack", "dodge", "flee", "idle", "move", "dash"}
 
     def test_no_say_tool(self) -> None:
         tools = build_npc_combat_tools()
@@ -380,7 +380,7 @@ class TestNpcCombatTurn:
         call_args = mock_llm.generate_with_tools.call_args
         tools_passed = call_args[0][1]
         tool_names = {t["function"]["name"] for t in tools_passed}
-        assert tool_names == {"attack", "dodge", "flee", "idle"}
+        assert tool_names == {"attack", "dodge", "flee", "idle", "move", "dash"}
         assert "say" not in tool_names
 
     def test_combat_turn_dodge(self) -> None:
@@ -591,6 +591,14 @@ class TestDodgeMechanics:
                 data={"attacker_id": "c1", "target_id": "c2"},
             )
         )
+
+        # Place in melee range for subsequent attacks
+        from dnd_simulator.core.combat import Position
+
+        combat = layer.get_combat("r1")
+        assert combat is not None
+        combat.battle_map.set_position("c1", Position(30, 30))
+        combat.battle_map.set_position("c2", Position(35, 30))
 
         # Count hits without dodge
         hits_normal = 0

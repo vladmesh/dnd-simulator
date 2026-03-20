@@ -26,6 +26,8 @@ def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -
         return _perceive_dodge(event, observer, get_entity)
     if event.event_type == EventType.ENTITY_FLEE:
         return _perceive_flee(event, observer, get_entity)
+    if event.event_type in (EventType.ENTITY_MOVE, EventType.ENTITY_DASH):
+        return _perceive_move(event, observer, get_entity)
     if event.event_type == EventType.COMBAT_STARTED:
         return _perceive_combat_started(event, observer, get_entity)
     if event.event_type == EventType.COMBAT_ENDED:
@@ -119,6 +121,35 @@ def _perceive_flee(event: Event, observer: Character, get_entity: GetEntityFn) -
         return f"Ты пытаешься сбежать{desc_suffix}"
     desc = _describe(observer, entity_id, get_entity)
     return f"{desc} пытается сбежать{desc_suffix}"
+
+
+def _perceive_move(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    from dnd_simulator.rules.movement import direction_label
+
+    entity_id = event.data.get("entity_id", "")
+    assert isinstance(entity_id, str)
+    description = event.data.get("description", "")
+    distance_ft = event.data.get("distance_ft", 0)
+    from_x = event.data.get("from_x", 0)
+    from_y = event.data.get("from_y", 0)
+    to_x = event.data.get("to_x", 0)
+    to_y = event.data.get("to_y", 0)
+    assert isinstance(from_x, int) and isinstance(from_y, int)
+    assert isinstance(to_x, int) and isinstance(to_y, int)
+
+    dx = to_x - from_x
+    dy = to_y - from_y
+    dir_label = direction_label(dx, dy)
+
+    is_dash = event.event_type == EventType.ENTITY_DASH
+    verb = "бежит" if is_dash else "перемещается"
+    desc_suffix = f" «{description}»" if description else ""
+
+    if entity_id == observer.id:
+        verb_self = "бежишь" if is_dash else "перемещаешься"
+        return f"Ты {verb_self} {dir_label} ({distance_ft} ft){desc_suffix}"
+    desc = _describe(observer, entity_id, get_entity)
+    return f"{desc} {verb} {dir_label} ({distance_ft} ft){desc_suffix}"
 
 
 def _perceive_combat_started(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
