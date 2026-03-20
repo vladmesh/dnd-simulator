@@ -48,6 +48,7 @@ class GameSession:
     session_id: str
     world: World
     player: PlayerCharacter | None = None
+    lang: str = "en"
 
     @property
     def player_location(self) -> str:
@@ -74,7 +75,7 @@ class GameService:
         self._content_dir = content_dir
         self._llm = llm
 
-    def start_game(self, world_name: str = "test_world.yaml") -> GameSession:
+    def start_game(self, world_name: str = "test_world.yaml", lang: str = "en") -> GameSession:
         """Create a new game session with a world loaded from content.
 
         Accepts either a legacy filename (test_world.yaml) or a directory name (sword_vale).
@@ -123,6 +124,7 @@ class GameService:
             session_id=session_id,
             world=world,
             player=player,
+            lang=lang,
         )
         self._sessions[session_id] = session
         return session
@@ -165,9 +167,25 @@ class GameService:
         if cmd == "status":
             return self._cmd_status(session)
 
+        if cmd.startswith("attack "):
+            return self._cmd_attack(session, text[7:].strip())
+
+        if cmd.startswith("say "):
+            return self._cmd_say(session, text[4:].strip())
+
+        if cmd == "dodge":
+            return self._cmd_dodge(session)
+
+        if cmd == "flee":
+            return self._cmd_flee(session)
+
+        if cmd.startswith("move ") or cmd.startswith("dash "):
+            return self._cmd_move(session, text, dash=cmd.startswith("dash "))
+
         return MasterResponse(
             text=f"Unknown command: '{text}'. "
-            "Try: look, map, go <dir>, wait [hours], nations, nation <id>, settlements, talk <npc>, status"
+            "Try: look, map, go <dir>, wait [hours], attack <target>, say <text>, "
+            "move/dash toward <target>, dodge, flee, nations, nation <id>, settlements, status"
         )
 
     def get_session(self, session_id: str) -> GameSession:
@@ -668,12 +686,101 @@ class GameService:
 
         return MasterResponse(text="\n".join(lines))
 
-    def _get_npc_object(self, session: GameSession, npc_id: str) -> Any:
-        """Get the Npc object from the entities layer (for perceive calls)."""
-        for layer in session.world.layers:
-            if isinstance(layer, EntitiesLayer):
-                return layer.get_entity(npc_id)
-        return None
+    def _cmd_attack(self, session: GameSession, target_id: str) -> MasterResponse:
+        """Attack a target entity."""
+        from dnd_simulator.core.models import Event, EventType
+
+        player = self._require_player(session)
+        if not target_id:
+            return MasterResponse(text="Usage: attack <target_id>")
+
+        result = session.world.handle_event(
+            Event(
+                event_type=EventType.ENTITY_ATTACK,
+                source_layer="entities",
+                data={"attacker_id": player.id, "target_id": target_id},
+            )
+        )
+        if not result.success:
+            return MasterResponse(text=result.error)
+
+        descriptions = [e.description for e in result.events if e.description]
+        return MasterResponse(text="\n".join(descriptions) if descriptions else "Attack!", events_summary=descriptions)
+
+    def _cmd_say(self, session: GameSession, text: str) -> MasterResponse:
+        """Say something in the current region."""
+        from dnd_simulator.core.models import Event, EventType
+
+        player = self._require_player(session)
+        session.world.handle_event(
+            Event(
+                event_type=EventType.ENTITY_SAY,
+                source_layer="entities",
+                data={"entity_id": player.id, "text": text},
+            )
+        )
+        return MasterResponse(text=f'{player.name} says: "{text}"')
+
+    def _cmd_dodge(self, session: GameSession) -> MasterResponse:
+        """Take the dodge action."""
+        from dnd_simulator.core.models import Event, EventType
+
+        player = self._require_player(session)
+        session.world.handle_event(
+            Event(
+                event_type=EventType.ENTITY_DODGE,
+                source_layer="entities",
+                data={"entity_id": player.id},
+            )
+        )
+        return MasterResponse(text=f"{player.name} takes the Dodge action.")
+
+    def _cmd_move(self, session: GameSession, text: str, dash: bool = False) -> MasterResponse:
+        """Move or dash in combat."""
+        from dnd_simulator.core.models import Event, EventType
+
+        player = self._require_player(session)
+        args = text[5:].strip().split()
+        if not args:
+            return MasterResponse(text="Usage: move/dash <toward|away|north|south|...> [target]")
+
+        event_data: dict[str, object] = {"entity_id": player.id}
+        keyword = args[0].lower()
+        if keyword == "toward" and len(args) > 1:
+            event_data["toward"] = args[1]
+        elif keyword == "away" and len(args) > 1:
+            event_data["away_from"] = args[1]
+        else:
+            event_data["direction"] = keyword
+
+        result = session.world.handle_event(
+            Event(
+                event_type=EventType.ENTITY_DASH if dash else EventType.ENTITY_MOVE,
+                source_layer="entities",
+                data=event_data,
+            )
+        )
+        if not result.success:
+            return MasterResponse(text=result.error)
+        descriptions = [e.description for e in result.events if e.description]
+        return MasterResponse(text="\n".join(descriptions) if descriptions else "Moved.")
+
+    def _cmd_flee(self, session: GameSession) -> MasterResponse:
+        """Attempt to flee combat."""
+        from dnd_simulator.core.models import Event, EventType
+
+        player = self._require_player(session)
+        result = session.world.handle_event(
+            Event(
+                event_type=EventType.ENTITY_FLEE,
+                source_layer="entities",
+                data={"entity_id": player.id},
+            )
+        )
+        if not result.success:
+            return MasterResponse(text=result.error)
+        descriptions = [e.description for e in result.events if e.description]
+        return MasterResponse(text="\n".join(descriptions) if descriptions else "You flee!")
 
     def _get_session(self, session_id: str) -> GameSession:
         if session_id not in self._sessions:

@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 class CreateSessionRequest(BaseModel):
     world_name: str = "test_world.yaml"
+    lang: str = "en"
 
 
 class PlayerActionRequest(BaseModel):
@@ -66,6 +67,10 @@ class PatchSettlementRequest(BaseModel):
 
 class AdvanceTimeRequest(BaseModel):
     hours: int = 1
+
+
+class SetLangRequest(BaseModel):
+    lang: str
 
 
 # -- Responses --

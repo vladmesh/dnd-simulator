@@ -355,6 +355,32 @@ class TestPlayerPerception:
         assert resp.status_code == 404
 
 
+class TestLanguage:
+    def test_create_session_with_lang(self, tmp_path: object) -> None:
+        client, service = _make_client(tmp_path)
+        resp = client.post("/api/master/sessions", json={"lang": "ru"})
+        assert resp.status_code == 200
+        sid = resp.json()["session_id"]
+        session = service.get_session(sid)
+        assert session.lang == "ru"
+
+    def test_change_lang(self, tmp_path: object) -> None:
+        client, service = _make_client(tmp_path)
+        sid = _create_session(client)
+
+        resp = client.put(f"/api/master/sessions/{sid}/lang", json={"lang": "ru"})
+        assert resp.status_code == 200
+
+        session = service.get_session(sid)
+        assert session.lang == "ru"
+
+    def test_default_lang_is_en(self, tmp_path: object) -> None:
+        client, service = _make_client(tmp_path)
+        sid = _create_session(client)
+        session = service.get_session(sid)
+        assert session.lang == "en"
+
+
 class TestSaves:
     def test_save_and_list(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)

@@ -1,21 +1,42 @@
 from __future__ import annotations
 
 import os
-from collections.abc import AsyncIterator
+import re
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
+from starlette.middleware.base import BaseHTTPMiddleware
 
-from dnd_simulator.adapters.api.deps import set_service
+from dnd_simulator.adapters.api.deps import get_service, set_service
 from dnd_simulator.adapters.api.routes_master import router as master_router
 from dnd_simulator.adapters.api.routes_player import router as player_router
+from dnd_simulator.i18n import set_language
 from dnd_simulator.llm.client import LlmClient
 from dnd_simulator.service import GameService
 from dnd_simulator.storage.store import JsonFileStore
 
 DEFAULT_SAVES_DIR = Path(__file__).resolve().parents[4] / "saves"
+
+_SESSION_ID_RE = re.compile(r"/api/(?:master|player)/sessions/([^/]+)")
+
+
+class I18nMiddleware(BaseHTTPMiddleware):
+    """Set i18n language from session before each request."""
+
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+        match = _SESSION_ID_RE.match(request.url.path)
+        if match:
+            session_id = match.group(1)
+            try:
+                service = get_service()
+                session = service.get_session(session_id)
+                set_language(session.lang)
+            except (ValueError, RuntimeError):
+                pass  # session not found — route handler will return 404
+        return await call_next(request)
 
 
 @asynccontextmanager
@@ -36,6 +57,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="D&D Simulator", version="0.1.0", lifespan=lifespan)
+app.add_middleware(I18nMiddleware)
 app.include_router(master_router)
 app.include_router(player_router)
 

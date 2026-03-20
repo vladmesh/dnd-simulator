@@ -15,6 +15,7 @@ from dnd_simulator.adapters.api.schemas import (
     PatchSettlementRequest,
     SessionResponse,
     SetBrainRequest,
+    SetLangRequest,
     SpawnNpcRequest,
     WorldListItem,
     WorldStateResponse,
@@ -43,7 +44,7 @@ def list_worlds() -> list[WorldListItem]:
 def create_session(body: CreateSessionRequest) -> SessionResponse:
     """Start a new game session from a world template."""
     service = get_service()
-    session = service.start_game(body.world_name)
+    session = service.start_game(body.world_name, lang=body.lang)
     player = session.player
     return SessionResponse(
         session_id=session.session_id,
@@ -230,6 +231,18 @@ def advance_time(session_id: str, body: AdvanceTimeRequest) -> MessageResponse:
     if events:
         msg += " Events: " + "; ".join(events)
     return MessageResponse(message=msg)
+
+
+# -- Language --
+
+
+@router.put("/sessions/{session_id}/lang", response_model=MessageResponse)
+def set_session_lang(session_id: str, body: SetLangRequest) -> MessageResponse:
+    """Change session language (affects NPC LLM prompts and translated strings)."""
+    service = get_service()
+    session = _get_session(service, session_id)
+    session.lang = body.lang
+    return MessageResponse(message=f"Language set to '{body.lang}'")
 
 
 # -- Saves --
