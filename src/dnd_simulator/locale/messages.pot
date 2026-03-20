@@ -1,0 +1,456 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR ORGANIZATION
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2026-03-20 22:25+0200\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: pygettext.py 1.5\n"
+
+
+#: src/dnd_simulator/adapters/cli_loop.py:41
+#: src/dnd_simulator/adapters/cli_loop.py:44
+msgid "Farewell, adventurer."
+msgstr ""
+
+#: src/dnd_simulator/adapters/cli_loop.py:63
+msgid "Error: set OPENROUTER_API_KEY and LLM_MODEL in .env"
+msgstr ""
+
+#: src/dnd_simulator/adapters/cli_loop.py:111
+msgid "=== D&D Simulator (Turn-Based) ==="
+msgstr ""
+
+#: src/dnd_simulator/adapters/cli_loop.py:112
+msgid "Commands: look, status, say <text>, attack <target>, idle, quit"
+msgstr ""
+
+#: src/dnd_simulator/core/character.py:335
+#: src/dnd_simulator/core/character.py:340
+msgid "looks wounded"
+msgstr ""
+
+#: src/dnd_simulator/core/character.py:443
+msgid "fists"
+msgstr ""
+
+#: src/dnd_simulator/core/combat.py:170
+msgid "Arena bounded by walls: {w}x{h} ft"
+msgstr ""
+
+#: src/dnd_simulator/core/combat.py:175
+msgid "vertical wall x={x} from y={y1} to y={y2}"
+msgstr ""
+
+#: src/dnd_simulator/core/combat.py:181
+msgid "horizontal wall y={y} from x={x1} to x={x2}"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:86 src/dnd_simulator/core/player.py:152
+msgid "Usage: attack <target>"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:100
+msgid "Commands: look, status, say <text>, attack <target>, wait [hours], idle"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:116
+msgid "combat> "
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:170
+msgid "Usage: move/dash <toward|away|north|south|...> [target]"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:193
+msgid "Commands: attack <target>, move <direction> [target], dash <direction> [target], dodge, flee, status, idle"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:212
+msgid "Terrain:"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:214
+msgid "Weather:"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:220
+msgid "Creatures:"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:228
+msgid "Paths:"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:239
+msgid "HP: {hp}/{max_hp} | AC: {ac} | Gold: {gold}"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:246
+msgid "Attacks:"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:259
+msgid "Usage: wait [hours]"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:262
+msgid "Minimum 1 hour."
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:265
+msgid "Passed {hours} h."
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:276
+msgid "Combat, round {round} (HP: {hp}/{max_hp}, weapon: {weapon}, speed: {speed} ft)"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:284
+msgid "Around:"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:295
+msgid "Walls:"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:301 src/dnd_simulator/core/player.py:320
+msgid "What happened:"
+msgstr ""
+
+#: src/dnd_simulator/core/player.py:312
+msgid "Your turn (HP: {hp}/{max_hp}, time: {hour}:00, day {day})"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/layer.py:241
+msgid "Creature '{id}' not found."
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/layer.py:245
+msgid "No active combat for movement."
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/layer.py:250
+msgid "Creature not on the battle map."
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/layer.py:262
+#: src/dnd_simulator/layers/entities/layer.py:268
+msgid "Target '{id}' not on the battle map."
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/layer.py:274
+msgid "Specify direction: toward, away_from, or direction."
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/layer.py:309
+msgid "Attacker '{id}' not found."
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/layer.py:313
+msgid "Target '{id}' not found."
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/layer.py:316
+msgid "You are dead and cannot attack."
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/layer.py:319
+msgid "Target '{id}' is already dead."
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/layer.py:322
+msgid "Target '{id}' is not in this region."
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/layer.py:333
+msgid "fist"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/layer.py:345
+msgid "Target too far ({dist} ft, reach {reach} ft)."
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:35
+msgid "Combat ended."
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:36
+msgid "Something happened ({type})"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:47
+msgid "someone"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:49
+msgid "you"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:62
+msgid "You say: \"{text}\""
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:63
+msgid "{speaker} says: \"{text}\""
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:80
+msgid ", miss"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:82
+msgid ", {damage} damage"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:87
+msgid "You attack {target}{weapon}{outcome}"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:89
+msgid "{attacker} attacks you{weapon}{outcome}"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:92
+msgid "{attacker} attacks {target}{weapon}{outcome}"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:102
+msgid "You die"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:104
+msgid "{entity} dies"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:114
+msgid "You take a defensive stance{desc}"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:116
+msgid "{entity} takes a defensive stance{desc}"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:126
+msgid "You try to flee{desc}"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:128
+msgid "{entity} tries to flee{desc}"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:150
+msgid "dashes"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:150
+msgid "moves"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:154
+msgid "dash"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:154
+msgid "move"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:155
+msgid "You {verb} {direction} ({distance} ft){desc}"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:159
+msgid "{entity} {verb} {direction} ({distance} ft){desc}"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:167
+msgid "Combat started! Initiative order: {order}"
+msgstr ""
+
+#: src/dnd_simulator/llm/brain.py:44
+msgid "You must choose an action: attack, move, dash, dodge, flee, or idle."
+msgstr ""
+
+#: src/dnd_simulator/llm/brain.py:57
+msgid "You must choose an action: say, attack, or idle."
+msgstr ""
+
+#: src/dnd_simulator/llm/brain.py:63
+msgid "Your turn. Choose an action."
+msgstr ""
+
+#: src/dnd_simulator/llm/brain.py:66
+msgid ""
+"What happened since your last turn:\n"
+"{events}\n"
+"\n"
+"Your turn. Choose an action."
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:25
+msgid "unknown"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:26
+msgid "Territory: {nation}. Ruler: {leader}."
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:28
+msgid "Independent territory."
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:34
+msgid "Settlements: {names}"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:39
+msgid "You have already spoken with this traveler: {summary}"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:49
+msgid "Near you:"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:53
+msgid ""
+"Rules:\n"
+"- Stay in character, do not break role\n"
+"- Answer briefly (1-3 sentences)\n"
+"- Speak as a medieval fantasy character\n"
+"- Always respond in the game language\n"
+"- By default use idle() — do nothing\n"
+"- Use say() only if there is a reason to speak: someone addressed you,\n"
+"  something important happened, or you need to react to a threat\n"
+"- Do NOT speak just because it is your turn — silence is normal\n"
+"- Use attack(target_id) only if you have a good reason to fight.\n"
+"  target_id is the id of a creature from the nearby list"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:68
+msgid "You are {name}, {role} in {location}."
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:72 src/dnd_simulator/llm/prompts.py:150
+msgid "Personality:"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:74
+msgid "Setting:"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:77
+msgid "Time: {hour}:00, day {day}, month {month}, year {year}"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:82
+msgid "Weather: {condition}, {temperature}C"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:85
+msgid "You are currently {activity}, located at: {location}"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:107
+msgid "healthy"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:109
+msgid "badly wounded"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:111
+msgid "wounded"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:125
+msgid "Around you:"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:125
+msgid "Nobody around."
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:133
+msgid "Walls in the arena:"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:137
+msgid ""
+"Rules:\n"
+"- Choose one action: attack, dodge, move, dash, flee, or idle\n"
+"- attack(target_id) — strike a target (must be within weapon reach)\n"
+"- move(toward/away_from/direction) — move up to {speed} ft\n"
+"- dash(toward/away_from/direction) — sprint up to {dash_speed} ft (instead of attacking)\n"
+"- Walls block movement — you cannot move through a wall\n"
+"- Want to say something — put it in description\n"
+"- Respond in the game language"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:149
+msgid "You are {name}, {role}. You are in combat!"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:152
+msgid "Your status:"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:155
+msgid "HP: {hp}/{max_hp} ({status})"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:158
+msgid "Weapon: {weapon} ({dmg})"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:161
+msgid "Speed: {speed} ft"
+msgstr ""
+
+#: src/dnd_simulator/llm/prompts.py:164
+msgid "Round {num}."
+msgstr ""
+
+#: src/dnd_simulator/rules/movement.py:43
+#: src/dnd_simulator/rules/movement.py:56
+msgid "here"
+msgstr ""
+
+#: src/dnd_simulator/rules/movement.py:47
+msgid "to the north"
+msgstr ""
+
+#: src/dnd_simulator/rules/movement.py:48
+msgid "to the south"
+msgstr ""
+
+#: src/dnd_simulator/rules/movement.py:49
+msgid "to the east"
+msgstr ""
+
+#: src/dnd_simulator/rules/movement.py:50
+msgid "to the west"
+msgstr ""
+
+#: src/dnd_simulator/rules/movement.py:51
+msgid "to the northeast"
+msgstr ""
+
+#: src/dnd_simulator/rules/movement.py:52
+msgid "to the northwest"
+msgstr ""
+
+#: src/dnd_simulator/rules/movement.py:53
+msgid "to the southeast"
+msgstr ""
+
+#: src/dnd_simulator/rules/movement.py:54
+msgid "to the southwest"
+msgstr ""
+
