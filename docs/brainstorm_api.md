@@ -122,26 +122,21 @@ GET    /api/player/sessions/{id}/combat            — инициатива, п�
 
 ### Итерация 1 — Скелет ✅
 - FastAPI-адаптер, базовая структура
-- SessionManager (создать/получить сессию)
-- `POST /api/player/sessions/{id}/action` — действие игрока
-- `GET /api/player/sessions/{id}/status` — статус персонажа
-- `POST /api/master/sessions` — создать сессию
-- `GET /api/master/sessions/{id}` — god-mode стейт
-- `make serve` — запуск сервера
+- `POST /api/player/sessions/{id}/action`, `GET .../status`
+- `POST /api/master/sessions`, `GET .../sessions/{id}`
+- `make serve`
 
-### Итерация 2 — Мастер CRUD + структура файлов
-- Разбить монолитный YAML на отдельные файлы (world/regions/nations/settlements/npcs)
-- ContentLoader: поддержка нового формата (директория вместо одного файла)
-- Мастер: CRUD шаблонов мира (файловые операции)
-- Мастер: hot controls живой сессии (NPC спавн/удаление, HP, brain)
-- Сессия: копирование шаблона → saves/{session_id}/
-- Сессия: save (сброс памяти на диск)
+### Итерация 2 — Мастер CRUD + структура файлов ✅
+- Директорный формат мира (content/worlds/sword_vale/)
+- ContentLoader: оба формата (файл и директория)
+- Hot controls: NPC CRUD, brain, нации, поселения, время
+- `GET /api/master/worlds` — список шаблонов
 
-### Итерация 3 — Полный игрок
-- Создание персонажа при входе в сессию
-- Perception, events, combat, map
-- Все игровые действия через REST
+### Итерация 3 — Полный игрок ✅
+- `POST /api/player/sessions/{id}/character` — создание персонажа
+- Perception, events, combat, map — REST эндпоинты
 
-### Итерация 4 — Полировка
-- Валидация, ошибки, i18n в ответах
-- Восстановление сессии из сейва при рестарте сервера
+### Итерация 4 — Полировка ✅
+- Сейвы: save, list, load через API
+- Валидация и ошибки (HTTPException с detail) — сделано по ходу
+- i18n: через `DND_LANGUAGE` env (per-request — будущая итерация)

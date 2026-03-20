@@ -353,3 +353,52 @@ class TestPlayerPerception:
 
         resp = client.get(f"/api/player/sessions/{sid}/perception")
         assert resp.status_code == 404
+
+
+class TestSaves:
+    def test_save_and_list(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        sid = _create_session(client)
+
+        # Save
+        resp = client.post(f"/api/master/sessions/{sid}/save")
+        assert resp.status_code == 200
+        assert "Saved" in resp.json()["message"]
+
+        # List
+        resp = client.get(f"/api/master/sessions/{sid}/saves")
+        assert resp.status_code == 200
+        assert len(resp.json()["saves"]) >= 1
+
+    def test_save_with_name(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        sid = _create_session(client)
+
+        resp = client.post(f"/api/master/sessions/{sid}/save?name=my_save")
+        assert resp.status_code == 200
+        assert "my_save" in resp.json()["message"]
+
+        resp = client.get(f"/api/master/sessions/{sid}/saves")
+        assert "my_save" in resp.json()["saves"]
+
+    def test_save_and_load(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        sid = _create_session(client)
+
+        # Advance time then save
+        client.post(f"/api/master/sessions/{sid}/time/advance", json={"hours": 12})
+        client.post(f"/api/master/sessions/{sid}/save?name=checkpoint")
+
+        # Advance more time
+        client.post(f"/api/master/sessions/{sid}/time/advance", json={"hours": 24})
+
+        # Load checkpoint
+        resp = client.post(f"/api/master/sessions/{sid}/saves/checkpoint/load")
+        assert resp.status_code == 200
+
+    def test_load_nonexistent_save(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        sid = _create_session(client)
+
+        resp = client.post(f"/api/master/sessions/{sid}/saves/nope/load")
+        assert resp.status_code == 404

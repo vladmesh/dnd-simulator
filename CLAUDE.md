@@ -13,6 +13,7 @@ make format       # auto-fix formatting and lint issues
 make typecheck    # uv run mypy src/
 make messages     # extract translatable strings to .pot
 make compile-messages  # compile .po → .mo
+make serve        # uvicorn API server on :8000 with --reload
 
 # Single test file
 uv run pytest tests/test_character.py
@@ -45,7 +46,7 @@ layers/            — concrete layer implementations (depend on core only)
 game_loop.py       — turn-based main loop: polls active creatures, advances time +6s per round
 service.py         — GameService: transport-agnostic API, command routing
   ↓
-adapters/          — CLI REPL (future: API, Telegram)
+adapters/          — CLI REPL, FastAPI REST API
 
 rules/             — pure D&D mechanics functions (no deps)
 llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
@@ -60,8 +61,9 @@ content/           — YAML world definitions (data, not code)
 - **Rules are pure functions** in `rules/` — no state, no I/O.
 - **Brain is a strategy** — `Creature.brain` field holds a `Brain` (RuleBrain or LlmBrain), decoupling AI from entity type.
 - **LLM is injected** — `LlmBrain` wraps an `LlmClient`; rule-based NPCs use `RuleBrain` with zero LLM calls.
-- **Content is data** — worlds, NPCs, quests defined in YAML under `content/`.
+- **Content is data** — worlds, NPCs, quests defined in YAML under `content/`. Two formats: legacy single-file and directory (world.yaml, regions.yaml, nations.yaml, npcs.yaml).
 - **Transport is thin** — adapters only translate I/O, all logic lives in `GameService`.
+- **Two editing modes** — between sessions: edit YAML files on disk; during session: hot controls in memory (NPC spawn/delete, HP, brain, time).
 
 ### Time System
 
@@ -85,3 +87,4 @@ content/           — YAML world definitions (data, not code)
 - Default LLM model: `deepseek/deepseek-chat-v3-0324`
 - `DND_LANGUAGE` env var selects game language (default: `ru`); locale files in `src/dnd_simulator/locale/`
 - Save files: `saves/` directory (JSON)
+- API: `make serve` → http://localhost:8000/docs (Swagger UI)

@@ -232,6 +232,42 @@ def advance_time(session_id: str, body: AdvanceTimeRequest) -> MessageResponse:
     return MessageResponse(message=msg)
 
 
+# -- Saves --
+
+
+@router.get("/sessions/{session_id}/saves")
+def list_saves(session_id: str) -> dict[str, list[str]]:
+    """List saves for this session."""
+    service = get_service()
+    _get_session(service, session_id)
+    saves = service.list_saves()
+    return {"saves": saves}
+
+
+@router.post("/sessions/{session_id}/save", response_model=MessageResponse)
+def save_game(session_id: str, name: str | None = None) -> MessageResponse:
+    """Save current session state to disk."""
+    service = get_service()
+    try:
+        save_name = service.save_game(session_id, name)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return MessageResponse(message=f"Saved as '{save_name}'")
+
+
+@router.post("/sessions/{session_id}/saves/{save_name}/load", response_model=MessageResponse)
+def load_save(session_id: str, save_name: str) -> MessageResponse:
+    """Load a save into the current session."""
+    service = get_service()
+    try:
+        service.load_game(session_id, save_name)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return MessageResponse(message=f"Loaded '{save_name}'")
+
+
 # -- Helpers --
 
 
