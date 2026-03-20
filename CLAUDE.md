@@ -11,6 +11,8 @@ make test         # uv run pytest
 make lint         # ruff check + format check
 make format       # auto-fix formatting and lint issues
 make typecheck    # uv run mypy src/
+make messages     # extract translatable strings to .pot
+make compile-messages  # compile .po → .mo
 
 # Single test file
 uv run pytest tests/test_character.py
@@ -56,7 +58,8 @@ content/           — YAML world definitions (data, not code)
 
 - **Layers depend down, never up.** Geography never imports from NPCs.
 - **Rules are pure functions** in `rules/` — no state, no I/O.
-- **LLM is injected** — layers receive an LlmClient, never instantiate one.
+- **Brain is a strategy** — `Creature.brain` field holds a `Brain` (RuleBrain or LlmBrain), decoupling AI from entity type.
+- **LLM is injected** — `LlmBrain` wraps an `LlmClient`; rule-based NPCs use `RuleBrain` with zero LLM calls.
 - **Content is data** — worlds, NPCs, quests defined in YAML under `content/`.
 - **Transport is thin** — adapters only translate I/O, all logic lives in `GameService`.
 
@@ -66,18 +69,19 @@ content/           — YAML world definitions (data, not code)
 
 ### Entity Hierarchy
 
-`Entity` (id, name, region_id, active, on_tick) → `Creature` (ability scores, HP, AC, in_combat, is_dodging) → `Character` (race, class, alignment) → `PlayerCharacter` / `Npc`. The `perceive()` method controls what information an observer sees about a target — LLM prompts never receive raw character data. All tracked entities live on the `EntitiesLayer`. Combat is managed via `CombatState` (initiative order, round tracking, auto-exit after 2 idle rounds) and `BattleMap` (2D grid with positions, walls, and movement). Movement rules live in `rules/movement.py` (D&D 5e diagonal distance, wall collision).
+`Entity` (id, name, region_id, active, on_tick) → `Creature` (ability scores, HP, AC, in_combat, is_dodging, brain) → `Character` (race, class, alignment) → `PlayerCharacter` / `Npc`. Creature delegates decisions to `brain.choose_action()` and executes via `execute_action()`. The `perceive()` method controls what information an observer sees about a target — LLM prompts never receive raw character data. All tracked entities live on the `EntitiesLayer`. Combat is managed via `CombatState` (initiative order, round tracking, auto-exit after 2 idle rounds) and `BattleMap` (2D grid with positions, walls, and movement). Movement rules live in `rules/movement.py` (D&D 5e diagonal distance, wall collision, occupied-cell blocking).
 
 ## Code Style
 
 - Python 3.12+, strict mypy, ruff with 120-char line length
-- Cyrillic characters allowed (Russian localization in game text)
+- All user-visible strings use `gettext` via `from dnd_simulator.i18n import _`; English base, Russian `.po` translation
 - Frozen dataclasses for models; `object` (not `Any`) in state dicts for mypy strict
 - Each layer has: `layer.py` (Layer impl), `models.py` (data); pure math lives in `rules/`
 - Tests mirror source structure: `test_{layer}_layer.py`, `test_{layer}_formulas.py`
 
 ## Environment
 
-- Requires `.env` with `OPENROUTER_API_KEY` for LLM features
+- Requires `.env` with `OPENROUTER_API_KEY` for LLM features (only if NPCs use `ai: llm`)
 - Default LLM model: `deepseek/deepseek-chat-v3-0324`
+- `DND_LANGUAGE` env var selects game language (default: `ru`); locale files in `src/dnd_simulator/locale/`
 - Save files: `saves/` directory (JSON)

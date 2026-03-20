@@ -30,7 +30,7 @@ Every layer implements the same interface:
 
 ```
 src/dnd_simulator/
-├── core/          — foundation types, abstract Layer, World container, CombatState
+├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/Action
 ├── layers/        — concrete layer implementations
 │   ├── geography/ — physical world simulation
 │   ├── politics/  — factions and diplomacy
@@ -38,7 +38,8 @@ src/dnd_simulator/
 │   └── entities/  — all tracked creatures (player, NPCs, named monsters)
 ├── master/        — DM orchestrator (LLM-powered)
 ├── rules/         — pure functions: D&D mechanics, combat/initiative resolution, movement/pathfinding, physics, economics
-├── llm/           — LLM client (with logging), prompt builders (peaceful + combat), tool schemas (peaceful + combat)
+├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas
+├── i18n.py        — gettext internationalization (English base, .po translations)
 ├── adapters/      — transport layer (CLI, API, Telegram)
 ├── content_loader.py — loads worlds, nations, settlements, NPCs, player from YAML
 ├── service.py     — GameService: transport-agnostic game interface
@@ -67,7 +68,7 @@ Player input flow (service.py, command-based):
     Player input → Adapter (CLI/API/TG) → GameService → response
 ```
 
-The game loop separates combat and peaceful turns. Combat regions use initiative order (d20 + DEX mod, rolled once at combat start); peaceful creatures use default order. Each creature builds awareness appropriate to its mode — combat awareness (HP, nearby combatants, round number) or full world awareness (time, weather, settlements). NPCs decide via LLM tool use, player via CLI input. Actions execute through world events. `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
+The game loop separates combat and peaceful turns. Combat regions use initiative order (d20 + DEX mod, rolled once at combat start); peaceful creatures use default order. Each creature builds awareness appropriate to its mode — combat awareness (HP, nearby combatants, round number) or full world awareness (time, weather, settlements). Creatures delegate decisions to their `brain` (strategy pattern): `RuleBrain` uses utility scoring, `LlmBrain` calls the LLM, `PlayerCharacter` handles interactive I/O directly. Actions execute through world events. `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
 
 `World.handle_event()` sends an event to all layers in order. Each layer returns an `ActionResult` — if any layer returns `success=False`, propagation stops and the failure is returned to the caller. This lets layers validate and reject actions (e.g., EntitiesLayer rejects attacks on dead targets).
 
@@ -87,10 +88,10 @@ Calendar: 30 days/month, 12 months/year.
 
 ```
 Entity (id, name, region_id, active, on_tick)
-└── Creature (ability_scores, HP, AC, in_combat, is_dodging)
-    └── Character (race, class, alignment, gold, appearance, perceive_by_id)
-        ├── PlayerCharacter (save/load, peaceful/combat turn modes)
-        └── Npc (personality, schedule, conversation memory, LLM combat/peaceful tools)
+└── Creature (ability_scores, HP, AC, in_combat, is_dodging, brain, execute_action)
+    └── Character (race, class, alignment, gold, appearance, perceive_by_id, get_npc_data)
+        ├── PlayerCharacter (interactive I/O, overrides take_turn directly)
+        └── Npc (personality, schedule, ai_type — brain assigned by content_loader/adapter)
 ```
 
 All tracked entities live on the `EntitiesLayer`. Each entity has an `active` flag — only active entities are ticked. `Entity.on_tick(hour)` is a no-op by default; `Npc` overrides it to update activity based on daily schedule.
@@ -122,6 +123,7 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 
 - **Layers depend down, never up.** Geography knows nothing about NPCs.
 - **Rules are pure functions.** No state, no side effects, easy to test.
-- **LLM is injected, not hardcoded.** Layers and Master receive an LLM client; they don't create one.
+- **Brain is a strategy.** `Creature.brain` decouples decision-making from entity type. `RuleBrain` (utility scoring) needs no LLM; `LlmBrain` wraps an `LlmClient`. Brains are swappable at runtime (LOD).
+- **LLM is injected, not hardcoded.** `LlmBrain` receives an `LlmClient`; rule-based NPCs use no LLM at all.
 - **Content is data, not code.** Quests, NPCs, and world maps live in YAML files outside the Python package.
 - **Transport is a thin adapter.** The game works the same whether accessed via terminal, HTTP, or Telegram.
