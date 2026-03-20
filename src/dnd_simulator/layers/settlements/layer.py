@@ -238,4 +238,3 @@ class SettlementsLayer(Layer):
                 prosperity=float(sdata.get("prosperity", 50.0)),
                 defenses=float(sdata.get("defenses", 30.0)),
             )
-

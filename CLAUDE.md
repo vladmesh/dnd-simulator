@@ -31,7 +31,7 @@ Layered LLM-powered text RPG simulator built on a **layer stack** pattern. Each 
 1. **Geography** (`layers/geography/`) — terrain, coordinates, weather, day/night cycle. Ticks every call.
 2. **Politics** (`layers/politics/`) — nations, diplomacy, warfare, economy. Ticks every 30 in-game days.
 3. **Settlements** (`layers/settlements/`) — towns, population, prosperity, harvests. Ticks every 30 in-game days.
-4. **NPCs** (`layers/npcs/`) — individual characters with daily schedules and LLM-powered dialog. Ticks every call (activity updates driven by hour of day).
+4. **Entities** (`layers/entities/`) — all tracked creatures: player, NPCs, named monsters. Ticks every call (NPC activity updates driven by hour of day).
 
 ### Module Dependency Flow
 
@@ -54,7 +54,7 @@ content/           — YAML world definitions (data, not code)
 ### Key Design Principles
 
 - **Layers depend down, never up.** Geography never imports from NPCs.
-- **Rules are pure functions** in `rules/` and layer-specific `formulas.py` — no state, no I/O.
+- **Rules are pure functions** in `rules/` — no state, no I/O.
 - **LLM is injected** — layers receive an LlmClient, never instantiate one.
 - **Content is data** — worlds, NPCs, quests defined in YAML under `content/`.
 - **Transport is thin** — adapters only translate I/O, all logic lives in `GameService`.
@@ -65,14 +65,14 @@ content/           — YAML world definitions (data, not code)
 
 ### Entity Hierarchy
 
-`Entity` → `Character` (D&D ability scores, race, class, alignment, HP) → `PlayerCharacter` / `Npc`. The `perceive()` method controls what information an observer sees about a target — LLM prompts never receive raw character data.
+`Entity` (id, name, region_id, active, on_tick) → `Creature` (ability scores, HP, AC) → `Character` (race, class, alignment) → `PlayerCharacter` / `Npc`. The `perceive()` method controls what information an observer sees about a target — LLM prompts never receive raw character data. All tracked entities live on the `EntitiesLayer`.
 
 ## Code Style
 
 - Python 3.12+, strict mypy, ruff with 120-char line length
 - Cyrillic characters allowed (Russian localization in game text)
 - Frozen dataclasses for models; `object` (not `Any`) in state dicts for mypy strict
-- Each layer has: `layer.py` (Layer impl), `models.py` (data), `formulas.py` (pure math)
+- Each layer has: `layer.py` (Layer impl), `models.py` (data); pure math lives in `rules/`
 - Tests mirror source structure: `test_{layer}_layer.py`, `test_{layer}_formulas.py`
 
 ## Environment

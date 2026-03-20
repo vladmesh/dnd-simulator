@@ -18,8 +18,8 @@ from dnd_simulator.core.character import Ability, build_awareness
 from dnd_simulator.core.models import GameDateTime, Query, TimeDelta
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
+from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.geography.layer import GeographyLayer
-from dnd_simulator.layers.npcs.layer import NpcLayer
 from dnd_simulator.layers.politics.layer import PoliticsLayer
 from dnd_simulator.layers.settlements.layer import SettlementsLayer
 from dnd_simulator.llm.client import LlmClient
@@ -86,6 +86,10 @@ class GameService:
         region_terrains = extract_region_terrains(regions)
         npcs = load_npcs(world_path)
 
+        # Fall back to first region if player has no start_region
+        if not player.region_id and regions:
+            player.region_id = regions[0].id
+
         geography = GeographyLayer(regions=regions)
         settlements_layer = SettlementsLayer(settlements=settlements, region_terrains=region_terrains)
         politics = PoliticsLayer(
@@ -94,19 +98,15 @@ class GameService:
             region_adjacency=extract_region_adjacency(regions),
             region_income_fn=settlements_layer.get_region_income,
         )
-        npc_layer = NpcLayer(npcs=npcs)
+        entities_layer = EntitiesLayer(entities=[*npcs, player])
 
         world = World(
-            layers=[geography, settlements_layer, politics, npc_layer],
+            layers=[geography, settlements_layer, politics, entities_layer],
             time=GameDateTime(year=1490, month=6, day=1, hour=10),
         )
 
         # Initial tick to set weather/temperature
         world.advance_time(TimeDelta(seconds=0))
-
-        # Fall back to first region if player has no start_region
-        if not player.region_id and regions:
-            player.region_id = regions[0].id
 
         session = GameSession(
             session_id=session_id,
@@ -243,12 +243,16 @@ class GameService:
             for s in settlements.value:
                 lines.append(f"  {s['name']} ({s['type']}, pop {s['population']}, prosperity {s['prosperity']:.0f})")
 
-        npcs = world.query_layer("npcs", Query(question="npcs_in_region", params={"region_id": loc}))
-        if npcs.value:
+        entities = world.query_layer("entities", Query(question="entities_in_region", params={"region_id": loc}))
+        others = [e for e in entities.value if e["id"] != (session.player.id if session.player else "")]
+        if others:
             lines.append("")
             lines.append("People:")
-            for npc in npcs.value:
-                lines.append(f"  {npc['name']} ({npc['role']}) - {npc['activity']}, at {npc['location_label']}")
+            for e in others:
+                if "role" in e:
+                    lines.append(f"  {e['name']} ({e['role']}) - {e['activity']}, at {e['location_label']}")
+                else:
+                    lines.append(f"  {e['name']}")
 
         lines.append("")
         lines.append("Paths:")
@@ -391,30 +395,32 @@ class GameService:
         world = session.world
         loc = session.player_location
 
-        npcs = world.query_layer("npcs", Query(question="npcs_in_region", params={"region_id": loc}))
+        entities = world.query_layer("entities", Query(question="entities_in_region", params={"region_id": loc}))
+        player_id = session.player.id if session.player else ""
+        npcs = [e for e in entities.value if e["id"] != player_id and "role" in e]
 
         # Find NPC by id or partial name match
         target = None
-        for npc in npcs.value:
+        for npc in npcs:
             if npc["id"] == npc_query or npc_query.lower() in npc["name"].lower():
                 target = npc
                 break
 
         if not target:
-            names = ", ".join(f"{n['name']} ({n['id']})" for n in npcs.value)
+            names = ", ".join(f"{n['name']} ({n['id']})" for n in npcs)
             if names:
                 return MasterResponse(text=f"No one called '{npc_query}' here. Present: {names}")
             return MasterResponse(text="There's no one here to talk to.")
 
         # Check if NPC is sleeping
-        if target["activity"] == "sleeping":
+        if target.get("activity") == "sleeping":
             return MasterResponse(text=f"{target['name']} is sleeping. Best not to disturb.")
 
         if not self._llm:
             return MasterResponse(text="(LLM not configured — cannot start conversation)")
 
         # Get full NPC info and build prompt
-        info = world.query_layer("npcs", Query(question="npc_info", params={"npc_id": target["id"]}))
+        info = world.query_layer("entities", Query(question="entity_info", params={"entity_id": target["id"]}))
         npc_data = info.value
         awareness = build_awareness(world, loc)
         system_prompt = build_npc_system_prompt(npc_data, awareness)
@@ -451,7 +457,9 @@ class GameService:
         assert session.talking_to
         assert self._llm
 
-        npc_info = session.world.query_layer("npcs", Query(question="npc_info", params={"npc_id": session.talking_to}))
+        npc_info = session.world.query_layer(
+            "entities", Query(question="entity_info", params={"entity_id": session.talking_to})
+        )
         npc_name = npc_info.value["name"]
 
         session.conversation_messages.append({"role": "user", "content": text})
@@ -464,7 +472,9 @@ class GameService:
         """End the current conversation."""
         assert session.talking_to
 
-        npc_info = session.world.query_layer("npcs", Query(question="npc_info", params={"npc_id": session.talking_to}))
+        npc_info = session.world.query_layer(
+            "entities", Query(question="entity_info", params={"entity_id": session.talking_to})
+        )
         npc_name = npc_info.value["name"]
 
         session.talking_to = None
@@ -517,10 +527,10 @@ class GameService:
         return MasterResponse(text="\n".join(lines))
 
     def _get_npc_object(self, session: GameSession, npc_id: str) -> Any:
-        """Get the Npc object from the NPC layer (for perceive calls)."""
+        """Get the Npc object from the entities layer (for perceive calls)."""
         for layer in session.world.layers:
-            if layer.name == "npcs":
-                return layer._npcs.get(npc_id)  # type: ignore[attr-defined]
+            if isinstance(layer, EntitiesLayer):
+                return layer.get_entity(npc_id)
         return None
 
     def _get_session(self, session_id: str) -> GameSession:

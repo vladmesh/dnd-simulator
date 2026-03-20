@@ -1,4 +1,4 @@
-"""Data models for the NPC layer."""
+"""Data models for the entities layer."""
 
 from __future__ import annotations
 
@@ -40,6 +40,16 @@ class Npc(Character):
     activity: NpcActivity = NpcActivity.IDLE
     location_label: str = "home"
     conversation_summary: str = ""
+
+    def on_tick(self, hour: int) -> None:
+        """Update activity based on daily schedule."""
+        for entry in self.schedule:
+            if hour_in_range(hour, entry.start_hour, entry.end_hour):
+                self.activity = entry.activity
+                self.location_label = entry.location_label
+                return
+        self.activity = NpcActivity.IDLE
+        self.location_label = "wandering"
 
 
 # Default schedules by role — keeps YAML clean.

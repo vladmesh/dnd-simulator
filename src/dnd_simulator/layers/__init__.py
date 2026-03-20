@@ -6,7 +6,7 @@ Layers are ordered by abstraction level — each depends only on layers below it
 - geography: physical world (terrain, weather, day/night, coordinates)
 - politics: factions, borders, diplomacy, laws
 - settlements: towns, local economy, population dynamics
-- npcs: individual characters powered by LLM agents
+- entities: all tracked creatures — player, NPCs, named monsters
 
 Layers share a common interface (tick, handle_event, query) defined in core.layer.
 """

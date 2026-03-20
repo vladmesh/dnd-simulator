@@ -121,6 +121,10 @@ class Entity:
     id: str
     name: str
     region_id: str
+    active: bool = True
+
+    def on_tick(self, hour: int) -> None:
+        """Update state based on time of day. Override in subclasses."""
 
 
 @dataclass

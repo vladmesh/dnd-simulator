@@ -14,7 +14,7 @@ Layers are ordered from most abstract (physical world) to most concrete (individ
 Layer 0: Geography    — terrain, coordinates, weather, day/night cycle
 Layer 1: Politics     — factions, borders, laws, diplomacy
 Layer 2: Settlements  — towns, economy, population, local events
-Layer 3: NPCs         — individual characters as LLM agents
+Layer 3: Entities     — all tracked creatures (player, NPCs, named monsters)
 ```
 
 New layers can be inserted between existing ones as the simulation grows in detail (e.g., a Cosmology layer above Geography for gods and planar mechanics).
@@ -35,7 +35,7 @@ src/dnd_simulator/
 │   ├── geography/ — physical world simulation
 │   ├── politics/  — factions and diplomacy
 │   ├── settlements/ — towns and local economy
-│   └── npcs/      — individual NPC agents
+│   └── entities/  — all tracked creatures (player, NPCs, named monsters)
 ├── master/        — DM orchestrator (LLM-powered)
 ├── rules/         — pure functions: D&D mechanics, physics, economics
 ├── llm/           — LLM client abstraction and model configs
@@ -71,7 +71,7 @@ The Master decides when to advance time. When it does, `World.advance_time()` ch
 Game time is tracked with second precision via `GameDateTime` (year/month/day/hour/minute/second). Time advances in `TimeDelta` increments measured in seconds, with convenience factories: `TimeDelta.from_rounds(n)` (1 round = 6 seconds, D&D standard), `TimeDelta.from_hours(n)`, `TimeDelta.from_days(n)`.
 
 Each layer declares a `tick_interval` in seconds. World tracks `_last_tick_time` per layer and only calls `tick()` when enough time has elapsed:
-- Geography, NPCs: `tick_interval = 0` (every advance_time call)
+- Geography, Entities: `tick_interval = 0` (every advance_time call)
 - Settlements, Politics: `tick_interval = 2 592 000` (30 days)
 
 Calendar: 30 days/month, 12 months/year.
@@ -79,11 +79,14 @@ Calendar: 30 days/month, 12 months/year.
 ## Entity Hierarchy
 
 ```
-Entity (id, name, region_id)
-└── Character (race, class, alignment, ability_scores, HP, gold, appearance)
-    ├── PlayerCharacter (save/load mutable state)
-    └── Npc (personality, schedule, conversation memory)
+Entity (id, name, region_id, active, on_tick)
+└── Creature (ability_scores, HP, AC)
+    └── Character (race, class, alignment, gold, appearance)
+        ├── PlayerCharacter (save/load mutable state)
+        └── Npc (personality, schedule, conversation memory)
 ```
+
+All tracked entities live on the `EntitiesLayer`. Each entity has an `active` flag — only active entities are ticked. `Entity.on_tick(hour)` is a no-op by default; `Npc` overrides it to update activity based on daily schedule.
 
 `Character.perceive(target: Entity) -> str` — observer extracts visible traits from target (race, appearance, wounds). LLM never receives raw character data, only what the observer can perceive.
 

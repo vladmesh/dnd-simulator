@@ -14,13 +14,13 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.player import PlayerCharacter
+from dnd_simulator.layers.entities.models import DEFAULT_SCHEDULES, Npc
 from dnd_simulator.layers.geography.models import (
     Connection,
     Direction,
     Region,
     TerrainType,
 )
-from dnd_simulator.layers.npcs.models import DEFAULT_SCHEDULES, Npc
 from dnd_simulator.layers.politics.models import Leader, LeaderTrait, Nation
 from dnd_simulator.layers.settlements.models import Settlement, SettlementType
 

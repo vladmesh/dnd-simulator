@@ -580,4 +580,3 @@ class PoliticsLayer(Layer):
         for key_str, months in war_data.items():
             parts = str(key_str).split(":")
             self._war_durations[(parts[0], parts[1])] = int(months)
-

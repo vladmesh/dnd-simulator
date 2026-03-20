@@ -17,9 +17,9 @@ class CheckResult:
     """Outcome of a d20-based check."""
 
     success: bool
-    roll: int       # natural d20 result
-    total: int      # roll + modifier
-    dc: int         # what we were rolling against
+    roll: int  # natural d20 result
+    total: int  # roll + modifier
+    dc: int  # what we were rolling against
     critical: bool  # nat 20 (hit) or nat 1 (miss)
 
 
