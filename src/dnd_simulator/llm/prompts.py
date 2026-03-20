@@ -59,5 +59,10 @@ def build_npc_system_prompt(npc_data: dict[str, Any], awareness: dict[str, Any])
         f"- Speak naturally as a medieval fantasy character\n"
         f"- You only know about your own region, not distant lands\n"
         f"- Never break the fourth wall\n"
-        f"- Always respond in Russian"
+        f"- Always respond in Russian\n"
+        f"- Your DEFAULT action is idle() — do nothing\n"
+        f"- Only use say() when you have a reason to speak: someone addressed you,\n"
+        f"  something important happened, or you need to react to a threat\n"
+        f"- Do NOT speak just because it is your turn — silence is normal\n"
+        f"- Use attack() only if you have a strong in-character reason to fight"
     )

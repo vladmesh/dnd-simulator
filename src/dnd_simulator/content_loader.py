@@ -8,9 +8,13 @@ from typing import Any
 import yaml
 
 from dnd_simulator.core.character import (
+    Ability,
     AbilityScores,
     Alignment,
+    Attack,
     CharClass,
+    DamageComponent,
+    DamageType,
     Race,
 )
 from dnd_simulator.core.player import PlayerCharacter
@@ -23,6 +27,24 @@ from dnd_simulator.layers.geography.models import (
 )
 from dnd_simulator.layers.politics.models import Leader, LeaderTrait, Nation
 from dnd_simulator.layers.settlements.models import Settlement, SettlementType
+
+
+def _parse_attacks(attacks_data: list[dict[str, Any]]) -> tuple[Attack, ...]:
+    """Parse attack definitions from YAML."""
+    attacks: list[Attack] = []
+    for adata in attacks_data:
+        damage = tuple(
+            DamageComponent(dice=str(d["dice"]), type=DamageType(d["type"])) for d in adata.get("damage", [])
+        )
+        attacks.append(
+            Attack(
+                name=str(adata["name"]),
+                ability=Ability(adata.get("ability", "str")),
+                damage=damage,
+                reach=int(adata.get("reach", 5)),
+            )
+        )
+    return tuple(attacks)
 
 
 def load_world(path: Path) -> list[Region]:
@@ -131,6 +153,9 @@ def load_npcs(path: Path) -> list[Npc]:
         race = Race(ndata["race"]) if "race" in ndata else Race.HUMAN
         char_class = CharClass(ndata["class"]) if "class" in ndata else CharClass.COMMONER
 
+        attacks = _parse_attacks(ndata.get("attacks", []))
+        max_hp = int(ndata.get("hp", 4))
+
         npcs.append(
             Npc(
                 id=str(npc_id),
@@ -142,6 +167,10 @@ def load_npcs(path: Path) -> list[Npc]:
                 personality=str(ndata.get("personality", "")),
                 settlement_id=str(ndata.get("settlement_id", "")),
                 schedule=schedule,
+                attacks=attacks,
+                max_hp=max_hp,
+                current_hp=max_hp,
+                ac=int(ndata.get("ac", 10)),
             )
         )
 
@@ -160,6 +189,7 @@ def load_player(path: Path) -> PlayerCharacter:
         ability_scores = AbilityScores.from_dict(pdata["ability_scores"])
 
     max_hp = int(pdata.get("hp", 10))
+    attacks = _parse_attacks(pdata.get("attacks", []))
 
     return PlayerCharacter(
         id="player",
@@ -174,6 +204,7 @@ def load_player(path: Path) -> PlayerCharacter:
         max_hp=max_hp,
         current_hp=max_hp,
         gold=int(pdata.get("gold", 0)),
+        attacks=attacks,
     )
 
 

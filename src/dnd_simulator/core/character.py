@@ -71,6 +71,55 @@ class Ability(Enum):
     CHA = "cha"
 
 
+class DamageType(Enum):
+    """All D&D damage types."""
+
+    # Physical
+    SLASHING = "slashing"
+    PIERCING = "piercing"
+    BLUDGEONING = "bludgeoning"
+    # Elemental
+    FIRE = "fire"
+    COLD = "cold"
+    LIGHTNING = "lightning"
+    THUNDER = "thunder"
+    ACID = "acid"
+    POISON = "poison"
+    # Other
+    RADIANT = "radiant"
+    NECROTIC = "necrotic"
+    FORCE = "force"
+    PSYCHIC = "psychic"
+
+
+class ResolveType(Enum):
+    """How an attack is resolved."""
+
+    ATTACK_ROLL = "attack_roll"  # d20 + mod vs AC
+    SAVING_THROW = "saving_throw"  # target rolls save vs DC
+    AUTO_HIT = "auto_hit"  # no roll, just damage
+
+
+@dataclass(frozen=True)
+class DamageComponent:
+    """One damage term: dice expression + type."""
+
+    dice: str  # "1d8", "2d6+1"
+    type: DamageType
+
+
+@dataclass(frozen=True)
+class Attack:
+    """A single-target damaging action — weapon or spell."""
+
+    name: str  # "longsword", "fire_bolt"
+    ability: Ability  # modifier source
+    damage: tuple[DamageComponent, ...]  # base damage components
+    reach: int = 5  # feet
+    resolve: ResolveType = ResolveType.ATTACK_ROLL
+    save_ability: Ability | None = None  # for SAVING_THROW targets
+
+
 # ---------------------------------------------------------------------------
 # Ability scores
 # ---------------------------------------------------------------------------
@@ -122,9 +171,14 @@ class Entity:
     name: str
     region_id: str
     active: bool = True
+    _last_seen_log_index: int = field(default=0, repr=False)
 
     def on_tick(self, hour: int) -> None:
         """Update state based on time of day. Override in subclasses."""
+
+    def take_turn(self, world: World) -> None:
+        """React to the world: build awareness, decide, execute. Override in subclasses."""
+        raise NotImplementedError
 
 
 @dataclass
@@ -138,6 +192,23 @@ class Creature(Entity):
     max_hp: int = 4
     current_hp: int = 4
     ac: int = 10  # natural armor; 10 = unarmored default
+    attacks: tuple[Attack, ...] = ()
+
+    @property
+    def is_alive(self) -> bool:
+        return self.current_hp > 0
+
+    def take_damage(self, amount: int) -> int:
+        """Apply damage, return actual damage dealt (after clamping to 0)."""
+        actual = min(amount, self.current_hp)
+        self.current_hp -= actual
+        return actual
+
+    def heal(self, amount: int) -> int:
+        """Restore HP, return actual amount healed (capped at max_hp)."""
+        actual = min(amount, self.max_hp - self.current_hp)
+        self.current_hp += actual
+        return actual
 
 
 @dataclass
@@ -154,17 +225,19 @@ class Character(Creature):
     def perceive(self, target: Entity) -> str:
         """What this character sees when looking at target.
 
-        Static for now — all observers see the same thing.
-        Later: observer's WIS/INT affects depth of perception.
+        Characters from the same settlement know each other by name.
+        Strangers are described by race + appearance.
         """
         if isinstance(target, Character):
+            known = self._knows_by_name(target)
             parts: list[str] = []
-            # Race is always visible
-            race_label = target.race.value.replace("_", " ")
-            parts.append(race_label)
-            # Appearance text
-            if target.appearance:
-                parts.append(target.appearance)
+            if known:
+                parts.append(target.name)
+            else:
+                race_label = target.race.value.replace("_", " ")
+                parts.append(race_label)
+                if target.appearance:
+                    parts.append(target.appearance)
             # Wound status
             if target.current_hp < target.max_hp // 2:
                 parts.append("выглядит раненым")
@@ -175,6 +248,16 @@ class Character(Creature):
                 parts.append("выглядит раненым")
             return ", ".join(parts)
         return target.name
+
+    def _knows_by_name(self, target: Character) -> bool:
+        """Check if this character knows the target by name."""
+        # Import here to avoid circular dependency
+        from dnd_simulator.layers.entities.models import Npc
+
+        # NPCs from the same settlement know each other
+        if isinstance(self, Npc) and isinstance(target, Npc):
+            return bool(self.settlement_id and self.settlement_id == target.settlement_id)
+        return False
 
 
 # ---------------------------------------------------------------------------

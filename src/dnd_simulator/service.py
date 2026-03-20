@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +14,7 @@ from dnd_simulator.content_loader import (
     load_settlements,
     load_world,
 )
-from dnd_simulator.core.character import Ability, build_awareness
+from dnd_simulator.core.character import Ability
 from dnd_simulator.core.models import GameDateTime, Query, TimeDelta
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
@@ -23,7 +23,6 @@ from dnd_simulator.layers.geography.layer import GeographyLayer
 from dnd_simulator.layers.politics.layer import PoliticsLayer
 from dnd_simulator.layers.settlements.layer import SettlementsLayer
 from dnd_simulator.llm.client import LlmClient
-from dnd_simulator.llm.prompts import build_npc_system_prompt
 from dnd_simulator.rules.geography import is_daylight
 from dnd_simulator.storage.store import SaveStore
 
@@ -45,8 +44,6 @@ class GameSession:
     session_id: str
     world: World
     player: PlayerCharacter | None = None
-    talking_to: str | None = None
-    conversation_messages: list[dict[str, str]] = field(default_factory=list)
 
     @property
     def player_location(self) -> str:
@@ -119,14 +116,6 @@ class GameService:
     def player_action(self, session_id: str, text: str) -> MasterResponse:
         """Process player input and return DM response."""
         session = self._get_session(session_id)
-
-        # Conversation mode — forward input to NPC
-        if session.talking_to:
-            cmd_lower = text.strip().lower()
-            if cmd_lower in ("bye", "leave", "exit"):
-                return self._end_conversation(session)
-            return self._continue_talk(session, text.strip())
-
         cmd = text.strip().lower()
 
         # Simple command parser until we have a real Master
@@ -158,9 +147,6 @@ class GameService:
 
         if cmd == "settlements":
             return self._cmd_settlements(session)
-
-        if cmd.startswith("talk "):
-            return self._cmd_talk(session, cmd[5:].strip())
 
         if cmd == "status":
             return self._cmd_status(session)
@@ -389,97 +375,6 @@ class GameService:
                 lines.append(f"  {other_info.value['name']}: {status_str}")
 
         return MasterResponse(text="\n".join(lines))
-
-    def _cmd_talk(self, session: GameSession, npc_query: str) -> MasterResponse:
-        """Talk to an NPC. Finds NPC by name or id in current region."""
-        world = session.world
-        loc = session.player_location
-
-        entities = world.query_layer("entities", Query(question="entities_in_region", params={"region_id": loc}))
-        player_id = session.player.id if session.player else ""
-        npcs = [e for e in entities.value if e["id"] != player_id and "role" in e]
-
-        # Find NPC by id or partial name match
-        target = None
-        for npc in npcs:
-            if npc["id"] == npc_query or npc_query.lower() in npc["name"].lower():
-                target = npc
-                break
-
-        if not target:
-            names = ", ".join(f"{n['name']} ({n['id']})" for n in npcs)
-            if names:
-                return MasterResponse(text=f"No one called '{npc_query}' here. Present: {names}")
-            return MasterResponse(text="There's no one here to talk to.")
-
-        # Check if NPC is sleeping
-        if target.get("activity") == "sleeping":
-            return MasterResponse(text=f"{target['name']} is sleeping. Best not to disturb.")
-
-        if not self._llm:
-            return MasterResponse(text="(LLM not configured — cannot start conversation)")
-
-        # Get full NPC info and build prompt
-        info = world.query_layer("entities", Query(question="entity_info", params={"entity_id": target["id"]}))
-        npc_data = info.value
-        awareness = build_awareness(world, loc)
-        system_prompt = build_npc_system_prompt(npc_data, awareness)
-
-        # Build player impression through NPC perception
-        npc_obj = self._get_npc_object(session, target["id"])
-        impression = ""
-        if session.player and npc_obj:
-            impression = npc_obj.perceive(session.player)
-        greeting_prompt = (
-            f"К тебе подходит {impression}. Поприветствуй его в образе."
-            if impression
-            else ("К тебе подходит незнакомец. Поприветствуй его в образе.")
-        )
-
-        # Enter conversation mode
-        session.talking_to = target["id"]
-        session.conversation_messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": greeting_prompt},
-        ]
-
-        response = self._llm.generate(session.conversation_messages)
-        session.conversation_messages.append({"role": "assistant", "content": response})
-
-        return MasterResponse(
-            text=f"You approach {npc_data['name']} at the {npc_data['location_label']}.\n\n"
-            f"{npc_data['name']}: {response}\n\n"
-            "(type 'bye' to end conversation)"
-        )
-
-    def _continue_talk(self, session: GameSession, text: str) -> MasterResponse:
-        """Continue a conversation with an NPC."""
-        assert session.talking_to
-        assert self._llm
-
-        npc_info = session.world.query_layer(
-            "entities", Query(question="entity_info", params={"entity_id": session.talking_to})
-        )
-        npc_name = npc_info.value["name"]
-
-        session.conversation_messages.append({"role": "user", "content": text})
-        response = self._llm.generate(session.conversation_messages)
-        session.conversation_messages.append({"role": "assistant", "content": response})
-
-        return MasterResponse(text=f"{npc_name}: {response}")
-
-    def _end_conversation(self, session: GameSession) -> MasterResponse:
-        """End the current conversation."""
-        assert session.talking_to
-
-        npc_info = session.world.query_layer(
-            "entities", Query(question="entity_info", params={"entity_id": session.talking_to})
-        )
-        npc_name = npc_info.value["name"]
-
-        session.talking_to = None
-        session.conversation_messages.clear()
-        return MasterResponse(text=f"You end your conversation with {npc_name}.")
 
     def _cmd_status(self, session: GameSession) -> MasterResponse:
         """Show player character info."""

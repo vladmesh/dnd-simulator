@@ -4,8 +4,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import TYPE_CHECKING
 
-from dnd_simulator.core.character import Character
+from dnd_simulator.core.character import Character, build_awareness
+from dnd_simulator.llm.client import LlmClient, ToolCall
+from dnd_simulator.llm.prompts import build_npc_system_prompt
+from dnd_simulator.llm.tools import build_npc_tools
+
+if TYPE_CHECKING:
+    from dnd_simulator.core.world import World
+
+_MAX_RETRIES = 3
 
 
 class NpcActivity(Enum):
@@ -40,6 +49,7 @@ class Npc(Character):
     activity: NpcActivity = NpcActivity.IDLE
     location_label: str = "home"
     conversation_summary: str = ""
+    llm: LlmClient | None = field(default=None, repr=False)
 
     def on_tick(self, hour: int) -> None:
         """Update activity based on daily schedule."""
@@ -50,6 +60,80 @@ class Npc(Character):
                 return
         self.activity = NpcActivity.IDLE
         self.location_label = "wandering"
+
+    def _build_npc_data(self) -> dict[str, str]:
+        return {
+            "name": self.name,
+            "role": self.role,
+            "personality": self.personality,
+            "activity": self.activity.value,
+            "location_label": self.location_label,
+            "conversation_summary": self.conversation_summary,
+        }
+
+    def take_turn(self, world: World) -> None:
+        """Decide what to do this turn and execute it."""
+        if self.llm is None:
+            return
+
+        from dnd_simulator.core.models import Query
+
+        awareness = build_awareness(world, self.region_id)
+        tools = build_npc_tools(self.attacks)
+        system_prompt = build_npc_system_prompt(self._build_npc_data(), awareness)
+
+        # Get recent events perceived by this NPC
+        log_answer = world.query_layer("entities", Query(question="perceived_log", params={"entity_id": self.id}))
+        recent_events: list[str] = log_answer.value if log_answer.value else []
+
+        turn_prompt = "Твой ход. Выбери действие."
+        if recent_events:
+            events_text = "\n".join(f"- {e}" for e in recent_events)
+            turn_prompt = f"Что произошло с твоего прошлого хода:\n{events_text}\n\nТвой ход. Выбери действие."
+
+        messages: list[dict[str, object]] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": turn_prompt},
+        ]
+
+        for _ in range(_MAX_RETRIES):
+            response = self.llm.generate_with_tools(messages, tools)
+            if response.is_tool_call:
+                assert response.tool_call is not None
+                self._execute_action(response.tool_call, world)
+                return
+            # No tool call — ask LLM to retry
+            messages.append({"role": "assistant", "content": response.text or ""})
+            messages.append({"role": "user", "content": "Ты должен выбрать действие: say, attack или idle."})
+
+    def _execute_action(self, action: ToolCall, world: World) -> None:
+        """Execute a tool call against the world."""
+        from dnd_simulator.core.models import Event, EventType
+
+        if action.name == "idle":
+            return
+        if action.name == "say":
+            world.handle_event(
+                Event(
+                    event_type=EventType.ENTITY_SAY,
+                    source_layer="entities",
+                    data={"entity_id": self.id, "text": action.arguments.get("text", "")},
+                )
+            )
+            return
+        if action.name == "attack":
+            world.handle_event(
+                Event(
+                    event_type=EventType.ENTITY_ATTACK,
+                    source_layer="entities",
+                    data={
+                        "attacker_id": self.id,
+                        "target_id": action.arguments.get("target_id", ""),
+                        "weapon": action.arguments.get("weapon", ""),
+                    },
+                )
+            )
+            return
 
 
 # Default schedules by role — keeps YAML clean.

@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
-from dnd_simulator.core.character import Entity
+from dnd_simulator.core.character import Attack, Character, Creature, Entity
 from dnd_simulator.core.layer import Layer
-from dnd_simulator.core.models import Answer, Event, Query
+from dnd_simulator.core.models import Answer, Event, EventType, Query
 from dnd_simulator.layers.entities.models import Npc, NpcActivity
+from dnd_simulator.layers.entities.perception import perceive_event
+from dnd_simulator.rules.combat import resolve_attack
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import TimeDelta
     from dnd_simulator.core.world import WorldState
+
+# Event types that get recorded in the region log
+_LOGGED_EVENTS = {EventType.ENTITY_SAY, EventType.ENTITY_ATTACK, EventType.ENTITY_DIED}
 
 
 class EntitiesLayer(Layer):
@@ -19,6 +25,7 @@ class EntitiesLayer(Layer):
 
     def __init__(self, entities: list[Entity] | None = None) -> None:
         self._entities: dict[str, Entity] = {}
+        self._region_log: dict[str, list[Event]] = defaultdict(list)
         if entities:
             for e in entities:
                 self._entities[e.id] = e
@@ -45,6 +52,18 @@ class EntitiesLayer(Layer):
         """Remove an entity from the layer."""
         self._entities.pop(entity_id, None)
 
+    def active_creatures_in_region(self, region_id: str, exclude_id: str = "") -> list[Creature]:
+        """Get active creatures in a region (for turn polling)."""
+        return [
+            e
+            for e in self._entities.values()
+            if isinstance(e, Creature) and e.active and e.region_id == region_id and e.id != exclude_id
+        ]
+
+    def get_active_creatures(self) -> list[Creature]:
+        """Get all active creatures in the world (for the main game loop)."""
+        return [e for e in self._entities.values() if isinstance(e, Creature) and e.active]
+
     # -- Layer interface --
 
     def tick(self, delta: TimeDelta, world_state: WorldState) -> list[Event]:
@@ -56,8 +75,116 @@ class EntitiesLayer(Layer):
         return []
 
     def handle_event(self, event: Event) -> list[Event]:
-        """React to world events."""
-        return []
+        """React to world events. Resolve attacks, log relevant events."""
+        result_events: list[Event] = []
+
+        if event.event_type == EventType.ENTITY_ATTACK:
+            result_events = self._resolve_attack(event)
+        elif event.event_type in _LOGGED_EVENTS:
+            region_id = self._event_region(event)
+            if region_id:
+                self._region_log[region_id].append(event)
+
+        return result_events
+
+    def _resolve_attack(self, event: Event) -> list[Event]:
+        """Resolve an attack event: roll dice, apply damage, log result."""
+        attacker_id = str(event.data.get("attacker_id", ""))
+        target_id = str(event.data.get("target_id", ""))
+        weapon_name = str(event.data.get("weapon", ""))
+
+        attacker = self._entities.get(attacker_id)
+        target = self._entities.get(target_id)
+
+        if not isinstance(attacker, Creature) or not isinstance(target, Creature):
+            return []
+
+        # Find the weapon
+        attack: Attack | None = None
+        for a in attacker.attacks:
+            if a.name == weapon_name:
+                attack = a
+                break
+        if attack is None:
+            return []
+
+        # Resolve
+        modifier = attacker.ability_scores.modifier(attack.ability)
+        result = resolve_attack(modifier=modifier, ac=target.ac, attack=attack)
+
+        # Build enriched event for the log (with damage info)
+        log_data: dict[str, Any] = {
+            "attacker_id": attacker_id,
+            "target_id": target_id,
+            "weapon": weapon_name,
+            "hit": result.hit,
+            "critical": result.critical,
+            "roll": result.attack_check.roll,
+            "total": result.attack_check.total,
+        }
+
+        result_events: list[Event] = []
+
+        if result.hit:
+            actual_damage = target.take_damage(result.total_damage)
+            log_data["damage"] = actual_damage
+            log_data["damage_types"] = [d.type.value for d in result.damage]
+
+            if not target.is_alive:
+                target.active = False
+                death_event = Event(
+                    event_type=EventType.ENTITY_DIED,
+                    source_layer="entities",
+                    data={"entity_id": target_id},
+                )
+                result_events.append(death_event)
+                # Log death in region
+                region_id = target.region_id
+                self._region_log[region_id].append(death_event)
+
+        # Log the attack in the attacker's region
+        attack_log_event = Event(
+            event_type=EventType.ENTITY_ATTACK,
+            source_layer="entities",
+            data=log_data,
+        )
+        self._region_log[attacker.region_id].append(attack_log_event)
+
+        return result_events
+
+    def get_perceived_log(self, observer: Character) -> list[str]:
+        """Get ALL events in observer's region, formatted through their perception.
+
+        Used for NPC LLM prompts — full history as context/memory.
+        """
+        events = self._region_log.get(observer.region_id, [])
+        if not events:
+            return []
+        return [perceive_event(e, observer, self.get_entity) for e in events]
+
+    def get_new_perceived_events(self, observer: Character) -> list[str]:
+        """Get only events since this observer last checked.
+
+        Updates the observer's index. Used for player display.
+        """
+        events = self._region_log.get(observer.region_id, [])
+        last_seen = observer._last_seen_log_index
+        new_events = events[last_seen:]
+        observer._last_seen_log_index = len(events)
+        if not new_events:
+            return []
+        return [perceive_event(e, observer, self.get_entity) for e in new_events]
+
+    def _event_region(self, event: Event) -> str | None:
+        """Determine which region an event happened in."""
+        # Try to find region from event participants
+        for key in ("entity_id", "attacker_id"):
+            eid = event.data.get(key)
+            if isinstance(eid, str):
+                entity = self._entities.get(eid)
+                if entity:
+                    return entity.region_id
+        return None
 
     def query(self, query: Query) -> Answer:
         """Answer queries about entities.
@@ -65,6 +192,7 @@ class EntitiesLayer(Layer):
         Supported queries:
         - "entities_in_region": params={region_id} -> entities in a region
         - "entity_info": params={entity_id} -> full entity data
+        - "perceived_log": params={entity_id} -> recent events from entity's POV
         """
         q = query.question
         params = query.params
@@ -80,6 +208,18 @@ class EntitiesLayer(Layer):
         if q == "entity_info":
             e = self._entities[params["entity_id"]]
             return Answer(value=self._entity_detail(e))
+
+        if q == "perceived_log":
+            e = self._entities[params["entity_id"]]
+            if isinstance(e, Character):
+                return Answer(value=self.get_perceived_log(e))
+            return Answer(value=[])
+
+        if q == "new_perceived_events":
+            e = self._entities[params["entity_id"]]
+            if isinstance(e, Character):
+                return Answer(value=self.get_new_perceived_events(e))
+            return Answer(value=[])
 
         raise ValueError(f"Unknown entities query: {q}")
 

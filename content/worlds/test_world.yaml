@@ -217,6 +217,17 @@ player:
   hp: 12
   gold: 50
   start_region: silverport
+  attacks:
+    - name: longsword
+      ability: str
+      damage:
+        - dice: "1d8"
+          type: slashing
+    - name: fist
+      ability: str
+      damage:
+        - dice: "1"
+          type: bludgeoning
 
 npcs:
   edgar:
@@ -224,10 +235,18 @@ npcs:
     region_id: silverport
     settlement_id: silverport_city
     role: blacksmith
+    hp: 18
+    ac: 12
     personality: >
       Gruff but fair. Takes pride in his craft.
       Worried about iron supply from Iron Peaks since
       relations with Ironmark are tense.
+    attacks:
+      - name: hammer
+        ability: str
+        damage:
+          - dice: "1d6"
+            type: bludgeoning
 
   marta:
     name: Marta
@@ -247,6 +266,8 @@ npcs:
     region_id: silverport
     settlement_id: silverport_city
     role: guard
+    hp: 32
+    ac: 16
     personality: >
       Disciplined, loyal to King Aldric. Suspicious of
       strangers. Veteran of border skirmishes with Ironmark.
@@ -254,3 +275,14 @@ npcs:
       Deeply distrusts tieflings — believes their infernal
       blood makes them untrustworthy. Will refuse to speak
       with tieflings and may order them to leave.
+    attacks:
+      - name: longsword
+        ability: str
+        damage:
+          - dice: "1d8"
+            type: slashing
+      - name: shield_bash
+        ability: str
+        damage:
+          - dice: "1d4"
+            type: bludgeoning

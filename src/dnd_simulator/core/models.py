@@ -44,6 +44,8 @@ class EventType(Enum):
     """Types of events that can flow between layers."""
 
     ENTITY_DIED = "entity_died"
+    ENTITY_SAY = "entity_say"
+    ENTITY_ATTACK = "entity_attack"
     WEATHER_CHANGED = "weather_changed"
     TIME_ADVANCED = "time_advanced"
     CUSTOM = "custom"

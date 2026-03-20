@@ -4,11 +4,15 @@ from dnd_simulator.core.character import (
     Ability,
     AbilityScores,
     Alignment,
+    Attack,
     Character,
     CharClass,
     Creature,
+    DamageComponent,
+    DamageType,
     Entity,
     Race,
+    ResolveType,
 )
 from dnd_simulator.core.player import PlayerCharacter
 
@@ -202,6 +206,108 @@ class TestPerceive:
         target = Character(id="tgt", name="Grok", region_id="r1", race=Race.HALF_ORC)
         result = observer.perceive(target)
         assert "half orc" in result
+
+
+class TestCombatData:
+    def test_attack_defaults(self) -> None:
+        atk = Attack(
+            name="longsword",
+            ability=Ability.STR,
+            damage=(DamageComponent("1d8", DamageType.SLASHING),),
+        )
+        assert atk.reach == 5
+        assert atk.resolve == ResolveType.ATTACK_ROLL
+        assert atk.save_ability is None
+
+    def test_attack_multiple_damage_components(self) -> None:
+        atk = Attack(
+            name="flame_tongue",
+            ability=Ability.STR,
+            damage=(
+                DamageComponent("1d8", DamageType.SLASHING),
+                DamageComponent("2d6", DamageType.FIRE),
+            ),
+        )
+        assert len(atk.damage) == 2
+        assert atk.damage[1].type == DamageType.FIRE
+
+    def test_spell_attack(self) -> None:
+        atk = Attack(
+            name="fire_bolt",
+            ability=Ability.INT,
+            damage=(DamageComponent("1d10", DamageType.FIRE),),
+            reach=120,
+        )
+        assert atk.reach == 120
+        assert atk.resolve == ResolveType.ATTACK_ROLL
+
+    def test_auto_hit_attack(self) -> None:
+        atk = Attack(
+            name="magic_missile",
+            ability=Ability.INT,
+            damage=(DamageComponent("1d4+1", DamageType.FORCE),),
+            reach=120,
+            resolve=ResolveType.AUTO_HIT,
+        )
+        assert atk.resolve == ResolveType.AUTO_HIT
+
+    def test_creature_attacks_default_empty(self) -> None:
+        c = Creature(id="wolf", name="Wolf", region_id="r1")
+        assert c.attacks == ()
+
+    def test_creature_with_attacks(self) -> None:
+        bite = Attack(
+            name="bite",
+            ability=Ability.STR,
+            damage=(DamageComponent("2d4+2", DamageType.PIERCING),),
+        )
+        c = Creature(
+            id="wolf",
+            name="Wolf",
+            region_id="r1",
+            attacks=(bite,),
+        )
+        assert len(c.attacks) == 1
+        assert c.attacks[0].name == "bite"
+
+
+class TestHpMutation:
+    def test_is_alive_full_hp(self) -> None:
+        c = Creature(id="c", name="C", region_id="r1", max_hp=10, current_hp=10)
+        assert c.is_alive is True
+
+    def test_is_alive_one_hp(self) -> None:
+        c = Creature(id="c", name="C", region_id="r1", max_hp=10, current_hp=1)
+        assert c.is_alive is True
+
+    def test_is_alive_zero_hp(self) -> None:
+        c = Creature(id="c", name="C", region_id="r1", max_hp=10, current_hp=0)
+        assert c.is_alive is False
+
+    def test_take_damage(self) -> None:
+        c = Creature(id="c", name="C", region_id="r1", max_hp=10, current_hp=10)
+        actual = c.take_damage(3)
+        assert actual == 3
+        assert c.current_hp == 7
+
+    def test_take_damage_clamps_to_zero(self) -> None:
+        c = Creature(id="c", name="C", region_id="r1", max_hp=10, current_hp=4)
+        actual = c.take_damage(7)
+        assert actual == 4
+        assert c.current_hp == 0
+        assert c.is_alive is False
+
+    def test_heal(self) -> None:
+        c = Creature(id="c", name="C", region_id="r1", max_hp=10, current_hp=5)
+        actual = c.heal(3)
+        assert actual == 3
+        assert c.current_hp == 8
+
+    def test_heal_clamps_to_max(self) -> None:
+        c = Creature(id="c", name="C", region_id="r1", max_hp=10, current_hp=8)
+        actual = c.heal(5)
+        assert actual == 2
+        assert c.current_hp == 10
 
 
 class TestPlayerSaveLoad:
