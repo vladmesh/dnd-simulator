@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from dnd_simulator.i18n import _
@@ -33,12 +34,11 @@ def build_npc_system_prompt(
         names = [f"{s['name']} ({s['type']})" for s in awareness["settlements"]]
         settlement_lines = "\n" + _("Settlements: {names}").format(names=", ".join(names))
 
-    # Previous conversation
-    conv_ctx = ""
-    if npc_data.get("conversation_summary"):
-        conv_ctx = "\n\n" + _("You have already spoken with this traveler: {summary}").format(
-            summary=npc_data["conversation_summary"]
-        )
+    # NPC memory
+    memory_ctx = ""
+    memory = npc_data.get("memory")
+    if memory and any(memory.get(k) for k in ("tags", "recent", "inner_state", "current_conversation")):
+        memory_ctx = "\n\n" + _("Your memory:") + "\n" + json.dumps(memory, ensure_ascii=False, indent=2)
 
     # Nearby entities
     entities_ctx = ""
@@ -88,7 +88,7 @@ def build_npc_system_prompt(
         + f"{nation_ctx}"
         f"{settlement_lines}"
         f"{entities_ctx}"
-        f"{conv_ctx}\n"
+        f"{memory_ctx}\n"
         f"\n" + rules
     )
 

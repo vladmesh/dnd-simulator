@@ -57,6 +57,32 @@ class LlmClient:
         self._client = OpenAI(api_key=api_key, base_url=base_url)
         self._model = model
 
+    def generate(
+        self,
+        messages: list[dict[str, object]],
+        max_tokens: int = 300,
+        temperature: float = 0.3,
+    ) -> str:
+        """Generate a plain text completion (no tools)."""
+        t0 = time.monotonic()
+        response = self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,  # type: ignore[arg-type]
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        elapsed_ms = (time.monotonic() - t0) * 1000
+
+        msg = response.choices[0].message
+        usage = response.usage
+        tokens_info = ""
+        if usage:
+            tokens_info = f" | tokens: {usage.prompt_tokens}→{usage.completion_tokens}"
+
+        text = msg.content or ""
+        logger.info("[LLM] summarizer | %.0fms%s", elapsed_ms, tokens_info)
+        return text
+
     def generate_with_tools(
         self,
         messages: list[dict[str, object]],

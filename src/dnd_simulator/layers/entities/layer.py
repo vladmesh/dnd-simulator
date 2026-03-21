@@ -10,7 +10,7 @@ from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.layers.entities.combat_manager import CombatManager
-from dnd_simulator.layers.entities.models import Npc, activity_flavor
+from dnd_simulator.layers.entities.models import Npc, NpcMemory, activity_flavor
 from dnd_simulator.layers.entities.perception import perceive_event
 
 if TYPE_CHECKING:
@@ -267,7 +267,7 @@ class EntitiesLayer(Layer):
                     "role": entity.role,
                     "personality": entity.personality,
                     "settlement_id": entity.settlement_id,
-                    "conversation_summary": entity.conversation_summary,
+                    "memory": entity.memory.to_dict(),
                 }
             )
         return base
@@ -289,7 +289,7 @@ class EntitiesLayer(Layer):
                         "personality": e.personality,
                         "settlement_id": e.settlement_id,
                         "location_override": e.location_override,
-                        "conversation_summary": e.conversation_summary,
+                        "memory": e.memory.to_dict(),
                     }
                 )
             entities[eid] = data
@@ -312,4 +312,10 @@ class EntitiesLayer(Layer):
                 if isinstance(entity, Npc):
                     override = edata.get("location_override")
                     entity.location_override = str(override) if override else None
-                    entity.conversation_summary = str(edata.get("conversation_summary", ""))
+                    # Load memory: prefer new format, fall back to legacy conversation_summary
+                    memory_data = edata.get("memory")
+                    if isinstance(memory_data, dict):
+                        entity.memory = NpcMemory.from_dict(memory_data)
+                    else:
+                        legacy = str(edata.get("conversation_summary", ""))
+                        entity.memory = NpcMemory(current_conversation=legacy) if legacy else NpcMemory()

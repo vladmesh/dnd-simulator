@@ -42,23 +42,32 @@
 
 ---
 
-## Фаза 2 — Память и осведомлённость (LLM при диалоге) ⬜ TODO
+## Фаза 2 — Память и осведомлённость (LLM при диалоге) ✅ DONE
 
-Когда игрок **заговаривает** с НПС — тот знает контекст.
+> Реализовано, детали в `plans/npc-lifecycle.md` Phase 2 + Phase 2.5
 
-### Event digest ⬜
+### Event digest → delta log ✅
 
-Перед LLM-вызовом собираем что произошло в локации с последнего разговора. Уже есть `get_perceived_log` — нужно скармливать в промпт при диалоге.
+LlmBrain переключен с `perceived_log` (полная история) на `new_perceived_events` (дельта с последнего хода), лимит 15 строк. Память в JSON формате вставляется в system prompt.
 
-### conversation_summary ⬜
+### NpcMemory (замена conversation_summary) ✅
 
-После диалога LLM генерирует 1-2 строки summary → сохраняется на НПС. При следующем разговоре — в контексте. Поле `conversation_summary` уже есть на Npc, нужно подключить генерацию и передачу.
+`NpcMemory` dataclass: `tags`, `recent`, `inner_state`, `current_conversation`. Заменяет `conversation_summary`. Сериализация в JSON, backward compat со старыми сейвами.
 
-### RuleBrain-заглушка для диалога ⬜
+### Structured tags ✅
 
-Без LLM — canned response по роли и activity: "Покупать будешь?" (merchant+working), "Проваливай, я занят" (guard+working), "Zzz..." (sleeping). Аналог `activity_flavor`, но для реплик.
+`NpcTag` — словарь тегов (emotions: angry/scared/..., relations: hates/loves/...:creature_id). `RuleBrain` читает теги: `hates:X` → приоритет цели, `scared` → раньше убегает.
 
-**Итог:** НПС помнят, что было. Без LLM — минимальные но осмысленные реплики.
+### MemorySummarizer ✅
+
+`llm/summarizer.py` — сжимает события в memory через дешёвый LLM-вызов. Триггеры: `conversation_ended`, `combat_ended`, `recent_overflow`. Защита тегов от изменения LLM.
+
+### Не подключено (Phase 2.5) ⬜
+
+- Триггеры сумарайзера не вызываются из `EntitiesLayer` (код есть, wiring нет)
+- RuleBrain canned dialogue (таблица реплик по role+activity)
+
+**Итог:** НПС помнят, что было. Structured tags работают в бою. Сумарайзер готов к подключению.
 
 ---
 

@@ -71,9 +71,11 @@ class LlmBrain(Brain):
             tools = build_npc_tools()
             retry_hint = _("You must choose an action: say, attack, or idle.")
 
-        # Get recent events perceived by this creature
-        log_answer = world.query_layer("entities", Query(question="perceived_log", params={"entity_id": creature.id}))
-        recent_events: list[str] = log_answer.value if log_answer.value else []
+        # Get only new events since last turn (delta, not full log)
+        log_answer = world.query_layer(
+            "entities", Query(question="new_perceived_events", params={"entity_id": creature.id})
+        )
+        recent_events: list[str] = log_answer.value[-15:] if log_answer.value else []
 
         turn_prompt = _("Your turn. Choose an action.")
         if recent_events:

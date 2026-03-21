@@ -26,9 +26,9 @@ class Brain(ABC):
 class RuleBrain(Brain):
     """Utility-scoring combat AI. Peaceful mode = idle.
 
-    Target selection scores each enemy by distance and wound level,
-    preferring wounded targets (finish-off) and nearby targets.
-    Ranged attackers try to attack from range; melee fighters close in.
+    Target selection scores each enemy by distance, wound level, and NPC tags
+    (hates/fears). Scared NPCs flee earlier. Tag-aware targeting prefers
+    hated enemies and avoids loved ones.
     """
 
     def choose_action(self, creature: Creature, world: World) -> Action:
@@ -43,7 +43,17 @@ class RuleBrain(Brain):
         awareness = build_combat_awareness(world, creature)
         return self._choose_combat_action(creature, awareness)
 
+    def _get_tags(self, creature: Creature) -> list[str]:
+        """Get NPC tags if available, empty list otherwise."""
+        from dnd_simulator.layers.entities.models import Npc
+
+        if isinstance(creature, Npc):
+            return creature.memory.tags
+        return []
+
     def _choose_combat_action(self, creature: Creature, awareness: dict[str, Any]) -> Action:
+        from dnd_simulator.layers.entities.models import NpcTag, find_tags, has_tag
+
         nearby = awareness["nearby"]
         if not nearby:
             return Action(name="idle")
@@ -56,19 +66,27 @@ class RuleBrain(Brain):
         primary_reach = creature.attacks[0].reach if creature.attacks else 5
         is_ranged = primary_reach > 10
 
-        # --- Target selection: score each enemy ---
-        target = self._pick_target(nearby, primary_reach)
+        tags = self._get_tags(creature)
+
+        # Tag-adjusted thresholds
+        flee_threshold = 0.25 if has_tag(tags, NpcTag.SCARED) else 0.15
+        dodge_threshold = 0.35 if has_tag(tags, NpcTag.SCARED) else 0.25
+
+        # --- Target selection: score each enemy, tag-aware ---
+        hated_ids = find_tags(tags, NpcTag.HATES)
+        feared_ids = find_tags(tags, NpcTag.FEARS)
+        target = self._pick_target(nearby, primary_reach, hated_ids, feared_ids)
         target_id = str(target["id"])
         dist = int(str(target.get("distance_ft", 999)))
 
-        # 1. Flee if critically wounded
-        if hp_ratio < 0.15:
+        # 1. Flee if critically wounded (scared NPCs flee earlier)
+        if hp_ratio < flee_threshold:
             logger.info("[RuleBrain:%s] → flee (HP %.0f%%)", creature.name, hp_ratio * 100)
             return Action(name="flee")
 
         # 2. Dodge if badly hurt and enemy in melee reach
         nearest_dist = min(int(str(e.get("distance_ft", 999))) for e in nearby)
-        if hp_ratio < 0.25 and nearest_dist <= 5:
+        if hp_ratio < dodge_threshold and nearest_dist <= 5:
             logger.info("[RuleBrain:%s] → dodge (HP %.0f%%)", creature.name, hp_ratio * 100)
             return Action(name="dodge")
 
@@ -91,19 +109,35 @@ class RuleBrain(Brain):
         logger.info("[RuleBrain:%s] → dash toward %s (dist %d ft)", creature.name, target_id, dist)
         return Action(name="dash", params={"toward": target_id})
 
-    def _pick_target(self, nearby: list[dict[str, object]], reach: int) -> dict[str, object]:
+    def _pick_target(
+        self,
+        nearby: list[dict[str, object]],
+        reach: int,
+        hated_ids: list[str] | None = None,
+        feared_ids: list[str] | None = None,
+    ) -> dict[str, object]:
         """Score enemies and pick best target.
 
-        Scoring: prefer wounded targets (lower HP description → higher score),
-        then closer targets. Enemies in weapon reach get a bonus.
+        Scoring: prefer wounded targets, hated targets get a large bonus,
+        feared targets get a smaller bonus (threat awareness),
+        closer targets preferred. Enemies in weapon reach get a bonus.
         """
         best: dict[str, object] | None = None
         best_score = -999.0
+        _hated = set(hated_ids or [])
+        _feared = set(feared_ids or [])
 
         for enemy in nearby:
             dist = int(str(enemy.get("distance_ft", 999)))
+            eid = str(enemy.get("id", ""))
 
             score = 0.0
+            # Hated targets: strong priority
+            if eid in _hated:
+                score += 60.0
+            # Feared targets: moderate priority (eliminate the threat)
+            if eid in _feared:
+                score += 25.0
             # Wounded targets are high priority (finish them off)
             if enemy.get("is_wounded", False):
                 score += 50.0

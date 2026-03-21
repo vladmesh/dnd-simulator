@@ -14,7 +14,7 @@ from dnd_simulator.core.character import (
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.core.models import ActionResult, GameDateTime
 from dnd_simulator.layers.entities.layer import EntitiesLayer
-from dnd_simulator.layers.entities.models import Npc
+from dnd_simulator.layers.entities.models import Npc, NpcMemory
 
 _SWORD = Attack(
     name="longsword",
@@ -147,3 +147,61 @@ class TestRuleBrainCombat:
         action = brain.choose_action(npc, world)
         assert action.name == "attack"
         assert action.params["target_id"] == "close"
+
+
+class TestRuleBrainTags:
+    def test_hated_target_preferred_over_closer(self) -> None:
+        """NPC with hates:far tag should prefer far enemy over closer one."""
+        npc = Npc(
+            id="n1",
+            name="Guard",
+            location_id="arena",
+            attacks=(_SWORD,),
+            max_hp=20,
+            current_hp=20,
+            memory=NpcMemory(tags=["hates:far"]),
+        )
+        far = Npc(id="far", name="Far", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        close = Npc(id="close", name="Close", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("far", Position(10, 30))  # 20 ft
+        bm.set_position("close", Position(10, 15))  # 5 ft
+        world = _make_world([npc, far, close], bm)
+        brain = RuleBrain()
+        action = brain.choose_action(npc, world)
+        # Should move toward hated target, not attack close one
+        assert action.params.get("toward") == "far" or action.params.get("target_id") == "far"
+
+    def test_scared_npc_flees_earlier(self) -> None:
+        """NPC with 'scared' tag should flee at higher HP threshold."""
+        npc = Npc(
+            id="n1",
+            name="Guard",
+            location_id="arena",
+            attacks=(_SWORD,),
+            max_hp=100,
+            current_hp=20,  # 20% HP — above normal flee (15%) but below scared flee (25%)
+            memory=NpcMemory(tags=["scared"]),
+        )
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("e1", Position(10, 15))
+        world = _make_world([npc, enemy], bm)
+        brain = RuleBrain()
+        action = brain.choose_action(npc, world)
+        assert action.name == "flee"
+
+    def test_no_tags_unchanged_behavior(self) -> None:
+        """NPC without tags should behave exactly as before."""
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("e1", Position(10, 15))
+        world = _make_world([npc, enemy], bm)
+        brain = RuleBrain()
+        action = brain.choose_action(npc, world)
+        assert action.name == "attack"
+        assert action.params["target_id"] == "e1"

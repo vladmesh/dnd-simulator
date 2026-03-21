@@ -4,8 +4,82 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 
 from dnd_simulator.core.character import Character
+
+
+class NpcTag:
+    """Structured tag vocabulary for NPC state.
+
+    Emotions are plain strings. Relations use "tag:creature_id" format.
+    Readable by both RuleBrain (direct checks) and LLM (in prompt context).
+    """
+
+    # Emotions / states
+    ANGRY = "angry"
+    TIRED = "tired"
+    HAPPY = "happy"
+    SCARED = "scared"
+    GRIEVING = "grieving"
+    SUSPICIOUS = "suspicious"
+    ALERTED = "alerted"
+
+    # Relations (use as f"{tag}:{creature_id}")
+    LOVES = "loves"
+    HATES = "hates"
+    TRUSTS = "trusts"
+    FEARS = "fears"
+    LOYAL_TO = "loyal_to"
+
+    # Situational
+    IN_MOURNING = "in_mourning"
+    FLEEING = "fleeing"
+
+
+def find_tags(tags: list[str], prefix: str) -> list[str]:
+    """Extract creature IDs matching a tag prefix, e.g. find_tags(tags, "hates") → ["orc_chief"]."""
+    p = prefix + ":"
+    return [t[len(p) :] for t in tags if t.startswith(p)]
+
+
+def has_tag(tags: list[str], tag: str) -> bool:
+    """Check if a plain (non-relation) tag is present."""
+    return tag in tags
+
+
+@dataclass
+class NpcMemory:
+    """Structured memory for an NPC — readable by both LLM and RuleBrain.
+
+    Fields:
+        tags: structured emotional/relational tags (e.g. "angry", "hates:orc_chief")
+        recent: summarized recent events
+        inner_state: current emotional/mental state
+        current_conversation: summary of ongoing conversation
+    """
+
+    tags: list[str] = field(default_factory=list)
+    recent: str = ""
+    inner_state: str = ""
+    current_conversation: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "tags": list(self.tags),
+            "recent": self.recent,
+            "inner_state": self.inner_state,
+            "current_conversation": self.current_conversation,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> NpcMemory:
+        return cls(
+            tags=list(data.get("tags", [])),
+            recent=str(data.get("recent", "")),
+            inner_state=str(data.get("inner_state", "")),
+            current_conversation=str(data.get("current_conversation", "")),
+        )
 
 
 class NpcActivity(Enum):
@@ -39,7 +113,7 @@ class Npc(Character):
     settlement_id: str = ""
     schedule: list[ScheduleEntry] = field(default_factory=list)
     location_override: str | None = None
-    conversation_summary: str = ""
+    memory: NpcMemory = field(default_factory=NpcMemory)
     ai_type: str = "rule_based"
 
     def scheduled_location(self, hour: int) -> str:
@@ -62,13 +136,13 @@ class Npc(Character):
             return self.location_override
         return self.scheduled_location(hour)
 
-    def get_npc_data(self) -> dict[str, str]:
+    def get_npc_data(self) -> dict[str, Any]:
         """Return NPC metadata for LLM prompts."""
         return {
             "name": self.name,
             "role": self.role,
             "personality": self.personality,
-            "conversation_summary": self.conversation_summary,
+            "memory": self.memory.to_dict(),
         }
 
 

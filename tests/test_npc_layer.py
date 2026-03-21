@@ -9,6 +9,7 @@ from dnd_simulator.core.world import WorldState
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import (
     Npc,
+    NpcMemory,
     hour_in_range,
     resolve_schedule,
 )
@@ -212,18 +213,48 @@ class TestSaveLoad:
         info = new_layer.query(Query(question="entity_info", params={"entity_id": "smith"}))
         assert info.value["location_id"] == "silverport"
 
-    def test_conversation_summary_persists(self) -> None:
+    def test_npc_memory_persists(self) -> None:
         layer = _make_layer()
         smith = layer.get_entity("smith")
         assert isinstance(smith, Npc)
-        smith.conversation_summary = "Player asked about iron supply."
+        smith.memory = NpcMemory(
+            tags=["angry", "hates:orcs"],
+            recent="War was declared last week.",
+            inner_state="worried about iron supply",
+            current_conversation="Player asked about iron supply.",
+        )
 
         state = layer.get_state()
         new_layer = EntitiesLayer(entities=_make_npcs())
         new_layer.load_state(state)
 
-        info = new_layer.query(Query(question="entity_info", params={"entity_id": "smith"}))
-        assert info.value["conversation_summary"] == "Player asked about iron supply."
+        restored = new_layer.get_entity("smith")
+        assert isinstance(restored, Npc)
+        assert restored.memory.tags == ["angry", "hates:orcs"]
+        assert restored.memory.recent == "War was declared last week."
+        assert restored.memory.inner_state == "worried about iron supply"
+        assert restored.memory.current_conversation == "Player asked about iron supply."
+
+    def test_legacy_conversation_summary_migrates(self) -> None:
+        """Old saves with conversation_summary should migrate to memory."""
+        layer = _make_layer()
+        # Simulate old save format
+        state = layer.get_state()
+        entities = state["entities"]
+        assert isinstance(entities, dict)
+        smith_data = entities["smith"]
+        assert isinstance(smith_data, dict)
+        # Replace new memory format with legacy field
+        del smith_data["memory"]
+        smith_data["conversation_summary"] = "Old conversation data."
+
+        new_layer = EntitiesLayer(entities=_make_npcs())
+        new_layer.load_state(state)
+
+        restored = new_layer.get_entity("smith")
+        assert isinstance(restored, Npc)
+        assert restored.memory.current_conversation == "Old conversation data."
+        assert restored.memory.tags == []
 
     def test_activation_persists(self) -> None:
         layer = _make_layer()
