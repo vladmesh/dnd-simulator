@@ -56,13 +56,94 @@ def _make_world(entities: list[object], battle_map: BattleMap | None = None) -> 
     return world
 
 
+def _make_peaceful_world(entities: list[object], hour: int = 12) -> MagicMock:
+    """Build a mock World backed by a real EntitiesLayer for peaceful queries."""
+    layer = EntitiesLayer(entities=entities)  # type: ignore[arg-type]
+    world = MagicMock()
+    world.time = GameDateTime(year=1, month=1, day=1, hour=hour)
+    world.layers = [layer]
+    world.handle_event.return_value = ActionResult()
+
+    def fake_query(layer_name: str, query: object) -> MagicMock:
+        if layer_name == "entities":
+            return layer.query(query)  # type: ignore[arg-type]
+        answer = MagicMock()
+        answer.value = None
+        return answer
+
+    world.query_layer.side_effect = fake_query
+    return world
+
+
 class TestRuleBrainPeaceful:
     def test_peaceful_returns_idle(self) -> None:
-        npc = Npc(id="n1", name="Guard", location_id="r1", attacks=(_SWORD,))
+        npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", attacks=(_SWORD,))
         npc.in_combat = False
+        world = _make_peaceful_world([npc])
         brain = RuleBrain()
-        world = MagicMock()
         action = brain.choose_action(npc, world)
+        assert action.name == "idle"
+
+    def test_responds_to_speech_with_canned_line(self) -> None:
+        from dnd_simulator.core.models import Event, EventType
+        from dnd_simulator.core.player import PlayerCharacter
+
+        player = PlayerCharacter(id="player", name="Hero", location_id="market")
+        merchant = Npc(id="m1", name="Merchant", location_id="market", role="merchant")
+        merchant.in_combat = False
+        world = _make_peaceful_world([player, merchant], hour=12)
+
+        # Simulate player speech in location log
+        layer = world.layers[0]
+        layer._location_log["market"].append(
+            Event(
+                event_type=EventType.ENTITY_SAY,
+                source_layer="entities",
+                data={"entity_id": "player", "text": "Hello!"},
+            )
+        )
+
+        brain = RuleBrain()
+        action = brain.choose_action(merchant, world)
+        assert action.name == "say"
+        # hour=12 with no schedule → IDLE activity
+        assert action.params["text"] == "Shop's closed. Try tomorrow."
+
+    def test_mood_overrides_role_dialogue(self) -> None:
+        from dnd_simulator.core.models import Event, EventType
+        from dnd_simulator.core.player import PlayerCharacter
+
+        player = PlayerCharacter(id="player", name="Hero", location_id="market")
+        merchant = Npc(
+            id="m1",
+            name="Merchant",
+            location_id="market",
+            role="merchant",
+            memory=NpcMemory(tags=["angry"]),
+        )
+        merchant.in_combat = False
+        world = _make_peaceful_world([player, merchant], hour=12)
+
+        layer = world.layers[0]
+        layer._location_log["market"].append(
+            Event(
+                event_type=EventType.ENTITY_SAY,
+                source_layer="entities",
+                data={"entity_id": "player", "text": "Hello!"},
+            )
+        )
+
+        brain = RuleBrain()
+        action = brain.choose_action(merchant, world)
+        assert action.name == "say"
+        assert action.params["text"] == "Leave me alone!"
+
+    def test_no_speech_stays_idle(self) -> None:
+        merchant = Npc(id="m1", name="Merchant", location_id="market", role="merchant")
+        merchant.in_combat = False
+        world = _make_peaceful_world([merchant])
+        brain = RuleBrain()
+        action = brain.choose_action(merchant, world)
         assert action.name == "idle"
 
 

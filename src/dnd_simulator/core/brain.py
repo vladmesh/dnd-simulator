@@ -33,7 +33,7 @@ class RuleBrain(Brain):
 
     def choose_action(self, creature: Creature, world: World) -> Action:
         if not creature.in_combat:
-            return Action(name="idle")
+            return self._peaceful_action(creature, world)
 
         from dnd_simulator.core.character import Character, build_combat_awareness
 
@@ -42,6 +42,32 @@ class RuleBrain(Brain):
 
         awareness = build_combat_awareness(world, creature)
         return self._choose_combat_action(creature, awareness)
+
+    def _peaceful_action(self, creature: Creature, world: World) -> Action:
+        """Peaceful mode: respond with canned line if someone spoke nearby."""
+        from dnd_simulator.core.models import Query
+        from dnd_simulator.layers.entities.models import Npc, canned_line
+
+        if not isinstance(creature, Npc):
+            return Action(name="idle")
+
+        # Check for new speech events in the location log (raw events, not perceived strings)
+        answer = world.query_layer("entities", Query(question="new_raw_events", params={"entity_id": creature.id}))
+        if not answer.value:
+            return Action(name="idle")
+        from dnd_simulator.core.models import EventType
+
+        heard_speech = any(
+            e.event_type == EventType.ENTITY_SAY and e.data.get("entity_id") != creature.id for e in answer.value
+        )
+        if not heard_speech:
+            return Action(name="idle")
+
+        hour = world.time.hour
+        activity = creature.scheduled_activity(hour)
+        line = canned_line(creature.role, activity, creature.memory.tags)
+        logger.info("[RuleBrain:%s] → say (canned: %s)", creature.name, line)
+        return Action(name="say", params={"text": line})
 
     def _get_tags(self, creature: Creature) -> list[str]:
         """Get NPC tags if available, empty list otherwise."""

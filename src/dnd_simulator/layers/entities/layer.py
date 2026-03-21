@@ -174,6 +174,17 @@ class EntitiesLayer(Layer):
             if e.observer_ids is None or observer.id in e.observer_ids
         ]
 
+    def get_new_raw_events(self, observer: Character) -> list[Event]:
+        """Peek at raw Event objects since observer's last seen index.
+
+        Does NOT advance the index — safe to call alongside get_new_perceived_events.
+        """
+        events = self._location_log.get(observer.location_id, [])
+        new_events = events[observer._last_seen_log_index :]
+        if not new_events:
+            return []
+        return [e for e in new_events if e.observer_ids is None or observer.id in e.observer_ids]
+
     def _event_location(self, event: Event) -> str | None:
         """Determine which location an event happened at."""
         for key in ("entity_id", "attacker_id"):
@@ -271,6 +282,12 @@ class EntitiesLayer(Layer):
             e = self._entities[params["entity_id"]]
             if isinstance(e, Character):
                 return Answer(value=self.get_new_perceived_events(e))
+            return Answer(value=[])
+
+        if q == "new_raw_events":
+            e = self._entities[params["entity_id"]]
+            if isinstance(e, Character):
+                return Answer(value=self.get_new_raw_events(e))
             return Answer(value=[])
 
         if q == "combat_info":

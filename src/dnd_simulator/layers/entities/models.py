@@ -229,6 +229,50 @@ def activity_flavor(role: str, activity: NpcActivity) -> str:
     return ACTIVITY_FLAVOR.get((role, activity), _ACTIVITY_GENERIC.get(activity, activity.value))
 
 
+# Canned dialogue for RuleBrain NPCs — response when someone talks to them.
+# Priority: mood tag override > (role, activity) > activity-only > generic fallback.
+# Future: add relationship overrides (hates:player → hostile line, trusts:player → friendly).
+CANNED_DIALOGUE: dict[tuple[str, NpcActivity], str] = {
+    # Blacksmith
+    ("blacksmith", NpcActivity.WORKING): "Need something forged?",
+    ("blacksmith", NpcActivity.IDLE): "Hm? Oh, I'm off duty.",
+    # Tavern keeper
+    ("tavern_keeper", NpcActivity.WORKING): "What'll it be?",
+    ("tavern_keeper", NpcActivity.IDLE): "Kitchen's closed. Come back later.",
+    # Guard
+    ("guard", NpcActivity.WORKING): "Move along, citizen.",
+    ("guard", NpcActivity.IDLE): "Quiet night, eh?",
+    # Merchant
+    ("merchant", NpcActivity.WORKING): "Looking to buy something?",
+    ("merchant", NpcActivity.IDLE): "Shop's closed. Try tomorrow.",
+    # Farmer
+    ("farmer", NpcActivity.WORKING): "Can't talk, crops won't tend themselves.",
+    ("farmer", NpcActivity.IDLE): "Fine evening, isn't it?",
+}
+
+_DIALOGUE_GENERIC: dict[NpcActivity, str] = {
+    NpcActivity.WORKING: "I'm busy.",
+    NpcActivity.IDLE: "Hm?",
+    NpcActivity.SLEEPING: "Zzz...",
+}
+
+# Mood overrides — if NPC has this tag, use this line regardless of role/activity.
+MOOD_DIALOGUE: dict[str, str] = {
+    NpcTag.ANGRY: "Leave me alone!",
+    NpcTag.SCARED: "Shh... Something's not right.",
+    NpcTag.GRIEVING: "I... I can't talk right now.",
+    NpcTag.SUSPICIOUS: "What do you want?",
+}
+
+
+def canned_line(role: str, activity: NpcActivity, tags: list[str]) -> str:
+    """Pick a canned dialogue line. Mood overrides role+activity."""
+    for tag, line in MOOD_DIALOGUE.items():
+        if has_tag(tags, tag):
+            return line
+    return CANNED_DIALOGUE.get((role, activity), _DIALOGUE_GENERIC.get(activity, "..."))
+
+
 def hour_in_range(hour: int, start: int, end: int) -> bool:
     """Check if hour falls within [start, end), handling midnight wrap."""
     if start <= end:

@@ -26,7 +26,7 @@ from dnd_simulator.core.character import (
 from dnd_simulator.core.combat import BattleMap, Wall
 from dnd_simulator.core.location import Location, LocationEdge
 from dnd_simulator.core.player import PlayerCharacter
-from dnd_simulator.layers.entities.models import Npc, resolve_schedule
+from dnd_simulator.layers.entities.models import Npc, NpcMemory, resolve_schedule
 from dnd_simulator.layers.geography.models import (
     Connection,
     Direction,
@@ -296,6 +296,10 @@ def parse_npc(npc_id: str, ndata: dict[str, Any]) -> Npc:
     if not location_id:
         location_id = str(ndata.get("region_id", ""))
 
+    # Parse initial memory from YAML (optional)
+    memory_data = ndata.get("memory")
+    memory = NpcMemory.from_dict(memory_data) if isinstance(memory_data, dict) else NpcMemory()
+
     npc = Npc(
         id=npc_id,
         name=str(ndata["name"]),
@@ -313,6 +317,7 @@ def parse_npc(npc_id: str, ndata: dict[str, Any]) -> Npc:
         ac=int(ndata.get("ac", 10)),
         ability_scores=_parse_ability_scores(ndata),
         ai_type=ai_type,
+        memory=memory,
     )
     if ai_type == "rule_based":
         npc.brain = RuleBrain()

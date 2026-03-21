@@ -1,0 +1,72 @@
+name: Quiet Village
+description: >
+  A small village for testing RuleBrain canned dialogue.
+  All NPCs are rule-based — no LLM needed.
+
+regions:
+  village:
+    name: Тихая Деревня
+    latitude: 45.0
+    longitude: 10.0
+    elevation: 200
+    terrain: plains
+    water_proximity: 0.3
+    connections: []
+    settlements:
+      - id: millbrook
+        name: Мельничный Ручей
+        type: village
+        population: 120
+
+nations: {}
+
+player:
+  name: Странник
+  race: human
+  class: fighter
+  level: 1
+  alignment: true_neutral
+  appearance: "путник в потрёпанном плаще"
+  ability_scores: { str: 14, dex: 12, con: 12, int: 10, wis: 10, cha: 10 }
+  hp: 12
+  ac: 14
+  gold: 10
+  start_region: village
+
+npcs:
+  olga:
+    name: Ольга-кузнец
+    region_id: village
+    role: blacksmith
+    personality: "Грубоватая, но справедливая."
+    settlement_id: millbrook
+
+  sergei:
+    name: Стражник Сергей
+    region_id: village
+    role: guard
+    personality: "Дисциплинированный и серьёзный."
+    settlement_id: millbrook
+
+  masha:
+    name: Маша-торговка
+    region_id: village
+    role: merchant
+    personality: "Весёлая и разговорчивая."
+    settlement_id: millbrook
+
+  ivan:
+    name: Дед Иван
+    region_id: village
+    role: farmer
+    personality: "Молчаливый старик."
+    settlement_id: millbrook
+    memory:
+      tags: ["grieving"]
+
+  tanya:
+    name: Таня-трактирщица
+    region_id: village
+    role: tavern_keeper
+    personality: "Гостеприимная хозяйка."
+    settlement_id: millbrook

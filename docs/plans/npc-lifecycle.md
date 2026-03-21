@@ -105,30 +105,25 @@ Connect the summarizer to actual game events. Give RuleBrain NPCs minimal dialog
 - Both `cli.py` (GameService) and `cli_loop.py` inject summarizer when LLM is configured.
 - Integration test script: `scripts/test_arena_summarizer.py`.
 
-### 2.5b — RuleBrain canned dialogue ⬜ TODO
+### 2.5b — RuleBrain canned dialogue DONE
 
-**Problem:** `RuleBrain` returns `idle()` in peaceful mode. NPCs without LLM are completely mute — no response to `talk`.
+> Implemented in commit (pending)
 
 **Decisions:**
 
-- Add canned response table keyed by `(role, activity)` in `layers/entities/models.py`, next to `ACTIVITY_FLAVOR`:
-  - `(merchant, working)` → "Looking to buy something?"
-  - `(guard, working)` → "Move along, citizen."
-  - `(tavern_keeper, working)` → "What'll it be?"
-  - `(*, sleeping)` → "Zzz..."
-  - `(*, idle)` → "Hmm?"
-- `RuleBrain.choose_action()` in peaceful mode: if an entity recently spoke (check `new_perceived_events` for `ENTITY_SAY` targeting this NPC), respond with `say()` using canned line. Otherwise `idle()`.
-- Canned lines support i18n via `_()`.
+- `CANNED_DIALOGUE` table keyed by `(role, activity)` in `models.py` — 5 roles x 2 activities.
+- `MOOD_DIALOGUE` table keyed by mood tag — overrides role+activity when present (angry, scared, grieving, suspicious).
+- `canned_line(role, activity, tags)` — mood override > role+activity > activity-only > "..." fallback.
+- `RuleBrain._peaceful_action()` queries `new_raw_events` (raw Event objects, not translated strings) for `ENTITY_SAY` from someone else. Responds with canned line via `Action(name="say")`.
+- `EntitiesLayer.get_new_raw_events()` — peeks at raw events without advancing the index (non-destructive, safe alongside `get_new_perceived_events`).
+- `content_loader.parse_npc()` now loads `memory` from YAML (tags, recent, inner_state, current_conversation).
+- Test script: `scripts/test_village_dialogue.py`, test world: `content/worlds/village.yaml`.
 
-**Files to modify:**
-- `layers/entities/models.py` — `CANNED_DIALOGUE` dict
-- `core/brain.py` — RuleBrain peaceful mode reads events, responds with canned line
-- Tests
-
-### Implementation order
-
-1. Summarizer triggers (2.5a)
-2. RuleBrain canned dialogue (2.5b)
+**Deferred / future expansion:**
+- i18n: wrap canned lines in `_()` for translation
+- Relationship overrides: `hates:player` → hostile line, `trusts:player` → friendly line
+- Multiple lines per key (random pick)
+- Sleeping NPCs: respond only if attacked/shaken, not to speech
 
 ---
 
