@@ -1,5 +1,7 @@
 """Tests for the entities layer."""
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from dnd_simulator.core.character import Creature, Entity
@@ -283,3 +285,120 @@ class TestSaveLoad:
         restored = new_layer.get_entity("smith")
         assert isinstance(restored, Npc)
         assert restored.location_override == "custom_spot"
+
+
+def _mock_summarizer(updated_recent: str = "Fought in combat.") -> MagicMock:
+    """Create a mock MemorySummarizer that returns updated memory."""
+    summarizer = MagicMock()
+
+    def _summarize(memory: NpcMemory, events: list[str], trigger: str) -> NpcMemory:
+        return NpcMemory(
+            tags=list(memory.tags),
+            recent=updated_recent,
+            inner_state="shaken",
+            current_conversation="",
+        )
+
+    summarizer.summarize.side_effect = _summarize
+    summarizer.needs_compression.return_value = False
+    return summarizer
+
+
+class TestCombatSummarization:
+    """Test that combat end triggers NPC memory summarization."""
+
+    def _setup_combat(self) -> tuple[EntitiesLayer, MagicMock]:
+        """Set up a layer with two NPCs and a player, start real combat via attack."""
+        player = PlayerCharacter(id="player", name="Hero", location_id="town_square")
+        player.max_hp = 100
+        player.current_hp = 100
+        guard = Npc(
+            id="guard",
+            name="Guard",
+            location_id="town_square",
+            role="guard",
+            personality="Brave.",
+            settlement_id="town",
+            memory=NpcMemory(tags=["loyal_to:player"]),
+        )
+        guard.max_hp = 100
+        guard.current_hp = 100
+        bandit = Npc(
+            id="bandit",
+            name="Bandit",
+            location_id="town_square",
+            role="bandit",
+            personality="Ruthless.",
+            settlement_id="town",
+            memory=NpcMemory(tags=["hates:player"]),
+        )
+        bandit.max_hp = 100
+        bandit.current_hp = 100
+        summarizer = _mock_summarizer()
+        layer = EntitiesLayer(entities=[player, guard, bandit], summarizer=summarizer)
+
+        # Start combat via attack event (creates COMBAT_STARTED + attack log)
+        layer.handle_event(
+            Event(
+                event_type=EventType.ENTITY_ATTACK,
+                source_layer="entities",
+                data={"attacker_id": "player", "target_id": "bandit"},
+            )
+        )
+        return layer, summarizer
+
+    def _end_combat_by_idle(self, layer: EntitiesLayer) -> None:
+        """End combat by having 2+ rounds without attacks."""
+        # Round after setup attack: resets rounds_without_attack to 0
+        layer.end_combat_round("town_square")
+        # Two idle rounds → rounds_without_attack reaches 2 → combat ends
+        layer.end_combat_round("town_square")
+        layer.end_combat_round("town_square")
+
+    def test_combat_ended_calls_summarizer_for_npcs(self) -> None:
+        layer, summarizer = self._setup_combat()
+        self._end_combat_by_idle(layer)
+
+        # Summarizer called for guard and bandit, not for player
+        assert summarizer.summarize.call_count == 2
+        call_npcs = {call.args[0].tags[0] for call in summarizer.summarize.call_args_list}
+        assert call_npcs == {"loyal_to:player", "hates:player"}
+
+    def test_combat_ended_updates_npc_memory(self) -> None:
+        layer, _ = self._setup_combat()
+        self._end_combat_by_idle(layer)
+
+        guard = layer.get_entity("guard")
+        assert isinstance(guard, Npc)
+        assert guard.memory.recent == "Fought in combat."
+        assert guard.memory.inner_state == "shaken"
+
+    def test_no_summarizer_does_nothing(self) -> None:
+        """Without a summarizer, combat end doesn't crash."""
+        player = PlayerCharacter(id="player", name="Hero", location_id="loc")
+        npc = Npc(id="npc1", name="NPC", location_id="loc", role="guard", personality=".", settlement_id="s")
+        npc.max_hp = 100
+        npc.current_hp = 100
+        layer = EntitiesLayer(entities=[player, npc])
+        # Start combat
+        layer.handle_event(
+            Event(
+                event_type=EventType.ENTITY_ATTACK,
+                source_layer="entities",
+                data={"attacker_id": "player", "target_id": "npc1"},
+            )
+        )
+        # End combat — no summarizer, should not raise
+        layer.end_combat_round("loc")
+        layer.end_combat_round("loc")
+
+    def test_recent_overflow_triggers_second_call(self) -> None:
+        layer, summarizer = self._setup_combat()
+        summarizer.needs_compression.return_value = True
+        self._end_combat_by_idle(layer)
+
+        # 2 NPCs x (combat_ended + recent_overflow) = 4 calls
+        assert summarizer.summarize.call_count == 4
+        triggers = [call.args[2] for call in summarizer.summarize.call_args_list]
+        assert triggers.count("combat_ended") == 2
+        assert triggers.count("recent_overflow") == 2

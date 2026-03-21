@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
@@ -16,6 +17,9 @@ from dnd_simulator.layers.entities.perception import perceive_event
 if TYPE_CHECKING:
     from dnd_simulator.core.models import TimeDelta
     from dnd_simulator.core.world import WorldState
+    from dnd_simulator.llm.summarizer import MemorySummarizer
+
+logger = logging.getLogger("dnd_simulator.entities")
 
 # Event types that get recorded in the location log
 _LOGGED_EVENTS = {
@@ -38,9 +42,11 @@ class EntitiesLayer(Layer):
         self,
         entities: list[Entity] | None = None,
         battle_map_configs: dict[str, BattleMap] | None = None,
+        summarizer: MemorySummarizer | None = None,
     ) -> None:
         self._entities: dict[str, Entity] = {}
         self._location_log: dict[str, list[Event]] = defaultdict(list)
+        self._summarizer = summarizer
         if entities:
             for e in entities:
                 self._entities[e.id] = e
@@ -92,7 +98,10 @@ class EntitiesLayer(Layer):
 
     def end_combat_round(self, location_id: str) -> None:
         """Called by game loop at end of each combat round."""
+        had_combat = self._combat.get_combat(location_id) is not None
         self._combat.end_combat_round(location_id)
+        if had_combat and self._combat.get_combat(location_id) is None:
+            self._on_combat_ended(location_id)
 
     # -- Layer interface --
 
@@ -105,11 +114,17 @@ class EntitiesLayer(Layer):
         if event.event_type == EventType.ENTITY_DODGE:
             return self._combat.resolve_dodge(event)
 
-        if event.event_type == EventType.ENTITY_ATTACK:
-            return self._combat.resolve_attack(event)
-
-        if event.event_type == EventType.ENTITY_FLEE:
-            return self._combat.resolve_flee(event)
+        # Attack/flee can end combat (kill/flee removes fighter, <=1 left → combat ends)
+        if event.event_type in (EventType.ENTITY_ATTACK, EventType.ENTITY_FLEE):
+            location_id = self._event_location(event)
+            had_combat = location_id is not None and self._combat.get_combat(location_id) is not None
+            if event.event_type == EventType.ENTITY_ATTACK:
+                result = self._combat.resolve_attack(event)
+            else:
+                result = self._combat.resolve_flee(event)
+            if had_combat and location_id and self._combat.get_combat(location_id) is None:
+                self._on_combat_ended(location_id)
+            return result
 
         if event.event_type == EventType.ENTITY_MOVE:
             return self._combat.resolve_move(event)
@@ -168,6 +183,50 @@ class EntitiesLayer(Layer):
                 if entity:
                     return entity.location_id
         return None
+
+    def _on_combat_ended(self, location_id: str) -> None:
+        """After combat ends, summarize combat events into each NPC participant's memory."""
+        if not self._summarizer:
+            return
+
+        log = self._location_log.get(location_id, [])
+
+        # Find the matching COMBAT_STARTED — scan backward from the end
+        start_idx = None
+        for i in range(len(log) - 1, -1, -1):
+            if log[i].event_type == EventType.COMBAT_STARTED:
+                start_idx = i
+                break
+        if start_idx is None:
+            return
+
+        combat_events = log[start_idx:]
+        participant_ids: list[str] = []
+        turn_order = log[start_idx].data.get("turn_order", [])
+        if isinstance(turn_order, list):
+            participant_ids = [str(pid) for pid in turn_order]
+
+        for pid in participant_ids:
+            entity = self._entities.get(pid)
+            if not isinstance(entity, Npc):
+                continue
+
+            # Perceive combat events from this NPC's point of view
+            perceived = [
+                perceive_event(e, entity, self.get_entity)
+                for e in combat_events
+                if e.observer_ids is None or entity.id in e.observer_ids
+            ]
+            if not perceived:
+                continue
+
+            try:
+                entity.memory = self._summarizer.summarize(entity.memory, perceived, "combat_ended")
+                if self._summarizer.needs_compression(entity.memory):
+                    entity.memory = self._summarizer.summarize(entity.memory, [], "recent_overflow")
+                logger.info("[Summarizer] Updated memory for NPC '%s' after combat", entity.name)
+            except Exception:
+                logger.exception("[Summarizer] Failed to summarize combat for NPC '%s'", entity.name)
 
     # -- Query --
 

@@ -31,6 +31,7 @@ from dnd_simulator.layers.politics.layer import PoliticsLayer
 from dnd_simulator.layers.settlements.layer import SettlementsLayer
 from dnd_simulator.llm.brain import LlmBrain
 from dnd_simulator.llm.client import LlmClient
+from dnd_simulator.llm.summarizer import MemorySummarizer
 
 DEFAULT_CONTENT_DIR = Path(__file__).resolve().parents[3] / "content"
 
@@ -104,7 +105,8 @@ def run_cli_loop() -> None:
         region_adjacency=extract_region_adjacency(regions),
         region_income_fn=settlements_layer.get_region_income,
     )
-    entities_layer = EntitiesLayer(entities=[*npcs, player], battle_map_configs=battle_maps)
+    summarizer = MemorySummarizer(llm) if llm else None
+    entities_layer = EntitiesLayer(entities=[*npcs, player], battle_map_configs=battle_maps, summarizer=summarizer)
 
     world = World(
         layers=[geography, settlements_layer, politics, entities_layer],

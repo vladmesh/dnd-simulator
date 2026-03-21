@@ -114,7 +114,12 @@ class GameService:
             region_adjacency=extract_region_adjacency(regions),
             region_income_fn=settlements_layer.get_region_income,
         )
-        entities_layer = EntitiesLayer(entities=entities)
+        summarizer = None
+        if self._llm:
+            from dnd_simulator.llm.summarizer import MemorySummarizer
+
+            summarizer = MemorySummarizer(self._llm)
+        entities_layer = EntitiesLayer(entities=entities, summarizer=summarizer)
 
         world = World(
             layers=[geography, settlements_layer, politics, entities_layer],
