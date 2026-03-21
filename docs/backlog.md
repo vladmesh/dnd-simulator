@@ -16,7 +16,22 @@
 Не критично — perception API отдаёт сырые данные, фронт переведёт.
 Но для консистентности text-based команд стоит перевести.
 
-### NPC list не показывает NPC вне регионов
+## Features
+
+### Periodic autosave scheduler
+Фоновый asyncio таск в FastAPI lifespan: каждые 2 минуты вызывает
+`service.autosave_all_sessions()`. Дополняет существующий per-action автосейв
+и shutdown автосейв. Использовать `asyncio.create_task` с loop + sleep,
+cancel на shutdown перед финальным autosave.
+
+### Layer isolation: query_fn pattern
+Убрать World из слоёв и сущностей. Передавать `query_fn: Callable[[str, Query], Answer]`
+вместо прямой ссылки. Brain получает готовый awareness dict вместо World.
+См. `docs/brainstorms/layer-isolation-and-query-fn.md`.
+
+### NPC реагируют на say мгновенно
+После `say` команды тикнуть NPC в локации (1 раунд), чтобы RuleBrain/LlmBrain
+успел ответить в рамках того же запроса. Сейчас NPC отвечают только при advance_time.
 `list_npcs` итерирует по регионам и ищет NPC в каждом.
 NPC в несуществующем регионе не попадёт в список. Мелочь, но стоит поправить —
 итерировать по entities напрямую.
