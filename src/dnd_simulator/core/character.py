@@ -207,6 +207,11 @@ class Creature(Entity):
     brain: Brain | None = field(default=None, repr=False)
 
     @property
+    def memory_tags(self) -> list[str]:
+        """Structured tags for brain decisions. Override in subclasses with memory."""
+        return []
+
+    @property
     def is_alive(self) -> bool:
         return self.current_hp > 0
 
@@ -297,6 +302,10 @@ class Creature(Entity):
         actual = min(amount, self.max_hp - self.current_hp)
         self.current_hp += actual
         return actual
+
+    def get_canned_response(self, hour: int) -> str | None:
+        """Return a canned dialogue line, or None. Override in NPC subclasses."""
+        return None
 
 
 @dataclass

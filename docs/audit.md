@@ -7,7 +7,7 @@
 - Dead code: 0 issues
 - Code smells: 2 issues
 - Security: 2 issues
-- Architecture violations: 3 issues
+- Architecture violations: 3 issues (1 fixed)
 - Convention violations: 2 issues
 - Layer contract: 0 issues
 - Test gaps: 3 issues
@@ -36,7 +36,7 @@ No hardcoded secrets, no subprocess calls, no prompt injection risks found. `.en
 ## Architecture Violations
 | File:Line | Violation | Should Be | Severity |
 |-----------|-----------|-----------|----------|
-| `core/brain.py:49,74,81` | `RuleBrain` imports from `layers.entities.models` (Npc, canned_line, NpcTag, find_tags, has_tag) via deferred imports | `core/` must not depend on `layers/`. Move the Npc type check and canned_line/tag helpers to `core/` or pass needed data as arguments | high |
+| ~~`core/brain.py:49,74,81`~~ | ~~`RuleBrain` imports from `layers.entities.models`~~ | **Fixed**: moved `NpcTag`/`find_tags`/`has_tag` → `core/tags.py`; added `Creature.memory_tags` + `get_canned_response()` polymorphism; zero layer imports in brain.py now | ~~high~~ |
 | `adapters/api/routes_master.py:24,84,125,305` | Route handlers import `Npc` from `layers.entities.models` and `EntitiesLayer` from `layers.entities.layer`, then iterate layer internals directly | All entity queries should go through `GameService`; adapters should not reach into layers | high |
 | `adapters/cli_loop.py:28-31` | CLI adapter imports all four layer classes and constructs them directly | Layer construction should be delegated to service or a factory; adapter should only call service methods | medium |
 
@@ -46,7 +46,7 @@ No hardcoded secrets, no subprocess calls, no prompt injection risks found. `.en
 | Multiple files (17 modules) | `from typing import Any` used throughout; `Answer.value: Any` in `core/models.py:167` | CLAUDE.md: use `object` not `Any` in state dicts for strict mypy. `Any` in adapters for session types is lower priority, but `Answer.value` is core |
 | Multiple files (17 dataclasses) | `@dataclass` without `frozen=True` on: `Creature`, `Character`, `PlayerCharacter` (core), `World`, `CombatState`, `BattleMap`, `Settlement`, `NpcMemory`, `Npc`, `NpcScheduleEntry`, `Nation`, `NationRelation`, `Region`, `HexCell` | Expected for stateful objects (World, CombatState, creatures). Settlement, Nation, NpcMemory are also mutated in-place by layer ticks — acceptable by design but worth documenting |
 
-Note: Line length is clean — only one hit (a docstring in `llm/__init__.py`).
+Note: Line length is clean (docstring in `llm/__init__.py` fixed).
 
 ## Layer Contract
 | Layer | Issue |

@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.action import Action
+from dnd_simulator.core.tags import NpcTag, find_tags, has_tag
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
@@ -45,17 +46,16 @@ class RuleBrain(Brain):
 
     def _peaceful_action(self, creature: Creature, world: World) -> Action:
         """Peaceful mode: respond with canned line if someone spoke nearby."""
-        from dnd_simulator.core.models import Query
-        from dnd_simulator.layers.entities.models import Npc, canned_line
+        from dnd_simulator.core.models import EventType, Query
 
-        if not isinstance(creature, Npc):
+        response = creature.get_canned_response(world.time.hour)
+        if response is None:
             return Action(name="idle")
 
         # Check for new speech events in the location log (raw events, not perceived strings)
         answer = world.query_layer("entities", Query(question="new_raw_events", params={"entity_id": creature.id}))
         if not answer.value:
             return Action(name="idle")
-        from dnd_simulator.core.models import EventType
 
         heard_speech = any(
             e.event_type == EventType.ENTITY_SAY and e.data.get("entity_id") != creature.id for e in answer.value
@@ -63,23 +63,14 @@ class RuleBrain(Brain):
         if not heard_speech:
             return Action(name="idle")
 
-        hour = world.time.hour
-        activity = creature.scheduled_activity(hour)
-        line = canned_line(creature.role, activity, creature.memory.tags)
-        logger.info("[RuleBrain:%s] → say (canned: %s)", creature.name, line)
-        return Action(name="say", params={"text": line})
+        logger.info("[RuleBrain:%s] → say (canned: %s)", creature.name, response)
+        return Action(name="say", params={"text": response})
 
     def _get_tags(self, creature: Creature) -> list[str]:
         """Get NPC tags if available, empty list otherwise."""
-        from dnd_simulator.layers.entities.models import Npc
-
-        if isinstance(creature, Npc):
-            return creature.memory.tags
-        return []
+        return creature.memory_tags
 
     def _choose_combat_action(self, creature: Creature, awareness: dict[str, Any]) -> Action:
-        from dnd_simulator.layers.entities.models import NpcTag, find_tags, has_tag
-
         nearby = awareness["nearby"]
         if not nearby:
             return Action(name="idle")
