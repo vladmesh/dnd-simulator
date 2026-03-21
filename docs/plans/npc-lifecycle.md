@@ -84,29 +84,28 @@ Summarizer triggers:
 
 ---
 
-## Phase 2.5 — Wire Summarizer Triggers + RuleBrain Dialogue ⬜ TODO
+## Phase 2.5 — Wire Summarizer Triggers + RuleBrain Dialogue
 
 ### Goal
 
 Connect the summarizer to actual game events. Give RuleBrain NPCs minimal dialogue without LLM.
 
-### 2.5a — Summarizer triggers
+### 2.5a — Summarizer triggers DONE
 
-**Problem:** `MemorySummarizer` exists in `llm/summarizer.py` but nothing calls it. `EntitiesLayer` has no reference to `LlmClient`.
+> Implemented in commit `ebac0a6`
 
 **Decisions:**
 
-- `EntitiesLayer` gets an optional `summarizer: MemorySummarizer | None` field, injected at construction (by `GameService` or content loading). `None` = no LLM available, skip summarization.
-- Trigger on `COMBAT_ENDED` in `handle_event()`: collect events from `_location_log` for each NPC participant, call `summarizer.summarize(npc.memory, events, "combat_ended")`, update `npc.memory`.
-- Trigger on `recent_overflow`: after any summarization, check `summarizer.needs_compression(npc.memory)` → if true, call again with trigger `"recent_overflow"`.
-- `conversation_ended` trigger: deferred (needs conversation detection — manual command or timeout). For now, only combat triggers summarization.
+- `EntitiesLayer` gets optional `summarizer: MemorySummarizer | None`, injected at construction. `None` = skip summarization.
+- `_on_combat_ended(location_id)` triggers when combat ends — detected in `end_combat_round()` (idle timeout) and `handle_event()` (last fighter killed/fled).
+- Scans `_location_log` backward to find `COMBAT_STARTED`, extracts `turn_order` for participant list.
+- Each NPC participant gets combat events perceived from their own POV via `perceive_event`.
+- After summarization, checks `needs_compression()` → second call with `"recent_overflow"` if needed.
+- `conversation_ended` trigger: deferred (needs conversation detection — manual command or timeout).
+- Both `cli.py` (GameService) and `cli_loop.py` inject summarizer when LLM is configured.
+- Integration test script: `scripts/test_arena_summarizer.py`.
 
-**Files to modify:**
-- `layers/entities/layer.py` — add optional `summarizer` field, call on COMBAT_ENDED
-- `service.py` — inject `MemorySummarizer` into `EntitiesLayer` when LLM is configured
-- Tests — mock summarizer in layer tests
-
-### 2.5b — RuleBrain canned dialogue
+### 2.5b — RuleBrain canned dialogue ⬜ TODO
 
 **Problem:** `RuleBrain` returns `idle()` in peaceful mode. NPCs without LLM are completely mute — no response to `talk`.
 
