@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Any
 
 from dnd_simulator.core.character import Character
+from dnd_simulator.i18n import _
 
 
 class NpcTag:
@@ -234,34 +235,34 @@ def activity_flavor(role: str, activity: NpcActivity) -> str:
 # Future: add relationship overrides (hates:player → hostile line, trusts:player → friendly).
 CANNED_DIALOGUE: dict[tuple[str, NpcActivity], str] = {
     # Blacksmith
-    ("blacksmith", NpcActivity.WORKING): "Need something forged?",
-    ("blacksmith", NpcActivity.IDLE): "Hm? Oh, I'm off duty.",
+    ("blacksmith", NpcActivity.WORKING): _("Need something forged?"),
+    ("blacksmith", NpcActivity.IDLE): _("Hm? Oh, I'm off duty."),
     # Tavern keeper
-    ("tavern_keeper", NpcActivity.WORKING): "What'll it be?",
-    ("tavern_keeper", NpcActivity.IDLE): "Kitchen's closed. Come back later.",
+    ("tavern_keeper", NpcActivity.WORKING): _("What'll it be?"),
+    ("tavern_keeper", NpcActivity.IDLE): _("Kitchen's closed. Come back later."),
     # Guard
-    ("guard", NpcActivity.WORKING): "Move along, citizen.",
-    ("guard", NpcActivity.IDLE): "Quiet night, eh?",
+    ("guard", NpcActivity.WORKING): _("Move along, citizen."),
+    ("guard", NpcActivity.IDLE): _("Quiet night, eh?"),
     # Merchant
-    ("merchant", NpcActivity.WORKING): "Looking to buy something?",
-    ("merchant", NpcActivity.IDLE): "Shop's closed. Try tomorrow.",
+    ("merchant", NpcActivity.WORKING): _("Looking to buy something?"),
+    ("merchant", NpcActivity.IDLE): _("Shop's closed. Try tomorrow."),
     # Farmer
-    ("farmer", NpcActivity.WORKING): "Can't talk, crops won't tend themselves.",
-    ("farmer", NpcActivity.IDLE): "Fine evening, isn't it?",
+    ("farmer", NpcActivity.WORKING): _("Can't talk, crops won't tend themselves."),
+    ("farmer", NpcActivity.IDLE): _("Fine evening, isn't it?"),
 }
 
 _DIALOGUE_GENERIC: dict[NpcActivity, str] = {
-    NpcActivity.WORKING: "I'm busy.",
-    NpcActivity.IDLE: "Hm?",
-    NpcActivity.SLEEPING: "Zzz...",
+    NpcActivity.WORKING: _("I'm busy."),
+    NpcActivity.IDLE: _("Hm?"),
+    NpcActivity.SLEEPING: _("Zzz..."),
 }
 
 # Mood overrides — if NPC has this tag, use this line regardless of role/activity.
 MOOD_DIALOGUE: dict[str, str] = {
-    NpcTag.ANGRY: "Leave me alone!",
-    NpcTag.SCARED: "Shh... Something's not right.",
-    NpcTag.GRIEVING: "I... I can't talk right now.",
-    NpcTag.SUSPICIOUS: "What do you want?",
+    NpcTag.ANGRY: _("Leave me alone!"),
+    NpcTag.SCARED: _("Shh... Something's not right."),
+    NpcTag.GRIEVING: _("I... I can't talk right now."),
+    NpcTag.SUSPICIOUS: _("What do you want?"),
 }
 
 

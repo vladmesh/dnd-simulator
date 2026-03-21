@@ -476,3 +476,61 @@ msgstr "на юго-востоке"
 #: src/dnd_simulator/rules/movement.py:54
 msgid "to the southwest"
 msgstr "на юго-западе"
+
+#: src/dnd_simulator/layers/entities/models.py (canned dialogue — blacksmith)
+msgid "Need something forged?"
+msgstr "Нужно что-нибудь выковать?"
+
+msgid "Hm? Oh, I'm off duty."
+msgstr "Хм? А, я не на работе."
+
+#: src/dnd_simulator/layers/entities/models.py (canned dialogue — tavern_keeper)
+msgid "What'll it be?"
+msgstr "Что будете заказывать?"
+
+msgid "Kitchen's closed. Come back later."
+msgstr "Кухня закрыта. Приходи позже."
+
+#: src/dnd_simulator/layers/entities/models.py (canned dialogue — guard)
+msgid "Move along, citizen."
+msgstr "Проходи, гражданин."
+
+msgid "Quiet night, eh?"
+msgstr "Тихая ночка, а?"
+
+#: src/dnd_simulator/layers/entities/models.py (canned dialogue — merchant)
+msgid "Looking to buy something?"
+msgstr "Хочешь что-нибудь купить?"
+
+msgid "Shop's closed. Try tomorrow."
+msgstr "Лавка закрыта. Приходи завтра."
+
+#: src/dnd_simulator/layers/entities/models.py (canned dialogue — farmer)
+msgid "Can't talk, crops won't tend themselves."
+msgstr "Некогда болтать, урожай сам себя не соберёт."
+
+msgid "Fine evening, isn't it?"
+msgstr "Хороший вечер, правда?"
+
+#: src/dnd_simulator/layers/entities/models.py (canned dialogue — generic)
+msgid "I'm busy."
+msgstr "Я занят."
+
+msgid "Hm?"
+msgstr "Хм?"
+
+msgid "Zzz..."
+msgstr "Zzz..."
+
+#: src/dnd_simulator/layers/entities/models.py (mood overrides)
+msgid "Leave me alone!"
+msgstr "Оставь меня в покое!"
+
+msgid "Shh... Something's not right."
+msgstr "Тсс... Что-то тут не так."
+
+msgid "I... I can't talk right now."
+msgstr "Я... Не могу сейчас говорить."
+
+msgid "What do you want?"
+msgstr "Чего тебе надо?"
