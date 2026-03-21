@@ -13,7 +13,7 @@ make format       # auto-fix formatting and lint issues
 make typecheck    # uv run mypy src/
 make messages     # extract translatable strings to .pot
 make compile-messages  # compile .po → .mo
-make serve        # uvicorn API server on :8000 with --reload
+make serve        # uvicorn API server on :8001 with --reload
 
 # Single test file
 uv run pytest tests/test_character.py
@@ -43,8 +43,8 @@ core/              — models, Layer ABC, World, Entity/Character hierarchy (no 
   ↓
 layers/            — concrete layer implementations (depend on core only)
   ↓
-game_loop.py       — turn-based main loop: polls active creatures, advances time +6s per round
-service.py         — GameService: transport-agnostic API, command routing
+round.py           — Round orchestrator: multi-action turn loop with budget enforcement
+service/           — GameService + command modules (combat, NPC, politics, save, time, world)
   ↓
 adapters/          — CLI REPL, FastAPI REST API
 
@@ -57,7 +57,7 @@ content/           — YAML world definitions (data, not code)
 
 ### Key Design Principles
 
-- **Layers depend down, never up.** Geography never imports from NPCs.
+- **Layers depend down, never up.** Geography never imports from NPCs. Enforced at runtime: `query_fn` and `emit_fn` callbacks injected by World validate direction — layers can only query layers below them.
 - **Rules are pure functions** in `rules/` — no state, no I/O.
 - **Brain is a strategy** — `Creature.brain` field holds a `Brain` (RuleBrain or LlmBrain), decoupling AI from entity type.
 - **LLM is injected** — `LlmBrain` wraps an `LlmClient`; rule-based NPCs use `RuleBrain` with zero LLM calls.
@@ -73,6 +73,10 @@ content/           — YAML world definitions (data, not code)
 
 `Entity` (id, name, location_id, active, on_tick) → `Creature` (ability scores, HP, AC, in_combat, is_dodging, brain) → `Character` (race, class, alignment) → `PlayerCharacter` / `Npc`. Creature delegates decisions to `brain.choose_action()` and executes via `execute_action()`. The `perceive()` method controls what information an observer sees about a target — LLM prompts never receive raw character data. All tracked entities live on the `EntitiesLayer`. `World.location_graph` (`LocationGraph`) maps locations to regions/settlements; entities reference `location_id`, and the graph resolves which region/settlement a location belongs to. NPCs have structured memory (`NpcMemory`: tags, recent, inner_state, current_conversation) readable by both LLM and RuleBrain; a `MemorySummarizer` compresses events into memory via LLM after combat/conversation ends. Combat is managed via `CombatState` (initiative order, round tracking, auto-exit after 2 idle rounds) and `BattleMap` (2D grid with positions, walls, and movement). Movement rules live in `rules/movement.py` (D&D 5e diagonal distance, wall collision, occupied-cell blocking).
 
+### Multi-Action Turns
+
+Each creature's turn is a multi-action loop orchestrated by `Round` (in `round.py`). A `TurnBudget` (actions, bonus_actions, movement_remaining, reaction) is created from creature stats at the start of each turn. The brain is called repeatedly: choose action → check budget via `action_cost()` (in `rules/actions.py`) → execute → rebuild awareness → repeat, until the brain returns `end_turn` or budget is exhausted. `PlayerBrain` uses a queue + callback pattern for interactive I/O.
+
 ## Code Style
 
 - Python 3.12+, strict mypy, ruff with 120-char line length
@@ -87,4 +91,4 @@ content/           — YAML world definitions (data, not code)
 - Default LLM model: `deepseek/deepseek-chat-v3-0324`
 - `DND_LANGUAGE` env var selects game language (default: `ru`); locale files in `src/dnd_simulator/locale/`
 - Save files: `saves/` directory (JSON)
-- API: `make serve` → http://localhost:8000/docs (Swagger UI)
+- API: `make serve` → http://localhost:8001/docs (Swagger UI)

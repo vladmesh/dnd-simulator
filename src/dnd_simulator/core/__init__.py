@@ -2,16 +2,17 @@
 
 Defines the core abstractions that everything else builds on:
 - GameDateTime (second precision), TimeDelta (seconds-based, with round/hour/day factories)
-- Event, Query, Answer, ActionResult — communication protocol between layers
-- Layer — abstract base class with tick_interval for all simulation layers
-- World — container that holds layers, manages per-layer tick scheduling, and propagates events
+- Event, Query, Answer, ActionResult, QueryFn, EmitFn — communication protocol between layers
+- Layer — abstract base class; tick/handle_event receive query_fn + emit_fn for layer isolation
+- World — container that holds layers, manages per-layer tick scheduling, enforces layer ordering via query_fn/emit_fn
 - Entity → Creature (in_combat flag, brain) → Character hierarchy with activation, D&D ability scores, and perception
-- Action — transport-agnostic creature action (name + params)
-- Brain ABC, RuleBrain — strategy pattern for creature decision-making (utility-scoring combat AI, canned dialogue)
+- Action (name + params), END_TURN, SKIP — transport-agnostic creature actions
+- TurnBudget, ActionCost — per-turn resource tracking (actions, bonus actions, movement, reaction)
+- Brain ABC, RuleBrain, PlayerBrain — strategy pattern for creature decision-making
 - CombatState — tracks initiative order, round number, and auto-exit counter per location
 - BattleMap, Position, Wall — 2D combat grid with entity positions, wall collision, random placement
 - Location, LocationEdge, LocationGraph — flat navigation graph mapping locations to regions/settlements
-- PeacefulAwareness, CombatAwareness, PerceivedEvent — structured data passed to Brain.choose_action
+- PeacefulAwareness, CombatAwareness, PerceivedEvent — structured awareness data passed to Brain.choose_action
 
 This module has no external dependencies (except i18n for translatable strings).
 All other modules depend on it.

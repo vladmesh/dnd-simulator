@@ -21,9 +21,11 @@ New layers can be inserted between existing ones as the simulation grows in deta
 
 Every layer implements the same interface:
 - `tick_interval` — minimum seconds between ticks (0 = every call)
-- `tick(delta, world_state)` — advance simulation, return events
-- `handle_event(event) -> ActionResult` — process an event, return success/error and cascade events
+- `tick(delta, time, query_fn, emit_fn)` — advance simulation, return events
+- `handle_event(event, query_fn, emit_fn) -> ActionResult` — process an event, return success/error and cascade events
 - `query(question)` — answer a question about current state
+
+`query_fn` and `emit_fn` are injected by World at call time. `query_fn` enforces layer ordering — a layer can only query layers below it (by index). `emit_fn` sends events back to World for propagation with source validation.
 - `get_state() / load_state()` — serialize/deserialize for saves
 
 ## Module Map
@@ -44,28 +46,39 @@ src/dnd_simulator/
 │   ├── cli.py, cli_loop.py — terminal REPL
 │   └── api/       — FastAPI REST adapter (master + player routes, i18n middleware)
 ├── content_loader.py — loads content from YAML (single file or directory format)
-├── service.py     — GameService: sessions, commands, hot controls, player/master logic
-└── game_loop.py   — turn-based main loop: polls active creatures, advances time each round
+├── content_saver.py  — saves world templates back to YAML
+├── service/       — GameService + command modules
+│   ├── game_service.py — session management, command routing, hot controls
+│   ├── session.py      — GameSession: world + player state, autosave
+│   ├── commands_combat.py, commands_npc.py, commands_politics.py, ...
+│   └── commands_save.py, commands_time.py, commands_world.py
+└── round.py       — Round orchestrator: multi-action turn loop with budget enforcement
 
 content/           — authored game data (YAML)
 └── worlds/        — world templates (single .yaml file or directory with split files)
-    ├── test_world.yaml     — legacy single-file format
+    ├── arena.yaml          — single-file format (combat arena)
+    ├── village.yaml        — single-file format (village scenario)
     └── sword_vale/         — directory format (world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml)
 ```
 
 ## Data Flow
 
 ```
-Turn-based game loop (game_loop.py):
+Round orchestrator (round.py):
     for each active combat location (initiative order):
         for each combatant in turn_order:
-            creature.take_turn(world)  → combat awareness → decide action → execute
+            run_creature_turn:
+                build TurnBudget from creature stats
+                loop:
+                    build_awareness → brain.choose_action → action_cost check
+                    → execute_action → on_action callback → repeat
+                    until end_turn or budget exhausted
         end_combat_round()            → 2 rounds without attacks → combat ends
     for each peaceful creature (not in combat):
-        creature.take_turn(world)     → full awareness → decide action → execute
+        run_creature_turn (same multi-action loop)
     world.advance_time(+1 round = 6 seconds)
 
-Player input flow (service.py, command-based):
+Player input flow (service/, command-based):
     Player input → Adapter (CLI/API/TG) → GameService → response
 
 REST API flow (adapters/api/):
@@ -75,7 +88,7 @@ REST API flow (adapters/api/):
     Player routes: character creation, perception, events, combat, map, actions
 ```
 
-The game loop separates combat and peaceful turns. Combat locations use initiative order (d20 + DEX mod, rolled once at combat start); peaceful creatures use default order. Each creature builds awareness appropriate to its mode — combat awareness (HP, nearby combatants, round number) or full world awareness (time, weather, settlements). Creatures delegate decisions to their `brain` (strategy pattern): `RuleBrain` uses utility scoring, `LlmBrain` calls the LLM, `PlayerCharacter` handles interactive I/O directly. Actions execute through world events. `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
+The `Round` class separates combat and peaceful turns. Combat locations use initiative order (d20 + DEX mod, rolled once at combat start); peaceful creatures use default order. Each creature's turn is a multi-action loop: a `TurnBudget` is created from creature stats, then the brain is called repeatedly until it returns `end_turn` or the budget is exhausted. `action_cost()` (in `rules/actions.py`) maps each action to its cost (standard action, bonus action, or movement feet). Brains receive structured awareness (`PeacefulAwareness` or `CombatAwareness` from `core/awareness.py`) with the current budget attached, so they can make informed decisions. Three brain types: `RuleBrain` (utility scoring), `LlmBrain` (LLM calls), `PlayerBrain` (queue + on_turn callback for interactive I/O). `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
 
 `World.handle_event()` sends an event to all layers in order. Each layer returns an `ActionResult` — if any layer returns `success=False`, propagation stops and the failure is returned to the caller. This lets layers validate and reject actions (e.g., EntitiesLayer rejects attacks on dead targets).
 
@@ -134,9 +147,9 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 
 ## Key Principles
 
-- **Layers depend down, never up.** Geography knows nothing about NPCs.
+- **Layers depend down, never up.** Geography knows nothing about NPCs. Enforced at runtime via `query_fn`/`emit_fn` callbacks injected by World — layers can only query layers below them by index.
 - **Rules are pure functions.** No state, no side effects, easy to test.
-- **Brain is a strategy.** `Creature.brain` decouples decision-making from entity type. `RuleBrain` (utility scoring + canned dialogue) needs no LLM; `LlmBrain` wraps an `LlmClient`. Brains are swappable at runtime (LOD).
+- **Brain is a strategy.** `Creature.brain` decouples decision-making from entity type. `RuleBrain` (utility scoring + canned dialogue) needs no LLM; `LlmBrain` wraps an `LlmClient`; `PlayerBrain` uses queue + callback for interactive input. Brains are swappable at runtime (LOD).
 - **LLM is injected, not hardcoded.** `LlmBrain` receives an `LlmClient`; rule-based NPCs use no LLM at all.
 - **Content is data, not code.** Worlds and NPCs live in YAML files. Two formats: legacy single file, or directory (world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml). ContentLoader handles both.
 - **Transport is a thin adapter.** The game works the same whether accessed via terminal, HTTP, or Telegram. REST API (FastAPI) is the primary adapter for frontend.
