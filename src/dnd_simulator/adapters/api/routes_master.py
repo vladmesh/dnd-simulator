@@ -9,15 +9,15 @@ from dnd_simulator.adapters.api.schemas import (
     AdvanceTimeRequest,
     CreateSessionRequest,
     CreateWorldRequest,
+    CreatureResponse,
     MessageResponse,
-    NpcResponse,
+    PatchCreatureRequest,
     PatchNationRequest,
-    PatchNpcRequest,
     PatchSettlementRequest,
     SessionResponse,
     SetBrainRequest,
     SetLangRequest,
-    SpawnNpcRequest,
+    SpawnCreatureRequest,
     WorldListItem,
     WorldStateResponse,
 )
@@ -84,7 +84,7 @@ def create_session(body: CreateSessionRequest) -> SessionResponse:
     """Start a new game session from a world template."""
     service = get_service()
     session = service.start_game(body.world_name, lang=body.lang)
-    player = session.player
+    player = session.get_player()
     return SessionResponse(
         session_id=session.session_id,
         player_name=player.name if player else "",
@@ -143,74 +143,79 @@ def delete_session(session_id: str) -> MessageResponse:
     return MessageResponse(message=f"Session {session_id} deleted")
 
 
-# -- NPC hot controls --
+# -- Creatures --
 
 
-@router.get("/sessions/{session_id}/npcs", response_model=list[NpcResponse])
-def list_npcs(session_id: str) -> list[NpcResponse]:
-    """List all NPCs in a session."""
+@router.get("/sessions/{session_id}/creatures", response_model=list[CreatureResponse])
+def list_creatures(
+    session_id: str,
+    entity_type: str | None = None,
+    location_id: str | None = None,
+    active: bool | None = None,
+) -> list[CreatureResponse]:
+    """List all creatures in a session with optional filters."""
     service = get_service()
-    npc_dicts = service.list_npcs(session_id)
-    return [NpcResponse.model_validate(d) for d in npc_dicts]
+    creatures = service.list_creatures(session_id, entity_type=entity_type, location_id=location_id, active=active)
+    return [CreatureResponse.model_validate(c) for c in creatures]
 
 
-@router.post("/sessions/{session_id}/npcs", response_model=NpcResponse)
-def spawn_npc(session_id: str, body: SpawnNpcRequest) -> NpcResponse:
-    """Spawn a new NPC into a live session."""
+@router.get("/sessions/{session_id}/creatures/{entity_id}", response_model=CreatureResponse)
+def get_creature(session_id: str, entity_id: str) -> CreatureResponse:
+    """Get creature details."""
     service = get_service()
     try:
-        service.spawn_npc(session_id, body.model_dump())
-        info = service.get_npc_info(session_id, body.id)
+        info = service.get_creature_info(session_id, entity_id)
+    except (ValueError, KeyError) as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return CreatureResponse.model_validate(info)
+
+
+@router.post("/sessions/{session_id}/creatures", response_model=CreatureResponse)
+def spawn_creature(session_id: str, body: SpawnCreatureRequest) -> CreatureResponse:
+    """Spawn a creature (NPC or monster) into a live session."""
+    service = get_service()
+    try:
+        service.spawn_creature(session_id, body.model_dump())
+        info = service.get_creature_info(session_id, body.id)
     except (ValueError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    return NpcResponse.model_validate(info)
+    return CreatureResponse.model_validate(info)
 
 
-@router.get("/sessions/{session_id}/npcs/{npc_id}", response_model=NpcResponse)
-def get_npc(session_id: str, npc_id: str) -> NpcResponse:
-    """Get NPC details."""
-    service = get_service()
-    try:
-        info = service.get_npc_info(session_id, npc_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
-    return NpcResponse.model_validate(info)
-
-
-@router.patch("/sessions/{session_id}/npcs/{npc_id}", response_model=MessageResponse)
-def patch_npc(session_id: str, npc_id: str, body: PatchNpcRequest) -> MessageResponse:
-    """Update mutable NPC fields."""
+@router.patch("/sessions/{session_id}/creatures/{entity_id}", response_model=MessageResponse)
+def patch_creature(session_id: str, entity_id: str, body: PatchCreatureRequest) -> MessageResponse:
+    """Update mutable creature fields."""
     service = get_service()
     updates = body.model_dump(exclude_none=True)
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
     try:
-        service.patch_npc(session_id, npc_id, updates)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
-    return MessageResponse(message=f"NPC {npc_id} updated")
-
-
-@router.delete("/sessions/{session_id}/npcs/{npc_id}", response_model=MessageResponse)
-def delete_npc(session_id: str, npc_id: str) -> MessageResponse:
-    """Remove an NPC from a live session."""
-    service = get_service()
-    try:
-        service.remove_npc(session_id, npc_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
-    return MessageResponse(message=f"NPC {npc_id} removed")
-
-
-@router.put("/sessions/{session_id}/npcs/{npc_id}/brain", response_model=MessageResponse)
-def set_brain(session_id: str, npc_id: str, body: SetBrainRequest) -> MessageResponse:
-    """Switch NPC brain type."""
-    service = get_service()
-    try:
-        service.set_npc_brain(session_id, npc_id, body.type, body.model)
+        service.patch_creature(session_id, entity_id, updates)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    return MessageResponse(message=f"NPC {npc_id} brain set to {body.type}")
+    return MessageResponse(message=f"Creature {entity_id} updated")
+
+
+@router.delete("/sessions/{session_id}/creatures/{entity_id}", response_model=MessageResponse)
+def delete_creature(session_id: str, entity_id: str) -> MessageResponse:
+    """Remove a creature from a live session."""
+    service = get_service()
+    try:
+        service.remove_creature(session_id, entity_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return MessageResponse(message=f"Creature {entity_id} removed")
+
+
+@router.put("/sessions/{session_id}/creatures/{entity_id}/brain", response_model=MessageResponse)
+def set_brain(session_id: str, entity_id: str, body: SetBrainRequest) -> MessageResponse:
+    """Switch creature brain type."""
+    service = get_service()
+    try:
+        service.set_creature_brain(session_id, entity_id, body.type, body.model)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return MessageResponse(message=f"Creature {entity_id} brain set to {body.type}")
 
 
 # -- Nation/Settlement hot controls --

@@ -44,14 +44,21 @@ const API = (() => {
 
         deleteSession: (sid) => del(`/master/sessions/${sid}`),
 
-        // NPCs
-        listNpcs: (sid) => get(`/master/sessions/${sid}/npcs`),
-        getNpc: (sid, npcId) => get(`/master/sessions/${sid}/npcs/${npcId}`),
-        spawnNpc: (sid, data) => post(`/master/sessions/${sid}/npcs`, data),
-        patchNpc: (sid, npcId, data) => patch(`/master/sessions/${sid}/npcs/${npcId}`, data),
-        deleteNpc: (sid, npcId) => del(`/master/sessions/${sid}/npcs/${npcId}`),
-        setBrain: (sid, npcId, type, model = null) =>
-            put(`/master/sessions/${sid}/npcs/${npcId}/brain`, { type, model }),
+        // Creatures (all entities: player, NPCs, monsters)
+        listCreatures: (sid, params = {}) => {
+            const qs = new URLSearchParams();
+            if (params.entity_type) qs.set('entity_type', params.entity_type);
+            if (params.location_id) qs.set('location_id', params.location_id);
+            if (params.active !== undefined) qs.set('active', params.active);
+            const q = qs.toString();
+            return get(`/master/sessions/${sid}/creatures` + (q ? '?' + q : ''));
+        },
+        getCreature: (sid, eid) => get(`/master/sessions/${sid}/creatures/${eid}`),
+        spawnCreature: (sid, data) => post(`/master/sessions/${sid}/creatures`, data),
+        patchCreature: (sid, eid, data) => patch(`/master/sessions/${sid}/creatures/${eid}`, data),
+        deleteCreature: (sid, eid) => del(`/master/sessions/${sid}/creatures/${eid}`),
+        setBrain: (sid, eid, type, model = null) =>
+            put(`/master/sessions/${sid}/creatures/${eid}/brain`, { type, model }),
 
         // Nations & Settlements
         patchNation: (sid, nationId, data) =>

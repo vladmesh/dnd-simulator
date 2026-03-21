@@ -45,9 +45,14 @@ class TestWebSocketErrors:
         client, service = _make_client(tmp_path)
         resp = client.post("/api/master/sessions", json={})
         sid = resp.json()["session_id"]
-        # Remove player from session
+        # Remove player from entities layer
         session = service.get_session(sid)
-        session.player = None
+        from dnd_simulator.layers.entities.layer import EntitiesLayer
+
+        for layer in session.world.layers:
+            if isinstance(layer, EntitiesLayer):
+                layer.remove_entity("player")
+                break
         with client.websocket_connect(f"/api/ws/{sid}") as ws:
             msg = ws.receive_json()
             assert msg["type"] == "error"

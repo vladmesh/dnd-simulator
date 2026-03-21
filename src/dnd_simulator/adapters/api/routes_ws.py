@@ -77,12 +77,11 @@ async def websocket_game(ws: WebSocket, session_id: str) -> None:
         await ws.close()
         return
 
-    if session.player is None:
+    player = session.get_player()
+    if player is None:
         await ws.send_json({"type": "error", "message": "No player in session"})
         await ws.close()
         return
-
-    player = session.player
     entities_layer = _get_entities_layer(session)
     loop = asyncio.get_running_loop()
 

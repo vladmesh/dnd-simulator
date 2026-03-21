@@ -165,14 +165,28 @@
                 <div class="tab-content" id="tab-entities">
                     <div class="panel">
                         <div class="flex items-center justify-between mb-1">
-                            <h3>NPCs</h3>
-                            <button class="primary small" id="btn-show-spawn">+ Spawn NPC</button>
+                            <h3>Creatures</h3>
+                            <div class="flex items-center gap-05">
+                                <select id="creatures-filter" style="font-size:0.85rem;">
+                                    <option value="">All</option>
+                                    <option value="npc">NPCs</option>
+                                    <option value="player">Players</option>
+                                    <option value="monster">Monsters</option>
+                                </select>
+                                <button class="primary small" id="btn-show-spawn">+ Spawn</button>
+                            </div>
                         </div>
 
                         <!-- Spawn Form -->
                         <div id="spawn-form" class="panel hidden">
-                            <h3>Spawn NPC</h3>
+                            <h3>Spawn Creature</h3>
                             <div class="form-row">
+                                <div class="form-group"><label>Type</label>
+                                    <select id="spawn-type">
+                                        <option value="npc">NPC</option>
+                                        <option value="monster">Monster</option>
+                                    </select>
+                                </div>
                                 <div class="form-group grow"><label>ID</label><input id="spawn-id" placeholder="goblin_1"></div>
                                 <div class="form-group grow"><label>Name</label><input id="spawn-name" placeholder="Gruk"></div>
                             </div>
@@ -180,9 +194,11 @@
                                 <div class="form-group grow"><label>Region ID</label><input id="spawn-region"></div>
                                 <div class="form-group grow"><label>Start Location</label><input id="spawn-location"></div>
                             </div>
-                            <div class="form-row">
-                                <div class="form-group grow"><label>Role</label><input id="spawn-role" placeholder="merchant"></div>
-                                <div class="form-group grow"><label>Personality</label><input id="spawn-personality" placeholder="grumpy but fair"></div>
+                            <div id="spawn-npc-fields">
+                                <div class="form-row">
+                                    <div class="form-group grow"><label>Role</label><input id="spawn-role" placeholder="merchant"></div>
+                                    <div class="form-group grow"><label>Personality</label><input id="spawn-personality" placeholder="grumpy but fair"></div>
+                                </div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group"><label>HP</label><input id="spawn-hp" type="number" value="10" style="width:80px"></div>
@@ -199,36 +215,47 @@
                         </div>
 
                         <table>
-                            <thead><tr><th>Name</th><th>Location</th><th>Role</th><th>HP</th><th>AC</th><th>AI</th><th>Active</th><th></th></tr></thead>
-                            <tbody id="npcs-tbody"></tbody>
+                            <thead><tr><th>Type</th><th>Name</th><th>Location</th><th>Role</th><th>HP</th><th>AC</th><th>AI</th><th>Active</th><th></th></tr></thead>
+                            <tbody id="creatures-tbody"></tbody>
                         </table>
                     </div>
 
-                    <!-- NPC Edit Panel -->
-                    <div id="npc-edit-panel" class="panel hidden">
+                    <!-- Creature Edit Panel -->
+                    <div id="creature-edit-panel" class="panel hidden">
                         <div class="flex items-center justify-between mb-1">
-                            <h3>Edit NPC: <span id="edit-npc-name"></span></h3>
+                            <h3>Edit: <span id="edit-creature-name"></span></h3>
                             <button class="small" id="btn-close-edit">Close</button>
                         </div>
-                        <input type="hidden" id="edit-npc-id">
-                        <div class="form-row">
-                            <div class="form-group"><label>Current HP</label><input id="edit-hp" type="number" style="width:80px"></div>
-                            <div class="form-group"><label>AC</label><input id="edit-ac" type="number" style="width:80px"></div>
-                            <div class="form-group"><label>Gold</label><input id="edit-gold" type="number" style="width:80px"></div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group grow"><label>Personality</label><input id="edit-personality"></div>
-                            <div class="form-group grow"><label>Location ID</label><input id="edit-location"></div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Brain Type</label>
-                                <select id="edit-brain-type"><option value="rule_based">rule_based</option><option value="llm">llm</option></select>
+                        <input type="hidden" id="edit-creature-id">
+                        <input type="hidden" id="edit-creature-type">
+                        <!-- View-only notice for player -->
+                        <p id="edit-readonly-notice" class="text-dim hidden" style="margin-bottom:0.5rem;">Player character — view only</p>
+                        <!-- Creature fields (all types) -->
+                        <div id="edit-creature-fields">
+                            <div class="form-row">
+                                <div class="form-group"><label>Current HP</label><input id="edit-hp" type="number" style="width:80px"></div>
+                                <div class="form-group"><label>AC</label><input id="edit-ac" type="number" style="width:80px"></div>
+                                <div class="form-group"><label>Gold</label><input id="edit-gold" type="number" style="width:80px"></div>
                             </div>
-                            <div class="form-group grow"><label>LLM Model</label><input id="edit-brain-model" placeholder="deepseek/deepseek-chat-v3-0324"></div>
-                        </div>
-                        <div class="form-row mt-1">
-                            <button class="primary" id="btn-save-npc">Save Changes</button>
-                            <button id="btn-save-brain">Set Brain</button>
+                            <div class="form-row">
+                                <div class="form-group grow"><label>Location ID</label><input id="edit-location"></div>
+                            </div>
+                            <!-- NPC-only fields -->
+                            <div id="edit-npc-fields">
+                                <div class="form-row">
+                                    <div class="form-group grow"><label>Personality</label><input id="edit-personality"></div>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Brain Type</label>
+                                    <select id="edit-brain-type"><option value="rule_based">rule_based</option><option value="llm">llm</option></select>
+                                </div>
+                                <div class="form-group grow"><label>LLM Model</label><input id="edit-brain-model" placeholder="deepseek/deepseek-chat-v3-0324"></div>
+                            </div>
+                            <div class="form-row mt-1">
+                                <button class="primary" id="btn-save-creature">Save Changes</button>
+                                <button id="btn-save-brain">Set Brain</button>
+                            </div>
                         </div>
                         <p id="edit-msg" class="text-dim mt-1"></p>
                     </div>

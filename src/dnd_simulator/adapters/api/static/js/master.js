@@ -35,11 +35,12 @@
     const $settlementsTbody  = $('settlements-tbody');
 
     // Session: Entities
-    const $npcsTbody      = $('npcs-tbody');
-    const $spawnForm      = $('spawn-form');
-    const $spawnMsg       = $('spawn-msg');
-    const $npcEditPanel   = $('npc-edit-panel');
-    const $editMsg        = $('edit-msg');
+    const $creaturesTbody   = $('creatures-tbody');
+    const $creaturesFilter  = $('creatures-filter');
+    const $spawnForm        = $('spawn-form');
+    const $spawnMsg         = $('spawn-msg');
+    const $creatureEditPanel = $('creature-edit-panel');
+    const $editMsg          = $('edit-msg');
 
     // Session: Time
     const $timeDisplay    = $('time-display');
@@ -73,6 +74,11 @@
         const d = document.createElement('div');
         d.textContent = String(str);
         return d.innerHTML;
+    }
+    function typeLabel(entityType) {
+        if (entityType === 'player') return '<span style="color:#6bb5ff">Player</span>';
+        if (entityType === 'npc') return '<span style="color:#e94560">NPC</span>';
+        return '<span style="color:#aaa">Monster</span>';
     }
 
     // ── Mode switching ──
@@ -285,12 +291,13 @@
     async function refreshSession() {
         if (!currentSession) return;
         try {
-            const [state, npcs] = await Promise.all([
+            const filterType = $creaturesFilter.value || undefined;
+            const [state, creatures] = await Promise.all([
                 API.master.getSession(currentSession),
-                API.master.listNpcs(currentSession),
+                API.master.listCreatures(currentSession, { entity_type: filterType }),
             ]);
             renderOverview(state);
-            renderNpcs(npcs);
+            renderCreatures(creatures);
             renderTime(state.time);
         } catch (err) {
             console.error('Refresh error:', err);
@@ -400,64 +407,92 @@
         btn.classList.add('primary');
     });
 
-    // -- Entities / NPCs --
+    // -- Creatures --
 
-    function renderNpcs(npcs) {
-        $npcsTbody.innerHTML = '';
-        (Array.isArray(npcs) ? npcs : []).forEach(npc => {
-            $npcsTbody.innerHTML +=
+    $creaturesFilter.addEventListener('change', refreshSession);
+
+    function renderCreatures(creatures) {
+        $creaturesTbody.innerHTML = '';
+        (Array.isArray(creatures) ? creatures : []).forEach(c => {
+            const isPlayer = c.entity_type === 'player';
+            const actions = isPlayer
+                ? `<button class="small btn-view-creature" data-id="${esc(c.id)}">View</button>`
+                : `<button class="small btn-edit-creature" data-id="${esc(c.id)}">Edit</button> ` +
+                  `<button class="small danger btn-del-creature" data-id="${esc(c.id)}">Del</button>`;
+
+            $creaturesTbody.innerHTML +=
                 `<tr>` +
-                `<td>${esc(npc.name)}</td>` +
-                `<td class="text-dim">${esc(npc.location_id || '—')}</td>` +
-                `<td>${esc(npc.role || '—')}</td>` +
-                `<td>${hpBar(npc.hp ?? npc.current_hp ?? 0, npc.max_hp ?? 0)}</td>` +
-                `<td>${npc.ac ?? '—'}</td>` +
-                `<td>${esc(npc.ai_type || '—')}</td>` +
-                `<td>${npc.active ? '<span class="text-success">yes</span>' : '<span class="text-danger">no</span>'}</td>` +
-                `<td><button class="small btn-edit-npc" data-id="${esc(npc.id)}">Edit</button> ` +
-                `<button class="small danger btn-del-npc" data-id="${esc(npc.id)}">Del</button></td>` +
+                `<td>${typeLabel(c.entity_type)}</td>` +
+                `<td>${esc(c.name)}</td>` +
+                `<td class="text-dim">${esc(c.location_id || '—')}</td>` +
+                `<td>${esc(c.role || '—')}</td>` +
+                `<td>${hpBar(c.hp ?? 0, c.max_hp ?? 0)}</td>` +
+                `<td>${c.ac ?? '—'}</td>` +
+                `<td>${esc(c.ai_type || '—')}</td>` +
+                `<td>${c.active ? '<span class="text-success">yes</span>' : '<span class="text-danger">no</span>'}</td>` +
+                `<td>${actions}</td>` +
                 `</tr>`;
         });
     }
 
-    $npcsTbody.addEventListener('click', async (e) => {
-        const editBtn = e.target.closest('.btn-edit-npc');
-        const delBtn  = e.target.closest('.btn-del-npc');
+    $creaturesTbody.addEventListener('click', async (e) => {
+        const editBtn = e.target.closest('.btn-edit-creature');
+        const viewBtn = e.target.closest('.btn-view-creature');
+        const delBtn  = e.target.closest('.btn-del-creature');
 
-        if (editBtn) {
+        if (editBtn || viewBtn) {
+            const eid = (editBtn || viewBtn).dataset.id;
             try {
-                const npc = await API.master.getNpc(currentSession, editBtn.dataset.id);
-                openNpcEdit(npc);
-            } catch (err) { alert('Failed to load NPC: ' + err.message); }
+                const creature = await API.master.getCreature(currentSession, eid);
+                openCreatureEdit(creature);
+            } catch (err) { alert('Failed to load creature: ' + err.message); }
         }
         if (delBtn) {
-            if (!confirm('Delete NPC ' + delBtn.dataset.id + '?')) return;
+            if (!confirm('Delete creature ' + delBtn.dataset.id + '?')) return;
             try {
-                await API.master.deleteNpc(currentSession, delBtn.dataset.id);
-                hide($npcEditPanel);
+                await API.master.deleteCreature(currentSession, delBtn.dataset.id);
+                hide($creatureEditPanel);
                 refreshSession();
-            } catch (err) { alert('Delete NPC failed: ' + err.message); }
+            } catch (err) { alert('Delete failed: ' + err.message); }
         }
     });
 
-    function openNpcEdit(npc) {
-        $('edit-npc-id').value = npc.id;
-        $('edit-npc-name').textContent = npc.name;
-        $('edit-hp').value = npc.hp ?? npc.current_hp ?? '';
-        $('edit-ac').value = npc.ac ?? '';
-        $('edit-gold').value = npc.gold ?? '';
-        $('edit-personality').value = npc.personality || '';
-        $('edit-location').value = npc.location_id || '';
-        $('edit-brain-type').value = npc.ai_type || 'rule_based';
+    function openCreatureEdit(creature) {
+        const isPlayer = creature.entity_type === 'player';
+        const isNpc = creature.entity_type === 'npc';
+
+        $('edit-creature-id').value = creature.id;
+        $('edit-creature-type').value = creature.entity_type || '';
+        $('edit-creature-name').textContent = creature.name;
+        $('edit-hp').value = creature.hp ?? '';
+        $('edit-ac').value = creature.ac ?? '';
+        $('edit-gold').value = creature.gold ?? '';
+        $('edit-location').value = creature.location_id || '';
+        $('edit-personality').value = creature.personality || '';
+        $('edit-brain-type').value = creature.ai_type || 'rule_based';
         $('edit-brain-model').value = '';
         $editMsg.textContent = '';
-        show($npcEditPanel);
+
+        // Show/hide NPC-specific fields
+        if (isNpc) show($('edit-npc-fields'));
+        else hide($('edit-npc-fields'));
+
+        // Player: read-only
+        if (isPlayer) {
+            show($('edit-readonly-notice'));
+            hide($('edit-creature-fields'));
+        } else {
+            hide($('edit-readonly-notice'));
+            show($('edit-creature-fields'));
+        }
+
+        show($creatureEditPanel);
     }
 
-    $('btn-close-edit').addEventListener('click', () => hide($npcEditPanel));
+    $('btn-close-edit').addEventListener('click', () => hide($creatureEditPanel));
 
-    $('btn-save-npc').addEventListener('click', async () => {
-        const npcId = $('edit-npc-id').value;
+    $('btn-save-creature').addEventListener('click', async () => {
+        const eid = $('edit-creature-id').value;
         const data = {};
         const hp = parseInt($('edit-hp').value);
         const ac = parseInt($('edit-ac').value);
@@ -470,46 +505,57 @@
         if (personality)  data.personality = personality;
         if (locationId)   data.location_id = locationId;
         try {
-            await API.master.patchNpc(currentSession, npcId, data);
+            await API.master.patchCreature(currentSession, eid, data);
             flashMsg($editMsg, 'Saved.', 'text-success');
             refreshSession();
         } catch (err) { flashMsg($editMsg, 'Error: ' + err.message, 'text-danger'); }
     });
 
     $('btn-save-brain').addEventListener('click', async () => {
-        const npcId = $('edit-npc-id').value;
+        const eid = $('edit-creature-id').value;
         const type  = $('edit-brain-type').value;
         const model = $('edit-brain-model').value.trim() || null;
         try {
-            await API.master.setBrain(currentSession, npcId, type, model);
+            await API.master.setBrain(currentSession, eid, type, model);
             flashMsg($editMsg, 'Brain updated.', 'text-success');
             refreshSession();
         } catch (err) { flashMsg($editMsg, 'Error: ' + err.message, 'text-danger'); }
     });
 
-    // -- Spawn NPC --
+    // -- Spawn --
 
     $('btn-show-spawn').addEventListener('click', () => { show($spawnForm); $spawnMsg.textContent = ''; });
     $('btn-cancel-spawn').addEventListener('click', () => hide($spawnForm));
 
+    // Toggle NPC-specific fields based on spawn type
+    $('spawn-type').addEventListener('change', () => {
+        const isNpc = $('spawn-type').value === 'npc';
+        if (isNpc) show($('spawn-npc-fields'));
+        else hide($('spawn-npc-fields'));
+    });
+
     $('btn-spawn').addEventListener('click', async () => {
+        const entityType = $('spawn-type').value;
         const data = {
             id:             $('spawn-id').value.trim(),
             name:           $('spawn-name').value.trim(),
+            entity_type:    entityType,
             region_id:      $('spawn-region').value.trim(),
             start_location: $('spawn-location').value.trim(),
-            role:           $('spawn-role').value.trim(),
-            personality:    $('spawn-personality').value.trim(),
             hp:             parseInt($('spawn-hp').value) || 10,
             ac:             parseInt($('spawn-ac').value) || 12,
             ai:             $('spawn-ai').value,
         };
-        if (!data.id || !data.name || !data.region_id || !data.start_location) {
-            flashMsg($spawnMsg, 'ID, Name, Region, and Location are required.', 'text-danger');
+        if (entityType === 'npc') {
+            data.role        = $('spawn-role').value.trim();
+            data.personality = $('spawn-personality').value.trim();
+        }
+        if (!data.id || !data.name) {
+            flashMsg($spawnMsg, 'ID and Name are required.', 'text-danger');
             return;
         }
         try {
-            await API.master.spawnNpc(currentSession, data);
+            await API.master.spawnCreature(currentSession, data);
             flashMsg($spawnMsg, 'Spawned!', 'text-success');
             hide($spawnForm);
             refreshSession();

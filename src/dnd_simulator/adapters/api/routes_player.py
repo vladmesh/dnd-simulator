@@ -32,7 +32,7 @@ def get_status(session_id: str) -> PlayerStatusResponse:
     """Player's own character info."""
     service = get_service()
     session = _get_session(service, session_id)
-    p = session.player
+    p = session.get_player()
     if not p:
         raise HTTPException(status_code=404, detail="No player in this session")
     return _player_status(p)

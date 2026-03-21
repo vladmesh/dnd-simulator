@@ -25,26 +25,38 @@ class CreatePlayerRequest(BaseModel):
     attacks: list[dict[str, object]] | None = None
 
 
-class SpawnNpcRequest(BaseModel):
+class SpawnCreatureRequest(BaseModel):
+    """Spawn a creature into a live session. entity_type determines the class created."""
+
     id: str
     name: str
-    region_id: str = ""  # backward compat
+    entity_type: str = "npc"  # "npc" or "monster"
+    # Location
+    region_id: str = ""
     start_location: str = ""
+    # Creature stats
+    hp: int = Field(default=4, ge=1, le=999)
+    ac: int = Field(default=10, ge=0, le=30)
+    speed: int = Field(default=30, ge=0)
+    attacks: list[dict[str, object]] | None = None
+    ability_scores: dict[str, int] | None = None
+    # NPC-specific (ignored for monsters)
     role: str = ""
     personality: str = ""
     settlement_id: str = ""
-    hp: int = Field(default=4, ge=1, le=999)
-    ac: int = Field(default=10, ge=0, le=30)
     ai: str = "rule_based"
-    attacks: list[dict[str, object]] | None = None
 
 
-class PatchNpcRequest(BaseModel):
+class PatchCreatureRequest(BaseModel):
+    """Update mutable creature fields. Only applicable fields are applied."""
+
     current_hp: int | None = Field(default=None, ge=0, le=999)
     ac: int | None = Field(default=None, ge=0, le=30)
-    personality: str | None = None
     location_id: str | None = None
+    # Character-level
     gold: int | None = Field(default=None, ge=0)
+    # NPC-level
+    personality: str | None = None
 
 
 class SetBrainRequest(BaseModel):
@@ -124,17 +136,27 @@ class WorldStateResponse(BaseModel):
     entities: list[dict[str, object]]
 
 
-class NpcResponse(BaseModel):
+class CreatureResponse(BaseModel):
+    """Any creature in the world — player, NPC, or monster."""
+
     id: str
     name: str
     location_id: str
-    role: str
-    personality: str
+    active: bool
     hp: int
     max_hp: int
     ac: int
-    ai_type: str
-    active: bool
+    entity_type: str = ""  # "player", "npc", or ""
+    race: str = ""
+    char_class: str = ""
+    level: int = 0
+    gold: int = 0
+    # NPC-specific (optional)
+    role: str = ""
+    personality: str = ""
+    ai_type: str = ""
+    settlement_id: str = ""
+    memory: dict[str, object] | None = None
 
 
 class MessageResponse(BaseModel):

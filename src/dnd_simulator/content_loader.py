@@ -69,7 +69,7 @@ def _load_section(path: Path, is_dir: bool, section: str) -> dict[str, Any]:
 # -- Parsing helpers --
 
 
-def _parse_attacks(attacks_data: list[dict[str, Any]]) -> tuple[Attack, ...]:
+def parse_attacks(attacks_data: list[dict[str, Any]]) -> tuple[Attack, ...]:
     """Parse attack definitions from YAML."""
     attacks: list[Attack] = []
     for adata in attacks_data:
@@ -87,7 +87,7 @@ def _parse_attacks(attacks_data: list[dict[str, Any]]) -> tuple[Attack, ...]:
     return tuple(attacks)
 
 
-def _parse_ability_scores(data: dict[str, Any], key: str = "ability_scores") -> AbilityScores:
+def parse_ability_scores(data: dict[str, Any], key: str = "ability_scores") -> AbilityScores:
     """Parse ability scores from YAML data."""
     scores = data.get(key)
     if scores:
@@ -284,7 +284,7 @@ def parse_npc(npc_id: str, ndata: dict[str, Any]) -> Npc:
     race = Race(ndata["race"]) if "race" in ndata else Race.HUMAN
     char_class = CharClass(ndata["class"]) if "class" in ndata else CharClass.COMMONER
 
-    attacks = _parse_attacks(ndata.get("attacks") or [])
+    attacks = parse_attacks(ndata.get("attacks") or [])
     max_hp = int(ndata.get("hp", 4))
     ai_type = str(ndata.get("ai", "rule_based"))
 
@@ -315,7 +315,7 @@ def parse_npc(npc_id: str, ndata: dict[str, Any]) -> Npc:
         max_hp=max_hp,
         current_hp=max_hp,
         ac=int(ndata.get("ac", 10)),
-        ability_scores=_parse_ability_scores(ndata),
+        ability_scores=parse_ability_scores(ndata),
         ai_type=ai_type,
         memory=memory,
     )
@@ -348,7 +348,7 @@ def load_player(path: Path) -> PlayerCharacter:
 def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
     """Parse player character from YAML data dict."""
     max_hp = int(pdata.get("hp", 10))
-    attacks = _parse_attacks(pdata.get("attacks") or [])
+    attacks = parse_attacks(pdata.get("attacks") or [])
 
     # Support both start_location and legacy start_region
     location_id = str(pdata.get("start_location", pdata.get("start_region", "")))
@@ -362,7 +362,7 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
         level=int(pdata.get("level", 1)),
         alignment=Alignment(pdata["alignment"]) if "alignment" in pdata else Alignment.TRUE_NEUTRAL,
         appearance=str(pdata.get("appearance", "")),
-        ability_scores=_parse_ability_scores(pdata),
+        ability_scores=parse_ability_scores(pdata),
         max_hp=max_hp,
         current_hp=max_hp,
         ac=int(pdata.get("ac", 10)),

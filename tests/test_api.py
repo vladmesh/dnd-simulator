@@ -82,33 +82,52 @@ class TestMasterSessions:
         assert resp.status_code == 404
 
 
-class TestNpcHotControls:
-    def test_list_npcs(self, tmp_path: object) -> None:
+class TestCreatureHotControls:
+    def test_list_creatures(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
         sid = _create_session(client)
-        resp = client.get(f"/api/master/sessions/{sid}/npcs")
+        resp = client.get(f"/api/master/sessions/{sid}/creatures")
         assert resp.status_code == 200
-        npcs = resp.json()
-        assert len(npcs) >= 3
-        assert any(n["id"] == "edgar" for n in npcs)
+        creatures = resp.json()
+        # Should include NPCs + player from sword_vale template
+        assert len(creatures) >= 3
+        assert any(c["id"] == "edgar" for c in creatures)
 
-    def test_get_npc(self, tmp_path: object) -> None:
+    def test_list_creatures_filter_npc(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
         sid = _create_session(client)
-        resp = client.get(f"/api/master/sessions/{sid}/npcs/edgar")
+        resp = client.get(f"/api/master/sessions/{sid}/creatures?entity_type=npc")
         assert resp.status_code == 200
-        npc = resp.json()
-        assert npc["name"] == "Edgar the Smith"
-        assert npc["role"] == "blacksmith"
+        creatures = resp.json()
+        assert all(c["entity_type"] == "npc" for c in creatures)
+
+    def test_list_creatures_filter_player(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        sid = _create_session_with_player(client)
+        resp = client.get(f"/api/master/sessions/{sid}/creatures?entity_type=player")
+        assert resp.status_code == 200
+        creatures = resp.json()
+        assert len(creatures) == 1
+        assert creatures[0]["entity_type"] == "player"
+
+    def test_get_creature(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        sid = _create_session(client)
+        resp = client.get(f"/api/master/sessions/{sid}/creatures/edgar")
+        assert resp.status_code == 200
+        creature = resp.json()
+        assert creature["name"] == "Edgar the Smith"
+        assert creature["entity_type"] == "npc"
 
     def test_spawn_npc(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
         sid = _create_session(client)
         resp = client.post(
-            f"/api/master/sessions/{sid}/npcs",
+            f"/api/master/sessions/{sid}/creatures",
             json={
                 "id": "goblin_scout",
                 "name": "Goblin Scout",
+                "entity_type": "npc",
                 "region_id": "silverport",
                 "role": "guard",
                 "hp": 7,
@@ -118,38 +137,72 @@ class TestNpcHotControls:
         assert resp.status_code == 200
         assert resp.json()["id"] == "goblin_scout"
 
-        # Verify it shows up in list
-        resp = client.get(f"/api/master/sessions/{sid}/npcs/goblin_scout")
+        # Verify it shows up
+        resp = client.get(f"/api/master/sessions/{sid}/creatures/goblin_scout")
         assert resp.status_code == 200
 
-    def test_patch_npc(self, tmp_path: object) -> None:
+    def test_spawn_monster(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        sid = _create_session(client)
+        resp = client.post(
+            f"/api/master/sessions/{sid}/creatures",
+            json={
+                "id": "wolf_1",
+                "name": "Dire Wolf",
+                "entity_type": "monster",
+                "start_location": "silverport_city",
+                "hp": 37,
+                "ac": 14,
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["id"] == "wolf_1"
+        assert data["name"] == "Dire Wolf"
+
+    def test_patch_creature(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
         sid = _create_session(client)
         resp = client.patch(
-            f"/api/master/sessions/{sid}/npcs/edgar",
+            f"/api/master/sessions/{sid}/creatures/edgar",
             json={"current_hp": 5, "personality": "Now angry"},
         )
         assert resp.status_code == 200
 
-        resp = client.get(f"/api/master/sessions/{sid}/npcs/edgar")
-        npc = resp.json()
-        assert npc["hp"] == 5
-        assert "angry" in npc["personality"].lower()
+        resp = client.get(f"/api/master/sessions/{sid}/creatures/edgar")
+        creature = resp.json()
+        assert creature["hp"] == 5
+        assert "angry" in creature["personality"].lower()
 
-    def test_delete_npc(self, tmp_path: object) -> None:
+    def test_patch_player_forbidden(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
         sid = _create_session(client)
-        resp = client.delete(f"/api/master/sessions/{sid}/npcs/edgar")
+        resp = client.patch(
+            f"/api/master/sessions/{sid}/creatures/player",
+            json={"current_hp": 1},
+        )
+        assert resp.status_code == 400
+
+    def test_delete_creature(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        sid = _create_session(client)
+        resp = client.delete(f"/api/master/sessions/{sid}/creatures/edgar")
         assert resp.status_code == 200
 
-        resp = client.get(f"/api/master/sessions/{sid}/npcs/edgar")
+        resp = client.get(f"/api/master/sessions/{sid}/creatures/edgar")
         assert resp.status_code == 404
+
+    def test_delete_player_forbidden(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        sid = _create_session(client)
+        resp = client.delete(f"/api/master/sessions/{sid}/creatures/player")
+        assert resp.status_code == 400
 
     def test_set_brain_rule_based(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
         sid = _create_session(client)
         resp = client.put(
-            f"/api/master/sessions/{sid}/npcs/edgar/brain",
+            f"/api/master/sessions/{sid}/creatures/edgar/brain",
             json={"type": "rule_based"},
         )
         assert resp.status_code == 200
@@ -158,10 +211,19 @@ class TestNpcHotControls:
         client, _ = _make_client(tmp_path)
         sid = _create_session(client)
         resp = client.put(
-            f"/api/master/sessions/{sid}/npcs/edgar/brain",
+            f"/api/master/sessions/{sid}/creatures/edgar/brain",
             json={"type": "llm"},
         )
         assert resp.status_code == 400  # LLM not configured
+
+    def test_set_brain_player_forbidden(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        sid = _create_session(client)
+        resp = client.put(
+            f"/api/master/sessions/{sid}/creatures/player/brain",
+            json={"type": "rule_based"},
+        )
+        assert resp.status_code == 400
 
 
 class TestNationSettlementHotControls:

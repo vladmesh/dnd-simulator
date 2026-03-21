@@ -28,7 +28,7 @@ from dnd_simulator.layers.settlements.layer import SettlementsLayer
 from dnd_simulator.llm.client import LlmClient
 from dnd_simulator.storage.store import SaveStore
 
-from .commands_npc import NpcCommands
+from .commands_creatures import CreatureCommands
 from .commands_politics import PoliticsCommands
 from .commands_save import SaveCommands
 from .commands_time import TimeCommands
@@ -38,7 +38,7 @@ DEFAULT_CONTENT_DIR = Path(__file__).resolve().parents[3] / "content"
 
 
 class GameService(
-    NpcCommands,
+    CreatureCommands,
     PoliticsCommands,
     SaveCommands,
     TimeCommands,
@@ -112,7 +112,6 @@ class GameService(
         session = GameSession(
             session_id=session_id,
             world=world,
-            player=player,
             lang=lang,
             world_name=world_name,
         )
@@ -125,7 +124,8 @@ class GameService(
 
         # In-memory sessions
         for sid, s in self._sessions.items():
-            result[sid] = {"session_id": sid, "player_name": s.player.name if s.player else ""}
+            player = s.get_player()
+            result[sid] = {"session_id": sid, "player_name": player.name if player else ""}
 
         # Saved sessions on disk (not yet loaded)
         for save_name in self._store.list_saves():
@@ -300,7 +300,7 @@ class GameService(
         from dnd_simulator.content_loader import parse_player
 
         session = self._get_session(session_id)
-        if session.player is not None:
+        if session.get_player() is not None:
             raise ValueError("Session already has a player")
 
         player = parse_player(player_data)
@@ -313,15 +313,15 @@ class GameService(
                 player.location_id = ids[0]
 
         self._get_entities_layer(session).add_entity(player)
-        session.player = player
         with contextlib.suppress(Exception):
             self.autosave_session(session_id)
         return player
 
     def _require_player(self, session: GameSession) -> PlayerCharacter:
-        if session.player is None:
+        player = session.get_player()
+        if player is None:
             raise ValueError("No player in this session")
-        return session.player
+        return player
 
     def _get_session(self, session_id: str) -> GameSession:
         if session_id not in self._sessions:
@@ -357,19 +357,22 @@ class GameService(
         del self._sessions[session.session_id]
         session.session_id = session_id
 
-        # Load saved world + player state
+        # Load saved world state (player state is restored as part of entities layer)
         if "world" in data:
             session.world.load(data["world"])
+
+            # Backward compat: old saves have separate "player" block
             player_data = data.get("player", {})
             assert isinstance(player_data, dict)
-            if player_data and session.player:
-                session.player.load_save_data(player_data)
-            elif player_data and not session.player:
-                # Player was created after session start — recreate
-                from dnd_simulator.content_loader import parse_player
+            if player_data:
+                player = session.get_player()
+                if player:
+                    player.load_save_data(player_data)
+                else:
+                    # Player was created after session start — recreate
+                    from dnd_simulator.content_loader import parse_player
 
-                player = parse_player(player_data)
-                self._get_entities_layer(session).add_entity(player)
-                session.player = player
+                    new_player = parse_player(player_data)
+                    self._get_entities_layer(session).add_entity(new_player)
 
         self._sessions[session_id] = session

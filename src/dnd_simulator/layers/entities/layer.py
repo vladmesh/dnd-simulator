@@ -472,6 +472,14 @@ class EntitiesLayer(Layer):
         q = query.question
         params = query.params
 
+        if q == "player":
+            from dnd_simulator.core.player import PlayerCharacter
+
+            for e in self._entities.values():
+                if isinstance(e, PlayerCharacter):
+                    return Answer(value=e)
+            return Answer(value=None)
+
         if q == "entities_at_location":
             location_id = params["location_id"]
             hour = int(params.get("hour", 12))
@@ -495,6 +503,28 @@ class EntitiesLayer(Layer):
             for e in self._entities.values():
                 if e.active:
                     result.append(self._entity_detail(e))
+            return Answer(value=result)
+
+        if q == "all_creatures":
+            from dnd_simulator.core.player import PlayerCharacter
+
+            # Filterable creature list for master panel
+            filter_type = params.get("entity_type")  # "player", "npc", or None for all
+            filter_location = params.get("location_id")
+            filter_active = params.get("active")  # True/False/None
+            result = []
+            for e in self._entities.values():
+                if not isinstance(e, Creature):
+                    continue
+                if filter_active is not None and e.active != filter_active:
+                    continue
+                if filter_location and e.location_id != filter_location:
+                    continue
+                if filter_type == "player" and not isinstance(e, PlayerCharacter):
+                    continue
+                if filter_type == "npc" and not isinstance(e, Npc):
+                    continue
+                result.append(self._entity_detail(e))
             return Answer(value=result)
 
         if q == "all_npcs":
@@ -569,18 +599,41 @@ class EntitiesLayer(Layer):
 
     def _entity_detail(self, entity: Entity) -> dict[str, object]:
         """Full detail for a single entity."""
+        from dnd_simulator.core.player import PlayerCharacter
+
         base: dict[str, object] = {
             "id": entity.id,
             "name": entity.name,
             "location_id": entity.location_id,
             "active": entity.active,
         }
+        if isinstance(entity, Creature):
+            base.update(
+                {
+                    "hp": entity.current_hp,
+                    "max_hp": entity.max_hp,
+                    "ac": entity.ac,
+                }
+            )
+        if isinstance(entity, Character):
+            base.update(
+                {
+                    "race": entity.race.value,
+                    "char_class": entity.char_class.value,
+                    "level": entity.level,
+                    "gold": entity.gold,
+                }
+            )
+        if isinstance(entity, PlayerCharacter):
+            base["entity_type"] = "player"
         if isinstance(entity, Npc):
             base.update(
                 {
+                    "entity_type": "npc",
                     "role": entity.role,
                     "personality": entity.personality,
                     "settlement_id": entity.settlement_id,
+                    "ai_type": entity.ai_type,
                     "memory": entity.memory.to_dict(),
                 }
             )
@@ -603,6 +656,8 @@ class EntitiesLayer(Layer):
 
     def get_state(self) -> dict[str, object]:
         """Serialize entities state."""
+        from dnd_simulator.core.player import PlayerCharacter
+
         entities: dict[str, Any] = {}
         for eid, e in self._entities.items():
             data: dict[str, Any] = {
@@ -611,7 +666,11 @@ class EntitiesLayer(Layer):
                 "location_id": e.location_id,
                 "active": e.active,
             }
-            if isinstance(e, Npc):
+            if isinstance(e, PlayerCharacter):
+                data["entity_type"] = "player"
+                data["current_hp"] = e.current_hp
+                data["gold"] = e.gold
+            elif isinstance(e, Npc):
                 data.update(
                     {
                         "role": e.role,
@@ -621,11 +680,15 @@ class EntitiesLayer(Layer):
                         "memory": e.memory.to_dict(),
                     }
                 )
+            elif isinstance(e, Creature):
+                data["current_hp"] = e.current_hp
             entities[eid] = data
         return {"entities": entities}
 
     def load_state(self, state: dict[str, object]) -> None:
         """Restore mutable entity state from saved data."""
+        from dnd_simulator.core.player import PlayerCharacter
+
         entities_data = state["entities"]
         assert isinstance(entities_data, dict)
 
@@ -637,7 +700,10 @@ class EntitiesLayer(Layer):
                 loc = edata.get("location_id") or edata.get("region_id")
                 if loc:
                     entity.location_id = str(loc)
-                if isinstance(entity, Npc):
+                if isinstance(entity, PlayerCharacter):
+                    entity.current_hp = int(edata.get("current_hp", entity.current_hp))
+                    entity.gold = int(edata.get("gold", entity.gold))
+                elif isinstance(entity, Npc):
                     override = edata.get("location_override")
                     entity.location_override = str(override) if override else None
                     memory_data = edata.get("memory")
@@ -646,3 +712,5 @@ class EntitiesLayer(Layer):
                     else:
                         legacy = str(edata.get("conversation_summary", ""))
                         entity.memory = NpcMemory(current_conversation=legacy) if legacy else NpcMemory()
+                elif isinstance(entity, Creature):
+                    entity.current_hp = int(edata.get("current_hp", entity.current_hp))

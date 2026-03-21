@@ -15,7 +15,6 @@ class SaveCommands:
         save_name = name or f"save_{session_id}"
         data: dict[str, Any] = {
             "world": session.world.save(),
-            "player": session.player.to_save_data() if session.player else {},
         }
         self._store.save(save_name, data)  # type: ignore[attr-defined]
         return save_name
@@ -30,7 +29,6 @@ class SaveCommands:
                 "lang": session.lang,
             },
             "world": session.world.save(),
-            "player": session.player.to_full_save_data() if session.player else {},
         }
         self._store.save(f"session_{session_id}", data)  # type: ignore[attr-defined]
 
@@ -49,10 +47,13 @@ class SaveCommands:
         # Support both old format (flat world data) and new format (world + player)
         if "world" in data:
             session.world.load(data["world"])
+            # Backward compat: old saves have separate "player" block
             player_data = data.get("player", {})
             assert isinstance(player_data, dict)
-            if session.player:
-                session.player.load_save_data(player_data)
+            if player_data:
+                player = session.get_player()
+                if player:
+                    player.load_save_data(player_data)
         else:
             session.world.load(data)
 

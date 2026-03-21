@@ -28,8 +28,8 @@ import time
 import requests
 import websocket  # type: ignore[import-untyped]
 
-BASE = "http://localhost:8000"
-WS_BASE = "ws://localhost:8000"
+BASE = "http://localhost:8001"
+WS_BASE = "ws://localhost:8001"
 
 
 def log(tag: str, msg: str) -> None:
@@ -91,9 +91,10 @@ def main() -> None:
 
     # ── 4. Master: spawn a goblin at player's location (with shortbow) ──
     section("4. Master: spawn goblin")
-    rest("post", f"/api/master/sessions/{sid}/npcs", {
+    rest("post", f"/api/master/sessions/{sid}/creatures", {
         "id": "goblin_1",
         "name": "Skrag the Goblin",
+        "entity_type": "npc",
         "start_location": player_location,
         "role": "bandit",
         "personality": "Vicious and cunning",
@@ -254,12 +255,12 @@ def main() -> None:
 
     # ── 11. Master: check NPC state ──
     section("11. NPC state after combat")
-    npc = rest("get", f"/api/master/sessions/{sid}/npcs/goblin_1")
-    log("INFO", f"Goblin HP: {npc.get('hp')}/{npc.get('max_hp')} active={npc.get('active')}")
+    goblin = rest("get", f"/api/master/sessions/{sid}/creatures/goblin_1")
+    log("INFO", f"Goblin HP: {goblin.get('hp')}/{goblin.get('max_hp')} active={goblin.get('active')}")
 
-    # ── 12. Master: patch NPC (heal it) ──
-    section("12. Master: patch NPC (heal)")
-    rest("patch", f"/api/master/sessions/{sid}/npcs/goblin_1", {"current_hp": 7})
+    # ── 12. Master: patch creature (heal goblin) ──
+    section("12. Master: patch creature (heal)")
+    rest("patch", f"/api/master/sessions/{sid}/creatures/goblin_1", {"current_hp": 7})
 
     # ── 13. Delete session ──
     section("13. Cleanup: delete session")
