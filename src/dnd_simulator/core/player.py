@@ -337,6 +337,23 @@ class PlayerCharacter(Character):
             "gold": self.gold,
         }
 
+    def to_full_save_data(self) -> dict[str, Any]:
+        """Serialize full player definition (for autosave restore)."""
+        return {
+            "name": self.name,
+            "race": self.race.value,
+            "class": self.char_class.value,
+            "level": self.level,
+            "alignment": self.alignment.value,
+            "appearance": self.appearance,
+            "ability_scores": {a.value: s for a, s in self.ability_scores.scores.items()},
+            "hp": self.max_hp,
+            "ac": self.ac,
+            "gold": self.gold,
+            "start_location": self.location_id,
+            "current_hp": self.current_hp,
+        }
+
     def load_save_data(self, data: dict[str, Any]) -> None:
         """Restore mutable state from a save."""
         self.location_id = str(data.get("location_id", data.get("region_id", self.location_id)))

@@ -22,6 +22,7 @@ class GameSession:
     world: World
     player: PlayerCharacter | None = None
     lang: str = "en"
+    world_name: str = ""
 
     @property
     def player_location(self) -> str:
