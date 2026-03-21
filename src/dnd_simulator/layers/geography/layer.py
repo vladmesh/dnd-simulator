@@ -64,17 +64,18 @@ class GeographyLayer(Layer):
         time = world_state.time
 
         # One weather transition per ~6 hours
-        steps = max(1, delta.total_hours // 6)
+        steps = delta.total_hours // 6
 
         for region in self._regions.values():
-            season = get_season(time.month, region.latitude)
             old_weather = region.weather
 
-            for _ in range(steps):
-                base_temp = calculate_base_temperature(region.latitude, time.month, time.hour, region.elevation)
-                region.weather = self._weather.next_weather(region, season, base_temp)
+            if steps >= 1:
+                season = get_season(time.month, region.latitude)
+                for _ in range(steps):
+                    base_temp = calculate_base_temperature(region.latitude, time.month, time.hour, region.elevation)
+                    region.weather = self._weather.next_weather(region, season, base_temp)
 
-            # Final temperature with weather modifier
+            # Always recalculate temperature (time of day changes it)
             base_temp = calculate_base_temperature(region.latitude, time.month, time.hour, region.elevation)
             region.temperature = apply_weather_temperature_modifier(base_temp, region.weather)
 

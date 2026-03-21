@@ -109,15 +109,28 @@ class WorldCommands:
 
     def _cmd_wait(self, session: GameSession, hours: int = 4) -> MasterResponse:
         """Wait specified hours, advancing time."""
+        player = self._require_player(session)
+        player_region = session.world.location_graph.region_of(player.location_id)
+
         events = session.world.advance_time(TimeDelta.from_hours(hours))
         t = session.world.time
 
-        lines = [f"Time passes... It is now {t.hour:02d}:{t.minute:02d}, day {t.day}, month {t.month}."]
-        for e in events:
-            if e.description:
-                lines.append(f"  • {e.description}")
+        # Filter events to only those relevant to the player's region
+        relevant = [
+            e
+            for e in events
+            if e.description
+            and (
+                e.data.get("region_id") == player_region  # weather, etc.
+                or e.data.get("region_id") is None  # events without region scope
+            )
+        ]
 
-        return MasterResponse(text="\n".join(lines), events_summary=[e.description for e in events])
+        lines = [f"Time passes... It is now {t.hour:02d}:{t.minute:02d}, day {t.day}, month {t.month}."]
+        for e in relevant:
+            lines.append(f"  • {e.description}")
+
+        return MasterResponse(text="\n".join(lines), events_summary=[e.description for e in relevant])
 
     def _cmd_go(self, session: GameSession, target: str) -> MasterResponse:
         """Move to a neighboring location."""
@@ -162,7 +175,12 @@ class WorldCommands:
         else:
             header = f"You walk to {graph.get(target).name} ({edge.distance_m}m, ~{int(travel_hours * 60)}min)..."
 
-        travel_notes = [e.description for e in events if e.description]
+        player_region = graph.region_of(target)
+        travel_notes = [
+            e.description
+            for e in events
+            if e.description and (e.data.get("region_id") == player_region or e.data.get("region_id") is None)
+        ]
         if travel_notes:
             return MasterResponse(
                 text=header + "\n" + "\n".join(f"  • {n}" for n in travel_notes) + f"\n\n{look.text}",
@@ -229,6 +247,12 @@ class WorldCommands:
 
         return {
             **awareness,
+            "current_location": {
+                "id": location.id,
+                "name": location.name,
+                "description": location.description,
+                "settlement_id": location.settlement_id,
+            },
             "entities": perceived_entities,
             "neighbors": neighbors,
         }
