@@ -1,72 +1,68 @@
 # Code Audit
 
-> **Date**: 2026-03-20
+> **Date**: 2026-03-21
 > **Scope**: full
 
 ## Summary
 - Dead code: 0 issues
-- Code smells: 1 issue (2 fixed, 1 deferred by design)
-- Security: 0 issues
-- Architecture violations: 0 issues (3 fixed)
-- Convention violations: 1 issue (3 fixed, 1 deferred)
+- Code smells: 2 issues
+- Security: 2 issues
+- Architecture violations: 3 issues
+- Convention violations: 2 issues
 - Layer contract: 0 issues
-- Test gaps: 12 issues
-- **Total: 14 issues**
+- Test gaps: 3 issues
 
 ## Dead Code
+| File | Issue | Action |
+|------|-------|--------|
+| — | ruff F401 clean; no unreferenced functions found | — |
 
-No issues found. Ruff F401 passes clean, no stale TODOs.
+No TODOs/FIXMEs found in source.
 
 ## Code Smells
-
-| File | Issue | Status |
-|------|-------|--------|
-| `layers/entities/layer.py` | was 557 LOC | **fixed** — extracted `combat_manager.py` (322 LOC), layer.py now 310 LOC |
-| `layers/politics/layer.py` | 582 LOC | **deferred** — file is well-structured internally (`_monthly_tick` orchestrator + focused `_process_*` methods, no LLM prompts despite original suggestion). Splitting would add complexity without reducing cognitive load |
-| `core/character.py` | 461 LOC | **deferred** — `build_awareness`/`build_combat_awareness` are free functions, not methods. File is below 500 LOC. Revisit if it grows |
-| `service.py` | 434 LOC | watch for growth |
+| File | Issue | Suggestion |
+|------|-------|------------|
+| `service.py` (839 lines) | Largest file, well above 400-line threshold | Consider splitting command handlers into sub-modules (combat commands, NPC commands, time commands) |
+| `layers/politics/layer.py` (588 lines) | Second largest, above threshold | Tick logic is inherently complex; lower priority but could extract war-resolution helpers |
 
 ## Security
+| File:Line | Issue | Severity |
+|-----------|-------|----------|
+| `adapters/api/schemas.py:24-70` | Pydantic request models accept bare `int`/`float` fields (`hp`, `ac`, `population`, `hours`, `wealth`) with no `Field(ge=0)` or upper-bound constraints — negative HP, negative hours, or extreme values accepted | medium |
+| `adapters/api/` | No CORSMiddleware configured — fine for local-only use, but flag if a separate frontend is added | low |
 
-No issues. `.env` is gitignored. No hardcoded secrets. No subprocess calls. API keys read from env vars only in adapters.
+No hardcoded secrets, no subprocess calls, no prompt injection risks found. `.env` is gitignored.
 
 ## Architecture Violations
-
-No issues. All three `core/ → layers/` violations fixed:
-- `perceive_by_id` — now uses `query_layer("entities", "perceive_entity")`
-- `_knows_by_name` — duck typing via `getattr` instead of `isinstance(Npc)`
-- `build_combat_awareness` — reads `is_wounded` from `entities_in_region` query data
-
-**Rules purity**: clean. **LLM instantiation**: clean. **Cross-layer imports**: clean.
+| File:Line | Violation | Should Be | Severity |
+|-----------|-----------|-----------|----------|
+| `core/brain.py:49,74,81` | `RuleBrain` imports from `layers.entities.models` (Npc, canned_line, NpcTag, find_tags, has_tag) via deferred imports | `core/` must not depend on `layers/`. Move the Npc type check and canned_line/tag helpers to `core/` or pass needed data as arguments | high |
+| `adapters/api/routes_master.py:24,84,125,305` | Route handlers import `Npc` from `layers.entities.models` and `EntitiesLayer` from `layers.entities.layer`, then iterate layer internals directly | All entity queries should go through `GameService`; adapters should not reach into layers | high |
+| `adapters/cli_loop.py:28-31` | CLI adapter imports all four layer classes and constructs them directly | Layer construction should be delegated to service or a factory; adapter should only call service methods | medium |
 
 ## Convention Violations
+| File:Line | Violation | Rule |
+|-----------|-----------|------|
+| Multiple files (17 modules) | `from typing import Any` used throughout; `Answer.value: Any` in `core/models.py:167` | CLAUDE.md: use `object` not `Any` in state dicts for strict mypy. `Any` in adapters for session types is lower priority, but `Answer.value` is core |
+| Multiple files (17 dataclasses) | `@dataclass` without `frozen=True` on: `Creature`, `Character`, `PlayerCharacter` (core), `World`, `CombatState`, `BattleMap`, `Settlement`, `NpcMemory`, `Npc`, `NpcScheduleEntry`, `Nation`, `NationRelation`, `Region`, `HexCell` | Expected for stateful objects (World, CombatState, creatures). Settlement, Nation, NpcMemory are also mutated in-place by layer ticks — acceptable by design but worth documenting |
 
-| File:Line | Violation | Status |
-|-----------|-----------|--------|
-| `core/models.py` | `ActionResult` not frozen | **fixed** — `frozen=True` |
-| `core/models.py` | `Answer` not frozen | **fixed** — `frozen=True` |
-| `service.py` | `MasterResponse` not frozen | **fixed** — `frozen=True` |
-| `core/models.py:160,167` | `params: dict[str, Any]` and `value: Any` in Query/Answer | **deferred** — changing to `object` causes 58 mypy errors across 8 files; every consumer of `Answer.value` indexes/iterates it without type narrowing. Proper fix requires typed query/answer protocol or cast discipline — not a quick fix |
-
-Note: mutable dataclasses on Entity, Creature, Character, World, CombatState, BattleMap, layer models — these are legitimately stateful, no issue.
+Note: Line length is clean — only one hit (a docstring in `llm/__init__.py`).
 
 ## Layer Contract
-
-No issues. All 4 layers (Geography, Politics, Settlements, Entities) implement the full Layer ABC.
+| Layer | Issue |
+|-------|-------|
+| — | All 4 layers (Geography, Politics, Settlements, Entities) implement the full Layer ABC. No issues found |
 
 ## Test Gaps
-
 | Source File | Expected Test | Status |
 |-------------|---------------|--------|
-| `core/action.py` | `tests/test_action.py` | **missing** (new file) |
-| `core/models.py` | `tests/test_models.py` | **missing** |
-| `core/player.py` | `tests/test_player.py` | **missing** |
-| `core/world.py` | `tests/test_world.py` | **missing** |
-| `llm/client.py` | `tests/test_llm_client.py` | **missing** (may need mocking) |
-| `llm/prompts.py` | `tests/test_prompts.py` | **missing** |
-| `storage/store.py` | `tests/test_store.py` | **missing** |
-| `adapters/cli_loop.py` | — | skip (integration/UI) |
-| `adapters/cli.py` | — | skip (integration/UI) |
-| `content_loader.py` | `tests/test_content_loader.py` | **missing** |
-| `service.py` | `tests/test_service.py` | **missing** |
-| `layers/entities/` | `tests/test_entities_layer.py` | **missing** (only `test_npc_layer.py` exists, may be partial) |
+| `rules/combat.py` | `tests/test_rules_combat.py` | missing (partially covered by `test_combat.py`, `test_attack_resolution.py`) |
+| `rules/geography.py` | `tests/test_rules_geography.py` | missing (partially covered by `test_geography_formulas.py`) |
+| `adapters/api/routes_master.py` | `tests/test_routes_master.py` | missing (partially covered by `test_api.py`) |
+| `adapters/api/routes_player.py` | `tests/test_routes_player.py` | missing (partially covered by `test_api.py`) |
+| `service.py` | `tests/test_service.py` | missing |
+| `layers/entities/layer.py` | `tests/test_entities_layer.py` | missing (covered by `test_npc_layer.py`) |
+
+Note: Many "missing" test files have equivalent coverage under different names. The main real gap is `test_service.py`.
+
+No skipped or xfail tests found.
