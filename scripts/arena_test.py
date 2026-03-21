@@ -165,7 +165,11 @@ def main() -> None:
             pos = combat.battle_map.get_position(entity_id)
             pos_str = f"({pos.x},{pos.y})" if pos else "?"
             print(f"\n  [{entity.name}] HP:{entity.current_hp}/{entity.max_hp} pos:{pos_str}")
-            entity.take_turn(world)
+            entities_layer.run_creature_turn(
+                entity, world.time,
+                world._make_query_fn("entities"),
+                world._make_emit_fn("entities"),
+            )
 
             # Show what happened
             if isinstance(entity, Creature):

@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
-
+from dnd_simulator.core.awareness import CombatAwareness, CombatEntity, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import RuleBrain
 from dnd_simulator.core.character import (
     Ability,
@@ -11,10 +10,10 @@ from dnd_simulator.core.character import (
     DamageComponent,
     DamageType,
 )
-from dnd_simulator.core.combat import BattleMap, CombatState, Position
-from dnd_simulator.core.models import ActionResult, GameDateTime
-from dnd_simulator.layers.entities.layer import EntitiesLayer
+from dnd_simulator.core.combat import BattleMap, Position
+from dnd_simulator.core.models import EventType
 from dnd_simulator.layers.entities.models import Npc, NpcMemory
+from dnd_simulator.rules.movement import direction_label, grid_distance
 
 _SWORD = Attack(
     name="longsword",
@@ -24,96 +23,88 @@ _SWORD = Attack(
 )
 
 
-def _make_world(entities: list[object], battle_map: BattleMap | None = None) -> MagicMock:
-    """Build a mock World backed by a real EntitiesLayer for combat awareness."""
-    layer = EntitiesLayer(entities=entities)  # type: ignore[arg-type]
-    world = MagicMock()
-    world.time = GameDateTime(year=1, month=1, day=1, hour=12)
-    world.layers = [layer]
-    world.handle_event.return_value = ActionResult()
-
-    # Start combat if multiple creatures in same region
-    combat_location = entities[0].location_id if entities else "arena"  # type: ignore[union-attr]
-    for e in entities:
-        if hasattr(e, "in_combat"):
-            e.in_combat = True  # type: ignore[union-attr]
-    combat = CombatState(
-        location_id=combat_location,
-        turn_order=[e.id for e in entities],  # type: ignore[union-attr]
+def _build_combat_awareness(
+    npc: Npc,
+    enemies: list[Npc],
+    battle_map: BattleMap,
+) -> CombatAwareness:
+    """Build CombatAwareness from entities and a battle map."""
+    my_pos = battle_map.get_position(npc.id)
+    nearby: list[CombatEntity] = []
+    for e in enemies:
+        if e.id == npc.id:
+            continue
+        other_pos = battle_map.get_position(e.id)
+        dist = 0
+        direction = ""
+        if my_pos and other_pos:
+            dist = grid_distance(my_pos, other_pos)
+            dx = other_pos.x - my_pos.x
+            dy = other_pos.y - my_pos.y
+            direction = direction_label(dx, dy)
+        nearby.append(
+            CombatEntity(
+                id=e.id,
+                description=e.name,
+                is_wounded=e.current_hp < e.max_hp // 2,
+                distance_ft=dist,
+                direction=direction,
+            )
+        )
+    weapon_name = npc.attacks[0].name if npc.attacks else "fists"
+    weapon_damage = str(npc.attacks[0].damage[0].dice) if npc.attacks else "1"
+    return CombatAwareness(
+        self_hp=npc.current_hp,
+        self_max_hp=npc.max_hp,
+        self_ac=npc.ac,
+        self_speed=npc.speed,
+        self_weapon=weapon_name,
+        self_weapon_damage=weapon_damage,
+        nearby=nearby,
     )
-    if battle_map is not None:
-        combat.battle_map = battle_map
-    layer._combat._combats[combat_location] = combat
-
-    def fake_query(layer_name: str, query: object) -> MagicMock:
-        if layer_name == "entities":
-            return layer.query(query)  # type: ignore[arg-type]
-        answer = MagicMock()
-        answer.value = None
-        return answer
-
-    world.query_layer.side_effect = fake_query
-    return world
 
 
-def _make_peaceful_world(entities: list[object], hour: int = 12) -> MagicMock:
-    """Build a mock World backed by a real EntitiesLayer for peaceful queries."""
-    layer = EntitiesLayer(entities=entities)  # type: ignore[arg-type]
-    world = MagicMock()
-    world.time = GameDateTime(year=1, month=1, day=1, hour=hour)
-    world.layers = [layer]
-    world.handle_event.return_value = ActionResult()
-
-    def fake_query(layer_name: str, query: object) -> MagicMock:
-        if layer_name == "entities":
-            return layer.query(query)  # type: ignore[arg-type]
-        answer = MagicMock()
-        answer.value = None
-        return answer
-
-    world.query_layer.side_effect = fake_query
-    return world
+def _peaceful_awareness(hour: int = 12) -> PeacefulAwareness:
+    return PeacefulAwareness(
+        hour=hour,
+        day=1,
+        month=1,
+        year=1,
+        weather={"condition": "clear", "temperature": 15},
+        location_name="market",
+        region_name="Test",
+        settlements=None,
+        territory_owner=None,
+        nation_info=None,
+    )
 
 
 class TestRuleBrainPeaceful:
     def test_peaceful_returns_idle(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", attacks=(_SWORD,))
         npc.in_combat = False
-        world = _make_peaceful_world([npc])
         brain = RuleBrain()
-        action = brain.choose_action(npc, world)
+        action = brain.choose_action(npc, _peaceful_awareness(), [])
         assert action.name == "idle"
 
     def test_responds_to_speech_with_canned_line(self) -> None:
-        from dnd_simulator.core.models import Event, EventType
-        from dnd_simulator.core.player import PlayerCharacter
-
-        player = PlayerCharacter(id="player", name="Hero", location_id="market")
         merchant = Npc(id="m1", name="Merchant", location_id="market", role="merchant")
         merchant.in_combat = False
-        world = _make_peaceful_world([player, merchant], hour=12)
 
-        # Simulate player speech in location log
-        layer = world.layers[0]
-        layer._location_log["market"].append(
-            Event(
-                event_type=EventType.ENTITY_SAY,
-                source_layer="entities",
-                data={"entity_id": "player", "text": "Hello!"},
-            )
+        # Simulate a speech event
+        speech_event = PerceivedEvent(
+            description='Hero says: "Hello!"',
+            event_type=EventType.ENTITY_SAY,
+            actor_id="player",
         )
 
         brain = RuleBrain()
-        action = brain.choose_action(merchant, world)
+        action = brain.choose_action(merchant, _peaceful_awareness(hour=12), [speech_event])
         assert action.name == "say"
         # hour=12 with no schedule → IDLE activity
         assert action.params["text"] == "Shop's closed. Try tomorrow."
 
     def test_mood_overrides_role_dialogue(self) -> None:
-        from dnd_simulator.core.models import Event, EventType
-        from dnd_simulator.core.player import PlayerCharacter
-
-        player = PlayerCharacter(id="player", name="Hero", location_id="market")
         merchant = Npc(
             id="m1",
             name="Merchant",
@@ -122,28 +113,23 @@ class TestRuleBrainPeaceful:
             memory=NpcMemory(tags=["angry"]),
         )
         merchant.in_combat = False
-        world = _make_peaceful_world([player, merchant], hour=12)
 
-        layer = world.layers[0]
-        layer._location_log["market"].append(
-            Event(
-                event_type=EventType.ENTITY_SAY,
-                source_layer="entities",
-                data={"entity_id": "player", "text": "Hello!"},
-            )
+        speech_event = PerceivedEvent(
+            description='Hero says: "Hello!"',
+            event_type=EventType.ENTITY_SAY,
+            actor_id="player",
         )
 
         brain = RuleBrain()
-        action = brain.choose_action(merchant, world)
+        action = brain.choose_action(merchant, _peaceful_awareness(hour=12), [speech_event])
         assert action.name == "say"
         assert action.params["text"] == "Leave me alone!"
 
     def test_no_speech_stays_idle(self) -> None:
         merchant = Npc(id="m1", name="Merchant", location_id="market", role="merchant")
         merchant.in_combat = False
-        world = _make_peaceful_world([merchant])
         brain = RuleBrain()
-        action = brain.choose_action(merchant, world)
+        action = brain.choose_action(merchant, _peaceful_awareness(), [])
         assert action.name == "idle"
 
 
@@ -154,9 +140,9 @@ class TestRuleBrainCombat:
         bm = BattleMap(width=60, height=60)
         bm.set_position("n1", Position(10, 10))
         bm.set_position("e1", Position(10, 15))  # 5 ft away — in reach
-        world = _make_world([npc, enemy], bm)
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
         brain = RuleBrain()
-        action = brain.choose_action(npc, world)
+        action = brain.choose_action(npc, awareness, [])
         assert action.name == "attack"
         assert action.params["target_id"] == "e1"
 
@@ -166,9 +152,9 @@ class TestRuleBrainCombat:
         bm = BattleMap(width=60, height=60)
         bm.set_position("n1", Position(10, 10))
         bm.set_position("e1", Position(10, 30))  # 20 ft away — within speed+reach=35
-        world = _make_world([npc, enemy], bm)
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
         brain = RuleBrain()
-        action = brain.choose_action(npc, world)
+        action = brain.choose_action(npc, awareness, [])
         assert action.name == "move"
         assert action.params["toward"] == "e1"
 
@@ -178,9 +164,9 @@ class TestRuleBrainCombat:
         bm = BattleMap(width=120, height=120)
         bm.set_position("n1", Position(0, 0))
         bm.set_position("e1", Position(60, 60))  # ~60 ft away — beyond speed+reach
-        world = _make_world([npc, enemy], bm)
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
         brain = RuleBrain()
-        action = brain.choose_action(npc, world)
+        action = brain.choose_action(npc, awareness, [])
         assert action.name == "dash"
         assert action.params["toward"] == "e1"
 
@@ -190,9 +176,9 @@ class TestRuleBrainCombat:
         bm = BattleMap(width=60, height=60)
         bm.set_position("n1", Position(10, 10))
         bm.set_position("e1", Position(10, 15))
-        world = _make_world([npc, enemy], bm)
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
         brain = RuleBrain()
-        action = brain.choose_action(npc, world)
+        action = brain.choose_action(npc, awareness, [])
         assert action.name == "flee"
 
     def test_dodge_when_badly_hurt_and_in_reach(self) -> None:
@@ -201,18 +187,23 @@ class TestRuleBrainCombat:
         bm = BattleMap(width=60, height=60)
         bm.set_position("n1", Position(10, 10))
         bm.set_position("e1", Position(10, 15))  # 5 ft — in reach
-        world = _make_world([npc, enemy], bm)
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
         brain = RuleBrain()
-        action = brain.choose_action(npc, world)
+        action = brain.choose_action(npc, awareness, [])
         assert action.name == "dodge"
 
     def test_idle_when_no_enemies(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
-        bm = BattleMap(width=60, height=60)
-        bm.set_position("n1", Position(10, 10))
-        world = _make_world([npc], bm)
+        awareness = CombatAwareness(
+            self_hp=20,
+            self_max_hp=20,
+            self_ac=10,
+            self_speed=30,
+            self_weapon="longsword",
+            self_weapon_damage="1d8",
+        )
         brain = RuleBrain()
-        action = brain.choose_action(npc, world)
+        action = brain.choose_action(npc, awareness, [])
         assert action.name == "idle"
 
     def test_attacks_nearest_of_multiple_enemies(self) -> None:
@@ -223,16 +214,15 @@ class TestRuleBrainCombat:
         bm.set_position("n1", Position(10, 10))
         bm.set_position("far", Position(10, 40))
         bm.set_position("close", Position(10, 15))
-        world = _make_world([npc, far, close], bm)
+        awareness = _build_combat_awareness(npc, [npc, far, close], bm)
         brain = RuleBrain()
-        action = brain.choose_action(npc, world)
+        action = brain.choose_action(npc, awareness, [])
         assert action.name == "attack"
         assert action.params["target_id"] == "close"
 
 
 class TestRuleBrainTags:
     def test_hated_target_preferred_over_closer(self) -> None:
-        """NPC with hates:far tag should prefer far enemy over closer one."""
         npc = Npc(
             id="n1",
             name="Guard",
@@ -248,41 +238,38 @@ class TestRuleBrainTags:
         bm.set_position("n1", Position(10, 10))
         bm.set_position("far", Position(10, 30))  # 20 ft
         bm.set_position("close", Position(10, 15))  # 5 ft
-        world = _make_world([npc, far, close], bm)
+        awareness = _build_combat_awareness(npc, [npc, far, close], bm)
         brain = RuleBrain()
-        action = brain.choose_action(npc, world)
-        # Should move toward hated target, not attack close one
+        action = brain.choose_action(npc, awareness, [])
         assert action.params.get("toward") == "far" or action.params.get("target_id") == "far"
 
     def test_scared_npc_flees_earlier(self) -> None:
-        """NPC with 'scared' tag should flee at higher HP threshold."""
         npc = Npc(
             id="n1",
             name="Guard",
             location_id="arena",
             attacks=(_SWORD,),
             max_hp=100,
-            current_hp=20,  # 20% HP — above normal flee (15%) but below scared flee (25%)
+            current_hp=20,
             memory=NpcMemory(tags=["scared"]),
         )
         enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=60, height=60)
         bm.set_position("n1", Position(10, 10))
         bm.set_position("e1", Position(10, 15))
-        world = _make_world([npc, enemy], bm)
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
         brain = RuleBrain()
-        action = brain.choose_action(npc, world)
+        action = brain.choose_action(npc, awareness, [])
         assert action.name == "flee"
 
     def test_no_tags_unchanged_behavior(self) -> None:
-        """NPC without tags should behave exactly as before."""
         npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=60, height=60)
         bm.set_position("n1", Position(10, 10))
         bm.set_position("e1", Position(10, 15))
-        world = _make_world([npc, enemy], bm)
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
         brain = RuleBrain()
-        action = brain.choose_action(npc, world)
+        action = brain.choose_action(npc, awareness, [])
         assert action.name == "attack"
         assert action.params["target_id"] == "e1"

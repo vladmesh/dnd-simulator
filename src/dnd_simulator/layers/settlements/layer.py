@@ -17,8 +17,7 @@ from dnd_simulator.rules.settlements import (
 )
 
 if TYPE_CHECKING:
-    from dnd_simulator.core.models import TimeDelta
-    from dnd_simulator.core.world import WorldState
+    from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn, TimeDelta
 
 
 class SettlementsLayer(Layer):
@@ -58,7 +57,7 @@ class SettlementsLayer(Layer):
                 total += calculate_settlement_income(s.type.value, terrain, s.prosperity)
         return total
 
-    def tick(self, delta: TimeDelta, world_state: WorldState) -> list[Event]:
+    def tick(self, delta: TimeDelta, time: GameDateTime, query_fn: QueryFn, emit_fn: EmitFn) -> list[Event]:
         """Process monthly settlement updates.
 
         World only calls this when tick_interval has elapsed,
@@ -67,44 +66,38 @@ class SettlementsLayer(Layer):
         months = max(1, delta.seconds // 2_592_000)
         events: list[Event] = []
         for _ in range(months):
-            events.extend(self._monthly_tick(world_state))
+            events.extend(self._monthly_tick(query_fn))
         return events
 
-    def _monthly_tick(self, world_state: WorldState) -> list[Event]:
+    def _monthly_tick(self, query_fn: QueryFn) -> list[Event]:
         """One month of settlement simulation."""
         events: list[Event] = []
 
-        # Extract geography state for weather
-        geo_state = world_state.layer_states.get("geography", {})
-        regions_data = geo_state.get("regions", {})
-        assert isinstance(regions_data, dict)
-
-        # Extract politics state for nation wealth/stability
-        pol_state = world_state.layer_states.get("politics", {})
-        nations_data = pol_state.get("nations", {})
-        assert isinstance(nations_data, dict)
-
-        # Build region -> nation data lookup
-        region_to_nation = self._build_region_nation_map(nations_data)
-
         for settlement in self._settlements.values():
             # 1. Weather -> harvest -> prosperity
-            region_data = regions_data.get(settlement.region_id, {})
-            assert isinstance(region_data, dict)
-            weather = str(region_data.get("weather", "clear"))
+            weather_answer = query_fn(
+                "geography", Query(question="weather", params={"region_id": settlement.region_id})
+            )
+            weather = str(weather_answer.value.get("condition", "clear")) if weather_answer.value else "clear"
 
             harvest_mod = calculate_harvest_modifier(weather, settlement.type.value)
             settlement.prosperity = clamp(settlement.prosperity + harvest_mod)
 
             # 2. Nation wealth/stability -> prosperity drift
-            nation_data = region_to_nation.get(settlement.region_id)
-            if nation_data:
-                drift = prosperity_drift(
-                    settlement.prosperity,
-                    float(nation_data.get("wealth", 50)),
-                    float(nation_data.get("stability", 50)),
+            owner_answer = query_fn(
+                "politics", Query(question="region_owner", params={"region_id": settlement.region_id})
+            )
+            if owner_answer.value:
+                nation_answer = query_fn(
+                    "politics", Query(question="nation_info", params={"nation_id": owner_answer.value})
                 )
-                settlement.prosperity = clamp(settlement.prosperity + drift)
+                if nation_answer.value:
+                    drift = prosperity_drift(
+                        settlement.prosperity,
+                        float(nation_answer.value.get("wealth", 50)),
+                        float(nation_answer.value.get("stability", 50)),
+                    )
+                    settlement.prosperity = clamp(settlement.prosperity + drift)
 
             # 3. Population change
             pop_change = calculate_population_change(settlement.population, settlement.prosperity)
@@ -112,18 +105,7 @@ class SettlementsLayer(Layer):
 
         return events
 
-    def _build_region_nation_map(self, nations_data: dict[str, object]) -> dict[str, dict[str, Any]]:
-        """Map region_id -> nation data dict."""
-        result: dict[str, dict[str, Any]] = {}
-        for _nid, ndata in nations_data.items():
-            assert isinstance(ndata, dict)
-            regions = ndata.get("regions", [])
-            assert isinstance(regions, list)
-            for rid in regions:
-                result[str(rid)] = ndata
-        return result
-
-    def handle_event(self, event: Event) -> ActionResult:
+    def handle_event(self, event: Event, query_fn: QueryFn, emit_fn: EmitFn) -> ActionResult:
         """React to conquest events from politics layer."""
         if event.data.get("type") == "region_conquered":
             region_id = str(event.data["region"])

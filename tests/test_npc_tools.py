@@ -1,11 +1,12 @@
-"""Tests for NPC tool schemas and take_turn."""
+"""Tests for NPC tool schemas and LLM brain turn orchestration."""
 
 from __future__ import annotations
 
 from unittest.mock import MagicMock
 
 from dnd_simulator.core.character import Ability, Attack, DamageComponent, DamageType
-from dnd_simulator.core.models import ActionResult, GameDateTime
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query
+from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.llm.brain import LlmBrain
 from dnd_simulator.llm.client import LlmResponse, ToolCall
@@ -17,36 +18,15 @@ _SWORD = Attack(
     damage=(DamageComponent("1d8", DamageType.SLASHING),),
 )
 
+_TIME = GameDateTime(year=1, month=1, day=1, hour=12)
 
-def _mock_world() -> MagicMock:
-    """Create a mock World with enough structure for build_awareness."""
-    world = MagicMock()
-    world.time = GameDateTime(year=1, month=1, day=1, hour=12)
 
-    def fake_query(layer_name: str, query: object) -> MagicMock:
-        answer = MagicMock()
-        q = getattr(query, "question", "")
-        if layer_name == "geography":
-            if q == "weather":
-                answer.value = {"condition": "clear", "temperature": 20}
-            elif q == "region_info":
-                answer.value = {"name": "Test Region"}
-            else:
-                answer.value = {}
-        elif layer_name == "entities":
-            if q == "entities_at_location" or q == "perceived_log" or q == "new_perceived_events":
-                answer.value = []
-            else:
-                answer.value = None
-        elif layer_name == "settlements" or layer_name == "politics":
-            answer.value = None
-        else:
-            answer.value = None
-        return answer
+def _noop_query_fn(layer: str, query: Query) -> Answer:
+    return Answer(value=None)
 
-    world.query_layer.side_effect = fake_query
-    world.handle_event.return_value = ActionResult()
-    return world
+
+def _noop_emit_fn(event: object) -> ActionResult:
+    return ActionResult()
 
 
 class TestBuildNpcTools:
@@ -65,53 +45,79 @@ class TestBuildNpcTools:
         assert "weapon" not in params
 
 
-class TestNpcTakeTurn:
-    def test_no_llm_does_nothing(self) -> None:
+class TestNpcTurnOrchestration:
+    def test_no_brain_does_nothing(self) -> None:
         npc = Npc(id="n1", name="Smith", location_id="r1", role="blacksmith")
-        world = _mock_world()
-        npc.take_turn(world)
-        world.handle_event.assert_not_called()
+        layer = EntitiesLayer([npc])
+
+        emit_calls: list[Event] = []
+
+        def capture_emit(event: Event) -> ActionResult:
+            emit_calls.append(event)
+            return ActionResult()
+
+        layer.run_creature_turn(npc, _TIME, _noop_query_fn, capture_emit)
+        assert emit_calls == []
 
     def test_llm_say_sends_event(self) -> None:
         npc = Npc(id="n1", name="Smith", location_id="r1", role="blacksmith")
-        world = _mock_world()
+        layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         say_tc = ToolCall(id="tc_1", name="say", arguments={"text": "Привет!"})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=say_tc, raw_message=None)
         npc.brain = LlmBrain(mock_llm)
-        npc.take_turn(world)
-        world.handle_event.assert_called_once()
-        event = world.handle_event.call_args[0][0]
-        assert event.event_type.value == "entity_say"
-        assert event.data["text"] == "Привет!"
+
+        emit_calls: list[Event] = []
+
+        def capture_emit(event: Event) -> ActionResult:
+            emit_calls.append(event)
+            return ActionResult()
+
+        layer.run_creature_turn(npc, _TIME, _noop_query_fn, capture_emit)
+        assert len(emit_calls) == 1
+        assert emit_calls[0].event_type == EventType.ENTITY_SAY
+        assert emit_calls[0].data["text"] == "Привет!"
 
     def test_llm_idle_no_event(self) -> None:
         npc = Npc(id="n1", name="Smith", location_id="r1", role="blacksmith")
-        world = _mock_world()
+        layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         idle_tc = ToolCall(id="tc_1", name="idle", arguments={})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=idle_tc, raw_message=None)
         npc.brain = LlmBrain(mock_llm)
-        npc.take_turn(world)
-        world.handle_event.assert_not_called()
+
+        emit_calls: list[Event] = []
+
+        def capture_emit(event: Event) -> ActionResult:
+            emit_calls.append(event)
+            return ActionResult()
+
+        layer.run_creature_turn(npc, _TIME, _noop_query_fn, capture_emit)
+        assert emit_calls == []
 
     def test_llm_attack_sends_event(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", attacks=(_SWORD,))
-        world = _mock_world()
+        layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         atk_tc = ToolCall(id="tc_1", name="attack", arguments={"target_id": "player"})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=atk_tc, raw_message=None)
         npc.brain = LlmBrain(mock_llm)
-        npc.take_turn(world)
-        world.handle_event.assert_called_once()
-        event = world.handle_event.call_args[0][0]
-        assert event.event_type.value == "entity_attack"
-        assert event.data["attacker_id"] == "n1"
-        assert event.data["target_id"] == "player"
+
+        emit_calls: list[Event] = []
+
+        def capture_emit(event: Event) -> ActionResult:
+            emit_calls.append(event)
+            return ActionResult()
+
+        layer.run_creature_turn(npc, _TIME, _noop_query_fn, capture_emit)
+        assert len(emit_calls) == 1
+        assert emit_calls[0].event_type == EventType.ENTITY_ATTACK
+        assert emit_calls[0].data["attacker_id"] == "n1"
+        assert emit_calls[0].data["target_id"] == "player"
 
     def test_llm_text_response_retries(self) -> None:
         npc = Npc(id="n1", name="Smith", location_id="r1", role="blacksmith")
-        world = _mock_world()
+        layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         idle_tc = ToolCall(id="tc_1", name="idle", arguments={})
         mock_llm.generate_with_tools.side_effect = [
@@ -119,15 +125,23 @@ class TestNpcTakeTurn:
             LlmResponse(text=None, tool_call=idle_tc, raw_message=None),
         ]
         npc.brain = LlmBrain(mock_llm)
-        npc.take_turn(world)
+
+        layer.run_creature_turn(npc, _TIME, _noop_query_fn, _noop_emit_fn)
         assert mock_llm.generate_with_tools.call_count == 2
 
     def test_llm_exhausts_retries_does_nothing(self) -> None:
         npc = Npc(id="n1", name="Smith", location_id="r1", role="blacksmith")
-        world = _mock_world()
+        layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         mock_llm.generate_with_tools.return_value = LlmResponse(text="I don't know", tool_call=None, raw_message=None)
         npc.brain = LlmBrain(mock_llm)
-        npc.take_turn(world)
+
+        emit_calls: list[Event] = []
+
+        def capture_emit(event: Event) -> ActionResult:
+            emit_calls.append(event)
+            return ActionResult()
+
+        layer.run_creature_turn(npc, _TIME, _noop_query_fn, capture_emit)
         assert mock_llm.generate_with_tools.call_count == 3
-        world.handle_event.assert_not_called()
+        assert emit_calls == []

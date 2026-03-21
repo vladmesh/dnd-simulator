@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-
+from dnd_simulator.core.action import Action
+from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
+from dnd_simulator.core.brain import Brain
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.location import Location, LocationGraph
 from dnd_simulator.core.models import GameDateTime
@@ -39,24 +40,29 @@ def _make_world(entities: list[Creature], hour: int = 10) -> World:
     )
     entities_layer = EntitiesLayer(entities=list(entities))
     return World(
-        layers=[geography, settlements, politics, entities_layer],
+        layers=[geography, politics, settlements, entities_layer],
         time=GameDateTime(year=1, month=1, day=1, hour=hour),
         location_graph=LocationGraph([Location(id="r1", name="Test Field", region_id="r1")]),
     )
 
 
-@dataclass
-class _OneShotCreature(Creature):
-    """Creature that deactivates itself after one turn."""
+class _DeactivateBrain(Brain):
+    """Brain that deactivates the creature after one turn (for test loop termination)."""
 
-    def take_turn(self, world: World) -> None:
-        self.active = False
+    def choose_action(
+        self,
+        creature: Creature,
+        awareness: PeacefulAwareness | CombatAwareness,
+        events: list[PerceivedEvent],
+    ) -> Action:
+        creature.active = False
+        return Action(name="idle")
 
 
 class TestGameLoopTimeAdvancement:
     def test_time_advances_by_one_round_per_loop_iteration(self) -> None:
         """After all creatures act, world time advances by 6 seconds."""
-        npc = _OneShotCreature(id="npc1", name="Guard", location_id="r1")
+        npc = Creature(id="npc1", name="Guard", location_id="r1", brain=_DeactivateBrain())
         world = _make_world([npc])
 
         initial_seconds = world.time.to_total_seconds()
@@ -67,8 +73,8 @@ class TestGameLoopTimeAdvancement:
 
     def test_multiple_creatures_still_one_round(self) -> None:
         """Multiple creatures acting in one round = still only 6 seconds."""
-        c1 = _OneShotCreature(id="c1", name="A", location_id="r1")
-        c2 = _OneShotCreature(id="c2", name="B", location_id="r1")
+        c1 = Creature(id="c1", name="A", location_id="r1", brain=_DeactivateBrain())
+        c2 = Creature(id="c2", name="B", location_id="r1", brain=_DeactivateBrain())
         world = _make_world([c1, c2])
 
         initial_seconds = world.time.to_total_seconds()

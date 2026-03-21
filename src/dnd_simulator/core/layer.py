@@ -4,15 +4,24 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from dnd_simulator.core.models import ActionResult, Answer, Event, Query, TimeDelta
-    from dnd_simulator.core.world import WorldState
+    from dnd_simulator.core.models import (
+        ActionResult,
+        Answer,
+        EmitFn,
+        Event,
+        GameDateTime,
+        Query,
+        QueryFn,
+        TimeDelta,
+    )
 
 
 class Layer(ABC):
     """Abstract base for all simulation layers.
 
     Layers are stacked from most abstract (geography) to most concrete (NPCs).
-    Each layer can read state from layers below it, but never above.
+    Each layer can query layers below it via query_fn, but never above.
+    Events flow through emit_fn back to the World for propagation.
     """
 
     @property
@@ -26,11 +35,11 @@ class Layer(ABC):
         """Minimum seconds between ticks. 0 means tick every advance_time call."""
 
     @abstractmethod
-    def tick(self, delta: TimeDelta, world_state: WorldState) -> list[Event]:
+    def tick(self, delta: TimeDelta, time: GameDateTime, query_fn: QueryFn, emit_fn: EmitFn) -> list[Event]:
         """Advance simulation by delta time. Returns events that occurred."""
 
     @abstractmethod
-    def handle_event(self, event: Event) -> ActionResult:
+    def handle_event(self, event: Event, query_fn: QueryFn, emit_fn: EmitFn) -> ActionResult:
         """Process an external event. Returns ActionResult with success/error and cascade events."""
 
     @abstractmethod

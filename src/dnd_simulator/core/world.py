@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from dnd_simulator.core.layer import Layer
-from dnd_simulator.core.location import LocationGraph
-from dnd_simulator.core.models import ActionResult, Answer, Event, GameDateTime, Query, TimeDelta
+from dnd_simulator.core.models import ActionResult, Answer, EmitFn, Event, GameDateTime, Query, QueryFn, TimeDelta
+
+if TYPE_CHECKING:
+    from dnd_simulator.core.location import LocationGraph
 
 
-@dataclass
-class WorldState:
-    """Snapshot of the world visible to layers during a tick."""
-
-    time: GameDateTime
-    layer_states: dict[str, dict[str, object]] = field(default_factory=dict)
+class LayerError(Exception):
+    """Raised when a layer violates isolation rules."""
 
 
 class World:
@@ -24,26 +22,17 @@ class World:
         time: GameDateTime | None = None,
         location_graph: LocationGraph | None = None,
     ) -> None:
+        from dnd_simulator.core.location import LocationGraph as _LocationGraph
+
         self.time = time or GameDateTime()
         self._layers = layers
-        self.location_graph = location_graph or LocationGraph()
+        self.location_graph = location_graph or _LocationGraph()
         self._last_tick_time: dict[str, GameDateTime] = {layer.name: self.time for layer in layers}
-
-        # Give entities layer a back-reference so NPC tick works
-        for layer in layers:
-            if hasattr(layer, "set_world"):
-                layer.set_world(self)
+        self._layer_indices: dict[str, int] = {layer.name: i for i, layer in enumerate(layers)}
 
     @property
     def layers(self) -> list[Layer]:
         return list(self._layers)
-
-    def get_state(self) -> WorldState:
-        """Build current world state from all layers."""
-        return WorldState(
-            time=self.time,
-            layer_states={layer.name: layer.get_state() for layer in self._layers},
-        )
 
     def advance_time(self, delta: TimeDelta) -> list[Event]:
         """Advance world time. Only ticks layers whose tick_interval has elapsed."""
@@ -56,8 +45,9 @@ class World:
             elapsed = now - last
 
             if layer.tick_interval == 0 or elapsed >= layer.tick_interval:
-                state = self.get_state()
-                events = layer.tick(TimeDelta(seconds=elapsed), state)
+                query_fn = self._make_query_fn(layer.name)
+                emit_fn = self._make_emit_fn(layer.name)
+                events = layer.tick(TimeDelta(seconds=elapsed), self.time, query_fn, emit_fn)
                 all_events.extend(events)
                 self._propagate_events(events, source=layer)
                 self._last_tick_time[layer.name] = self.time
@@ -68,7 +58,9 @@ class World:
         """Send an event to all layers. Returns first failure or aggregated success."""
         all_events: list[Event] = []
         for layer in self._layers:
-            result = layer.handle_event(event)
+            query_fn = self._make_query_fn(layer.name)
+            emit_fn = self._make_emit_fn(layer.name)
+            result = layer.handle_event(event, query_fn, emit_fn)
             if not result.success:
                 return result
             all_events.extend(result.events)
@@ -81,12 +73,43 @@ class World:
                 return layer.query(query)
         raise ValueError(f"Layer '{layer_name}' not found")
 
+    def _make_query_fn(self, caller_layer: str) -> QueryFn:
+        """Create a query callback for a specific layer with validation."""
+        caller_index = self._layer_indices[caller_layer]
+
+        def query_fn(target_layer: str, query: Query) -> Answer:
+            if target_layer == caller_layer:
+                raise LayerError(f"{caller_layer} cannot query itself through World")
+            target_index = self._layer_indices.get(target_layer)
+            if target_index is None:
+                raise LayerError(f"Layer '{target_layer}' not found")
+            if target_index >= caller_index:
+                raise LayerError(
+                    f"{caller_layer} (index {caller_index}) cannot query "
+                    f"{target_layer} (index {target_index}) — only layers below"
+                )
+            return self.query_layer(target_layer, query)
+
+        return query_fn
+
+    def _make_emit_fn(self, caller_layer: str) -> EmitFn:
+        """Create an emit callback for a specific layer with validation."""
+
+        def emit_fn(event: Event) -> ActionResult:
+            if event.source_layer != caller_layer:
+                raise LayerError(f"{caller_layer} cannot emit event with source_layer='{event.source_layer}'")
+            return self.handle_event(event)
+
+        return emit_fn
+
     def _propagate_events(self, events: list[Event], source: Layer) -> None:
         """Send events to all layers except the source (notification, results ignored)."""
         for event in events:
             for layer in self._layers:
                 if layer is not source:
-                    layer.handle_event(event)
+                    query_fn = self._make_query_fn(layer.name)
+                    emit_fn = self._make_emit_fn(layer.name)
+                    layer.handle_event(event, query_fn, emit_fn)
 
     def save(self) -> dict[str, object]:
         """Serialize entire world state."""

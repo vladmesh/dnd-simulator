@@ -143,7 +143,11 @@ def main() -> None:
                 else:
                     # NPC takes turn via brain
                     entity.is_dodging = False
-                    entity.take_turn(world)
+                    entities_layer.run_creature_turn(
+                        entity, world.time,
+                        world._make_query_fn("entities"),
+                        world._make_emit_fn("entities"),
+                    )
 
             entities_layer.end_combat_round(loc_id)
 

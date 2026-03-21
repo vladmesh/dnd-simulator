@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -166,3 +167,11 @@ class Answer:
 
     value: Any
     description: str = ""
+
+
+# Callback types for layer isolation — layers receive these instead of World
+QueryFn = Callable[[str, Query], Answer]
+"""Query another layer: (target_layer_name, query) -> answer. Only layers below the caller."""
+
+EmitFn = Callable[[Event], ActionResult]
+"""Emit an event into the world: (event) -> action_result."""

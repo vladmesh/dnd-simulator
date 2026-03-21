@@ -1,4 +1,4 @@
-"""LLM-powered brain for NPCs — extracts decision logic from the old Npc.take_turn."""
+"""LLM-powered brain for NPCs."""
 
 from __future__ import annotations
 
@@ -6,9 +6,8 @@ import logging
 from typing import TYPE_CHECKING
 
 from dnd_simulator.core.action import Action
+from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain
-from dnd_simulator.core.character import Character, build_awareness, build_combat_awareness
-from dnd_simulator.core.models import Query
 from dnd_simulator.i18n import _
 from dnd_simulator.llm.client import LlmClient
 from dnd_simulator.llm.prompts import build_npc_combat_prompt, build_npc_system_prompt
@@ -16,7 +15,6 @@ from dnd_simulator.llm.tools import build_npc_combat_tools, build_npc_tools
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
-    from dnd_simulator.core.world import World
 
 logger = logging.getLogger("dnd_simulator.npc")
 
@@ -29,53 +27,48 @@ class LlmBrain(Brain):
     def __init__(self, llm: LlmClient) -> None:
         self._llm = llm
 
-    def choose_action(self, creature: Creature, world: World) -> Action:
+    def choose_action(
+        self,
+        creature: Creature,
+        awareness: PeacefulAwareness | CombatAwareness,
+        events: list[PerceivedEvent],
+    ) -> Action:
+        from dnd_simulator.core.character import Character
+
         if not isinstance(creature, Character):
             return Action(name="idle")
 
-        logger.info("[NPC:%s] === starts turn (%s) ===", creature.name, "combat" if creature.in_combat else "peace")
+        is_combat = isinstance(awareness, CombatAwareness)
+        logger.info("[NPC:%s] === starts turn (%s) ===", creature.name, "combat" if is_combat else "peace")
 
         npc_data = creature.get_npc_data()
 
         # Enrich NPC data with schedule-dependent fields
         from dnd_simulator.layers.entities.models import Npc as NpcModel
 
-        if isinstance(creature, NpcModel):
-            hour = world.time.hour
-            npc_data["activity"] = creature.scheduled_activity(hour).value
-            try:
-                loc = world.location_graph.get(creature.current_location(hour))
-                npc_data["location_label"] = loc.name
-            except (KeyError, AttributeError):
-                npc_data["location_label"] = creature.location_id
+        if isinstance(creature, NpcModel) and isinstance(awareness, PeacefulAwareness):
+            npc_data["activity"] = creature.scheduled_activity(awareness.hour).value
+            npc_data["location_label"] = awareness.location_name
         else:
             npc_data.setdefault("activity", "idle")
-            npc_data.setdefault("location_label", creature.location_id)
+            npc_data.setdefault("location_label", "")
 
-        if creature.in_combat:
-            combat_awareness = build_combat_awareness(world, creature)
-            system_prompt = build_npc_combat_prompt(npc_data, combat_awareness)
+        if is_combat:
+            assert isinstance(awareness, CombatAwareness)
+            # Convert CombatAwareness to dict for prompt builder
+            combat_dict = _combat_awareness_to_dict(awareness)
+            system_prompt = build_npc_combat_prompt(npc_data, combat_dict)
             tools = build_npc_combat_tools()
             retry_hint = _("You must choose an action: attack, move, dash, dodge, flee, or idle.")
         else:
-            awareness = build_awareness(world, creature.location_id)
-            entities_answer = world.query_layer(
-                "entities", Query(question="entities_at_location", params={"location_id": creature.location_id})
-            )
-            nearby: list[dict[str, str]] = []
-            for e in entities_answer.value:
-                if e["id"] != creature.id:
-                    desc = creature.perceive_by_id(e["id"], world)
-                    nearby.append({"id": str(e["id"]), "description": desc})
-            system_prompt = build_npc_system_prompt(npc_data, awareness, nearby)
+            assert isinstance(awareness, PeacefulAwareness)
+            awareness_dict = _peaceful_awareness_to_dict(awareness)
+            nearby_list: list[dict[str, str]] = [{"id": e.id, "description": e.description} for e in awareness.nearby]
+            system_prompt = build_npc_system_prompt(npc_data, awareness_dict, nearby_list)
             tools = build_npc_tools()
             retry_hint = _("You must choose an action: say, attack, or idle.")
 
-        # Get only new events since last turn (delta, not full log)
-        log_answer = world.query_layer(
-            "entities", Query(question="new_perceived_events", params={"entity_id": creature.id})
-        )
-        recent_events: list[str] = log_answer.value[-15:] if log_answer.value else []
+        recent_events: list[str] = [e.description for e in events[-15:]]
 
         turn_prompt = _("Your turn. Choose an action.")
         if recent_events:
@@ -101,3 +94,40 @@ class LlmBrain(Brain):
 
         # Exhausted retries — idle as fallback
         return Action(name="idle")
+
+
+def _peaceful_awareness_to_dict(aw: PeacefulAwareness) -> dict[str, object]:
+    """Convert PeacefulAwareness to dict format expected by prompt builders."""
+    return {
+        "time": {"hour": aw.hour, "day": aw.day, "month": aw.month, "year": aw.year},
+        "weather": aw.weather,
+        "location": {"name": aw.region_name},
+        "settlements": aw.settlements,
+        "territory": aw.territory_owner,
+        "nation": aw.nation_info,
+    }
+
+
+def _combat_awareness_to_dict(aw: CombatAwareness) -> dict[str, object]:
+    """Convert CombatAwareness to dict format expected by prompt builders."""
+    nearby_list: list[dict[str, object]] = []
+    for e in aw.nearby:
+        entry: dict[str, object] = {"id": e.id, "description": e.description}
+        if e.is_wounded:
+            entry["is_wounded"] = True
+        if e.distance_ft:
+            entry["distance_ft"] = e.distance_ft
+        if e.direction:
+            entry["direction"] = e.direction
+        nearby_list.append(entry)
+    return {
+        "self_hp": aw.self_hp,
+        "self_max_hp": aw.self_max_hp,
+        "self_ac": aw.self_ac,
+        "self_speed": aw.self_speed,
+        "self_weapon": aw.self_weapon,
+        "self_weapon_damage": aw.self_weapon_damage,
+        "nearby": nearby_list,
+        "round_number": aw.round_number,
+        "walls": aw.walls,
+    }

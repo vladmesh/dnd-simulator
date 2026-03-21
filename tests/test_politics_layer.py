@@ -2,8 +2,7 @@
 
 import pytest
 
-from dnd_simulator.core.models import GameDateTime, Query, TimeDelta
-from dnd_simulator.core.world import WorldState
+from dnd_simulator.core.models import ActionResult, Answer, GameDateTime, Query, TimeDelta
 from dnd_simulator.layers.politics.layer import PoliticsLayer
 from dnd_simulator.layers.politics.models import (
     DiplomaticStatus,
@@ -11,6 +10,16 @@ from dnd_simulator.layers.politics.models import (
     LeaderTrait,
     Nation,
 )
+
+_TIME = GameDateTime(year=1490, month=6, day=1, hour=12)
+
+
+def _noop_query_fn(layer: str, query: Query) -> Answer:
+    raise RuntimeError(f"Politics should not query other layers: {layer}/{query.question}")
+
+
+def _noop_emit_fn(event: object) -> ActionResult:
+    return ActionResult()
 
 
 def _make_nations() -> list[Nation]:
@@ -55,10 +64,6 @@ def _make_layer(seed: int = 42) -> PoliticsLayer:
     )
 
 
-def _world_state() -> WorldState:
-    return WorldState(time=GameDateTime(year=1490, month=6, day=1, hour=12))
-
-
 class TestLayerBasics:
     def test_name(self) -> None:
         layer = _make_layer()
@@ -68,7 +73,11 @@ class TestLayerBasics:
         from dnd_simulator.core.models import Event, EventType
 
         layer = _make_layer()
-        result = layer.handle_event(Event(event_type=EventType.WEATHER_CHANGED, source_layer="geography"))
+        result = layer.handle_event(
+            Event(event_type=EventType.WEATHER_CHANGED, source_layer="geography"),
+            _noop_query_fn,
+            _noop_emit_fn,
+        )
         assert result.success
         assert result.events == []
 
@@ -105,14 +114,14 @@ class TestRegionOwner:
 class TestTick:
     def test_monthly_tick_runs(self) -> None:
         layer = _make_layer()
-        layer.tick(TimeDelta.from_days(30), _world_state())
+        layer.tick(TimeDelta.from_days(30), _TIME, _noop_query_fn, _noop_emit_fn)
         # Economy should have changed wealth
         info = layer.query(Query(question="nation_info", params={"nation_id": "alpha"}))
         assert info.value["wealth"] != 60.0  # Should have changed from income/upkeep
 
     def test_multiple_months(self) -> None:
         layer = _make_layer()
-        layer.tick(TimeDelta.from_days(90), _world_state())
+        layer.tick(TimeDelta.from_days(90), _TIME, _noop_query_fn, _noop_emit_fn)
         # Should have processed 3 monthly ticks
         info = layer.query(Query(question="nation_info", params={"nation_id": "alpha"}))
         # Wealth should have changed significantly over 3 months
@@ -128,7 +137,7 @@ class TestWarResolution:
         # Run 12 months of war
         all_events = []
         for _ in range(12):
-            events = layer.tick(TimeDelta.from_days(30), _world_state())
+            events = layer.tick(TimeDelta.from_days(30), _TIME, _noop_query_fn, _noop_emit_fn)
             all_events.extend(events)
 
         # At least some conquest or political events should have occurred
@@ -144,7 +153,7 @@ class TestWarResolution:
         alpha_mil = layer.query(Query(question="nation_info", params={"nation_id": "alpha"})).value["military"]
         beta_mil = layer.query(Query(question="nation_info", params={"nation_id": "beta"})).value["military"]
 
-        layer.tick(TimeDelta.from_days(30), _world_state())
+        layer.tick(TimeDelta.from_days(30), _TIME, _noop_query_fn, _noop_emit_fn)
 
         alpha_mil_after = layer.query(Query(question="nation_info", params={"nation_id": "alpha"})).value["military"]
         beta_mil_after = layer.query(Query(question="nation_info", params={"nation_id": "beta"})).value["military"]

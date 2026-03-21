@@ -28,8 +28,7 @@ from dnd_simulator.rules.politics import (
 )
 
 if TYPE_CHECKING:
-    from dnd_simulator.core.models import TimeDelta
-    from dnd_simulator.core.world import WorldState
+    from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn, TimeDelta
 
 
 _LEADER_NAMES = [
@@ -123,7 +122,7 @@ class PoliticsLayer(Layer):
                 return nation.id
         return None
 
-    def tick(self, delta: TimeDelta, world_state: WorldState) -> list[Event]:
+    def tick(self, delta: TimeDelta, time: GameDateTime, query_fn: QueryFn, emit_fn: EmitFn) -> list[Event]:
         """Process monthly political updates.
 
         World only calls this when tick_interval has elapsed,
@@ -454,7 +453,7 @@ class PoliticsLayer(Layer):
 
     # -- Layer interface --
 
-    def handle_event(self, event: Event) -> ActionResult:
+    def handle_event(self, event: Event, query_fn: QueryFn, emit_fn: EmitFn) -> ActionResult:
         """Politics doesn't react to external events (yet)."""
         return ActionResult()
 

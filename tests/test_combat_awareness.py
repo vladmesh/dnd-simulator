@@ -13,9 +13,8 @@ from dnd_simulator.core.character import (
     DamageType,
     Entity,
     Race,
-    build_combat_awareness,
 )
-from dnd_simulator.core.models import ActionResult, Event, EventType, GameDateTime
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
@@ -24,6 +23,15 @@ from dnd_simulator.llm.brain import LlmBrain
 from dnd_simulator.llm.client import LlmResponse, ToolCall
 from dnd_simulator.llm.prompts import build_npc_combat_prompt
 from dnd_simulator.llm.tools import build_npc_combat_tools
+
+
+def _noop_query_fn(layer: str, query: Query) -> Answer:
+    return Answer(value=None)
+
+
+def _noop_emit_fn(event: object) -> ActionResult:
+    return ActionResult()
+
 
 _SWORD = Attack(
     name="longsword",
@@ -51,7 +59,7 @@ def _get_entity_fn(*entities: Entity):
 
 
 def _mock_world(entities: list[Entity] | None = None) -> MagicMock:
-    """Create a mock World with EntitiesLayer for combat awareness."""
+    """Create a mock World with EntitiesLayer for player combat awareness."""
     world = MagicMock()
     world.time = GameDateTime(year=1, month=1, day=1, hour=12)
 
@@ -88,35 +96,35 @@ class TestBuildCombatAwareness:
     def test_contains_self_stats(self) -> None:
         player = Character(id="p1", name="Hero", location_id="r1", max_hp=20, current_hp=15, attacks=(_SWORD,))
         npc = Character(id="n1", name="Guard", location_id="r1")
-        world = _mock_world([player, npc])
-        aw = build_combat_awareness(world, player)
-        assert aw["self_hp"] == 15
-        assert aw["self_max_hp"] == 20
-        assert aw["self_weapon"] == "longsword"
-        assert aw["self_weapon_damage"] == "1d8"
+        layer = EntitiesLayer([player, npc])
+        aw = layer._build_combat_awareness(player)
+        assert aw.self_hp == 15
+        assert aw.self_max_hp == 20
+        assert aw.self_weapon == "longsword"
+        assert aw.self_weapon_damage == "1d8"
 
     def test_unarmed_defaults(self) -> None:
         player = Character(id="p1", name="Hero", location_id="r1")
-        world = _mock_world([player])
-        aw = build_combat_awareness(world, player)
-        assert aw["self_weapon"] == "fists"
-        assert aw["self_weapon_damage"] == "1"
+        layer = EntitiesLayer([player])
+        aw = layer._build_combat_awareness(player)
+        assert aw.self_weapon == "fists"
+        assert aw.self_weapon_damage == "1"
 
     def test_nearby_excludes_self(self) -> None:
         player = Character(id="p1", name="Hero", location_id="r1")
         npc = Character(id="n1", name="Guard", location_id="r1", race=Race.DWARF)
-        world = _mock_world([player, npc])
-        aw = build_combat_awareness(world, player)
-        assert len(aw["nearby"]) == 1
-        assert aw["nearby"][0]["id"] == "n1"
+        layer = EntitiesLayer([player, npc])
+        aw = layer._build_combat_awareness(player)
+        assert len(aw.nearby) == 1
+        assert aw.nearby[0].id == "n1"
 
     def test_no_time_or_weather(self) -> None:
         player = Character(id="p1", name="Hero", location_id="r1")
-        world = _mock_world([player])
-        aw = build_combat_awareness(world, player)
-        assert "time" not in aw
-        assert "weather" not in aw
-        assert "settlements" not in aw
+        layer = EntitiesLayer([player])
+        aw = layer._build_combat_awareness(player)
+        assert not hasattr(aw, "time")
+        assert not hasattr(aw, "weather")
+        assert not hasattr(aw, "settlements")
 
 
 # --- Combat prompt ---
@@ -204,9 +212,7 @@ class TestBuildNpcCombatPrompt:
             "nearby": [],
         }
         prompt = build_npc_combat_prompt(npc_data, combat_aw)
-        # "say" should not be listed as an available action in the action list
         rules_section = prompt.lower().split("rules")[1]
-        # The action list says "attack, dodge, move, dash, flee, or idle" — no "say"
         assert "say," not in rules_section.split("\n")[1]
 
 
@@ -315,7 +321,7 @@ class TestCombatModeSwitch:
             source_layer="entities",
             data={"attacker_id": "p1", "target_id": "n1"},
         )
-        layer.handle_event(event)
+        layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
 
         assert attacker.in_combat is True
         assert target.in_combat is True
@@ -330,7 +336,7 @@ class TestCombatModeSwitch:
             source_layer="entities",
             data={"entity_id": "n1"},
         )
-        layer.handle_event(event)
+        layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         assert npc.in_combat is False
 
     def test_flee_event_logged(self) -> None:
@@ -342,7 +348,7 @@ class TestCombatModeSwitch:
             source_layer="entities",
             data={"entity_id": "n1"},
         )
-        layer.handle_event(event)
+        layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         log = layer.get_perceived_log(observer)
         assert len(log) == 1
         assert "flee" in log[0]
@@ -356,7 +362,7 @@ class TestCombatModeSwitch:
             source_layer="entities",
             data={"entity_id": "n1"},
         )
-        layer.handle_event(event)
+        layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         log = layer.get_perceived_log(observer)
         assert len(log) == 1
         assert "defensive stance" in log[0]
@@ -370,16 +376,22 @@ class TestNpcCombatTurn:
         """When in_combat=True, NPC should use combat prompt and tools."""
         npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", attacks=(_DAGGER,), in_combat=True)
         player = Character(id="p1", name="Hero", location_id="r1", race=Race.HUMAN)
-        world = _mock_world([npc, player])
+        layer = EntitiesLayer([npc, player])
 
         mock_llm = MagicMock()
         atk_tc = ToolCall(id="tc_1", name="attack", arguments={"target_id": "p1", "description": "Бью кинжалом!"})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=atk_tc, raw_message=None)
         npc.brain = LlmBrain(mock_llm)
 
-        npc.take_turn(world)
+        emit_calls: list[Event] = []
 
-        # Check that combat tools were used (4 tools: attack, dodge, flee, idle)
+        def capture_emit(event: Event) -> ActionResult:
+            emit_calls.append(event)
+            return ActionResult()
+
+        layer.run_creature_turn(npc, GameDateTime(hour=12), _noop_query_fn, capture_emit)
+
+        # Check that combat tools were used
         call_args = mock_llm.generate_with_tools.call_args
         tools_passed = call_args[0][1]
         tool_names = {t["function"]["name"] for t in tools_passed}
@@ -388,37 +400,50 @@ class TestNpcCombatTurn:
 
     def test_combat_turn_dodge(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", in_combat=True)
-        world = _mock_world([npc])
+        layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         dodge_tc = ToolCall(id="tc_1", name="dodge", arguments={"description": "Прячусь за щит"})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=dodge_tc, raw_message=None)
         npc.brain = LlmBrain(mock_llm)
-        npc.take_turn(world)
-        world.handle_event.assert_called_once()
-        event = world.handle_event.call_args[0][0]
-        assert event.event_type == EventType.ENTITY_DODGE
+
+        emit_calls: list[Event] = []
+
+        def capture_emit(event: Event) -> ActionResult:
+            emit_calls.append(event)
+            return ActionResult()
+
+        layer.run_creature_turn(npc, GameDateTime(hour=12), _noop_query_fn, capture_emit)
+        assert len(emit_calls) == 1
+        assert emit_calls[0].event_type == EventType.ENTITY_DODGE
 
     def test_combat_turn_flee(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", in_combat=True)
-        world = _mock_world([npc])
+        layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         flee_tc = ToolCall(id="tc_1", name="flee", arguments={"description": "Бегу к двери!"})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=flee_tc, raw_message=None)
         npc.brain = LlmBrain(mock_llm)
-        npc.take_turn(world)
-        world.handle_event.assert_called_once()
-        event = world.handle_event.call_args[0][0]
-        assert event.event_type == EventType.ENTITY_FLEE
+
+        emit_calls: list[Event] = []
+
+        def capture_emit(event: Event) -> ActionResult:
+            emit_calls.append(event)
+            return ActionResult()
+
+        layer.run_creature_turn(npc, GameDateTime(hour=12), _noop_query_fn, capture_emit)
+        assert len(emit_calls) == 1
+        assert emit_calls[0].event_type == EventType.ENTITY_FLEE
 
     def test_peaceful_turn_uses_peaceful_tools(self) -> None:
         """When in_combat=False, NPC should use the regular tools."""
         npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", in_combat=False)
-        world = _mock_world([npc])
+        layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         idle_tc = ToolCall(id="tc_1", name="idle", arguments={})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=idle_tc, raw_message=None)
         npc.brain = LlmBrain(mock_llm)
-        npc.take_turn(world)
+
+        layer.run_creature_turn(npc, GameDateTime(hour=12), _noop_query_fn, _noop_emit_fn)
         call_args = mock_llm.generate_with_tools.call_args
         tools_passed = call_args[0][1]
         tool_names = {t["function"]["name"] for t in tools_passed}
@@ -445,7 +470,6 @@ class TestPlayerCombatTurn:
         )
         world = _mock_world([player])
         player.take_turn(world)
-        # Should show combat-style prompt
         assert any("Combat" in o for o in outputs)
         assert not any("time:" in o.lower() for o in outputs)
 
@@ -496,10 +520,7 @@ class TestPlayerCombatTurn:
         )
         world = _mock_world([player])
         player.take_turn(world)
-        # say should show help text, not send event
         assert any("Commands:" in o for o in outputs)
-        # Only handle_event should not have been called with entity_say
-        # (idle doesn't call handle_event either)
         world.handle_event.assert_not_called()
 
     def test_combat_wait_not_available(self) -> None:
@@ -535,7 +556,6 @@ class TestPlayerCombatTurn:
         assert event.event_type == EventType.ENTITY_SAY
 
     def test_combat_prompt_input_prefix(self) -> None:
-        """Combat mode should use 'бой>' prompt prefix."""
         prompts: list[str] = []
 
         def capture_input(prompt: str) -> str:
@@ -567,11 +587,10 @@ class TestDodgeMechanics:
             source_layer="entities",
             data={"entity_id": "c1"},
         )
-        layer.handle_event(event)
+        layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         assert c1.is_dodging is True
 
     def test_dodge_gives_disadvantage_on_attacks(self) -> None:
-        """A dodging target should be harder to hit (disadvantage)."""
         import random
 
         attacker = Character(
@@ -586,16 +605,16 @@ class TestDodgeMechanics:
         target = Character(id="c2", name="Dodger", location_id="r1", max_hp=100, current_hp=100, ac=10)
         layer = EntitiesLayer([attacker, target])
 
-        # Start combat first
         layer.handle_event(
             Event(
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
                 data={"attacker_id": "c1", "target_id": "c2"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
 
-        # Place in melee range for subsequent attacks
         from dnd_simulator.core.combat import Position
 
         combat = layer.get_combat("r1")
@@ -603,7 +622,6 @@ class TestDodgeMechanics:
         combat.battle_map.set_position("c1", Position(30, 30))
         combat.battle_map.set_position("c2", Position(35, 30))
 
-        # Count hits without dodge
         hits_normal = 0
         for seed in range(200):
             target.current_hp = 100
@@ -614,12 +632,13 @@ class TestDodgeMechanics:
                     event_type=EventType.ENTITY_ATTACK,
                     source_layer="entities",
                     data={"attacker_id": "c1", "target_id": "c2"},
-                )
+                ),
+                _noop_query_fn,
+                _noop_emit_fn,
             )
             if target.current_hp < 100:
                 hits_normal += 1
 
-        # Count hits with dodge
         hits_dodging = 0
         for seed in range(200):
             target.current_hp = 100
@@ -630,19 +649,19 @@ class TestDodgeMechanics:
                     event_type=EventType.ENTITY_ATTACK,
                     source_layer="entities",
                     data={"attacker_id": "c1", "target_id": "c2"},
-                )
+                ),
+                _noop_query_fn,
+                _noop_emit_fn,
             )
             if target.current_hp < 100:
                 hits_dodging += 1
 
-        # Disadvantage should result in fewer hits
         assert hits_dodging < hits_normal
 
     def test_dodge_clears_on_combat_end(self) -> None:
         c1 = Character(id="c1", name="Fighter", location_id="r1", max_hp=20, current_hp=20, is_dodging=True)
         c2 = Character(id="c2", name="Rogue", location_id="r1", max_hp=20, current_hp=20)
         layer = EntitiesLayer([c1, c2])
-        # Start and immediately end combat
         layer._combat.start_combat("r1")
         layer._combat._end_combat("r1")
         assert c1.is_dodging is False

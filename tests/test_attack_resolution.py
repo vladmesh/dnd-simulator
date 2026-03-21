@@ -11,8 +11,16 @@ from dnd_simulator.core.character import (
     DamageType,
 )
 from dnd_simulator.core.combat import Position
-from dnd_simulator.core.models import ActionResult, Event, EventType
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.layers.entities.layer import EntitiesLayer
+
+
+def _noop_query_fn(layer: str, query: Query) -> Answer:
+    return Answer(value=None)
+
+
+def _noop_emit_fn(event: object) -> ActionResult:
+    return ActionResult()
 
 
 def _sword() -> Attack:
@@ -53,7 +61,7 @@ class TestAttackResolution:
         hits = 0
         for i in range(20):
             target.current_hp = 20  # reset
-            result = layer.handle_event(_attack_event())
+            result = layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)
             if i == 0:
                 _place_melee(layer, "r1")  # fix positions after first attack starts combat
                 continue
@@ -67,9 +75,9 @@ class TestAttackResolution:
         target = Character(id="target", name="Goblin", location_id="r1", max_hp=20, current_hp=20, ac=5)
         layer = EntitiesLayer(entities=[attacker, target])
 
-        layer.handle_event(_attack_event())
+        layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)
         _place_melee(layer, "r1")
-        layer.handle_event(_attack_event())
+        layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)
 
         log = layer.get_perceived_log(target)
         assert len(log) >= 2  # combat_started + attack
@@ -82,7 +90,7 @@ class TestAttackResolution:
         layer = EntitiesLayer(entities=[attacker, target])
 
         # First attack starts combat — fix positions
-        layer.handle_event(_attack_event())
+        layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)
         _place_melee(layer, "r1")
 
         # With AC 1, should hit easily; 1 HP means any damage kills
@@ -90,7 +98,7 @@ class TestAttackResolution:
         for _ in range(20):
             target.current_hp = 1
             target.active = True
-            result = layer.handle_event(_attack_event())
+            result = layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)
             if not result.success:
                 continue
             if result.events:
@@ -109,13 +117,13 @@ class TestAttackResolution:
         target = Character(id="target", name="Goblin", location_id="r1", max_hp=20, current_hp=20, ac=5)
         layer = EntitiesLayer(entities=[attacker, target])
 
-        layer.handle_event(_attack_event())  # start combat
+        layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)  # start combat
         _place_melee(layer, "r1")
 
         hits = 0
         for _ in range(20):
             target.current_hp = 20
-            result = layer.handle_event(_attack_event())
+            result = layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)
             assert result.success  # unarmed strike always valid
             if target.current_hp < 20:
                 hits += 1
@@ -125,7 +133,7 @@ class TestAttackResolution:
         attacker = Character(id="attacker", name="Fighter", location_id="r1", attacks=(_sword(),))
         layer = EntitiesLayer(entities=[attacker])
 
-        result = layer.handle_event(_attack_event(target_id="nonexistent"))
+        result = layer.handle_event(_attack_event(target_id="nonexistent"), _noop_query_fn, _noop_emit_fn)
         assert not result.success
         assert "nonexistent" in result.error
 
@@ -134,7 +142,7 @@ class TestAttackResolution:
         target = Character(id="target", name="Goblin", location_id="r2", max_hp=20, current_hp=20)
         layer = EntitiesLayer(entities=[attacker, target])
 
-        result = layer.handle_event(_attack_event())
+        result = layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)
         assert not result.success
         assert "is not in this region" in result.error
         assert target.current_hp == 20
@@ -144,7 +152,7 @@ class TestAttackResolution:
         target = Character(id="target", name="Goblin", location_id="r1", max_hp=20, current_hp=0)
         layer = EntitiesLayer(entities=[attacker, target])
 
-        result = layer.handle_event(_attack_event())
+        result = layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)
         assert not result.success
         assert "already dead" in result.error
 
@@ -154,12 +162,12 @@ class TestAttackResolution:
         target = Character(id="target", name="Goblin", location_id="r1", max_hp=20, current_hp=20, ac=10)
         layer = EntitiesLayer(entities=[attacker, target])
 
-        layer.handle_event(_attack_event())  # start combat
+        layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)  # start combat
         combat = layer.get_combat("r1")
         assert combat is not None
         combat.battle_map.set_position("attacker", Position(0, 0))
         combat.battle_map.set_position("target", Position(30, 0))
 
-        result = layer.handle_event(_attack_event())
+        result = layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)
         assert not result.success
         assert "too far" in result.error

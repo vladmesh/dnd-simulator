@@ -5,9 +5,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from dnd_simulator.core.character import Creature, Entity
-from dnd_simulator.core.models import Event, EventType, GameDateTime, Query, TimeDelta
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query, TimeDelta
 from dnd_simulator.core.player import PlayerCharacter
-from dnd_simulator.core.world import WorldState
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import (
     Npc,
@@ -15,6 +14,16 @@ from dnd_simulator.layers.entities.models import (
     hour_in_range,
     resolve_schedule,
 )
+
+_TIME = GameDateTime(year=1490, month=6, day=1, hour=12)
+
+
+def _noop_query_fn(layer: str, query: Query) -> Answer:
+    return Answer(value=None)
+
+
+def _noop_emit_fn(event: object) -> ActionResult:
+    return ActionResult()
 
 
 def _make_npcs() -> list[Npc]:
@@ -53,13 +62,6 @@ def _make_layer() -> EntitiesLayer:
     return EntitiesLayer(entities=_make_npcs())
 
 
-def _world_state(hour: int = 12) -> WorldState:
-    return WorldState(
-        time=GameDateTime(year=1490, month=6, day=1, hour=hour),
-        layer_states={},
-    )
-
-
 class TestHourInRange:
     def test_normal_range(self) -> None:
         assert hour_in_range(12, 8, 20) is True
@@ -82,7 +84,7 @@ class TestLayerBasics:
     def test_handle_event_returns_empty(self) -> None:
         layer = _make_layer()
         event = Event(event_type=EventType.WEATHER_CHANGED, source_layer="geography")
-        result = layer.handle_event(event)
+        result = layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         assert result.success
         assert result.events == []
 
@@ -201,7 +203,7 @@ class TestMixedEntities:
         """Tick does nothing — schedule is computed."""
         entity = Entity(id="rock", name="Magic Rock", location_id="cave")
         layer = EntitiesLayer(entities=[entity])
-        layer.tick(TimeDelta(seconds=0), _world_state(hour=12))  # no error
+        layer.tick(TimeDelta(seconds=0), _TIME, _noop_query_fn, _noop_emit_fn)  # no error
 
 
 class TestSaveLoad:
@@ -343,7 +345,9 @@ class TestCombatSummarization:
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
                 data={"attacker_id": "player", "target_id": "bandit"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
         return layer, summarizer
 
@@ -386,7 +390,9 @@ class TestCombatSummarization:
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
                 data={"attacker_id": "player", "target_id": "npc1"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
         # End combat — no summarizer, should not raise
         layer.end_combat_round("loc")

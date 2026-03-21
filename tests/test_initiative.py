@@ -15,11 +15,20 @@ from dnd_simulator.core.character import (
 )
 from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.location import Location, LocationGraph
-from dnd_simulator.core.models import Event, EventType, GameDateTime
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query
 from dnd_simulator.core.world import World
 from dnd_simulator.game_loop import run_game_loop
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.rules.combat import roll_initiative
+
+
+def _noop_query_fn(layer: str, query: Query) -> Answer:
+    return Answer(value=None)
+
+
+def _noop_emit_fn(event: object) -> ActionResult:
+    return ActionResult()
+
 
 _SWORD = Attack(
     name="longsword",
@@ -121,7 +130,7 @@ class TestEntitiesLayerCombat:
             source_layer="entities",
             data={"attacker_id": "c1", "target_id": "c2"},
         )
-        layer.handle_event(event)
+        layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
 
         combat = layer.get_combat("r1")
         assert combat is not None
@@ -135,7 +144,7 @@ class TestEntitiesLayerCombat:
             source_layer="entities",
             data={"attacker_id": "c1", "target_id": "c2"},
         )
-        layer.handle_event(event)
+        layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
 
         assert c1.in_combat is True
         assert c2.in_combat is True
@@ -148,10 +157,10 @@ class TestEntitiesLayerCombat:
             source_layer="entities",
             data={"attacker_id": "c1", "target_id": "c2"},
         )
-        layer.handle_event(atk)
+        layer.handle_event(atk, _noop_query_fn, _noop_emit_fn)
         first_order = list(layer.get_combat("r1").turn_order)
 
-        layer.handle_event(atk)
+        layer.handle_event(atk, _noop_query_fn, _noop_emit_fn)
         second_order = list(layer.get_combat("r1").turn_order)
         assert first_order == second_order
 
@@ -165,7 +174,7 @@ class TestEntitiesLayerCombat:
             source_layer="entities",
             data={"attacker_id": "c1", "target_id": "c2"},
         )
-        layer.handle_event(event)
+        layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         assert c_other.in_combat is False
         assert layer.get_combat("r2") is None
 
@@ -177,7 +186,9 @@ class TestEntitiesLayerCombat:
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
                 data={"attacker_id": "c1", "target_id": "c2"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
         layer.end_combat_round("r1")
         combat = layer.get_combat("r1")
@@ -192,7 +203,9 @@ class TestEntitiesLayerCombat:
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
                 data={"attacker_id": "c1", "target_id": "c2"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
         # Round 1 had an attack → rounds_without_attack stays 0
         layer.end_combat_round("r1")
@@ -218,7 +231,9 @@ class TestEntitiesLayerCombat:
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
                 data={"attacker_id": "c1", "target_id": "c2"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
         layer.end_combat_round("r1")  # round 1 had attack → rwa=0
 
@@ -232,7 +247,9 @@ class TestEntitiesLayerCombat:
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
                 data={"attacker_id": "c1", "target_id": "c2"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
         layer.end_combat_round("r1")  # had attack → rwa=0
         assert layer.get_combat("r1") is not None
@@ -256,7 +273,9 @@ class TestFleeRemovesFromCombat:
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
                 data={"attacker_id": "c1", "target_id": "c2"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
         assert "c3" in layer.get_combat("r1").turn_order
 
@@ -266,7 +285,9 @@ class TestFleeRemovesFromCombat:
                 event_type=EventType.ENTITY_FLEE,
                 source_layer="entities",
                 data={"entity_id": "c3"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
         assert c3.in_combat is False
         combat = layer.get_combat("r1")
@@ -284,7 +305,9 @@ class TestFleeRemovesFromCombat:
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
                 data={"attacker_id": "c1", "target_id": "c2"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
 
         # c2 flees — only 1 left → combat ends
@@ -293,7 +316,9 @@ class TestFleeRemovesFromCombat:
                 event_type=EventType.ENTITY_FLEE,
                 source_layer="entities",
                 data={"entity_id": "c2"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
         assert layer.get_combat("r1") is None
         assert c1.in_combat is False
@@ -322,7 +347,9 @@ class TestDeathRemovesFromCombat:
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
                 data={"attacker_id": "c1", "target_id": "c2"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
 
         combat = layer.get_combat("r1")
@@ -349,7 +376,9 @@ class TestDeathRemovesFromCombat:
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
                 data={"attacker_id": "c1", "target_id": "c2"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
 
         if not c2.is_alive:
@@ -371,7 +400,9 @@ class TestCombatInfoQuery:
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
                 data={"attacker_id": "c1", "target_id": "c2"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
         answer = layer.query(Query(question="combat_info", params={"location_id": "r1"}))
         assert answer.value is not None
@@ -393,14 +424,28 @@ class TestCombatInfoQuery:
 class TestGameLoopCombat:
     def test_combat_creatures_turn_in_initiative_order(self) -> None:
         """Combat creatures should take turns in initiative order, not insertion order."""
+        from dnd_simulator.core.action import Action
+        from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
+        from dnd_simulator.core.brain import Brain
+
         turn_log: list[str] = []
 
-        class LogCreature(Character):
-            def take_turn(self, world: World) -> None:
-                turn_log.append(self.id)
+        class LogBrain(Brain):
+            def choose_action(
+                self,
+                creature: Creature,
+                awareness: PeacefulAwareness | CombatAwareness,
+                events: list[PerceivedEvent],
+            ) -> Action:
+                turn_log.append(creature.id)
+                return Action(name="idle")
 
-        c1 = LogCreature(id="c1", name="A", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
-        c2 = LogCreature(id="c2", name="B", location_id="r1", max_hp=15, current_hp=15, attacks=(_SWORD,))
+        c1 = Character(
+            id="c1", name="A", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,), brain=LogBrain()
+        )
+        c2 = Character(
+            id="c2", name="B", location_id="r1", max_hp=15, current_hp=15, attacks=(_SWORD,), brain=LogBrain()
+        )
 
         layer = EntitiesLayer([c1, c2])
         world = World(
@@ -417,31 +462,42 @@ class TestGameLoopCombat:
         assert combat is not None
         combat.turn_order = ["c2", "c1"]  # c2 goes first
 
-        # Run one iteration manually
+        # Run one iteration manually via EntitiesLayer orchestration
+        query_fn = world._make_query_fn("entities")
+        emit_fn = world._make_emit_fn("entities")
         for entity_id in list(combat.turn_order):
             entity = layer.get_entity(entity_id)
             if isinstance(entity, Creature) and entity.is_alive and entity.active and entity.in_combat:
-                entity.take_turn(world)
+                layer.run_creature_turn(entity, world.time, query_fn, emit_fn)
 
         assert turn_log == ["c2", "c1"]
 
     def test_peaceful_creatures_skip_combat(self) -> None:
         """Peaceful creatures should not be polled during combat rounds."""
+        from dnd_simulator.core.action import Action
+        from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
+        from dnd_simulator.core.brain import Brain
+
         turn_log: list[str] = []
 
-        class LogCreature(Character):
-            def take_turn(self, world: World) -> None:
-                turn_log.append(self.id)
+        class LogBrain(Brain):
+            def choose_action(
+                self,
+                creature: Creature,
+                awareness: PeacefulAwareness | CombatAwareness,
+                events: list[PerceivedEvent],
+            ) -> Action:
+                turn_log.append(creature.id)
                 # Stop the loop after first round
                 if len(turn_log) >= 3:
-                    self.active = False
-                    for e in world.layers[0]._entities.values():
-                        if isinstance(e, Creature):
-                            e.active = False
+                    creature.active = False
+                return Action(name="idle")
 
-        c_combat1 = LogCreature(id="c1", name="A", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
-        c_combat2 = LogCreature(id="c2", name="B", location_id="r1", max_hp=15, current_hp=15)
-        c_peaceful = LogCreature(id="c3", name="C", location_id="r2", max_hp=10, current_hp=10)
+        c_combat1 = Character(
+            id="c1", name="A", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,), brain=LogBrain()
+        )
+        c_combat2 = Character(id="c2", name="B", location_id="r1", max_hp=15, current_hp=15, brain=LogBrain())
+        c_peaceful = Character(id="c3", name="C", location_id="r2", max_hp=10, current_hp=10, brain=LogBrain())
 
         layer = EntitiesLayer([c_combat1, c_combat2, c_peaceful])
         world = World(

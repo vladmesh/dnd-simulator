@@ -109,7 +109,7 @@ def run_cli_loop() -> None:
     entities_layer = EntitiesLayer(entities=[*npcs, player], battle_map_configs=battle_maps, summarizer=summarizer)
 
     world = World(
-        layers=[geography, settlements_layer, politics, entities_layer],
+        layers=[geography, politics, settlements_layer, entities_layer],
         time=GameDateTime(year=1490, month=6, day=1, hour=10),
         location_graph=location_graph,
     )

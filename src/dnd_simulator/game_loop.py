@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.models import TimeDelta
+from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 
@@ -29,6 +30,9 @@ def run_game_loop(world: World) -> None:
         if not creatures:
             break
 
+        query_fn = world._make_query_fn("entities")
+        emit_fn = world._make_emit_fn("entities")
+
         # Combat rounds: iterate by initiative order
         for location_id in list(entities_layer.get_combat_locations()):
             combat = entities_layer.get_combat(location_id)
@@ -38,7 +42,10 @@ def run_game_loop(world: World) -> None:
                 entity = entities_layer.get_entity(entity_id)
                 if isinstance(entity, Creature) and entity.is_alive and entity.active and entity.in_combat:
                     entity.is_dodging = False  # dodge lasts until start of next turn
-                    entity.take_turn(world)
+                    if isinstance(entity, PlayerCharacter):
+                        entity.take_turn(world)
+                    else:
+                        entities_layer.run_creature_turn(entity, world.time, query_fn, emit_fn)
             # End of round — check for combat exit
             entities_layer.end_combat_round(location_id)
 
@@ -46,6 +53,9 @@ def run_game_loop(world: World) -> None:
         for creature in creatures:
             if creature.in_combat or not creature.is_alive or not creature.active:
                 continue
-            creature.take_turn(world)
+            if isinstance(creature, PlayerCharacter):
+                creature.take_turn(world)
+            else:
+                entities_layer.run_creature_turn(creature, world.time, query_fn, emit_fn)
 
         world.advance_time(TimeDelta.from_rounds(1))

@@ -1,19 +1,19 @@
-"""Entity hierarchy and world awareness."""
+"""Entity hierarchy."""
 
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from dnd_simulator.core.action import Action
-from dnd_simulator.core.models import Event, EventType, Query
-from dnd_simulator.core.world import World
+from dnd_simulator.core.models import EmitFn, Event, EventType
 from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
     from dnd_simulator.core.brain import Brain
+    from dnd_simulator.core.world import World
 
 logger = logging.getLogger("dnd_simulator.creature")
 
@@ -185,7 +185,7 @@ class Entity:
         """Update state based on time of day. Override in subclasses."""
 
     def take_turn(self, world: World) -> None:
-        """React to the world: build awareness, decide, execute. Override in subclasses."""
+        """React to the world. Override in subclasses (PlayerCharacter)."""
         raise NotImplementedError
 
 
@@ -194,6 +194,7 @@ class Creature(Entity):
     """A living being with physical stats — animals, monsters, humanoids.
 
     Has ability scores, HP, and AC but no class, race, or alignment.
+    NPC turns are orchestrated by EntitiesLayer (brain.choose_action + execute_action).
     """
 
     ability_scores: AbilityScores = field(default_factory=AbilityScores)
@@ -215,20 +216,13 @@ class Creature(Entity):
     def is_alive(self) -> bool:
         return self.current_hp > 0
 
-    def take_turn(self, world: World) -> None:
-        """Delegate to brain for decision, then execute the action."""
-        if self.brain is None:
-            return
-        action = self.brain.choose_action(self, world)
-        self.execute_action(action, world)
-
-    def execute_action(self, action: Action, world: World) -> bool:
-        """Execute a chosen action against the world. Returns True if succeeded."""
+    def execute_action(self, action: Action, emit_fn: EmitFn) -> bool:
+        """Execute a chosen action via emit_fn. Returns True if succeeded."""
         if action.name == "idle":
             logger.info("[%s] → idle", self.name)
             return True
         if action.name == "say":
-            world.handle_event(
+            emit_fn(
                 Event(
                     event_type=EventType.ENTITY_SAY,
                     source_layer="entities",
@@ -237,7 +231,7 @@ class Creature(Entity):
             )
             return True
         if action.name == "attack":
-            result = world.handle_event(
+            result = emit_fn(
                 Event(
                     event_type=EventType.ENTITY_ATTACK,
                     source_layer="entities",
@@ -250,7 +244,7 @@ class Creature(Entity):
             return result.success
         if action.name == "dodge":
             logger.info("[%s] → dodge", self.name)
-            world.handle_event(
+            emit_fn(
                 Event(
                     event_type=EventType.ENTITY_DODGE,
                     source_layer="entities",
@@ -263,7 +257,7 @@ class Creature(Entity):
             return True
         if action.name == "flee":
             logger.info("[%s] → flee", self.name)
-            world.handle_event(
+            emit_fn(
                 Event(
                     event_type=EventType.ENTITY_FLEE,
                     source_layer="entities",
@@ -287,7 +281,7 @@ class Creature(Entity):
             elif "direction" in action.params:
                 event_data["direction"] = action.params["direction"]
             logger.info("[%s] → %s", self.name, action.name)
-            result = world.handle_event(Event(event_type=event_type, source_layer="entities", data=event_data))
+            result = emit_fn(Event(event_type=event_type, source_layer="entities", data=event_data))
             return result.success
         return False
 
@@ -350,108 +344,10 @@ class Character(Creature):
             return ", ".join(parts)
         return target.name
 
-    def perceive_by_id(self, entity_id: str, world: World) -> str:
-        """Perceive another entity by ID, looking it up via query_layer."""
-        answer = world.query_layer(
-            "entities",
-            Query(question="perceive_entity", params={"observer_id": self.id, "target_id": entity_id}),
-        )
-        return str(answer.value) if answer.value else entity_id
-
     def _knows_by_name(self, target: Character) -> bool:
         """Check if this character knows the target by name."""
-        # NPCs from the same settlement know each other (duck typing to avoid layer import)
         self_settlement = getattr(self, "settlement_id", None)
         target_settlement = getattr(target, "settlement_id", None)
         if self_settlement and target_settlement:
             return bool(self_settlement == target_settlement)
         return False
-
-
-# ---------------------------------------------------------------------------
-# World awareness (unchanged)
-# ---------------------------------------------------------------------------
-
-
-def build_awareness(world: World, location_id: str) -> dict[str, Any]:
-    """Gather what a character at a location knows about the world."""
-    time = world.time
-    region_id = world.location_graph.region_of(location_id)
-
-    weather = world.query_layer("geography", Query(question="weather", params={"region_id": region_id}))
-    region = world.query_layer("geography", Query(question="region_info", params={"region_id": region_id}))
-    settlements = world.query_layer(
-        "settlements", Query(question="region_settlements", params={"region_id": region_id})
-    )
-    owner = world.query_layer("politics", Query(question="region_owner", params={"region_id": region_id}))
-
-    nation_info = None
-    if owner.value:
-        nation_info = world.query_layer("politics", Query(question="nation_info", params={"nation_id": owner.value}))
-
-    return {
-        "time": {
-            "hour": time.hour,
-            "day": time.day,
-            "month": time.month,
-            "year": time.year,
-        },
-        "weather": weather.value,
-        "location": region.value,
-        "settlements": settlements.value,
-        "territory": owner.value,
-        "nation": nation_info.value if nation_info else None,
-    }
-
-
-def build_combat_awareness(world: World, entity: Character) -> dict[str, Any]:
-    """Gather combat-focused awareness — only what matters in a fight."""
-    from dnd_simulator.core.combat import Position
-    from dnd_simulator.rules.movement import direction_label, grid_distance
-
-    entities_answer = world.query_layer(
-        "entities", Query(question="entities_at_location", params={"location_id": entity.location_id})
-    )
-
-    # Get battle map positions from combat info
-    combat_answer = world.query_layer(
-        "entities", Query(question="combat_info", params={"location_id": entity.location_id})
-    )
-    round_number = combat_answer.value["round_number"] if combat_answer.value else 1
-    battle_map_positions: dict[str, Position] = combat_answer.value.get("positions", {}) if combat_answer.value else {}
-    my_pos = battle_map_positions.get(entity.id)
-
-    nearby: list[dict[str, object]] = []
-    for e in entities_answer.value:
-        if e["id"] != entity.id:
-            desc = entity.perceive_by_id(e["id"], world)
-            entry: dict[str, object] = {"id": str(e["id"]), "description": desc}
-            if "is_wounded" in e:
-                entry["is_wounded"] = e["is_wounded"]
-            other_pos = battle_map_positions.get(str(e["id"]))
-            if my_pos is not None and other_pos is not None:
-                entry["distance_ft"] = grid_distance(my_pos, other_pos)
-                dx = other_pos.x - my_pos.x
-                dy = other_pos.y - my_pos.y
-                entry["direction"] = direction_label(dx, dy)
-            nearby.append(entry)
-
-    weapon_name = _("fists")
-    weapon_damage = "1"
-    if entity.attacks:
-        weapon_name = entity.attacks[0].name
-        weapon_damage = str(entity.attacks[0].damage[0].dice)
-
-    wall_descriptions: list[str] = combat_answer.value.get("wall_descriptions", []) if combat_answer.value else []
-
-    return {
-        "self_hp": entity.current_hp,
-        "self_max_hp": entity.max_hp,
-        "self_ac": entity.ac,
-        "self_speed": entity.speed,
-        "self_weapon": weapon_name,
-        "self_weapon_damage": weapon_damage,
-        "nearby": nearby,
-        "round_number": round_number,
-        "walls": wall_descriptions,
-    }

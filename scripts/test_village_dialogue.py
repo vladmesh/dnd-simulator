@@ -84,7 +84,11 @@ def main() -> None:
         log_before = len(entities_layer._location_log.get(LOC, []))
         for npc in targets:
             if npc.active and not npc.in_combat:
-                npc.take_turn(world)
+                entities_layer.run_creature_turn(
+                    npc, world.time,
+                    world._make_query_fn("entities"),
+                    world._make_emit_fn("entities"),
+                )
 
         # Show new events since before NPC turns
         log = entities_layer._location_log.get(LOC, [])

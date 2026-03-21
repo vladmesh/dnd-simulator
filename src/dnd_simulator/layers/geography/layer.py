@@ -24,8 +24,7 @@ from dnd_simulator.rules.geography import (
 )
 
 if TYPE_CHECKING:
-    from dnd_simulator.core.models import TimeDelta
-    from dnd_simulator.core.world import WorldState
+    from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn, TimeDelta
 
 
 class GeographyLayer(Layer):
@@ -58,10 +57,9 @@ class GeographyLayer(Layer):
             raise KeyError(f"Region '{region_id}' not found")
         return self._regions[region_id]
 
-    def tick(self, delta: TimeDelta, world_state: WorldState) -> list[Event]:
+    def tick(self, delta: TimeDelta, time: GameDateTime, query_fn: QueryFn, emit_fn: EmitFn) -> list[Event]:
         """Advance weather and recalculate temperatures."""
         events: list[Event] = []
-        time = world_state.time
 
         # One weather transition per ~6 hours
         steps = delta.total_hours // 6
@@ -98,7 +96,7 @@ class GeographyLayer(Layer):
 
         return events
 
-    def handle_event(self, event: Event) -> ActionResult:
+    def handle_event(self, event: Event, query_fn: QueryFn, emit_fn: EmitFn) -> ActionResult:
         """Geography doesn't react to external events."""
         return ActionResult()
 

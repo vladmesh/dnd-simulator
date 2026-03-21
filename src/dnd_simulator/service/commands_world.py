@@ -215,13 +215,11 @@ class WorldCommands:
 
     def get_perception(self, session_id: str) -> dict[str, Any]:
         """Get what the player's character perceives — awareness of surroundings."""
-        from dnd_simulator.core.character import build_awareness
-
         session = self._get_session(session_id)  # type: ignore[attr-defined]
         player = self._require_player(session)
         world = session.world
 
-        awareness = build_awareness(world, player.location_id)
+        awareness = player._build_awareness(world)
 
         # Entities at location, perceived through player's eyes
         entities_answer = world.query_layer(
@@ -234,7 +232,11 @@ class WorldCommands:
         perceived_entities: list[dict[str, str]] = []
         for e in entities_answer.value:
             if e["id"] != player.id:
-                desc = player.perceive_by_id(str(e["id"]), world)
+                perceive_answer = world.query_layer(
+                    "entities",
+                    Query(question="perceive_entity", params={"observer_id": player.id, "target_id": str(e["id"])}),
+                )
+                desc = str(perceive_answer.value) if perceive_answer.value else str(e["id"])
                 perceived_entities.append({"id": str(e["id"]), "description": desc})
 
         # Neighbors from location graph

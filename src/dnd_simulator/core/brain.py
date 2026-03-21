@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from dnd_simulator.core.action import Action
+from dnd_simulator.core.awareness import CombatAwareness, CombatEntity, PeacefulAwareness, PerceivedEvent
+from dnd_simulator.core.models import EventType
 from dnd_simulator.core.tags import NpcTag, find_tags, has_tag
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
-    from dnd_simulator.core.world import World
 
 logger = logging.getLogger("dnd_simulator.brain")
 
@@ -20,7 +21,12 @@ class Brain(ABC):
     """Strategy for choosing actions. Injected into Creature."""
 
     @abstractmethod
-    def choose_action(self, creature: Creature, world: World) -> Action:
+    def choose_action(
+        self,
+        creature: Creature,
+        awareness: PeacefulAwareness | CombatAwareness,
+        events: list[PerceivedEvent],
+    ) -> Action:
         """Decide what to do this turn. Must return a valid Action."""
 
 
@@ -32,34 +38,28 @@ class RuleBrain(Brain):
     hated enemies and avoids loved ones.
     """
 
-    def choose_action(self, creature: Creature, world: World) -> Action:
-        if not creature.in_combat:
-            return self._peaceful_action(creature, world)
+    def choose_action(
+        self,
+        creature: Creature,
+        awareness: PeacefulAwareness | CombatAwareness,
+        events: list[PerceivedEvent],
+    ) -> Action:
+        if isinstance(awareness, CombatAwareness):
+            return self._choose_combat_action(creature, awareness)
+        return self._peaceful_action(creature, awareness, events)
 
-        from dnd_simulator.core.character import Character, build_combat_awareness
-
-        if not isinstance(creature, Character):
-            return Action(name="idle")
-
-        awareness = build_combat_awareness(world, creature)
-        return self._choose_combat_action(creature, awareness)
-
-    def _peaceful_action(self, creature: Creature, world: World) -> Action:
+    def _peaceful_action(
+        self,
+        creature: Creature,
+        awareness: PeacefulAwareness,
+        events: list[PerceivedEvent],
+    ) -> Action:
         """Peaceful mode: respond with canned line if someone spoke nearby."""
-        from dnd_simulator.core.models import EventType, Query
-
-        response = creature.get_canned_response(world.time.hour)
+        response = creature.get_canned_response(awareness.hour)
         if response is None:
             return Action(name="idle")
 
-        # Check for new speech events in the location log (raw events, not perceived strings)
-        answer = world.query_layer("entities", Query(question="new_raw_events", params={"entity_id": creature.id}))
-        if not answer.value:
-            return Action(name="idle")
-
-        heard_speech = any(
-            e.event_type == EventType.ENTITY_SAY and e.data.get("entity_id") != creature.id for e in answer.value
-        )
+        heard_speech = any(e.event_type == EventType.ENTITY_SAY and e.actor_id != creature.id for e in events)
         if not heard_speech:
             return Action(name="idle")
 
@@ -70,14 +70,14 @@ class RuleBrain(Brain):
         """Get NPC tags if available, empty list otherwise."""
         return creature.memory_tags
 
-    def _choose_combat_action(self, creature: Creature, awareness: dict[str, Any]) -> Action:
-        nearby = awareness["nearby"]
+    def _choose_combat_action(self, creature: Creature, awareness: CombatAwareness) -> Action:
+        nearby = awareness.nearby
         if not nearby:
             return Action(name="idle")
 
-        hp: int = awareness["self_hp"]
-        max_hp: int = awareness["self_max_hp"]
-        speed: int = awareness["self_speed"]
+        hp = awareness.self_hp
+        max_hp = awareness.self_max_hp
+        speed = awareness.self_speed
         hp_ratio = hp / max_hp if max_hp > 0 else 0.0
 
         primary_reach = creature.attacks[0].reach if creature.attacks else 5
@@ -93,8 +93,8 @@ class RuleBrain(Brain):
         hated_ids = find_tags(tags, NpcTag.HATES)
         feared_ids = find_tags(tags, NpcTag.FEARS)
         target = self._pick_target(nearby, primary_reach, hated_ids, feared_ids)
-        target_id = str(target["id"])
-        dist = int(str(target.get("distance_ft", 999)))
+        target_id = target.id
+        dist = target.distance_ft
 
         # 1. Flee if critically wounded (scared NPCs flee earlier)
         if hp_ratio < flee_threshold:
@@ -102,7 +102,7 @@ class RuleBrain(Brain):
             return Action(name="flee")
 
         # 2. Dodge if badly hurt and enemy in melee reach
-        nearest_dist = min(int(str(e.get("distance_ft", 999))) for e in nearby)
+        nearest_dist = min(e.distance_ft for e in nearby)
         if hp_ratio < dodge_threshold and nearest_dist <= 5:
             logger.info("[RuleBrain:%s] → dodge (HP %.0f%%)", creature.name, hp_ratio * 100)
             return Action(name="dodge")
@@ -128,40 +128,30 @@ class RuleBrain(Brain):
 
     def _pick_target(
         self,
-        nearby: list[dict[str, object]],
+        nearby: list[CombatEntity],
         reach: int,
         hated_ids: list[str] | None = None,
         feared_ids: list[str] | None = None,
-    ) -> dict[str, object]:
-        """Score enemies and pick best target.
-
-        Scoring: prefer wounded targets, hated targets get a large bonus,
-        feared targets get a smaller bonus (threat awareness),
-        closer targets preferred. Enemies in weapon reach get a bonus.
-        """
-        best: dict[str, object] | None = None
+    ) -> CombatEntity:
+        """Score enemies and pick best target."""
+        best: CombatEntity | None = None
         best_score = -999.0
         _hated = set(hated_ids or [])
         _feared = set(feared_ids or [])
 
         for enemy in nearby:
-            dist = int(str(enemy.get("distance_ft", 999)))
-            eid = str(enemy.get("id", ""))
+            dist = enemy.distance_ft
+            eid = enemy.id
 
             score = 0.0
-            # Hated targets: strong priority
             if eid in _hated:
                 score += 60.0
-            # Feared targets: moderate priority (eliminate the threat)
             if eid in _feared:
                 score += 25.0
-            # Wounded targets are high priority (finish them off)
-            if enemy.get("is_wounded", False):
+            if enemy.is_wounded:
                 score += 50.0
-            # Prefer enemies in weapon reach (can attack this turn)
             if dist <= reach:
                 score += 30.0
-            # Prefer closer targets (normalized: 0 at max range, 20 at melee)
             score += max(0.0, 20.0 - dist * 0.2)
 
             if score > best_score:

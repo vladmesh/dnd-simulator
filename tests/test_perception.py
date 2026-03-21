@@ -3,9 +3,17 @@
 from __future__ import annotations
 
 from dnd_simulator.core.character import Ability, Attack, Character, DamageComponent, DamageType, Entity, Race
-from dnd_simulator.core.models import Event, EventType
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.perception import perceive_event
+
+
+def _noop_query_fn(layer: str, query: Query) -> Answer:
+    return Answer(value=None)
+
+
+def _noop_emit_fn(event: object) -> ActionResult:
+    return ActionResult()
 
 
 def _get_entity_fn(*entities: Entity):
@@ -129,7 +137,7 @@ class TestRegionLog:
             source_layer="entities",
             data={"entity_id": "smith", "text": "Привет!"},
         )
-        layer.handle_event(event)
+        layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         log = layer.get_perceived_log(smith)
         assert len(log) == 1
         assert "Привет!" in log[0]
@@ -143,7 +151,7 @@ class TestRegionLog:
             source_layer="entities",
             data={"entity_id": "smith", "text": "Привет!"},
         )
-        layer.handle_event(event)
+        layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         assert len(layer.get_perceived_log(smith)) == 1
         assert len(layer.get_perceived_log(guard)) == 0
 
@@ -157,7 +165,9 @@ class TestRegionLog:
                 event_type=EventType.ENTITY_SAY,
                 source_layer="entities",
                 data={"entity_id": "player", "text": "Первое!"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
         new1 = layer.get_new_perceived_events(smith)
         assert len(new1) == 1
@@ -172,7 +182,9 @@ class TestRegionLog:
                 event_type=EventType.ENTITY_SAY,
                 source_layer="entities",
                 data={"entity_id": "player", "text": "Второе!"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
         new3 = layer.get_new_perceived_events(smith)
         assert len(new3) == 1
@@ -190,7 +202,7 @@ class TestRegionLog:
             source_layer="geography",
             data={},
         )
-        layer.handle_event(event)
+        layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         assert len(layer.get_perceived_log(smith)) == 0
 
     def test_multiple_events_in_order(self) -> None:
@@ -210,7 +222,9 @@ class TestRegionLog:
                 event_type=EventType.ENTITY_SAY,
                 source_layer="entities",
                 data={"entity_id": "player", "text": "Готовься!"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
         # First attack starts combat — place in melee range, then attack again
         layer.handle_event(
@@ -218,7 +232,9 @@ class TestRegionLog:
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
                 data={"attacker_id": "player", "target_id": "smith", "weapon": "longsword"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
         combat = layer.get_combat("r1")
         assert combat is not None
@@ -229,7 +245,9 @@ class TestRegionLog:
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
                 data={"attacker_id": "player", "target_id": "smith", "weapon": "longsword"},
-            )
+            ),
+            _noop_query_fn,
+            _noop_emit_fn,
         )
 
         log = layer.get_perceived_log(smith)

@@ -1,7 +1,6 @@
 """Tests for the GeographyLayer."""
 
-from dnd_simulator.core.models import EventType, GameDateTime, Query, TimeDelta
-from dnd_simulator.core.world import WorldState
+from dnd_simulator.core.models import ActionResult, Answer, EventType, GameDateTime, Query, TimeDelta
 from dnd_simulator.layers.geography.layer import GeographyLayer
 from dnd_simulator.layers.geography.models import (
     Connection,
@@ -10,6 +9,14 @@ from dnd_simulator.layers.geography.models import (
     TerrainType,
     WeatherCondition,
 )
+
+
+def _noop_query_fn(layer: str, query: Query) -> Answer:
+    raise RuntimeError(f"Geography should not query other layers: {layer}/{query.question}")
+
+
+def _noop_emit_fn(event: object) -> ActionResult:
+    return ActionResult()
 
 
 def _make_test_regions() -> list[Region]:
@@ -60,10 +67,10 @@ class TestGeographyLayer:
 
     def test_tick_updates_temperature(self) -> None:
         layer = GeographyLayer(regions=_make_test_regions(), weather_seed=42)
-        state = WorldState(time=GameDateTime(year=1490, month=7, day=15, hour=12))
+        time = GameDateTime(year=1490, month=7, day=15, hour=12)
         delta = TimeDelta.from_hours(6)
 
-        layer.tick(delta, state)
+        layer.tick(delta, time, _noop_query_fn, _noop_emit_fn)
 
         forest = layer.get_region("forest_vale")
         mountain = layer.get_region("mountain_pass")
@@ -73,12 +80,12 @@ class TestGeographyLayer:
 
     def test_tick_returns_weather_events(self) -> None:
         layer = GeographyLayer(regions=_make_test_regions(), weather_seed=42)
-        state = WorldState(time=GameDateTime(year=1490, month=7, day=15, hour=12))
+        time = GameDateTime(year=1490, month=7, day=15, hour=12)
 
         # Run multiple ticks to get at least some weather changes
         all_events = []
         for _ in range(20):
-            events = layer.tick(TimeDelta.from_hours(6), state)
+            events = layer.tick(TimeDelta.from_hours(6), time, _noop_query_fn, _noop_emit_fn)
             all_events.extend(events)
 
         # At least some weather changes should have occurred
@@ -129,7 +136,7 @@ class TestGeographyLayer:
 
         layer = GeographyLayer()
         event = Event(event_type=EventType.WEATHER_CHANGED, source_layer="test")
-        result = layer.handle_event(event)
+        result = layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         assert result.success
         assert result.events == []
 
@@ -140,8 +147,8 @@ class TestGeographySaveLoad:
         original = GeographyLayer(regions=_make_test_regions(), weather_seed=42)
 
         # Modify some state
-        state_ws = WorldState(time=GameDateTime(year=1490, month=7, day=15, hour=12))
-        original.tick(TimeDelta.from_hours(6), state_ws)
+        time = GameDateTime(year=1490, month=7, day=15, hour=12)
+        original.tick(TimeDelta.from_hours(6), time, _noop_query_fn, _noop_emit_fn)
 
         # Save
         saved = original.get_state()

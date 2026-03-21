@@ -6,12 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from dnd_simulator.core.character import (
-    Ability,
-    Character,
-    build_awareness,
-    build_combat_awareness,
-)
+from dnd_simulator.core.character import Ability, Character
 from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
@@ -36,7 +31,7 @@ class PlayerCharacter(Character):
         """Peacetime turn: full awareness, all commands available."""
         from dnd_simulator.core.models import Event, EventType, Query
 
-        awareness = build_awareness(world, self.location_id)
+        awareness = self._build_awareness(world)
 
         # Get new events since player's last turn
         log_answer = world.query_layer(
@@ -103,7 +98,7 @@ class PlayerCharacter(Character):
         """Combat turn: focused awareness, restricted commands."""
         from dnd_simulator.core.models import Event, EventType, Query
 
-        combat_aw = build_combat_awareness(world, self)
+        combat_aw = self._build_combat_awareness(world)
 
         log_answer = world.query_layer(
             "entities", Query(question="new_perceived_events", params={"entity_id": self.id})
@@ -195,6 +190,93 @@ class PlayerCharacter(Character):
                     "dash <direction> [target], dodge, flee, status, idle"
                 )
             )
+
+    def _build_awareness(self, world: World) -> dict[str, Any]:
+        """Build peaceful awareness using world queries."""
+        from dnd_simulator.core.models import Query
+
+        time = world.time
+        region_id = world.location_graph.region_of(self.location_id)
+
+        weather = world.query_layer("geography", Query(question="weather", params={"region_id": region_id}))
+        region = world.query_layer("geography", Query(question="region_info", params={"region_id": region_id}))
+        settlements = world.query_layer(
+            "settlements", Query(question="region_settlements", params={"region_id": region_id})
+        )
+        owner = world.query_layer("politics", Query(question="region_owner", params={"region_id": region_id}))
+
+        nation_info = None
+        if owner.value:
+            nation_info = world.query_layer(
+                "politics", Query(question="nation_info", params={"nation_id": owner.value})
+            )
+
+        return {
+            "time": {"hour": time.hour, "day": time.day, "month": time.month, "year": time.year},
+            "weather": weather.value,
+            "location": region.value,
+            "settlements": settlements.value,
+            "territory": owner.value,
+            "nation": nation_info.value if nation_info else None,
+        }
+
+    def _build_combat_awareness(self, world: World) -> dict[str, Any]:
+        """Build combat awareness using world queries."""
+        from dnd_simulator.core.combat import Position
+        from dnd_simulator.core.models import Query
+        from dnd_simulator.rules.movement import direction_label, grid_distance
+
+        entities_answer = world.query_layer(
+            "entities", Query(question="entities_at_location", params={"location_id": self.location_id})
+        )
+        combat_answer = world.query_layer(
+            "entities", Query(question="combat_info", params={"location_id": self.location_id})
+        )
+        round_number = combat_answer.value["round_number"] if combat_answer.value else 1
+        battle_map_positions: dict[str, Position] = (
+            combat_answer.value.get("positions", {}) if combat_answer.value else {}
+        )
+        my_pos = battle_map_positions.get(self.id)
+
+        nearby: list[dict[str, object]] = []
+        for e in entities_answer.value:
+            if e["id"] != self.id:
+                # Use perceive_entity query to get description
+                perceive_answer = world.query_layer(
+                    "entities",
+                    Query(question="perceive_entity", params={"observer_id": self.id, "target_id": str(e["id"])}),
+                )
+                desc = str(perceive_answer.value) if perceive_answer.value else str(e["id"])
+                entry: dict[str, object] = {"id": str(e["id"]), "description": desc}
+                if "is_wounded" in e:
+                    entry["is_wounded"] = e["is_wounded"]
+                other_pos = battle_map_positions.get(str(e["id"]))
+                if my_pos is not None and other_pos is not None:
+                    entry["distance_ft"] = grid_distance(my_pos, other_pos)
+                    dx = other_pos.x - my_pos.x
+                    dy = other_pos.y - my_pos.y
+                    entry["direction"] = direction_label(dx, dy)
+                nearby.append(entry)
+
+        weapon_name = _("fists")
+        weapon_damage = "1"
+        if self.attacks:
+            weapon_name = self.attacks[0].name
+            weapon_damage = str(self.attacks[0].damage[0].dice)
+
+        wall_descriptions: list[str] = combat_answer.value.get("wall_descriptions", []) if combat_answer.value else []
+
+        return {
+            "self_hp": self.current_hp,
+            "self_max_hp": self.max_hp,
+            "self_ac": self.ac,
+            "self_speed": self.speed,
+            "self_weapon": weapon_name,
+            "self_weapon_damage": weapon_damage,
+            "nearby": nearby,
+            "round_number": round_number,
+            "walls": wall_descriptions,
+        }
 
     def _cmd_look(self, world: World) -> None:
         """Describe current location, entities, and paths."""

@@ -2,10 +2,15 @@
 
 import pytest
 
-from dnd_simulator.core.models import Event, EventType, GameDateTime, Query, TimeDelta
-from dnd_simulator.core.world import WorldState
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query, QueryFn, TimeDelta
 from dnd_simulator.layers.settlements.layer import SettlementsLayer
 from dnd_simulator.layers.settlements.models import Settlement, SettlementType
+
+_TIME = GameDateTime(year=1490, month=6, day=1, hour=12)
+
+
+def _noop_emit_fn(event: object) -> ActionResult:
+    return ActionResult()
 
 
 def _make_settlements() -> list[Settlement]:
@@ -47,37 +52,36 @@ def _make_layer() -> SettlementsLayer:
     )
 
 
-def _world_state(
+def _make_query_fn(
     weather_a: str = "clear",
     weather_b: str = "clear",
     nation_wealth: float = 50.0,
     nation_stability: float = 70.0,
-) -> WorldState:
-    return WorldState(
-        time=GameDateTime(year=1490, month=6, day=1, hour=12),
-        layer_states={
-            "geography": {
-                "regions": {
-                    "region_a": {"weather": weather_a, "terrain": "coast"},
-                    "region_b": {"weather": weather_b, "terrain": "mountains"},
-                },
-            },
-            "politics": {
-                "nations": {
-                    "alpha": {
-                        "regions": ["region_a"],
-                        "wealth": nation_wealth,
-                        "stability": nation_stability,
-                    },
-                    "beta": {
-                        "regions": ["region_b"],
-                        "wealth": 40.0,
-                        "stability": 60.0,
-                    },
-                },
-            },
-        },
-    )
+) -> QueryFn:
+    """Build a query_fn that simulates geography + politics layers below settlements."""
+
+    def query_fn(layer: str, query: Query) -> Answer:
+        if layer == "geography" and query.question == "weather":
+            region_id = query.params["region_id"]
+            weather_map = {"region_a": weather_a, "region_b": weather_b}
+            return Answer(value={"condition": weather_map.get(region_id, "clear"), "temperature": 15})
+
+        if layer == "politics" and query.question == "region_owner":
+            region_id = query.params["region_id"]
+            owners = {"region_a": "alpha", "region_b": "beta"}
+            return Answer(value=owners.get(region_id))
+
+        if layer == "politics" and query.question == "nation_info":
+            nation_id = query.params["nation_id"]
+            if nation_id == "alpha":
+                return Answer(value={"wealth": nation_wealth, "stability": nation_stability})
+            if nation_id == "beta":
+                return Answer(value={"wealth": 40.0, "stability": 60.0})
+            return Answer(value=None)
+
+        raise RuntimeError(f"Unexpected query: {layer}/{query.question}")
+
+    return query_fn
 
 
 class TestLayerBasics:
@@ -88,7 +92,7 @@ class TestLayerBasics:
     def test_handle_event_unrelated(self) -> None:
         layer = _make_layer()
         event = Event(event_type=EventType.WEATHER_CHANGED, source_layer="geography")
-        result = layer.handle_event(event)
+        result = layer.handle_event(event, _make_query_fn(), _noop_emit_fn)
         assert result.success
         assert result.events == []
 
@@ -116,24 +120,21 @@ class TestRegionIncome:
 class TestTick:
     def test_monthly_tick_changes_population(self) -> None:
         layer = _make_layer()
-        ws = _world_state()
-        layer.tick(TimeDelta.from_days(30), ws)
+        layer.tick(TimeDelta.from_days(30), _TIME, _make_query_fn(), _noop_emit_fn)
         info = layer.query(Query(question="settlement_info", params={"settlement_id": "city_a"}))
         # prosperity 70 -> population should grow (2%)
         assert info.value["population"] > 5000
 
     def test_bad_weather_hurts_village_prosperity(self) -> None:
         layer = _make_layer()
-        ws = _world_state(weather_a="blizzard")
-        layer.tick(TimeDelta.from_days(30), ws)
+        layer.tick(TimeDelta.from_days(30), _TIME, _make_query_fn(weather_a="blizzard"), _noop_emit_fn)
         info = layer.query(Query(question="settlement_info", params={"settlement_id": "village_a"}))
         # Blizzard should hurt village prosperity significantly
         assert info.value["prosperity"] < 50.0
 
     def test_bad_weather_barely_affects_city(self) -> None:
         layer = _make_layer()
-        ws = _world_state(weather_a="blizzard")
-        layer.tick(TimeDelta.from_days(30), ws)
+        layer.tick(TimeDelta.from_days(30), _TIME, _make_query_fn(weather_a="blizzard"), _noop_emit_fn)
         info = layer.query(Query(question="settlement_info", params={"settlement_id": "city_a"}))
         # City barely affected by weather
         # Blizzard: -5.0 * 0.3 = -1.5 on prosperity, plus drift from wealth/stability
@@ -148,7 +149,7 @@ class TestConquest:
             source_layer="politics",
             data={"type": "region_conquered", "winner": "beta", "loser": "alpha", "region": "region_a"},
         )
-        result = layer.handle_event(event)
+        result = layer.handle_event(event, _make_query_fn(), _noop_emit_fn)
         assert result.success
         # Both settlements in region_a should be damaged
         assert len(result.events) == 2
@@ -165,7 +166,7 @@ class TestConquest:
             source_layer="politics",
             data={"type": "region_conquered", "winner": "alpha", "loser": "beta", "region": "region_a"},
         )
-        layer.handle_event(event)
+        layer.handle_event(event, _make_query_fn(), _noop_emit_fn)
 
         info = layer.query(Query(question="settlement_info", params={"settlement_id": "town_b"}))
         assert info.value["prosperity"] == 50.0  # unchanged

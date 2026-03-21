@@ -112,12 +112,10 @@ class CombatCommands:
 
     def get_combat_state(self, session_id: str) -> dict[str, Any] | None:
         """Get combat state from the player's perspective. Returns None if not in combat."""
-        from dnd_simulator.core.character import build_combat_awareness
-
         session = self._get_session(session_id)  # type: ignore[attr-defined]
         player = self._require_player(session)
 
         if not player.in_combat:
             return None
 
-        return build_combat_awareness(session.world, player)
+        return player._build_combat_awareness(session.world)
