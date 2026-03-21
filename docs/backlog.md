@@ -24,11 +24,6 @@
 и shutdown автосейв. Использовать `asyncio.create_task` с loop + sleep,
 cancel на shutdown перед финальным autosave.
 
-### Layer isolation: query_fn pattern
-Убрать World из слоёв и сущностей. Передавать `query_fn: Callable[[str, Query], Answer]`
-вместо прямой ссылки. Brain получает готовый awareness dict вместо World.
-См. `docs/brainstorms/layer-isolation-and-query-fn.md`.
-
 ### NPC реагируют на say мгновенно
 После `say` команды тикнуть NPC в локации (1 раунд), чтобы RuleBrain/LlmBrain
 успел ответить в рамках того же запроса. Сейчас NPC отвечают только при advance_time.

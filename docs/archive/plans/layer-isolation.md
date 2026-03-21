@@ -1,5 +1,7 @@
 # Layer Isolation — Plan
 
+> **СТАТУС: РЕАЛИЗОВАНО / ЧАСТИЧНО ПОГЛОЩЕНО** (Фазы 1 и 2 реализованы. Фаза 3+ заменена на `round-system.md`)
+
 > Design: [layer-isolation-and-query-fn.md](../brainstorms/layer-isolation-and-query-fn.md)
 
 ## Goal
@@ -385,10 +387,6 @@ Remove `World` from `execute_action` signature. Remove `take_turn` method — En
 
 ---
 
-## Phase 3+ — Not yet detailed
+## Phase 3+ — Round System
 
-See [brainstorm](../brainstorms/layer-isolation-and-query-fn.md) for the full picture. Remaining phases to be planned after Phase 2 lands:
-
-- **Phase 3**: PlayerBrain — player as regular Brain (CLI + API variants), unify wait/idle, simplify game_loop to just `advance_time`
-- **Phase 4**: Push events — Settlements emits census for Politics, remove `region_income_fn` callback
-- **Phase 5**: Combat turn order moves into EntitiesLayer.tick(), game_loop becomes trivial
+Superseded by [round-system.md](round-system.md). The original Phase 3–5 scope (PlayerBrain, push events, combat turn order) evolved into a broader redesign: Round as fundamental game unit, WebSocket transport, multiple actions per turn, turn-based mode, Level 2 consciousness.
