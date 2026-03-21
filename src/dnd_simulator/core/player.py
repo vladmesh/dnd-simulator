@@ -220,7 +220,9 @@ class PlayerCharacter(Character):
         if others:
             lines.append("\n" + _("Creatures:"))
             for e in others:
-                if "role" in e:
+                if "activity_flavor" in e:
+                    lines.append(f"  {e['name']} [{e['id']}] — {e['activity_flavor']}")
+                elif "role" in e:
                     lines.append(f"  {e['name']} [{e['id']}] ({e['role']}) — {e['activity']}")
                 else:
                     lines.append(f"  {e['name']} [{e['id']}]")

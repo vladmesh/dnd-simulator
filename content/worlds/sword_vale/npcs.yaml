@@ -1,6 +1,6 @@
 edgar:
   name: Edgar the Smith
-  region_id: silverport
+  start_location: silverport_city_smithy
   settlement_id: silverport_city
   role: blacksmith
   hp: 18
@@ -18,7 +18,7 @@ edgar:
 
 marta:
   name: Marta
-  region_id: silverport
+  start_location: silverport_city_tavern
   settlement_id: silverport_city
   role: tavern_keeper
   personality: >
@@ -31,7 +31,7 @@ marta:
 
 rodrik:
   name: Guard Captain Rodrik
-  region_id: silverport
+  start_location: silverport_city_barracks
   settlement_id: silverport_city
   role: guard
   hp: 32

@@ -10,7 +10,7 @@ from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.layers.entities.combat_manager import CombatManager
-from dnd_simulator.layers.entities.models import Npc
+from dnd_simulator.layers.entities.models import Npc, activity_flavor
 from dnd_simulator.layers.entities.perception import perceive_event
 
 if TYPE_CHECKING:
@@ -246,8 +246,10 @@ class EntitiesLayer(Layer):
         if isinstance(entity, Creature):
             base["is_wounded"] = entity.current_hp < entity.max_hp // 2
         if isinstance(entity, Npc):
+            npc_activity = entity.scheduled_activity(hour)
             base["role"] = entity.role
-            base["activity"] = entity.scheduled_activity(hour).value
+            base["activity"] = npc_activity.value
+            base["activity_flavor"] = activity_flavor(entity.role, npc_activity)
             base["location_label"] = entity.current_location(hour)
         return base
 

@@ -13,6 +13,7 @@ from dnd_simulator.layers.entities.models import (
     Npc,
     NpcActivity,
     ScheduleEntry,
+    activity_flavor,
     hour_in_range,
     resolve_schedule,
 )
@@ -23,6 +24,7 @@ __all__ = [
     "Npc",
     "NpcActivity",
     "ScheduleEntry",
+    "activity_flavor",
     "hour_in_range",
     "resolve_schedule",
 ]

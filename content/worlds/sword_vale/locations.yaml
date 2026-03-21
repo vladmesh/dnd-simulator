@@ -1,0 +1,352 @@
+# === Silverport City ===
+
+silverport_city_tavern:
+  name: "The Salty Anchor"
+  region: silverport
+  settlement: silverport_city
+  description: "A rowdy dockside tavern. The smell of ale and fried fish fills the air."
+  neighbors:
+    - target: silverport_city_market
+      distance: 200
+    - target: silverport_city_docks
+      distance: 100
+
+silverport_city_market:
+  name: "Silverport Market Square"
+  region: silverport
+  settlement: silverport_city
+  description: "A bustling open-air market near the city center."
+  neighbors:
+    - target: silverport_city_tavern
+      distance: 200
+    - target: silverport_city_smithy
+      distance: 150
+    - target: silverport_city_gate
+      distance: 300
+
+silverport_city_smithy:
+  name: "Edgar's Smithy"
+  region: silverport
+  settlement: silverport_city
+  description: "A soot-covered forge near the eastern wall. The clang of hammer on anvil rings out."
+  neighbors:
+    - target: silverport_city_market
+      distance: 150
+
+silverport_city_docks:
+  name: "Silverport Docks"
+  region: silverport
+  settlement: silverport_city
+  description: "Creaking wooden piers stretch into the grey harbor. Fishing boats bob in the waves."
+  neighbors:
+    - target: silverport_city_tavern
+      distance: 100
+
+silverport_city_gate:
+  name: "Silverport City Gates"
+  region: silverport
+  settlement: silverport_city
+  description: "Stone gatehouse with heavy iron-bound doors. Guards stand watch."
+  neighbors:
+    - target: silverport_city_market
+      distance: 300
+    - target: silverport_city_barracks
+      distance: 50
+    - target: fishing_hamlet_shore
+      distance: 3000
+    - target: silverport_greenwood_road
+      distance: 500
+    - target: silverport_highfield_road
+      distance: 500
+
+silverport_city_barracks:
+  name: "City Barracks"
+  region: silverport
+  settlement: silverport_city
+  description: "A stone building beside the gates. The city guard musters here."
+  neighbors:
+    - target: silverport_city_gate
+      distance: 50
+
+silverport_city_home:
+  name: "Residential Quarter"
+  region: silverport
+  settlement: silverport_city
+  description: "Narrow streets of timber-framed houses behind the market."
+  neighbors:
+    - target: silverport_city_market
+      distance: 200
+
+# === Fishing Hamlet ===
+
+fishing_hamlet_shore:
+  name: "Fishing Hamlet Shore"
+  region: silverport
+  settlement: fishing_hamlet
+  description: "A cluster of huts on a rocky beach south of the city."
+  neighbors:
+    - target: silverport_city_gate
+      distance: 3000
+
+# === Roads from Silverport ===
+
+silverport_highfield_road:
+  name: "East Road to Highfield"
+  region: silverport
+  description: "A well-worn trade road heading east through rolling hills."
+  neighbors:
+    - target: silverport_city_gate
+      distance: 500
+    - target: highfield_town_gate
+      distance: 155000
+
+silverport_greenwood_road:
+  name: "Forest Road to Greenwood"
+  region: silverport
+  description: "A narrow path winding southeast into dark woods."
+  neighbors:
+    - target: silverport_city_gate
+      distance: 500
+    - target: greenwood_village_edge
+      distance: 125000
+
+# === Highfield Town ===
+
+highfield_town_gate:
+  name: "Highfield Town Gate"
+  region: highfield
+  settlement: highfield_town
+  description: "A simple wooden palisade with an open gate. Wheat fields stretch to the horizon."
+  neighbors:
+    - target: highfield_town_market
+      distance: 200
+    - target: silverport_highfield_road
+      distance: 155000
+    - target: highfield_iron_road
+      distance: 500
+    - target: highfield_bogmire_road
+      distance: 500
+    - target: greenwood_highfield_road
+      distance: 500
+
+highfield_town_market:
+  name: "Highfield Market"
+  region: highfield
+  settlement: highfield_town
+  description: "A modest market square where farmers sell grain and livestock."
+  neighbors:
+    - target: highfield_town_gate
+      distance: 200
+    - target: highfield_town_tavern
+      distance: 100
+
+highfield_town_tavern:
+  name: "The Golden Sheaf"
+  region: highfield
+  settlement: highfield_town
+  description: "A warm inn popular with travelers and farmers alike."
+  neighbors:
+    - target: highfield_town_market
+      distance: 100
+
+highfield_town_home:
+  name: "Highfield Homes"
+  region: highfield
+  settlement: highfield_town
+  description: "Simple stone cottages along dirt lanes."
+  neighbors:
+    - target: highfield_town_market
+      distance: 150
+
+highfield_town_fields:
+  name: "Wheat Fields"
+  region: highfield
+  settlement: highfield_town
+  description: "Endless golden fields of wheat swaying in the wind."
+  neighbors:
+    - target: highfield_town_gate
+      distance: 400
+
+# === Roads from Highfield ===
+
+highfield_iron_road:
+  name: "Mountain Road to Iron Peaks"
+  region: highfield
+  description: "A steep road climbing north into the mountains."
+  neighbors:
+    - target: highfield_town_gate
+      distance: 500
+    - target: iron_keep_gate
+      distance: 310000
+
+highfield_bogmire_road:
+  name: "Marsh Road to Bogmire"
+  region: highfield
+  description: "A muddy track heading east toward the swamps."
+  neighbors:
+    - target: highfield_town_gate
+      distance: 500
+    - target: bogtown_entrance
+      distance: 230000
+
+greenwood_highfield_road:
+  name: "Southwest Road to Greenwood"
+  region: highfield
+  description: "A road heading southwest toward the forest."
+  neighbors:
+    - target: highfield_town_gate
+      distance: 500
+    - target: greenwood_village_edge
+      distance: 185000
+
+# === Greenwood Village ===
+
+greenwood_village_edge:
+  name: "Greenwood Village Edge"
+  region: greenwood
+  settlement: greenwood_village
+  description: "A clearing in the ancient forest. Moss-covered cottages huddle between the trees."
+  neighbors:
+    - target: greenwood_village_tavern
+      distance: 100
+    - target: silverport_greenwood_road
+      distance: 125000
+    - target: greenwood_highfield_road
+      distance: 185000
+
+greenwood_village_tavern:
+  name: "The Mossy Log"
+  region: greenwood
+  settlement: greenwood_village
+  description: "A low-ceilinged tavern built into a massive hollow tree stump."
+  neighbors:
+    - target: greenwood_village_edge
+      distance: 100
+
+greenwood_village_home:
+  name: "Forest Homes"
+  region: greenwood
+  settlement: greenwood_village
+  description: "Wooden huts among the trees, connected by narrow paths."
+  neighbors:
+    - target: greenwood_village_edge
+      distance: 80
+
+# === Iron Keep ===
+
+iron_keep_gate:
+  name: "Iron Keep Gate"
+  region: iron_peaks
+  settlement: iron_keep
+  description: "A fortified gate carved into the mountainside. The air smells of sulfur and hot metal."
+  neighbors:
+    - target: iron_keep_forge
+      distance: 100
+    - target: highfield_iron_road
+      distance: 310000
+    - target: iron_peaks_north_pass
+      distance: 500
+
+iron_keep_forge:
+  name: "The Great Forge"
+  region: iron_peaks
+  settlement: iron_keep
+  description: "A cavernous forge lit by rivers of molten metal. The heat is oppressive."
+  neighbors:
+    - target: iron_keep_gate
+      distance: 100
+
+iron_keep_home:
+  name: "Iron Keep Quarters"
+  region: iron_peaks
+  settlement: iron_keep
+  description: "Cramped chambers carved into rock, warmed by the forge below."
+  neighbors:
+    - target: iron_keep_forge
+      distance: 50
+
+# === Road from Iron Peaks to Frostholm ===
+
+iron_peaks_north_pass:
+  name: "North Pass"
+  region: iron_peaks
+  description: "A treacherous mountain pass leading north into the frozen wastes."
+  neighbors:
+    - target: iron_keep_gate
+      distance: 500
+    - target: frostholm_outpost_camp
+      distance: 800000
+
+# === Frostholm ===
+
+frostholm_outpost_camp:
+  name: "Frostholm Outpost"
+  region: frostholm
+  settlement: frostholm_outpost
+  description: "A wind-battered cluster of tents and stone shelters at the edge of the world."
+  neighbors:
+    - target: iron_peaks_north_pass
+      distance: 800000
+
+frostholm_outpost_home:
+  name: "Outpost Shelters"
+  region: frostholm
+  settlement: frostholm_outpost
+  description: "Low stone huts insulated with furs and packed snow."
+  neighbors:
+    - target: frostholm_outpost_camp
+      distance: 50
+
+# === Bogmire ===
+
+bogtown_entrance:
+  name: "Bogtown"
+  region: bogmire
+  settlement: bogtown
+  description: "A miserable settlement built on stilts above the fetid swamp."
+  neighbors:
+    - target: highfield_bogmire_road
+      distance: 230000
+    - target: bogmire_dustmere_road
+      distance: 500
+
+bogtown_home:
+  name: "Bogtown Hovels"
+  region: bogmire
+  settlement: bogtown
+  description: "Ramshackle huts connected by rotting boardwalks."
+  neighbors:
+    - target: bogtown_entrance
+      distance: 100
+
+# === Road from Bogmire to Dustmere ===
+
+bogmire_dustmere_road:
+  name: "Desert Road South"
+  region: bogmire
+  description: "The swamp gradually dries into cracked earth heading south."
+  neighbors:
+    - target: bogtown_entrance
+      distance: 500
+    - target: dustmere_oasis_gate
+      distance: 530000
+
+# === Dustmere ===
+
+dustmere_oasis_gate:
+  name: "Dustmere Oasis"
+  region: dustmere
+  settlement: dustmere_oasis
+  description: "A walled settlement around a natural spring in the vast desert."
+  neighbors:
+    - target: bogmire_dustmere_road
+      distance: 530000
+
+dustmere_oasis_home:
+  name: "Oasis Quarter"
+  region: dustmere
+  settlement: dustmere_oasis
+  description: "Sun-bleached mud-brick houses clustered around the central spring."
+  neighbors:
+    - target: dustmere_oasis_gate
+      distance: 100

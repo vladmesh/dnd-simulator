@@ -117,6 +117,44 @@ def resolve_schedule(role: str, settlement_id: str) -> list[ScheduleEntry]:
     ]
 
 
+# Flavor text: what the NPC looks like they're doing.
+# Keyed by (role, activity). Falls back to activity-only, then generic.
+ACTIVITY_FLAVOR: dict[tuple[str, NpcActivity], str] = {
+    # Blacksmith
+    ("blacksmith", NpcActivity.WORKING): "hammering at the anvil",
+    ("blacksmith", NpcActivity.IDLE): "sitting with a mug of ale",
+    ("blacksmith", NpcActivity.SLEEPING): "sleeping",
+    # Tavern keeper
+    ("tavern_keeper", NpcActivity.WORKING): "wiping down the bar",
+    ("tavern_keeper", NpcActivity.IDLE): "resting behind the counter",
+    ("tavern_keeper", NpcActivity.SLEEPING): "sleeping",
+    # Guard
+    ("guard", NpcActivity.WORKING): "standing watch",
+    ("guard", NpcActivity.IDLE): "leaning against the wall",
+    ("guard", NpcActivity.SLEEPING): "sleeping in the barracks",
+    # Merchant
+    ("merchant", NpcActivity.WORKING): "hawking wares to passersby",
+    ("merchant", NpcActivity.IDLE): "counting coins at a table",
+    ("merchant", NpcActivity.SLEEPING): "sleeping",
+    # Farmer
+    ("farmer", NpcActivity.WORKING): "tending the fields",
+    ("farmer", NpcActivity.IDLE): "resting on the porch",
+    ("farmer", NpcActivity.SLEEPING): "sleeping",
+}
+
+# Generic fallbacks by activity (when role has no specific entry)
+_ACTIVITY_GENERIC: dict[NpcActivity, str] = {
+    NpcActivity.WORKING: "busy at work",
+    NpcActivity.IDLE: "standing around",
+    NpcActivity.SLEEPING: "sleeping",
+}
+
+
+def activity_flavor(role: str, activity: NpcActivity) -> str:
+    """Get a short flavor description of what an NPC is doing."""
+    return ACTIVITY_FLAVOR.get((role, activity), _ACTIVITY_GENERIC.get(activity, activity.value))
+
+
 def hour_in_range(hour: int, start: int, end: int) -> bool:
     """Check if hour falls within [start, end), handling midnight wrap."""
     if start <= end:

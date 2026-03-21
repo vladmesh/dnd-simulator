@@ -530,7 +530,9 @@ class GameService:
             lines.append("")
             lines.append("People:")
             for e in others:
-                if "role" in e:
+                if "activity_flavor" in e:
+                    lines.append(f"  {e['name']} — {e['activity_flavor']}")
+                elif "role" in e:
                     lines.append(f"  {e['name']} ({e['role']}) - {e['activity']}")
                 else:
                     lines.append(f"  {e['name']}")
