@@ -21,7 +21,6 @@ from dnd_simulator.adapters.api.schemas import (
     WorldStateResponse,
 )
 from dnd_simulator.core.models import Query
-from dnd_simulator.layers.entities.models import Npc
 
 router = APIRouter(prefix="/api/master", tags=["master"])
 
@@ -80,16 +79,8 @@ def get_session_state(session_id: str) -> WorldStateResponse:
         for s in answer.value:
             all_settlements.append(s)
 
-    # Collect all entities (no longer region-indexed)
-    from dnd_simulator.layers.entities.layer import EntitiesLayer
-
-    entities_list: list[dict[str, object]] = []
-    for layer in world.layers:
-        if isinstance(layer, EntitiesLayer):
-            for creature in layer.get_active_creatures():
-                info = world.query_layer("entities", Query(question="entity_info", params={"entity_id": creature.id}))
-                entities_list.append(info.value)
-            break
+    entities_answer = world.query_layer("entities", Query(question="all_entities", params={}))
+    entities_list: list[dict[str, object]] = entities_answer.value
 
     return WorldStateResponse(
         session_id=session.session_id,
@@ -119,19 +110,8 @@ def delete_session(session_id: str) -> MessageResponse:
 def list_npcs(session_id: str) -> list[NpcResponse]:
     """List all NPCs in a session."""
     service = get_service()
-    session = _get_session(service, session_id)
-    world = session.world
-
-    from dnd_simulator.layers.entities.layer import EntitiesLayer
-
-    npcs: list[NpcResponse] = []
-    for layer in world.layers:
-        if isinstance(layer, EntitiesLayer):
-            for entity in layer.get_active_creatures():
-                if isinstance(entity, Npc):
-                    npcs.append(_npc_response(entity))
-            break
-    return npcs
+    npc_dicts = service.list_npcs(session_id)
+    return [NpcResponse.model_validate(d) for d in npc_dicts]
 
 
 @router.post("/sessions/{session_id}/npcs", response_model=NpcResponse)
@@ -139,19 +119,22 @@ def spawn_npc(session_id: str, body: SpawnNpcRequest) -> NpcResponse:
     """Spawn a new NPC into a live session."""
     service = get_service()
     try:
-        npc = service.spawn_npc(session_id, body.model_dump())
+        service.spawn_npc(session_id, body.model_dump())
+        info = service.get_npc_info(session_id, body.id)
     except (ValueError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    return _npc_response(npc)
+    return NpcResponse.model_validate(info)
 
 
 @router.get("/sessions/{session_id}/npcs/{npc_id}", response_model=NpcResponse)
 def get_npc(session_id: str, npc_id: str) -> NpcResponse:
     """Get NPC details."""
     service = get_service()
-    session = _get_session(service, session_id)
-    entity = _get_npc(session, npc_id)
-    return _npc_response(entity)
+    try:
+        info = service.get_npc_info(session_id, npc_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return NpcResponse.model_validate(info)
 
 
 @router.patch("/sessions/{session_id}/npcs/{npc_id}", response_model=MessageResponse)
@@ -301,32 +284,3 @@ def _get_session(service: Any, session_id: str) -> Any:
         raise HTTPException(status_code=404, detail=str(e)) from e
 
 
-def _get_npc(session: Any, npc_id: str) -> Npc:
-    from dnd_simulator.layers.entities.layer import EntitiesLayer
-
-    for layer in session.world.layers:
-        if isinstance(layer, EntitiesLayer):
-            entity = layer.get_entity(npc_id)
-            if entity is not None and isinstance(entity, Npc):
-                return entity
-    raise HTTPException(status_code=404, detail=f"NPC '{npc_id}' not found")
-
-
-def _npc_response(npc: Npc) -> NpcResponse:
-    return NpcResponse(
-        id=npc.id,
-        name=npc.name,
-        location_id=npc.location_id,
-        role=npc.role,
-        personality=npc.personality,
-        hp=npc.current_hp,
-        max_hp=npc.max_hp,
-        ac=npc.ac,
-        ai_type=npc.ai_type,
-        active=npc.active,
-    )
-
-
-def _npc_response_from_info(info: dict[str, object], session: Any) -> NpcResponse:
-    npc = _get_npc(session, str(info["id"]))
-    return _npc_response(npc)

@@ -23,6 +23,7 @@ dev = [
     "ruff>=0.8",
     "mypy>=1.13",
     "types-pyyaml>=6.0.12.20250915",
+    "babel>=2.18.0",
 ]
 
 [tool.ruff]

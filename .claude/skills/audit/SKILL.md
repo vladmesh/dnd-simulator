@@ -81,7 +81,9 @@ For functions that look long, read them and count lines. Also watch for:
 
 #### Security
 
-The main risk surface is the `.env` file and LLM API keys.
+Two risk surfaces: secrets/subprocess (original) and the REST API (added with the FastAPI backend).
+
+**Secrets & subprocess:**
 
 ```bash
 # Hardcoded secrets, tokens, API keys
@@ -95,6 +97,31 @@ rg -n 'subprocess\.(call|run|Popen)' src/ --type py
 ```
 
 Flag any hardcoded credential values (not just variable names referencing env vars — those are fine).
+
+**CORS configuration** — if the API is meant to be consumed by a separate frontend, CORS middleware must be explicitly configured. Missing CORS is fine for same-origin / local-only use, but flag it if a frontend exists in the repo:
+
+```bash
+# Check if CORSMiddleware is registered
+rg -n 'CORSMiddleware' src/dnd_simulator/adapters/api/ --type py
+```
+
+**LLM prompt injection** — user-supplied text (player actions, `say` command, NPC personality via PATCH) flows into LLM prompts. Check that user input is not interpolated into system prompts without separation:
+
+```bash
+# Find where user text enters LLM prompts
+rg -n 'system.*\{|f".*\{.*user|f".*\{.*text|f".*\{.*action' src/dnd_simulator/llm/ --type py
+```
+
+Use judgment: passing user text as a clearly delineated user-message field is fine. Interpolating it directly into system prompt strings is a risk.
+
+**Input bounds validation** — numeric fields accepted via API (HP, population, wealth, hours) should have reasonable bounds. Check Pydantic models for missing `ge=`, `le=`, `Field(gt=0)` constraints:
+
+```bash
+# Pydantic models with bare int/float fields (no Field constraints)
+rg -n 'hp:|population:|wealth:|hours:|ac:' src/dnd_simulator/adapters/api/schemas.py
+```
+
+Flag fields that accept arbitrary values where negative or extreme numbers make no game sense.
 
 ---
 
@@ -143,6 +170,17 @@ rg -n 'LlmClient\(' src/dnd_simulator/ --type py
 ```
 
 If `LlmClient(` appears in `layers/` or `rules/`, that's a violation.
+
+**Thick adapter** — per CLAUDE.md, adapters only translate I/O; all logic lives in `GameService`. If route handlers import domain models or layer internals directly, they're doing too much:
+
+```bash
+# Route files importing from core/layers/rules (should go through service)
+rg -n 'from dnd_simulator\.(core|layers|rules)\.' src/dnd_simulator/adapters/ --type py
+```
+
+Importing Pydantic schemas or the service itself is fine. Importing `Character`, layer models, or rule functions means the adapter is doing business logic.
+
+Also check for inline logic in route handlers — things like math, game-state queries, or conditional branching that should live in the service layer. Read route files and flag handlers that do more than: validate input → call service → translate response.
 
 **Hardcoded game data that belongs in YAML** — content like NPC names, town descriptions, quest text should live in `content/`, not in Python code:
 
@@ -215,6 +253,11 @@ rg -n '@pytest.mark.skip|@pytest.mark.xfail' tests/ --type py
 # Layer files without tests
 for layer in geography politics settlements entities; do
   [ -f "tests/test_${layer}_layer.py" ] || echo "MISSING: tests/test_${layer}_layer.py"
+done
+
+# API route and service tests
+for mod in routes_master routes_player service; do
+  [ -f "tests/test_${mod}.py" ] || echo "MISSING: tests/test_${mod}.py"
 done
 ```
 

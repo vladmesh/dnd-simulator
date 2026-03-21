@@ -247,6 +247,9 @@ class EntitiesLayer(Layer):
         Supported queries:
         - "entities_at_location": params={location_id} -> entities at a location
         - "entity_info": params={entity_id} -> full entity data
+        - "all_entities": params={} -> entity_info for all active entities
+        - "all_npcs": params={} -> NPC detail for all active NPCs
+        - "npc_info": params={npc_id} -> single NPC detail (raises ValueError if not NPC)
         - "perceived_log": params={entity_id} -> recent events from entity's POV
         - "combat_info": params={location_id} -> combat state
         - "perceive_entity": params={observer_id, target_id} -> perception string
@@ -271,6 +274,26 @@ class EntitiesLayer(Layer):
         if q == "entity_info":
             e = self._entities[params["entity_id"]]
             return Answer(value=self._entity_detail(e))
+
+        if q == "all_entities":
+            result = []
+            for e in self._entities.values():
+                if e.active:
+                    result.append(self._entity_detail(e))
+            return Answer(value=result)
+
+        if q == "all_npcs":
+            result = []
+            for e in self._entities.values():
+                if e.active and isinstance(e, Npc):
+                    result.append(self._npc_detail(e))
+            return Answer(value=result)
+
+        if q == "npc_info":
+            npc = self._entities.get(params["npc_id"])
+            if npc is None or not isinstance(npc, Npc):
+                raise ValueError(f"NPC '{params['npc_id']}' not found")
+            return Answer(value=self._npc_detail(npc))
 
         if q == "perceived_log":
             e = self._entities[params["entity_id"]]
@@ -347,6 +370,21 @@ class EntitiesLayer(Layer):
                 }
             )
         return base
+
+    def _npc_detail(self, npc: Npc) -> dict[str, object]:
+        """Full NPC detail including creature stats."""
+        return {
+            "id": npc.id,
+            "name": npc.name,
+            "location_id": npc.location_id,
+            "role": npc.role,
+            "personality": npc.personality,
+            "hp": npc.current_hp,
+            "max_hp": npc.max_hp,
+            "ac": npc.ac,
+            "ai_type": npc.ai_type,
+            "active": npc.active,
+        }
 
     def get_state(self) -> dict[str, object]:
         """Serialize entities state."""

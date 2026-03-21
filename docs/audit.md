@@ -5,9 +5,9 @@
 
 ## Summary
 - Dead code: 0 issues
-- Code smells: 2 issues
-- Security: 2 issues
-- Architecture violations: 3 issues (1 fixed)
+- Code smells: 2 issues (1 planned)
+- Security: 2 issues (1 fixed, 1 won't fix)
+- Architecture violations: 3 issues (2 fixed, 1 won't fix)
 - Convention violations: 2 issues
 - Layer contract: 0 issues
 - Test gaps: 3 issues
@@ -22,13 +22,13 @@ No TODOs/FIXMEs found in source.
 ## Code Smells
 | File | Issue | Suggestion |
 |------|-------|------------|
-| `service.py` (839 lines) | Largest file, well above 400-line threshold | Consider splitting command handlers into sub-modules (combat commands, NPC commands, time commands) |
+| `service.py` (850+ lines) | Largest file, well above 400-line threshold | **Planned**: split command handlers into sub-modules (combat, NPC, time) — next task |
 | `layers/politics/layer.py` (588 lines) | Second largest, above threshold | Tick logic is inherently complex; lower priority but could extract war-resolution helpers |
 
 ## Security
 | File:Line | Issue | Severity |
 |-----------|-------|----------|
-| `adapters/api/schemas.py:24-70` | Pydantic request models accept bare `int`/`float` fields (`hp`, `ac`, `population`, `hours`, `wealth`) with no `Field(ge=0)` or upper-bound constraints — negative HP, negative hours, or extreme values accepted | medium |
+| ~~`adapters/api/schemas.py:24-70`~~ | ~~Pydantic request models accept bare `int`/`float` fields with no constraints~~ | **Fixed**: added `Field(ge=, le=)` bounds on all numeric request fields (hp, ac, level, gold, population, hours, wealth, military, stability, prosperity, defenses) | ~~medium~~ |
 | `adapters/api/` | No CORSMiddleware configured — fine for local-only use, but flag if a separate frontend is added | low |
 
 No hardcoded secrets, no subprocess calls, no prompt injection risks found. `.env` is gitignored.
@@ -37,8 +37,8 @@ No hardcoded secrets, no subprocess calls, no prompt injection risks found. `.en
 | File:Line | Violation | Should Be | Severity |
 |-----------|-----------|-----------|----------|
 | ~~`core/brain.py:49,74,81`~~ | ~~`RuleBrain` imports from `layers.entities.models`~~ | **Fixed**: moved `NpcTag`/`find_tags`/`has_tag` → `core/tags.py`; added `Creature.memory_tags` + `get_canned_response()` polymorphism; zero layer imports in brain.py now | ~~high~~ |
-| `adapters/api/routes_master.py:24,84,125,305` | Route handlers import `Npc` from `layers.entities.models` and `EntitiesLayer` from `layers.entities.layer`, then iterate layer internals directly | All entity queries should go through `GameService`; adapters should not reach into layers | high |
-| `adapters/cli_loop.py:28-31` | CLI adapter imports all four layer classes and constructs them directly | Layer construction should be delegated to service or a factory; adapter should only call service methods | medium |
+| ~~`adapters/api/routes_master.py:24,84,125,305`~~ | ~~Route handlers import `Npc` and `EntitiesLayer`, iterate layer internals directly~~ | **Fixed**: added `all_entities`/`all_npcs`/`npc_info` queries to EntitiesLayer; added `list_npcs()`/`get_npc_info()` to GameService; routes now use service only, zero layer imports | ~~high~~ |
+| `adapters/cli_loop.py:28-31` | CLI adapter imports all four layer classes and constructs them directly | **Won't fix**: debug-only REPL adapter, not used in production; gameplay goes through API | ~~medium~~ |
 
 ## Convention Violations
 | File:Line | Violation | Rule |
