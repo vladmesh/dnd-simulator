@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Simulator — Master Panel</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+        .mode-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; padding: 0.15rem 0.5rem; border-radius: 3px; }
+        .mode-label.template { background: #1a3a5c; color: #6bb5ff; border: 1px solid #2a5a8c; }
+        .mode-label.session { background: #3a1a3c; color: #e94560; border: 1px solid #6a2a5c; }
+        .sidebar-section { margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body>
+    <div class="layout-master">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h1><a href="/">D&D Sim</a></h1>
+
+            <!-- World Templates -->
+            <div class="panel sidebar-section">
+                <div class="section-header">
+                    <h2>World Templates</h2>
+                    <button class="primary small" id="btn-new-world">+ New</button>
+                </div>
+                <div id="worlds-list" class="text-dim">Loading<span class="spinner"></span></div>
+            </div>
+
+            <!-- Sessions -->
+            <div class="panel sidebar-section">
+                <div class="section-header">
+                    <h2>Sessions</h2>
+                    <button class="primary small" id="btn-new-session">+ New</button>
+                </div>
+                <div id="sessions-list" class="text-dim">No sessions yet</div>
+            </div>
+        </div>
+
+        <!-- Main Area -->
+        <div class="main-area">
+            <!-- Empty state -->
+            <div id="no-selection" class="panel" style="margin-top:2rem; text-align:center;">
+                <p class="text-dim">Select a world template or session from the sidebar</p>
+            </div>
+
+            <!-- ═══════════════════════════════════════ -->
+            <!-- WORLD TEMPLATE VIEW (read-only inspect) -->
+            <!-- ═══════════════════════════════════════ -->
+            <div id="template-panel" class="hidden">
+                <div class="section-header">
+                    <div class="flex items-center gap-05">
+                        <span class="mode-label template">TEMPLATE</span>
+                        <h2 id="template-name"></h2>
+                    </div>
+                    <button class="primary small" id="btn-edit-template">Edit</button>
+                </div>
+                <p id="template-description" class="text-dim mb-1"></p>
+
+                <div class="tabs" id="template-tabs">
+                    <div class="tab active" data-tab="tpl-regions">Regions</div>
+                    <div class="tab" data-tab="tpl-settlements">Settlements</div>
+                    <div class="tab" data-tab="tpl-locations">Locations</div>
+                    <div class="tab" data-tab="tpl-nations">Nations</div>
+                    <div class="tab" data-tab="tpl-npcs">NPCs</div>
+                </div>
+
+                <div class="tab-content active" id="tab-tpl-regions">
+                    <div class="panel">
+                        <table>
+                            <thead><tr><th>ID</th><th>Name</th><th>Terrain</th><th>Lat</th><th>Lon</th><th>Elev</th><th>Water</th><th>Connections</th></tr></thead>
+                            <tbody id="tpl-regions-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-tpl-settlements">
+                    <div class="panel">
+                        <table>
+                            <thead><tr><th>ID</th><th>Name</th><th>Region</th><th>Type</th><th>Pop</th><th>Prosperity</th><th>Defenses</th></tr></thead>
+                            <tbody id="tpl-settlements-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-tpl-locations">
+                    <div class="panel">
+                        <table>
+                            <thead><tr><th>ID</th><th>Name</th><th>Region</th><th>Settlement</th><th>Neighbors</th></tr></thead>
+                            <tbody id="tpl-locations-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-tpl-nations">
+                    <div class="panel">
+                        <table>
+                            <thead><tr><th>ID</th><th>Name</th><th>Regions</th><th>Wealth</th><th>Military</th><th>Stability</th><th>Leader</th></tr></thead>
+                            <tbody id="tpl-nations-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-tpl-npcs">
+                    <div class="panel">
+                        <table>
+                            <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Location</th><th>Race</th><th>Class</th><th>HP</th><th>AC</th><th>AI</th></tr></thead>
+                            <tbody id="tpl-npcs-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════ -->
+            <!-- SESSION VIEW (live, editable)      -->
+            <!-- ═══════════════════════════════════ -->
+            <div id="session-panel" class="hidden">
+                <div class="section-header">
+                    <div class="flex items-center gap-05">
+                        <span class="mode-label session">SESSION</span>
+                        <h2>Session: <span id="session-id-label" class="text-success"></span></h2>
+                    </div>
+                    <button class="danger small" id="btn-delete-session">Delete</button>
+                </div>
+
+                <!-- Tabs -->
+                <div class="tabs" id="session-tabs">
+                    <div class="tab active" data-tab="overview">Overview</div>
+                    <div class="tab" data-tab="entities">Entities</div>
+                    <div class="tab" data-tab="time">Time</div>
+                    <div class="tab" data-tab="saveload">Save / Load</div>
+                </div>
+
+                <!-- Overview Tab -->
+                <div class="tab-content active" id="tab-overview">
+                    <div class="panel">
+                        <h3>Time</h3>
+                        <p id="overview-time" class="text-dim">—</p>
+                    </div>
+                    <div class="panel">
+                        <h3>Regions</h3>
+                        <table>
+                            <thead><tr><th>Name</th><th>Terrain</th><th>Weather</th></tr></thead>
+                            <tbody id="regions-tbody"></tbody>
+                        </table>
+                    </div>
+                    <div class="panel">
+                        <h3>Nations</h3>
+                        <table>
+                            <thead><tr><th>Name</th><th>Wealth</th><th>Military</th><th>Stability</th><th></th></tr></thead>
+                            <tbody id="nations-tbody"></tbody>
+                        </table>
+                    </div>
+                    <div class="panel">
+                        <h3>Settlements</h3>
+                        <table>
+                            <thead><tr><th>Name</th><th>Type</th><th>Population</th><th>Prosperity</th><th>Defenses</th><th></th></tr></thead>
+                            <tbody id="settlements-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Entities Tab -->
+                <div class="tab-content" id="tab-entities">
+                    <div class="panel">
+                        <div class="flex items-center justify-between mb-1">
+                            <h3>NPCs</h3>
+                            <button class="primary small" id="btn-show-spawn">+ Spawn NPC</button>
+                        </div>
+
+                        <!-- Spawn Form -->
+                        <div id="spawn-form" class="panel hidden">
+                            <h3>Spawn NPC</h3>
+                            <div class="form-row">
+                                <div class="form-group grow"><label>ID</label><input id="spawn-id" placeholder="goblin_1"></div>
+                                <div class="form-group grow"><label>Name</label><input id="spawn-name" placeholder="Gruk"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group grow"><label>Region ID</label><input id="spawn-region"></div>
+                                <div class="form-group grow"><label>Start Location</label><input id="spawn-location"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group grow"><label>Role</label><input id="spawn-role" placeholder="merchant"></div>
+                                <div class="form-group grow"><label>Personality</label><input id="spawn-personality" placeholder="grumpy but fair"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>HP</label><input id="spawn-hp" type="number" value="10" style="width:80px"></div>
+                                <div class="form-group"><label>AC</label><input id="spawn-ac" type="number" value="12" style="width:80px"></div>
+                                <div class="form-group"><label>AI Type</label>
+                                    <select id="spawn-ai"><option value="rule_based">rule_based</option><option value="llm">llm</option></select>
+                                </div>
+                            </div>
+                            <div class="form-row mt-1">
+                                <button class="primary" id="btn-spawn">Spawn</button>
+                                <button id="btn-cancel-spawn">Cancel</button>
+                            </div>
+                            <p id="spawn-msg" class="text-dim mt-1"></p>
+                        </div>
+
+                        <table>
+                            <thead><tr><th>Name</th><th>Location</th><th>Role</th><th>HP</th><th>AC</th><th>AI</th><th>Active</th><th></th></tr></thead>
+                            <tbody id="npcs-tbody"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- NPC Edit Panel -->
+                    <div id="npc-edit-panel" class="panel hidden">
+                        <div class="flex items-center justify-between mb-1">
+                            <h3>Edit NPC: <span id="edit-npc-name"></span></h3>
+                            <button class="small" id="btn-close-edit">Close</button>
+                        </div>
+                        <input type="hidden" id="edit-npc-id">
+                        <div class="form-row">
+                            <div class="form-group"><label>Current HP</label><input id="edit-hp" type="number" style="width:80px"></div>
+                            <div class="form-group"><label>AC</label><input id="edit-ac" type="number" style="width:80px"></div>
+                            <div class="form-group"><label>Gold</label><input id="edit-gold" type="number" style="width:80px"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group grow"><label>Personality</label><input id="edit-personality"></div>
+                            <div class="form-group grow"><label>Location ID</label><input id="edit-location"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Brain Type</label>
+                                <select id="edit-brain-type"><option value="rule_based">rule_based</option><option value="llm">llm</option></select>
+                            </div>
+                            <div class="form-group grow"><label>LLM Model</label><input id="edit-brain-model" placeholder="deepseek/deepseek-chat-v3-0324"></div>
+                        </div>
+                        <div class="form-row mt-1">
+                            <button class="primary" id="btn-save-npc">Save Changes</button>
+                            <button id="btn-save-brain">Set Brain</button>
+                        </div>
+                        <p id="edit-msg" class="text-dim mt-1"></p>
+                    </div>
+                </div>
+
+                <!-- Time Tab -->
+                <div class="tab-content" id="tab-time">
+                    <div class="panel">
+                        <h3>Current Time</h3>
+                        <p id="time-display" style="font-size:1.2rem; margin-bottom:1rem;">—</p>
+                        <h3>Quick Advance</h3>
+                        <div class="form-row">
+                            <button class="primary" data-hours="1">+1 hour</button>
+                            <button class="primary" data-hours="6">+6 hours</button>
+                            <button class="primary" data-hours="24">+24 hours</button>
+                            <button class="primary" data-hours="168">+7 days</button>
+                        </div>
+                        <h3 class="mt-2">Custom Advance</h3>
+                        <div class="form-row">
+                            <div class="form-group"><label>Hours</label><input id="custom-hours" type="number" value="1" min="1" style="width:100px"></div>
+                            <button class="primary" id="btn-advance-custom">Advance</button>
+                        </div>
+                        <p id="time-msg" class="text-success mt-1"></p>
+                    </div>
+                </div>
+
+                <!-- Save/Load Tab -->
+                <div class="tab-content" id="tab-saveload">
+                    <div class="panel">
+                        <h3>Save Game</h3>
+                        <div class="form-row">
+                            <div class="form-group grow"><label>Save Name (optional)</label><input id="save-name" placeholder="my_save"></div>
+                            <button class="primary" id="btn-save">Save</button>
+                        </div>
+                        <p id="save-msg" class="text-success mt-1"></p>
+                    </div>
+                    <div class="panel">
+                        <h3>Load Game</h3>
+                        <div id="saves-list" class="text-dim">No saves found</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════════════════════════════ -->
+            <!-- NEW SESSION DIALOG                 -->
+            <!-- ═══════════════════════════════════ -->
+            <div id="new-session-dialog" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:500;display:flex;align-items:center;justify-content:center;">
+                <div class="panel" style="min-width:400px;max-width:500px;">
+                    <h2>Create New Session</h2>
+                    <div class="form-group mt-1">
+                        <label>World Template</label>
+                        <select id="new-session-world" style="width:100%;"></select>
+                    </div>
+                    <div class="form-group mt-1">
+                        <label>Language</label>
+                        <select id="new-session-lang" style="width:100%;">
+                            <option value="ru">Russian</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                    <div class="form-row mt-2">
+                        <button class="primary" id="btn-confirm-new-session">Create</button>
+                        <button id="btn-cancel-new-session">Cancel</button>
+                    </div>
+                    <p id="new-session-msg" class="text-danger mt-1"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/world-builder.js"></script>
+    <script src="/js/master.js"></script>
+</body>
+</html>

@@ -8,6 +8,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from dnd_simulator.adapters.api.deps import get_service, set_service
@@ -19,6 +21,7 @@ from dnd_simulator.service import GameService
 from dnd_simulator.storage.store import JsonFileStore
 
 DEFAULT_SAVES_DIR = Path(__file__).resolve().parents[4] / "saves"
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 _SESSION_ID_RE = re.compile(r"/api/(?:master|player)/sessions/([^/]+)")
 
@@ -53,11 +56,20 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     service = GameService(store=store, llm=llm)
     set_service(service)
-    yield
+    try:
+        yield
+    finally:
+        service.autosave_all_sessions()
 
 
 app = FastAPI(title="D&D Simulator", version="0.1.0", lifespan=lifespan)
 app.add_middleware(I18nMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(master_router)
 app.include_router(player_router)
 
@@ -65,3 +77,7 @@ app.include_router(player_router)
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+# Static files served AFTER API routes so /api/* takes priority
+app.mount("/", StaticFiles(directory=str(_STATIC_DIR), html=True), name="static")

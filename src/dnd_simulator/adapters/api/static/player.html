@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Simulator — Player</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- Phase 1: Setup -->
+<div id="setup-screen" class="setup-panel panel">
+    <h1>Player Setup</h1>
+
+    <!-- Connect to existing session -->
+    <div id="connect-section">
+        <h3>Join Existing Session</h3>
+        <div class="form-row">
+            <div class="form-group grow">
+                <label for="session-id-input">Session ID</label>
+                <input type="text" id="session-id-input" placeholder="Enter session ID">
+            </div>
+            <button id="btn-connect" class="primary">Connect</button>
+        </div>
+
+        <p class="text-dim mt-1" style="text-align:center;">or</p>
+
+        <h3 class="mt-1">New Session</h3>
+        <div class="form-row">
+            <div class="form-group grow">
+                <label for="world-select">World</label>
+                <select id="world-select">
+                    <option value="">Loading worlds...</option>
+                </select>
+            </div>
+            <button id="btn-new-session" class="primary">New Session</button>
+        </div>
+        <p id="world-description" class="text-dim mt-1" style="font-size:0.85rem; max-height:4rem; overflow-y:auto;"></p>
+        <p id="connect-error" class="text-danger mt-1 hidden"></p>
+        <p id="connect-info" class="text-success mt-1 hidden"></p>
+    </div>
+
+    <!-- Character creation (shown after connecting if no character) -->
+    <div id="chargen-section" class="hidden">
+        <h2 class="mt-2">Create Your Character</h2>
+        <p class="text-dim mb-1">Session: <span id="chargen-sid" class="text-success"></span></p>
+
+        <div class="form-row">
+            <div class="form-group grow">
+                <label for="char-name">Name</label>
+                <input type="text" id="char-name" placeholder="Character name">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group grow">
+                <label for="char-race">Race</label>
+                <select id="char-race">
+                    <option value="human">Human</option>
+                    <option value="elf">Elf</option>
+                    <option value="dwarf">Dwarf</option>
+                    <option value="halfling">Halfling</option>
+                    <option value="gnome">Gnome</option>
+                    <option value="half-orc">Half-Orc</option>
+                    <option value="tiefling">Tiefling</option>
+                    <option value="dragonborn">Dragonborn</option>
+                </select>
+            </div>
+            <div class="form-group grow">
+                <label for="char-class">Class</label>
+                <select id="char-class">
+                    <option value="fighter">Fighter</option>
+                    <option value="wizard">Wizard</option>
+                    <option value="rogue">Rogue</option>
+                    <option value="cleric">Cleric</option>
+                    <option value="ranger">Ranger</option>
+                    <option value="barbarian">Barbarian</option>
+                    <option value="paladin">Paladin</option>
+                    <option value="bard">Bard</option>
+                    <option value="monk">Monk</option>
+                    <option value="sorcerer">Sorcerer</option>
+                    <option value="warlock">Warlock</option>
+                    <option value="druid">Druid</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="char-level">Level</label>
+                <input type="number" id="char-level" min="1" max="20" value="1" style="width:60px;">
+            </div>
+            <div class="form-group grow">
+                <label for="char-alignment">Alignment</label>
+                <select id="char-alignment">
+                    <option value="lawful_good">Lawful Good</option>
+                    <option value="neutral_good">Neutral Good</option>
+                    <option value="chaotic_good">Chaotic Good</option>
+                    <option value="lawful_neutral">Lawful Neutral</option>
+                    <option value="true_neutral" selected>True Neutral</option>
+                    <option value="chaotic_neutral">Chaotic Neutral</option>
+                    <option value="lawful_evil">Lawful Evil</option>
+                    <option value="neutral_evil">Neutral Evil</option>
+                    <option value="chaotic_evil">Chaotic Evil</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group grow">
+                <label for="char-appearance">Appearance</label>
+                <textarea id="char-appearance" rows="2" placeholder="Describe your character's appearance"></textarea>
+            </div>
+        </div>
+
+        <h3 class="mt-1">Ability Scores</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="char-str">STR</label>
+                <input type="number" id="char-str" min="1" max="30" value="10" style="width:55px;">
+            </div>
+            <div class="form-group">
+                <label for="char-dex">DEX</label>
+                <input type="number" id="char-dex" min="1" max="30" value="10" style="width:55px;">
+            </div>
+            <div class="form-group">
+                <label for="char-con">CON</label>
+                <input type="number" id="char-con" min="1" max="30" value="10" style="width:55px;">
+            </div>
+            <div class="form-group">
+                <label for="char-int">INT</label>
+                <input type="number" id="char-int" min="1" max="30" value="10" style="width:55px;">
+            </div>
+            <div class="form-group">
+                <label for="char-wis">WIS</label>
+                <input type="number" id="char-wis" min="1" max="30" value="10" style="width:55px;">
+            </div>
+            <div class="form-group">
+                <label for="char-cha">CHA</label>
+                <input type="number" id="char-cha" min="1" max="30" value="10" style="width:55px;">
+            </div>
+        </div>
+
+        <h3 class="mt-1">Combat Stats</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="char-hp">HP</label>
+                <input type="number" id="char-hp" min="1" value="10" style="width:60px;">
+            </div>
+            <div class="form-group">
+                <label for="char-ac">AC</label>
+                <input type="number" id="char-ac" min="1" value="10" style="width:60px;">
+            </div>
+            <div class="form-group">
+                <label for="char-gold">Gold</label>
+                <input type="number" id="char-gold" min="0" value="15" style="width:70px;">
+            </div>
+        </div>
+
+        <div class="form-row mt-2">
+            <button id="btn-create-char" class="primary" style="width:100%;">Create Character</button>
+        </div>
+        <p id="chargen-error" class="text-danger mt-1 hidden"></p>
+    </div>
+</div>
+
+<!-- Phase 2: Game Screen -->
+<div id="game-screen" class="layout-player hidden">
+
+    <!-- Left: Status -->
+    <div class="player-status">
+        <div class="panel">
+            <h3 id="status-name">—</h3>
+            <p class="text-dim" id="status-race-class">—</p>
+            <p class="text-dim" style="font-size:0.75rem;" id="status-alignment">—</p>
+
+            <div class="mt-1">
+                <div class="flex justify-between" style="font-size:0.8rem;">
+                    <span>HP</span>
+                    <span id="status-hp-text">—</span>
+                </div>
+                <div class="hp-bar-outer mt-1">
+                    <div class="hp-bar-inner" id="status-hp-bar" style="width:100%;"></div>
+                </div>
+            </div>
+
+            <div class="stat-grid mt-1">
+                <span class="stat-label">AC</span>
+                <span class="stat-value" id="status-ac">—</span>
+                <span class="stat-label">Gold</span>
+                <span class="stat-value" id="status-gold">—</span>
+                <span class="stat-label">Level</span>
+                <span class="stat-value" id="status-level">—</span>
+            </div>
+
+            <h3 class="mt-1" style="font-size:0.85rem;">Abilities</h3>
+            <div class="stat-grid">
+                <span class="stat-label">STR</span>
+                <span class="stat-value" id="stat-str">—</span>
+                <span class="stat-label">DEX</span>
+                <span class="stat-value" id="stat-dex">—</span>
+                <span class="stat-label">CON</span>
+                <span class="stat-value" id="stat-con">—</span>
+                <span class="stat-label">INT</span>
+                <span class="stat-value" id="stat-int">—</span>
+                <span class="stat-label">WIS</span>
+                <span class="stat-value" id="stat-wis">—</span>
+                <span class="stat-label">CHA</span>
+                <span class="stat-value" id="stat-cha">—</span>
+            </div>
+
+            <div class="mt-1" style="font-size:0.8rem;">
+                <span class="stat-label">Location</span>
+                <p id="status-location" class="text-success">—</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Center: Perception + Events + Combat -->
+    <div class="player-center">
+        <div id="combat-panel" class="combat-panel hidden">
+            <h3>Combat</h3>
+            <p>Round: <span id="combat-round">—</span></p>
+            <div id="combat-initiative" class="mt-1" style="font-size:0.8rem;"></div>
+            <pre id="combat-map" class="mt-1" style="font-size:0.7rem; overflow-x:auto;"></pre>
+        </div>
+
+        <div class="perception-box panel" id="perception-box">
+            <span class="text-dim">Loading perception...</span>
+        </div>
+
+        <div class="event-log" id="event-log"></div>
+    </div>
+
+    <!-- Right: Map -->
+    <div class="player-map">
+        <div class="panel">
+            <h3 style="font-size:0.85rem;">Map</h3>
+            <div id="map-current" class="map-node current">—</div>
+            <p class="text-dim mt-1" style="font-size:0.75rem;">Paths:</p>
+            <div id="map-paths"></div>
+        </div>
+    </div>
+
+    <!-- Bottom: Command -->
+    <div class="player-command">
+        <div class="command-bar">
+            <input type="text" id="command-input" placeholder="Enter command..." autocomplete="off">
+            <button id="btn-send" class="primary">Send</button>
+        </div>
+        <div class="flex gap-05 mt-1" id="quick-actions-explore">
+            <button class="small" data-action="look">Look</button>
+            <button class="small" data-action="map">Map</button>
+            <button class="small" data-action="wait 1">Wait 1h</button>
+            <button class="small" data-action="status">Status</button>
+            <button class="small" data-action="nations">Nations</button>
+            <button class="small" data-action="settlements">Settlements</button>
+        </div>
+        <div class="flex gap-05 mt-1 hidden" id="quick-actions-combat">
+            <button class="small" data-action="dodge">Dodge</button>
+            <button class="small" data-action="flee">Flee</button>
+            <button class="small" data-action="look">Look</button>
+            <button class="small" data-action="status">Status</button>
+        </div>
+    </div>
+</div>
+
+<script src="/js/api.js"></script>
+<script src="/js/player.js"></script>
+</body>
+</html>
