@@ -23,6 +23,15 @@ def _create_session(client: TestClient) -> str:
     return resp.json()["session_id"]
 
 
+def _create_session_with_player(client: TestClient) -> str:
+    sid = _create_session(client)
+    resp = client.post(
+        f"/api/player/sessions/{sid}/character", json={"name": "Tester", "race": "human", "char_class": "fighter"}
+    )
+    assert resp.status_code == 200
+    return sid
+
+
 class TestHealthEndpoint:
     def test_health(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
@@ -44,20 +53,10 @@ class TestWorldsEndpoint:
 class TestMasterSessions:
     def test_create_session(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
-        resp = client.post("/api/master/sessions", json={"world_name": "test_world.yaml"})
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "session_id" in data
-        assert data["player_name"] != ""
-
-    def test_create_session_directory_format(self, tmp_path: object) -> None:
-        client, _ = _make_client(tmp_path)
         resp = client.post("/api/master/sessions", json={"world_name": "sword_vale"})
         assert resp.status_code == 200
         data = resp.json()
         assert "session_id" in data
-        # sword_vale has no player.yaml, so player_name should be empty
-        assert data["player_name"] == ""
 
     def test_get_session_state(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
@@ -209,7 +208,7 @@ class TestTimeControl:
 class TestPlayerEndpoints:
     def test_get_status(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
-        sid = _create_session(client)
+        sid = _create_session_with_player(client)
         resp = client.get(f"/api/player/sessions/{sid}/status")
         assert resp.status_code == 200
         data = resp.json()
@@ -219,7 +218,7 @@ class TestPlayerEndpoints:
 
     def test_player_action_look(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
-        sid = _create_session(client)
+        sid = _create_session_with_player(client)
         resp = client.post(f"/api/player/sessions/{sid}/action", json={"action": "look"})
         assert resp.status_code == 200
         assert len(resp.json()["text"]) > 0
@@ -289,7 +288,7 @@ class TestPlayerCharacterCreation:
 class TestPlayerPerception:
     def test_get_perception(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
-        sid = _create_session(client)
+        sid = _create_session_with_player(client)
 
         resp = client.get(f"/api/player/sessions/{sid}/perception")
         assert resp.status_code == 200
@@ -302,7 +301,7 @@ class TestPlayerPerception:
 
     def test_perception_entities_are_perceived(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
-        sid = _create_session(client)
+        sid = _create_session_with_player(client)
 
         resp = client.get(f"/api/player/sessions/{sid}/perception")
         data = resp.json()
@@ -313,7 +312,7 @@ class TestPlayerPerception:
 
     def test_get_events(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
-        sid = _create_session(client)
+        sid = _create_session_with_player(client)
 
         resp = client.get(f"/api/player/sessions/{sid}/events")
         assert resp.status_code == 200
@@ -321,7 +320,7 @@ class TestPlayerPerception:
 
     def test_get_combat_not_in_combat(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
-        sid = _create_session(client)
+        sid = _create_session_with_player(client)
 
         resp = client.get(f"/api/player/sessions/{sid}/combat")
         assert resp.status_code == 200
@@ -331,7 +330,7 @@ class TestPlayerPerception:
 
     def test_get_map(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
-        sid = _create_session(client)
+        sid = _create_session_with_player(client)
 
         resp = client.get(f"/api/player/sessions/{sid}/map")
         assert resp.status_code == 200

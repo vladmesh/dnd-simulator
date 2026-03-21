@@ -34,7 +34,7 @@ class NpcTag:
 def find_tags(tags: list[str], prefix: str) -> list[str]:
     """Extract creature IDs matching a tag prefix, e.g. find_tags(tags, "hates") → ["orc_chief"]."""
     p = prefix + ":"
-    return [t[len(p):] for t in tags if t.startswith(p)]
+    return [t[len(p) :] for t in tags if t.startswith(p)]
 
 
 def has_tag(tags: list[str], tag: str) -> bool:

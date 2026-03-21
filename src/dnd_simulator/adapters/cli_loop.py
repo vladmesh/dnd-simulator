@@ -69,7 +69,7 @@ def run_cli_loop() -> None:
     print(f"LLM: {model}")
 
     # Load world (accept filename from argv)
-    world_file = sys.argv[1] if len(sys.argv) > 1 else "test_world.yaml"
+    world_file = sys.argv[1] if len(sys.argv) > 1 else "sword_vale"
     world_path = DEFAULT_CONTENT_DIR / "worlds" / world_file
     regions = load_world(world_path)
     nations = load_nations(world_path)

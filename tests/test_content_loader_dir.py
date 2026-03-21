@@ -46,19 +46,3 @@ class TestDirectoryFormat:
         edgar = next(n for n in npcs if n.id == "edgar")
         assert edgar.role == "blacksmith"
         assert edgar.brain is not None
-
-    def test_matches_legacy_format(self) -> None:
-        """Directory format produces same data as legacy single-file."""
-        legacy = Path(__file__).resolve().parents[1] / "content" / "worlds" / "test_world.yaml"
-
-        legacy_regions = load_world(legacy)
-        dir_regions = load_world(SWORD_VALE)
-        assert len(legacy_regions) == len(dir_regions)
-
-        legacy_nations = load_nations(legacy)
-        dir_nations = load_nations(SWORD_VALE)
-        assert len(legacy_nations) == len(dir_nations)
-
-        legacy_npcs = load_npcs(legacy)
-        dir_npcs = load_npcs(SWORD_VALE)
-        assert len(legacy_npcs) == len(dir_npcs)
