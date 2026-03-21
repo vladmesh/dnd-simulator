@@ -16,7 +16,7 @@ from dnd_simulator.layers.entities.perception import perceive_event
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import TimeDelta
-    from dnd_simulator.core.world import WorldState
+    from dnd_simulator.core.world import World, WorldState
     from dnd_simulator.llm.summarizer import MemorySummarizer
 
 logger = logging.getLogger("dnd_simulator.entities")
@@ -47,10 +47,15 @@ class EntitiesLayer(Layer):
         self._entities: dict[str, Entity] = {}
         self._location_log: dict[str, list[Event]] = defaultdict(list)
         self._summarizer = summarizer
+        self._world: World | None = None
         if entities:
             for e in entities:
                 self._entities[e.id] = e
         self._combat = CombatManager(self._entities, self._location_log, battle_map_configs)
+
+    def set_world(self, world: World) -> None:
+        """Set back-reference to World (needed for NPC take_turn)."""
+        self._world = world
 
     @property
     def name(self) -> str:
@@ -106,7 +111,32 @@ class EntitiesLayer(Layer):
     # -- Layer interface --
 
     def tick(self, delta: TimeDelta, world_state: WorldState) -> list[Event]:
-        """Update all active entities. Schedule is computed, not ticked."""
+        """Let active NPC creatures take their turns.
+
+        One round of NPC actions per 6-second D&D round elapsed.
+        Player characters are skipped (they act via API).
+        """
+        from dnd_simulator.core.player import PlayerCharacter
+
+        if self._world is None:
+            return []
+
+        # One NPC round per 6 seconds of game time
+        rounds = delta.rounds
+        if rounds == 0:
+            return []
+
+        # Cap to avoid huge bursts (e.g. 24h wait = 14400 rounds)
+        rounds = min(rounds, 3)
+
+        for _ in range(rounds):
+            for entity in list(self._entities.values()):
+                if isinstance(entity, Creature) and entity.active and not isinstance(entity, PlayerCharacter):
+                    try:
+                        entity.take_turn(self._world)
+                    except Exception:
+                        logger.exception("Error in %s.take_turn", entity.name)
+
         return []
 
     def handle_event(self, event: Event) -> ActionResult:

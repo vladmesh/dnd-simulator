@@ -29,6 +29,11 @@ class World:
         self.location_graph = location_graph or LocationGraph()
         self._last_tick_time: dict[str, GameDateTime] = {layer.name: self.time for layer in layers}
 
+        # Give entities layer a back-reference so NPC tick works
+        for layer in layers:
+            if hasattr(layer, "set_world"):
+                layer.set_world(self)
+
     @property
     def layers(self) -> list[Layer]:
         return list(self._layers)
