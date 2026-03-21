@@ -34,7 +34,7 @@ def _mock_world() -> MagicMock:
             else:
                 answer.value = {}
         elif layer_name == "entities":
-            if q == "entities_in_region" or q == "perceived_log" or q == "new_perceived_events":
+            if q == "entities_at_location" or q == "perceived_log" or q == "new_perceived_events":
                 answer.value = []
             else:
                 answer.value = None
@@ -67,13 +67,13 @@ class TestBuildNpcTools:
 
 class TestNpcTakeTurn:
     def test_no_llm_does_nothing(self) -> None:
-        npc = Npc(id="n1", name="Smith", region_id="r1", role="blacksmith")
+        npc = Npc(id="n1", name="Smith", location_id="r1", role="blacksmith")
         world = _mock_world()
         npc.take_turn(world)
         world.handle_event.assert_not_called()
 
     def test_llm_say_sends_event(self) -> None:
-        npc = Npc(id="n1", name="Smith", region_id="r1", role="blacksmith")
+        npc = Npc(id="n1", name="Smith", location_id="r1", role="blacksmith")
         world = _mock_world()
         mock_llm = MagicMock()
         say_tc = ToolCall(id="tc_1", name="say", arguments={"text": "Привет!"})
@@ -86,7 +86,7 @@ class TestNpcTakeTurn:
         assert event.data["text"] == "Привет!"
 
     def test_llm_idle_no_event(self) -> None:
-        npc = Npc(id="n1", name="Smith", region_id="r1", role="blacksmith")
+        npc = Npc(id="n1", name="Smith", location_id="r1", role="blacksmith")
         world = _mock_world()
         mock_llm = MagicMock()
         idle_tc = ToolCall(id="tc_1", name="idle", arguments={})
@@ -96,7 +96,7 @@ class TestNpcTakeTurn:
         world.handle_event.assert_not_called()
 
     def test_llm_attack_sends_event(self) -> None:
-        npc = Npc(id="n1", name="Guard", region_id="r1", role="guard", attacks=(_SWORD,))
+        npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", attacks=(_SWORD,))
         world = _mock_world()
         mock_llm = MagicMock()
         atk_tc = ToolCall(id="tc_1", name="attack", arguments={"target_id": "player"})
@@ -110,7 +110,7 @@ class TestNpcTakeTurn:
         assert event.data["target_id"] == "player"
 
     def test_llm_text_response_retries(self) -> None:
-        npc = Npc(id="n1", name="Smith", region_id="r1", role="blacksmith")
+        npc = Npc(id="n1", name="Smith", location_id="r1", role="blacksmith")
         world = _mock_world()
         mock_llm = MagicMock()
         idle_tc = ToolCall(id="tc_1", name="idle", arguments={})
@@ -123,7 +123,7 @@ class TestNpcTakeTurn:
         assert mock_llm.generate_with_tools.call_count == 2
 
     def test_llm_exhausts_retries_does_nothing(self) -> None:
-        npc = Npc(id="n1", name="Smith", region_id="r1", role="blacksmith")
+        npc = Npc(id="n1", name="Smith", location_id="r1", role="blacksmith")
         world = _mock_world()
         mock_llm = MagicMock()
         mock_llm.generate_with_tools.return_value = LlmResponse(text="I don't know", tool_call=None, raw_message=None)

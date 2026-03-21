@@ -14,6 +14,7 @@ from dnd_simulator.core.character import (
     DamageType,
 )
 from dnd_simulator.core.combat import CombatState
+from dnd_simulator.core.location import Location, LocationGraph
 from dnd_simulator.core.models import Event, EventType, GameDateTime
 from dnd_simulator.core.world import World
 from dnd_simulator.game_loop import run_game_loop
@@ -42,8 +43,8 @@ class TestRollInitiative:
     def test_sorts_by_total_descending(self) -> None:
         # Fix RNG so d20 rolls are predictable
         rng = random.Random(42)
-        high_dex = Creature(id="fast", name="Fast", region_id="r1", ability_scores=_scores(dex=18))
-        low_dex = Creature(id="slow", name="Slow", region_id="r1", ability_scores=_scores(dex=8))
+        high_dex = Creature(id="fast", name="Fast", location_id="r1", ability_scores=_scores(dex=18))
+        low_dex = Creature(id="slow", name="Slow", location_id="r1", ability_scores=_scores(dex=8))
         # With many trials, higher DEX should generally go first
         wins = 0
         for seed in range(100):
@@ -56,7 +57,7 @@ class TestRollInitiative:
 
     def test_returns_all_creatures(self) -> None:
         rng = random.Random(1)
-        creatures = [Creature(id=f"c{i}", name=f"C{i}", region_id="r1") for i in range(5)]
+        creatures = [Creature(id=f"c{i}", name=f"C{i}", location_id="r1") for i in range(5)]
         result = roll_initiative(creatures, rng=rng)
         assert len(result) == 5
         assert {c.id for c in result} == {c.id for c in creatures}
@@ -67,8 +68,8 @@ class TestRollInitiative:
         wins_15 = 0
         for seed in range(200):
             rng = random.Random(seed)
-            c14 = Creature(id="dex14", name="D14", region_id="r1", ability_scores=_scores(dex=14))
-            c15 = Creature(id="dex15", name="D15", region_id="r1", ability_scores=_scores(dex=15))
+            c14 = Creature(id="dex14", name="D14", location_id="r1", ability_scores=_scores(dex=14))
+            c15 = Creature(id="dex15", name="D15", location_id="r1", ability_scores=_scores(dex=15))
             order = roll_initiative([c14, c15], rng=rng)
             if order[0].id == "dex15":
                 wins_15 += 1
@@ -77,7 +78,7 @@ class TestRollInitiative:
 
     def test_single_creature(self) -> None:
         rng = random.Random(1)
-        c = Creature(id="solo", name="Solo", region_id="r1")
+        c = Creature(id="solo", name="Solo", location_id="r1")
         result = roll_initiative([c], rng=rng)
         assert result == [c]
 
@@ -91,12 +92,12 @@ class TestRollInitiative:
 
 class TestCombatState:
     def test_defaults(self) -> None:
-        cs = CombatState(region_id="r1", turn_order=["a", "b", "c"])
+        cs = CombatState(location_id="r1", turn_order=["a", "b", "c"])
         assert cs.round_number == 1
         assert cs.rounds_without_attack == 0
 
     def test_mutable(self) -> None:
-        cs = CombatState(region_id="r1", turn_order=["a", "b"])
+        cs = CombatState(location_id="r1", turn_order=["a", "b"])
         cs.round_number = 3
         cs.rounds_without_attack = 2
         assert cs.round_number == 3
@@ -107,9 +108,9 @@ class TestCombatState:
 
 class TestEntitiesLayerCombat:
     def _make_layer(self) -> tuple[EntitiesLayer, Creature, Creature, Creature]:
-        c1 = Character(id="c1", name="Fighter", region_id="r1", max_hp=20, current_hp=20, ac=15, attacks=(_SWORD,))
-        c2 = Character(id="c2", name="Rogue", region_id="r1", max_hp=15, current_hp=15, ac=12, attacks=(_SWORD,))
-        c3 = Character(id="c3", name="Bystander", region_id="r1", max_hp=10, current_hp=10)
+        c1 = Character(id="c1", name="Fighter", location_id="r1", max_hp=20, current_hp=20, ac=15, attacks=(_SWORD,))
+        c2 = Character(id="c2", name="Rogue", location_id="r1", max_hp=15, current_hp=15, ac=12, attacks=(_SWORD,))
+        c3 = Character(id="c3", name="Bystander", location_id="r1", max_hp=10, current_hp=10)
         layer = EntitiesLayer([c1, c2, c3])
         return layer, c1, c2, c3
 
@@ -155,7 +156,7 @@ class TestEntitiesLayerCombat:
         assert first_order == second_order
 
     def test_other_region_not_affected(self) -> None:
-        c_other = Character(id="c4", name="Farmer", region_id="r2", max_hp=10, current_hp=10)
+        c_other = Character(id="c4", name="Farmer", location_id="r2", max_hp=10, current_hp=10)
         layer, _c1, _c2, _c3 = self._make_layer()
         layer.add_entity(c_other)
 
@@ -244,9 +245,9 @@ class TestEntitiesLayerCombat:
 
 class TestFleeRemovesFromCombat:
     def test_flee_removes_from_turn_order(self) -> None:
-        c1 = Character(id="c1", name="Fighter", region_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
-        c2 = Character(id="c2", name="Rogue", region_id="r1", max_hp=15, current_hp=15, attacks=(_SWORD,))
-        c3 = Character(id="c3", name="Mage", region_id="r1", max_hp=8, current_hp=8)
+        c1 = Character(id="c1", name="Fighter", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
+        c2 = Character(id="c2", name="Rogue", location_id="r1", max_hp=15, current_hp=15, attacks=(_SWORD,))
+        c3 = Character(id="c3", name="Mage", location_id="r1", max_hp=8, current_hp=8)
         layer = EntitiesLayer([c1, c2, c3])
 
         # Start combat
@@ -273,8 +274,8 @@ class TestFleeRemovesFromCombat:
         assert "c3" not in combat.turn_order
 
     def test_flee_last_two_ends_combat(self) -> None:
-        c1 = Character(id="c1", name="Fighter", region_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
-        c2 = Character(id="c2", name="Rogue", region_id="r1", max_hp=15, current_hp=15)
+        c1 = Character(id="c1", name="Fighter", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
+        c2 = Character(id="c2", name="Rogue", location_id="r1", max_hp=15, current_hp=15)
         layer = EntitiesLayer([c1, c2])
 
         # Start combat
@@ -304,15 +305,15 @@ class TestDeathRemovesFromCombat:
         c1 = Character(
             id="c1",
             name="Fighter",
-            region_id="r1",
+            location_id="r1",
             max_hp=20,
             current_hp=20,
             ac=15,
             attacks=(_SWORD,),
             ability_scores=_scores(str=20),  # high STR for guaranteed hit
         )
-        c2 = Character(id="c2", name="Weakling", region_id="r1", max_hp=1, current_hp=1, ac=1)
-        c3 = Character(id="c3", name="Observer", region_id="r1", max_hp=10, current_hp=10)
+        c2 = Character(id="c2", name="Weakling", location_id="r1", max_hp=1, current_hp=1, ac=1)
+        c3 = Character(id="c3", name="Observer", location_id="r1", max_hp=10, current_hp=10)
         layer = EntitiesLayer([c1, c2, c3])
 
         # Attack c2 (HP=1, AC=1 → almost guaranteed kill)
@@ -333,14 +334,14 @@ class TestDeathRemovesFromCombat:
         c1 = Character(
             id="c1",
             name="Fighter",
-            region_id="r1",
+            location_id="r1",
             max_hp=20,
             current_hp=20,
             ac=15,
             attacks=(_SWORD,),
             ability_scores=_scores(str=30),
         )
-        c2 = Character(id="c2", name="Weak", region_id="r1", max_hp=1, current_hp=1, ac=1)
+        c2 = Character(id="c2", name="Weak", location_id="r1", max_hp=1, current_hp=1, ac=1)
         layer = EntitiesLayer([c1, c2])
 
         layer.handle_event(
@@ -361,8 +362,8 @@ class TestCombatInfoQuery:
     def test_returns_round_and_order(self) -> None:
         from dnd_simulator.core.models import Query
 
-        c1 = Character(id="c1", name="A", region_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
-        c2 = Character(id="c2", name="B", region_id="r1", max_hp=15, current_hp=15)
+        c1 = Character(id="c1", name="A", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
+        c2 = Character(id="c2", name="B", location_id="r1", max_hp=15, current_hp=15)
         layer = EntitiesLayer([c1, c2])
 
         layer.handle_event(
@@ -372,7 +373,7 @@ class TestCombatInfoQuery:
                 data={"attacker_id": "c1", "target_id": "c2"},
             )
         )
-        answer = layer.query(Query(question="combat_info", params={"region_id": "r1"}))
+        answer = layer.query(Query(question="combat_info", params={"location_id": "r1"}))
         assert answer.value is not None
         assert answer.value["round_number"] == 1
         assert set(answer.value["turn_order"]) == {"c1", "c2"}
@@ -380,9 +381,9 @@ class TestCombatInfoQuery:
     def test_returns_none_outside_combat(self) -> None:
         from dnd_simulator.core.models import Query
 
-        c1 = Character(id="c1", name="A", region_id="r1")
+        c1 = Character(id="c1", name="A", location_id="r1")
         layer = EntitiesLayer([c1])
-        answer = layer.query(Query(question="combat_info", params={"region_id": "r1"}))
+        answer = layer.query(Query(question="combat_info", params={"location_id": "r1"}))
         assert answer.value is None
 
 
@@ -398,11 +399,15 @@ class TestGameLoopCombat:
             def take_turn(self, world: World) -> None:
                 turn_log.append(self.id)
 
-        c1 = LogCreature(id="c1", name="A", region_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
-        c2 = LogCreature(id="c2", name="B", region_id="r1", max_hp=15, current_hp=15, attacks=(_SWORD,))
+        c1 = LogCreature(id="c1", name="A", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
+        c2 = LogCreature(id="c2", name="B", location_id="r1", max_hp=15, current_hp=15, attacks=(_SWORD,))
 
         layer = EntitiesLayer([c1, c2])
-        world = World(layers=[layer], time=GameDateTime())
+        world = World(
+            layers=[layer],
+            time=GameDateTime(),
+            location_graph=LocationGraph([Location(id="r1", name="Test", region_id="r1")]),
+        )
 
         # Start combat manually
         layer._combat.start_combat("r1")
@@ -434,12 +439,21 @@ class TestGameLoopCombat:
                         if isinstance(e, Creature):
                             e.active = False
 
-        c_combat1 = LogCreature(id="c1", name="A", region_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
-        c_combat2 = LogCreature(id="c2", name="B", region_id="r1", max_hp=15, current_hp=15)
-        c_peaceful = LogCreature(id="c3", name="C", region_id="r2", max_hp=10, current_hp=10)
+        c_combat1 = LogCreature(id="c1", name="A", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
+        c_combat2 = LogCreature(id="c2", name="B", location_id="r1", max_hp=15, current_hp=15)
+        c_peaceful = LogCreature(id="c3", name="C", location_id="r2", max_hp=10, current_hp=10)
 
         layer = EntitiesLayer([c_combat1, c_combat2, c_peaceful])
-        world = World(layers=[layer], time=GameDateTime())
+        world = World(
+            layers=[layer],
+            time=GameDateTime(),
+            location_graph=LocationGraph(
+                [
+                    Location(id="r1", name="Test", region_id="r1"),
+                    Location(id="r2", name="Test2", region_id="r2"),
+                ]
+            ),
+        )
 
         # Put r1 in combat
         layer._combat.start_combat("r1")

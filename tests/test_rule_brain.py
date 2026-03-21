@@ -33,17 +33,17 @@ def _make_world(entities: list[object], battle_map: BattleMap | None = None) -> 
     world.handle_event.return_value = ActionResult()
 
     # Start combat if multiple creatures in same region
-    combat_region = entities[0].region_id if entities else "arena"  # type: ignore[union-attr]
+    combat_location = entities[0].location_id if entities else "arena"  # type: ignore[union-attr]
     for e in entities:
         if hasattr(e, "in_combat"):
             e.in_combat = True  # type: ignore[union-attr]
     combat = CombatState(
-        region_id=combat_region,
+        location_id=combat_location,
         turn_order=[e.id for e in entities],  # type: ignore[union-attr]
     )
     if battle_map is not None:
         combat.battle_map = battle_map
-    layer._combat._combats[combat_region] = combat
+    layer._combat._combats[combat_location] = combat
 
     def fake_query(layer_name: str, query: object) -> MagicMock:
         if layer_name == "entities":
@@ -58,7 +58,7 @@ def _make_world(entities: list[object], battle_map: BattleMap | None = None) -> 
 
 class TestRuleBrainPeaceful:
     def test_peaceful_returns_idle(self) -> None:
-        npc = Npc(id="n1", name="Guard", region_id="r1", attacks=(_SWORD,))
+        npc = Npc(id="n1", name="Guard", location_id="r1", attacks=(_SWORD,))
         npc.in_combat = False
         brain = RuleBrain()
         world = MagicMock()
@@ -68,8 +68,8 @@ class TestRuleBrainPeaceful:
 
 class TestRuleBrainCombat:
     def test_attack_when_in_reach(self) -> None:
-        npc = Npc(id="n1", name="Guard", region_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
-        enemy = Npc(id="e1", name="Bandit", region_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=60, height=60)
         bm.set_position("n1", Position(10, 10))
         bm.set_position("e1", Position(10, 15))  # 5 ft away — in reach
@@ -80,8 +80,8 @@ class TestRuleBrainCombat:
         assert action.params["target_id"] == "e1"
 
     def test_move_toward_when_close_but_not_in_reach(self) -> None:
-        npc = Npc(id="n1", name="Guard", region_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20, speed=30)
-        enemy = Npc(id="e1", name="Bandit", region_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20, speed=30)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=60, height=60)
         bm.set_position("n1", Position(10, 10))
         bm.set_position("e1", Position(10, 30))  # 20 ft away — within speed+reach=35
@@ -92,8 +92,8 @@ class TestRuleBrainCombat:
         assert action.params["toward"] == "e1"
 
     def test_dash_when_far(self) -> None:
-        npc = Npc(id="n1", name="Guard", region_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20, speed=30)
-        enemy = Npc(id="e1", name="Bandit", region_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20, speed=30)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=120, height=120)
         bm.set_position("n1", Position(0, 0))
         bm.set_position("e1", Position(60, 60))  # ~60 ft away — beyond speed+reach
@@ -104,8 +104,8 @@ class TestRuleBrainCombat:
         assert action.params["toward"] == "e1"
 
     def test_flee_when_critically_wounded(self) -> None:
-        npc = Npc(id="n1", name="Guard", region_id="arena", attacks=(_SWORD,), max_hp=100, current_hp=10)
-        enemy = Npc(id="e1", name="Bandit", region_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=100, current_hp=10)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=60, height=60)
         bm.set_position("n1", Position(10, 10))
         bm.set_position("e1", Position(10, 15))
@@ -115,8 +115,8 @@ class TestRuleBrainCombat:
         assert action.name == "flee"
 
     def test_dodge_when_badly_hurt_and_in_reach(self) -> None:
-        npc = Npc(id="n1", name="Guard", region_id="arena", attacks=(_SWORD,), max_hp=100, current_hp=20)
-        enemy = Npc(id="e1", name="Bandit", region_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=100, current_hp=20)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=60, height=60)
         bm.set_position("n1", Position(10, 10))
         bm.set_position("e1", Position(10, 15))  # 5 ft — in reach
@@ -126,7 +126,7 @@ class TestRuleBrainCombat:
         assert action.name == "dodge"
 
     def test_idle_when_no_enemies(self) -> None:
-        npc = Npc(id="n1", name="Guard", region_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=60, height=60)
         bm.set_position("n1", Position(10, 10))
         world = _make_world([npc], bm)
@@ -135,9 +135,9 @@ class TestRuleBrainCombat:
         assert action.name == "idle"
 
     def test_attacks_nearest_of_multiple_enemies(self) -> None:
-        npc = Npc(id="n1", name="Guard", region_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
-        far = Npc(id="far", name="Far", region_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
-        close = Npc(id="close", name="Close", region_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        far = Npc(id="far", name="Far", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        close = Npc(id="close", name="Close", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=60, height=60)
         bm.set_position("n1", Position(10, 10))
         bm.set_position("far", Position(10, 40))

@@ -257,7 +257,7 @@ class TestPlayerCharacterCreation:
         assert data["name"] == "Thrain"
         assert data["race"] == "dwarf"
         assert data["hp"] == 14
-        assert data["region_id"] == "silverport"
+        assert data["location_id"] == "silverport"
 
     def test_create_character_default_region(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
@@ -268,7 +268,7 @@ class TestPlayerCharacterCreation:
             json={"name": "Nobody"},
         )
         assert resp.status_code == 200
-        assert resp.json()["region_id"] != ""
+        assert resp.json()["location_id"] != ""
 
     def test_create_character_twice_fails(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
@@ -297,7 +297,7 @@ class TestPlayerPerception:
         assert "weather" in data
         assert "location" in data
         assert "entities" in data
-        assert "connections" in data
+        assert "neighbors" in data
         assert "time" in data
 
     def test_perception_entities_are_perceived(self, tmp_path: object) -> None:
@@ -340,10 +340,10 @@ class TestPlayerPerception:
         assert "paths" in data
         assert len(data["paths"]) > 0
         path = data["paths"][0]
-        assert "direction" in path
         assert "target_id" in path
-        assert "distance_km" in path
-        assert "travel_hours" in path
+        assert "target_name" in path
+        assert "distance_m" in path
+        assert "travel_seconds" in path
 
     def test_perception_no_player(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)

@@ -177,7 +177,7 @@ class Entity:
 
     id: str
     name: str
-    region_id: str
+    location_id: str
     active: bool = True
     _last_seen_log_index: int = field(default=0, repr=False)
 
@@ -364,9 +364,10 @@ class Character(Creature):
 # ---------------------------------------------------------------------------
 
 
-def build_awareness(world: World, region_id: str) -> dict[str, Any]:
-    """Gather what a character in a region knows about the world."""
+def build_awareness(world: World, location_id: str) -> dict[str, Any]:
+    """Gather what a character at a location knows about the world."""
     time = world.time
+    region_id = world.location_graph.region_of(location_id)
 
     weather = world.query_layer("geography", Query(question="weather", params={"region_id": region_id}))
     region = world.query_layer("geography", Query(question="region_info", params={"region_id": region_id}))
@@ -400,11 +401,13 @@ def build_combat_awareness(world: World, entity: Character) -> dict[str, Any]:
     from dnd_simulator.rules.movement import direction_label, grid_distance
 
     entities_answer = world.query_layer(
-        "entities", Query(question="entities_in_region", params={"region_id": entity.region_id})
+        "entities", Query(question="entities_at_location", params={"location_id": entity.location_id})
     )
 
     # Get battle map positions from combat info
-    combat_answer = world.query_layer("entities", Query(question="combat_info", params={"region_id": entity.region_id}))
+    combat_answer = world.query_layer(
+        "entities", Query(question="combat_info", params={"location_id": entity.location_id})
+    )
     round_number = combat_answer.value["round_number"] if combat_answer.value else 1
     battle_map_positions: dict[str, Position] = combat_answer.value.get("positions", {}) if combat_answer.value else {}
     my_pos = battle_map_positions.get(entity.id)

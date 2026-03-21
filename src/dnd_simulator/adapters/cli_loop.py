@@ -13,12 +13,14 @@ from dnd_simulator.content_loader import (
     extract_region_adjacency,
     extract_region_terrains,
     load_battle_maps,
+    load_locations,
     load_nations,
     load_npcs,
     load_player,
     load_settlements,
     load_world,
 )
+from dnd_simulator.core.location import LocationGraph
 from dnd_simulator.core.models import GameDateTime, TimeDelta
 from dnd_simulator.core.world import World
 from dnd_simulator.game_loop import run_game_loop
@@ -80,9 +82,13 @@ def run_cli_loop() -> None:
         if npc.ai_type == "llm":
             npc.brain = LlmBrain(llm)
 
-    # Fall back to first region if player has no start_region
-    if not player.region_id and regions:
-        player.region_id = regions[0].id
+    # Build location graph
+    locations = load_locations(world_path, regions)
+    location_graph = LocationGraph(locations)
+
+    # Fall back to first location
+    if not player.location_id and locations:
+        player.location_id = locations[0].id
 
     # Player I/O
     player.input_fn = _quit_input
@@ -103,6 +109,7 @@ def run_cli_loop() -> None:
     world = World(
         layers=[geography, settlements_layer, politics, entities_layer],
         time=GameDateTime(year=1490, month=6, day=1, hour=10),
+        location_graph=location_graph,
     )
 
     # Initial tick

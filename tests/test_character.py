@@ -55,12 +55,12 @@ class TestAbilityScores:
 
 class TestEntityHierarchy:
     def test_entity_fields(self) -> None:
-        e = Entity(id="e1", name="Rock", region_id="r1")
+        e = Entity(id="e1", name="Rock", location_id="r1")
         assert e.id == "e1"
         assert e.name == "Rock"
 
     def test_character_defaults(self) -> None:
-        c = Character(id="c1", name="John", region_id="r1")
+        c = Character(id="c1", name="John", location_id="r1")
         assert c.race == Race.HUMAN
         assert c.char_class == CharClass.COMMONER
         assert c.level == 1
@@ -72,7 +72,7 @@ class TestEntityHierarchy:
         c = Character(
             id="c2",
             name="Kael",
-            region_id="r1",
+            location_id="r1",
             race=Race.TIEFLING,
             char_class=CharClass.FIGHTER,
             level=3,
@@ -86,7 +86,7 @@ class TestEntityHierarchy:
         assert c.level == 3
 
     def test_creature_defaults(self) -> None:
-        c = Creature(id="wolf", name="Grey Wolf", region_id="r1")
+        c = Creature(id="wolf", name="Grey Wolf", location_id="r1")
         assert c.max_hp == 4
         assert c.current_hp == 4
         assert c.ac == 10
@@ -99,7 +99,7 @@ class TestEntityHierarchy:
         c = Creature(
             id="bear",
             name="Brown Bear",
-            region_id="r1",
+            location_id="r1",
             ability_scores=scores,
             max_hp=34,
             current_hp=34,
@@ -110,12 +110,12 @@ class TestEntityHierarchy:
         assert c.ability_scores.modifier(Ability.STR) == 3
 
     def test_character_is_creature(self) -> None:
-        c = Character(id="c1", name="John", region_id="r1")
+        c = Character(id="c1", name="John", location_id="r1")
         assert isinstance(c, Creature)
         assert isinstance(c, Entity)
 
     def test_character_inherits_creature_fields(self) -> None:
-        c = Character(id="c1", name="John", region_id="r1", ac=15, max_hp=20, current_hp=20)
+        c = Character(id="c1", name="John", location_id="r1", ac=15, max_hp=20, current_hp=20)
         assert c.ac == 15
         assert c.max_hp == 20
 
@@ -123,7 +123,7 @@ class TestEntityHierarchy:
         p = PlayerCharacter(
             id="player",
             name="Hero",
-            region_id="r1",
+            location_id="r1",
             race=Race.ELF,
             char_class=CharClass.WIZARD,
         )
@@ -134,22 +134,22 @@ class TestEntityHierarchy:
 
 class TestPerceive:
     def test_perceive_character_sees_race(self) -> None:
-        observer = Character(id="obs", name="Observer", region_id="r1")
+        observer = Character(id="obs", name="Observer", location_id="r1")
         target = Character(
             id="tgt",
             name="Target",
-            region_id="r1",
+            location_id="r1",
             race=Race.TIEFLING,
         )
         result = observer.perceive(target)
         assert "tiefling" in result
 
     def test_perceive_includes_appearance(self) -> None:
-        observer = Character(id="obs", name="Observer", region_id="r1")
+        observer = Character(id="obs", name="Observer", location_id="r1")
         target = Character(
             id="tgt",
             name="Target",
-            region_id="r1",
+            location_id="r1",
             race=Race.DWARF,
             appearance="short with a braided red beard",
         )
@@ -158,11 +158,11 @@ class TestPerceive:
         assert "braided red beard" in result
 
     def test_perceive_wounded(self) -> None:
-        observer = Character(id="obs", name="Observer", region_id="r1")
+        observer = Character(id="obs", name="Observer", location_id="r1")
         target = Character(
             id="tgt",
             name="Target",
-            region_id="r1",
+            location_id="r1",
             max_hp=20,
             current_hp=5,
         )
@@ -170,11 +170,11 @@ class TestPerceive:
         assert "wounded" in result
 
     def test_perceive_healthy_no_wound(self) -> None:
-        observer = Character(id="obs", name="Observer", region_id="r1")
+        observer = Character(id="obs", name="Observer", location_id="r1")
         target = Character(
             id="tgt",
             name="Target",
-            region_id="r1",
+            location_id="r1",
             max_hp=20,
             current_hp=20,
         )
@@ -182,28 +182,28 @@ class TestPerceive:
         assert "wounded" not in result
 
     def test_perceive_entity_returns_name(self) -> None:
-        observer = Character(id="obs", name="Observer", region_id="r1")
-        target = Entity(id="door", name="Wooden Door", region_id="r1")
+        observer = Character(id="obs", name="Observer", location_id="r1")
+        target = Entity(id="door", name="Wooden Door", location_id="r1")
         result = observer.perceive(target)
         assert result == "Wooden Door"
 
     def test_perceive_creature_shows_name(self) -> None:
-        observer = Character(id="obs", name="Observer", region_id="r1")
-        target = Creature(id="wolf", name="Grey Wolf", region_id="r1", max_hp=11, current_hp=11)
+        observer = Character(id="obs", name="Observer", location_id="r1")
+        target = Creature(id="wolf", name="Grey Wolf", location_id="r1", max_hp=11, current_hp=11)
         result = observer.perceive(target)
         assert "Grey Wolf" in result
         assert "wounded" not in result
 
     def test_perceive_creature_wounded(self) -> None:
-        observer = Character(id="obs", name="Observer", region_id="r1")
-        target = Creature(id="wolf", name="Grey Wolf", region_id="r1", max_hp=11, current_hp=3)
+        observer = Character(id="obs", name="Observer", location_id="r1")
+        target = Creature(id="wolf", name="Grey Wolf", location_id="r1", max_hp=11, current_hp=3)
         result = observer.perceive(target)
         assert "Grey Wolf" in result
         assert "wounded" in result
 
     def test_perceive_half_orc_label(self) -> None:
-        observer = Character(id="obs", name="Observer", region_id="r1")
-        target = Character(id="tgt", name="Grok", region_id="r1", race=Race.HALF_ORC)
+        observer = Character(id="obs", name="Observer", location_id="r1")
+        target = Character(id="tgt", name="Grok", location_id="r1", race=Race.HALF_ORC)
         result = observer.perceive(target)
         assert "half orc" in result
 
@@ -252,7 +252,7 @@ class TestCombatData:
         assert atk.resolve == ResolveType.AUTO_HIT
 
     def test_creature_attacks_default_empty(self) -> None:
-        c = Creature(id="wolf", name="Wolf", region_id="r1")
+        c = Creature(id="wolf", name="Wolf", location_id="r1")
         assert c.attacks == ()
 
     def test_creature_with_attacks(self) -> None:
@@ -264,7 +264,7 @@ class TestCombatData:
         c = Creature(
             id="wolf",
             name="Wolf",
-            region_id="r1",
+            location_id="r1",
             attacks=(bite,),
         )
         assert len(c.attacks) == 1
@@ -273,38 +273,38 @@ class TestCombatData:
 
 class TestHpMutation:
     def test_is_alive_full_hp(self) -> None:
-        c = Creature(id="c", name="C", region_id="r1", max_hp=10, current_hp=10)
+        c = Creature(id="c", name="C", location_id="r1", max_hp=10, current_hp=10)
         assert c.is_alive is True
 
     def test_is_alive_one_hp(self) -> None:
-        c = Creature(id="c", name="C", region_id="r1", max_hp=10, current_hp=1)
+        c = Creature(id="c", name="C", location_id="r1", max_hp=10, current_hp=1)
         assert c.is_alive is True
 
     def test_is_alive_zero_hp(self) -> None:
-        c = Creature(id="c", name="C", region_id="r1", max_hp=10, current_hp=0)
+        c = Creature(id="c", name="C", location_id="r1", max_hp=10, current_hp=0)
         assert c.is_alive is False
 
     def test_take_damage(self) -> None:
-        c = Creature(id="c", name="C", region_id="r1", max_hp=10, current_hp=10)
+        c = Creature(id="c", name="C", location_id="r1", max_hp=10, current_hp=10)
         actual = c.take_damage(3)
         assert actual == 3
         assert c.current_hp == 7
 
     def test_take_damage_clamps_to_zero(self) -> None:
-        c = Creature(id="c", name="C", region_id="r1", max_hp=10, current_hp=4)
+        c = Creature(id="c", name="C", location_id="r1", max_hp=10, current_hp=4)
         actual = c.take_damage(7)
         assert actual == 4
         assert c.current_hp == 0
         assert c.is_alive is False
 
     def test_heal(self) -> None:
-        c = Creature(id="c", name="C", region_id="r1", max_hp=10, current_hp=5)
+        c = Creature(id="c", name="C", location_id="r1", max_hp=10, current_hp=5)
         actual = c.heal(3)
         assert actual == 3
         assert c.current_hp == 8
 
     def test_heal_clamps_to_max(self) -> None:
-        c = Creature(id="c", name="C", region_id="r1", max_hp=10, current_hp=8)
+        c = Creature(id="c", name="C", location_id="r1", max_hp=10, current_hp=8)
         actual = c.heal(5)
         assert actual == 2
         assert c.current_hp == 10
@@ -315,13 +315,13 @@ class TestPlayerSaveLoad:
         p = PlayerCharacter(
             id="player",
             name="Hero",
-            region_id="r1",
+            location_id="r1",
             current_hp=8,
             max_hp=12,
             gold=50,
         )
         data = p.to_save_data()
-        assert data["region_id"] == "r1"
+        assert data["location_id"] == "r1"
         assert data["current_hp"] == 8
         assert data["gold"] == 50
 
@@ -329,13 +329,13 @@ class TestPlayerSaveLoad:
         p = PlayerCharacter(
             id="player",
             name="Hero",
-            region_id="r1",
+            location_id="r1",
             current_hp=12,
             max_hp=12,
             gold=50,
         )
-        p.load_save_data({"region_id": "r2", "current_hp": 3, "gold": 10})
-        assert p.region_id == "r2"
+        p.load_save_data({"location_id": "r2", "current_hp": 3, "gold": 10})
+        assert p.location_id == "r2"
         assert p.current_hp == 3
         assert p.gold == 10
 
@@ -343,12 +343,12 @@ class TestPlayerSaveLoad:
         p = PlayerCharacter(
             id="player",
             name="Hero",
-            region_id="r1",
+            location_id="r1",
             current_hp=12,
             max_hp=12,
             gold=50,
         )
-        p.load_save_data({"region_id": "r2"})
-        assert p.region_id == "r2"
+        p.load_save_data({"location_id": "r2"})
+        assert p.location_id == "r2"
         assert p.current_hp == 12  # unchanged
         assert p.gold == 50  # unchanged

@@ -86,8 +86,8 @@ def _mock_world(entities: list[Entity] | None = None) -> MagicMock:
 
 class TestBuildCombatAwareness:
     def test_contains_self_stats(self) -> None:
-        player = Character(id="p1", name="Hero", region_id="r1", max_hp=20, current_hp=15, attacks=(_SWORD,))
-        npc = Character(id="n1", name="Guard", region_id="r1")
+        player = Character(id="p1", name="Hero", location_id="r1", max_hp=20, current_hp=15, attacks=(_SWORD,))
+        npc = Character(id="n1", name="Guard", location_id="r1")
         world = _mock_world([player, npc])
         aw = build_combat_awareness(world, player)
         assert aw["self_hp"] == 15
@@ -96,22 +96,22 @@ class TestBuildCombatAwareness:
         assert aw["self_weapon_damage"] == "1d8"
 
     def test_unarmed_defaults(self) -> None:
-        player = Character(id="p1", name="Hero", region_id="r1")
+        player = Character(id="p1", name="Hero", location_id="r1")
         world = _mock_world([player])
         aw = build_combat_awareness(world, player)
         assert aw["self_weapon"] == "fists"
         assert aw["self_weapon_damage"] == "1"
 
     def test_nearby_excludes_self(self) -> None:
-        player = Character(id="p1", name="Hero", region_id="r1")
-        npc = Character(id="n1", name="Guard", region_id="r1", race=Race.DWARF)
+        player = Character(id="p1", name="Hero", location_id="r1")
+        npc = Character(id="n1", name="Guard", location_id="r1", race=Race.DWARF)
         world = _mock_world([player, npc])
         aw = build_combat_awareness(world, player)
         assert len(aw["nearby"]) == 1
         assert aw["nearby"][0]["id"] == "n1"
 
     def test_no_time_or_weather(self) -> None:
-        player = Character(id="p1", name="Hero", region_id="r1")
+        player = Character(id="p1", name="Hero", location_id="r1")
         world = _mock_world([player])
         aw = build_combat_awareness(world, player)
         assert "time" not in aw
@@ -243,7 +243,7 @@ class TestBuildNpcCombatTools:
 
 class TestPerceiveDodgeFlee:
     def test_perceive_dodge_self(self) -> None:
-        observer = Character(id="p1", name="Hero", region_id="r1")
+        observer = Character(id="p1", name="Hero", location_id="r1")
         event = Event(
             event_type=EventType.ENTITY_DODGE,
             source_layer="entities",
@@ -254,8 +254,8 @@ class TestPerceiveDodgeFlee:
         assert "you" in result.lower()
 
     def test_perceive_dodge_other(self) -> None:
-        observer = Character(id="p1", name="Hero", region_id="r1")
-        npc = Character(id="n1", name="Guard", region_id="r1", race=Race.DWARF)
+        observer = Character(id="p1", name="Hero", location_id="r1")
+        npc = Character(id="n1", name="Guard", location_id="r1", race=Race.DWARF)
         event = Event(
             event_type=EventType.ENTITY_DODGE,
             source_layer="entities",
@@ -266,8 +266,8 @@ class TestPerceiveDodgeFlee:
         assert "dwarf" in result
 
     def test_perceive_dodge_with_description(self) -> None:
-        observer = Character(id="p1", name="Hero", region_id="r1")
-        npc = Character(id="n1", name="Guard", region_id="r1", race=Race.DWARF)
+        observer = Character(id="p1", name="Hero", location_id="r1")
+        npc = Character(id="n1", name="Guard", location_id="r1", race=Race.DWARF)
         event = Event(
             event_type=EventType.ENTITY_DODGE,
             source_layer="entities",
@@ -277,7 +277,7 @@ class TestPerceiveDodgeFlee:
         assert "Прячется за стол" in result
 
     def test_perceive_flee_self(self) -> None:
-        observer = Character(id="p1", name="Hero", region_id="r1")
+        observer = Character(id="p1", name="Hero", location_id="r1")
         event = Event(
             event_type=EventType.ENTITY_FLEE,
             source_layer="entities",
@@ -288,8 +288,8 @@ class TestPerceiveDodgeFlee:
         assert "you" in result.lower()
 
     def test_perceive_flee_other(self) -> None:
-        observer = Character(id="p1", name="Hero", region_id="r1")
-        npc = Character(id="n1", name="Guard", region_id="r1", race=Race.DWARF)
+        observer = Character(id="p1", name="Hero", location_id="r1")
+        npc = Character(id="n1", name="Guard", location_id="r1", race=Race.DWARF)
         event = Event(
             event_type=EventType.ENTITY_FLEE,
             source_layer="entities",
@@ -304,10 +304,10 @@ class TestPerceiveDodgeFlee:
 
 class TestCombatModeSwitch:
     def test_attack_sets_in_combat_for_all_in_region(self) -> None:
-        attacker = Character(id="p1", name="Hero", region_id="r1", max_hp=20, current_hp=20, ac=15, attacks=(_SWORD,))
-        target = Character(id="n1", name="Guard", region_id="r1", max_hp=20, current_hp=20, ac=10)
-        bystander = Character(id="n2", name="Merchant", region_id="r1", max_hp=10, current_hp=10)
-        other_region = Character(id="n3", name="Farmer", region_id="r2", max_hp=10, current_hp=10)
+        attacker = Character(id="p1", name="Hero", location_id="r1", max_hp=20, current_hp=20, ac=15, attacks=(_SWORD,))
+        target = Character(id="n1", name="Guard", location_id="r1", max_hp=20, current_hp=20, ac=10)
+        bystander = Character(id="n2", name="Merchant", location_id="r1", max_hp=10, current_hp=10)
+        other_region = Character(id="n3", name="Farmer", location_id="r2", max_hp=10, current_hp=10)
 
         layer = EntitiesLayer([attacker, target, bystander, other_region])
         event = Event(
@@ -323,7 +323,7 @@ class TestCombatModeSwitch:
         assert other_region.in_combat is False
 
     def test_flee_clears_in_combat(self) -> None:
-        npc = Character(id="n1", name="Guard", region_id="r1", in_combat=True)
+        npc = Character(id="n1", name="Guard", location_id="r1", in_combat=True)
         layer = EntitiesLayer([npc])
         event = Event(
             event_type=EventType.ENTITY_FLEE,
@@ -334,8 +334,8 @@ class TestCombatModeSwitch:
         assert npc.in_combat is False
 
     def test_flee_event_logged(self) -> None:
-        observer = Character(id="p1", name="Hero", region_id="r1")
-        npc = Character(id="n1", name="Guard", region_id="r1", race=Race.DWARF, in_combat=True)
+        observer = Character(id="p1", name="Hero", location_id="r1")
+        npc = Character(id="n1", name="Guard", location_id="r1", race=Race.DWARF, in_combat=True)
         layer = EntitiesLayer([observer, npc])
         event = Event(
             event_type=EventType.ENTITY_FLEE,
@@ -348,8 +348,8 @@ class TestCombatModeSwitch:
         assert "flee" in log[0]
 
     def test_dodge_event_logged(self) -> None:
-        observer = Character(id="p1", name="Hero", region_id="r1")
-        npc = Character(id="n1", name="Guard", region_id="r1", race=Race.DWARF)
+        observer = Character(id="p1", name="Hero", location_id="r1")
+        npc = Character(id="n1", name="Guard", location_id="r1", race=Race.DWARF)
         layer = EntitiesLayer([observer, npc])
         event = Event(
             event_type=EventType.ENTITY_DODGE,
@@ -368,8 +368,8 @@ class TestCombatModeSwitch:
 class TestNpcCombatTurn:
     def test_combat_turn_uses_combat_tools(self) -> None:
         """When in_combat=True, NPC should use combat prompt and tools."""
-        npc = Npc(id="n1", name="Guard", region_id="r1", role="guard", attacks=(_DAGGER,), in_combat=True)
-        player = Character(id="p1", name="Hero", region_id="r1", race=Race.HUMAN)
+        npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", attacks=(_DAGGER,), in_combat=True)
+        player = Character(id="p1", name="Hero", location_id="r1", race=Race.HUMAN)
         world = _mock_world([npc, player])
 
         mock_llm = MagicMock()
@@ -387,7 +387,7 @@ class TestNpcCombatTurn:
         assert "say" not in tool_names
 
     def test_combat_turn_dodge(self) -> None:
-        npc = Npc(id="n1", name="Guard", region_id="r1", role="guard", in_combat=True)
+        npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", in_combat=True)
         world = _mock_world([npc])
         mock_llm = MagicMock()
         dodge_tc = ToolCall(id="tc_1", name="dodge", arguments={"description": "Прячусь за щит"})
@@ -399,7 +399,7 @@ class TestNpcCombatTurn:
         assert event.event_type == EventType.ENTITY_DODGE
 
     def test_combat_turn_flee(self) -> None:
-        npc = Npc(id="n1", name="Guard", region_id="r1", role="guard", in_combat=True)
+        npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", in_combat=True)
         world = _mock_world([npc])
         mock_llm = MagicMock()
         flee_tc = ToolCall(id="tc_1", name="flee", arguments={"description": "Бегу к двери!"})
@@ -412,7 +412,7 @@ class TestNpcCombatTurn:
 
     def test_peaceful_turn_uses_peaceful_tools(self) -> None:
         """When in_combat=False, NPC should use the regular tools."""
-        npc = Npc(id="n1", name="Guard", region_id="r1", role="guard", in_combat=False)
+        npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", in_combat=False)
         world = _mock_world([npc])
         mock_llm = MagicMock()
         idle_tc = ToolCall(id="tc_1", name="idle", arguments={})
@@ -435,7 +435,7 @@ class TestPlayerCombatTurn:
         player = PlayerCharacter(
             id="p1",
             name="Hero",
-            region_id="r1",
+            location_id="r1",
             max_hp=20,
             current_hp=15,
             attacks=(_SWORD,),
@@ -455,7 +455,7 @@ class TestPlayerCombatTurn:
         player = PlayerCharacter(
             id="p1",
             name="Hero",
-            region_id="r1",
+            location_id="r1",
             in_combat=True,
             output_fn=outputs.append,
             input_fn=lambda _prompt: next(inputs),
@@ -472,7 +472,7 @@ class TestPlayerCombatTurn:
         player = PlayerCharacter(
             id="p1",
             name="Hero",
-            region_id="r1",
+            location_id="r1",
             in_combat=True,
             output_fn=outputs.append,
             input_fn=lambda _prompt: next(inputs),
@@ -489,7 +489,7 @@ class TestPlayerCombatTurn:
         player = PlayerCharacter(
             id="p1",
             name="Hero",
-            region_id="r1",
+            location_id="r1",
             in_combat=True,
             output_fn=outputs.append,
             input_fn=lambda _prompt: next(inputs),
@@ -508,7 +508,7 @@ class TestPlayerCombatTurn:
         player = PlayerCharacter(
             id="p1",
             name="Hero",
-            region_id="r1",
+            location_id="r1",
             in_combat=True,
             output_fn=outputs.append,
             input_fn=lambda _prompt: next(inputs),
@@ -523,7 +523,7 @@ class TestPlayerCombatTurn:
         player = PlayerCharacter(
             id="p1",
             name="Hero",
-            region_id="r1",
+            location_id="r1",
             in_combat=False,
             output_fn=outputs.append,
             input_fn=lambda _prompt: next(inputs),
@@ -545,7 +545,7 @@ class TestPlayerCombatTurn:
         player = PlayerCharacter(
             id="p1",
             name="Hero",
-            region_id="r1",
+            location_id="r1",
             in_combat=True,
             output_fn=lambda _: None,
             input_fn=capture_input,
@@ -560,7 +560,7 @@ class TestPlayerCombatTurn:
 
 class TestDodgeMechanics:
     def test_dodge_sets_is_dodging(self) -> None:
-        c1 = Character(id="c1", name="Fighter", region_id="r1", max_hp=20, current_hp=20)
+        c1 = Character(id="c1", name="Fighter", location_id="r1", max_hp=20, current_hp=20)
         layer = EntitiesLayer([c1])
         event = Event(
             event_type=EventType.ENTITY_DODGE,
@@ -577,13 +577,13 @@ class TestDodgeMechanics:
         attacker = Character(
             id="c1",
             name="Fighter",
-            region_id="r1",
+            location_id="r1",
             max_hp=20,
             current_hp=20,
             attacks=(_SWORD,),
             ability_scores=_scores(str=14),
         )
-        target = Character(id="c2", name="Dodger", region_id="r1", max_hp=100, current_hp=100, ac=10)
+        target = Character(id="c2", name="Dodger", location_id="r1", max_hp=100, current_hp=100, ac=10)
         layer = EntitiesLayer([attacker, target])
 
         # Start combat first
@@ -639,8 +639,8 @@ class TestDodgeMechanics:
         assert hits_dodging < hits_normal
 
     def test_dodge_clears_on_combat_end(self) -> None:
-        c1 = Character(id="c1", name="Fighter", region_id="r1", max_hp=20, current_hp=20, is_dodging=True)
-        c2 = Character(id="c2", name="Rogue", region_id="r1", max_hp=20, current_hp=20)
+        c1 = Character(id="c1", name="Fighter", location_id="r1", max_hp=20, current_hp=20, is_dodging=True)
+        c2 = Character(id="c2", name="Rogue", location_id="r1", max_hp=20, current_hp=20)
         layer = EntitiesLayer([c1, c2])
         # Start and immediately end combat
         layer._combat.start_combat("r1")

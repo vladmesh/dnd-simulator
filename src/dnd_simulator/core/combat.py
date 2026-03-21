@@ -198,7 +198,7 @@ class CombatState:
     rounds-without-attack for automatic combat exit.
     """
 
-    region_id: str
+    location_id: str
     turn_order: list[str] = field(default_factory=list)  # entity IDs in initiative order
     round_number: int = 1
     rounds_without_attack: int = 0

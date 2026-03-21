@@ -37,15 +37,30 @@ class LlmBrain(Brain):
 
         npc_data = creature.get_npc_data()
 
+        # Enrich NPC data with schedule-dependent fields
+        from dnd_simulator.layers.entities.models import Npc as NpcModel
+
+        if isinstance(creature, NpcModel):
+            hour = world.time.hour
+            npc_data["activity"] = creature.scheduled_activity(hour).value
+            try:
+                loc = world.location_graph.get(creature.current_location(hour))
+                npc_data["location_label"] = loc.name
+            except (KeyError, AttributeError):
+                npc_data["location_label"] = creature.location_id
+        else:
+            npc_data.setdefault("activity", "idle")
+            npc_data.setdefault("location_label", creature.location_id)
+
         if creature.in_combat:
             combat_awareness = build_combat_awareness(world, creature)
             system_prompt = build_npc_combat_prompt(npc_data, combat_awareness)
             tools = build_npc_combat_tools()
             retry_hint = _("You must choose an action: attack, move, dash, dodge, flee, or idle.")
         else:
-            awareness = build_awareness(world, creature.region_id)
+            awareness = build_awareness(world, creature.location_id)
             entities_answer = world.query_layer(
-                "entities", Query(question="entities_in_region", params={"region_id": creature.region_id})
+                "entities", Query(question="entities_at_location", params={"location_id": creature.location_id})
             )
             nearby: list[dict[str, str]] = []
             for e in entities_answer.value:

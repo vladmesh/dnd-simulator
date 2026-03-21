@@ -10,14 +10,14 @@ from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.layers.entities.combat_manager import CombatManager
-from dnd_simulator.layers.entities.models import Npc, NpcActivity
+from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.perception import perceive_event
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import TimeDelta
     from dnd_simulator.core.world import WorldState
 
-# Event types that get recorded in the region log
+# Event types that get recorded in the location log
 _LOGGED_EVENTS = {
     EventType.ENTITY_SAY,
     EventType.ENTITY_ATTACK,
@@ -40,11 +40,11 @@ class EntitiesLayer(Layer):
         battle_map_configs: dict[str, BattleMap] | None = None,
     ) -> None:
         self._entities: dict[str, Entity] = {}
-        self._region_log: dict[str, list[Event]] = defaultdict(list)
+        self._location_log: dict[str, list[Event]] = defaultdict(list)
         if entities:
             for e in entities:
                 self._entities[e.id] = e
-        self._combat = CombatManager(self._entities, self._region_log, battle_map_configs)
+        self._combat = CombatManager(self._entities, self._location_log, battle_map_configs)
 
     @property
     def name(self) -> str:
@@ -68,12 +68,12 @@ class EntitiesLayer(Layer):
         """Remove an entity from the layer."""
         self._entities.pop(entity_id, None)
 
-    def active_creatures_in_region(self, region_id: str, exclude_id: str = "") -> list[Creature]:
-        """Get active creatures in a region (for turn polling)."""
+    def active_creatures_at_location(self, location_id: str, exclude_id: str = "") -> list[Creature]:
+        """Get active creatures at a location (for turn polling)."""
         return [
             e
             for e in self._entities.values()
-            if isinstance(e, Creature) and e.active and e.region_id == region_id and e.id != exclude_id
+            if isinstance(e, Creature) and e.active and e.location_id == location_id and e.id != exclude_id
         ]
 
     def get_active_creatures(self) -> list[Creature]:
@@ -82,26 +82,22 @@ class EntitiesLayer(Layer):
 
     # -- Combat (delegated to CombatManager) --
 
-    def get_combat_regions(self) -> list[str]:
-        """Return region IDs with active combats."""
-        return self._combat.get_combat_regions()
+    def get_combat_locations(self) -> list[str]:
+        """Return location IDs with active combats."""
+        return self._combat.get_combat_locations()
 
-    def get_combat(self, region_id: str) -> CombatState | None:
-        """Get combat state for a region, or None if no active combat."""
-        return self._combat.get_combat(region_id)
+    def get_combat(self, location_id: str) -> CombatState | None:
+        """Get combat state for a location, or None if no active combat."""
+        return self._combat.get_combat(location_id)
 
-    def end_combat_round(self, region_id: str) -> None:
+    def end_combat_round(self, location_id: str) -> None:
         """Called by game loop at end of each combat round."""
-        self._combat.end_combat_round(region_id)
+        self._combat.end_combat_round(location_id)
 
     # -- Layer interface --
 
     def tick(self, delta: TimeDelta, world_state: WorldState) -> list[Event]:
-        """Update all active entities."""
-        hour = world_state.time.hour
-        for entity in self._entities.values():
-            if entity.active:
-                entity.on_tick(hour)
+        """Update all active entities. Schedule is computed, not ticked."""
         return []
 
     def handle_event(self, event: Event) -> ActionResult:
@@ -122,22 +118,22 @@ class EntitiesLayer(Layer):
             return self._combat.resolve_move(event, dash=True)
 
         if event.event_type in _LOGGED_EVENTS:
-            region_id = self._event_region(event)
-            if region_id:
-                self._region_log[region_id].append(event)
+            location_id = self._event_location(event)
+            if location_id:
+                self._location_log[location_id].append(event)
 
         return ActionResult()
 
     # -- Perception log --
 
     def get_perceived_log(self, observer: Character) -> list[str]:
-        """Get ALL events in observer's region that the observer can see.
+        """Get ALL events at observer's location that the observer can see.
 
         Used for NPC LLM prompts — full history as context/memory.
         Filters by observer_ids: events with observer_ids set are only visible
         to listed entities.
         """
-        events = self._region_log.get(observer.region_id, [])
+        events = self._location_log.get(observer.location_id, [])
         if not events:
             return []
         return [
@@ -151,7 +147,7 @@ class EntitiesLayer(Layer):
 
         Updates the observer's index. Used for player display.
         """
-        events = self._region_log.get(observer.region_id, [])
+        events = self._location_log.get(observer.location_id, [])
         last_seen = observer._last_seen_log_index
         new_events = events[last_seen:]
         observer._last_seen_log_index = len(events)
@@ -163,14 +159,14 @@ class EntitiesLayer(Layer):
             if e.observer_ids is None or observer.id in e.observer_ids
         ]
 
-    def _event_region(self, event: Event) -> str | None:
-        """Determine which region an event happened in."""
+    def _event_location(self, event: Event) -> str | None:
+        """Determine which location an event happened at."""
         for key in ("entity_id", "attacker_id"):
             eid = event.data.get(key)
             if isinstance(eid, str):
                 entity = self._entities.get(eid)
                 if entity:
-                    return entity.region_id
+                    return entity.location_id
         return None
 
     # -- Query --
@@ -179,20 +175,26 @@ class EntitiesLayer(Layer):
         """Answer queries about entities.
 
         Supported queries:
-        - "entities_in_region": params={region_id} -> entities in a region
+        - "entities_at_location": params={location_id} -> entities at a location
         - "entity_info": params={entity_id} -> full entity data
         - "perceived_log": params={entity_id} -> recent events from entity's POV
-        - "combat_info": params={region_id} -> combat state
+        - "combat_info": params={location_id} -> combat state
         - "perceive_entity": params={observer_id, target_id} -> perception string
         """
         q = query.question
         params = query.params
 
-        if q == "entities_in_region":
-            region_id = params["region_id"]
+        if q == "entities_at_location":
+            location_id = params["location_id"]
+            hour = int(params.get("hour", 12))
             result = []
             for e in self._entities.values():
-                if e.region_id == region_id and e.active:
+                if not e.active:
+                    continue
+                if isinstance(e, Npc):
+                    if e.current_location(hour) == location_id:
+                        result.append(self._entity_summary(e, hour))
+                elif e.location_id == location_id:
                     result.append(self._entity_summary(e))
             return Answer(value=result)
 
@@ -213,8 +215,8 @@ class EntitiesLayer(Layer):
             return Answer(value=[])
 
         if q == "combat_info":
-            region_id = params["region_id"]
-            combat = self._combat.get_combat(region_id)
+            location_id = params["location_id"]
+            combat = self._combat.get_combat(location_id)
             if combat:
                 return Answer(
                     value={
@@ -235,7 +237,7 @@ class EntitiesLayer(Layer):
 
         raise ValueError(f"Unknown entities query: {q}")
 
-    def _entity_summary(self, entity: Entity) -> dict[str, object]:
+    def _entity_summary(self, entity: Entity, hour: int = 12) -> dict[str, object]:
         """Short summary for listings."""
         base: dict[str, object] = {
             "id": entity.id,
@@ -245,8 +247,8 @@ class EntitiesLayer(Layer):
             base["is_wounded"] = entity.current_hp < entity.max_hp // 2
         if isinstance(entity, Npc):
             base["role"] = entity.role
-            base["activity"] = entity.activity.value
-            base["location_label"] = entity.location_label
+            base["activity"] = entity.scheduled_activity(hour).value
+            base["location_label"] = entity.current_location(hour)
         return base
 
     def _entity_detail(self, entity: Entity) -> dict[str, object]:
@@ -254,7 +256,7 @@ class EntitiesLayer(Layer):
         base: dict[str, object] = {
             "id": entity.id,
             "name": entity.name,
-            "region_id": entity.region_id,
+            "location_id": entity.location_id,
             "active": entity.active,
         }
         if isinstance(entity, Npc):
@@ -263,8 +265,6 @@ class EntitiesLayer(Layer):
                     "role": entity.role,
                     "personality": entity.personality,
                     "settlement_id": entity.settlement_id,
-                    "activity": entity.activity.value,
-                    "location_label": entity.location_label,
                     "conversation_summary": entity.conversation_summary,
                 }
             )
@@ -277,7 +277,7 @@ class EntitiesLayer(Layer):
             data: dict[str, Any] = {
                 "id": e.id,
                 "name": e.name,
-                "region_id": e.region_id,
+                "location_id": e.location_id,
                 "active": e.active,
             }
             if isinstance(e, Npc):
@@ -286,8 +286,7 @@ class EntitiesLayer(Layer):
                         "role": e.role,
                         "personality": e.personality,
                         "settlement_id": e.settlement_id,
-                        "activity": e.activity.value,
-                        "location_label": e.location_label,
+                        "location_override": e.location_override,
                         "conversation_summary": e.conversation_summary,
                     }
                 )
@@ -304,7 +303,11 @@ class EntitiesLayer(Layer):
             entity = self._entities.get(str(eid))
             if entity:
                 entity.active = bool(edata.get("active", True))
+                # Backward compat: support both location_id and region_id
+                loc = edata.get("location_id") or edata.get("region_id")
+                if loc:
+                    entity.location_id = str(loc)
                 if isinstance(entity, Npc):
-                    entity.activity = NpcActivity(str(edata.get("activity", "idle")))
-                    entity.location_label = str(edata.get("location_label", "home"))
+                    override = edata.get("location_override")
+                    entity.location_override = str(override) if override else None
                     entity.conversation_summary = str(edata.get("conversation_summary", ""))

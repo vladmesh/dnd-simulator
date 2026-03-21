@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from dnd_simulator.core.layer import Layer
+from dnd_simulator.core.location import LocationGraph
 from dnd_simulator.core.models import ActionResult, Answer, Event, GameDateTime, Query, TimeDelta
 
 
@@ -17,9 +18,15 @@ class WorldState:
 class World:
     """Container for all simulation layers. Manages time and event propagation."""
 
-    def __init__(self, layers: list[Layer], time: GameDateTime | None = None) -> None:
+    def __init__(
+        self,
+        layers: list[Layer],
+        time: GameDateTime | None = None,
+        location_graph: LocationGraph | None = None,
+    ) -> None:
         self.time = time or GameDateTime()
         self._layers = layers
+        self.location_graph = location_graph or LocationGraph()
         self._last_tick_time: dict[str, GameDateTime] = {layer.name: self.time for layer in layers}
 
     @property

@@ -24,8 +24,9 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.combat import BattleMap, Wall
+from dnd_simulator.core.location import Location, LocationEdge
 from dnd_simulator.core.player import PlayerCharacter
-from dnd_simulator.layers.entities.models import DEFAULT_SCHEDULES, Npc
+from dnd_simulator.layers.entities.models import Npc, resolve_schedule
 from dnd_simulator.layers.geography.models import (
     Connection,
     Direction,
@@ -34,6 +35,7 @@ from dnd_simulator.layers.geography.models import (
 )
 from dnd_simulator.layers.politics.models import Leader, LeaderTrait, Nation
 from dnd_simulator.layers.settlements.models import Settlement, SettlementType
+from dnd_simulator.rules.geography import calculate_distance_km
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:
@@ -127,6 +129,81 @@ def load_world(path: Path) -> list[Region]:
     return regions
 
 
+def load_locations(path: Path, regions: list[Region]) -> list[Location]:
+    """Load locations from a world YAML file or directory.
+
+    If locations.yaml exists, load from it.
+    Otherwise, auto-generate one location per region from region data
+    (backward compat for worlds without explicit locations).
+    """
+    is_dir, resolved = _resolve_source(path)
+
+    locations_data: dict[str, Any] = {}
+    if is_dir:
+        loc_path = resolved / "locations.yaml"
+        if loc_path.exists():
+            locations_data = _read_yaml(loc_path)
+    else:
+        data = _read_yaml(resolved)
+        locations_data = data.get("locations", {})
+        assert isinstance(locations_data, dict)
+
+    if locations_data:
+        return _parse_locations(locations_data)
+
+    # Fallback: auto-generate from regions
+    return _generate_locations_from_regions(regions)
+
+
+def _parse_locations(data: dict[str, Any]) -> list[Location]:
+    """Parse locations from YAML data."""
+    locations: list[Location] = []
+    for loc_id, ldata in data.items():
+        edges = tuple(
+            LocationEdge(
+                target_id=str(n["target"]),
+                distance_m=int(n["distance"]),
+            )
+            for n in ldata.get("neighbors", [])
+        )
+        locations.append(
+            Location(
+                id=str(loc_id),
+                name=str(ldata["name"]),
+                region_id=str(ldata["region"]),
+                settlement_id=str(ldata.get("settlement", "")),
+                edges=edges,
+                description=str(ldata.get("description", "")),
+            )
+        )
+    return locations
+
+
+def _generate_locations_from_regions(regions: list[Region]) -> list[Location]:
+    """Auto-generate one Location per Region for backward compat."""
+    region_map = {r.id: r for r in regions}
+    locations: list[Location] = []
+
+    for region in regions:
+        edges: list[LocationEdge] = []
+        for conn in region.connections:
+            target = region_map.get(conn.target_id)
+            if target:
+                dist_km = calculate_distance_km(region.latitude, region.longitude, target.latitude, target.longitude)
+                edges.append(LocationEdge(target_id=conn.target_id, distance_m=int(dist_km * 1000)))
+
+        locations.append(
+            Location(
+                id=region.id,
+                name=region.name,
+                region_id=region.id,
+                edges=tuple(edges),
+            )
+        )
+
+    return locations
+
+
 def load_nations(path: Path) -> list[Nation]:
     """Load nations from a world YAML file or directory."""
     is_dir, path = _resolve_source(path)
@@ -199,7 +276,10 @@ def load_npcs(path: Path) -> list[Npc]:
 def parse_npc(npc_id: str, ndata: dict[str, Any]) -> Npc:
     """Parse a single NPC from YAML data."""
     role = str(ndata.get("role", ""))
-    schedule = list(DEFAULT_SCHEDULES.get(role, []))
+    settlement_id = str(ndata.get("settlement_id", ""))
+
+    # Resolve schedule: role-based template with settlement prefix
+    schedule = resolve_schedule(role, settlement_id)
 
     race = Race(ndata["race"]) if "race" in ndata else Race.HUMAN
     char_class = CharClass(ndata["class"]) if "class" in ndata else CharClass.COMMONER
@@ -208,15 +288,23 @@ def parse_npc(npc_id: str, ndata: dict[str, Any]) -> Npc:
     max_hp = int(ndata.get("hp", 4))
     ai_type = str(ndata.get("ai", "rule_based"))
 
+    # Location: prefer start_location, fall back to settlement default, then region
+    location_id = str(ndata.get("start_location", ""))
+    if not location_id and settlement_id:
+        # Default: NPC starts at their settlement's home location
+        location_id = f"{settlement_id}_home"
+    if not location_id:
+        location_id = str(ndata.get("region_id", ""))
+
     npc = Npc(
         id=npc_id,
         name=str(ndata["name"]),
-        region_id=str(ndata["region_id"]),
+        location_id=location_id,
         race=race,
         char_class=char_class,
         role=role,
         personality=str(ndata.get("personality", "")),
-        settlement_id=str(ndata.get("settlement_id", "")),
+        settlement_id=settlement_id,
         schedule=schedule,
         speed=int(ndata.get("speed", 30)),
         attacks=attacks,
@@ -257,10 +345,13 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
     max_hp = int(pdata.get("hp", 10))
     attacks = _parse_attacks(pdata.get("attacks", []))
 
+    # Support both start_location and legacy start_region
+    location_id = str(pdata.get("start_location", pdata.get("start_region", "")))
+
     return PlayerCharacter(
         id="player",
         name=str(pdata.get("name", "Adventurer")),
-        region_id=str(pdata.get("start_region", "")),
+        location_id=location_id,
         race=Race(pdata["race"]) if "race" in pdata else Race.HUMAN,
         char_class=CharClass(pdata["class"]) if "class" in pdata else CharClass.FIGHTER,
         level=int(pdata.get("level", 1)),

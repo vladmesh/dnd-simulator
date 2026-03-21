@@ -36,7 +36,7 @@ class PlayerCharacter(Character):
         """Peacetime turn: full awareness, all commands available."""
         from dnd_simulator.core.models import Event, EventType, Query
 
-        awareness = build_awareness(world, self.region_id)
+        awareness = build_awareness(world, self.location_id)
 
         # Get new events since player's last turn
         log_answer = world.query_layer(
@@ -200,14 +200,15 @@ class PlayerCharacter(Character):
         """Describe current location, entities, and paths."""
         from dnd_simulator.core.models import Query
 
-        info = world.query_layer("geography", Query(question="region_info", params={"region_id": self.region_id}))
-        weather = world.query_layer("geography", Query(question="weather", params={"region_id": self.region_id}))
-        conns = world.query_layer("geography", Query(question="connections", params={"region_id": self.region_id}))
+        region_id = world.location_graph.region_of(self.location_id)
+        info = world.query_layer("geography", Query(question="region_info", params={"region_id": region_id}))
+        weather = world.query_layer("geography", Query(question="weather", params={"region_id": region_id}))
+        location = world.location_graph.get(self.location_id)
         entities = world.query_layer(
-            "entities", Query(question="entities_in_region", params={"region_id": self.region_id})
+            "entities", Query(question="entities_at_location", params={"location_id": self.location_id})
         )
 
-        lines = [f"=== {info.value['name']} ==="]
+        lines = [f"=== {location.name} ==="]
         lines.append(
             _("Terrain:")
             + f" {info.value['terrain']}  |  "
@@ -224,10 +225,13 @@ class PlayerCharacter(Character):
                 else:
                     lines.append(f"  {e['name']} [{e['id']}]")
 
-        if conns.value:
+        edges = location.edges
+        if edges:
             lines.append("\n" + _("Paths:"))
-            for c in conns.value:
-                lines.append(f"  {c['direction'].upper()} → {c['target_id']}")
+            for edge in edges:
+                target = world.location_graph.get(edge.target_id)
+                dist_str = f"{edge.distance_m / 1000:.1f} km" if edge.distance_m >= 1000 else f"{edge.distance_m} m"
+                lines.append(f"  {target.name} ({edge.target_id}) — {dist_str}")
 
         self.output_fn("\n".join(lines))
 
@@ -326,13 +330,13 @@ class PlayerCharacter(Character):
     def to_save_data(self) -> dict[str, Any]:
         """Serialize mutable player state for saving."""
         return {
-            "region_id": self.region_id,
+            "location_id": self.location_id,
             "current_hp": self.current_hp,
             "gold": self.gold,
         }
 
     def load_save_data(self, data: dict[str, Any]) -> None:
         """Restore mutable state from a save."""
-        self.region_id = str(data.get("region_id", self.region_id))
+        self.location_id = str(data.get("location_id", data.get("region_id", self.location_id)))
         self.current_hp = int(data.get("current_hp", self.current_hp))
         self.gold = int(data.get("gold", self.gold))

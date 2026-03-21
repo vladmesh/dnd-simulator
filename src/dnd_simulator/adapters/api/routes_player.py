@@ -117,7 +117,7 @@ def _player_status(p: Any) -> PlayerStatusResponse:
         max_hp=p.max_hp,
         ac=p.ac,
         gold=p.gold,
-        region_id=p.region_id,
+        location_id=p.location_id,
         appearance=p.appearance,
         ability_scores={
             "str": scores[Ability.STR],

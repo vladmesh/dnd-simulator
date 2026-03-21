@@ -9,11 +9,20 @@ add_entity, remove_entity for hot controls.
 
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import (
-    DEFAULT_SCHEDULES,
+    DEFAULT_SCHEDULE_TEMPLATES,
     Npc,
     NpcActivity,
     ScheduleEntry,
     hour_in_range,
+    resolve_schedule,
 )
 
-__all__ = ["DEFAULT_SCHEDULES", "EntitiesLayer", "Npc", "NpcActivity", "ScheduleEntry", "hour_in_range"]
+__all__ = [
+    "DEFAULT_SCHEDULE_TEMPLATES",
+    "EntitiesLayer",
+    "Npc",
+    "NpcActivity",
+    "ScheduleEntry",
+    "hour_in_range",
+    "resolve_schedule",
+]

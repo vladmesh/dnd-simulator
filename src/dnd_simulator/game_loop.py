@@ -30,8 +30,8 @@ def run_game_loop(world: World) -> None:
             break
 
         # Combat rounds: iterate by initiative order
-        for region_id in list(entities_layer.get_combat_regions()):
-            combat = entities_layer.get_combat(region_id)
+        for location_id in list(entities_layer.get_combat_locations()):
+            combat = entities_layer.get_combat(location_id)
             if not combat:
                 continue
             for entity_id in list(combat.turn_order):
@@ -40,7 +40,7 @@ def run_game_loop(world: World) -> None:
                     entity.is_dodging = False  # dodge lasts until start of next turn
                     entity.take_turn(world)
             # End of round — check for combat exit
-            entities_layer.end_combat_round(region_id)
+            entities_layer.end_combat_round(location_id)
 
         # Peaceful turns: creatures not in combat
         for creature in creatures:

@@ -16,8 +16,8 @@ def _get_entity_fn(*entities: Entity):
 
 class TestPerceiveEvent:
     def test_say_from_other(self) -> None:
-        observer = Character(id="guard", name="Guard", region_id="r1")
-        speaker = Character(id="smith", name="Smith", region_id="r1", race=Race.DWARF)
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        speaker = Character(id="smith", name="Smith", location_id="r1", race=Race.DWARF)
         event = Event(
             event_type=EventType.ENTITY_SAY,
             source_layer="entities",
@@ -29,7 +29,7 @@ class TestPerceiveEvent:
         assert "dwarf" in result
 
     def test_say_from_self(self) -> None:
-        observer = Character(id="smith", name="Smith", region_id="r1")
+        observer = Character(id="smith", name="Smith", location_id="r1")
         event = Event(
             event_type=EventType.ENTITY_SAY,
             source_layer="entities",
@@ -39,8 +39,8 @@ class TestPerceiveEvent:
         assert "You say" in result
 
     def test_attack_observer_is_target(self) -> None:
-        observer = Character(id="smith", name="Smith", region_id="r1")
-        attacker = Character(id="player", name="Hero", region_id="r1", race=Race.ELF)
+        observer = Character(id="smith", name="Smith", location_id="r1")
+        attacker = Character(id="player", name="Hero", location_id="r1", race=Race.ELF)
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
@@ -52,8 +52,8 @@ class TestPerceiveEvent:
         assert "5 damage" in result
 
     def test_attack_observer_is_attacker(self) -> None:
-        observer = Character(id="player", name="Hero", region_id="r1")
-        target = Character(id="smith", name="Smith", region_id="r1", race=Race.DWARF)
+        observer = Character(id="player", name="Hero", location_id="r1")
+        target = Character(id="smith", name="Smith", location_id="r1", race=Race.DWARF)
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
@@ -63,9 +63,9 @@ class TestPerceiveEvent:
         assert "You attack" in result
 
     def test_attack_observer_is_bystander(self) -> None:
-        observer = Character(id="guard", name="Guard", region_id="r1")
-        attacker = Character(id="player", name="Hero", region_id="r1", race=Race.ELF)
-        target = Character(id="smith", name="Smith", region_id="r1", race=Race.DWARF)
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        attacker = Character(id="player", name="Hero", location_id="r1", race=Race.ELF)
+        target = Character(id="smith", name="Smith", location_id="r1", race=Race.DWARF)
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
@@ -77,8 +77,8 @@ class TestPerceiveEvent:
         assert "attacks" in result
 
     def test_death_other(self) -> None:
-        observer = Character(id="guard", name="Guard", region_id="r1")
-        victim = Character(id="smith", name="Smith", region_id="r1", race=Race.DWARF)
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        victim = Character(id="smith", name="Smith", location_id="r1", race=Race.DWARF)
         event = Event(
             event_type=EventType.ENTITY_DIED,
             source_layer="entities",
@@ -89,7 +89,7 @@ class TestPerceiveEvent:
         assert "dwarf" in result
 
     def test_death_self(self) -> None:
-        observer = Character(id="smith", name="Smith", region_id="r1")
+        observer = Character(id="smith", name="Smith", location_id="r1")
         event = Event(
             event_type=EventType.ENTITY_DIED,
             source_layer="entities",
@@ -99,7 +99,7 @@ class TestPerceiveEvent:
         assert "You die" in result
 
     def test_unknown_event(self) -> None:
-        observer = Character(id="guard", name="Guard", region_id="r1")
+        observer = Character(id="guard", name="Guard", location_id="r1")
         event = Event(
             event_type=EventType.WEATHER_CHANGED,
             source_layer="geography",
@@ -109,7 +109,7 @@ class TestPerceiveEvent:
         assert "Something happened" in result
 
     def test_unknown_entity_id(self) -> None:
-        observer = Character(id="guard", name="Guard", region_id="r1")
+        observer = Character(id="guard", name="Guard", location_id="r1")
         event = Event(
             event_type=EventType.ENTITY_SAY,
             source_layer="entities",
@@ -122,7 +122,7 @@ class TestPerceiveEvent:
 
 class TestRegionLog:
     def test_handle_event_logs_say(self) -> None:
-        smith = Character(id="smith", name="Smith", region_id="r1")
+        smith = Character(id="smith", name="Smith", location_id="r1")
         layer = EntitiesLayer(entities=[smith])
         event = Event(
             event_type=EventType.ENTITY_SAY,
@@ -135,8 +135,8 @@ class TestRegionLog:
         assert "Привет!" in log[0]
 
     def test_log_only_for_same_region(self) -> None:
-        smith = Character(id="smith", name="Smith", region_id="r1")
-        guard = Character(id="guard", name="Guard", region_id="r2")
+        smith = Character(id="smith", name="Smith", location_id="r1")
+        guard = Character(id="guard", name="Guard", location_id="r2")
         layer = EntitiesLayer(entities=[smith, guard])
         event = Event(
             event_type=EventType.ENTITY_SAY,
@@ -148,8 +148,8 @@ class TestRegionLog:
         assert len(layer.get_perceived_log(guard)) == 0
 
     def test_new_perceived_events_tracks_index(self) -> None:
-        smith = Character(id="smith", name="Smith", region_id="r1")
-        player = Character(id="player", name="Hero", region_id="r1", race=Race.ELF)
+        smith = Character(id="smith", name="Smith", location_id="r1")
+        player = Character(id="player", name="Hero", location_id="r1", race=Race.ELF)
         layer = EntitiesLayer(entities=[smith, player])
 
         layer.handle_event(
@@ -183,7 +183,7 @@ class TestRegionLog:
         assert len(full) == 2
 
     def test_non_logged_events_ignored(self) -> None:
-        smith = Character(id="smith", name="Smith", region_id="r1")
+        smith = Character(id="smith", name="Smith", location_id="r1")
         layer = EntitiesLayer(entities=[smith])
         event = Event(
             event_type=EventType.WEATHER_CHANGED,
@@ -196,13 +196,13 @@ class TestRegionLog:
     def test_multiple_events_in_order(self) -> None:
         from dnd_simulator.core.combat import Position
 
-        smith = Character(id="smith", name="Smith", region_id="r1", max_hp=100, current_hp=100)
+        smith = Character(id="smith", name="Smith", location_id="r1", max_hp=100, current_hp=100)
         sword = Attack(
             name="longsword",
             ability=Ability.STR,
             damage=(DamageComponent("1d8", DamageType.SLASHING),),
         )
-        player = Character(id="player", name="Hero", region_id="r1", race=Race.ELF, attacks=(sword,))
+        player = Character(id="player", name="Hero", location_id="r1", race=Race.ELF, attacks=(sword,))
         layer = EntitiesLayer(entities=[smith, player])
 
         layer.handle_event(

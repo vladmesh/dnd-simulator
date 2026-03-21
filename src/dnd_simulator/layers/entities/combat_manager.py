@@ -21,57 +21,57 @@ class CombatManager:
     def __init__(
         self,
         entities: dict[str, Entity],
-        region_log: dict[str, list[Event]],
+        location_log: dict[str, list[Event]],
         battle_map_configs: dict[str, BattleMap] | None = None,
     ) -> None:
         self._entities = entities
-        self._region_log = region_log
+        self._location_log = location_log
         self._combats: dict[str, CombatState] = {}
         self._attack_this_round: dict[str, bool] = {}
         self._battle_map_configs: dict[str, BattleMap] = battle_map_configs or {}
 
     # -- Combat queries --
 
-    def get_combat_regions(self) -> list[str]:
-        """Return region IDs with active combats."""
+    def get_combat_locations(self) -> list[str]:
+        """Return location IDs with active combats."""
         return list(self._combats)
 
-    def get_combat(self, region_id: str) -> CombatState | None:
-        """Get combat state for a region, or None if no active combat."""
-        return self._combats.get(region_id)
+    def get_combat(self, location_id: str) -> CombatState | None:
+        """Get combat state for a location, or None if no active combat."""
+        return self._combats.get(location_id)
 
     # -- Combat lifecycle --
 
-    def start_combat(self, region_id: str) -> CombatState:
-        """Roll initiative, create battle map, and start combat in a region."""
-        creatures = self._active_creatures_in_region(region_id)
+    def start_combat(self, location_id: str) -> CombatState:
+        """Roll initiative, create battle map, and start combat at a location."""
+        creatures = self._active_creatures_at_location(location_id)
         ordered = roll_initiative(creatures)
 
         # Use pre-configured battle map (with walls etc.) if available, otherwise default
-        if region_id in self._battle_map_configs:
-            template = self._battle_map_configs[region_id]
+        if location_id in self._battle_map_configs:
+            template = self._battle_map_configs[location_id]
             battle_map = BattleMap(width=template.width, height=template.height, walls=list(template._inner_walls))
         else:
             battle_map = BattleMap(width=60, height=60)
         battle_map.place_randomly([c.id for c in creatures])
 
         combat = CombatState(
-            region_id=region_id,
+            location_id=location_id,
             turn_order=[c.id for c in ordered],
             battle_map=battle_map,
         )
-        self._combats[region_id] = combat
-        self._attack_this_round[region_id] = False
+        self._combats[location_id] = combat
+        self._attack_this_round[location_id] = False
         for c in creatures:
             c.in_combat = True
 
         # Log combat start with initiative order
-        self._region_log[region_id].append(
+        self._location_log[location_id].append(
             Event(
                 event_type=EventType.COMBAT_STARTED,
                 source_layer="entities",
                 data={
-                    "region_id": region_id,
+                    "location_id": location_id,
                     "turn_order": [c.id for c in ordered],
                     "turn_order_names": [c.name for c in ordered],
                 },
@@ -79,48 +79,48 @@ class CombatManager:
         )
         return combat
 
-    def end_combat_round(self, region_id: str) -> None:
+    def end_combat_round(self, location_id: str) -> None:
         """Called by game loop at end of each combat round."""
-        combat = self._combats.get(region_id)
+        combat = self._combats.get(location_id)
         if not combat:
             return
 
-        if self._attack_this_round.get(region_id, False):
+        if self._attack_this_round.get(location_id, False):
             combat.rounds_without_attack = 0
         else:
             combat.rounds_without_attack += 1
-        self._attack_this_round[region_id] = False
+        self._attack_this_round[location_id] = False
         combat.round_number += 1
 
         if combat.rounds_without_attack >= 2:
-            self._end_combat(region_id)
+            self._end_combat(location_id)
 
-    def _end_combat(self, region_id: str) -> None:
-        """End combat in a region: clear in_combat and dodge flags, remove state."""
-        for c in self._active_creatures_in_region(region_id):
+    def _end_combat(self, location_id: str) -> None:
+        """End combat at a location: clear in_combat and dodge flags, remove state."""
+        for c in self._active_creatures_at_location(location_id):
             c.in_combat = False
             c.is_dodging = False
-        self._combats.pop(region_id, None)
-        self._attack_this_round.pop(region_id, None)
+        self._combats.pop(location_id, None)
+        self._attack_this_round.pop(location_id, None)
 
-        self._region_log[region_id].append(
+        self._location_log[location_id].append(
             Event(
                 event_type=EventType.COMBAT_ENDED,
                 source_layer="entities",
-                data={"region_id": region_id},
+                data={"location_id": location_id},
             )
         )
 
-    def _remove_from_combat(self, region_id: str, entity_id: str) -> None:
+    def _remove_from_combat(self, location_id: str, entity_id: str) -> None:
         """Remove an entity from combat turn order and map. End combat if ≤1 left."""
-        combat = self._combats.get(region_id)
+        combat = self._combats.get(location_id)
         if not combat:
             return
         if entity_id in combat.turn_order:
             combat.turn_order.remove(entity_id)
         combat.battle_map.remove(entity_id)
         if len(combat.turn_order) <= 1:
-            self._end_combat(region_id)
+            self._end_combat(location_id)
 
     # -- Action resolution --
 
@@ -130,9 +130,9 @@ class CombatManager:
         entity = self._entities.get(entity_id)
         if isinstance(entity, Creature):
             entity.is_dodging = True
-        region_id = self._event_region(event)
-        if region_id:
-            self._region_log[region_id].append(event)
+        location_id = self._event_location(event)
+        if location_id:
+            self._location_log[location_id].append(event)
         return ActionResult()
 
     def resolve_flee(self, event: Event) -> ActionResult:
@@ -141,10 +141,10 @@ class CombatManager:
         entity = self._entities.get(entity_id)
         if isinstance(entity, Creature):
             entity.in_combat = False
-            self._remove_from_combat(entity.region_id, entity_id)
-        region_id = self._event_region(event)
-        if region_id:
-            self._region_log[region_id].append(event)
+            self._remove_from_combat(entity.location_id, entity_id)
+        location_id = self._event_location(event)
+        if location_id:
+            self._location_log[location_id].append(event)
         return ActionResult()
 
     def resolve_move(self, event: Event, *, dash: bool = False) -> ActionResult:
@@ -154,7 +154,7 @@ class CombatManager:
         if not isinstance(entity, Creature):
             return ActionResult(success=False, error=_("Creature '{id}' not found.").format(id=entity_id))
 
-        combat = self._combats.get(entity.region_id)
+        combat = self._combats.get(entity.location_id)
         if not combat:
             return ActionResult(success=False, error=_("No active combat for movement."))
 
@@ -207,7 +207,7 @@ class CombatManager:
                 "description": event.data.get("description", ""),
             },
         )
-        self._region_log[entity.region_id].append(log_event)
+        self._location_log[entity.location_id].append(log_event)
         return ActionResult(success=True)
 
     def resolve_attack(self, event: Event) -> ActionResult:
@@ -230,13 +230,13 @@ class CombatManager:
         if not target.is_alive:
             return ActionResult(success=False, error=_("Target '{id}' is already dead.").format(id=target_id))
 
-        if attacker.region_id != target.region_id:
+        if attacker.location_id != target.location_id:
             return ActionResult(success=False, error=_("Target '{id}' is not in this region.").format(id=target_id))
 
-        # --- Enter combat for all creatures in the region ---
-        if attacker.region_id not in self._combats:
-            self.start_combat(attacker.region_id)
-        self._attack_this_round[attacker.region_id] = True
+        # --- Enter combat for all creatures at the location ---
+        if attacker.location_id not in self._combats:
+            self.start_combat(attacker.location_id)
+        self._attack_this_round[attacker.location_id] = True
 
         # Use equipped (first) attack, or unarmed strike
         if attacker.attacks:
@@ -245,7 +245,7 @@ class CombatManager:
             attack = Attack(name=_("fist"), ability=Ability.STR, damage=(DamageComponent("1", DamageType.BLUDGEONING),))
 
         # --- Reach check ---
-        combat = self._combats.get(attacker.region_id)
+        combat = self._combats.get(attacker.location_id)
         if combat:
             a_pos = combat.battle_map.get_position(attacker_id)
             t_pos = combat.battle_map.get_position(target_id)
@@ -282,41 +282,41 @@ class CombatManager:
             if not target.is_alive:
                 target.active = False
                 target.in_combat = False
-                self._remove_from_combat(target.region_id, target_id)
+                self._remove_from_combat(target.location_id, target_id)
                 death_event = Event(
                     event_type=EventType.ENTITY_DIED,
                     source_layer="entities",
                     data={"entity_id": target_id},
                 )
                 result_events.append(death_event)
-                self._region_log[target.region_id].append(death_event)
+                self._location_log[target.location_id].append(death_event)
 
-        # Log the attack in the attacker's region
+        # Log the attack in the attacker's location
         attack_log_event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
             data=log_data,
         )
-        self._region_log[attacker.region_id].append(attack_log_event)
+        self._location_log[attacker.location_id].append(attack_log_event)
 
         return ActionResult(success=True, events=result_events)
 
     # -- Helpers --
 
-    def _active_creatures_in_region(self, region_id: str, exclude_id: str = "") -> list[Creature]:
-        """Get active creatures in a region."""
+    def _active_creatures_at_location(self, location_id: str, exclude_id: str = "") -> list[Creature]:
+        """Get active creatures at a location."""
         return [
             e
             for e in self._entities.values()
-            if isinstance(e, Creature) and e.active and e.region_id == region_id and e.id != exclude_id
+            if isinstance(e, Creature) and e.active and e.location_id == location_id and e.id != exclude_id
         ]
 
-    def _event_region(self, event: Event) -> str | None:
-        """Determine which region an event happened in."""
+    def _event_location(self, event: Event) -> str | None:
+        """Determine which location an event happened at."""
         for key in ("entity_id", "attacker_id"):
             eid = event.data.get(key)
             if isinstance(eid, str):
                 entity = self._entities.get(eid)
                 if entity:
-                    return entity.region_id
+                    return entity.location_id
         return None

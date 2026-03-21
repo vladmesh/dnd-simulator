@@ -8,6 +8,7 @@ from typing import Any
 from dnd_simulator.content_loader import (
     extract_region_adjacency,
     extract_region_terrains,
+    load_locations,
     load_nations,
     load_npcs,
     load_player,
@@ -18,6 +19,7 @@ from dnd_simulator.content_loader import (
 )
 from dnd_simulator.core.brain import RuleBrain
 from dnd_simulator.core.character import Ability, Entity
+from dnd_simulator.core.location import LocationGraph
 from dnd_simulator.core.models import GameDateTime, Query, TimeDelta
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
@@ -52,13 +54,13 @@ class GameSession:
 
     @property
     def player_location(self) -> str:
-        """Shortcut for player's current region."""
-        return self.player.region_id if self.player else ""
+        """Shortcut for player's current location."""
+        return self.player.location_id if self.player else ""
 
     @player_location.setter
     def player_location(self, value: str) -> None:
         if self.player:
-            self.player.region_id = value
+            self.player.location_id = value
 
 
 class GameService:
@@ -87,14 +89,16 @@ class GameService:
         nations = load_nations(world_path)
         settlements = load_settlements(world_path)
         npcs = load_npcs(world_path)
+        locations = load_locations(world_path, regions)
+        location_graph = LocationGraph(locations)
         region_terrains = extract_region_terrains(regions)
 
         # Player is optional in templates (created by player at session join)
         player: PlayerCharacter | None = None
         try:
             player = load_player(world_path)
-            if player.region_id == "" and regions:
-                player.region_id = regions[0].id
+            if player.location_id == "" and locations:
+                player.location_id = locations[0].id
         except (KeyError, FileNotFoundError):
             pass
 
@@ -115,6 +119,7 @@ class GameService:
         world = World(
             layers=[geography, settlements_layer, politics, entities_layer],
             time=GameDateTime(year=1490, month=6, day=1, hour=10),
+            location_graph=location_graph,
         )
 
         # Initial tick to set weather/temperature
@@ -184,7 +189,7 @@ class GameService:
 
         return MasterResponse(
             text=f"Unknown command: '{text}'. "
-            "Try: look, map, go <dir>, wait [hours], attack <target>, say <text>, "
+            "Try: look, map, go <location>, wait [hours], attack <target>, say <text>, "
             "move/dash toward <target>, dodge, flee, nations, nation <id>, settlements, status"
         )
 
@@ -290,8 +295,8 @@ class GameService:
             entity.ac = int(updates["ac"])
         if "personality" in updates:
             entity.personality = str(updates["personality"])
-        if "region_id" in updates:
-            entity.region_id = str(updates["region_id"])
+        if "location_id" in updates:
+            entity.location_id = str(updates["location_id"])
         if "gold" in updates:
             entity.gold = int(updates["gold"])
 
@@ -359,11 +364,12 @@ class GameService:
 
         player = parse_player(player_data)
 
-        # Default to first region if not specified
-        if not player.region_id:
-            regions = session.world.query_layer("geography", Query(question="regions", params={}))
-            if regions.value:
-                player.region_id = str(regions.value[0])
+        # Default to first location if not specified
+        if not player.location_id:
+            graph = session.world.location_graph
+            ids = graph.all_ids()
+            if ids:
+                player.location_id = ids[0]
 
         self._get_entities_layer(session).add_entity(player)
         session.player = player
@@ -377,11 +383,15 @@ class GameService:
         player = self._require_player(session)
         world = session.world
 
-        awareness = build_awareness(world, player.region_id)
+        awareness = build_awareness(world, player.location_id)
 
-        # Entities in region, perceived through player's eyes
+        # Entities at location, perceived through player's eyes
         entities_answer = world.query_layer(
-            "entities", Query(question="entities_in_region", params={"region_id": player.region_id})
+            "entities",
+            Query(
+                question="entities_at_location",
+                params={"location_id": player.location_id, "hour": world.time.hour},
+            ),
         )
         perceived_entities: list[dict[str, str]] = []
         for e in entities_answer.value:
@@ -389,13 +399,18 @@ class GameService:
                 desc = player.perceive_by_id(str(e["id"]), world)
                 perceived_entities.append({"id": str(e["id"]), "description": desc})
 
-        # Connections from current region
-        conns = world.query_layer("geography", Query(question="connections", params={"region_id": player.region_id}))
+        # Neighbors from location graph
+        graph = world.location_graph
+        location = graph.get(player.location_id)
+        neighbors = [
+            {"target_id": edge.target_id, "name": graph.get(edge.target_id).name, "distance_m": edge.distance_m}
+            for edge in location.edges
+        ]
 
         return {
             **awareness,
             "entities": perceived_entities,
-            "connections": conns.value,
+            "neighbors": neighbors,
         }
 
     def get_new_events(self, session_id: str) -> list[str]:
@@ -421,31 +436,32 @@ class GameService:
         return build_combat_awareness(session.world, player)
 
     def get_map(self, session_id: str) -> dict[str, Any]:
-        """Get map data: current region connections with travel info."""
+        """Get map data: current location neighbors with travel info."""
         session = self._get_session(session_id)
         player = self._require_player(session)
         world = session.world
-        loc = player.region_id
+        graph = world.location_graph
+        loc = player.location_id
 
-        region_info = world.query_layer("geography", Query(question="region_info", params={"region_id": loc}))
-        conns = world.query_layer("geography", Query(question="connections", params={"region_id": loc}))
+        location = graph.get(loc)
+        region_id = location.region_id
+        region_info = world.query_layer("geography", Query(question="region_info", params={"region_id": region_id}))
 
         paths: list[dict[str, object]] = []
-        for c in conns.value:
-            travel = world.query_layer(
-                "geography",
-                Query(question="travel_time", params={"from_id": loc, "to_id": c["target_id"]}),
-            )
+        for edge in location.edges:
+            target = graph.get(edge.target_id)
+            travel_secs = graph.travel_seconds(loc, edge.target_id)
             paths.append(
                 {
-                    "direction": c["direction"],
-                    "target_id": c["target_id"],
-                    "distance_km": travel.value["distance_km"],
-                    "travel_hours": travel.value["hours"],
+                    "target_id": edge.target_id,
+                    "target_name": target.name,
+                    "distance_m": edge.distance_m,
+                    "travel_seconds": travel_secs,
                 }
             )
 
         return {
+            "current_location": {"id": location.id, "name": location.name, "region_id": region_id},
             "current_region": region_info.value,
             "paths": paths,
         }
@@ -460,16 +476,19 @@ class GameService:
     def _cmd_look(self, session: GameSession) -> MasterResponse:
         """Describe current location."""
         world = session.world
-        loc = session.player_location
+        graph = world.location_graph
+        loc_id = session.player_location
 
-        info = world.query_layer("geography", Query(question="region_info", params={"region_id": loc}))
-        weather = world.query_layer("geography", Query(question="weather", params={"region_id": loc}))
-        conns = world.query_layer("geography", Query(question="connections", params={"region_id": loc}))
+        location = graph.get(loc_id)
+        region_id = location.region_id
+
+        info = world.query_layer("geography", Query(question="region_info", params={"region_id": region_id}))
+        weather = world.query_layer("geography", Query(question="weather", params={"region_id": region_id}))
 
         lat = float(info.value["latitude"])
         day_or_night = "Day" if is_daylight(lat, world.time.month, world.time.hour) else "Night"
 
-        owner = world.query_layer("politics", Query(question="region_owner", params={"region_id": loc}))
+        owner = world.query_layer("politics", Query(question="region_owner", params={"region_id": region_id}))
         territory = ""
         if owner.value:
             nation_info = world.query_layer(
@@ -479,14 +498,19 @@ class GameService:
         else:
             territory = "  |  Territory: Independent"
 
-        settlements = world.query_layer("settlements", Query(question="region_settlements", params={"region_id": loc}))
+        settlements = world.query_layer(
+            "settlements", Query(question="region_settlements", params={"region_id": region_id})
+        )
 
         lines = [
-            f"=== {info.value['name']} ===",
+            f"=== {location.name} ===",
             f"Terrain: {info.value['terrain']}  |  Elevation: {info.value['elevation']}m{territory}",
             f"Weather: {weather.value['condition'].replace('_', ' ')}  |  {weather.value['temperature']}°C",
             f"Time: {world.time.hour:02d}:{world.time.minute:02d} ({day_or_night})",
         ]
+
+        if location.description:
+            lines.append(location.description)
 
         if settlements.value:
             lines.append("")
@@ -494,28 +518,31 @@ class GameService:
             for s in settlements.value:
                 lines.append(f"  {s['name']} ({s['type']}, pop {s['population']}, prosperity {s['prosperity']:.0f})")
 
-        entities = world.query_layer("entities", Query(question="entities_in_region", params={"region_id": loc}))
+        entities = world.query_layer(
+            "entities",
+            Query(
+                question="entities_at_location",
+                params={"location_id": loc_id, "hour": world.time.hour},
+            ),
+        )
         others = [e for e in entities.value if e["id"] != (session.player.id if session.player else "")]
         if others:
             lines.append("")
             lines.append("People:")
             for e in others:
                 if "role" in e:
-                    lines.append(f"  {e['name']} ({e['role']}) - {e['activity']}, at {e['location_label']}")
+                    lines.append(f"  {e['name']} ({e['role']}) - {e['activity']}")
                 else:
                     lines.append(f"  {e['name']}")
 
         lines.append("")
         lines.append("Paths:")
-        for c in conns.value:
-            travel = world.query_layer(
-                "geography",
-                Query(question="travel_time", params={"from_id": loc, "to_id": c["target_id"]}),
-            )
-            lines.append(
-                f"  {c['direction'].upper()} → {c['target_id']}"
-                f"  ({travel.value['distance_km']} km, ~{travel.value['hours']}h)"
-            )
+        for edge in location.edges:
+            target = graph.get(edge.target_id)
+            dist_str = f"{edge.distance_m / 1000:.1f} km" if edge.distance_m >= 1000 else f"{edge.distance_m} m"
+            travel_secs = graph.travel_seconds(loc_id, edge.target_id)
+            time_str = f"~{travel_secs / 3600:.1f}h" if travel_secs >= 3600 else f"~{travel_secs // 60}min"
+            lines.append(f"  {target.name} ({edge.target_id}) — {dist_str}, {time_str}")
 
         return MasterResponse(text="\n".join(lines))
 
@@ -525,9 +552,10 @@ class GameService:
         regions = world.query_layer("geography", Query(question="regions", params={}))
 
         lines = [f"=== World Map (Year {world.time.year}, Month {world.time.month}, Day {world.time.day}) ==="]
+        current_region = world.location_graph.region_of(session.player_location) if session.player_location else ""
         for rid in regions.value:
             weather = world.query_layer("geography", Query(question="weather", params={"region_id": rid}))
-            marker = " ← you are here" if rid == session.player_location else ""
+            marker = " ← you are here" if rid == current_region else ""
             lines.append(
                 f"  {rid}: {weather.value['condition'].replace('_', ' ')}, {weather.value['temperature']}°C{marker}"
             )
@@ -546,41 +574,56 @@ class GameService:
 
         return MasterResponse(text="\n".join(lines), events_summary=[e.description for e in events])
 
-    def _cmd_go(self, session: GameSession, direction: str) -> MasterResponse:
-        """Move to a connected region."""
+    def _cmd_go(self, session: GameSession, target: str) -> MasterResponse:
+        """Move to a neighboring location."""
         world = session.world
-        conns = world.query_layer(
-            "geography", Query(question="connections", params={"region_id": session.player_location})
+        graph = world.location_graph
+        loc_id = session.player_location
+
+        edge = graph.edge_between(loc_id, target)
+        if edge is None:
+            # List available neighbors
+            location = graph.get(loc_id)
+            available = ", ".join(e.target_id for e in location.edges)
+            return MasterResponse(text=f"Can't go to '{target}'. Available: {available}")
+
+        # Calculate travel time with terrain/weather modifiers
+        target_region = graph.region_of(target)
+        region_info = world.query_layer("geography", Query(question="region_info", params={"region_id": target_region}))
+        weather = world.query_layer("geography", Query(question="weather", params={"region_id": target_region}))
+
+        # Use rules/geography for proper speed calculation
+        from dnd_simulator.rules.geography import calculate_travel_hours
+
+        terrain_type = region_info.value["terrain"]
+        weather_condition = weather.value["condition"]
+        from dnd_simulator.core.models import TerrainType, WeatherCondition
+
+        distance_km = edge.distance_m / 1000.0
+        travel_hours = calculate_travel_hours(
+            distance_km,
+            TerrainType(terrain_type),
+            WeatherCondition(weather_condition),
         )
+        travel_hours = max(travel_hours, 1 / 60)  # minimum 1 minute
 
-        for c in conns.value:
-            if c["direction"] == direction.lower():
-                # Calculate actual travel time
-                travel = world.query_layer(
-                    "geography",
-                    Query(
-                        question="travel_time",
-                        params={"from_id": session.player_location, "to_id": c["target_id"]},
-                    ),
-                )
-                travel_hours = int(travel.value["hours"])
-                travel_hours = max(1, travel_hours)  # minimum 1 hour
+        session.player_location = target
+        travel_seconds = int(travel_hours * 3600)
+        events = world.advance_time(TimeDelta(seconds=travel_seconds))
+        look = self._cmd_look(session)
 
-                session.player_location = c["target_id"]
-                events = world.advance_time(TimeDelta.from_hours(travel_hours))
-                look = self._cmd_look(session)
+        if travel_hours >= 1:
+            header = f"You travel to {graph.get(target).name} ({distance_km:.1f} km, ~{travel_hours:.1f}h)..."
+        else:
+            header = f"You walk to {graph.get(target).name} ({edge.distance_m}m, ~{int(travel_hours * 60)}min)..."
 
-                header = f"You travel {direction.upper()} for ~{travel_hours}h ({travel.value['distance_km']} km)..."
-                travel_notes = [e.description for e in events if e.description]
-                if travel_notes:
-                    return MasterResponse(
-                        text=header + "\n" + "\n".join(f"  • {n}" for n in travel_notes) + f"\n\n{look.text}",
-                        events_summary=travel_notes,
-                    )
-                return MasterResponse(text=f"{header}\n\n{look.text}")
-
-        valid = ", ".join(c["direction"].upper() for c in conns.value)
-        return MasterResponse(text=f"You can't go {direction.upper()}. Available: {valid}")
+        travel_notes = [e.description for e in events if e.description]
+        if travel_notes:
+            return MasterResponse(
+                text=header + "\n" + "\n".join(f"  • {n}" for n in travel_notes) + f"\n\n{look.text}",
+                events_summary=travel_notes,
+            )
+        return MasterResponse(text=f"{header}\n\n{look.text}")
 
     def _cmd_nations(self, session: GameSession) -> MasterResponse:
         """List all nations with summary stats."""
@@ -588,15 +631,14 @@ class GameService:
         nation_ids = world.query_layer("politics", Query(question="nations", params={}))
 
         lines = [f"=== Nations of the World (Year {world.time.year}) ==="]
+        current_region = world.location_graph.region_of(session.player_location) if session.player_location else ""
         for nid in nation_ids.value:
             info = world.query_layer("politics", Query(question="nation_info", params={"nation_id": nid}))
             n = info.value
             leader = n["leader"]
             leader_str = f"{leader['name']} ({leader['trait']})" if leader else "none"
             marker = ""
-            owner = world.query_layer(
-                "politics", Query(question="region_owner", params={"region_id": session.player_location})
-            )
+            owner = world.query_layer("politics", Query(question="region_owner", params={"region_id": current_region}))
             if owner.value == nid:
                 marker = " ← you are here"
             lines.append(
@@ -667,11 +709,13 @@ class GameService:
     def _cmd_settlements(self, session: GameSession) -> MasterResponse:
         """List all settlements in current region."""
         world = session.world
-        loc = session.player_location
+        region_id = world.location_graph.region_of(session.player_location)
 
-        settlements = world.query_layer("settlements", Query(question="region_settlements", params={"region_id": loc}))
+        settlements = world.query_layer(
+            "settlements", Query(question="region_settlements", params={"region_id": region_id})
+        )
 
-        info = world.query_layer("geography", Query(question="region_info", params={"region_id": loc}))
+        info = world.query_layer("geography", Query(question="region_info", params={"region_id": region_id}))
         lines = [f"=== Settlements in {info.value['name']} ==="]
 
         if not settlements.value:
@@ -708,7 +752,7 @@ class GameService:
         return MasterResponse(text="\n".join(descriptions) if descriptions else "Attack!", events_summary=descriptions)
 
     def _cmd_say(self, session: GameSession, text: str) -> MasterResponse:
-        """Say something in the current region."""
+        """Say something in the current location."""
         from dnd_simulator.core.models import Event, EventType
 
         player = self._require_player(session)

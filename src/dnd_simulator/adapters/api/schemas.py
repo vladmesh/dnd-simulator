@@ -31,7 +31,8 @@ class CreatePlayerRequest(BaseModel):
 class SpawnNpcRequest(BaseModel):
     id: str
     name: str
-    region_id: str
+    region_id: str = ""  # backward compat
+    start_location: str = ""
     role: str = ""
     personality: str = ""
     settlement_id: str = ""
@@ -44,7 +45,7 @@ class PatchNpcRequest(BaseModel):
     current_hp: int | None = None
     ac: int | None = None
     personality: str | None = None
-    region_id: str | None = None
+    location_id: str | None = None
     gold: int | None = None
 
 
@@ -99,7 +100,7 @@ class PlayerStatusResponse(BaseModel):
     max_hp: int
     ac: int
     gold: int
-    region_id: str
+    location_id: str
     appearance: str
     ability_scores: dict[str, int]
 
@@ -121,7 +122,7 @@ class WorldStateResponse(BaseModel):
 class NpcResponse(BaseModel):
     id: str
     name: str
-    region_id: str
+    location_id: str
     role: str
     personality: str
     hp: int

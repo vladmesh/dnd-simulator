@@ -80,11 +80,16 @@ def get_session_state(session_id: str) -> WorldStateResponse:
         for s in answer.value:
             all_settlements.append(s)
 
+    # Collect all entities (no longer region-indexed)
+    from dnd_simulator.layers.entities.layer import EntitiesLayer
+
     entities_list: list[dict[str, object]] = []
-    for rid in regions_answer.value:
-        answer = world.query_layer("entities", Query(question="entities_in_region", params={"region_id": rid}))
-        for e in answer.value:
-            entities_list.append(e)
+    for layer in world.layers:
+        if isinstance(layer, EntitiesLayer):
+            for creature in layer.get_active_creatures():
+                info = world.query_layer("entities", Query(question="entity_info", params={"entity_id": creature.id}))
+                entities_list.append(info.value)
+            break
 
     return WorldStateResponse(
         session_id=session.session_id,
@@ -117,15 +122,15 @@ def list_npcs(session_id: str) -> list[NpcResponse]:
     session = _get_session(service, session_id)
     world = session.world
 
-    regions_answer = world.query_layer("geography", Query(question="regions", params={}))
+    from dnd_simulator.layers.entities.layer import EntitiesLayer
+
     npcs: list[NpcResponse] = []
-    for rid in regions_answer.value:
-        answer = world.query_layer("entities", Query(question="entities_in_region", params={"region_id": rid}))
-        for e in answer.value:
-            entity = world.query_layer("entities", Query(question="entity_info", params={"entity_id": e["id"]}))
-            info = entity.value
-            if "role" in info:
-                npcs.append(_npc_response_from_info(info, session))
+    for layer in world.layers:
+        if isinstance(layer, EntitiesLayer):
+            for entity in layer.get_active_creatures():
+                if isinstance(entity, Npc):
+                    npcs.append(_npc_response(entity))
+            break
     return npcs
 
 
@@ -311,7 +316,7 @@ def _npc_response(npc: Npc) -> NpcResponse:
     return NpcResponse(
         id=npc.id,
         name=npc.name,
-        region_id=npc.region_id,
+        location_id=npc.location_id,
         role=npc.role,
         personality=npc.personality,
         hp=npc.current_hp,

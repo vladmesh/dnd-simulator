@@ -23,7 +23,7 @@ class ScheduleEntry:
     start_hour: int  # 0-23
     end_hour: int  # 0-23, wraps around midnight if start > end
     activity: NpcActivity
-    location_label: str  # "smithy", "home", "tavern", "patrol"
+    location_id: str  # resolved location ID (e.g. "silverport_city_smithy")
 
 
 @dataclass
@@ -38,20 +38,29 @@ class Npc(Character):
     personality: str = ""
     settlement_id: str = ""
     schedule: list[ScheduleEntry] = field(default_factory=list)
-    activity: NpcActivity = NpcActivity.IDLE
-    location_label: str = "home"
+    location_override: str | None = None
     conversation_summary: str = ""
     ai_type: str = "rule_based"
 
-    def on_tick(self, hour: int) -> None:
-        """Update activity based on daily schedule."""
+    def scheduled_location(self, hour: int) -> str:
+        """Compute where this NPC should be at a given hour, from schedule."""
         for entry in self.schedule:
             if hour_in_range(hour, entry.start_hour, entry.end_hour):
-                self.activity = entry.activity
-                self.location_label = entry.location_label
-                return
-        self.activity = NpcActivity.IDLE
-        self.location_label = "wandering"
+                return entry.location_id
+        return self.location_id  # fallback to home/default location
+
+    def scheduled_activity(self, hour: int) -> NpcActivity:
+        """Compute what this NPC should be doing at a given hour."""
+        for entry in self.schedule:
+            if hour_in_range(hour, entry.start_hour, entry.end_hour):
+                return entry.activity
+        return NpcActivity.IDLE
+
+    def current_location(self, hour: int) -> str:
+        """Where the NPC actually is: override if set, else schedule."""
+        if self.location_override is not None:
+            return self.location_override
+        return self.scheduled_location(hour)
 
     def get_npc_data(self) -> dict[str, str]:
         """Return NPC metadata for LLM prompts."""
@@ -59,38 +68,53 @@ class Npc(Character):
             "name": self.name,
             "role": self.role,
             "personality": self.personality,
-            "activity": self.activity.value,
-            "location_label": self.location_label,
             "conversation_summary": self.conversation_summary,
         }
 
 
-# Default schedules by role — keeps YAML clean.
-DEFAULT_SCHEDULES: dict[str, list[ScheduleEntry]] = {
+# Default schedules by role — uses relative location labels.
+# At NPC creation, these are resolved to "{settlement_id}_{label}" IDs.
+DEFAULT_SCHEDULE_TEMPLATES: dict[str, list[tuple[int, int, NpcActivity, str]]] = {
     "blacksmith": [
-        ScheduleEntry(21, 7, NpcActivity.SLEEPING, "home"),
-        ScheduleEntry(7, 19, NpcActivity.WORKING, "smithy"),
-        ScheduleEntry(19, 21, NpcActivity.IDLE, "tavern"),
+        (21, 7, NpcActivity.SLEEPING, "home"),
+        (7, 19, NpcActivity.WORKING, "smithy"),
+        (19, 21, NpcActivity.IDLE, "tavern"),
     ],
     "tavern_keeper": [
-        ScheduleEntry(3, 10, NpcActivity.SLEEPING, "home"),
-        ScheduleEntry(10, 3, NpcActivity.WORKING, "tavern"),
+        (3, 10, NpcActivity.SLEEPING, "home"),
+        (10, 3, NpcActivity.WORKING, "tavern"),
     ],
     "guard": [
-        ScheduleEntry(22, 6, NpcActivity.SLEEPING, "barracks"),
-        ScheduleEntry(6, 22, NpcActivity.WORKING, "patrol"),
+        (22, 6, NpcActivity.SLEEPING, "barracks"),
+        (6, 22, NpcActivity.WORKING, "patrol"),
     ],
     "merchant": [
-        ScheduleEntry(22, 7, NpcActivity.SLEEPING, "home"),
-        ScheduleEntry(7, 18, NpcActivity.WORKING, "market"),
-        ScheduleEntry(18, 22, NpcActivity.IDLE, "tavern"),
+        (22, 7, NpcActivity.SLEEPING, "home"),
+        (7, 18, NpcActivity.WORKING, "market"),
+        (18, 22, NpcActivity.IDLE, "tavern"),
     ],
     "farmer": [
-        ScheduleEntry(20, 5, NpcActivity.SLEEPING, "home"),
-        ScheduleEntry(5, 18, NpcActivity.WORKING, "fields"),
-        ScheduleEntry(18, 20, NpcActivity.IDLE, "home"),
+        (20, 5, NpcActivity.SLEEPING, "home"),
+        (5, 18, NpcActivity.WORKING, "fields"),
+        (18, 20, NpcActivity.IDLE, "home"),
     ],
 }
+
+
+def resolve_schedule(role: str, settlement_id: str) -> list[ScheduleEntry]:
+    """Build a schedule from a role template, resolving relative location labels."""
+    template = DEFAULT_SCHEDULE_TEMPLATES.get(role)
+    if not template:
+        return []
+    return [
+        ScheduleEntry(
+            start_hour=start,
+            end_hour=end,
+            activity=activity,
+            location_id=f"{settlement_id}_{label}" if settlement_id else label,
+        )
+        for start, end, activity, label in template
+    ]
 
 
 def hour_in_range(hour: int, start: int, end: int) -> bool:
