@@ -39,17 +39,18 @@ src/dnd_simulator/
 ├── master/        — DM orchestrator (LLM-powered)
 ├── rules/         — pure functions: D&D mechanics, combat/initiative resolution, movement/pathfinding, physics, economics
 ├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas
-├── i18n.py        — gettext internationalization (English base, .po translations)
-├── adapters/      — transport layer (CLI, API, Telegram)
-├── content_loader.py — loads worlds, nations, settlements, NPCs, player from YAML
-├── service.py     — GameService: transport-agnostic game interface
+├── i18n.py        — gettext internationalization, per-session language via contextvars
+├── adapters/      — transport layer
+│   ├── cli.py, cli_loop.py — terminal REPL
+│   └── api/       — FastAPI REST adapter (master + player routes, i18n middleware)
+├── content_loader.py — loads content from YAML (single file or directory format)
+├── service.py     — GameService: sessions, commands, hot controls, player/master logic
 └── game_loop.py   — turn-based main loop: polls active creatures, advances time each round
 
-content/           — authored game data (YAML/JSON)
-├── worlds/        — pre-built region maps
-├── npcs/          — hand-crafted NPCs with backstories
-├── quests/        — quest lines and storylines
-└── triggers/      — event triggers (enter city → scene starts)
+content/           — authored game data (YAML)
+└── worlds/        — world templates (single .yaml file or directory with split files)
+    ├── test_world.yaml     — legacy single-file format
+    └── sword_vale/         — directory format (world.yaml, regions.yaml, nations.yaml, npcs.yaml)
 ```
 
 ## Data Flow
@@ -66,6 +67,12 @@ Turn-based game loop (game_loop.py):
 
 Player input flow (service.py, command-based):
     Player input → Adapter (CLI/API/TG) → GameService → response
+
+REST API flow (adapters/api/):
+    FastAPI routes → GameService methods → JSON responses
+    I18nMiddleware sets session language before each request via contextvars
+    Master routes: session CRUD, NPC hot controls, nation/settlement patching, saves
+    Player routes: character creation, perception, events, combat, map, actions
 ```
 
 The game loop separates combat and peaceful turns. Combat regions use initiative order (d20 + DEX mod, rolled once at combat start); peaceful creatures use default order. Each creature builds awareness appropriate to its mode — combat awareness (HP, nearby combatants, round number) or full world awareness (time, weather, settlements). Creatures delegate decisions to their `brain` (strategy pattern): `RuleBrain` uses utility scoring, `LlmBrain` calls the LLM, `PlayerCharacter` handles interactive I/O directly. Actions execute through world events. `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
@@ -125,5 +132,7 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 - **Rules are pure functions.** No state, no side effects, easy to test.
 - **Brain is a strategy.** `Creature.brain` decouples decision-making from entity type. `RuleBrain` (utility scoring) needs no LLM; `LlmBrain` wraps an `LlmClient`. Brains are swappable at runtime (LOD).
 - **LLM is injected, not hardcoded.** `LlmBrain` receives an `LlmClient`; rule-based NPCs use no LLM at all.
-- **Content is data, not code.** Quests, NPCs, and world maps live in YAML files outside the Python package.
-- **Transport is a thin adapter.** The game works the same whether accessed via terminal, HTTP, or Telegram.
+- **Content is data, not code.** Worlds and NPCs live in YAML files. Two formats: legacy single file, or directory (world.yaml, regions.yaml, nations.yaml, npcs.yaml). ContentLoader handles both.
+- **Transport is a thin adapter.** The game works the same whether accessed via terminal, HTTP, or Telegram. REST API (FastAPI) is the primary adapter for frontend.
+- **Two editing modes.** Between sessions: master edits YAML templates on disk. During sessions: hot controls (NPC spawn/delete, HP, brain, nation/settlement patches) modify objects in memory. Saves persist state to disk.
+- **Per-session i18n.** Language is set per session via `contextvars`. The global `_()` function reads the current context, so NPC LLM prompts and translated strings respect session language.
