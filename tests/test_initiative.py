@@ -17,8 +17,8 @@ from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.location import Location, LocationGraph
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query
 from dnd_simulator.core.world import World
-from dnd_simulator.game_loop import run_game_loop
 from dnd_simulator.layers.entities.layer import EntitiesLayer
+from dnd_simulator.round import Round
 from dnd_simulator.rules.combat import roll_initiative
 
 
@@ -474,7 +474,7 @@ class TestGameLoopCombat:
 
     def test_peaceful_creatures_skip_combat(self) -> None:
         """Peaceful creatures should not be polled during combat rounds."""
-        from dnd_simulator.core.action import Action
+        from dnd_simulator.core.action import END_TURN, Action
         from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
         from dnd_simulator.core.brain import Brain
 
@@ -491,7 +491,7 @@ class TestGameLoopCombat:
                 # Stop the loop after first round
                 if len(turn_log) >= 3:
                     creature.active = False
-                return Action(name="idle")
+                return END_TURN
 
         c_combat1 = Character(
             id="c1", name="A", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,), brain=LogBrain()
@@ -516,7 +516,7 @@ class TestGameLoopCombat:
         combat = layer.get_combat("r1")
         combat.turn_order = ["c1", "c2"]
 
-        run_game_loop(world)
+        Round(world, layer).run_loop()
 
         # c3 should have taken a turn (it's peaceful, in a different region)
         assert "c3" in turn_log

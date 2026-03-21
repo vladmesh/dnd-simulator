@@ -216,18 +216,6 @@ class TestPlayerEndpoints:
         assert data["hp"] > 0
         assert "str" in data["ability_scores"]
 
-    def test_player_action_look(self, tmp_path: object) -> None:
-        client, _ = _make_client(tmp_path)
-        sid = _create_session_with_player(client)
-        resp = client.post(f"/api/player/sessions/{sid}/action", json={"action": "look"})
-        assert resp.status_code == 200
-        assert len(resp.json()["text"]) > 0
-
-    def test_player_action_nonexistent_session(self, tmp_path: object) -> None:
-        client, _ = _make_client(tmp_path)
-        resp = client.post("/api/player/sessions/nope/action", json={"action": "look"})
-        assert resp.status_code == 404
-
 
 class TestPlayerCharacterCreation:
     def _create_session_no_player(self, client: TestClient) -> str:
@@ -282,75 +270,6 @@ class TestPlayerCharacterCreation:
         sid = self._create_session_no_player(client)
 
         resp = client.get(f"/api/player/sessions/{sid}/status")
-        assert resp.status_code == 404
-
-
-class TestPlayerPerception:
-    def test_get_perception(self, tmp_path: object) -> None:
-        client, _ = _make_client(tmp_path)
-        sid = _create_session_with_player(client)
-
-        resp = client.get(f"/api/player/sessions/{sid}/perception")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "weather" in data
-        assert "location" in data
-        assert "entities" in data
-        assert "neighbors" in data
-        assert "time" in data
-
-    def test_perception_entities_are_perceived(self, tmp_path: object) -> None:
-        client, _ = _make_client(tmp_path)
-        sid = _create_session_with_player(client)
-
-        resp = client.get(f"/api/player/sessions/{sid}/perception")
-        data = resp.json()
-        # Entities should have description (from perceive), not raw stats
-        for e in data["entities"]:
-            assert "id" in e
-            assert "description" in e
-
-    def test_get_events(self, tmp_path: object) -> None:
-        client, _ = _make_client(tmp_path)
-        sid = _create_session_with_player(client)
-
-        resp = client.get(f"/api/player/sessions/{sid}/events")
-        assert resp.status_code == 200
-        assert "events" in resp.json()
-
-    def test_get_combat_not_in_combat(self, tmp_path: object) -> None:
-        client, _ = _make_client(tmp_path)
-        sid = _create_session_with_player(client)
-
-        resp = client.get(f"/api/player/sessions/{sid}/combat")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["in_combat"] is False
-        assert data["combat"] is None
-
-    def test_get_map(self, tmp_path: object) -> None:
-        client, _ = _make_client(tmp_path)
-        sid = _create_session_with_player(client)
-
-        resp = client.get(f"/api/player/sessions/{sid}/map")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "current_region" in data
-        assert "paths" in data
-        assert len(data["paths"]) > 0
-        path = data["paths"][0]
-        assert "target_id" in path
-        assert "target_name" in path
-        assert "distance_m" in path
-        assert "travel_seconds" in path
-
-    def test_perception_no_player(self, tmp_path: object) -> None:
-        client, _ = _make_client(tmp_path)
-        # Create session without player (sword_vale has no player.yaml)
-        resp = client.post("/api/master/sessions", json={"world_name": "sword_vale"})
-        sid = resp.json()["session_id"]
-
-        resp = client.get(f"/api/player/sessions/{sid}/perception")
         assert resp.status_code == 404
 
 

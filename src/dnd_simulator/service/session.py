@@ -6,14 +6,6 @@ from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
 
 
-@dataclass(frozen=True)
-class MasterResponse:
-    """What the DM tells the player."""
-
-    text: str
-    events_summary: list[str] | None = None
-
-
 @dataclass
 class GameSession:
     """An active game session."""

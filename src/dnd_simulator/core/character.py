@@ -13,7 +13,6 @@ from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
     from dnd_simulator.core.brain import Brain
-    from dnd_simulator.core.world import World
 
 logger = logging.getLogger("dnd_simulator.creature")
 
@@ -183,10 +182,6 @@ class Entity:
 
     def on_tick(self, hour: int) -> None:
         """Update state based on time of day. Override in subclasses."""
-
-    def take_turn(self, world: World) -> None:
-        """React to the world. Override in subclasses (PlayerCharacter)."""
-        raise NotImplementedError
 
 
 @dataclass

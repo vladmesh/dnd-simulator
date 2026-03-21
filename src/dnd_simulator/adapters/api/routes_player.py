@@ -6,9 +6,7 @@ from fastapi import APIRouter, HTTPException
 
 from dnd_simulator.adapters.api.deps import get_service
 from dnd_simulator.adapters.api.schemas import (
-    ActionResponse,
     CreatePlayerRequest,
-    PlayerActionRequest,
     PlayerStatusResponse,
 )
 from dnd_simulator.core.character import Ability
@@ -38,61 +36,6 @@ def get_status(session_id: str) -> PlayerStatusResponse:
     if not p:
         raise HTTPException(status_code=404, detail="No player in this session")
     return _player_status(p)
-
-
-@router.post("/sessions/{session_id}/action", response_model=ActionResponse)
-def player_action(session_id: str, body: PlayerActionRequest) -> ActionResponse:
-    """Execute a player action (look, go, wait, etc.)."""
-    service = get_service()
-    _get_session(service, session_id)
-
-    response = service.player_action(session_id, body.action)
-    return ActionResponse(
-        text=response.text,
-        events=response.events_summary or [],
-    )
-
-
-@router.get("/sessions/{session_id}/perception")
-def get_perception(session_id: str) -> dict[str, Any]:
-    """What the player's character perceives — surroundings, entities, weather."""
-    service = get_service()
-    try:
-        return service.get_perception(session_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
-
-
-@router.get("/sessions/{session_id}/events")
-def get_events(session_id: str) -> dict[str, list[str]]:
-    """New events since player last checked."""
-    service = get_service()
-    try:
-        events = service.get_new_events(session_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
-    return {"events": events}
-
-
-@router.get("/sessions/{session_id}/combat")
-def get_combat(session_id: str) -> dict[str, Any]:
-    """Combat state from player's perspective. Returns null if not in combat."""
-    service = get_service()
-    try:
-        state = service.get_combat_state(session_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
-    return {"in_combat": state is not None, "combat": state}
-
-
-@router.get("/sessions/{session_id}/map")
-def get_map(session_id: str) -> dict[str, Any]:
-    """Map: current region info and paths to adjacent regions."""
-    service = get_service()
-    try:
-        return service.get_map(session_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
 
 
 # -- Helpers --

@@ -9,7 +9,7 @@ Replace game_loop with a Round orchestrator. Player becomes a regular Brain. Web
 
 ---
 
-## Phase 3a — Round orchestrator + PlayerBrain ⬜
+## Phase 3a — Round orchestrator + PlayerBrain DONE
 
 ### Goal
 
@@ -179,83 +179,202 @@ For now: service returns `dataclasses.asdict(awareness)` in API responses. CLI a
 
 ---
 
-## Phase 3b — WebSocket adapter ⬜
+## Phase 3b — WebSocket adapter DONE
 
 ### Goal
 
-WebSocket as primary transport. Protocol: awareness → action → result → round_end. REST stays for stateless queries. CLI becomes a WS client.
+WebSocket as primary transport. Protocol: awareness → action → round_result. REST stays for stateless queries.
 
-### Design decisions
+### What was done
 
-1. **FastAPI WebSocket** endpoint alongside existing REST.
-2. **Round runs in asyncio task** per session — blocks on PlayerBrain.choose_action() (which awaits the queue).
-3. **PlayerBrain queue becomes asyncio.Queue** for async compatibility.
-4. **Queries** (look, status, map) handled inline without consuming a turn.
+1. **PlayerBrain** — переведён с callback (`TurnHandler`) на `queue.Queue` + `on_turn` callback. `submit_action()` кладёт в очередь, `choose_action()` блокирует на `.get()`. Тип `TurnHandler` удалён, заменён на `OnTurnCallback` (возвращает `None`).
+2. **Round** — добавлены `stop()` (флаг для выхода из loop) и `set_on_round_end(callback)` (вызывается после каждого раунда).
+3. **WS endpoint** (`adapters/api/routes_ws.py`) — `GET /api/ws/{session_id}`. Round в daemon-потоке, awareness отправляется через `asyncio.run_coroutine_threadsafe`, actions приходят из WS. Queries обрабатываются без потребления хода.
+4. **CLI adapter** — минимальное обновление: `CliTurnHandler` принимает brain, вызывает `submit_action()` вместо return.
+5. **Тесты** — 10 новых (4 PlayerBrain queue + 6 WebSocket endpoint).
 
-### Key steps
+### Отклонения от исходного плана
 
-- Add `POST /sessions/{id}/ws` WebSocket endpoint
-- Round loop runs as asyncio task per session
-- PlayerBrain.awareness_callback sends JSON over WebSocket
-- Client sends action JSON, handler puts into PlayerBrain queue
-- Client sends query JSON, handler responds immediately
-- CLI adapter: connect to WS, render awareness as text, send actions as JSON
-- REST `player_action` endpoint kept for backward compat (wraps submit + wait for round)
+1. **`queue.Queue` вместо `asyncio.Queue`** — Round остаётся sync, живёт в отдельном потоке. Мост через `asyncio.run_coroutine_threadsafe`. Не потребовалось делать Brain/Round async.
+2. **CLI НЕ переписан как WS-клиент** — отложено. CLI по-прежнему работает напрямую через Round + PlayerBrain (on_turn callback печатает, читает input, вызывает submit_action).
+3. **Протокол упрощён** — нет отдельного `action_result` (один action = конец хода). `action_result` будет добавлен в Phase 3c вместе с multiple actions per turn.
+4. **Тип сообщения `awareness` переименован в `turn`** — содержит mode + awareness + events.
+5. **REST `player_action` endpoint не менялся** — backward compat через существующий REST сохраняется as-is.
+6. **Session не хранит Round/thread** — lifecycle управляется WS handler напрямую (создаёт и убивает при connect/disconnect).
 
-### Protocol
+### Actual protocol
 
 ```
-← {"type": "awareness", "mode": "free", "data": {...}, "events": [...]}
+← {"type": "turn", "mode": "peaceful|combat", "awareness": {...}, "events": [...]}
 → {"type": "action", "name": "attack", "params": {"target_id": "goblin1"}}
-← {"type": "action_result", "success": true, "events": [...]}
-← {"type": "round_end"}
-← {"type": "awareness", ...}
+← {"type": "round_result", "events": [...]}
+← {"type": "turn", ...}
 
-→ {"type": "query", "name": "look"}
-← {"type": "query_result", "name": "look", "data": {...}}
+→ {"type": "query", "name": "look|status|map|perception|combat"}
+← {"type": "query_result", "query": "look", "data": {...}}
+
+← {"type": "error", "message": "..."}
+← {"type": "game_over"}
 ```
 
 ### Files touched
 
 | File | Change |
 |------|--------|
-| `adapters/api.py` | Add WebSocket endpoint |
-| `core/brain.py` | PlayerBrain queue → asyncio.Queue, choose_action → async or threaded |
-| `core/round.py` | Async-compatible run_loop |
-| `adapters/cli.py` | Rewrite as WS client |
+| `core/brain.py` | PlayerBrain: callback → queue + on_turn. `TurnHandler` → `OnTurnCallback` |
+| `round.py` | `stop()`, `set_on_round_end()`, `_stop_flag` |
+| `adapters/api/routes_ws.py` | NEW: WebSocket endpoint |
+| `adapters/api/app.py` | Register ws_router |
+| `adapters/cli_loop.py` | Minimal update for new PlayerBrain API |
+| `tests/test_player_brain.py` | NEW: queue pattern tests |
+| `tests/test_ws.py` | NEW: WebSocket endpoint tests |
+| `tests/test_game_loop.py` | Updated for new PlayerBrain constructor |
 
 ---
 
-## Phase 3c — Multiple actions per turn ⬜
+## Phase 3c — Multiple actions per turn + reactions DONE
 
 ### Goal
 
-Brain can take multiple actions per turn (Action + Bonus Action + Movement). choose_action() called in loop until end_turn.
+Multi-action turns with budget enforcement. Reactions as interrupt mini-turns. Entity-level queries eliminated — everything is an Action (some cost 0). Unified turn loop for combat and peaceful modes.
 
 ### Design decisions
 
-1. **choose_action() signature unchanged** — returns one Action at a time.
-2. **Round calls choose_action() in loop** until brain returns `Action(name="end_turn")`.
-3. **After each action**: execute, update awareness, call choose_action() again.
-4. **Action budget tracking** (optional): Round or EntitiesLayer tracks what's been used this turn (action, bonus_action, movement, reaction). Enforce D&D 5e rules.
+1. **Everything is an Action** — no entity-level queries. look, status, map — Actions with zero cost. Brain always returns Action via choose_action(). Cross-layer queries (world.query) remain — they're infrastructure, not entity behavior.
+2. **choose_action() signature unchanged** — returns one Action at a time. Called in loop until brain returns `end_turn`.
+3. **TurnBudget tracks resources** — `actions: int` (default 1, Fighter Extra Attack gives more), `bonus_actions: int` (default 1), `movement_remaining: int` (from creature speed), `reaction: int` (default 1, consumed by reactions). All ints, not bools — some features grant additional uses.
+4. **Round enforces budget** — before execute, Round checks `rules.action_cost(action)` and `budget.consume(cost)`. Illegal action → rejected. Concrete cost tables (which class gets how many actions) deferred to rules/, but the enforce skeleton is in 3c.
+5. **Reactions are interrupt mini-turns** — triggered by events (opportunity attack, counterspell, shield). Round pauses the current turn, asks the reacting creature via the same `choose_action()` with awareness containing only available reactions + skip. If not skip: execute, `budget.reaction -= 1`. Then resume interrupted turn.
+6. **Peaceful and combat use the same loop** — one `run_creature_turn` implementation, budget differs by context (combat has stricter rules, peaceful may have unlimited free actions). No separate handlers.
+7. **Awareness includes budget** — CombatAwareness/PeacefulAwareness get a `turn_budget: TurnBudget` field so brains know what's left. LLM sees it in prompt, RuleBrain checks programmatically.
+8. **Round owns budget, not Creature** — TurnBudget is a local variable of `run_creature_turn()`. It's runtime state of one turn, not a creature property. Creature provides `speed` (base movement), Round computes budget from it.
+
+### Turn loop (in Round)
+
+```python
+def run_creature_turn(self, creature, time, query_fn, emit_fn) -> list[Action]:
+    budget = TurnBudget(
+        actions=rules.get_num_actions(creature),
+        bonus_actions=rules.get_num_bonus_actions(creature),
+        movement_remaining=creature.speed,
+    )
+    actions: list[Action] = []
+
+    while True:
+        awareness = self._entities.build_awareness(creature, time, query_fn)
+        awareness.turn_budget = budget
+        events = self._entities.get_perceived_events(creature)
+
+        action = creature.brain.choose_action(creature, awareness, events)
+        if action.name == "end_turn":
+            break
+
+        cost = rules.action_cost(action)
+        budget.consume(cost)          # raises/rejects if over budget
+        creature.execute_action(action, emit_fn)
+        actions.append(action)
+
+        # Hook: on_action_executed(creature, action, budget) → WS sends action_result
+
+    return actions
+```
+
+### Reaction flow (in Round)
+
+```python
+# During someone's turn, an event triggers a possible reaction
+def check_reactions(self, trigger_event, candidates, time, query_fn, emit_fn):
+    for creature in candidates:
+        if creature.budget.reaction <= 0:
+            continue
+        available = rules.available_reactions(creature, trigger_event)
+        if not available:
+            continue
+        # Mini-turn: awareness with only reaction options + skip
+        awareness = self._entities.build_awareness(creature, time, query_fn)
+        awareness.available_actions = available + [Action("skip")]
+        events = [trigger_event]
+        action = creature.brain.choose_action(creature, awareness, events)
+        if action.name != "skip":
+            creature.execute_action(action, emit_fn)
+            creature.budget.reaction -= 1
+```
+
+### Brain behavior per type
+
+| Brain | Turn behavior | Reaction behavior |
+|-------|--------------|-------------------|
+| **RuleBrain** | 1 action → end_turn (simple). Later: attack + move → end_turn | Check reaction table, take best or skip |
+| **LlmBrain** | LLM sees budget in prompt, decides sequence. attack → move → end_turn | LLM decides from available reactions |
+| **PlayerBrain** | Each choose_action() blocks on queue. Client sends end_turn explicitly | Same — blocks on queue, client picks reaction or skip |
+
+### WS protocol update
+
+```
+← turn:          {awareness, budget, events}
+→ action:        {name: "attack", params: {target_id: "goblin1"}}
+← action_result: {events, updated_budget, awareness}     # NEW — after each action
+→ action:        {name: "move", params: {x: 5, y: 3}}
+← action_result: {events, updated_budget, awareness}
+→ action:        {name: "end_turn"}
+← round_result:  {events}                                # after ALL creatures acted
+
+# Reaction interrupt (injected mid-turn):
+← reaction_prompt: {trigger_event, available_reactions, awareness}
+→ action:          {name: "opportunity_attack", params: {...}}   # or "skip"
+← action_result:   {events}
+# ... interrupted turn resumes
+```
 
 ### Key steps
 
-- Round.run_creature_turn() becomes a loop: choose → execute → update awareness → repeat
-- New `end_turn` Action type
-- WebSocket protocol: multiple action/result exchanges before round_end
-- RuleBrain and LlmBrain updated to use end_turn
-- PlayerBrain: client sends end_turn explicitly
+1. TurnBudget dataclass + rules.action_cost() skeleton
+2. Round.run_creature_turn() → multi-action loop with budget enforce
+3. Add end_turn Action constant
+4. Awareness gets turn_budget field
+5. RuleBrain: action → end_turn. PlayerBrain: unchanged (already loops via queue)
+6. Remove entity-level query handling from EntitiesLayer (look/status become Actions)
+7. Reaction check_reactions() in Round — interrupt flow
+8. WS protocol: action_result message type between actions
+9. Update tests
 
 ### Files touched
 
 | File | Change |
 |------|--------|
-| `core/round.py` | Loop in run_creature_turn until end_turn |
-| `core/action.py` | Add END_TURN action |
-| `core/brain.py` | RuleBrain returns end_turn after single action; PlayerBrain unchanged |
-| `llm/brain.py` | LlmBrain returns end_turn after action sequence |
-| `layers/entities/layer.py` | Awareness rebuild between actions |
+| `core/turn_budget.py` | NEW — TurnBudget dataclass |
+| `rules/actions.py` | NEW — action_cost(), get_num_actions(), available_reactions() skeletons |
+| `round.py` | run_creature_turn → multi-action loop + check_reactions |
+| `core/action.py` | Add END_TURN, SKIP constants |
+| `core/brain.py` | RuleBrain: action → end_turn after single action |
+| `llm/brain.py` | LlmBrain: budget in prompt, end_turn after sequence |
+| `layers/entities/layer.py` | build_awareness public, remove query handling for look/status |
+| `layers/entities/models.py` | Awareness gets turn_budget field |
+| `adapters/api/routes_ws.py` | action_result + reaction_prompt message types |
+| `service/commands_world.py` | look/status become Actions, not queries |
+| Tests | Multi-action turns, budget enforcement, reactions |
+
+### What was done
+
+1. **TurnBudget** (`core/turn_budget.py`) — `actions: int`, `bonus_actions: int`, `movement_remaining: int`, `reaction: int`. `ActionCost` + `consume()`/`can_afford()`.
+2. **Action cost rules** (`rules/actions.py`) — `action_cost()`, `get_num_actions()`, `get_num_bonus_actions()`. attack/dodge/dash cost 1 action, say/idle/end_turn free, move costs 5ft.
+3. **END_TURN, SKIP** sentinels in `core/action.py`.
+4. **Awareness** — `PeacefulAwareness`/`CombatAwareness` now non-frozen, have `turn_budget: TurnBudget | None`.
+5. **Round.run_creature_turn** — multi-action loop: build awareness (with budget) → choose_action → enforce budget → execute → repeat until end_turn or budget exhausted. `on_action` callback for WS action_result.
+6. **Round.check_reactions** — skeleton for reaction interrupts (not wired to trigger points yet).
+7. **RuleBrain** — returns `end_turn` instead of `idle` in peaceful mode; checks `budget.actions <= 0` before combat action.
+8. **WS protocol** — `action_result` message between actions within a turn; `budget` in `turn` message; `query` message type removed (action→awareness only).
+9. **GameService cleanup** — removed `player_action()`/`_dispatch_action()`, `CombatCommands`, `WorldCommands` mixins, `MasterResponse`. Removed REST endpoints: POST /action, GET /perception, GET /events, GET /combat, GET /map. Removed legacy `adapters/cli.py`.
+10. **Bug fix** — `get_perceived_events()` now advances `_last_seen_log_index` to prevent infinite loop in multi-action turn (RuleBrain would repeat say forever on stale events).
+11. **WS robustness** — `_ws_send_from_thread()` helper catches send errors on disconnect.
+12. **REST schemas** — `attacks` field added to `CreatePlayerRequest` and `SpawnNpcRequest`.
+13. **Live test script** (`scripts/live_test.py`) — 13-step integration test covering REST + WS: session, player, NPC spawn, combat with ranged weapons, flee, peaceful turns, save/load.
+
+### Deviations from plan
+
+1. **Entity-level queries NOT removed** — cross-layer queries stay (infrastructure). WS query message type removed. REST query endpoints removed. look/status as zero-cost Actions deferred (requires GameService command routing refactor).
+2. **Reactions skeleton only** — `check_reactions()` exists but no trigger points wired (opportunity attacks, counterspell etc). Will connect when specific D&D rules are implemented.
+3. **EntitiesLayer.tick()** still runs NPC turns — double-execution with Round. Harmless (RuleBrain returns end_turn immediately) but wasteful. Should be cleaned up in 3d.
 
 ---
 

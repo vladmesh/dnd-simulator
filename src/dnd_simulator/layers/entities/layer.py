@@ -22,6 +22,7 @@ from dnd_simulator.layers.entities.models import Npc, NpcMemory, activity_flavor
 from dnd_simulator.layers.entities.perception import perceive_event
 
 if TYPE_CHECKING:
+    from dnd_simulator.core.action import Action
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn, TimeDelta
     from dnd_simulator.llm.summarizer import MemorySummarizer
 
@@ -111,8 +112,16 @@ class EntitiesLayer(Layer):
 
     # -- Awareness building --
 
-    def _build_peaceful_awareness(self, creature: Creature, time: GameDateTime, query_fn: QueryFn) -> PeacefulAwareness:
-        """Build peaceful awareness for an NPC turn using query_fn + internal data."""
+    def build_awareness(
+        self, creature: Creature, time: GameDateTime, query_fn: QueryFn
+    ) -> PeacefulAwareness | CombatAwareness:
+        """Build awareness for a creature — dispatches by combat state."""
+        if creature.in_combat:
+            return self.build_combat_awareness(creature)
+        return self.build_peaceful_awareness(creature, time, query_fn)
+
+    def build_peaceful_awareness(self, creature: Creature, time: GameDateTime, query_fn: QueryFn) -> PeacefulAwareness:
+        """Build peaceful awareness using query_fn + internal data."""
         region_id = creature.location_id  # fallback
         location_name = creature.location_id
         region_name = creature.location_id
@@ -164,7 +173,7 @@ class EntitiesLayer(Layer):
             pass
 
         # Nearby entities (internal — no query needed)
-        nearby = self._build_nearby_entities(creature, time.hour)
+        nearby = self.build_nearby_entities(creature, time.hour)
 
         # NPC scheduled location name
         if isinstance(creature, Npc):
@@ -184,7 +193,7 @@ class EntitiesLayer(Layer):
             nearby=nearby,
         )
 
-    def _build_combat_awareness(self, creature: Creature) -> CombatAwareness:
+    def build_combat_awareness(self, creature: Creature) -> CombatAwareness:
         """Build combat awareness using internal data only."""
         from dnd_simulator.core.combat import Position
         from dnd_simulator.rules.movement import direction_label, grid_distance
@@ -242,7 +251,7 @@ class EntitiesLayer(Layer):
             walls=wall_descriptions,
         )
 
-    def _build_nearby_entities(self, creature: Creature, hour: int) -> list[NearbyEntity]:
+    def build_nearby_entities(self, creature: Creature, hour: int) -> list[NearbyEntity]:
         """Build list of nearby entities for peaceful awareness."""
         result: list[NearbyEntity] = []
         creature_location = creature.location_id
@@ -262,13 +271,18 @@ class EntitiesLayer(Layer):
             result.append(NearbyEntity(id=e.id, description=desc, is_wounded=is_wounded))
         return result
 
-    def _get_perceived_events(self, creature: Creature) -> list[PerceivedEvent]:
-        """Get new events perceived by this creature as structured data."""
+    def get_perceived_events(self, creature: Creature) -> list[PerceivedEvent]:
+        """Get new events perceived by this creature as structured data.
+
+        Advances the creature's seen-index so the same events aren't returned twice.
+        This is critical for the multi-action turn loop — without it, RuleBrain
+        would see the same events every iteration and loop forever.
+        """
         if not isinstance(creature, Character):
             return []
         events = self._location_log.get(creature.location_id, [])
         new_events = events[creature._last_seen_log_index :]
-        # Don't advance index — that's done by get_new_perceived_events for player display
+        creature._last_seen_log_index = len(events)
         if not new_events:
             return []
         result: list[PerceivedEvent] = []
@@ -289,19 +303,21 @@ class EntitiesLayer(Layer):
             )
         return result
 
-    def run_creature_turn(self, creature: Creature, time: GameDateTime, query_fn: QueryFn, emit_fn: EmitFn) -> None:
-        """Orchestrate a single NPC turn: build awareness → brain → execute."""
+    def run_creature_turn(
+        self, creature: Creature, time: GameDateTime, query_fn: QueryFn, emit_fn: EmitFn
+    ) -> Action | None:
+        """Orchestrate a single creature turn: build awareness → brain → execute.
+
+        Returns the chosen Action (so callers like Round can inspect it), or None if no brain.
+        """
         if creature.brain is None:
-            return
+            return None
 
-        if creature.in_combat:
-            awareness: PeacefulAwareness | CombatAwareness = self._build_combat_awareness(creature)
-        else:
-            awareness = self._build_peaceful_awareness(creature, time, query_fn)
-
-        events = self._get_perceived_events(creature)
+        awareness = self.build_awareness(creature, time, query_fn)
+        events = self.get_perceived_events(creature)
         action = creature.brain.choose_action(creature, awareness, events)
         creature.execute_action(action, emit_fn)
+        return action
 
     # -- Layer interface --
 

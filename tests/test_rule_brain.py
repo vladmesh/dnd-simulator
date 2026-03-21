@@ -80,12 +80,12 @@ def _peaceful_awareness(hour: int = 12) -> PeacefulAwareness:
 
 
 class TestRuleBrainPeaceful:
-    def test_peaceful_returns_idle(self) -> None:
+    def test_peaceful_returns_end_turn(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", attacks=(_SWORD,))
         npc.in_combat = False
         brain = RuleBrain()
         action = brain.choose_action(npc, _peaceful_awareness(), [])
-        assert action.name == "idle"
+        assert action.name == "end_turn"
 
     def test_responds_to_speech_with_canned_line(self) -> None:
         merchant = Npc(id="m1", name="Merchant", location_id="market", role="merchant")
@@ -125,12 +125,12 @@ class TestRuleBrainPeaceful:
         assert action.name == "say"
         assert action.params["text"] == "Leave me alone!"
 
-    def test_no_speech_stays_idle(self) -> None:
+    def test_no_speech_returns_end_turn(self) -> None:
         merchant = Npc(id="m1", name="Merchant", location_id="market", role="merchant")
         merchant.in_combat = False
         brain = RuleBrain()
         action = brain.choose_action(merchant, _peaceful_awareness(), [])
-        assert action.name == "idle"
+        assert action.name == "end_turn"
 
 
 class TestRuleBrainCombat:

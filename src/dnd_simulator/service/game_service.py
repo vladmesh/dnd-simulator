@@ -28,26 +28,22 @@ from dnd_simulator.layers.settlements.layer import SettlementsLayer
 from dnd_simulator.llm.client import LlmClient
 from dnd_simulator.storage.store import SaveStore
 
-from .commands_combat import CombatCommands
 from .commands_npc import NpcCommands
 from .commands_politics import PoliticsCommands
 from .commands_save import SaveCommands
 from .commands_time import TimeCommands
-from .commands_world import WorldCommands
-from .session import GameSession, MasterResponse
+from .session import GameSession
 
 DEFAULT_CONTENT_DIR = Path(__file__).resolve().parents[3] / "content"
 
 
 class GameService(
-    CombatCommands,
-    WorldCommands,
     NpcCommands,
     PoliticsCommands,
     SaveCommands,
     TimeCommands,
 ):
-    """Main interface to the game. Transport-agnostic."""
+    """Session management, world templates, hot controls. No turn execution."""
 
     def __init__(
         self,
@@ -122,72 +118,6 @@ class GameService(
         )
         self._sessions[session_id] = session
         return session
-
-    def player_action(self, session_id: str, text: str) -> MasterResponse:
-        """Process player input and return DM response."""
-        result = self._dispatch_action(session_id, text)
-        with contextlib.suppress(Exception):
-            self.autosave_session(session_id)
-        return result
-
-    def _dispatch_action(self, session_id: str, text: str) -> MasterResponse:
-        """Route player command to handler."""
-        session = self._get_session(session_id)
-        cmd = text.strip().lower()
-
-        # Simple command parser until we have a real Master
-        if cmd == "look":
-            return self._cmd_look(session)
-
-        if cmd == "map":
-            return self._cmd_map(session)
-
-        if cmd == "wait" or cmd.startswith("wait "):
-            hours = 4
-            if cmd.startswith("wait "):
-                try:
-                    hours = int(cmd[5:].strip())
-                except ValueError:
-                    return MasterResponse(text="Usage: wait [hours]  (e.g. wait 12)")
-                if hours < 1:
-                    return MasterResponse(text="Must wait at least 1 hour.")
-            return self._cmd_wait(session, hours)
-
-        if cmd.startswith("go "):
-            return self._cmd_go(session, cmd[3:].strip())
-
-        if cmd == "nations":
-            return self._cmd_nations(session)
-
-        if cmd.startswith("nation "):
-            return self._cmd_nation_info(session, cmd[7:].strip())
-
-        if cmd == "settlements":
-            return self._cmd_settlements(session)
-
-        if cmd == "status":
-            return self._cmd_status(session)
-
-        if cmd.startswith("attack "):
-            return self._cmd_attack(session, text[7:].strip())
-
-        if cmd.startswith("say "):
-            return self._cmd_say(session, text[4:].strip())
-
-        if cmd == "dodge":
-            return self._cmd_dodge(session)
-
-        if cmd == "flee":
-            return self._cmd_flee(session)
-
-        if cmd.startswith("move ") or cmd.startswith("dash "):
-            return self._cmd_move(session, text, dash=cmd.startswith("dash "))
-
-        return MasterResponse(
-            text=f"Unknown command: '{text}'. "
-            "Try: look, map, go <location>, wait [hours], attack <target>, say <text>, "
-            "move/dash toward <target>, dodge, flee, nations, nation <id>, settlements, status"
-        )
 
     def list_sessions(self) -> list[dict[str, str]]:
         """List all active sessions (in-memory + saved on disk)."""

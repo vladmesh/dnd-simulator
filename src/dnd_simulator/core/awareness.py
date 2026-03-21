@@ -7,8 +7,12 @@ never touch World directly.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from dnd_simulator.core.models import EventType
+
+if TYPE_CHECKING:
+    from dnd_simulator.core.turn_budget import TurnBudget
 
 
 @dataclass(frozen=True)
@@ -31,7 +35,7 @@ class CombatEntity:
     direction: str = ""
 
 
-@dataclass(frozen=True)
+@dataclass
 class PeacefulAwareness:
     """What a creature knows in peacetime — weather, location, politics, nearby entities."""
 
@@ -46,9 +50,10 @@ class PeacefulAwareness:
     territory_owner: str | None
     nation_info: dict[str, object] | None
     nearby: list[NearbyEntity] = field(default_factory=list)
+    turn_budget: TurnBudget | None = None
 
 
-@dataclass(frozen=True)
+@dataclass
 class CombatAwareness:
     """What a creature knows in combat — stats, enemies, terrain."""
 
@@ -61,6 +66,7 @@ class CombatAwareness:
     nearby: list[CombatEntity] = field(default_factory=list)
     round_number: int = 1
     walls: list[str] = field(default_factory=list)
+    turn_budget: TurnBudget | None = None
 
 
 @dataclass(frozen=True)

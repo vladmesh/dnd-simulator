@@ -15,7 +15,6 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query
-from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.perception import perceive_event
@@ -58,37 +57,6 @@ def _get_entity_fn(*entities: Entity):
     return lambda eid: by_id.get(eid)
 
 
-def _mock_world(entities: list[Entity] | None = None) -> MagicMock:
-    """Create a mock World with EntitiesLayer for player combat awareness."""
-    world = MagicMock()
-    world.time = GameDateTime(year=1, month=1, day=1, hour=12)
-
-    layer = EntitiesLayer(entities or [])
-    world.layers = [layer]
-
-    def fake_query(layer_name: str, query: object) -> MagicMock:
-        answer = MagicMock()
-        q = getattr(query, "question", "")
-        if layer_name == "entities":
-            return layer.query(query)
-        elif layer_name == "geography":
-            if q == "weather":
-                answer.value = {"condition": "clear", "temperature": 20}
-            elif q == "region_info":
-                answer.value = {"name": "Test Region"}
-            else:
-                answer.value = {}
-        elif layer_name in ("settlements", "politics"):
-            answer.value = None
-        else:
-            answer.value = None
-        return answer
-
-    world.query_layer.side_effect = fake_query
-    world.handle_event.return_value = ActionResult()
-    return world
-
-
 # --- Combat awareness ---
 
 
@@ -97,7 +65,7 @@ class TestBuildCombatAwareness:
         player = Character(id="p1", name="Hero", location_id="r1", max_hp=20, current_hp=15, attacks=(_SWORD,))
         npc = Character(id="n1", name="Guard", location_id="r1")
         layer = EntitiesLayer([player, npc])
-        aw = layer._build_combat_awareness(player)
+        aw = layer.build_combat_awareness(player)
         assert aw.self_hp == 15
         assert aw.self_max_hp == 20
         assert aw.self_weapon == "longsword"
@@ -106,7 +74,7 @@ class TestBuildCombatAwareness:
     def test_unarmed_defaults(self) -> None:
         player = Character(id="p1", name="Hero", location_id="r1")
         layer = EntitiesLayer([player])
-        aw = layer._build_combat_awareness(player)
+        aw = layer.build_combat_awareness(player)
         assert aw.self_weapon == "fists"
         assert aw.self_weapon_damage == "1"
 
@@ -114,14 +82,14 @@ class TestBuildCombatAwareness:
         player = Character(id="p1", name="Hero", location_id="r1")
         npc = Character(id="n1", name="Guard", location_id="r1", race=Race.DWARF)
         layer = EntitiesLayer([player, npc])
-        aw = layer._build_combat_awareness(player)
+        aw = layer.build_combat_awareness(player)
         assert len(aw.nearby) == 1
         assert aw.nearby[0].id == "n1"
 
     def test_no_time_or_weather(self) -> None:
         player = Character(id="p1", name="Hero", location_id="r1")
         layer = EntitiesLayer([player])
-        aw = layer._build_combat_awareness(player)
+        aw = layer.build_combat_awareness(player)
         assert not hasattr(aw, "time")
         assert not hasattr(aw, "weather")
         assert not hasattr(aw, "settlements")
@@ -448,131 +416,6 @@ class TestNpcCombatTurn:
         tools_passed = call_args[0][1]
         tool_names = {t["function"]["name"] for t in tools_passed}
         assert "say" in tool_names
-
-
-# --- Player combat turn ---
-
-
-class TestPlayerCombatTurn:
-    def test_combat_prompt_shown(self) -> None:
-        outputs: list[str] = []
-        inputs = iter(["idle"])
-        player = PlayerCharacter(
-            id="p1",
-            name="Hero",
-            location_id="r1",
-            max_hp=20,
-            current_hp=15,
-            attacks=(_SWORD,),
-            in_combat=True,
-            output_fn=outputs.append,
-            input_fn=lambda _prompt: next(inputs),
-        )
-        world = _mock_world([player])
-        player.take_turn(world)
-        assert any("Combat" in o for o in outputs)
-        assert not any("time:" in o.lower() for o in outputs)
-
-    def test_combat_dodge_command(self) -> None:
-        outputs: list[str] = []
-        inputs = iter(["dodge"])
-        player = PlayerCharacter(
-            id="p1",
-            name="Hero",
-            location_id="r1",
-            in_combat=True,
-            output_fn=outputs.append,
-            input_fn=lambda _prompt: next(inputs),
-        )
-        world = _mock_world([player])
-        player.take_turn(world)
-        world.handle_event.assert_called_once()
-        event = world.handle_event.call_args[0][0]
-        assert event.event_type == EventType.ENTITY_DODGE
-
-    def test_combat_flee_command(self) -> None:
-        outputs: list[str] = []
-        inputs = iter(["flee"])
-        player = PlayerCharacter(
-            id="p1",
-            name="Hero",
-            location_id="r1",
-            in_combat=True,
-            output_fn=outputs.append,
-            input_fn=lambda _prompt: next(inputs),
-        )
-        world = _mock_world([player])
-        player.take_turn(world)
-        world.handle_event.assert_called_once()
-        event = world.handle_event.call_args[0][0]
-        assert event.event_type == EventType.ENTITY_FLEE
-
-    def test_combat_say_not_available(self) -> None:
-        outputs: list[str] = []
-        inputs = iter(["say Привет", "idle"])
-        player = PlayerCharacter(
-            id="p1",
-            name="Hero",
-            location_id="r1",
-            in_combat=True,
-            output_fn=outputs.append,
-            input_fn=lambda _prompt: next(inputs),
-        )
-        world = _mock_world([player])
-        player.take_turn(world)
-        assert any("Commands:" in o for o in outputs)
-        world.handle_event.assert_not_called()
-
-    def test_combat_wait_not_available(self) -> None:
-        outputs: list[str] = []
-        inputs = iter(["wait", "idle"])
-        player = PlayerCharacter(
-            id="p1",
-            name="Hero",
-            location_id="r1",
-            in_combat=True,
-            output_fn=outputs.append,
-            input_fn=lambda _prompt: next(inputs),
-        )
-        world = _mock_world([player])
-        player.take_turn(world)
-        assert any("Commands:" in o for o in outputs)
-
-    def test_peaceful_turn_has_say(self) -> None:
-        outputs: list[str] = []
-        inputs = iter(["say Привет"])
-        player = PlayerCharacter(
-            id="p1",
-            name="Hero",
-            location_id="r1",
-            in_combat=False,
-            output_fn=outputs.append,
-            input_fn=lambda _prompt: next(inputs),
-        )
-        world = _mock_world([player])
-        player.take_turn(world)
-        world.handle_event.assert_called_once()
-        event = world.handle_event.call_args[0][0]
-        assert event.event_type == EventType.ENTITY_SAY
-
-    def test_combat_prompt_input_prefix(self) -> None:
-        prompts: list[str] = []
-
-        def capture_input(prompt: str) -> str:
-            prompts.append(prompt)
-            return "idle"
-
-        player = PlayerCharacter(
-            id="p1",
-            name="Hero",
-            location_id="r1",
-            in_combat=True,
-            output_fn=lambda _: None,
-            input_fn=capture_input,
-        )
-        world = _mock_world([player])
-        player.take_turn(world)
-        assert any("combat>" in p.lower() for p in prompts)
 
 
 # --- Dodge mechanics ---

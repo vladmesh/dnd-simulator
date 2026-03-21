@@ -9,9 +9,14 @@ from dataclasses import dataclass, field
 class Action:
     """A creature's chosen action for this turn.
 
-    Name is one of: idle, say, attack, dodge, flee, move, dash.
+    Name is one of: idle, say, attack, dodge, flee, move, dash, end_turn, skip.
     Params carry action-specific data (target_id, text, toward, etc.).
     """
 
     name: str
     params: dict[str, object] = field(default_factory=dict)
+
+
+# Sentinel actions — used by the multi-action turn loop.
+END_TURN = Action(name="end_turn")
+SKIP = Action(name="skip")

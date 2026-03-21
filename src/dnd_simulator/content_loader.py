@@ -284,7 +284,7 @@ def parse_npc(npc_id: str, ndata: dict[str, Any]) -> Npc:
     race = Race(ndata["race"]) if "race" in ndata else Race.HUMAN
     char_class = CharClass(ndata["class"]) if "class" in ndata else CharClass.COMMONER
 
-    attacks = _parse_attacks(ndata.get("attacks", []))
+    attacks = _parse_attacks(ndata.get("attacks") or [])
     max_hp = int(ndata.get("hp", 4))
     ai_type = str(ndata.get("ai", "rule_based"))
 
@@ -348,7 +348,7 @@ def load_player(path: Path) -> PlayerCharacter:
 def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
     """Parse player character from YAML data dict."""
     max_hp = int(pdata.get("hp", 10))
-    attacks = _parse_attacks(pdata.get("attacks", []))
+    attacks = _parse_attacks(pdata.get("attacks") or [])
 
     # Support both start_location and legacy start_region
     location_id = str(pdata.get("start_location", pdata.get("start_region", "")))

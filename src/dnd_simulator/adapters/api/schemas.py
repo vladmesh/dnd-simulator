@@ -10,10 +10,6 @@ class CreateSessionRequest(BaseModel):
     lang: str = "en"
 
 
-class PlayerActionRequest(BaseModel):
-    action: str
-
-
 class CreatePlayerRequest(BaseModel):
     name: str = "Adventurer"
     race: str = "human"
@@ -26,6 +22,7 @@ class CreatePlayerRequest(BaseModel):
     gold: int = Field(default=0, ge=0)
     start_region: str = ""
     ability_scores: dict[str, int] | None = None
+    attacks: list[dict[str, object]] | None = None
 
 
 class SpawnNpcRequest(BaseModel):
@@ -39,6 +36,7 @@ class SpawnNpcRequest(BaseModel):
     hp: int = Field(default=4, ge=1, le=999)
     ac: int = Field(default=10, ge=0, le=30)
     ai: str = "rule_based"
+    attacks: list[dict[str, object]] | None = None
 
 
 class PatchNpcRequest(BaseModel):
@@ -115,11 +113,6 @@ class PlayerStatusResponse(BaseModel):
     location_id: str
     appearance: str
     ability_scores: dict[str, int]
-
-
-class ActionResponse(BaseModel):
-    text: str
-    events: list[str]
 
 
 class WorldStateResponse(BaseModel):

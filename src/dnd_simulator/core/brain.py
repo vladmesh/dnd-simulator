@@ -1,12 +1,14 @@
-"""Brain ABC and rule-based AI for creatures."""
+"""Brain ABC, rule-based AI, and player brain for creatures."""
 
 from __future__ import annotations
 
 import logging
+import queue
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from dnd_simulator.core.action import Action
+from dnd_simulator.core.action import END_TURN, Action
 from dnd_simulator.core.awareness import CombatAwareness, CombatEntity, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.models import EventType
 from dnd_simulator.core.tags import NpcTag, find_tags, has_tag
@@ -15,6 +17,12 @@ if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
 
 logger = logging.getLogger("dnd_simulator.brain")
+
+# Callback type: notified when it's the player's turn (awareness push).
+OnTurnCallback = Callable[
+    ["Creature", "PeacefulAwareness | CombatAwareness", "list[PerceivedEvent]"],
+    None,
+]
 
 
 class Brain(ABC):
@@ -44,6 +52,11 @@ class RuleBrain(Brain):
         awareness: PeacefulAwareness | CombatAwareness,
         events: list[PerceivedEvent],
     ) -> Action:
+        # If budget has no actions left, end the turn.
+        budget = awareness.turn_budget
+        if budget is not None and budget.actions <= 0:
+            return END_TURN
+
         if isinstance(awareness, CombatAwareness):
             return self._choose_combat_action(creature, awareness)
         return self._peaceful_action(creature, awareness, events)
@@ -54,14 +67,18 @@ class RuleBrain(Brain):
         awareness: PeacefulAwareness,
         events: list[PerceivedEvent],
     ) -> Action:
-        """Peaceful mode: respond with canned line if someone spoke nearby."""
+        """Peaceful mode: respond with canned line if someone spoke nearby.
+
+        Returns end_turn instead of idle — in multi-action loop, idle would
+        loop forever (it's free). end_turn signals the turn is done.
+        """
         response = creature.get_canned_response(awareness.hour)
         if response is None:
-            return Action(name="idle")
+            return END_TURN
 
         heard_speech = any(e.event_type == EventType.ENTITY_SAY and e.actor_id != creature.id for e in events)
         if not heard_speech:
-            return Action(name="idle")
+            return END_TURN
 
         logger.info("[RuleBrain:%s] → say (canned: %s)", creature.name, response)
         return Action(name="say", params={"text": response})
@@ -159,3 +176,33 @@ class RuleBrain(Brain):
                 best = enemy
 
         return best if best is not None else nearby[0]
+
+
+class PlayerBrain(Brain):
+    """Brain controlled by external input via queue + on_turn callback.
+
+    When it's the player's turn, on_turn fires (so transport can send awareness).
+    Then choose_action blocks on the queue until transport calls submit_action().
+    """
+
+    def __init__(self) -> None:
+        self._action_queue: queue.Queue[Action] = queue.Queue()
+        self._on_turn: OnTurnCallback | None = None
+
+    def set_on_turn(self, callback: OnTurnCallback) -> None:
+        """Transport sets this to receive awareness when it's the player's turn."""
+        self._on_turn = callback
+
+    def choose_action(
+        self,
+        creature: Creature,
+        awareness: PeacefulAwareness | CombatAwareness,
+        events: list[PerceivedEvent],
+    ) -> Action:
+        if self._on_turn:
+            self._on_turn(creature, awareness, events)
+        return self._action_queue.get()
+
+    def submit_action(self, action: Action) -> None:
+        """Called by transport to provide the player's chosen action."""
+        self._action_queue.put(action)

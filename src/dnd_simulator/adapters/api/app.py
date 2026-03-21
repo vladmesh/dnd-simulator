@@ -15,6 +15,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from dnd_simulator.adapters.api.deps import get_service, set_service
 from dnd_simulator.adapters.api.routes_master import router as master_router
 from dnd_simulator.adapters.api.routes_player import router as player_router
+from dnd_simulator.adapters.api.routes_ws import router as ws_router
 from dnd_simulator.i18n import set_language
 from dnd_simulator.llm.client import LlmClient
 from dnd_simulator.service import GameService
@@ -72,6 +73,7 @@ app.add_middleware(
 )
 app.include_router(master_router)
 app.include_router(player_router)
+app.include_router(ws_router)
 
 
 @app.get("/health")
