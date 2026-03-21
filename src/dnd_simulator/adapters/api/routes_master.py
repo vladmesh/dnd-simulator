@@ -8,6 +8,7 @@ from dnd_simulator.adapters.api.deps import get_service
 from dnd_simulator.adapters.api.schemas import (
     AdvanceTimeRequest,
     CreateSessionRequest,
+    CreateWorldRequest,
     MessageResponse,
     NpcResponse,
     PatchNationRequest,
@@ -36,7 +37,46 @@ def list_worlds() -> list[WorldListItem]:
     return [WorldListItem(**w) for w in worlds]
 
 
+@router.post("/worlds", response_model=WorldListItem, status_code=201)
+def create_world(req: CreateWorldRequest) -> WorldListItem:
+    """Create a new world template from structured data."""
+    service = get_service()
+    try:
+        result = service.create_world(req.model_dump())
+    except FileExistsError as exc:
+        raise HTTPException(status_code=409, detail=f"World '{req.id}' already exists") from exc
+    return WorldListItem(id=result["id"], name=result["name"], description=req.description)
+
+
+@router.get("/worlds/{world_id}")
+def get_world_template(world_id: str) -> dict[str, object]:
+    """Get full world template contents (YAML on disk, not a session)."""
+    service = get_service()
+    try:
+        return service.get_world_template(world_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"World '{world_id}' not found") from exc
+
+
+@router.put("/worlds/{world_id}", response_model=WorldListItem)
+def update_world(world_id: str, req: CreateWorldRequest) -> WorldListItem:
+    """Update an existing world template (full replace)."""
+    service = get_service()
+    try:
+        result = service.update_world(world_id, req.model_dump())
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"World '{world_id}' not found") from exc
+    return WorldListItem(id=result["id"], name=result["name"], description=req.description)
+
+
 # -- Sessions --
+
+
+@router.get("/sessions")
+def list_sessions() -> list[dict[str, str]]:
+    """List all active sessions."""
+    service = get_service()
+    return service.list_sessions()
 
 
 @router.post("/sessions", response_model=SessionResponse)
@@ -282,5 +322,3 @@ def _get_session(service: Any, session_id: str) -> Any:
         return service.get_session(session_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-
-

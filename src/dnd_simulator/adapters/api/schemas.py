@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class CreateSessionRequest(BaseModel):
-    world_name: str = "test_world.yaml"
+    world_name: str = "sword_vale"
     lang: str = "en"
 
 
@@ -64,6 +64,18 @@ class PatchSettlementRequest(BaseModel):
     population: int | None = Field(default=None, ge=0)
     prosperity: float | None = Field(default=None, ge=0.0, le=1.0)
     defenses: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+class CreateWorldRequest(BaseModel):
+    """Full world definition for the world builder."""
+
+    id: str = Field(..., pattern=r"^[a-z0-9_]+$", min_length=1, max_length=64)
+    name: str
+    description: str = ""
+    regions: dict[str, object] = Field(default_factory=dict)
+    locations: dict[str, object] = Field(default_factory=dict)
+    nations: dict[str, object] = Field(default_factory=dict)
+    npcs: dict[str, object] = Field(default_factory=dict)
 
 
 class AdvanceTimeRequest(BaseModel):
