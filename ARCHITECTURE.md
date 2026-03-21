@@ -30,7 +30,7 @@ Every layer implements the same interface:
 
 ```
 src/dnd_simulator/
-├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/Action
+├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/Action, LocationGraph
 ├── layers/        — concrete layer implementations
 │   ├── geography/ — physical world simulation
 │   ├── politics/  — factions and diplomacy
@@ -38,7 +38,7 @@ src/dnd_simulator/
 │   └── entities/  — all tracked creatures (player, NPCs, named monsters)
 ├── master/        — DM orchestrator (LLM-powered)
 ├── rules/         — pure functions: D&D mechanics, combat/initiative resolution, movement/pathfinding, physics, economics
-├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas
+├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, MemorySummarizer
 ├── i18n.py        — gettext internationalization, per-session language via contextvars
 ├── adapters/      — transport layer
 │   ├── cli.py, cli_loop.py — terminal REPL
@@ -50,14 +50,14 @@ src/dnd_simulator/
 content/           — authored game data (YAML)
 └── worlds/        — world templates (single .yaml file or directory with split files)
     ├── test_world.yaml     — legacy single-file format
-    └── sword_vale/         — directory format (world.yaml, regions.yaml, nations.yaml, npcs.yaml)
+    └── sword_vale/         — directory format (world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml)
 ```
 
 ## Data Flow
 
 ```
 Turn-based game loop (game_loop.py):
-    for each active combat region (initiative order):
+    for each active combat location (initiative order):
         for each combatant in turn_order:
             creature.take_turn(world)  → combat awareness → decide action → execute
         end_combat_round()            → 2 rounds without attacks → combat ends
@@ -75,7 +75,7 @@ REST API flow (adapters/api/):
     Player routes: character creation, perception, events, combat, map, actions
 ```
 
-The game loop separates combat and peaceful turns. Combat regions use initiative order (d20 + DEX mod, rolled once at combat start); peaceful creatures use default order. Each creature builds awareness appropriate to its mode — combat awareness (HP, nearby combatants, round number) or full world awareness (time, weather, settlements). Creatures delegate decisions to their `brain` (strategy pattern): `RuleBrain` uses utility scoring, `LlmBrain` calls the LLM, `PlayerCharacter` handles interactive I/O directly. Actions execute through world events. `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
+The game loop separates combat and peaceful turns. Combat locations use initiative order (d20 + DEX mod, rolled once at combat start); peaceful creatures use default order. Each creature builds awareness appropriate to its mode — combat awareness (HP, nearby combatants, round number) or full world awareness (time, weather, settlements). Creatures delegate decisions to their `brain` (strategy pattern): `RuleBrain` uses utility scoring, `LlmBrain` calls the LLM, `PlayerCharacter` handles interactive I/O directly. Actions execute through world events. `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
 
 `World.handle_event()` sends an event to all layers in order. Each layer returns an `ActionResult` — if any layer returns `success=False`, propagation stops and the failure is returned to the caller. This lets layers validate and reject actions (e.g., EntitiesLayer rejects attacks on dead targets).
 
@@ -94,14 +94,20 @@ Calendar: 30 days/month, 12 months/year.
 ## Entity Hierarchy
 
 ```
-Entity (id, name, region_id, active, on_tick)
+Entity (id, name, location_id, active, on_tick)
 └── Creature (ability_scores, HP, AC, in_combat, is_dodging, brain, execute_action)
     └── Character (race, class, alignment, gold, appearance, perceive_by_id, get_npc_data)
         ├── PlayerCharacter (interactive I/O, overrides take_turn directly)
-        └── Npc (personality, schedule, ai_type — brain assigned by content_loader/adapter)
+        └── Npc (role, personality, schedule, memory: NpcMemory, ai_type — brain assigned by content_loader/adapter)
 ```
 
 All tracked entities live on the `EntitiesLayer`. Each entity has an `active` flag — only active entities are ticked. `Entity.on_tick(hour)` is a no-op by default; `Npc` overrides it to update activity based on daily schedule.
+
+`World.location_graph` (`LocationGraph`) provides a flat graph of all locations. Each `Location` node has a `region_id` tag (for weather/terrain lookups) and an optional `settlement_id` tag (for economy/NPC binding). Entities hold a `location_id` and the graph resolves which region/settlement they are in. Edges between locations carry distances in meters; `travel_seconds()` computes travel time.
+
+### NPC Memory
+
+NPCs carry structured memory via `NpcMemory` (tags, recent, inner_state, current_conversation). Tags use `NpcTag` vocabulary — emotions (`angry`, `scared`) and relations (`hates:orc_chief`, `fears:player`). Tags are readable by both `RuleBrain` (direct checks for target selection, flee thresholds, mood-based canned dialogue) and `LlmBrain` (included in prompt context). A `MemorySummarizer` (in `llm/summarizer.py`) compresses NPC event logs into memory via a cheap LLM call, triggered after combat ends or when the `recent` field overflows 300 characters. Memory can be pre-loaded from YAML content files.
 
 `Character.perceive(target: Entity) -> str` — observer extracts visible traits from target (race, appearance, wounds). LLM never receives raw character data, only what the observer can perceive.
 
@@ -109,7 +115,7 @@ All tracked entities live on the `EntitiesLayer`. Each entity has an `active` fl
 
 Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defined in `core/combat.py`). No separate combat layer — it's a mode within entities.
 
-**Entry:** First attack in a region → `roll_initiative()` for all active creatures → `CombatState` created → all creatures in region get `in_combat=True`.
+**Entry:** First attack in a location → `roll_initiative()` for all active creatures → `CombatState` created → all creatures in location get `in_combat=True`.
 
 **Turn order:** Initiative = d20 + DEX modifier, tiebreaker by DEX score. Order is fixed for the entire combat. Game loop iterates combatants in this order.
 
@@ -124,15 +130,15 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 - Flee removes creature from turn order; if ≤1 left → end
 - Death removes from turn order; if ≤1 left → end
 
-**Events:** `COMBAT_STARTED` and `COMBAT_ENDED` are logged and perceived by all creatures in the region. Attack events include entity IDs so LLM can unambiguously identify participants.
+**Events:** `COMBAT_STARTED` and `COMBAT_ENDED` are logged and perceived by all creatures in the location. Attack events include entity IDs so LLM can unambiguously identify participants.
 
 ## Key Principles
 
 - **Layers depend down, never up.** Geography knows nothing about NPCs.
 - **Rules are pure functions.** No state, no side effects, easy to test.
-- **Brain is a strategy.** `Creature.brain` decouples decision-making from entity type. `RuleBrain` (utility scoring) needs no LLM; `LlmBrain` wraps an `LlmClient`. Brains are swappable at runtime (LOD).
+- **Brain is a strategy.** `Creature.brain` decouples decision-making from entity type. `RuleBrain` (utility scoring + canned dialogue) needs no LLM; `LlmBrain` wraps an `LlmClient`. Brains are swappable at runtime (LOD).
 - **LLM is injected, not hardcoded.** `LlmBrain` receives an `LlmClient`; rule-based NPCs use no LLM at all.
-- **Content is data, not code.** Worlds and NPCs live in YAML files. Two formats: legacy single file, or directory (world.yaml, regions.yaml, nations.yaml, npcs.yaml). ContentLoader handles both.
+- **Content is data, not code.** Worlds and NPCs live in YAML files. Two formats: legacy single file, or directory (world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml). ContentLoader handles both.
 - **Transport is a thin adapter.** The game works the same whether accessed via terminal, HTTP, or Telegram. REST API (FastAPI) is the primary adapter for frontend.
 - **Two editing modes.** Between sessions: master edits YAML templates on disk. During sessions: hot controls (NPC spawn/delete, HP, brain, nation/settlement patches) modify objects in memory. Saves persist state to disk.
 - **Per-session i18n.** Language is set per session via `contextvars`. The global `_()` function reads the current context, so NPC LLM prompts and translated strings respect session language.

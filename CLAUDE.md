@@ -61,7 +61,7 @@ content/           — YAML world definitions (data, not code)
 - **Rules are pure functions** in `rules/` — no state, no I/O.
 - **Brain is a strategy** — `Creature.brain` field holds a `Brain` (RuleBrain or LlmBrain), decoupling AI from entity type.
 - **LLM is injected** — `LlmBrain` wraps an `LlmClient`; rule-based NPCs use `RuleBrain` with zero LLM calls.
-- **Content is data** — worlds, NPCs, quests defined in YAML under `content/`. Two formats: legacy single-file and directory (world.yaml, regions.yaml, nations.yaml, npcs.yaml).
+- **Content is data** — worlds, NPCs, quests defined in YAML under `content/`. Two formats: legacy single-file and directory (world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml).
 - **Transport is thin** — adapters only translate I/O, all logic lives in `GameService`.
 - **Two editing modes** — between sessions: edit YAML files on disk; during session: hot controls in memory (NPC spawn/delete, HP, brain, time).
 
@@ -71,7 +71,7 @@ content/           — YAML world definitions (data, not code)
 
 ### Entity Hierarchy
 
-`Entity` (id, name, region_id, active, on_tick) → `Creature` (ability scores, HP, AC, in_combat, is_dodging, brain) → `Character` (race, class, alignment) → `PlayerCharacter` / `Npc`. Creature delegates decisions to `brain.choose_action()` and executes via `execute_action()`. The `perceive()` method controls what information an observer sees about a target — LLM prompts never receive raw character data. All tracked entities live on the `EntitiesLayer`. Combat is managed via `CombatState` (initiative order, round tracking, auto-exit after 2 idle rounds) and `BattleMap` (2D grid with positions, walls, and movement). Movement rules live in `rules/movement.py` (D&D 5e diagonal distance, wall collision, occupied-cell blocking).
+`Entity` (id, name, location_id, active, on_tick) → `Creature` (ability scores, HP, AC, in_combat, is_dodging, brain) → `Character` (race, class, alignment) → `PlayerCharacter` / `Npc`. Creature delegates decisions to `brain.choose_action()` and executes via `execute_action()`. The `perceive()` method controls what information an observer sees about a target — LLM prompts never receive raw character data. All tracked entities live on the `EntitiesLayer`. `World.location_graph` (`LocationGraph`) maps locations to regions/settlements; entities reference `location_id`, and the graph resolves which region/settlement a location belongs to. NPCs have structured memory (`NpcMemory`: tags, recent, inner_state, current_conversation) readable by both LLM and RuleBrain; a `MemorySummarizer` compresses events into memory via LLM after combat/conversation ends. Combat is managed via `CombatState` (initiative order, round tracking, auto-exit after 2 idle rounds) and `BattleMap` (2D grid with positions, walls, and movement). Movement rules live in `rules/movement.py` (D&D 5e diagonal distance, wall collision, occupied-cell blocking).
 
 ## Code Style
 
