@@ -15,23 +15,6 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
 
-#: src/dnd_simulator/adapters/cli_loop.py:41
-#: src/dnd_simulator/adapters/cli_loop.py:44
-msgid "Farewell, adventurer."
-msgstr "Прощай, искатель приключений."
-
-#: src/dnd_simulator/adapters/cli_loop.py:63
-msgid "Error: set OPENROUTER_API_KEY and LLM_MODEL in .env"
-msgstr "Ошибка: установите OPENROUTER_API_KEY и LLM_MODEL в .env"
-
-#: src/dnd_simulator/adapters/cli_loop.py:111
-msgid "=== D&D Simulator (Turn-Based) ==="
-msgstr "=== D&D Simulator (Пошаговый) ==="
-
-#: src/dnd_simulator/adapters/cli_loop.py:112
-msgid "Commands: look, status, say <text>, attack <target>, idle, quit"
-msgstr "Команды: look, status, say <текст>, attack <цель>, idle, quit"
-
 #: src/dnd_simulator/core/character.py:335
 #: src/dnd_simulator/core/character.py:340
 msgid "looks wounded"

@@ -15,23 +15,6 @@ msgstr ""
 "Generated-By: pygettext.py 1.5\n"
 
 
-#: src/dnd_simulator/adapters/cli_loop.py:44
-#: src/dnd_simulator/adapters/cli_loop.py:47
-msgid "Farewell, adventurer."
-msgstr ""
-
-#: src/dnd_simulator/adapters/cli_loop.py:66
-msgid "Error: set OPENROUTER_API_KEY and LLM_MODEL in .env"
-msgstr ""
-
-#: src/dnd_simulator/adapters/cli_loop.py:120
-msgid "=== D&D Simulator (Turn-Based) ==="
-msgstr ""
-
-#: src/dnd_simulator/adapters/cli_loop.py:121
-msgid "Commands: look, status, say <text>, attack <target>, idle, quit"
-msgstr ""
-
 #: src/dnd_simulator/core/character.py:335
 #: src/dnd_simulator/core/character.py:340
 msgid "looks wounded"

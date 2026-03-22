@@ -20,7 +20,9 @@ import asyncio
 import dataclasses
 import json
 import logging
+import os
 import threading
+import time
 from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -32,7 +34,6 @@ from dnd_simulator.core.brain import PlayerBrain
 from dnd_simulator.core.character import Ability, Creature
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.turn_budget import TurnBudget
-from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.round import Round
 from dnd_simulator.service.session import GameSession
 
@@ -208,6 +209,15 @@ async def websocket_game(ws: WebSocket, session_id: str) -> None:
     Wires a PlayerBrain, starts Round in a background thread, and bridges
     WS messages to the game loop.
     """
+    # Origin check: if WS_ALLOWED_ORIGINS is set, reject connections from other origins
+    allowed_raw = os.getenv("WS_ALLOWED_ORIGINS", "")
+    if allowed_raw:
+        allowed_origins = [o.strip() for o in allowed_raw.split(",") if o.strip()]
+        origin = ws.headers.get("origin", "")
+        if origin not in allowed_origins:
+            await ws.close(code=4003)
+            return
+
     await ws.accept()
     service = get_service()
 
@@ -224,7 +234,6 @@ async def websocket_game(ws: WebSocket, session_id: str) -> None:
         await ws.send_json({"type": "error", "message": "No player in session"})
         await ws.close()
         return
-    entities_layer = _get_entities_layer(session)
     event_loop = asyncio.get_running_loop()
 
     # Wire PlayerBrain with queue pattern
@@ -262,13 +271,13 @@ async def websocket_game(ws: WebSocket, session_id: str) -> None:
     player.brain = brain
 
     # Create Round with callbacks
-    game_round = Round(session.world, entities_layer)
+    game_round = Round(session.world)
 
     def on_action(creature: Creature, action: Action, budget: TurnBudget | None) -> None:
         """Send action_result after each action within a turn."""
         if creature.id != player.id:
             return  # only send action_result for the player
-        perceived = entities_layer.get_perceived_events(player)
+        perceived = game_round.get_perceived_events(player)
         msg: dict[str, Any] = {
             "type": "action_result",
             "action": action.name,
@@ -283,7 +292,7 @@ async def websocket_game(ws: WebSocket, session_id: str) -> None:
 
     def on_round_end(result: object) -> None:
         """Send perceived events after each round completes."""
-        perceived = entities_layer.get_perceived_events(player)
+        perceived = game_round.get_perceived_events(player)
         msg: dict[str, Any] = {
             "type": "round_result",
             "events": _events_to_list(perceived),
@@ -310,9 +319,25 @@ async def websocket_game(ws: WebSocket, session_id: str) -> None:
     round_thread = threading.Thread(target=run_round_loop, daemon=True, name=f"round-{session_id}")
     round_thread.start()
 
+    # Rate limiting: token bucket (burst 10, refill 2 msg/sec)
+    rl_budget = 20.0
+    rl_last = time.monotonic()
+    rl_max_burst = 20.0
+    rl_per_sec = 5.0
+
     try:
         while True:
             raw = await ws.receive_text()
+
+            # Enforce rate limit
+            now = time.monotonic()
+            rl_budget = min(rl_max_burst, rl_budget + (now - rl_last) * rl_per_sec)
+            rl_last = now
+            if rl_budget < 1.0:
+                await ws.send_json({"type": "error", "message": "Rate limited, slow down"})
+                continue
+            rl_budget -= 1.0
+
             msg = json.loads(raw)
             msg_type = msg.get("type")
 
@@ -339,10 +364,3 @@ async def websocket_game(ws: WebSocket, session_id: str) -> None:
         brain.submit_action(Action(name="end_turn"))  # unblock queue
         round_thread.join(timeout=5)
 
-
-def _get_entities_layer(session: GameSession) -> EntitiesLayer:
-    """Find EntitiesLayer in session's world."""
-    for layer in session.world.layers:
-        if isinstance(layer, EntitiesLayer):
-            return layer
-    raise RuntimeError("EntitiesLayer not found")

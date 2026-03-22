@@ -43,8 +43,7 @@ src/dnd_simulator/
 ├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, MemorySummarizer
 ├── i18n.py        — gettext internationalization, per-session language via contextvars
 ├── adapters/      — transport layer
-│   ├── cli.py, cli_loop.py — terminal REPL
-│   └── api/       — FastAPI REST adapter (master + player routes, i18n middleware)
+│   └── api/       — FastAPI REST + WebSocket adapter (master + player routes, WS game loop, i18n middleware)
 ├── content_loader.py — loads content from YAML (single file or directory format)
 ├── content_saver.py  — saves world templates back to YAML
 ├── service/       — GameService + command modules

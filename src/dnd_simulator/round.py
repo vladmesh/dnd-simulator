@@ -12,6 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from dnd_simulator.core.action import SKIP, Action
+from dnd_simulator.core.awareness import PerceivedEvent
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.models import EmitFn, Event, GameDateTime, QueryFn, TimeDelta
 from dnd_simulator.core.turn_budget import TurnBudget
@@ -49,9 +50,9 @@ class Round:
     Peaceful: no budget — turn-ending actions auto-end, queries loop.
     """
 
-    def __init__(self, world: World, entities_layer: EntitiesLayer) -> None:
+    def __init__(self, world: World, entities_layer: EntitiesLayer | None = None) -> None:
         self._world = world
-        self._entities = entities_layer
+        self._entities = entities_layer or get_entities_layer(world)
         self._stop_flag = False
         self._on_round_end: Callable[[RoundResult], None] | None = None
         self._on_action: OnActionCallback | None = None
@@ -67,6 +68,10 @@ class Round:
     def set_on_action(self, callback: OnActionCallback) -> None:
         """Set callback invoked after each action within a turn."""
         self._on_action = callback
+
+    def get_perceived_events(self, creature: Creature) -> list[PerceivedEvent]:
+        """Return perceived events for a creature (delegates to EntitiesLayer)."""
+        return self._entities.get_perceived_events(creature)
 
     def run_creature_turn(
         self,

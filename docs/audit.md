@@ -4,10 +4,10 @@
 > **Scope**: full
 
 ## Summary
-- Dead code: 1 issue
+- Dead code: 1 issue (1 fixed)
 - Code smells: 3 issues
-- Security: 4 issues
-- Architecture violations: 2 issues
+- Security: 4 issues (2 fixed)
+- Architecture violations: 2 issues (2 fixed)
 - Convention violations: 2 issues
 - Layer contract: 0 issues
 - Test gaps: 1 issue
@@ -17,6 +17,7 @@
 | File | Issue | Action |
 |------|-------|--------|
 | `round.py:213` | Stale TODO: reaction support placeholder — no implementation progress | backlog (track in roadmap if planned) |
+| ~~`adapters/cli_loop.py`~~ | ~~408-line legacy CLI adapter, unused~~ | **FIXED**: removed entirely |
 
 ## Code Smells
 | File | Issue | Suggestion |
@@ -29,17 +30,17 @@
 | File:Line | Issue | Severity |
 |-----------|-------|----------|
 | `adapters/api/app.py:70` | CORS `allow_origins=["*"]` — open to any origin | low (local dev OK, lock down before deployment) |
-| `adapters/api/routes_ws.py` | No rate limiting or message size limits on WebSocket | medium (client can spam messages) |
-| `adapters/api/routes_ws.py` | No origin validation on WS upgrade — any page can connect | medium |
+| ~~`adapters/api/routes_ws.py`~~ | ~~No rate limiting or message size limits on WebSocket~~ | **FIXED**: token bucket (burst 20, 5 msg/sec) |
+| ~~`adapters/api/routes_ws.py`~~ | ~~No origin validation on WS upgrade~~ | **FIXED**: `WS_ALLOWED_ORIGINS` env var check before accept |
 | `adapters/api/static/js/*.js` | Extensive `innerHTML` usage with server data — XSS surface | medium (mitigated by `esc()` helper in most places, but patterns like `innerHTML += \`...\`` with template literals are fragile — one missed `esc()` call is an XSS) |
 
 ## Architecture Violations
 | File:Line | Violation | Should Be | Severity |
 |-----------|-----------|-----------|----------|
-| `adapters/api/routes_ws.py:35` | Imports `EntitiesLayer` directly from layers | Access via `GameService` or `World` query interface | medium |
-| `adapters/cli_loop.py:32-35` | Imports all 4 layer classes directly | Access via `GameService` or `World` query interface | medium |
+| ~~`adapters/api/routes_ws.py:35`~~ | ~~Imports `EntitiesLayer` directly from layers~~ | ~~Access via `Round` proxy~~ | **FIXED**: `Round.get_perceived_events()` proxy, adapter no longer imports any layer |
+| ~~`adapters/cli_loop.py:32-35`~~ | ~~Imports all 4 layer classes directly~~ | | **FIXED**: file removed |
 
-Note: Both adapters also import heavily from `core.*` (Action, Awareness, Brain, Creature, etc.). Core imports are acceptable per architecture rules, but the adapters contain significant game logic (turn orchestration, awareness formatting, Round creation) that could live in the service layer. This is a "thick adapter" smell rather than a hard violation.
+Note: The WS adapter imports from `core.*` (Action, Awareness, Brain, Creature, etc.). Core imports are acceptable per architecture rules. The adapter still contains turn orchestration and awareness formatting that could move to the service layer — a "thick adapter" smell, not a hard violation.
 
 ## Convention Violations
 | File:Line | Violation | Rule |
