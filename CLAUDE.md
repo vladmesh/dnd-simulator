@@ -25,6 +25,10 @@ uv run pytest tests/test_character.py::TestPerceive::test_perceive_character_see
 uv run pytest --cov=src/dnd_simulator
 ```
 
+## Product Vision
+
+See [docs/VISION.md](docs/VISION.md) for product vision and [docs/ROADMAP.md](docs/ROADMAP.md) for current status and plans.
+
 ## Architecture
 
 Layered LLM-powered text RPG simulator built on a **layer stack** pattern. Each layer simulates one aspect of the world through an identical `Layer` ABC interface (`tick_interval`, `tick`, `handle_event`, `query`, `get_state`, `load_state`).

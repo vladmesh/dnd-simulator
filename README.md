@@ -5,6 +5,7 @@ Text RPG with multi-level LLM simulation, inspired by classic text adventures an
 An LLM-powered Dungeon Master orchestrates a layered world simulation where each layer builds on top of the previous one — from geography and weather up to individual NPC conversations.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for details on how the system is structured.
+See [docs/VISION.md](docs/VISION.md) for product vision and [docs/ROADMAP.md](docs/ROADMAP.md) for current status and plans.
 
 ## Development
 
