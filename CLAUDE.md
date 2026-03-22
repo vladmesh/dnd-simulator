@@ -34,7 +34,7 @@ Layered LLM-powered text RPG simulator built on a **layer stack** pattern. Each 
 1. **Geography** (`layers/geography/`) — terrain, coordinates, weather, day/night cycle. Ticks every call.
 2. **Politics** (`layers/politics/`) — nations, diplomacy, warfare, economy. Ticks every 30 in-game days.
 3. **Settlements** (`layers/settlements/`) — towns, population, prosperity, harvests. Ticks every 30 in-game days.
-4. **Entities** (`layers/entities/`) — all tracked creatures: player, NPCs, named monsters. Ticks every call (NPC activity updates driven by hour of day).
+4. **Entities** (`layers/entities/`) — all tracked creatures: player, NPCs, named monsters. Tick is a no-op; the Round orchestrator drives all creature turns.
 
 ### Module Dependency Flow
 
@@ -44,7 +44,7 @@ core/              — models, Layer ABC, World, Entity/Character hierarchy (no 
 layers/            — concrete layer implementations (depend on core only)
   ↓
 round.py           — Round orchestrator: multi-action turn loop with budget enforcement
-service/           — GameService + command modules (combat, NPC, politics, save, time, world)
+service/           — GameService + command modules (combat, creatures, politics, save, time, world)
   ↓
 adapters/          — CLI REPL, FastAPI REST API
 
@@ -63,7 +63,7 @@ content/           — YAML world definitions (data, not code)
 - **LLM is injected** — `LlmBrain` wraps an `LlmClient`; rule-based NPCs use `RuleBrain` with zero LLM calls.
 - **Content is data** — worlds, NPCs, quests defined in YAML under `content/`. Two formats: legacy single-file and directory (world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml).
 - **Transport is thin** — adapters only translate I/O, all logic lives in `GameService`.
-- **Two editing modes** — between sessions: edit YAML files on disk; during session: hot controls in memory (NPC spawn/delete, HP, brain, time).
+- **Two editing modes** — between sessions: edit YAML files on disk; during session: hot controls in memory (creature spawn/delete, HP, brain, time).
 
 ### Time System
 

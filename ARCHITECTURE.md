@@ -48,9 +48,9 @@ src/dnd_simulator/
 ├── content_loader.py — loads content from YAML (single file or directory format)
 ├── content_saver.py  — saves world templates back to YAML
 ├── service/       — GameService + command modules
-│   ├── game_service.py — session management, command routing, hot controls
-│   ├── session.py      — GameSession: world + player state, autosave
-│   ├── commands_combat.py, commands_npc.py, commands_politics.py, ...
+│   ├── game_service.py — session management, command routing, creature hot controls
+│   ├── session.py      — GameSession: world ref, player lookup via entities layer, autosave
+│   ├── commands_combat.py, commands_creatures.py, commands_politics.py, ...
 │   └── commands_save.py, commands_time.py, commands_world.py
 └── round.py       — Round orchestrator: multi-action turn loop with budget enforcement
 
@@ -84,7 +84,7 @@ Player input flow (service/, command-based):
 REST API flow (adapters/api/):
     FastAPI routes → GameService methods → JSON responses
     I18nMiddleware sets session language before each request via contextvars
-    Master routes: session CRUD, NPC hot controls, nation/settlement patching, saves
+    Master routes: session CRUD, creature hot controls, nation/settlement patching, saves
     Player routes: character creation, perception, events, combat, map, actions
 ```
 
@@ -99,7 +99,8 @@ Events carry an optional `observer_ids` field (`frozenset[str] | None`). When `N
 Game time is tracked with second precision via `GameDateTime` (year/month/day/hour/minute/second). Time advances in `TimeDelta` increments measured in seconds, with convenience factories: `TimeDelta.from_rounds(n)` (1 round = 6 seconds, D&D standard), `TimeDelta.from_hours(n)`, `TimeDelta.from_days(n)`.
 
 Each layer declares a `tick_interval` in seconds. World tracks `_last_tick_time` per layer and only calls `tick()` when enough time has elapsed:
-- Geography, Entities: `tick_interval = 0` (every advance_time call)
+- Geography: `tick_interval = 0` (every advance_time call)
+- Entities: `tick_interval = 0` but `tick()` is a no-op — Round orchestrator drives all creature turns
 - Settlements, Politics: `tick_interval = 2 592 000` (30 days)
 
 Calendar: 30 days/month, 12 months/year.
@@ -114,7 +115,7 @@ Entity (id, name, location_id, active, on_tick)
         └── Npc (role, personality, schedule, memory: NpcMemory, ai_type — brain assigned by content_loader/adapter)
 ```
 
-All tracked entities live on the `EntitiesLayer`. Each entity has an `active` flag — only active entities are ticked. `Entity.on_tick(hour)` is a no-op by default; `Npc` overrides it to update activity based on daily schedule.
+All tracked entities live on the `EntitiesLayer`. The layer's `tick()` is a no-op — the Round orchestrator calls `run_creature_turn` directly for both combat and peaceful turns. `Entity.on_tick(hour)` is called by the Round to update NPC activity based on daily schedule.
 
 `World.location_graph` (`LocationGraph`) provides a flat graph of all locations. Each `Location` node has a `region_id` tag (for weather/terrain lookups) and an optional `settlement_id` tag (for economy/NPC binding). Entities hold a `location_id` and the graph resolves which region/settlement they are in. Edges between locations carry distances in meters; `travel_seconds()` computes travel time.
 
@@ -153,5 +154,5 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 - **LLM is injected, not hardcoded.** `LlmBrain` receives an `LlmClient`; rule-based NPCs use no LLM at all.
 - **Content is data, not code.** Worlds and NPCs live in YAML files. Two formats: legacy single file, or directory (world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml). ContentLoader handles both.
 - **Transport is a thin adapter.** The game works the same whether accessed via terminal, HTTP, or Telegram. REST API (FastAPI) is the primary adapter for frontend.
-- **Two editing modes.** Between sessions: master edits YAML templates on disk. During sessions: hot controls (NPC spawn/delete, HP, brain, nation/settlement patches) modify objects in memory. Saves persist state to disk.
+- **Two editing modes.** Between sessions: master edits YAML templates on disk. During sessions: hot controls (creature spawn/delete, HP, brain, nation/settlement patches) modify objects in memory. Saves persist state to disk.
 - **Per-session i18n.** Language is set per session via `contextvars`. The global `_()` function reads the current context, so NPC LLM prompts and translated strings respect session language.
