@@ -184,6 +184,82 @@ class BattleMap:
                 )
         return descriptions
 
+    def render_ascii(self, observer_id: str | None = None) -> str:
+        """Render an ASCII top-down view of the battle map.
+
+        Each cell is 5 ft.  Legend:
+        - ``@`` = observer (observer_id)
+        - ``1``–``9`` = other entities (keyed in legend below the map)
+        - ``#`` = wall segment between cells
+        - ``.`` = empty cell
+        """
+        cols = self.width // 5 + 1
+        rows = self.height // 5 + 1
+
+        # Build entity lookup: grid (col, row) → entity_id
+        pos_lookup: dict[tuple[int, int], str] = {}
+        for eid, pos in self.positions.items():
+            col = pos.x // 5
+            row = pos.y // 5
+            pos_lookup[(col, row)] = eid
+
+        # Assign glyphs: observer = @, others numbered 1-9
+        glyph_map: dict[str, str] = {}
+        legend: list[str] = []
+        counter = 1
+        for eid in self.positions:
+            if eid == observer_id:
+                glyph_map[eid] = "@"
+            else:
+                g = str(counter) if counter <= 9 else "+"
+                glyph_map[eid] = g
+                legend.append(f"  {g} = {eid}")
+                counter += 1
+
+        # Build blocked-edge set for wall rendering (inner walls only, skip perimeter)
+        inner_edges: set[frozenset[Position]] = set()
+        for wall in self._inner_walls:
+            if wall.x1 == wall.x2:
+                wx = wall.x1
+                y_min, y_max = min(wall.y1, wall.y2), max(wall.y1, wall.y2)
+                for y in range(y_min, y_max, 5):
+                    inner_edges.add(frozenset({Position(wx - 5, y), Position(wx, y)}))
+            elif wall.y1 == wall.y2:
+                wy = wall.y1
+                x_min, x_max = min(wall.x1, wall.x2), max(wall.x1, wall.x2)
+                for x in range(x_min, x_max, 5):
+                    inner_edges.add(frozenset({Position(x, wy - 5), Position(x, wy)}))
+        edges = inner_edges
+
+        lines: list[str] = []
+        # Render top-down: row 0 = top (max y), going down
+        for row in range(rows - 1, -1, -1):
+            cell_line = ""
+            for col in range(cols):
+                cell_eid = pos_lookup.get((col, row))
+                cell_line += glyph_map[cell_eid] if cell_eid is not None else "."
+                # Vertical wall between (col,row) and (col+1,row)?
+                if col < cols - 1:
+                    left = Position(col * 5, row * 5)
+                    right = Position((col + 1) * 5, row * 5)
+                    cell_line += "|" if frozenset({left, right}) in edges else " "
+            lines.append(cell_line)
+            # Horizontal wall between rows
+            if row > 0:
+                wall_line = ""
+                for col in range(cols):
+                    above = Position(col * 5, row * 5)
+                    below = Position(col * 5, (row - 1) * 5)
+                    wall_line += "-" if frozenset({above, below}) in edges else " "
+                    if col < cols - 1:
+                        wall_line += " "
+                lines.append(wall_line)
+
+        result = "\n".join(lines)
+        if legend:
+            result += "\n" + "\n".join(legend)
+        return result
+
 
 def _chebyshev_ft(a: Position, b: Position) -> int:
     """Chebyshev (max of dx, dy) distance in feet — used for spacing only."""

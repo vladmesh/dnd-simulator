@@ -66,6 +66,7 @@ class CombatAwareness:
     nearby: list[CombatEntity] = field(default_factory=list)
     round_number: int = 1
     walls: list[str] = field(default_factory=list)
+    battle_map_ascii: str = ""
     turn_budget: TurnBudget | None = None
 
 

@@ -74,6 +74,7 @@ export interface CombatAwareness {
   nearby: CombatEntity[]
   round_number: number
   walls?: string[]
+  battle_map_ascii?: string
   turn_budget?: TurnBudget | null
 }
 

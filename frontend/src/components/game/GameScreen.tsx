@@ -7,11 +7,14 @@ import { ActionBar } from "./ActionBar"
 import { Perception } from "./Perception"
 import { LocationPanel } from "./LocationPanel"
 import { PlayerStats } from "./PlayerStats"
+import { BattleMap } from "./BattleMap"
+import { CombatPanel } from "./CombatPanel"
 
 export function GameScreen() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const lastError = useGameStore((s) => s.lastError)
   const gameOver = useGameStore((s) => s.gameOver)
+  const mode = useGameStore((s) => s.mode)
   const connectedRef = useRef(false)
 
   useEffect(() => {
@@ -26,6 +29,8 @@ export function GameScreen() {
       useGameStore.getState().disconnect()
     }
   }, [sessionId])
+
+  const isCombat = mode === "combat"
 
   return (
     <div className="dark flex h-screen flex-col bg-background text-foreground">
@@ -51,13 +56,23 @@ export function GameScreen() {
           <EventLog />
         </div>
 
-        {/* Sidebar */}
+        {/* Sidebar — switches between peaceful and combat */}
         <div className="hidden w-72 flex-col gap-4 overflow-y-auto p-3 md:flex">
-          <Perception />
-          <div className="border-t border-border" />
-          <LocationPanel />
-          <div className="border-t border-border" />
-          <PlayerStats />
+          {isCombat ? (
+            <>
+              <BattleMap />
+              <div className="border-t border-border" />
+              <CombatPanel />
+            </>
+          ) : (
+            <>
+              <Perception />
+              <div className="border-t border-border" />
+              <LocationPanel />
+              <div className="border-t border-border" />
+              <PlayerStats />
+            </>
+          )}
         </div>
       </div>
 

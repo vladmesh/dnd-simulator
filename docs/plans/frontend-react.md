@@ -192,13 +192,13 @@ src/components/game/
 ```
 
 Шаги:
-- [ ] GameScreen: переключать layout при mode === "combat" (показать BattleMap + CombatPanel)
-- [ ] BattleMap: рендерить ASCII из бэкенда в <pre> с моноширинным шрифтом
-- [ ] CombatPanel: список врагов из combat awareness, расстояние + направление
-- [ ] BudgetDisplay: визуализация оставшихся ресурсов (иконки или прогресс-бары)
-- [ ] ActionBar в бою: Attack (dropdown с целями), Dodge, Flee, Move (dropdown с направлениями), Dash, End Turn
-- [ ] Disable кнопок по budget (нет actions → disable Attack/Dodge, нет movement → disable Move)
-- [ ] Проверить: войти в бой → атаковать → передвинуться → закончить ход → NPC ходят → новый раунд
+- [x] GameScreen: переключать layout при mode === "combat" (показать BattleMap + CombatPanel)
+- [x] BattleMap: рендерить ASCII из бэкенда в <pre> с моноширинным шрифтом
+- [x] CombatPanel: список врагов из combat awareness, расстояние + направление
+- [x] BudgetDisplay: визуализация оставшихся ресурсов (иконки или прогресс-бары)
+- [x] ActionBar в бою: Attack (dropdown с целями), Dodge, Flee, Move (dropdown с направлениями), Dash, End Turn
+- [x] Disable кнопок по budget (нет actions → disable Attack/Dodge, нет movement → disable Move)
+- [x] Проверить: войти в бой → атаковать → передвинуться → закончить ход → NPC ходят → новый раунд
 
 Результат: можно воевать через новый UI.
 
@@ -240,8 +240,8 @@ src/components/master/
 Шаги:
 - [ ] Toast notifications: подключение/отключение WS, ошибки, успех операций
 - [ ] Loading states: Skeleton для всех async-данных
-- [ ] Keyboard shortcuts: Enter → отправить команду, Escape → закрыть модалку
-- [ ] Command input: текстовое поле внизу как fallback (для опытных пользователей)
+- [ ] Keyboard shortcuts: Escape → закрыть модалку
+- [x] Command input: текстовое поле внизу как fallback (для опытных пользователей) + Enter → отправить
 - [ ] Favicon + title с именем персонажа
 - [ ] Убрать старый debug UI из FastAPI static (или переместить в /debug)
 - [ ] Обновить Makefile: `make serve` поднимает бэкенд + отдаёт frontend/dist
@@ -278,6 +278,14 @@ src/components/master/
 - connectionSlice: store updates из WS-коллбэков через `setTimeout(0)` (useSyncExternalStore tearing)
 - GameScreen: `useRef` guard против двойного подключения в StrictMode
 
+### BattleMap ASCII — генерируется на бэкенде
+
+Добавлен метод `BattleMap.render_ascii(observer_id)` в `core/combat.py`. Генерирует ASCII-карту с `@` (игрок), `1-9` (враги), `|`/`-` (стены). Передаётся через новое поле `battle_map_ascii` в `CombatAwareness` → автоматически сериализуется в WS-сообщение. Фронтенд рендерит в `<pre>`.
+
+### BudgetDisplay — вынесен в отдельный компонент
+
+Изначально budget отображался inline в ActionBar. Вынесен в `BudgetDisplay.tsx` с иконками (Swords/Zap/Footprints/Shield) и визуальным затемнением исчерпанных ресурсов. Используется и в мирном, и в боевом режиме.
+
 ### Playwright MCP — добавлен для отладки
 
 Не был в плане. Добавлен headless Playwright через MCP для автоматизированного тестирования UI без ручного открытия браузера.
@@ -286,7 +294,7 @@ src/components/master/
 
 ## Что дальше
 
-Следующая фаза: **Phase 5 — Combat Mode**. BattleMap, CombatPanel, BudgetDisplay, боевые действия.
+Следующая фаза: **Phase 6 — Master Panel**. MasterScreen, SessionList, WorldOverview, CreatureList/Form, TimeControl.
 
 ---
 

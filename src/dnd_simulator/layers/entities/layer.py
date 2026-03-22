@@ -235,8 +235,10 @@ class EntitiesLayer(Layer):
             weapon_damage = str(creature.attacks[0].damage[0].dice)
 
         wall_descriptions: list[str] = []
+        battle_map_ascii = ""
         if combat:
             wall_descriptions = combat.battle_map.describe_walls()
+            battle_map_ascii = combat.battle_map.render_ascii(creature.id)
 
         return CombatAwareness(
             self_hp=creature.current_hp,
@@ -248,6 +250,7 @@ class EntitiesLayer(Layer):
             nearby=nearby,
             round_number=round_number,
             walls=wall_descriptions,
+            battle_map_ascii=battle_map_ascii,
         )
 
     def build_nearby_entities(self, creature: Creature, hour: int) -> list[NearbyEntity]:
