@@ -43,13 +43,13 @@ frontend/
 ```
 
 Шаги:
-- [ ] `npm create vite@latest frontend -- --template react-ts`
-- [ ] Установить tailwind 4, shadcn/ui, zustand, react-router, zod
-- [ ] Настроить vite proxy на :8001
-- [ ] Настроить shadcn (dark theme, zinc palette)
-- [ ] Добавить `make frontend-dev` и `make frontend-build` в Makefile
-- [ ] FastAPI: отдавать `frontend/dist/` через StaticFiles в проде
-- [ ] Проверить: `make frontend-dev` → открывается пустая страница, `/api/master/worlds` проксируется
+- [x] `npm create vite@latest frontend -- --template react-ts`
+- [x] Установить tailwind 4, shadcn/ui, zustand, react-router, zod
+- [x] Настроить vite proxy на :8001
+- [x] Настроить shadcn (dark theme, zinc palette)
+- [x] Добавить `make frontend-dev` и `make frontend-build` в Makefile
+- [x] FastAPI: отдавать `frontend/dist/` через StaticFiles в проде
+- [x] Проверить: `make frontend-dev` → открывается пустая страница, `/api/master/worlds` проксируется
 
 Результат: фронтенд собирается и проксирует бэкенд.
 
@@ -71,10 +71,10 @@ src/
 ```
 
 Шаги:
-- [ ] Описать все TypeScript-типы по бэкенд-контракту (schemas.py + awareness.py)
-- [ ] apiClient: обёртки над fetch для всех REST-эндпоинтов
-- [ ] wsClient: класс с connect/disconnect/send/on, exponential backoff reconnect
-- [ ] Проверить: вручную вызвать `apiClient.master.getWorlds()` из консоли браузера
+- [x] Описать все TypeScript-типы по бэкенд-контракту (schemas.py + awareness.py)
+- [x] apiClient: обёртки над fetch для всех REST-эндпоинтов
+- [x] wsClient: класс с connect/disconnect/send/on, exponential backoff reconnect
+- [x] Проверить: вручную вызвать `apiClient.master.getWorlds()` из консоли браузера
 
 Результат: фронтенд может общаться с бэкендом через типизированные функции.
 
@@ -95,13 +95,13 @@ src/store/
 ```
 
 Шаги:
-- [ ] connectionSlice: статусы connecting/connected/disconnected/error, привязка к wsClient
-- [ ] playerSlice: обновляется из каждого WS-сообщения (turn, action_result, round_result)
-- [ ] turnSlice: парсит awareness (peaceful/combat), обновляет mode, budget, nearby
-- [ ] logSlice: append events, cap 200, каждый event получает unique id для React keys
-- [ ] Подписка на WS-сообщения: wsClient.on('turn') → store.onTurn(), и т.д.
-- [ ] Derived state: `useAvailableActions()` hook — вычисляет кнопки из mode + budget + nearby
-- [ ] Проверить: подключиться к существующей сессии, убедиться что стор обновляется в React DevTools
+- [x] connectionSlice: статусы connecting/connected/disconnected/error, привязка к wsClient
+- [x] playerSlice: обновляется из каждого WS-сообщения (turn, action_result, round_result)
+- [x] turnSlice: парсит awareness (peaceful/combat), обновляет mode, budget, nearby
+- [x] logSlice: append events, cap 200, каждый event получает unique id для React keys
+- [x] Подписка на WS-сообщения: wsClient.on('turn') → store.onTurn(), и т.д.
+- [x] Derived state: `useAvailableActions()` hook — вычисляет кнопки из mode + budget + nearby
+- [x] Проверить: подключиться к существующей сессии, убедиться что стор обновляется в React DevTools
 
 Результат: всё состояние игры живёт в сторе и реактивно обновляется от WS.
 

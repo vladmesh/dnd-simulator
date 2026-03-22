@@ -22,6 +22,7 @@ from dnd_simulator.service import GameService
 from dnd_simulator.storage.store import JsonFileStore
 
 DEFAULT_SAVES_DIR = Path(__file__).resolve().parents[4] / "saves"
+_FRONTEND_DIST = Path(__file__).resolve().parents[4] / "frontend" / "dist"
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 _SESSION_ID_RE = re.compile(r"/api/(?:master|player)/sessions/([^/]+)")
@@ -81,5 +82,7 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-# Static files served AFTER API routes so /api/* takes priority
-app.mount("/", StaticFiles(directory=str(_STATIC_DIR), html=True), name="static")
+# Static files served AFTER API routes so /api/* takes priority.
+# Prefer React frontend build if available, fall back to legacy debug UI.
+_static_root = _FRONTEND_DIST if _FRONTEND_DIST.is_dir() else _STATIC_DIR
+app.mount("/", StaticFiles(directory=str(_static_root), html=True), name="static")

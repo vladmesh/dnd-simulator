@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test check messages compile-messages serve stop
+.PHONY: install lint format typecheck test check messages compile-messages serve stop frontend-dev frontend-build
 
 install:
 	uv sync
@@ -30,3 +30,9 @@ messages:
 
 compile-messages:
 	python3 -c "import subprocess; subprocess.run(['msgfmt', '-o', 'src/dnd_simulator/locale/ru/LC_MESSAGES/dnd_simulator.mo', 'src/dnd_simulator/locale/ru/LC_MESSAGES/dnd_simulator.po'])" 2>/dev/null || echo "msgfmt not available, use scripts/compile_po.py"
+
+frontend-dev:
+	cd frontend && npm run dev
+
+frontend-build:
+	cd frontend && npm run build

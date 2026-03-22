@@ -75,3 +75,6 @@ dmypy.json
 .pytype/
 cython_debug/
 .ruff_cache/
+
+# Frontend
+node_modules/
