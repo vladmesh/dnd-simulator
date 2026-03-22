@@ -86,34 +86,31 @@ class TestWebSocketTurnCycle:
             assert msg["type"] == "turn"
 
     def test_action_then_end_turn(self, tmp_path: object) -> None:
-        """Send a free action, get action_result + turn, then end_turn for round_result."""
+        """Send a say action (turn-ending in peaceful), get action_result then round_result."""
         client, _ = _make_client(tmp_path)
         sid = _create_session_with_player(client)
 
         with client.websocket_connect(f"/api/ws/{sid}") as ws:
-            # First turn
+            # First turn (peaceful)
             msg = ws.receive_json()
             assert msg["type"] == "turn"
 
-            # Send a say action (free, doesn't consume budget)
+            # Send a say action — turn-ending in peaceful mode
             ws.send_json({"type": "action", "name": "say", "params": {"text": "hello"}})
 
-            # Should get action_result for the say
+            # Should get action_result (no budget in peaceful)
             msg = ws.receive_json()
             assert msg["type"] == "action_result"
             assert msg["action"] == "say"
-            assert "budget" in msg
+            assert "budget" not in msg  # no budget in peaceful mode
 
-            # Loop continues — should get another turn prompt
-            msg = ws.receive_json()
-            assert msg["type"] == "turn"
-
-            # Now end the turn
-            ws.send_json({"type": "action", "name": "end_turn"})
-
-            # Should receive round_result
+            # Say auto-ends peaceful turn → round completes → round_result
             msg = ws.receive_json()
             assert msg["type"] == "round_result"
+
+            # Next turn starts
+            msg = ws.receive_json()
+            assert msg["type"] == "turn"
 
     def test_unknown_message_type(self, tmp_path: object) -> None:
         """Unknown message type returns error."""

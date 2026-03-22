@@ -26,6 +26,10 @@ _BONUS_ACTIONS: frozenset[str] = frozenset()
 # Actions that use movement (cost depends on params)
 _MOVEMENT_ACTIONS = frozenset({"move"})
 
+# Peaceful actions that auto-end the turn (meaningful world interactions).
+# Queries (idle = look/status/map) do NOT end the turn — they just refresh awareness.
+_TURN_ENDING_PEACEFUL = frozenset({"say", "attack", "wait", "move", "dash", "flee", "dodge"})
+
 
 def action_cost(action: Action) -> ActionCost:
     """Determine the budget cost of an action.
@@ -52,6 +56,15 @@ def action_cost(action: Action) -> ActionCost:
 
     # Unknown actions are free (safe default — don't block gameplay)
     return ActionCost()
+
+
+def ends_peaceful_turn(action: Action) -> bool:
+    """Whether this action auto-ends a peaceful turn.
+
+    Turn-ending actions are meaningful world interactions (say, attack, move, etc.).
+    Non-ending actions are UI queries (idle = look/status/map) that just refresh awareness.
+    """
+    return action.name in _TURN_ENDING_PEACEFUL
 
 
 def get_num_actions(creature: Creature) -> int:

@@ -1,8 +1,8 @@
-"""Round orchestrator — runs all active creatures uniformly each round.
+"""Round orchestrator — runs all active creatures each round.
 
-Multi-action turn loop: each creature's turn is a loop of
-choose_action → budget check → execute → rebuild awareness → repeat
-until the brain returns end_turn or budget is exhausted.
+Combat turns use a multi-action loop with D&D 5e turn budget enforcement.
+Peaceful turns have no budget — meaningful actions auto-end the turn,
+while queries (look/status/map) loop without ending.
 """
 
 from __future__ import annotations
@@ -17,13 +17,13 @@ from dnd_simulator.core.models import EmitFn, Event, GameDateTime, QueryFn, Time
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
-from dnd_simulator.rules.actions import action_cost, get_num_actions, get_num_bonus_actions
+from dnd_simulator.rules.actions import action_cost, ends_peaceful_turn, get_num_actions, get_num_bonus_actions
 
 logger = logging.getLogger("dnd_simulator.round")
 
 # Callback fired after each individual action within a turn.
-# (creature, action, budget) — used by WS to send action_result.
-OnActionCallback = Callable[[Creature, Action, TurnBudget], None]
+# (creature, action, budget) — budget is None for peaceful turns.
+OnActionCallback = Callable[[Creature, Action, TurnBudget | None], None]
 
 
 @dataclass
@@ -45,8 +45,8 @@ def get_entities_layer(world: World) -> EntitiesLayer:
 class Round:
     """Orchestrates one game round: all active creatures act, then time advances.
 
-    Each creature's turn is a multi-action loop: the brain is called repeatedly
-    until it returns end_turn or the turn budget is exhausted.
+    Combat: multi-action loop with budget (actions, bonus, movement).
+    Peaceful: no budget — turn-ending actions auto-end, queries loop.
     """
 
     def __init__(self, world: World, entities_layer: EntitiesLayer) -> None:
@@ -75,7 +75,19 @@ class Round:
         query_fn: QueryFn,
         emit_fn: EmitFn,
     ) -> list[Action]:
-        """Run one creature's full turn as a multi-action loop.
+        """Dispatch to combat or peaceful turn based on creature state."""
+        if creature.in_combat:
+            return self.run_combat_turn(creature, time, query_fn, emit_fn)
+        return self.run_peaceful_turn(creature, time, query_fn, emit_fn)
+
+    def run_combat_turn(
+        self,
+        creature: Creature,
+        time: GameDateTime,
+        query_fn: QueryFn,
+        emit_fn: EmitFn,
+    ) -> list[Action]:
+        """Run one creature's combat turn as a multi-action loop with budget.
 
         Returns the list of actions taken (excluding end_turn).
         """
@@ -127,6 +139,50 @@ class Round:
 
         return actions
 
+    def run_peaceful_turn(
+        self,
+        creature: Creature,
+        time: GameDateTime,
+        query_fn: QueryFn,
+        emit_fn: EmitFn,
+    ) -> list[Action]:
+        """Run one creature's peaceful turn — no budget.
+
+        Turn-ending actions (say, attack, move, etc.) execute and auto-end.
+        Queries (idle = look/status/map) execute, fire on_action, and loop.
+        Returns the list of actions taken (excluding end_turn).
+        """
+        if creature.brain is None:
+            return []
+
+        actions: list[Action] = []
+
+        while True:
+            awareness = self._entities.build_awareness(creature, time, query_fn)
+            # No budget in peaceful mode — awareness.turn_budget stays None
+            events = self._entities.get_perceived_events(creature)
+
+            action = creature.brain.choose_action(creature, awareness, events)
+
+            if action.name == "end_turn":
+                break
+
+            creature.execute_action(action, emit_fn)
+            actions.append(action)
+
+            if self._on_action:
+                self._on_action(creature, action, None)
+
+            # Special: wait action advances time immediately
+            if action.name == "wait":
+                self._handle_wait(action)
+
+            # Turn-ending actions auto-end the peaceful turn
+            if ends_peaceful_turn(action):
+                break
+
+        return actions
+
     def check_reactions(
         self,
         trigger_event: Event,
@@ -144,7 +200,7 @@ class Round:
 
         Note: actual reaction trigger points (opportunity attacks during move,
         counterspell on cast, etc.) are not wired yet — this is the skeleton
-        that will be called from the appropriate places in run_creature_turn.
+        that will be called from the appropriate places in run_combat_turn.
         """
         reactions: list[Action] = []
 

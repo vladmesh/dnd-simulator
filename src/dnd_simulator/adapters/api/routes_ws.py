@@ -264,7 +264,7 @@ async def websocket_game(ws: WebSocket, session_id: str) -> None:
     # Create Round with callbacks
     game_round = Round(session.world, entities_layer)
 
-    def on_action(creature: Creature, action: Action, budget: TurnBudget) -> None:
+    def on_action(creature: Creature, action: Action, budget: TurnBudget | None) -> None:
         """Send action_result after each action within a turn."""
         if creature.id != player.id:
             return  # only send action_result for the player
@@ -273,9 +273,10 @@ async def websocket_game(ws: WebSocket, session_id: str) -> None:
             "type": "action_result",
             "action": action.name,
             "events": _events_to_list(perceived),
-            "budget": _budget_to_dict(budget),
             "player": _player_to_dict(player),
         }
+        if budget is not None:
+            msg["budget"] = _budget_to_dict(budget)
         _ws_send_from_thread(msg)
 
     game_round.set_on_action(on_action)

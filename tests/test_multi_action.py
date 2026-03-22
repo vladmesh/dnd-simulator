@@ -179,6 +179,7 @@ class TestMultiActionLoop:
             max_hp=20,
             current_hp=20,
             attacks=(sword,),
+            in_combat=True,
         )
         target = Creature(id="target1", name="T", location_id="r1", max_hp=100, current_hp=100)
 
@@ -188,14 +189,14 @@ class TestMultiActionLoop:
 
         query_fn = world._make_query_fn("entities")
         emit_fn = world._make_emit_fn("entities")
-        actions = game_round.run_creature_turn(attacker, world.time, query_fn, emit_fn)
+        actions = game_round.run_combat_turn(attacker, world.time, query_fn, emit_fn)
 
         # Only 1 attack should have executed (budget has 1 action)
         assert len(actions) == 1
         assert actions[0].name == "attack"
 
     def test_free_action_then_costly_action(self) -> None:
-        """Free action (say) + costly action (dodge) both execute."""
+        """In combat: free action (say) + costly action (dodge) both execute."""
         brain = _ScriptedBrain(
             [
                 Action(name="say", params={"text": "prepare!"}),
@@ -203,7 +204,7 @@ class TestMultiActionLoop:
                 END_TURN,
             ]
         )
-        creature = Creature(id="c1", name="A", location_id="r1", brain=brain)
+        creature = Creature(id="c1", name="A", location_id="r1", brain=brain, in_combat=True)
 
         world = _make_world([creature])
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
@@ -211,16 +212,16 @@ class TestMultiActionLoop:
 
         query_fn = world._make_query_fn("entities")
         emit_fn = world._make_emit_fn("entities")
-        actions = game_round.run_creature_turn(creature, world.time, query_fn, emit_fn)
+        actions = game_round.run_combat_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(actions) == 2
         assert actions[0].name == "say"
         assert actions[1].name == "dodge"
 
     def test_on_action_callback_fires(self) -> None:
-        """on_action callback fires after each action with current budget."""
+        """on_action callback fires after each action with current budget in combat."""
         brain = _ScriptedBrain([Action(name="say", params={"text": "hi"}), END_TURN])
-        creature = Creature(id="c1", name="A", location_id="r1", brain=brain)
+        creature = Creature(id="c1", name="A", location_id="r1", brain=brain, in_combat=True)
 
         world = _make_world([creature])
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
@@ -228,20 +229,89 @@ class TestMultiActionLoop:
 
         callback_log: list[tuple[str, str, int]] = []
 
-        def on_action(c: Creature, a: Action, b: TurnBudget) -> None:
+        def on_action(c: Creature, a: Action, b: TurnBudget | None) -> None:
+            assert b is not None
             callback_log.append((c.id, a.name, b.actions))
 
         game_round.set_on_action(on_action)
 
         query_fn = world._make_query_fn("entities")
         emit_fn = world._make_emit_fn("entities")
-        game_round.run_creature_turn(creature, world.time, query_fn, emit_fn)
+        game_round.run_combat_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(callback_log) == 1
         assert callback_log[0] == ("c1", "say", 1)  # say is free, actions still 1
 
-    def test_awareness_includes_budget(self) -> None:
-        """The awareness passed to choose_action includes turn_budget."""
+    def test_awareness_includes_budget_in_combat(self) -> None:
+        """Combat awareness includes turn_budget."""
+        received_budgets: list[TurnBudget | None] = []
+
+        class BudgetCaptureBrain(Brain):
+            def choose_action(
+                self,
+                creature: Creature,
+                awareness: PeacefulAwareness | CombatAwareness,
+                events: list[PerceivedEvent],
+            ) -> Action:
+                received_budgets.append(awareness.turn_budget)
+                return END_TURN
+
+        creature = Creature(id="c1", name="A", location_id="r1", brain=BudgetCaptureBrain(), in_combat=True)
+        world = _make_world([creature])
+        el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        game_round = Round(world, el)
+
+        query_fn = world._make_query_fn("entities")
+        emit_fn = world._make_emit_fn("entities")
+        game_round.run_combat_turn(creature, world.time, query_fn, emit_fn)
+
+        assert len(received_budgets) == 1
+        budget = received_budgets[0]
+        assert budget is not None
+        assert budget.actions == 1
+        assert budget.bonus_actions == 1
+        assert budget.movement_remaining == creature.speed
+
+
+# -- Peaceful turn tests --
+
+
+class TestPeacefulTurn:
+    def test_say_ends_peaceful_turn(self) -> None:
+        """Say is a turn-ending action in peaceful mode."""
+        brain = _ScriptedBrain([Action(name="say", params={"text": "hi"})])
+        creature = Creature(id="c1", name="A", location_id="r1", brain=brain)
+
+        world = _make_world([creature])
+        el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        game_round = Round(world, el)
+
+        query_fn = world._make_query_fn("entities")
+        emit_fn = world._make_emit_fn("entities")
+        actions = game_round.run_peaceful_turn(creature, world.time, query_fn, emit_fn)
+
+        assert len(actions) == 1
+        assert actions[0].name == "say"
+
+    def test_idle_loops_in_peaceful(self) -> None:
+        """Idle (look/status/map) does NOT end peaceful turn — loops until end_turn."""
+        brain = _ScriptedBrain([Action(name="idle"), Action(name="idle"), END_TURN])
+        creature = Creature(id="c1", name="A", location_id="r1", brain=brain)
+
+        world = _make_world([creature])
+        el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        game_round = Round(world, el)
+
+        query_fn = world._make_query_fn("entities")
+        emit_fn = world._make_emit_fn("entities")
+        actions = game_round.run_peaceful_turn(creature, world.time, query_fn, emit_fn)
+
+        # Both idles should execute, then end_turn exits
+        assert len(actions) == 2
+        assert all(a.name == "idle" for a in actions)
+
+    def test_no_budget_in_peaceful(self) -> None:
+        """Peaceful awareness has turn_budget=None."""
         received_budgets: list[TurnBudget | None] = []
 
         class BudgetCaptureBrain(Brain):
@@ -261,11 +331,51 @@ class TestMultiActionLoop:
 
         query_fn = world._make_query_fn("entities")
         emit_fn = world._make_emit_fn("entities")
-        game_round.run_creature_turn(creature, world.time, query_fn, emit_fn)
+        game_round.run_peaceful_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(received_budgets) == 1
-        budget = received_budgets[0]
-        assert budget is not None
-        assert budget.actions == 1
-        assert budget.bonus_actions == 1
-        assert budget.movement_remaining == creature.speed
+        assert received_budgets[0] is None
+
+    def test_on_action_callback_gets_none_budget(self) -> None:
+        """Peaceful on_action callback receives budget=None."""
+        brain = _ScriptedBrain([Action(name="say", params={"text": "hi"})])
+        creature = Creature(id="c1", name="A", location_id="r1", brain=brain)
+
+        world = _make_world([creature])
+        el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        game_round = Round(world, el)
+
+        callback_log: list[tuple[str, str, TurnBudget | None]] = []
+
+        def on_action(c: Creature, a: Action, b: TurnBudget | None) -> None:
+            callback_log.append((c.id, a.name, b))
+
+        game_round.set_on_action(on_action)
+
+        query_fn = world._make_query_fn("entities")
+        emit_fn = world._make_emit_fn("entities")
+        game_round.run_peaceful_turn(creature, world.time, query_fn, emit_fn)
+
+        assert len(callback_log) == 1
+        assert callback_log[0] == ("c1", "say", None)
+
+    def test_dispatcher_routes_by_combat_state(self) -> None:
+        """run_creature_turn dispatches to combat or peaceful based on in_combat."""
+        brain = _ScriptedBrain([END_TURN])
+        creature = Creature(id="c1", name="A", location_id="r1", brain=brain)
+
+        world = _make_world([creature])
+        el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        game_round = Round(world, el)
+
+        query_fn = world._make_query_fn("entities")
+        emit_fn = world._make_emit_fn("entities")
+
+        # Peaceful
+        creature.in_combat = False
+        game_round.run_creature_turn(creature, world.time, query_fn, emit_fn)
+
+        # Combat
+        creature.in_combat = True
+        brain._index = 0  # reset brain
+        game_round.run_creature_turn(creature, world.time, query_fn, emit_fn)
