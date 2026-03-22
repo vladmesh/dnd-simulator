@@ -286,7 +286,7 @@ def list_saves(session_id: str) -> dict[str, list[str]]:
     """List saves for this session."""
     service = get_service()
     _get_session(service, session_id)
-    saves = service.list_saves()
+    saves = service.list_saves(session_id)
     return {"saves": saves}
 
 
@@ -312,6 +312,19 @@ def load_save(session_id: str, save_name: str) -> MessageResponse:
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     return MessageResponse(message=f"Loaded '{save_name}'")
+
+
+@router.delete("/sessions/{session_id}/saves/{save_name}", response_model=MessageResponse)
+def delete_save(session_id: str, save_name: str) -> MessageResponse:
+    """Delete a save file."""
+    service = get_service()
+    try:
+        service.delete_save(session_id, save_name)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return MessageResponse(message=f"Deleted '{save_name}'")
 
 
 # -- Helpers --

@@ -16,7 +16,7 @@ class SaveCommands:
         data: dict[str, Any] = {
             "world": session.world.save(),
         }
-        self._store.save(save_name, data)  # type: ignore[attr-defined]
+        self._store.save(save_name, data, world=session.world_name)  # type: ignore[attr-defined]
         return save_name
 
     def autosave_session(self, session_id: str) -> None:
@@ -30,7 +30,7 @@ class SaveCommands:
             },
             "world": session.world.save(),
         }
-        self._store.save(f"session_{session_id}", data)  # type: ignore[attr-defined]
+        self._store.save(f"session_{session_id}", data, world=session.world_name)  # type: ignore[attr-defined]
 
     def autosave_all_sessions(self) -> None:
         """Autosave all active sessions."""
@@ -42,7 +42,7 @@ class SaveCommands:
     def load_game(self, session_id: str, name: str) -> None:
         """Load game state into session."""
         session: GameSession = self._get_session(session_id)  # type: ignore[attr-defined]
-        data = self._store.load(name)  # type: ignore[attr-defined]
+        data = self._store.load(name, world=session.world_name)  # type: ignore[attr-defined]
 
         # Support both old format (flat world data) and new format (world + player)
         if "world" in data:
@@ -57,7 +57,13 @@ class SaveCommands:
         else:
             session.world.load(data)
 
-    def list_saves(self) -> list[str]:
-        """List available saves."""
-        result: list[str] = self._store.list_saves()  # type: ignore[attr-defined]
+    def delete_save(self, session_id: str, name: str) -> None:
+        """Delete a save file."""
+        session: GameSession = self._get_session(session_id)  # type: ignore[attr-defined]
+        self._store.delete(name, world=session.world_name)  # type: ignore[attr-defined]
+
+    def list_saves(self, session_id: str) -> list[str]:
+        """List available saves for the session's world."""
+        session: GameSession = self._get_session(session_id)  # type: ignore[attr-defined]
+        result: list[str] = self._store.list_saves(world=session.world_name)  # type: ignore[attr-defined]
         return result

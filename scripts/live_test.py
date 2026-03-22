@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import json
 import sys
-import time
 
 import requests
 import websocket  # type: ignore[import-untyped]
@@ -69,6 +68,31 @@ def main() -> None:
     sid = session["session_id"]
     log("INFO", f"Session: {sid}, player: {session.get('player_name')}, location: {session.get('player_location')}")
 
+    try:
+        _run_test(sid)
+    finally:
+        _cleanup(sid)
+
+
+def _cleanup(sid: str) -> None:
+    """Delete session and all saves created during the test."""
+    section("Cleanup")
+    # Delete saves created by this test
+    for save_name in ["live_test_save", f"session_{sid}"]:
+        try:
+            rest("delete", f"/api/master/sessions/{sid}/saves/{save_name}")
+        except Exception:
+            log("WARN", f"Could not delete save '{save_name}'")
+    # Delete the session itself
+    try:
+        rest("delete", f"/api/master/sessions/{sid}")
+    except Exception:
+        log("WARN", "Could not delete session")
+    section("DONE — all steps completed")
+
+
+def _run_test(sid: str) -> None:
+    """Run all test steps for a given session."""
     # ── 3. Player: create character ──
     section("3. Player: create character")
     player = rest("post", f"/api/player/sessions/{sid}/character", {
@@ -86,7 +110,8 @@ def main() -> None:
             {"name": "longsword", "ability": "str", "damage": [{"dice": "1d8", "type": "slashing"}], "reach": 5},
         ],
     })
-    log("INFO", f"Player: {player.get('name')} HP:{player.get('hp')} AC:{player.get('ac')} at {player.get('location_id')}")
+    loc = player.get('location_id')
+    log("INFO", f"Player: {player.get('name')} HP:{player.get('hp')} AC:{player.get('ac')} loc={loc}")
     player_location = player.get("location_id", "")
 
     # ── 4. Master: spawn a goblin at player's location (with shortbow) ──
@@ -182,7 +207,7 @@ def main() -> None:
             for n in nearby:
                 log("INFO", f"  Nearby: {n.get('description')} dist={n.get('distance_ft')}ft {n.get('direction')}")
 
-    # ── 8d–8i. Combat: multiple rounds of fighting ──
+    # ── 8d-8i. Combat: multiple rounds of fighting ──
     for combat_round in range(6):
         section(f"8.{combat_round + 4}. Combat round — attack goblin")
         ws_send({"type": "action", "name": "attack", "params": {"target_id": "goblin_1"}})
@@ -262,11 +287,7 @@ def main() -> None:
     section("12. Master: patch creature (heal)")
     rest("patch", f"/api/master/sessions/{sid}/creatures/goblin_1", {"current_hp": 7})
 
-    # ── 13. Delete session ──
-    section("13. Cleanup: delete session")
-    rest("delete", f"/api/master/sessions/{sid}")
-
-    section("DONE — all steps completed")
+    section("Test steps completed")
 
 
 def _summarize(msg: dict) -> str:

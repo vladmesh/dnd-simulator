@@ -127,12 +127,16 @@ class GameService(
             player = s.get_player()
             result[sid] = {"session_id": sid, "player_name": player.name if player else ""}
 
-        # Saved sessions on disk (not yet loaded)
-        for save_name in self._store.list_saves():
-            if save_name.startswith("session_"):
-                sid = save_name[len("session_") :]
-                if sid not in result:
-                    result[sid] = {"session_id": sid, "player_name": "(saved)"}
+        # Saved sessions on disk (not yet loaded) — scan all world subdirs
+        from dnd_simulator.storage.store import JsonFileStore
+
+        if isinstance(self._store, JsonFileStore):
+            for world_name in self._store.list_worlds():
+                for save_name in self._store.list_saves(world=world_name):
+                    if save_name.startswith("session_"):
+                        sid = save_name[len("session_") :]
+                        if sid not in result:
+                            result[sid] = {"session_id": sid, "player_name": "(saved)"}
 
         return list(result.values())
 
@@ -334,10 +338,25 @@ class GameService(
     def _try_restore_session(self, session_id: str) -> None:
         """Attempt to restore a session from its autosave file."""
         save_name = f"session_{session_id}"
-        try:
-            data = self._store.load(save_name)
-        except KeyError:
-            return
+
+        # Search across all world subdirectories
+        data: dict[str, object] | None = None
+        from dnd_simulator.storage.store import JsonFileStore
+
+        if isinstance(self._store, JsonFileStore):
+            for world_name in self._store.list_worlds():
+                try:
+                    data = self._store.load(save_name, world=world_name)
+                    break
+                except KeyError:
+                    continue
+
+        # Fallback: try root directory (backward compat)
+        if data is None:
+            try:
+                data = self._store.load(save_name)
+            except KeyError:
+                return
 
         meta = data.get("meta", {})
         assert isinstance(meta, dict)
@@ -359,7 +378,9 @@ class GameService(
 
         # Load saved world state (player state is restored as part of entities layer)
         if "world" in data:
-            session.world.load(data["world"])
+            world_data = data["world"]
+            assert isinstance(world_data, dict)
+            session.world.load(world_data)
 
             # Backward compat: old saves have separate "player" block
             player_data = data.get("player", {})
