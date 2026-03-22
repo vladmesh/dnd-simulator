@@ -1,6 +1,14 @@
-name: Sword Vale
-description: >
-  A small region around the port of Silverport.
-  Temperate coast gives way to fertile plains, dense forests,
-  treacherous swamps, scorching desert, towering mountains,
-  and frozen tundra beyond.
+name:
+  en: Sword Vale
+  ru: Долина Мечей
+description:
+  en: >
+    A small region around the port of Silverport.
+    Temperate coast gives way to fertile plains, dense forests,
+    treacherous swamps, scorching desert, towering mountains,
+    and frozen tundra beyond.
+  ru: >
+    Небольшой край вокруг порта Серебропорт.
+    Умеренное побережье сменяется плодородными равнинами,
+    густыми лесами, коварными болотами, палящей пустыней,
+    высокими горами и замёрзшей тундрой за ними.

@@ -38,6 +38,18 @@ from dnd_simulator.layers.settlements.models import Settlement, SettlementType
 from dnd_simulator.rules.geography import calculate_distance_km
 
 
+def resolve_text(value: object, lang: str = "en") -> str:
+    """Resolve a localizable text field.
+
+    If value is a plain string, return it as-is (backward compat).
+    If value is a dict (e.g. {en: "Sword Vale", ru: "Долина Мечей"}),
+    pick *lang* with fallback to 'en', then first available.
+    """
+    if isinstance(value, dict):
+        return str(value.get(lang) or value.get("en") or next(iter(value.values()), ""))
+    return str(value)
+
+
 def _read_yaml(path: Path) -> dict[str, Any]:
     """Read a YAML file, returning empty dict if file doesn't exist."""
     if not path.exists():
@@ -98,7 +110,7 @@ def parse_ability_scores(data: dict[str, Any], key: str = "ability_scores") -> A
 # -- Public loaders --
 
 
-def load_world(path: Path) -> list[Region]:
+def load_world(path: Path, lang: str = "en") -> list[Region]:
     """Load regions from a world YAML file or directory."""
     is_dir, path = _resolve_source(path)
     regions_data = _load_section(path, is_dir, "regions")
@@ -116,7 +128,7 @@ def load_world(path: Path) -> list[Region]:
         regions.append(
             Region(
                 id=str(region_id),
-                name=str(rdata["name"]),
+                name=resolve_text(rdata["name"], lang),
                 latitude=float(rdata["latitude"]),
                 longitude=float(rdata["longitude"]),
                 elevation=float(rdata["elevation"]),
@@ -129,7 +141,7 @@ def load_world(path: Path) -> list[Region]:
     return regions
 
 
-def load_locations(path: Path, regions: list[Region]) -> list[Location]:
+def load_locations(path: Path, regions: list[Region], lang: str = "en") -> list[Location]:
     """Load locations from a world YAML file or directory.
 
     If locations.yaml exists, load from it.
@@ -149,13 +161,13 @@ def load_locations(path: Path, regions: list[Region]) -> list[Location]:
         assert isinstance(locations_data, dict)
 
     if locations_data:
-        return _parse_locations(locations_data)
+        return _parse_locations(locations_data, lang)
 
     # Fallback: auto-generate from regions
     return _generate_locations_from_regions(regions)
 
 
-def _parse_locations(data: dict[str, Any]) -> list[Location]:
+def _parse_locations(data: dict[str, Any], lang: str = "en") -> list[Location]:
     """Parse locations from YAML data."""
     locations: list[Location] = []
     for loc_id, ldata in data.items():
@@ -169,11 +181,11 @@ def _parse_locations(data: dict[str, Any]) -> list[Location]:
         locations.append(
             Location(
                 id=str(loc_id),
-                name=str(ldata["name"]),
+                name=resolve_text(ldata["name"], lang),
                 region_id=str(ldata["region"]),
                 settlement_id=str(ldata.get("settlement", "")),
                 edges=edges,
-                description=str(ldata.get("description", "")),
+                description=resolve_text(ldata.get("description", ""), lang),
             )
         )
     return locations
@@ -204,7 +216,7 @@ def _generate_locations_from_regions(regions: list[Region]) -> list[Location]:
     return locations
 
 
-def load_nations(path: Path) -> list[Nation]:
+def load_nations(path: Path, lang: str = "en") -> list[Nation]:
     """Load nations from a world YAML file or directory."""
     is_dir, path = _resolve_source(path)
     nations_data = _load_section(path, is_dir, "nations")
@@ -215,7 +227,7 @@ def load_nations(path: Path) -> list[Nation]:
         leader_data = ndata.get("leader")
         if leader_data:
             leader = Leader(
-                name=str(leader_data["name"]),
+                name=resolve_text(leader_data["name"], lang),
                 age=int(leader_data["age"]),
                 trait=LeaderTrait(leader_data["trait"]),
             )
@@ -223,7 +235,7 @@ def load_nations(path: Path) -> list[Nation]:
         nations.append(
             Nation(
                 id=str(nation_id),
-                name=str(ndata["name"]),
+                name=resolve_text(ndata["name"], lang),
                 regions=[str(r) for r in ndata.get("regions", [])],
                 wealth=float(ndata.get("wealth", 50.0)),
                 military=float(ndata.get("military", 50.0)),
@@ -235,7 +247,7 @@ def load_nations(path: Path) -> list[Nation]:
     return nations
 
 
-def load_settlements(path: Path) -> list[Settlement]:
+def load_settlements(path: Path, lang: str = "en") -> list[Settlement]:
     """Load settlements from a world YAML file or directory.
 
     In directory mode, settlements are nested under regions in regions.yaml.
@@ -249,7 +261,7 @@ def load_settlements(path: Path) -> list[Settlement]:
             settlements.append(
                 Settlement(
                     id=str(sdata["id"]),
-                    name=str(sdata["name"]),
+                    name=resolve_text(sdata["name"], lang),
                     region_id=str(region_id),
                     type=SettlementType(sdata["type"]),
                     population=int(sdata.get("population", 100)),
@@ -261,19 +273,19 @@ def load_settlements(path: Path) -> list[Settlement]:
     return settlements
 
 
-def load_npcs(path: Path) -> list[Npc]:
+def load_npcs(path: Path, lang: str = "en") -> list[Npc]:
     """Load NPCs from a world YAML file or directory."""
     is_dir, path = _resolve_source(path)
     npcs_data = _load_section(path, is_dir, "npcs")
 
     npcs: list[Npc] = []
     for npc_id, ndata in npcs_data.items():
-        npcs.append(parse_npc(str(npc_id), ndata))
+        npcs.append(parse_npc(str(npc_id), ndata, lang=lang))
 
     return npcs
 
 
-def parse_npc(npc_id: str, ndata: dict[str, Any]) -> Npc:
+def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en") -> Npc:
     """Parse a single NPC from YAML data."""
     role = str(ndata.get("role", ""))
     settlement_id = str(ndata.get("settlement_id", ""))
@@ -302,12 +314,12 @@ def parse_npc(npc_id: str, ndata: dict[str, Any]) -> Npc:
 
     npc = Npc(
         id=npc_id,
-        name=str(ndata["name"]),
+        name=resolve_text(ndata["name"], lang),
         location_id=location_id,
         race=race,
         char_class=char_class,
         role=role,
-        personality=str(ndata.get("personality", "")),
+        personality=resolve_text(ndata.get("personality", ""), lang),
         settlement_id=settlement_id,
         schedule=schedule,
         speed=int(ndata.get("speed", 30)),
@@ -393,19 +405,19 @@ def load_battle_maps(path: Path) -> dict[str, BattleMap]:
     return result
 
 
-def load_world_meta(path: Path) -> dict[str, str]:
+def load_world_meta(path: Path, lang: str = "en") -> dict[str, str]:
     """Load world metadata (name, description) from directory format."""
     is_dir, path = _resolve_source(path)
     if is_dir:
         meta = _read_yaml(path / "world.yaml")
         return {
-            "name": str(meta.get("name", path.name)),
-            "description": str(meta.get("description", "")),
+            "name": resolve_text(meta.get("name", path.name), lang),
+            "description": resolve_text(meta.get("description", ""), lang),
         }
     data = _read_yaml(path)
     return {
-        "name": str(data.get("name", path.stem)),
-        "description": str(data.get("description", "")),
+        "name": resolve_text(data.get("name", path.stem), lang),
+        "description": resolve_text(data.get("description", ""), lang),
     }
 
 

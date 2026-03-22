@@ -1,5 +1,7 @@
 silverport:
-  name: Silverport
+  name:
+    en: Silverport
+    ru: Серебропорт
   latitude: 45.0
   longitude: -2.0
   elevation: 5
@@ -12,20 +14,26 @@ silverport:
       direction: se
   settlements:
     - id: silverport_city
-      name: Silverport City
+      name:
+        en: Silverport City
+        ru: Город Серебропорт
       type: city
       population: 5000
       prosperity: 70
       defenses: 60
     - id: fishing_hamlet
-      name: Fishing Hamlet
+      name:
+        en: Fishing Hamlet
+        ru: Рыбацкий Хутор
       type: village
       population: 200
       prosperity: 50
       defenses: 10
 
 highfield:
-  name: Highfield Plains
+  name:
+    en: Highfield Plains
+    ru: Высокопольские Равнины
   latitude: 45.5
   longitude: 0.0
   elevation: 150
@@ -42,20 +50,26 @@ highfield:
       direction: e
   settlements:
     - id: highfield_town
-      name: Highfield Town
+      name:
+        en: Highfield Town
+        ru: Город Высокополье
       type: town
       population: 1500
       prosperity: 60
       defenses: 30
     - id: wheat_village
-      name: Wheat Village
+      name:
+        en: Wheat Village
+        ru: Пшеничная Деревня
       type: village
       population: 400
       prosperity: 55
       defenses: 5
 
 greenwood:
-  name: Greenwood Forest
+  name:
+    en: Greenwood Forest
+    ru: Зеленолесье
   latitude: 44.0
   longitude: -1.0
   elevation: 100
@@ -68,14 +82,18 @@ greenwood:
       direction: ne
   settlements:
     - id: greenwood_village
-      name: Greenwood Village
+      name:
+        en: Greenwood Village
+        ru: Деревня Зеленолесья
       type: village
       population: 300
       prosperity: 45
       defenses: 15
 
 iron_peaks:
-  name: Iron Peaks
+  name:
+    en: Iron Peaks
+    ru: Железные Пики
   latitude: 48.0
   longitude: 0.5
   elevation: 2800
@@ -88,20 +106,26 @@ iron_peaks:
       direction: n
   settlements:
     - id: iron_keep
-      name: Iron Keep
+      name:
+        en: Iron Keep
+        ru: Железная Крепость
       type: town
       population: 800
       prosperity: 50
       defenses: 70
     - id: miners_rest
-      name: Miner's Rest
+      name:
+        en: Miner's Rest
+        ru: Привал Шахтёров
       type: village
       population: 200
       prosperity: 40
       defenses: 10
 
 frostholm:
-  name: Frostholm
+  name:
+    en: Frostholm
+    ru: Морозград
   latitude: 55.0
   longitude: 1.0
   elevation: 800
@@ -112,14 +136,18 @@ frostholm:
       direction: s
   settlements:
     - id: frostholm_outpost
-      name: Frostholm Outpost
+      name:
+        en: Frostholm Outpost
+        ru: Застава Морозграда
       type: village
       population: 150
       prosperity: 30
       defenses: 40
 
 bogmire:
-  name: Bogmire Marsh
+  name:
+    en: Bogmire Marsh
+    ru: Болотная Топь
   latitude: 44.5
   longitude: 2.5
   elevation: 20
@@ -132,14 +160,18 @@ bogmire:
       direction: s
   settlements:
     - id: bogtown
-      name: Bogtown
+      name:
+        en: Bogtown
+        ru: Болотоград
       type: village
       population: 250
       prosperity: 35
       defenses: 15
 
 dustmere:
-  name: Dustmere Wastes
+  name:
+    en: Dustmere Wastes
+    ru: Пыльнотопская Пустошь
   latitude: 40.0
   longitude: 3.0
   elevation: 400
@@ -150,7 +182,9 @@ dustmere:
       direction: n
   settlements:
     - id: dustmere_oasis
-      name: Dustmere Oasis
+      name:
+        en: Dustmere Oasis
+        ru: Оазис Пыльнотопья
       type: town
       population: 600
       prosperity: 45

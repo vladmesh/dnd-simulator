@@ -1,10 +1,14 @@
 # === Silverport City ===
 
 silverport_city_tavern:
-  name: "The Salty Anchor"
+  name:
+    en: "The Salty Anchor"
+    ru: "Солёный Якорь"
   region: silverport
   settlement: silverport_city
-  description: "A rowdy dockside tavern. The smell of ale and fried fish fills the air."
+  description:
+    en: "A rowdy dockside tavern. The smell of ale and fried fish fills the air."
+    ru: "Шумная портовая таверна. В воздухе витает запах эля и жареной рыбы."
   neighbors:
     - target: silverport_city_market
       distance: 200
@@ -12,10 +16,14 @@ silverport_city_tavern:
       distance: 100
 
 silverport_city_market:
-  name: "Silverport Market Square"
+  name:
+    en: "Silverport Market Square"
+    ru: "Рыночная площадь Серебропорта"
   region: silverport
   settlement: silverport_city
-  description: "A bustling open-air market near the city center."
+  description:
+    en: "A bustling open-air market near the city center."
+    ru: "Оживлённый рынок под открытым небом в центре города."
   neighbors:
     - target: silverport_city_tavern
       distance: 200
@@ -25,28 +33,40 @@ silverport_city_market:
       distance: 300
 
 silverport_city_smithy:
-  name: "Edgar's Smithy"
+  name:
+    en: "Edgar's Smithy"
+    ru: "Кузница Эдгара"
   region: silverport
   settlement: silverport_city
-  description: "A soot-covered forge near the eastern wall. The clang of hammer on anvil rings out."
+  description:
+    en: "A soot-covered forge near the eastern wall. The clang of hammer on anvil rings out."
+    ru: "Покрытая копотью кузница у восточной стены. Раздаётся звон молота о наковальню."
   neighbors:
     - target: silverport_city_market
       distance: 150
 
 silverport_city_docks:
-  name: "Silverport Docks"
+  name:
+    en: "Silverport Docks"
+    ru: "Доки Серебропорта"
   region: silverport
   settlement: silverport_city
-  description: "Creaking wooden piers stretch into the grey harbor. Fishing boats bob in the waves."
+  description:
+    en: "Creaking wooden piers stretch into the grey harbor. Fishing boats bob in the waves."
+    ru: "Скрипучие деревянные причалы тянутся в серую гавань. Рыбацкие лодки покачиваются на волнах."
   neighbors:
     - target: silverport_city_tavern
       distance: 100
 
 silverport_city_gate:
-  name: "Silverport City Gates"
+  name:
+    en: "Silverport City Gates"
+    ru: "Городские ворота Серебропорта"
   region: silverport
   settlement: silverport_city
-  description: "Stone gatehouse with heavy iron-bound doors. Guards stand watch."
+  description:
+    en: "Stone gatehouse with heavy iron-bound doors. Guards stand watch."
+    ru: "Каменная надвратная башня с тяжёлыми окованными железом дверями. Стража стоит на посту."
   neighbors:
     - target: silverport_city_market
       distance: 300
@@ -60,19 +80,27 @@ silverport_city_gate:
       distance: 500
 
 silverport_city_barracks:
-  name: "City Barracks"
+  name:
+    en: "City Barracks"
+    ru: "Городские казармы"
   region: silverport
   settlement: silverport_city
-  description: "A stone building beside the gates. The city guard musters here."
+  description:
+    en: "A stone building beside the gates. The city guard musters here."
+    ru: "Каменное здание рядом с воротами. Здесь собирается городская стража."
   neighbors:
     - target: silverport_city_gate
       distance: 50
 
 silverport_city_home:
-  name: "Residential Quarter"
+  name:
+    en: "Residential Quarter"
+    ru: "Жилой квартал"
   region: silverport
   settlement: silverport_city
-  description: "Narrow streets of timber-framed houses behind the market."
+  description:
+    en: "Narrow streets of timber-framed houses behind the market."
+    ru: "Узкие улочки фахверковых домов за рынком."
   neighbors:
     - target: silverport_city_market
       distance: 200
@@ -80,10 +108,14 @@ silverport_city_home:
 # === Fishing Hamlet ===
 
 fishing_hamlet_shore:
-  name: "Fishing Hamlet Shore"
+  name:
+    en: "Fishing Hamlet Shore"
+    ru: "Берег Рыбацкого Хутора"
   region: silverport
   settlement: fishing_hamlet
-  description: "A cluster of huts on a rocky beach south of the city."
+  description:
+    en: "A cluster of huts on a rocky beach south of the city."
+    ru: "Скопление хижин на скалистом берегу к югу от города."
   neighbors:
     - target: silverport_city_gate
       distance: 3000
@@ -91,9 +123,13 @@ fishing_hamlet_shore:
 # === Roads from Silverport ===
 
 silverport_highfield_road:
-  name: "East Road to Highfield"
+  name:
+    en: "East Road to Highfield"
+    ru: "Восточный тракт к Высокополью"
   region: silverport
-  description: "A well-worn trade road heading east through rolling hills."
+  description:
+    en: "A well-worn trade road heading east through rolling hills."
+    ru: "Протоптанный торговый тракт, ведущий на восток через пологие холмы."
   neighbors:
     - target: silverport_city_gate
       distance: 500
@@ -101,9 +137,13 @@ silverport_highfield_road:
       distance: 155000
 
 silverport_greenwood_road:
-  name: "Forest Road to Greenwood"
+  name:
+    en: "Forest Road to Greenwood"
+    ru: "Лесная дорога к Зеленолесью"
   region: silverport
-  description: "A narrow path winding southeast into dark woods."
+  description:
+    en: "A narrow path winding southeast into dark woods."
+    ru: "Узкая тропа, петляющая на юго-восток в тёмные леса."
   neighbors:
     - target: silverport_city_gate
       distance: 500
@@ -113,10 +153,14 @@ silverport_greenwood_road:
 # === Highfield Town ===
 
 highfield_town_gate:
-  name: "Highfield Town Gate"
+  name:
+    en: "Highfield Town Gate"
+    ru: "Ворота Высокополья"
   region: highfield
   settlement: highfield_town
-  description: "A simple wooden palisade with an open gate. Wheat fields stretch to the horizon."
+  description:
+    en: "A simple wooden palisade with an open gate. Wheat fields stretch to the horizon."
+    ru: "Простой деревянный частокол с открытыми воротами. Пшеничные поля тянутся до горизонта."
   neighbors:
     - target: highfield_town_market
       distance: 200
@@ -130,10 +174,14 @@ highfield_town_gate:
       distance: 500
 
 highfield_town_market:
-  name: "Highfield Market"
+  name:
+    en: "Highfield Market"
+    ru: "Рынок Высокополья"
   region: highfield
   settlement: highfield_town
-  description: "A modest market square where farmers sell grain and livestock."
+  description:
+    en: "A modest market square where farmers sell grain and livestock."
+    ru: "Скромная рыночная площадь, где фермеры продают зерно и скот."
   neighbors:
     - target: highfield_town_gate
       distance: 200
@@ -141,28 +189,40 @@ highfield_town_market:
       distance: 100
 
 highfield_town_tavern:
-  name: "The Golden Sheaf"
+  name:
+    en: "The Golden Sheaf"
+    ru: "Золотой Сноп"
   region: highfield
   settlement: highfield_town
-  description: "A warm inn popular with travelers and farmers alike."
+  description:
+    en: "A warm inn popular with travelers and farmers alike."
+    ru: "Уютная таверна, любимая путешественниками и фермерами."
   neighbors:
     - target: highfield_town_market
       distance: 100
 
 highfield_town_home:
-  name: "Highfield Homes"
+  name:
+    en: "Highfield Homes"
+    ru: "Дома Высокополья"
   region: highfield
   settlement: highfield_town
-  description: "Simple stone cottages along dirt lanes."
+  description:
+    en: "Simple stone cottages along dirt lanes."
+    ru: "Простые каменные домики вдоль грунтовых дорог."
   neighbors:
     - target: highfield_town_market
       distance: 150
 
 highfield_town_fields:
-  name: "Wheat Fields"
+  name:
+    en: "Wheat Fields"
+    ru: "Пшеничные поля"
   region: highfield
   settlement: highfield_town
-  description: "Endless golden fields of wheat swaying in the wind."
+  description:
+    en: "Endless golden fields of wheat swaying in the wind."
+    ru: "Бескрайние золотые поля пшеницы, колышущиеся на ветру."
   neighbors:
     - target: highfield_town_gate
       distance: 400
@@ -170,9 +230,13 @@ highfield_town_fields:
 # === Roads from Highfield ===
 
 highfield_iron_road:
-  name: "Mountain Road to Iron Peaks"
+  name:
+    en: "Mountain Road to Iron Peaks"
+    ru: "Горный тракт к Железным Пикам"
   region: highfield
-  description: "A steep road climbing north into the mountains."
+  description:
+    en: "A steep road climbing north into the mountains."
+    ru: "Крутая дорога, поднимающаяся на север в горы."
   neighbors:
     - target: highfield_town_gate
       distance: 500
@@ -180,9 +244,13 @@ highfield_iron_road:
       distance: 310000
 
 highfield_bogmire_road:
-  name: "Marsh Road to Bogmire"
+  name:
+    en: "Marsh Road to Bogmire"
+    ru: "Болотная дорога к Топи"
   region: highfield
-  description: "A muddy track heading east toward the swamps."
+  description:
+    en: "A muddy track heading east toward the swamps."
+    ru: "Грязная тропа, ведущая на восток к болотам."
   neighbors:
     - target: highfield_town_gate
       distance: 500
@@ -190,9 +258,13 @@ highfield_bogmire_road:
       distance: 230000
 
 greenwood_highfield_road:
-  name: "Southwest Road to Greenwood"
+  name:
+    en: "Southwest Road to Greenwood"
+    ru: "Юго-западная дорога к Зеленолесью"
   region: highfield
-  description: "A road heading southwest toward the forest."
+  description:
+    en: "A road heading southwest toward the forest."
+    ru: "Дорога, ведущая на юго-запад к лесу."
   neighbors:
     - target: highfield_town_gate
       distance: 500
@@ -202,10 +274,14 @@ greenwood_highfield_road:
 # === Greenwood Village ===
 
 greenwood_village_edge:
-  name: "Greenwood Village Edge"
+  name:
+    en: "Greenwood Village Edge"
+    ru: "Окраина деревни Зеленолесья"
   region: greenwood
   settlement: greenwood_village
-  description: "A clearing in the ancient forest. Moss-covered cottages huddle between the trees."
+  description:
+    en: "A clearing in the ancient forest. Moss-covered cottages huddle between the trees."
+    ru: "Поляна в древнем лесу. Покрытые мхом домики жмутся между деревьев."
   neighbors:
     - target: greenwood_village_tavern
       distance: 100
@@ -215,19 +291,27 @@ greenwood_village_edge:
       distance: 185000
 
 greenwood_village_tavern:
-  name: "The Mossy Log"
+  name:
+    en: "The Mossy Log"
+    ru: "Мшистый Пень"
   region: greenwood
   settlement: greenwood_village
-  description: "A low-ceilinged tavern built into a massive hollow tree stump."
+  description:
+    en: "A low-ceilinged tavern built into a massive hollow tree stump."
+    ru: "Таверна с низким потолком, устроенная в огромном пустом пне."
   neighbors:
     - target: greenwood_village_edge
       distance: 100
 
 greenwood_village_home:
-  name: "Forest Homes"
+  name:
+    en: "Forest Homes"
+    ru: "Лесные дома"
   region: greenwood
   settlement: greenwood_village
-  description: "Wooden huts among the trees, connected by narrow paths."
+  description:
+    en: "Wooden huts among the trees, connected by narrow paths."
+    ru: "Деревянные хижины среди деревьев, соединённые узкими тропами."
   neighbors:
     - target: greenwood_village_edge
       distance: 80
@@ -235,10 +319,14 @@ greenwood_village_home:
 # === Iron Keep ===
 
 iron_keep_gate:
-  name: "Iron Keep Gate"
+  name:
+    en: "Iron Keep Gate"
+    ru: "Ворота Железной Крепости"
   region: iron_peaks
   settlement: iron_keep
-  description: "A fortified gate carved into the mountainside. The air smells of sulfur and hot metal."
+  description:
+    en: "A fortified gate carved into the mountainside. The air smells of sulfur and hot metal."
+    ru: "Укреплённые ворота, высеченные в склоне горы. В воздухе пахнет серой и раскалённым металлом."
   neighbors:
     - target: iron_keep_forge
       distance: 100
@@ -248,19 +336,27 @@ iron_keep_gate:
       distance: 500
 
 iron_keep_forge:
-  name: "The Great Forge"
+  name:
+    en: "The Great Forge"
+    ru: "Великая Кузня"
   region: iron_peaks
   settlement: iron_keep
-  description: "A cavernous forge lit by rivers of molten metal. The heat is oppressive."
+  description:
+    en: "A cavernous forge lit by rivers of molten metal. The heat is oppressive."
+    ru: "Пещерная кузня, освещённая потоками расплавленного металла. Жар невыносимый."
   neighbors:
     - target: iron_keep_gate
       distance: 100
 
 iron_keep_home:
-  name: "Iron Keep Quarters"
+  name:
+    en: "Iron Keep Quarters"
+    ru: "Жилые покои Крепости"
   region: iron_peaks
   settlement: iron_keep
-  description: "Cramped chambers carved into rock, warmed by the forge below."
+  description:
+    en: "Cramped chambers carved into rock, warmed by the forge below."
+    ru: "Тесные каморки, высеченные в скале, согретые кузней внизу."
   neighbors:
     - target: iron_keep_forge
       distance: 50
@@ -268,9 +364,13 @@ iron_keep_home:
 # === Road from Iron Peaks to Frostholm ===
 
 iron_peaks_north_pass:
-  name: "North Pass"
+  name:
+    en: "North Pass"
+    ru: "Северный перевал"
   region: iron_peaks
-  description: "A treacherous mountain pass leading north into the frozen wastes."
+  description:
+    en: "A treacherous mountain pass leading north into the frozen wastes."
+    ru: "Опасный горный перевал, ведущий на север в замёрзшие пустоши."
   neighbors:
     - target: iron_keep_gate
       distance: 500
@@ -280,19 +380,27 @@ iron_peaks_north_pass:
 # === Frostholm ===
 
 frostholm_outpost_camp:
-  name: "Frostholm Outpost"
+  name:
+    en: "Frostholm Outpost"
+    ru: "Застава Морозграда"
   region: frostholm
   settlement: frostholm_outpost
-  description: "A wind-battered cluster of tents and stone shelters at the edge of the world."
+  description:
+    en: "A wind-battered cluster of tents and stone shelters at the edge of the world."
+    ru: "Продуваемое ветрами скопление палаток и каменных укрытий на краю мира."
   neighbors:
     - target: iron_peaks_north_pass
       distance: 800000
 
 frostholm_outpost_home:
-  name: "Outpost Shelters"
+  name:
+    en: "Outpost Shelters"
+    ru: "Укрытия заставы"
   region: frostholm
   settlement: frostholm_outpost
-  description: "Low stone huts insulated with furs and packed snow."
+  description:
+    en: "Low stone huts insulated with furs and packed snow."
+    ru: "Низкие каменные хижины, утеплённые мехами и спрессованным снегом."
   neighbors:
     - target: frostholm_outpost_camp
       distance: 50
@@ -300,10 +408,14 @@ frostholm_outpost_home:
 # === Bogmire ===
 
 bogtown_entrance:
-  name: "Bogtown"
+  name:
+    en: "Bogtown"
+    ru: "Болотоград"
   region: bogmire
   settlement: bogtown
-  description: "A miserable settlement built on stilts above the fetid swamp."
+  description:
+    en: "A miserable settlement built on stilts above the fetid swamp."
+    ru: "Жалкое поселение на сваях над зловонным болотом."
   neighbors:
     - target: highfield_bogmire_road
       distance: 230000
@@ -311,10 +423,14 @@ bogtown_entrance:
       distance: 500
 
 bogtown_home:
-  name: "Bogtown Hovels"
+  name:
+    en: "Bogtown Hovels"
+    ru: "Лачуги Болотограда"
   region: bogmire
   settlement: bogtown
-  description: "Ramshackle huts connected by rotting boardwalks."
+  description:
+    en: "Ramshackle huts connected by rotting boardwalks."
+    ru: "Покосившиеся хижины, соединённые гнилыми мостками."
   neighbors:
     - target: bogtown_entrance
       distance: 100
@@ -322,9 +438,13 @@ bogtown_home:
 # === Road from Bogmire to Dustmere ===
 
 bogmire_dustmere_road:
-  name: "Desert Road South"
+  name:
+    en: "Desert Road South"
+    ru: "Южная дорога в пустыню"
   region: bogmire
-  description: "The swamp gradually dries into cracked earth heading south."
+  description:
+    en: "The swamp gradually dries into cracked earth heading south."
+    ru: "Болото постепенно высыхает, переходя в растрескавшуюся землю по пути на юг."
   neighbors:
     - target: bogtown_entrance
       distance: 500
@@ -334,19 +454,27 @@ bogmire_dustmere_road:
 # === Dustmere ===
 
 dustmere_oasis_gate:
-  name: "Dustmere Oasis"
+  name:
+    en: "Dustmere Oasis"
+    ru: "Оазис Пыльнотопья"
   region: dustmere
   settlement: dustmere_oasis
-  description: "A walled settlement around a natural spring in the vast desert."
+  description:
+    en: "A walled settlement around a natural spring in the vast desert."
+    ru: "Обнесённое стенами поселение вокруг природного источника посреди бескрайней пустыни."
   neighbors:
     - target: bogmire_dustmere_road
       distance: 530000
 
 dustmere_oasis_home:
-  name: "Oasis Quarter"
+  name:
+    en: "Oasis Quarter"
+    ru: "Квартал Оазиса"
   region: dustmere
   settlement: dustmere_oasis
-  description: "Sun-bleached mud-brick houses clustered around the central spring."
+  description:
+    en: "Sun-bleached mud-brick houses clustered around the central spring."
+    ru: "Выгоревшие на солнце саманные дома вокруг центрального источника."
   neighbors:
     - target: dustmere_oasis_gate
       distance: 100

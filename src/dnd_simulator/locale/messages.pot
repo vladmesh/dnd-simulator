@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-03-21 16:55+0200\n"
+"POT-Creation-Date: 2026-03-22 22:19+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -15,13 +15,93 @@ msgstr ""
 "Generated-By: pygettext.py 1.5\n"
 
 
-#: src/dnd_simulator/core/character.py:335
-#: src/dnd_simulator/core/character.py:340
-msgid "looks wounded"
+#: src/dnd_simulator/adapters/api/routes_master.py:48
+msgid "World '{}' already exists"
 msgstr ""
 
-#: src/dnd_simulator/core/character.py:430
-msgid "fists"
+#: src/dnd_simulator/adapters/api/routes_master.py:59
+#: src/dnd_simulator/adapters/api/routes_master.py:69
+msgid "World '{}' not found"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_master.py:144
+msgid "Session {} deleted"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_master.py:192
+#: src/dnd_simulator/adapters/api/routes_master.py:231
+#: src/dnd_simulator/adapters/api/routes_master.py:245
+msgid "No fields to update"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_master.py:197
+msgid "Creature {} updated"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_master.py:208
+msgid "Creature {} removed"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_master.py:219
+msgid "Creature {} brain set to {}"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_master.py:236
+msgid "Nation {} updated"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_master.py:250
+msgid "Settlement {} updated"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_master.py:264
+msgid "Advanced {}h."
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_master.py:266
+msgid "Events:"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_master.py:279
+msgid "Language set to '{}'"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_master.py:302
+msgid "Saved as '{}'"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_master.py:315
+msgid "Loaded '{}'"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_master.py:328
+msgid "Deleted '{}'"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_player.py:38
+#: src/dnd_simulator/service/game_service.py:328
+msgid "No player in this session"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_ws.py:229
+msgid "Session '{}' not found"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_ws.py:235
+msgid "No player in session"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_ws.py:338
+msgid "Rate limited, slow down"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_ws.py:356
+msgid "Unknown message type: {}"
+msgstr ""
+
+#: src/dnd_simulator/core/character.py:333
+#: src/dnd_simulator/core/character.py:338
+msgid "looks wounded"
 msgstr ""
 
 #: src/dnd_simulator/core/combat.py:170
@@ -34,82 +114,6 @@ msgstr ""
 
 #: src/dnd_simulator/core/combat.py:181
 msgid "horizontal wall y={y} from x={x1} to x={x2}"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:86 src/dnd_simulator/core/player.py:152
-msgid "Usage: attack <target>"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:100
-msgid "Commands: look, status, say <text>, attack <target>, wait [hours], idle"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:116
-msgid "combat> "
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:170
-msgid "Usage: move/dash <toward|away|north|south|...> [target]"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:193
-msgid "Commands: attack <target>, move <direction> [target], dash <direction> [target], dodge, flee, status, idle"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:213
-msgid "Terrain:"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:215
-msgid "Weather:"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:221
-msgid "Creatures:"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:232
-msgid "Paths:"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:245
-msgid "HP: {hp}/{max_hp} | AC: {ac} | Gold: {gold}"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:252
-msgid "Attacks:"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:265
-msgid "Usage: wait [hours]"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:268
-msgid "Minimum 1 hour."
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:271
-msgid "Passed {hours} h."
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:282
-msgid "Combat, round {round} (HP: {hp}/{max_hp}, weapon: {weapon}, speed: {speed} ft)"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:290
-msgid "Around:"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:301
-msgid "Walls:"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:307 src/dnd_simulator/core/player.py:326
-msgid "What happened:"
-msgstr ""
-
-#: src/dnd_simulator/core/player.py:318
-msgid "Your turn (HP: {hp}/{max_hp}, time: {hour}:00, day {day})"
 msgstr ""
 
 #: src/dnd_simulator/layers/entities/combat_manager.py:155
@@ -161,71 +165,71 @@ msgstr ""
 msgid "Target too far ({dist} ft, reach {reach} ft)."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:238
+#: src/dnd_simulator/layers/entities/models.py:209
 msgid "Need something forged?"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:239
+#: src/dnd_simulator/layers/entities/models.py:210
 msgid "Hm? Oh, I'm off duty."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:241
+#: src/dnd_simulator/layers/entities/models.py:212
 msgid "What'll it be?"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:242
+#: src/dnd_simulator/layers/entities/models.py:213
 msgid "Kitchen's closed. Come back later."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:244
+#: src/dnd_simulator/layers/entities/models.py:215
 msgid "Move along, citizen."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:245
+#: src/dnd_simulator/layers/entities/models.py:216
 msgid "Quiet night, eh?"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:247
+#: src/dnd_simulator/layers/entities/models.py:218
 msgid "Looking to buy something?"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:248
+#: src/dnd_simulator/layers/entities/models.py:219
 msgid "Shop's closed. Try tomorrow."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:250
+#: src/dnd_simulator/layers/entities/models.py:221
 msgid "Can't talk, crops won't tend themselves."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:251
+#: src/dnd_simulator/layers/entities/models.py:222
 msgid "Fine evening, isn't it?"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:255
+#: src/dnd_simulator/layers/entities/models.py:226
 msgid "I'm busy."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:256
+#: src/dnd_simulator/layers/entities/models.py:227
 msgid "Hm?"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:257
+#: src/dnd_simulator/layers/entities/models.py:228
 msgid "Zzz..."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:262
+#: src/dnd_simulator/layers/entities/models.py:233
 msgid "Leave me alone!"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:263
+#: src/dnd_simulator/layers/entities/models.py:234
 msgid "Shh... Something's not right."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:264
+#: src/dnd_simulator/layers/entities/models.py:235
 msgid "I... I can't talk right now."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:265
+#: src/dnd_simulator/layers/entities/models.py:236
 msgid "What do you want?"
 msgstr ""
 
@@ -325,19 +329,19 @@ msgstr ""
 msgid "Combat started! Initiative order: {order}"
 msgstr ""
 
-#: src/dnd_simulator/llm/brain.py:59
+#: src/dnd_simulator/llm/brain.py:62
 msgid "You must choose an action: attack, move, dash, dodge, flee, or idle."
 msgstr ""
 
-#: src/dnd_simulator/llm/brain.py:72
+#: src/dnd_simulator/llm/brain.py:69
 msgid "You must choose an action: say, attack, or idle."
 msgstr ""
 
-#: src/dnd_simulator/llm/brain.py:80
+#: src/dnd_simulator/llm/brain.py:73
 msgid "Your turn. Choose an action."
 msgstr ""
 
-#: src/dnd_simulator/llm/brain.py:83
+#: src/dnd_simulator/llm/brain.py:76
 msgid ""
 "What happened since your last turn:\n"
 "{events}\n"
@@ -503,5 +507,25 @@ msgstr ""
 
 #: src/dnd_simulator/rules/movement.py:54
 msgid "to the southwest"
+msgstr ""
+
+#: src/dnd_simulator/service/commands_creatures.py:78
+msgid "Cannot edit player character from master panel"
+msgstr ""
+
+#: src/dnd_simulator/service/commands_creatures.py:110
+msgid "Cannot remove player character from master panel"
+msgstr ""
+
+#: src/dnd_simulator/service/commands_creatures.py:127
+msgid "Cannot change player brain from master panel"
+msgstr ""
+
+#: src/dnd_simulator/service/commands_creatures.py:135
+msgid "LLM not configured"
+msgstr ""
+
+#: src/dnd_simulator/service/game_service.py:309
+msgid "Session already has a player"
 msgstr ""
 

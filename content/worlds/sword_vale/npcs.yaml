@@ -1,14 +1,21 @@
 edgar:
-  name: Edgar the Smith
+  name:
+    en: Edgar the Smith
+    ru: Эдгар Кузнец
   start_location: silverport_city_smithy
   settlement_id: silverport_city
   role: blacksmith
   hp: 18
   ac: 12
-  personality: >
-    Gruff but fair. Takes pride in his craft.
-    Worried about iron supply from Iron Peaks since
-    relations with Ironmark are tense.
+  personality:
+    en: >
+      Gruff but fair. Takes pride in his craft.
+      Worried about iron supply from Iron Peaks since
+      relations with Ironmark are tense.
+    ru: >
+      Грубоватый, но справедливый. Гордится своим ремеслом.
+      Беспокоится о поставках железа из Железных Пиков,
+      так как отношения с Железной Конфедерацией напряжённые.
   attacks:
     - name: hammer
       ability: str
@@ -17,32 +24,52 @@ edgar:
           type: bludgeoning
 
 marta:
-  name: Marta
+  name:
+    en: Marta
+    ru: Марта
   start_location: silverport_city_tavern
   settlement_id: silverport_city
   role: tavern_keeper
-  personality: >
-    Cheerful and gossipy. Knows everyone's business
-    in Silverport. Loves a good story and always has
-    a rumor to share. Has a soft spot for tieflings —
-    her late husband was one. Always eager to help
-    any tiefling she meets, offers them free drinks
-    and goes out of her way to assist them.
+  personality:
+    en: >
+      Cheerful and gossipy. Knows everyone's business
+      in Silverport. Loves a good story and always has
+      a rumor to share. Has a soft spot for tieflings —
+      her late husband was one. Always eager to help
+      any tiefling she meets, offers them free drinks
+      and goes out of her way to assist them.
+    ru: >
+      Весёлая и любит посплетничать. Знает все дела
+      в Серебропорте. Обожает хорошие истории и всегда
+      припасёт свежий слух. Питает слабость к тифлингам —
+      её покойный муж был тифлингом. Всегда рада помочь
+      любому тифлингу, угощает бесплатной выпивкой
+      и всячески старается им помочь.
 
 rodrik:
-  name: Guard Captain Rodrik
+  name:
+    en: Guard Captain Rodrik
+    ru: Капитан стражи Родрик
   start_location: silverport_city_barracks
   settlement_id: silverport_city
   role: guard
   hp: 32
   ac: 16
-  personality: >
-    Disciplined, loyal to King Aldric. Suspicious of
-    strangers. Veteran of border skirmishes with Ironmark.
-    Quietly worried about the kingdom's small military.
-    Deeply distrusts tieflings — believes their infernal
-    blood makes them untrustworthy. Will refuse to speak
-    with tieflings and may order them to leave.
+  personality:
+    en: >
+      Disciplined, loyal to King Aldric. Suspicious of
+      strangers. Veteran of border skirmishes with Ironmark.
+      Quietly worried about the kingdom's small military.
+      Deeply distrusts tieflings — believes their infernal
+      blood makes them untrustworthy. Will refuse to speak
+      with tieflings and may order them to leave.
+    ru: >
+      Дисциплинированный, верен Королю Олдрику. Подозрительно
+      относится к чужакам. Ветеран пограничных стычек с
+      Железной Конфедерацией. Втайне обеспокоен малочисленностью
+      армии королевства. Глубоко не доверяет тифлингам — считает,
+      что их инфернальная кровь делает их ненадёжными. Откажется
+      говорить с тифлингами и может приказать им уйти.
   attacks:
     - name: longsword
       ability: str

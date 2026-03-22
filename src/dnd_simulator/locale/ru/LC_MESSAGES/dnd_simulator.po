@@ -517,3 +517,81 @@ msgstr "Я... Не могу сейчас говорить."
 
 msgid "What do you want?"
 msgstr "Чего тебе надо?"
+
+#: src/dnd_simulator/adapters/api/ (API messages)
+msgid "World '{}' already exists"
+msgstr "Мир '{}' уже существует"
+
+msgid "World '{}' not found"
+msgstr "Мир '{}' не найден"
+
+msgid "Session {} deleted"
+msgstr "Сессия {} удалена"
+
+msgid "No fields to update"
+msgstr "Нет полей для обновления"
+
+msgid "Creature {} updated"
+msgstr "Существо {} обновлено"
+
+msgid "Creature {} removed"
+msgstr "Существо {} удалено"
+
+msgid "Creature {} brain set to {}"
+msgstr "Мозг существа {} установлен на {}"
+
+msgid "Nation {} updated"
+msgstr "Нация {} обновлена"
+
+msgid "Settlement {} updated"
+msgstr "Поселение {} обновлено"
+
+msgid "Advanced {}h."
+msgstr "Перемотано на {}ч."
+
+msgid "Events:"
+msgstr "События:"
+
+msgid "Language set to '{}'"
+msgstr "Язык установлен на '{}'"
+
+msgid "Saved as '{}'"
+msgstr "Сохранено как '{}'"
+
+msgid "Loaded '{}'"
+msgstr "Загружено '{}'"
+
+msgid "Deleted '{}'"
+msgstr "Удалено '{}'"
+
+msgid "No player in this session"
+msgstr "В этой сессии нет игрока"
+
+msgid "Session already has a player"
+msgstr "В сессии уже есть игрок"
+
+#: src/dnd_simulator/adapters/api/routes_ws.py
+msgid "Session '{}' not found"
+msgstr "Сессия '{}' не найдена"
+
+msgid "No player in session"
+msgstr "В сессии нет игрока"
+
+msgid "Rate limited, slow down"
+msgstr "Слишком много запросов, подождите"
+
+msgid "Unknown message type: {}"
+msgstr "Неизвестный тип сообщения: {}"
+
+#: src/dnd_simulator/service/commands_creatures.py
+msgid "Cannot edit player character from master panel"
+msgstr "Нельзя редактировать персонажа игрока из панели мастера"
+
+msgid "Cannot remove player character from master panel"
+msgstr "Нельзя удалить персонажа игрока из панели мастера"
+
+msgid "Cannot change player brain from master panel"
+msgstr "Нельзя изменить мозг игрока из панели мастера"
+
+msgid "LLM not configured"
+msgstr "LLM не настроен"
