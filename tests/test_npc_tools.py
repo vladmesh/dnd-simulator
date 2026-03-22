@@ -29,6 +29,16 @@ def _noop_emit_fn(event: object) -> ActionResult:
     return ActionResult()
 
 
+def _run_turn(layer: EntitiesLayer, npc: Npc, emit_fn: object = None) -> None:
+    """Run a single brain→execute turn (replaces removed layer.run_creature_turn)."""
+    if npc.brain is None:
+        return
+    awareness = layer.build_awareness(npc, _TIME, _noop_query_fn)
+    events = layer.get_perceived_events(npc)
+    action = npc.brain.choose_action(npc, awareness, events)
+    npc.execute_action(action, emit_fn or _noop_emit_fn)
+
+
 class TestBuildNpcTools:
     def test_always_has_say_idle_attack(self) -> None:
         tools = build_npc_tools()
@@ -56,7 +66,7 @@ class TestNpcTurnOrchestration:
             emit_calls.append(event)
             return ActionResult()
 
-        layer.run_creature_turn(npc, _TIME, _noop_query_fn, capture_emit)
+        _run_turn(layer, npc, capture_emit)
         assert emit_calls == []
 
     def test_llm_say_sends_event(self) -> None:
@@ -73,7 +83,7 @@ class TestNpcTurnOrchestration:
             emit_calls.append(event)
             return ActionResult()
 
-        layer.run_creature_turn(npc, _TIME, _noop_query_fn, capture_emit)
+        _run_turn(layer, npc, capture_emit)
         assert len(emit_calls) == 1
         assert emit_calls[0].event_type == EventType.ENTITY_SAY
         assert emit_calls[0].data["text"] == "Привет!"
@@ -92,7 +102,7 @@ class TestNpcTurnOrchestration:
             emit_calls.append(event)
             return ActionResult()
 
-        layer.run_creature_turn(npc, _TIME, _noop_query_fn, capture_emit)
+        _run_turn(layer, npc, capture_emit)
         assert emit_calls == []
 
     def test_llm_attack_sends_event(self) -> None:
@@ -109,7 +119,7 @@ class TestNpcTurnOrchestration:
             emit_calls.append(event)
             return ActionResult()
 
-        layer.run_creature_turn(npc, _TIME, _noop_query_fn, capture_emit)
+        _run_turn(layer, npc, capture_emit)
         assert len(emit_calls) == 1
         assert emit_calls[0].event_type == EventType.ENTITY_ATTACK
         assert emit_calls[0].data["attacker_id"] == "n1"
@@ -126,7 +136,7 @@ class TestNpcTurnOrchestration:
         ]
         npc.brain = LlmBrain(mock_llm)
 
-        layer.run_creature_turn(npc, _TIME, _noop_query_fn, _noop_emit_fn)
+        _run_turn(layer, npc)
         assert mock_llm.generate_with_tools.call_count == 2
 
     def test_llm_exhausts_retries_does_nothing(self) -> None:
@@ -142,6 +152,6 @@ class TestNpcTurnOrchestration:
             emit_calls.append(event)
             return ActionResult()
 
-        layer.run_creature_turn(npc, _TIME, _noop_query_fn, capture_emit)
+        _run_turn(layer, npc, capture_emit)
         assert mock_llm.generate_with_tools.call_count == 3
         assert emit_calls == []

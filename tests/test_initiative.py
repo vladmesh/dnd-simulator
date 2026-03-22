@@ -424,7 +424,7 @@ class TestCombatInfoQuery:
 class TestGameLoopCombat:
     def test_combat_creatures_turn_in_initiative_order(self) -> None:
         """Combat creatures should take turns in initiative order, not insertion order."""
-        from dnd_simulator.core.action import Action
+        from dnd_simulator.core.action import END_TURN, Action
         from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
         from dnd_simulator.core.brain import Brain
 
@@ -438,7 +438,7 @@ class TestGameLoopCombat:
                 events: list[PerceivedEvent],
             ) -> Action:
                 turn_log.append(creature.id)
-                return Action(name="idle")
+                return END_TURN
 
         c1 = Character(
             id="c1", name="A", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,), brain=LogBrain()
@@ -462,13 +462,11 @@ class TestGameLoopCombat:
         assert combat is not None
         combat.turn_order = ["c2", "c1"]  # c2 goes first
 
-        # Run one iteration manually via EntitiesLayer orchestration
-        query_fn = world._make_query_fn("entities")
-        emit_fn = world._make_emit_fn("entities")
-        for entity_id in list(combat.turn_order):
-            entity = layer.get_entity(entity_id)
-            if isinstance(entity, Creature) and entity.is_alive and entity.active and entity.in_combat:
-                layer.run_creature_turn(entity, world.time, query_fn, emit_fn)
+        # Run one iteration via Round orchestrator
+        from dnd_simulator.round import Round
+
+        game_round = Round(world, layer)
+        game_round.run_round()
 
         assert turn_log == ["c2", "c1"]
 

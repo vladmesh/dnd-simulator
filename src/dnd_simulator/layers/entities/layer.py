@@ -22,7 +22,6 @@ from dnd_simulator.layers.entities.models import Npc, NpcMemory, activity_flavor
 from dnd_simulator.layers.entities.perception import perceive_event
 
 if TYPE_CHECKING:
-    from dnd_simulator.core.action import Action
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn, TimeDelta
     from dnd_simulator.llm.summarizer import MemorySummarizer
 
@@ -303,48 +302,14 @@ class EntitiesLayer(Layer):
             )
         return result
 
-    def run_creature_turn(
-        self, creature: Creature, time: GameDateTime, query_fn: QueryFn, emit_fn: EmitFn
-    ) -> Action | None:
-        """Orchestrate a single creature turn: build awareness → brain → execute.
-
-        Returns the chosen Action (so callers like Round can inspect it), or None if no brain.
-        """
-        if creature.brain is None:
-            return None
-
-        awareness = self.build_awareness(creature, time, query_fn)
-        events = self.get_perceived_events(creature)
-        action = creature.brain.choose_action(creature, awareness, events)
-        creature.execute_action(action, emit_fn)
-        return action
-
     # -- Layer interface --
 
     def tick(self, delta: TimeDelta, time: GameDateTime, query_fn: QueryFn, emit_fn: EmitFn) -> list[Event]:
-        """Let active NPC creatures take their turns.
+        """No-op: Round orchestrator manages all creature turns.
 
-        One round of NPC actions per 6-second D&D round elapsed.
-        Player characters are skipped (they act via API/CLI).
+        EntitiesLayer does not drive creature actions — Round calls
+        run_creature_turn directly for both combat and peaceful turns.
         """
-        from dnd_simulator.core.player import PlayerCharacter
-
-        # One NPC round per 6 seconds of game time
-        rounds = delta.rounds
-        if rounds == 0:
-            return []
-
-        # Cap to avoid huge bursts (e.g. 24h wait = 14400 rounds)
-        rounds = min(rounds, 3)
-
-        for _ in range(rounds):
-            for entity in list(self._entities.values()):
-                if isinstance(entity, Creature) and entity.active and not isinstance(entity, PlayerCharacter):
-                    try:
-                        self.run_creature_turn(entity, time, query_fn, emit_fn)
-                    except Exception:
-                        logger.exception("Error in %s turn", entity.name)
-
         return []
 
     def handle_event(self, event: Event, query_fn: QueryFn, emit_fn: EmitFn) -> ActionResult:

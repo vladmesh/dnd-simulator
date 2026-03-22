@@ -130,7 +130,7 @@ class TestWebSocketTurnCycle:
             assert "Unknown" in msg["message"]
 
     def test_query_type_rejected(self, tmp_path: object) -> None:
-        """Query message type is no longer supported — returns error."""
+        """Query message type is not supported — returns error."""
         client, _ = _make_client(tmp_path)
         sid = _create_session_with_player(client)
 

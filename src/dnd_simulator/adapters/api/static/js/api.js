@@ -89,17 +89,6 @@ const API = (() => {
             post(`/player/sessions/${sid}/character`, data),
 
         getStatus: (sid) => get(`/player/sessions/${sid}/status`),
-
-        action: (sid, actionText) =>
-            post(`/player/sessions/${sid}/action`, { action: actionText }),
-
-        getPerception: (sid) => get(`/player/sessions/${sid}/perception`),
-
-        getEvents: (sid) => get(`/player/sessions/${sid}/events`),
-
-        getCombat: (sid) => get(`/player/sessions/${sid}/combat`),
-
-        getMap: (sid) => get(`/player/sessions/${sid}/map`),
     };
 
     return { master, player };

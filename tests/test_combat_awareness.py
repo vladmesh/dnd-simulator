@@ -357,7 +357,11 @@ class TestNpcCombatTurn:
             emit_calls.append(event)
             return ActionResult()
 
-        layer.run_creature_turn(npc, GameDateTime(hour=12), _noop_query_fn, capture_emit)
+        time = GameDateTime(hour=12)
+        awareness = layer.build_awareness(npc, time, _noop_query_fn)
+        events = layer.get_perceived_events(npc)
+        action = npc.brain.choose_action(npc, awareness, events)
+        npc.execute_action(action, capture_emit)
 
         # Check that combat tools were used
         call_args = mock_llm.generate_with_tools.call_args
@@ -380,7 +384,11 @@ class TestNpcCombatTurn:
             emit_calls.append(event)
             return ActionResult()
 
-        layer.run_creature_turn(npc, GameDateTime(hour=12), _noop_query_fn, capture_emit)
+        time = GameDateTime(hour=12)
+        awareness = layer.build_awareness(npc, time, _noop_query_fn)
+        events = layer.get_perceived_events(npc)
+        action = npc.brain.choose_action(npc, awareness, events)
+        npc.execute_action(action, capture_emit)
         assert len(emit_calls) == 1
         assert emit_calls[0].event_type == EventType.ENTITY_DODGE
 
@@ -398,7 +406,11 @@ class TestNpcCombatTurn:
             emit_calls.append(event)
             return ActionResult()
 
-        layer.run_creature_turn(npc, GameDateTime(hour=12), _noop_query_fn, capture_emit)
+        time = GameDateTime(hour=12)
+        awareness = layer.build_awareness(npc, time, _noop_query_fn)
+        events = layer.get_perceived_events(npc)
+        action = npc.brain.choose_action(npc, awareness, events)
+        npc.execute_action(action, capture_emit)
         assert len(emit_calls) == 1
         assert emit_calls[0].event_type == EventType.ENTITY_FLEE
 
@@ -411,7 +423,10 @@ class TestNpcCombatTurn:
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=idle_tc, raw_message=None)
         npc.brain = LlmBrain(mock_llm)
 
-        layer.run_creature_turn(npc, GameDateTime(hour=12), _noop_query_fn, _noop_emit_fn)
+        time = GameDateTime(hour=12)
+        awareness = layer.build_awareness(npc, time, _noop_query_fn)
+        events = layer.get_perceived_events(npc)
+        npc.brain.choose_action(npc, awareness, events)
         call_args = mock_llm.generate_with_tools.call_args
         tools_passed = call_args[0][1]
         tool_names = {t["function"]["name"] for t in tools_passed}

@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test check messages compile-messages serve
+.PHONY: install lint format typecheck test check messages compile-messages serve stop
 
 install:
 	uv sync
@@ -19,8 +19,11 @@ test:
 
 check: lint typecheck test
 
-serve:
-	uv run uvicorn dnd_simulator.adapters.api.app:app --host 0.0.0.0 --port 8000 --reload
+stop:
+	@fuser -k 8001/tcp 2>/dev/null && echo "Stopped server on :8001" || echo "Nothing running on :8001"
+
+serve: stop
+	uv run uvicorn dnd_simulator.adapters.api.app:app --host 0.0.0.0 --port 8001 --reload
 
 messages:
 	find src/dnd_simulator -name '*.py' | xargs pygettext3 --keyword=_ --output=src/dnd_simulator/locale/messages.pot

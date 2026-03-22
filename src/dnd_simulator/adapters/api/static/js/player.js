@@ -1,6 +1,6 @@
 /**
  * D&D Simulator — Player interface logic.
- * Vanilla JS, no frameworks.
+ * WebSocket-based gameplay with REST setup phase.
  */
 (() => {
     'use strict';
@@ -8,10 +8,9 @@
     // ── State ──
 
     let sessionId = null;
+    let ws = null;
     let commandHistory = [];
     let historyIndex = -1;
-    let eventPollTimer = null;
-    let lastEventCount = 0;
 
     // ── DOM refs ──
 
@@ -79,6 +78,12 @@
         div.innerHTML = html;
         eventLog.appendChild(div);
         eventLog.scrollTop = eventLog.scrollHeight;
+    }
+
+    function escapeHtml(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
     }
 
     // ── Setup: Load worlds ──
@@ -154,13 +159,11 @@
             const isSessionGone = msg.toLowerCase().includes('session') && msg.toLowerCase().includes('not found');
 
             if (isNoPlayer) {
-                // Session exists but no character yet — show chargen
                 saveSession(sid);
                 connectSection.classList.add('hidden');
                 chargenSection.classList.remove('hidden');
                 chargenSid.textContent = sid;
             } else if (isSessionGone) {
-                // Session expired/server restarted — clear cache, stay on setup
                 clearSavedSession();
                 sessionId = null;
                 showError(connectError, 'Session expired. Create or join a new one.');
@@ -215,18 +218,126 @@
     function enterGame(status) {
         showPhase('game');
         updateStatus(status);
-        // Fetch all panels in parallel
-        refreshAll();
-        startEventPolling();
+        connectWebSocket();
     }
 
-    async function refreshAll() {
-        const promises = [
-            API.player.getPerception(sessionId).then(updatePerception).catch(() => {}),
-            API.player.getMap(sessionId).then(updateMap).catch(() => {}),
-            API.player.getCombat(sessionId).then(updateCombat).catch(() => {}),
-        ];
-        await Promise.allSettled(promises);
+    // ── WebSocket ──
+
+    function connectWebSocket() {
+        if (ws) {
+            ws.close();
+            ws = null;
+        }
+
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const url = `${proto}//${location.host}/api/ws/${sessionId}`;
+        ws = new WebSocket(url);
+
+        ws.onopen = () => {
+            appendEventHtml('<span class="text-success">Connected to game.</span>');
+        };
+
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            handleWsMessage(msg);
+        };
+
+        ws.onclose = () => {
+            appendEventHtml('<span class="text-dim">Disconnected from game.</span>');
+            ws = null;
+            setInputEnabled(true);
+        };
+
+        ws.onerror = () => {
+            appendEventHtml('<span class="text-danger">WebSocket error.</span>');
+        };
+    }
+
+    function handleWsMessage(msg) {
+        switch (msg.type) {
+            case 'turn':
+                handleTurn(msg);
+                break;
+            case 'action_result':
+                handleActionResult(msg);
+                break;
+            case 'round_result':
+                handleRoundResult(msg);
+                break;
+            case 'error':
+                appendEventHtml('<span class="text-danger">Error: ' + escapeHtml(msg.message) + '</span>');
+                setInputEnabled(true);
+                break;
+            case 'game_over':
+                appendEventHtml('<span class="text-danger">Game over.</span>');
+                setInputEnabled(false);
+                break;
+        }
+    }
+
+    function handleTurn(msg) {
+        // Update status panel from player data
+        if (msg.player) updateStatus(msg.player);
+
+        // Update perception from awareness
+        updatePerceptionFromAwareness(msg.mode, msg.awareness);
+
+        // Update combat state
+        updateCombatFromAwareness(msg.mode, msg.awareness, msg.budget);
+
+        // Update map from location data
+        if (msg.location) updateMap(msg.location);
+
+        // Show round header in combat
+        if (msg.mode === 'combat' && msg.awareness && msg.awareness.round_number) {
+            appendEventHtml('<span class="text-dim">--- Round ' + msg.awareness.round_number + ', your turn ---</span>');
+        }
+
+        // Show events
+        showEvents(msg.events);
+
+        // Enable input — it's the player's turn
+        setInputEnabled(true);
+    }
+
+    function handleActionResult(msg) {
+        if (msg.player) updateStatus(msg.player);
+        showEvents(msg.events);
+        // Don't re-enable input — still the player's turn, wait for next turn message
+    }
+
+    function handleRoundResult(msg) {
+        if (msg.player) updateStatus(msg.player);
+        if (msg.events && msg.events.length > 0) {
+            appendEventHtml('<span class="text-dim">--- Others\' actions ---</span>');
+        }
+        showEvents(msg.events);
+    }
+
+    function showEvents(events) {
+        if (!events || events.length === 0) return;
+        for (const ev of events) {
+            const text = ev.description || (typeof ev === 'string' ? ev : JSON.stringify(ev));
+            appendEvent(text);
+        }
+    }
+
+    // ── WebSocket send helpers ──
+
+    function wsSend(msg) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(msg));
+        }
+    }
+
+    function wsSendCommand(text) {
+        wsSend({ type: 'command', text: text });
+    }
+
+    function setInputEnabled(enabled) {
+        commandInput.disabled = !enabled;
+        btnSend.disabled = !enabled;
+        if (enabled) commandInput.focus();
     }
 
     // ── Game: Status panel ──
@@ -264,48 +375,56 @@
         $('#status-location').textContent = s.location_id || '—';
     }
 
-    // ── Game: Perception ──
+    // ── Game: Perception (from turn awareness) ──
 
-    function updatePerception(data) {
-        if (!data) {
-            perceptionBox.innerHTML = '<span class="text-dim">No perception data.</span>';
+    function updatePerceptionFromAwareness(mode, awareness) {
+        if (!awareness) return;
+
+        if (mode === 'combat') {
+            // In combat, show minimal perception — combat panel has the details
+            let html = '<span class="text-danger">In combat</span>';
+            if (awareness.self_hp !== undefined) {
+                html += ` — HP: ${awareness.self_hp}/${awareness.self_max_hp}`;
+            }
+            perceptionBox.innerHTML = html;
             return;
         }
 
+        // Peaceful awareness
         let html = '';
 
-        // Time & Weather — single line
-        const t = data.time;
-        const w = data.weather;
-        if (t) {
-            html += `<div style="font-size:0.9rem;margin-bottom:0.5rem;">` +
-                `<strong>Y${t.year} M${t.month} D${t.day} ${String(t.hour).padStart(2,'0')}:00</strong>`;
-            if (w) html += ` &mdash; ${escapeHtml(w.condition || '?')}, ${w.temperature ?? '?'}&deg;C`;
-            html += `</div>`;
+        // Time & Weather
+        const hour = awareness.hour ?? 0;
+        const day = awareness.day ?? 1;
+        const month = awareness.month ?? 1;
+        const year = awareness.year ?? 0;
+        html += `<div style="font-size:0.9rem;margin-bottom:0.5rem;">`;
+        html += `<strong>Y${year} M${month} D${day} ${String(hour).padStart(2,'0')}:00</strong>`;
+        const w = awareness.weather;
+        if (w) {
+            const cond = (w.condition || '?').replace(/_/g, ' ');
+            html += ` &mdash; ${escapeHtml(cond)}, ${w.temperature ?? '?'}&deg;C`;
         }
+        html += `</div>`;
 
-        // Current location + region
-        const cur = data.current_location;
-        const loc = data.location;
-        if (cur || loc) {
+        // Location
+        if (awareness.location_name) {
             html += `<div style="margin-bottom:0.5rem;">`;
-            if (cur) {
-                html += `<span class="text-success" style="font-size:1.05rem;">${escapeHtml(cur.name || cur.id)}</span>`;
-                if (cur.description) html += ` <span class="text-dim">&mdash; ${escapeHtml(cur.description)}</span>`;
-                html += `<br>`;
+            html += `<span class="text-success" style="font-size:1.05rem;">${escapeHtml(awareness.location_name)}</span>`;
+            if (awareness.region_name) {
+                html += ` <span class="text-dim">&mdash; ${escapeHtml(awareness.region_name)}</span>`;
             }
-            if (loc) {
-                html += `<span class="text-dim">Region: ${escapeHtml(loc.name || loc.id)} (${escapeHtml(loc.terrain || '?')})</span>`;
-                if (data.territory) html += ` &mdash; <span class="text-dim">${escapeHtml(data.territory)}</span>`;
+            if (awareness.territory_owner) {
+                html += ` <span class="text-dim">(${escapeHtml(awareness.territory_owner)})</span>`;
             }
             html += `</div>`;
         }
 
-        // Entities nearby
-        const entities = data.entities || [];
-        if (entities.length > 0) {
+        // Nearby entities
+        const nearby = awareness.nearby || [];
+        if (nearby.length > 0) {
             html += `<div style="margin-bottom:0.5rem;"><strong>Nearby:</strong>`;
-            for (const e of entities) {
+            for (const e of nearby) {
                 const eid = escapeHtml(e.id);
                 const desc = escapeHtml(e.description || e.id);
                 html += `<div style="margin:0.3rem 0;display:flex;align-items:center;gap:0.5rem;">` +
@@ -318,36 +437,21 @@
             html += `</div>`;
         }
 
-        // Exits
-        const neighbors = data.neighbors || [];
-        if (neighbors.length > 0) {
-            html += `<div><strong>Exits:</strong> `;
-            html += neighbors.map(n =>
-                `<span class="text-success">${escapeHtml(n.name || n.target_id)}</span>` +
-                ` <span class="text-dim">(${n.distance_m}m)</span>`
-            ).join(', ');
-            html += `</div>`;
-        }
-
         perceptionBox.innerHTML = html || '<span class="text-dim">You see nothing special.</span>';
+        wireNpcActions();
+    }
 
-        // Wire up NPC action buttons
+    function wireNpcActions() {
         perceptionBox.querySelectorAll('.npc-action').forEach(btn => {
             btn.addEventListener('click', () => {
                 if (btn.dataset.cmd === 'prefill') {
                     commandInput.value = btn.dataset.text;
                     commandInput.focus();
                 } else {
-                    sendAction(btn.dataset.text);
+                    sendCommand(btn.dataset.text);
                 }
             });
         });
-    }
-
-    function escapeHtml(s) {
-        const d = document.createElement('div');
-        d.textContent = s;
-        return d.innerHTML;
     }
 
     // ── Game: Map ──
@@ -366,14 +470,13 @@
         for (const p of paths) {
             const node = document.createElement('div');
             node.className = 'map-node';
-            const targetId = p.target_id || p.target || '?';
+            const targetId = p.target_id || '?';
             const targetName = p.target_name || targetId;
-            const dir = p.direction || '';
             node.innerHTML = escapeHtml(targetName) +
                 ' <span class="text-dim" style="font-size:0.7rem;">(' + escapeHtml(targetId) + ')</span>' +
-                (dir ? ' <span class="map-direction">[' + escapeHtml(dir) + ']</span>' : '');
+                ' <span class="text-dim" style="font-size:0.7rem;">' + (p.distance_m || 0) + 'm</span>';
             node.addEventListener('click', () => {
-                sendAction('go ' + (p.target_id || p.target || targetName));
+                sendCommand('go ' + targetId);
             });
             pathsEl.appendChild(node);
         }
@@ -381,56 +484,78 @@
 
     // ── Game: Combat ──
 
-    function updateCombat(data) {
+    let combatNearby = []; // current combat enemies for Attack button
+
+    function updateCombatFromAwareness(mode, awareness, budget) {
         const exploreActions = document.getElementById('quick-actions-explore');
         const combatActions = document.getElementById('quick-actions-combat');
-        if (!data || !data.in_combat) {
+
+        if (mode !== 'combat') {
             combatPanel.classList.add('hidden');
             exploreActions.classList.remove('hidden');
             combatActions.classList.add('hidden');
+            combatNearby = [];
             return;
         }
+
         exploreActions.classList.add('hidden');
         combatActions.classList.remove('hidden');
         combatPanel.classList.remove('hidden');
-        const c = data.combat || {};
-        $('#combat-round').textContent = c.round ?? '?';
 
-        // Initiative order
+        $('#combat-round').textContent = awareness.round_number ?? '?';
+
+        // Nearby enemies — with per-target Attack buttons
         const initEl = $('#combat-initiative');
         initEl.innerHTML = '';
-        const order = c.initiative_order || [];
-        for (const entry of order) {
+        const nearby = awareness.nearby || [];
+        combatNearby = nearby;
+        for (const e of nearby) {
             const div = document.createElement('div');
-            const name = entry.name || entry.entity_id || '?';
-            const init = entry.initiative ?? '?';
-            const isCurrent = entry.is_current || false;
             div.style.fontSize = '0.8rem';
             div.style.padding = '0.15rem 0';
-            if (isCurrent) {
-                div.innerHTML = '<strong class="text-danger">' + escapeHtml(name) + '</strong> (' + init + ')';
-            } else {
-                div.textContent = name + ' (' + init + ')';
-            }
+            div.style.display = 'flex';
+            div.style.alignItems = 'center';
+            div.style.gap = '0.5rem';
+            const desc = e.description || e.id;
+            let info = escapeHtml(desc) + ' [' + escapeHtml(e.id) + ']';
+            if (e.distance_ft) info += ` — ${e.distance_ft} ft`;
+            if (e.direction) info += ` ${e.direction}`;
+            const eid = e.id;
+            div.innerHTML = `<span>${info}</span>` +
+                `<button class="small danger combat-atk" data-target="${escapeHtml(eid)}" style="font-size:0.6rem;">Atk</button>`;
             initEl.appendChild(div);
         }
+        // Wire per-target attack buttons
+        initEl.querySelectorAll('.combat-atk').forEach(btn => {
+            btn.addEventListener('click', () => {
+                sendCommand('attack ' + btn.dataset.target);
+            });
+        });
 
-        // Battle map (text-based)
-        const mapEl = $('#combat-map');
-        if (c.battle_map) {
-            mapEl.textContent = typeof c.battle_map === 'string'
-                ? c.battle_map
-                : JSON.stringify(c.battle_map, null, 2);
-            mapEl.classList.remove('hidden');
-        } else {
-            mapEl.textContent = '';
-            mapEl.classList.add('hidden');
+        // Budget display
+        if (budget) {
+            const budgetEl = $('#combat-map');
+            const parts = [];
+            if (budget.actions !== undefined) parts.push(`Actions: ${budget.actions}`);
+            if (budget.bonus_actions !== undefined) parts.push(`Bonus: ${budget.bonus_actions}`);
+            if (budget.movement_remaining !== undefined) parts.push(`Move: ${budget.movement_remaining} ft`);
+            budgetEl.textContent = parts.join(' | ');
+            budgetEl.classList.remove('hidden');
         }
     }
 
+    // Attack button — attacks closest enemy
+    document.getElementById('btn-attack-target').addEventListener('click', () => {
+        if (combatNearby.length > 0) {
+            // Pick closest
+            const sorted = [...combatNearby].sort((a, b) => (a.distance_ft || 999) - (b.distance_ft || 999));
+            sendCommand('attack ' + sorted[0].id);
+        }
+    });
+
     // ── Game: Commands ──
 
-    async function sendAction(text) {
+    function sendCommand(text) {
         if (!text || !sessionId) return;
 
         // Add to history
@@ -441,46 +566,19 @@
 
         appendEvent('> ' + text);
         commandInput.value = '';
-        commandInput.disabled = true;
-        btnSend.disabled = true;
 
-        try {
-            const result = await API.player.action(sessionId, text);
-            if (result.text) {
-                appendEventHtml('<span class="text-success">' + escapeHtml(result.text) + '</span>');
-            }
-            if (result.events && result.events.length > 0) {
-                for (const ev of result.events) {
-                    appendEvent(typeof ev === 'string' ? ev : JSON.stringify(ev));
-                }
-            }
-        } catch (e) {
-            appendEventHtml('<span class="text-danger">Error: ' + escapeHtml(e.message) + '</span>');
-        }
-
-        commandInput.disabled = false;
-        btnSend.disabled = false;
-        commandInput.focus();
-
-        // Refresh panels
-        try {
-            const [status, _, __, ___] = await Promise.allSettled([
-                API.player.getStatus(sessionId),
-                API.player.getPerception(sessionId).then(updatePerception),
-                API.player.getMap(sessionId).then(updateMap),
-                API.player.getCombat(sessionId).then(updateCombat),
-            ]);
-            if (status.status === 'fulfilled') updateStatus(status.value);
-        } catch (_) {}
+        // All commands are actions — disable input until next turn message
+        setInputEnabled(false);
+        wsSendCommand(text);
     }
 
     btnSend.addEventListener('click', () => {
-        sendAction(commandInput.value.trim());
+        sendCommand(commandInput.value.trim());
     });
 
     commandInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
-            sendAction(commandInput.value.trim());
+            sendCommand(commandInput.value.trim());
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
             if (commandHistory.length === 0) return;
@@ -506,38 +604,8 @@
     // Quick action buttons
     for (const btn of $$('[data-action]')) {
         btn.addEventListener('click', () => {
-            sendAction(btn.dataset.action);
+            sendCommand(btn.dataset.action);
         });
-    }
-
-    // ── Event polling ──
-
-    function startEventPolling() {
-        if (eventPollTimer) clearInterval(eventPollTimer);
-        eventPollTimer = setInterval(pollEvents, 3000);
-    }
-
-    async function pollEvents() {
-        if (!sessionId) return;
-        try {
-            const data = await API.player.getEvents(sessionId);
-            const events = data.events || [];
-            // Only show new events since last poll
-            if (events.length > lastEventCount) {
-                const newEvents = events.slice(lastEventCount);
-                for (const ev of newEvents) {
-                    const text = typeof ev === 'string' ? ev : (ev.text || ev.message || JSON.stringify(ev));
-                    appendEvent(text);
-                }
-                lastEventCount = events.length;
-            }
-        } catch (_) {}
-
-        // Also refresh combat state
-        try {
-            const combatData = await API.player.getCombat(sessionId);
-            updateCombat(combatData);
-        } catch (_) {}
     }
 
     // ── Session persistence ──
