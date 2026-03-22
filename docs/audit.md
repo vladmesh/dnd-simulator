@@ -1,68 +1,65 @@
 # Code Audit
 
-> **Date**: 2026-03-21
+> **Date**: 2026-03-22
 > **Scope**: full
 
 ## Summary
-- Dead code: 0 issues
-- Code smells: 2 issues (1 planned)
-- Security: 2 issues (1 fixed, 1 won't fix)
-- Architecture violations: 3 issues (2 fixed, 1 won't fix)
+- Dead code: 1 issue
+- Code smells: 3 issues
+- Security: 4 issues
+- Architecture violations: 2 issues
 - Convention violations: 2 issues
 - Layer contract: 0 issues
-- Test gaps: 3 issues
+- Test gaps: 1 issue
+- Vision drift: 0 issues
 
 ## Dead Code
 | File | Issue | Action |
 |------|-------|--------|
-| — | ruff F401 clean; no unreferenced functions found | — |
-
-No TODOs/FIXMEs found in source.
+| `round.py:213` | Stale TODO: reaction support placeholder — no implementation progress | backlog (track in roadmap if planned) |
 
 ## Code Smells
 | File | Issue | Suggestion |
 |------|-------|------------|
-| `service.py` (850+ lines) | Largest file, well above 400-line threshold | **Planned**: split command handlers into sub-modules (combat, NPC, time) — next task |
-| `layers/politics/layer.py` (588 lines) | Second largest, above threshold | Tick logic is inherently complex; lower priority but could extract war-resolution helpers |
+| `layers/entities/layer.py` | 681 lines — largest file in codebase | Extract perception/activity helpers into submodules |
+| `layers/politics/layer.py` | 587 lines | Consider splitting diplomacy/warfare logic into submodules |
+| `adapters/api/static/js/world-builder.js` | 1706 lines — single JS file, no linter | Split into step modules or add eslint |
 
 ## Security
 | File:Line | Issue | Severity |
 |-----------|-------|----------|
-| ~~`adapters/api/schemas.py:24-70`~~ | ~~Pydantic request models accept bare `int`/`float` fields with no constraints~~ | **Fixed**: added `Field(ge=, le=)` bounds on all numeric request fields (hp, ac, level, gold, population, hours, wealth, military, stability, prosperity, defenses) | ~~medium~~ |
-| `adapters/api/` | No CORSMiddleware configured — fine for local-only use, but flag if a separate frontend is added | low |
-
-No hardcoded secrets, no subprocess calls, no prompt injection risks found. `.env` is gitignored.
+| `adapters/api/app.py:70` | CORS `allow_origins=["*"]` — open to any origin | low (local dev OK, lock down before deployment) |
+| `adapters/api/routes_ws.py` | No rate limiting or message size limits on WebSocket | medium (client can spam messages) |
+| `adapters/api/routes_ws.py` | No origin validation on WS upgrade — any page can connect | medium |
+| `adapters/api/static/js/*.js` | Extensive `innerHTML` usage with server data — XSS surface | medium (mitigated by `esc()` helper in most places, but patterns like `innerHTML += \`...\`` with template literals are fragile — one missed `esc()` call is an XSS) |
 
 ## Architecture Violations
 | File:Line | Violation | Should Be | Severity |
 |-----------|-----------|-----------|----------|
-| ~~`core/brain.py:49,74,81`~~ | ~~`RuleBrain` imports from `layers.entities.models`~~ | **Fixed**: moved `NpcTag`/`find_tags`/`has_tag` → `core/tags.py`; added `Creature.memory_tags` + `get_canned_response()` polymorphism; zero layer imports in brain.py now | ~~high~~ |
-| ~~`adapters/api/routes_master.py:24,84,125,305`~~ | ~~Route handlers import `Npc` and `EntitiesLayer`, iterate layer internals directly~~ | **Fixed**: added `all_entities`/`all_npcs`/`npc_info` queries to EntitiesLayer; added `list_npcs()`/`get_npc_info()` to GameService; routes now use service only, zero layer imports | ~~high~~ |
-| `adapters/cli_loop.py:28-31` | CLI adapter imports all four layer classes and constructs them directly | **Won't fix**: debug-only REPL adapter, not used in production; gameplay goes through API | ~~medium~~ |
+| `adapters/api/routes_ws.py:35` | Imports `EntitiesLayer` directly from layers | Access via `GameService` or `World` query interface | medium |
+| `adapters/cli_loop.py:32-35` | Imports all 4 layer classes directly | Access via `GameService` or `World` query interface | medium |
+
+Note: Both adapters also import heavily from `core.*` (Action, Awareness, Brain, Creature, etc.). Core imports are acceptable per architecture rules, but the adapters contain significant game logic (turn orchestration, awareness formatting, Round creation) that could live in the service layer. This is a "thick adapter" smell rather than a hard violation.
 
 ## Convention Violations
 | File:Line | Violation | Rule |
 |-----------|-----------|------|
-| Multiple files (17 modules) | `from typing import Any` used throughout; `Answer.value: Any` in `core/models.py:167` | CLAUDE.md: use `object` not `Any` in state dicts for strict mypy. `Any` in adapters for session types is lower priority, but `Answer.value` is core |
-| Multiple files (17 dataclasses) | `@dataclass` without `frozen=True` on: `Creature`, `Character`, `PlayerCharacter` (core), `World`, `CombatState`, `BattleMap`, `Settlement`, `NpcMemory`, `Npc`, `NpcScheduleEntry`, `Nation`, `NationRelation`, `Region`, `HexCell` | Expected for stateful objects (World, CombatState, creatures). Settlement, Nation, NpcMemory are also mutated in-place by layer ticks — acceptable by design but worth documenting |
-
-Note: Line length is clean (docstring in `llm/__init__.py` fixed).
+| `core/models.py:168` | `value: Any` in `Answer` dataclass | Use `object` for strict mypy (CLAUDE.md convention) |
+| Multiple files (21 files) | `from typing import Any` — widespread `Any` usage in adapters, service, layers, llm | Prefer `object` where possible; `Any` acceptable at serialization boundaries (JSON dicts) but overused in internal signatures like `_get_session() -> Any` |
 
 ## Layer Contract
-| Layer | Issue |
-|-------|-------|
-| — | All 4 layers (Geography, Politics, Settlements, Entities) implement the full Layer ABC. No issues found |
+All 4 layers (Geography, Politics, Settlements, Entities) implement the full Layer ABC. No issues found.
 
 ## Test Gaps
 | Source File | Expected Test | Status |
 |-------------|---------------|--------|
-| `rules/combat.py` | `tests/test_rules_combat.py` | missing (partially covered by `test_combat.py`, `test_attack_resolution.py`) |
-| `rules/geography.py` | `tests/test_rules_geography.py` | missing (partially covered by `test_geography_formulas.py`) |
-| `adapters/api/routes_master.py` | `tests/test_routes_master.py` | missing (partially covered by `test_api.py`) |
-| `adapters/api/routes_player.py` | `tests/test_routes_player.py` | missing (partially covered by `test_api.py`) |
-| `service.py` | `tests/test_service.py` | missing |
-| `layers/entities/layer.py` | `tests/test_entities_layer.py` | missing (covered by `test_npc_layer.py`) |
+| `rules/actions.py` | `tests/test_rules_actions.py` | missing (naming mismatch — tests exist as `test_multi_action.py` but don't follow `test_rules_*` convention; action_cost rules tested indirectly) |
 
-Note: Many "missing" test files have equivalent coverage under different names. The main real gap is `test_service.py`.
+Note: Most rules have tests under alternative names (`test_checks.py`, `test_dice.py`, `test_movement.py`, `test_combat.py`, `test_geography_formulas.py`, etc.). The naming doesn't follow `test_rules_*` convention but coverage exists. WS tests cover connection, turn flow, action handling, unknown messages, and query rejection — reasonable coverage.
 
-No skipped or xfail tests found.
+## Vision Drift
+No drift detected. Recent commits (last 2 weeks) align with vision:
+- `a7b7c3b` Split peaceful/combat loops — consistent with round-based design
+- `59892d1` Fix double-turn bug — fixes, not new violations
+- `c6080c3` Unify entity model — moves toward cleaner entity hierarchy
+- `bbeb65e` Added VISION.md/ROADMAP.md — documentation, no code impact
