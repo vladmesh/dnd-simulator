@@ -15,7 +15,12 @@ export function SetupScreen() {
   const [step, setStep] = useState<Step>("pick-world")
   const [sessionId, setSessionId] = useState<string | null>(null)
 
-  const goToGame = (sid: string) => navigate(`/play/${sid}`)
+  const goToGame = (sid: string, playerId?: string) => {
+    if (playerId) {
+      localStorage.setItem(`player_id:${sid}`, playerId)
+    }
+    navigate(`/play/${sid}`)
+  }
 
   return (
     <div className="dark mx-auto min-h-screen max-w-2xl bg-background px-4 py-8 text-foreground">
@@ -52,7 +57,7 @@ export function SetupScreen() {
           <h2 className="mb-4 text-lg font-medium">{t("setup:create_character")}</h2>
           <Card>
             <CardContent className="pt-4">
-              <CharacterForm sessionId={sessionId} onCreated={() => goToGame(sessionId)} />
+              <CharacterForm sessionId={sessionId} onCreated={(playerId) => goToGame(sessionId, playerId)} />
             </CardContent>
           </Card>
         </>

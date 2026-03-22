@@ -22,7 +22,8 @@ export function GameScreen() {
     // Guard against StrictMode double-mount: only connect once
     if (!connectedRef.current) {
       connectedRef.current = true
-      useGameStore.getState().connect(sessionId)
+      const playerId = localStorage.getItem(`player_id:${sessionId}`) ?? undefined
+      useGameStore.getState().connect(sessionId, playerId)
     }
     return () => {
       connectedRef.current = false

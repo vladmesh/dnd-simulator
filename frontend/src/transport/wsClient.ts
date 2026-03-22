@@ -11,6 +11,7 @@ const MAX_RETRY_MS = 30000
 export class WsClient {
   private ws: WebSocket | null = null
   private sessionId: string | null = null
+  private playerId: string | null = null
   private messageHandlers = new Set<MessageHandler>()
   private statusHandlers = new Set<StatusHandler>()
   private status: WsStatus = "disconnected"
@@ -22,9 +23,10 @@ export class WsClient {
     return this.status
   }
 
-  connect(sessionId: string): void {
+  connect(sessionId: string, playerId?: string): void {
     this.intentionalClose = false
     this.sessionId = sessionId
+    this.playerId = playerId ?? null
     this.retryMs = INITIAL_RETRY_MS
     this.doConnect()
   }
@@ -75,7 +77,10 @@ export class WsClient {
     this.setStatus("connecting")
 
     const proto = location.protocol === "https:" ? "wss:" : "ws:"
-    const url = `${proto}//${location.host}/api/ws/${this.sessionId}`
+    let url = `${proto}//${location.host}/api/ws/${this.sessionId}`
+    if (this.playerId) {
+      url += `?player_id=${encodeURIComponent(this.playerId)}`
+    }
 
     const ws = new WebSocket(url)
     this.ws = ws

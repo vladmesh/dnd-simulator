@@ -319,13 +319,16 @@ class TestPlayerCharacterCreation:
         assert resp.status_code == 200
         assert resp.json()["location_id"] != ""
 
-    def test_create_character_twice_fails(self, tmp_path: object) -> None:
+    def test_create_multiple_players(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
         sid = self._create_session_no_player(client)
 
-        client.post(f"/api/player/sessions/{sid}/character", json={"name": "First"})
-        resp = client.post(f"/api/player/sessions/{sid}/character", json={"name": "Second"})
-        assert resp.status_code == 400
+        resp1 = client.post(f"/api/player/sessions/{sid}/character", json={"name": "First"})
+        resp2 = client.post(f"/api/player/sessions/{sid}/character", json={"name": "Second"})
+        assert resp1.status_code == 200
+        assert resp2.status_code == 200
+        # Each player gets a unique ID
+        assert resp1.json()["player_id"] != resp2.json()["player_id"]
 
     def test_status_without_player(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)

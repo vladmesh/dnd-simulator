@@ -189,7 +189,7 @@ class BattleMap:
 
         Each cell is 5 ft.  Legend:
         - ``@`` = observer (observer_id)
-        - ``1``–``9`` = other entities (keyed in legend below the map)
+        - ``1``-``9`` = other entities (keyed in legend below the map)
         - ``#`` = wall segment between cells
         - ``.`` = empty cell
         """

@@ -96,6 +96,7 @@ export interface WorldListItem {
 }
 
 export interface PlayerStatusResponse {
+  player_id: string
   name: string
   race: string
   char_class: string

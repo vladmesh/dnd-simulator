@@ -16,17 +16,34 @@ class GameSession:
     lang: str = "en"
     world_name: str = ""
 
-    def get_player(self) -> PlayerCharacter | None:
-        """Look up the player entity from the entities layer."""
-        answer = self.world.query_layer("entities", Query(question="player", params={}))
+    def get_players(self) -> list[PlayerCharacter]:
+        """Return all player characters in this session."""
+        answer = self.world.query_layer("entities", Query(question="players", params={}))
         result = answer.value
-        if isinstance(result, PlayerCharacter):
+        if isinstance(result, list):
             return result
-        return None
+        return []
+
+    def get_player(self, player_id: str | None = None) -> PlayerCharacter | None:
+        """Look up a player character.
+
+        If *player_id* is given, return that specific player.
+        Otherwise return the first (and usually only) player — handy for
+        single-player sessions and backward compatibility.
+        """
+        if player_id:
+            answer = self.world.query_layer(
+                "entities", Query(question="player", params={"id": player_id})
+            )
+            result = answer.value
+            return result if isinstance(result, PlayerCharacter) else None
+        # Legacy: return first player
+        players = self.get_players()
+        return players[0] if players else None
 
     @property
     def player_location(self) -> str:
-        """Shortcut for player's current location."""
+        """Shortcut for the first player's current location."""
         player = self.get_player()
         return player.location_id if player else ""
 

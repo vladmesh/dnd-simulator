@@ -6,7 +6,8 @@ import type { GameStore } from "../gameStore"
 export interface ConnectionSlice {
   wsStatus: WsStatus
   sessionId: string | null
-  connect: (sessionId: string) => void
+  playerId: string | null
+  connect: (sessionId: string, playerId?: string) => void
   disconnect: () => void
 }
 
@@ -49,15 +50,16 @@ export const createConnectionSlice: StateCreator<
   return {
     wsStatus: "disconnected",
     sessionId: null,
+    playerId: null,
 
-    connect: (sessionId: string) => {
-      set({ sessionId })
-      wsClient.connect(sessionId)
+    connect: (sessionId: string, playerId?: string) => {
+      set({ sessionId, playerId: playerId ?? null })
+      wsClient.connect(sessionId, playerId)
     },
 
     disconnect: () => {
       wsClient.disconnect()
-      set({ sessionId: null })
+      set({ sessionId: null, playerId: null })
     },
   }
 }

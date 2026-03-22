@@ -39,7 +39,7 @@ type CharacterFormData = z.infer<typeof characterSchema>
 
 interface Props {
   sessionId: string
-  onCreated: () => void
+  onCreated: (playerId: string) => void
 }
 
 export function CharacterForm({ sessionId, onCreated }: Props) {
@@ -71,11 +71,11 @@ export function CharacterForm({ sessionId, onCreated }: Props) {
     setServerError(null)
     try {
       const { str, dex, con, int, wis, cha, ...rest } = data
-      await api.player.createCharacter(sessionId, {
+      const result = await api.player.createCharacter(sessionId, {
         ...rest,
         ability_scores: { str, dex, con, int, wis, cha },
       })
-      onCreated()
+      onCreated(result.player_id)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : t("setup:create_character_error")
       setServerError(msg)

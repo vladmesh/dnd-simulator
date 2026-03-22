@@ -11,7 +11,6 @@ from dnd_simulator.content_loader import (
     load_locations,
     load_nations,
     load_npcs,
-    load_player,
     load_settlements,
     load_world,
     load_world_meta,
@@ -73,18 +72,8 @@ class GameService(
         location_graph = LocationGraph(locations)
         region_terrains = extract_region_terrains(regions)
 
-        # Player is optional in templates (created by player at session join)
-        player: PlayerCharacter | None = None
-        try:
-            player = load_player(world_path)
-            if player.location_id == "" and locations:
-                player.location_id = locations[0].id
-        except (KeyError, FileNotFoundError):
-            pass
-
+        # Players are created via API (create_player), not from templates
         entities: list[Entity] = [*npcs]
-        if player:
-            entities.append(player)
 
         geography = GeographyLayer(regions=regions)
         settlements_layer = SettlementsLayer(settlements=settlements, region_terrains=region_terrains)
@@ -125,8 +114,9 @@ class GameService(
 
         # In-memory sessions
         for sid, s in self._sessions.items():
-            player = s.get_player()
-            result[sid] = {"session_id": sid, "player_name": player.name if player else ""}
+            players = s.get_players()
+            player_name = players[0].name if players else ""
+            result[sid] = {"session_id": sid, "player_name": player_name}
 
         # Saved sessions on disk (not yet loaded) — scan all world subdirs
         from dnd_simulator.storage.store import JsonFileStore
@@ -301,12 +291,13 @@ class GameService(
     # -- Player --
 
     def create_player(self, session_id: str, player_data: dict[str, Any]) -> PlayerCharacter:
-        """Create a player character in a session that doesn't have one yet."""
+        """Create a new player character in a session.
+
+        Returns the created PlayerCharacter (with a unique id like ``player_<hex>``).
+        """
         from dnd_simulator.content_loader import parse_player
 
         session = self._get_session(session_id)
-        if session.get_player() is not None:
-            raise ValueError(_("Session already has a player"))
 
         player = parse_player(player_data)
 
@@ -322,8 +313,8 @@ class GameService(
             self.autosave_session(session_id)
         return player
 
-    def _require_player(self, session: GameSession) -> PlayerCharacter:
-        player = session.get_player()
+    def _require_player(self, session: GameSession, player_id: str | None = None) -> PlayerCharacter:
+        player = session.get_player(player_id)
         if player is None:
             raise ValueError(_("No player in this session"))
         return player

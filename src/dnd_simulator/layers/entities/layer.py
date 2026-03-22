@@ -440,9 +440,19 @@ class EntitiesLayer(Layer):
         q = query.question
         params = query.params
 
+        if q == "players":
+            from dnd_simulator.core.player import PlayerCharacter
+
+            return Answer(value=[e for e in self._entities.values() if isinstance(e, PlayerCharacter)])
+
         if q == "player":
             from dnd_simulator.core.player import PlayerCharacter
 
+            pid = params.get("id")
+            if pid:
+                e = self._entities.get(str(pid))
+                return Answer(value=e if isinstance(e, PlayerCharacter) else None)
+            # Legacy: first player found
             for e in self._entities.values():
                 if isinstance(e, PlayerCharacter):
                     return Answer(value=e)
@@ -636,8 +646,7 @@ class EntitiesLayer(Layer):
             }
             if isinstance(e, PlayerCharacter):
                 data["entity_type"] = "player"
-                data["current_hp"] = e.current_hp
-                data["gold"] = e.gold
+                data.update(e.to_full_save_data())
             elif isinstance(e, Npc):
                 data.update(
                     {
@@ -655,6 +664,7 @@ class EntitiesLayer(Layer):
 
     def load_state(self, state: dict[str, object]) -> None:
         """Restore mutable entity state from saved data."""
+        from dnd_simulator.content_loader import parse_player
         from dnd_simulator.core.player import PlayerCharacter
 
         entities_data = state["entities"]
@@ -663,6 +673,14 @@ class EntitiesLayer(Layer):
         for eid, edata in entities_data.items():
             assert isinstance(edata, dict)
             entity = self._entities.get(str(eid))
+
+            # Recreate player if missing (e.g. world template has no player.yaml)
+            if entity is None and edata.get("entity_type") == "player":
+                player = parse_player(edata)
+                player.current_hp = int(edata.get("current_hp", player.max_hp))
+                self.add_entity(player)
+                continue
+
             if entity:
                 entity.active = bool(edata.get("active", True))
                 loc = edata.get("location_id") or edata.get("region_id")

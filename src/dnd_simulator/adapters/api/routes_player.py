@@ -52,6 +52,7 @@ def _get_session(service: Any, session_id: str) -> Any:
 def _player_status(p: Any) -> PlayerStatusResponse:
     scores = p.ability_scores
     return PlayerStatusResponse(
+        player_id=p.id,
         name=p.name,
         race=p.race.value,
         char_class=p.char_class.value,

@@ -72,6 +72,7 @@ def _player_to_dict(player: PlayerCharacter) -> dict[str, Any]:
     """Serialize player stats for the status panel."""
     scores = player.ability_scores
     return {
+        "player_id": player.id,
         "name": player.name,
         "race": player.race.value,
         "char_class": player.char_class.value,
@@ -205,12 +206,15 @@ def _parse_command(text: str) -> Action:
 
 
 @router.websocket("/api/ws/{session_id}")
-async def websocket_game(ws: WebSocket, session_id: str) -> None:
+async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None = None) -> None:
     """WebSocket game loop for a session.
 
     Expects the session to already exist (created via REST POST /api/master/sessions).
     Wires a PlayerBrain, starts Round in a background thread, and bridges
     WS messages to the game loop.
+
+    Query params:
+        player_id: which player to control (optional — defaults to first player in session)
     """
     # Origin check: if WS_ALLOWED_ORIGINS is set, reject connections from other origins
     allowed_raw = os.getenv("WS_ALLOWED_ORIGINS", "")
@@ -232,7 +236,7 @@ async def websocket_game(ws: WebSocket, session_id: str) -> None:
         await ws.close()
         return
 
-    player = session.get_player()
+    player = session.get_player(player_id)
     if player is None:
         await ws.send_json({"type": "error", "message": _("No player in session")})
         await ws.close()

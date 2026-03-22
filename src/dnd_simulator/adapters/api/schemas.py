@@ -113,6 +113,7 @@ class WorldListItem(BaseModel):
 
 
 class PlayerStatusResponse(BaseModel):
+    player_id: str
     name: str
     race: str
     char_class: str

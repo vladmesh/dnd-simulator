@@ -110,6 +110,7 @@ export interface AbilityScores {
 }
 
 export interface PlayerStatus {
+  player_id: string
   name: string
   race: string
   char_class: string

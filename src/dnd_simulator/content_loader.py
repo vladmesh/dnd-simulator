@@ -358,15 +358,24 @@ def load_player(path: Path) -> PlayerCharacter:
 
 
 def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
-    """Parse player character from YAML data dict."""
+    """Parse player character from YAML data dict.
+
+    If ``pdata`` does not contain an ``id`` field a unique one is generated
+    (``player_<hex8>``).  Callers may supply an explicit ``id`` to preserve
+    identity across save/load cycles.
+    """
+    import uuid
+
     max_hp = int(pdata.get("hp", 10))
     attacks = parse_attacks(pdata.get("attacks") or [])
 
     # Support both start_location and legacy start_region
-    location_id = str(pdata.get("start_location", pdata.get("start_region", "")))
+    location_id = str(pdata.get("start_location", pdata.get("start_region", pdata.get("location_id", ""))))
+
+    player_id = str(pdata.get("id", "")) or f"player_{uuid.uuid4().hex[:8]}"
 
     return PlayerCharacter(
-        id="player",
+        id=player_id,
         name=str(pdata.get("name", "Adventurer")),
         location_id=location_id,
         race=Race(pdata["race"]) if "race" in pdata else Race.HUMAN,
@@ -376,7 +385,7 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
         appearance=str(pdata.get("appearance", "")),
         ability_scores=parse_ability_scores(pdata),
         max_hp=max_hp,
-        current_hp=max_hp,
+        current_hp=int(pdata.get("current_hp", max_hp)),
         ac=int(pdata.get("ac", 10)),
         gold=int(pdata.get("gold", 0)),
         attacks=attacks,
