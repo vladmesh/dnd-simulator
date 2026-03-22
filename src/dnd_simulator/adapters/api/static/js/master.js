@@ -5,6 +5,45 @@
 (() => {
     'use strict';
 
+    // ── I18n init ──
+
+    function detectLang() {
+        const saved = localStorage.getItem('dnd_lang');
+        if (saved) return saved;
+        const nav = (navigator.language || '').toLowerCase();
+        if (nav.startsWith('ru')) return 'ru';
+        return 'en';
+    }
+
+    function currentLang() {
+        return localStorage.getItem('dnd_lang') || 'en';
+    }
+
+    function setActiveLangFlags(lang) {
+        document.querySelectorAll('.lang-flag').forEach(el => {
+            el.classList.toggle('active', el.dataset.lang === lang);
+        });
+    }
+
+    const initLang = detectLang();
+    localStorage.setItem('dnd_lang', initLang);
+    setActiveLangFlags(initLang);
+    I18n.init(initLang).then(() => {
+        document.title = I18n.t('master.title');
+    });
+
+    document.querySelectorAll('.lang-flag').forEach(el => {
+        el.addEventListener('click', () => {
+            const lang = el.dataset.lang;
+            localStorage.setItem('dnd_lang', lang);
+            setActiveLangFlags(lang);
+            I18n.init(lang).then(() => {
+                document.title = I18n.t('master.title');
+                loadWorlds(); // reload world names in new language
+            });
+        });
+    });
+
     // ── State ──
     let sessionsList = [];
     let currentSession = null;    // active session id
@@ -76,9 +115,9 @@
         return d.innerHTML;
     }
     function typeLabel(entityType) {
-        if (entityType === 'player') return '<span style="color:#6bb5ff">Player</span>';
-        if (entityType === 'npc') return '<span style="color:#e94560">NPC</span>';
-        return '<span style="color:#aaa">Monster</span>';
+        if (entityType === 'player') return '<span style="color:#6bb5ff">' + esc(I18n.t('entity.player')) + '</span>';
+        if (entityType === 'npc') return '<span style="color:#e94560">' + esc(I18n.t('entity.npc')) + '</span>';
+        return '<span style="color:#aaa">' + esc(I18n.t('entity.monster')) + '</span>';
     }
 
     // ── Mode switching ──
@@ -100,9 +139,9 @@
 
     async function loadWorlds() {
         try {
-            worldsList = await API.master.listWorlds();
+            worldsList = await API.master.listWorlds(currentLang());
             if (!worldsList.length) {
-                $worldsList.textContent = 'No worlds found';
+                $worldsList.textContent = I18n.t('master.no_worlds');
                 return;
             }
             $worldsList.innerHTML = '';
@@ -115,7 +154,7 @@
                 $worldsList.appendChild(card);
             });
         } catch (err) {
-            $worldsList.textContent = 'Error: ' + err.message;
+            $worldsList.textContent = I18n.t('error.prefix', { message: err.message });
         }
     }
 
@@ -134,7 +173,7 @@
             renderTemplateData(data);
         } catch (err) {
             $templateName.textContent = worldId;
-            $templateDesc.textContent = 'Error loading: ' + err.message;
+            $templateDesc.textContent = I18n.t('error.loading', { message: err.message });
         }
     }
 
@@ -221,15 +260,15 @@
 
     $('btn-confirm-new-session').addEventListener('click', async () => {
         const worldId = $newSessionWorld.value;
-        const lang = $('new-session-lang').value;
-        if (!worldId) { $newSessionMsg.textContent = 'Select a world'; return; }
+        const lang = currentLang();
+        if (!worldId) { $newSessionMsg.textContent = I18n.t('dialog.select_world'); return; }
         try {
             const res = await API.master.createSession(worldId, lang);
             hide($newSessionDialog);
             await loadSessions();
             selectSession(res.session_id);
         } catch (err) {
-            $newSessionMsg.textContent = 'Error: ' + err.message;
+            $newSessionMsg.textContent = I18n.t('error.prefix', { message: err.message });
         }
     });
 
@@ -240,13 +279,13 @@
             sessionsList = await API.master.listSessions();
             renderSessionsList();
         } catch (err) {
-            $sessionsList.textContent = 'Error: ' + err.message;
+            $sessionsList.textContent = I18n.t('error.prefix', { message: err.message });
         }
     }
 
     function renderSessionsList() {
         if (sessionsList.length === 0) {
-            $sessionsList.innerHTML = '<span class="text-dim">No sessions yet</span>';
+            $sessionsList.innerHTML = '<span class="text-dim">' + esc(I18n.t('master.no_sessions')) + '</span>';
             return;
         }
         $sessionsList.innerHTML = '';
@@ -275,14 +314,14 @@
 
     async function deleteCurrentSession() {
         if (!currentSession) return;
-        if (!confirm('Delete session ' + currentSession + '?')) return;
+        if (!confirm(I18n.t('confirm.delete_session', { id: currentSession }))) return;
         try {
             await API.master.deleteSession(currentSession);
             currentSession = null;
             setMode(null);
             await loadSessions();
         } catch (err) {
-            alert('Delete failed: ' + err.message);
+            alert(I18n.t('error.delete_failed', { message: err.message }));
         }
     }
 
@@ -324,7 +363,7 @@
                 `<td class="editable" data-field="wealth">${n.wealth ?? '—'}</td>` +
                 `<td class="editable" data-field="military">${n.military ?? '—'}</td>` +
                 `<td class="editable" data-field="stability">${n.stability ?? '—'}</td>` +
-                `<td><button class="small btn-edit-nation">Edit</button></td>`;
+                `<td><button class="small btn-edit-nation">${esc(I18n.t('master.edit'))}</button></td>`;
             $nationsTbody.appendChild(tr);
         });
 
@@ -338,7 +377,7 @@
                 `<td class="editable" data-field="population">${s.population ?? '—'}</td>` +
                 `<td class="editable" data-field="prosperity">${s.prosperity ?? '—'}</td>` +
                 `<td class="editable" data-field="defenses">${s.defenses ?? '—'}</td>` +
-                `<td><button class="small btn-edit-settlement">Edit</button></td>`;
+                `<td><button class="small btn-edit-settlement">${esc(I18n.t('master.edit'))}</button></td>`;
             $settlementsTbody.appendChild(tr);
         });
     }
@@ -352,7 +391,7 @@
         const nationId = tr.dataset.id;
         const cells = tr.querySelectorAll('.editable');
 
-        if (btn.textContent === 'Save') {
+        if (btn.dataset.editing === 'true') {
             const data = {};
             cells.forEach(td => {
                 const input = td.querySelector('input');
@@ -363,7 +402,7 @@
             });
             API.master.patchNation(currentSession, nationId, data)
                 .then(() => refreshSession())
-                .catch(err => alert('Patch nation failed: ' + err.message));
+                .catch(err => alert(I18n.t('error.patch_nation', { message: err.message })));
             return;
         }
 
@@ -371,7 +410,8 @@
             const val = td.textContent;
             td.innerHTML = `<input type="number" value="${val === '—' ? '' : val}" style="width:70px">`;
         });
-        btn.textContent = 'Save';
+        btn.textContent = I18n.t('save.btn');
+        btn.dataset.editing = 'true';
         btn.classList.add('primary');
     });
 
@@ -384,7 +424,7 @@
         const settId = tr.dataset.id;
         const cells = tr.querySelectorAll('.editable');
 
-        if (btn.textContent === 'Save') {
+        if (btn.dataset.editing === 'true') {
             const data = {};
             cells.forEach(td => {
                 const input = td.querySelector('input');
@@ -395,7 +435,7 @@
             });
             API.master.patchSettlement(currentSession, settId, data)
                 .then(() => refreshSession())
-                .catch(err => alert('Patch settlement failed: ' + err.message));
+                .catch(err => alert(I18n.t('error.patch_settlement', { message: err.message })));
             return;
         }
 
@@ -403,7 +443,8 @@
             const val = td.textContent;
             td.innerHTML = `<input type="number" value="${val === '—' ? '' : val}" style="width:70px">`;
         });
-        btn.textContent = 'Save';
+        btn.textContent = I18n.t('save.btn');
+        btn.dataset.editing = 'true';
         btn.classList.add('primary');
     });
 
@@ -416,9 +457,9 @@
         (Array.isArray(creatures) ? creatures : []).forEach(c => {
             const isPlayer = c.entity_type === 'player';
             const actions = isPlayer
-                ? `<button class="small btn-view-creature" data-id="${esc(c.id)}">View</button>`
-                : `<button class="small btn-edit-creature" data-id="${esc(c.id)}">Edit</button> ` +
-                  `<button class="small danger btn-del-creature" data-id="${esc(c.id)}">Del</button>`;
+                ? `<button class="small btn-view-creature" data-id="${esc(c.id)}">${esc(I18n.t('entity.view'))}</button>`
+                : `<button class="small btn-edit-creature" data-id="${esc(c.id)}">${esc(I18n.t('entity.edit'))}</button> ` +
+                  `<button class="small danger btn-del-creature" data-id="${esc(c.id)}">${esc(I18n.t('entity.del'))}</button>`;
 
             $creaturesTbody.innerHTML +=
                 `<tr>` +
@@ -429,7 +470,7 @@
                 `<td>${hpBar(c.hp ?? 0, c.max_hp ?? 0)}</td>` +
                 `<td>${c.ac ?? '—'}</td>` +
                 `<td>${esc(c.ai_type || '—')}</td>` +
-                `<td>${c.active ? '<span class="text-success">yes</span>' : '<span class="text-danger">no</span>'}</td>` +
+                `<td>${c.active ? '<span class="text-success">' + esc(I18n.t('entity.yes')) + '</span>' : '<span class="text-danger">' + esc(I18n.t('entity.no')) + '</span>'}</td>` +
                 `<td>${actions}</td>` +
                 `</tr>`;
         });
@@ -445,15 +486,15 @@
             try {
                 const creature = await API.master.getCreature(currentSession, eid);
                 openCreatureEdit(creature);
-            } catch (err) { alert('Failed to load creature: ' + err.message); }
+            } catch (err) { alert(I18n.t('error.load_creature', { message: err.message })); }
         }
         if (delBtn) {
-            if (!confirm('Delete creature ' + delBtn.dataset.id + '?')) return;
+            if (!confirm(I18n.t('confirm.delete_creature', { id: delBtn.dataset.id }))) return;
             try {
                 await API.master.deleteCreature(currentSession, delBtn.dataset.id);
                 hide($creatureEditPanel);
                 refreshSession();
-            } catch (err) { alert('Delete failed: ' + err.message); }
+            } catch (err) { alert(I18n.t('error.delete_failed', { message: err.message })); }
         }
     });
 
@@ -506,9 +547,9 @@
         if (locationId)   data.location_id = locationId;
         try {
             await API.master.patchCreature(currentSession, eid, data);
-            flashMsg($editMsg, 'Saved.', 'text-success');
+            flashMsg($editMsg, I18n.t('edit.saved'), 'text-success');
             refreshSession();
-        } catch (err) { flashMsg($editMsg, 'Error: ' + err.message, 'text-danger'); }
+        } catch (err) { flashMsg($editMsg, I18n.t('error.prefix', { message: err.message }), 'text-danger'); }
     });
 
     $('btn-save-brain').addEventListener('click', async () => {
@@ -517,9 +558,9 @@
         const model = $('edit-brain-model').value.trim() || null;
         try {
             await API.master.setBrain(currentSession, eid, type, model);
-            flashMsg($editMsg, 'Brain updated.', 'text-success');
+            flashMsg($editMsg, I18n.t('edit.brain_updated'), 'text-success');
             refreshSession();
-        } catch (err) { flashMsg($editMsg, 'Error: ' + err.message, 'text-danger'); }
+        } catch (err) { flashMsg($editMsg, I18n.t('error.prefix', { message: err.message }), 'text-danger'); }
     });
 
     // -- Spawn --
@@ -551,15 +592,15 @@
             data.personality = $('spawn-personality').value.trim();
         }
         if (!data.id || !data.name) {
-            flashMsg($spawnMsg, 'ID and Name are required.', 'text-danger');
+            flashMsg($spawnMsg, I18n.t('spawn.id_name_required'), 'text-danger');
             return;
         }
         try {
             await API.master.spawnCreature(currentSession, data);
-            flashMsg($spawnMsg, 'Spawned!', 'text-success');
+            flashMsg($spawnMsg, I18n.t('spawn.spawned'), 'text-success');
             hide($spawnForm);
             refreshSession();
-        } catch (err) { flashMsg($spawnMsg, 'Error: ' + err.message, 'text-danger'); }
+        } catch (err) { flashMsg($spawnMsg, I18n.t('error.prefix', { message: err.message }), 'text-danger'); }
     });
 
     // -- Time Tab --
@@ -582,9 +623,9 @@
         $timeMsg.textContent = '';
         try {
             const res = await API.master.advanceTime(currentSession, hours);
-            flashMsg($timeMsg, res.message || ('Advanced ' + hours + 'h'), 'text-success');
+            flashMsg($timeMsg, res.message || I18n.t('time.advanced', { hours: hours }), 'text-success');
             refreshSession();
-        } catch (err) { flashMsg($timeMsg, 'Error: ' + err.message, 'text-danger'); }
+        } catch (err) { flashMsg($timeMsg, I18n.t('error.prefix', { message: err.message }), 'text-danger'); }
     }
 
     // -- Save / Load --
@@ -593,9 +634,9 @@
         const name = $('save-name').value.trim() || null;
         try {
             const res = await API.master.save(currentSession, name);
-            flashMsg($saveMsg, res.message || 'Saved!', 'text-success');
+            flashMsg($saveMsg, res.message || I18n.t('save.saved'), 'text-success');
             loadSavesList();
-        } catch (err) { flashMsg($saveMsg, 'Error: ' + err.message, 'text-danger'); }
+        } catch (err) { flashMsg($saveMsg, I18n.t('error.prefix', { message: err.message }), 'text-danger'); }
     });
 
     async function loadSavesList() {
@@ -603,7 +644,7 @@
         try {
             const res = await API.master.listSaves(currentSession);
             const saves = res.saves || [];
-            if (!saves.length) { $savesList.innerHTML = '<span class="text-dim">No saves found</span>'; return; }
+            if (!saves.length) { $savesList.innerHTML = '<span class="text-dim">' + esc(I18n.t('load.no_saves')) + '</span>'; return; }
             $savesList.innerHTML = '';
             saves.forEach(s => {
                 const name = typeof s === 'string' ? s : s.name || s;
@@ -611,20 +652,20 @@
                 row.className = 'flex items-center justify-between';
                 row.style.cssText = 'padding:0.3rem 0;border-bottom:1px solid var(--border);';
                 row.innerHTML = `<span>${esc(String(name))}</span>` +
-                    `<button class="small primary btn-load-save" data-name="${esc(String(name))}">Load</button>`;
+                    `<button class="small primary btn-load-save" data-name="${esc(String(name))}">${esc(I18n.t('load.btn'))}</button>`;
                 $savesList.appendChild(row);
             });
-        } catch (err) { $savesList.textContent = 'Error: ' + err.message; }
+        } catch (err) { $savesList.textContent = I18n.t('error.prefix', { message: err.message }); }
     }
 
     $savesList.addEventListener('click', async (e) => {
         const btn = e.target.closest('.btn-load-save');
         if (!btn) return;
-        if (!confirm('Load save "' + btn.dataset.name + '"?')) return;
+        if (!confirm(I18n.t('load.confirm', { name: btn.dataset.name }))) return;
         try {
             await API.master.load(currentSession, btn.dataset.name);
             refreshSession();
-        } catch (err) { alert('Load failed: ' + err.message); }
+        } catch (err) { alert(I18n.t('load.failed', { message: err.message })); }
     });
 
     // -- Session Tabs --

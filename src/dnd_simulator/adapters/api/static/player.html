@@ -5,35 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>D&D Simulator — Player</title>
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .lang-flags { display: flex; gap: 0.5rem; align-items: center; }
+        .lang-flag { cursor: pointer; font-size: 1.3rem; opacity: 0.4; transition: opacity 0.15s; padding: 0.1rem 0.3rem; border-radius: 4px; border: 2px solid transparent; }
+        .lang-flag:hover { opacity: 0.7; }
+        .lang-flag.active { opacity: 1; border-color: var(--accent); }
+    </style>
 </head>
 <body>
 
 <!-- Phase 1: Setup -->
 <div id="setup-screen" class="setup-panel panel">
-    <h1>Player Setup</h1>
+    <div class="flex items-center justify-between">
+        <h1 data-i18n="player.setup.title">Player Setup</h1>
+        <div class="lang-flags">
+            <span class="lang-flag" data-lang="en" title="English">&#127468;&#127463;</span>
+            <span class="lang-flag" data-lang="ru" title="Русский">&#127479;&#127482;</span>
+        </div>
+    </div>
 
     <!-- Connect to existing session -->
     <div id="connect-section">
-        <h3>Join Existing Session</h3>
+        <h3 data-i18n="player.setup.join">Join Existing Session</h3>
         <div class="form-row">
             <div class="form-group grow">
-                <label for="session-id-input">Session ID</label>
-                <input type="text" id="session-id-input" placeholder="Enter session ID">
+                <label for="session-id-input" data-i18n="player.setup.session_id">Session ID</label>
+                <input type="text" id="session-id-input" data-i18n-placeholder="player.setup.session_id_placeholder" placeholder="Enter session ID">
             </div>
-            <button id="btn-connect" class="primary">Connect</button>
+            <button id="btn-connect" class="primary" data-i18n="player.setup.connect">Connect</button>
         </div>
 
-        <p class="text-dim mt-1" style="text-align:center;">or</p>
+        <p class="text-dim mt-1" style="text-align:center;" data-i18n="player.setup.or">or</p>
 
-        <h3 class="mt-1">New Session</h3>
+        <h3 class="mt-1" data-i18n="player.setup.new_session">New Session</h3>
         <div class="form-row">
             <div class="form-group grow">
-                <label for="world-select">World</label>
+                <label for="world-select" data-i18n="player.setup.world">World</label>
                 <select id="world-select">
-                    <option value="">Loading worlds...</option>
+                    <option value="" data-i18n="player.setup.loading_worlds">Loading worlds...</option>
                 </select>
             </div>
-            <button id="btn-new-session" class="primary">New Session</button>
+            <button id="btn-new-session" class="primary" data-i18n="player.setup.new_session">New Session</button>
         </div>
         <p id="world-description" class="text-dim mt-1" style="font-size:0.85rem; max-height:4rem; overflow-y:auto;"></p>
         <p id="connect-error" class="text-danger mt-1 hidden"></p>
@@ -42,121 +54,121 @@
 
     <!-- Character creation (shown after connecting if no character) -->
     <div id="chargen-section" class="hidden">
-        <h2 class="mt-2">Create Your Character</h2>
-        <p class="text-dim mb-1">Session: <span id="chargen-sid" class="text-success"></span></p>
+        <h2 class="mt-2" data-i18n="chargen.title">Create Your Character</h2>
+        <p class="text-dim mb-1"><span data-i18n="chargen.session">Session:</span> <span id="chargen-sid" class="text-success"></span></p>
 
         <div class="form-row">
             <div class="form-group grow">
-                <label for="char-name">Name</label>
-                <input type="text" id="char-name" placeholder="Character name">
+                <label for="char-name" data-i18n="chargen.name">Name</label>
+                <input type="text" id="char-name" data-i18n-placeholder="chargen.name_placeholder" placeholder="Character name">
             </div>
         </div>
         <div class="form-row">
             <div class="form-group grow">
-                <label for="char-race">Race</label>
+                <label for="char-race" data-i18n="chargen.race">Race</label>
                 <select id="char-race">
-                    <option value="human">Human</option>
-                    <option value="elf">Elf</option>
-                    <option value="dwarf">Dwarf</option>
-                    <option value="halfling">Halfling</option>
-                    <option value="gnome">Gnome</option>
-                    <option value="half-orc">Half-Orc</option>
-                    <option value="tiefling">Tiefling</option>
-                    <option value="dragonborn">Dragonborn</option>
+                    <option value="human" data-i18n="race.human">Human</option>
+                    <option value="elf" data-i18n="race.elf">Elf</option>
+                    <option value="dwarf" data-i18n="race.dwarf">Dwarf</option>
+                    <option value="halfling" data-i18n="race.halfling">Halfling</option>
+                    <option value="gnome" data-i18n="race.gnome">Gnome</option>
+                    <option value="half-orc" data-i18n="race.half_orc">Half-Orc</option>
+                    <option value="tiefling" data-i18n="race.tiefling">Tiefling</option>
+                    <option value="dragonborn" data-i18n="race.dragonborn">Dragonborn</option>
                 </select>
             </div>
             <div class="form-group grow">
-                <label for="char-class">Class</label>
+                <label for="char-class" data-i18n="chargen.class">Class</label>
                 <select id="char-class">
-                    <option value="fighter">Fighter</option>
-                    <option value="wizard">Wizard</option>
-                    <option value="rogue">Rogue</option>
-                    <option value="cleric">Cleric</option>
-                    <option value="ranger">Ranger</option>
-                    <option value="barbarian">Barbarian</option>
-                    <option value="paladin">Paladin</option>
-                    <option value="bard">Bard</option>
-                    <option value="monk">Monk</option>
-                    <option value="sorcerer">Sorcerer</option>
-                    <option value="warlock">Warlock</option>
-                    <option value="druid">Druid</option>
+                    <option value="fighter" data-i18n="class.fighter">Fighter</option>
+                    <option value="wizard" data-i18n="class.wizard">Wizard</option>
+                    <option value="rogue" data-i18n="class.rogue">Rogue</option>
+                    <option value="cleric" data-i18n="class.cleric">Cleric</option>
+                    <option value="ranger" data-i18n="class.ranger">Ranger</option>
+                    <option value="barbarian" data-i18n="class.barbarian">Barbarian</option>
+                    <option value="paladin" data-i18n="class.paladin">Paladin</option>
+                    <option value="bard" data-i18n="class.bard">Bard</option>
+                    <option value="monk" data-i18n="class.monk">Monk</option>
+                    <option value="sorcerer" data-i18n="class.sorcerer">Sorcerer</option>
+                    <option value="warlock" data-i18n="class.warlock">Warlock</option>
+                    <option value="druid" data-i18n="class.druid">Druid</option>
                 </select>
             </div>
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label for="char-level">Level</label>
+                <label for="char-level" data-i18n="chargen.level">Level</label>
                 <input type="number" id="char-level" min="1" max="20" value="1" style="width:60px;">
             </div>
             <div class="form-group grow">
-                <label for="char-alignment">Alignment</label>
+                <label for="char-alignment" data-i18n="chargen.alignment">Alignment</label>
                 <select id="char-alignment">
-                    <option value="lawful_good">Lawful Good</option>
-                    <option value="neutral_good">Neutral Good</option>
-                    <option value="chaotic_good">Chaotic Good</option>
-                    <option value="lawful_neutral">Lawful Neutral</option>
-                    <option value="true_neutral" selected>True Neutral</option>
-                    <option value="chaotic_neutral">Chaotic Neutral</option>
-                    <option value="lawful_evil">Lawful Evil</option>
-                    <option value="neutral_evil">Neutral Evil</option>
-                    <option value="chaotic_evil">Chaotic Evil</option>
+                    <option value="lawful_good" data-i18n="alignment.lawful_good">Lawful Good</option>
+                    <option value="neutral_good" data-i18n="alignment.neutral_good">Neutral Good</option>
+                    <option value="chaotic_good" data-i18n="alignment.chaotic_good">Chaotic Good</option>
+                    <option value="lawful_neutral" data-i18n="alignment.lawful_neutral">Lawful Neutral</option>
+                    <option value="true_neutral" selected data-i18n="alignment.true_neutral">True Neutral</option>
+                    <option value="chaotic_neutral" data-i18n="alignment.chaotic_neutral">Chaotic Neutral</option>
+                    <option value="lawful_evil" data-i18n="alignment.lawful_evil">Lawful Evil</option>
+                    <option value="neutral_evil" data-i18n="alignment.neutral_evil">Neutral Evil</option>
+                    <option value="chaotic_evil" data-i18n="alignment.chaotic_evil">Chaotic Evil</option>
                 </select>
             </div>
         </div>
 
         <div class="form-row">
             <div class="form-group grow">
-                <label for="char-appearance">Appearance</label>
-                <textarea id="char-appearance" rows="2" placeholder="Describe your character's appearance"></textarea>
+                <label for="char-appearance" data-i18n="chargen.appearance">Appearance</label>
+                <textarea id="char-appearance" rows="2" data-i18n-placeholder="chargen.appearance_placeholder" placeholder="Describe your character's appearance"></textarea>
             </div>
         </div>
 
-        <h3 class="mt-1">Ability Scores</h3>
+        <h3 class="mt-1" data-i18n="chargen.ability_scores">Ability Scores</h3>
         <div class="form-row">
             <div class="form-group">
-                <label for="char-str">STR</label>
+                <label for="char-str" data-i18n="stat.str">STR</label>
                 <input type="number" id="char-str" min="1" max="30" value="10" style="width:55px;">
             </div>
             <div class="form-group">
-                <label for="char-dex">DEX</label>
+                <label for="char-dex" data-i18n="stat.dex">DEX</label>
                 <input type="number" id="char-dex" min="1" max="30" value="10" style="width:55px;">
             </div>
             <div class="form-group">
-                <label for="char-con">CON</label>
+                <label for="char-con" data-i18n="stat.con">CON</label>
                 <input type="number" id="char-con" min="1" max="30" value="10" style="width:55px;">
             </div>
             <div class="form-group">
-                <label for="char-int">INT</label>
+                <label for="char-int" data-i18n="stat.int">INT</label>
                 <input type="number" id="char-int" min="1" max="30" value="10" style="width:55px;">
             </div>
             <div class="form-group">
-                <label for="char-wis">WIS</label>
+                <label for="char-wis" data-i18n="stat.wis">WIS</label>
                 <input type="number" id="char-wis" min="1" max="30" value="10" style="width:55px;">
             </div>
             <div class="form-group">
-                <label for="char-cha">CHA</label>
+                <label for="char-cha" data-i18n="stat.cha">CHA</label>
                 <input type="number" id="char-cha" min="1" max="30" value="10" style="width:55px;">
             </div>
         </div>
 
-        <h3 class="mt-1">Combat Stats</h3>
+        <h3 class="mt-1" data-i18n="chargen.combat_stats">Combat Stats</h3>
         <div class="form-row">
             <div class="form-group">
-                <label for="char-hp">HP</label>
+                <label for="char-hp" data-i18n="stat.hp">HP</label>
                 <input type="number" id="char-hp" min="1" value="10" style="width:60px;">
             </div>
             <div class="form-group">
-                <label for="char-ac">AC</label>
+                <label for="char-ac" data-i18n="stat.ac">AC</label>
                 <input type="number" id="char-ac" min="1" value="10" style="width:60px;">
             </div>
             <div class="form-group">
-                <label for="char-gold">Gold</label>
+                <label for="char-gold" data-i18n="stat.gold">Gold</label>
                 <input type="number" id="char-gold" min="0" value="15" style="width:70px;">
             </div>
         </div>
 
         <div class="form-row mt-2">
-            <button id="btn-create-char" class="primary" style="width:100%;">Create Character</button>
+            <button id="btn-create-char" class="primary" style="width:100%;" data-i18n="chargen.create">Create Character</button>
         </div>
         <p id="chargen-error" class="text-danger mt-1 hidden"></p>
     </div>
@@ -174,7 +186,7 @@
 
             <div class="mt-1">
                 <div class="flex justify-between" style="font-size:0.8rem;">
-                    <span>HP</span>
+                    <span data-i18n="stat.hp">HP</span>
                     <span id="status-hp-text">—</span>
                 </div>
                 <div class="hp-bar-outer mt-1">
@@ -183,48 +195,50 @@
             </div>
 
             <div class="stat-grid mt-1">
-                <span class="stat-label">AC</span>
+                <span class="stat-label" data-i18n="stat.ac">AC</span>
                 <span class="stat-value" id="status-ac">—</span>
-                <span class="stat-label">Gold</span>
+                <span class="stat-label" data-i18n="stat.gold">Gold</span>
                 <span class="stat-value" id="status-gold">—</span>
-                <span class="stat-label">Level</span>
+                <span class="stat-label" data-i18n="stat.level">Level</span>
                 <span class="stat-value" id="status-level">—</span>
             </div>
 
-            <h3 class="mt-1" style="font-size:0.85rem;">Abilities</h3>
+            <h3 class="mt-1" style="font-size:0.85rem;" data-i18n="stat.abilities">Abilities</h3>
             <div class="stat-grid">
-                <span class="stat-label">STR</span>
+                <span class="stat-label" data-i18n="stat.str">STR</span>
                 <span class="stat-value" id="stat-str">—</span>
-                <span class="stat-label">DEX</span>
+                <span class="stat-label" data-i18n="stat.dex">DEX</span>
                 <span class="stat-value" id="stat-dex">—</span>
-                <span class="stat-label">CON</span>
+                <span class="stat-label" data-i18n="stat.con">CON</span>
                 <span class="stat-value" id="stat-con">—</span>
-                <span class="stat-label">INT</span>
+                <span class="stat-label" data-i18n="stat.int">INT</span>
                 <span class="stat-value" id="stat-int">—</span>
-                <span class="stat-label">WIS</span>
+                <span class="stat-label" data-i18n="stat.wis">WIS</span>
                 <span class="stat-value" id="stat-wis">—</span>
-                <span class="stat-label">CHA</span>
+                <span class="stat-label" data-i18n="stat.cha">CHA</span>
                 <span class="stat-value" id="stat-cha">—</span>
             </div>
 
             <div class="mt-1" style="font-size:0.8rem;">
-                <span class="stat-label">Location</span>
+                <span class="stat-label" data-i18n="stat.location">Location</span>
                 <p id="status-location" class="text-success">—</p>
             </div>
+
+            <button id="btn-exit-session" class="small danger mt-1" style="width:100%;" data-i18n="game.exit_session">Exit Session</button>
         </div>
     </div>
 
     <!-- Center: Perception + Events + Combat -->
     <div class="player-center">
         <div id="combat-panel" class="combat-panel hidden">
-            <h3>Combat</h3>
-            <p>Round: <span id="combat-round">—</span></p>
+            <h3 data-i18n="game.combat">Combat</h3>
+            <p><span data-i18n="game.round">Round:</span> <span id="combat-round">—</span></p>
             <div id="combat-initiative" class="mt-1" style="font-size:0.8rem;"></div>
             <pre id="combat-map" class="mt-1" style="font-size:0.7rem; overflow-x:auto;"></pre>
         </div>
 
         <div class="perception-box panel" id="perception-box">
-            <span class="text-dim">Loading perception...</span>
+            <span class="text-dim" data-i18n="game.loading_perception">Loading perception...</span>
         </div>
 
         <div class="event-log" id="event-log"></div>
@@ -233,9 +247,9 @@
     <!-- Right: Map -->
     <div class="player-map">
         <div class="panel">
-            <h3 style="font-size:0.85rem;">Map</h3>
+            <h3 style="font-size:0.85rem;" data-i18n="game.map">Map</h3>
             <div id="map-current" class="map-node current">—</div>
-            <p class="text-dim mt-1" style="font-size:0.75rem;">Paths:</p>
+            <p class="text-dim mt-1" style="font-size:0.75rem;" data-i18n="game.paths">Paths:</p>
             <div id="map-paths"></div>
         </div>
     </div>
@@ -243,28 +257,29 @@
     <!-- Bottom: Command -->
     <div class="player-command">
         <div class="command-bar">
-            <input type="text" id="command-input" placeholder="Enter command..." autocomplete="off">
-            <button id="btn-send" class="primary">Send</button>
+            <input type="text" id="command-input" data-i18n-placeholder="game.command_placeholder" placeholder="Enter command..." autocomplete="off">
+            <button id="btn-send" class="primary" data-i18n="game.send">Send</button>
         </div>
         <div class="flex gap-05 mt-1" id="quick-actions-explore">
-            <button class="small" data-action="look">Look</button>
-            <button class="small" data-action="map">Map</button>
-            <button class="small" data-action="wait 1">Wait 1h</button>
-            <button class="small" data-action="status">Status</button>
-            <button class="small" data-action="nations">Nations</button>
-            <button class="small" data-action="settlements">Settlements</button>
+            <button class="small" data-action="look" data-i18n="action.look">Look</button>
+            <button class="small" data-action="map" data-i18n="action.map">Map</button>
+            <button class="small" data-action="wait 1" data-i18n="action.wait">Wait 1h</button>
+            <button class="small" data-action="status" data-i18n="action.status">Status</button>
+            <button class="small" data-action="nations" data-i18n="action.nations">Nations</button>
+            <button class="small" data-action="settlements" data-i18n="action.settlements">Settlements</button>
         </div>
         <div class="flex gap-05 mt-1 hidden" id="quick-actions-combat">
-            <button class="small danger" id="btn-attack-target">Attack</button>
-            <button class="small" data-action="dodge">Dodge</button>
-            <button class="small" data-action="flee">Flee</button>
-            <button class="small" data-action="move toward">Move</button>
-            <button class="small" data-action="end_turn">End Turn</button>
+            <button class="small danger" id="btn-attack-target" data-i18n="action.attack">Attack</button>
+            <button class="small" data-action="dodge" data-i18n="action.dodge">Dodge</button>
+            <button class="small" data-action="flee" data-i18n="action.flee">Flee</button>
+            <button class="small" data-action="move toward" data-i18n="action.move">Move</button>
+            <button class="small" data-action="end_turn" data-i18n="action.end_turn">End Turn</button>
         </div>
     </div>
 </div>
 
+<script src="/js/i18n.js"></script>
 <script src="/js/api.js?v=5"></script>
-<script src="/js/player.js?v=5"></script>
+<script src="/js/player.js?v=6"></script>
 </body>
 </html>

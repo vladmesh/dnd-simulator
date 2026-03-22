@@ -75,6 +75,62 @@ const WorldBuilder = (() => {
         ).join('');
     }
 
+    /** Resolve a translatable value to display string (for cards/labels). */
+    function resolveText(val) {
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+            const lang = (typeof I18n !== 'undefined') ? I18n.getLocale() : 'en';
+            return val[lang] || val.en || Object.values(val)[0] || '';
+        }
+        return val || '';
+    }
+
+    /**
+     * Render a bilingual text input (two fields with flag labels).
+     * Returns HTML string. `idPrefix` is used for DOM ids.
+     * `value` can be a string or {en: "...", ru: "..."}.
+     * `tag` is 'input' or 'textarea'.
+     */
+    function translatableField(idPrefix, value, opts = {}) {
+        const tag = opts.tag || 'input';
+        const rows = opts.rows || 2;
+        const placeholder = opts.placeholder || '';
+        const en = (value && typeof value === 'object') ? (value.en || '') : (value || '');
+        const ru = (value && typeof value === 'object') ? (value.ru || '') : '';
+        const enEsc = esc(en);
+        const ruEsc = esc(ru);
+        if (tag === 'textarea') {
+            return `
+                <div style="display:flex;align-items:flex-start;gap:0.3rem;margin-bottom:0.2rem;">
+                    <span style="font-size:1.1rem;margin-top:0.3rem" title="English">🇬🇧</span>
+                    <textarea id="${idPrefix}-en" rows="${rows}" style="width:100%" placeholder="${esc(placeholder)}">${enEsc}</textarea>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:0.3rem;">
+                    <span style="font-size:1.1rem;margin-top:0.3rem" title="Русский">🇷🇺</span>
+                    <textarea id="${idPrefix}-ru" rows="${rows}" style="width:100%" placeholder="${esc(placeholder)}">${ruEsc}</textarea>
+                </div>`;
+        }
+        return `
+            <div style="display:flex;align-items:center;gap:0.3rem;margin-bottom:0.2rem;">
+                <span style="font-size:1.1rem" title="English">🇬🇧</span>
+                <input id="${idPrefix}-en" value="${enEsc}" placeholder="${esc(placeholder)}" style="flex:1">
+            </div>
+            <div style="display:flex;align-items:center;gap:0.3rem;">
+                <span style="font-size:1.1rem" title="Русский">🇷🇺</span>
+                <input id="${idPrefix}-ru" value="${ruEsc}" placeholder="${esc(placeholder)}" style="flex:1">
+            </div>`;
+    }
+
+    /**
+     * Gather a translatable field value from DOM.
+     * Returns string if only EN filled, {en, ru} if both filled.
+     */
+    function gatherTranslatable(idPrefix) {
+        const en = (document.getElementById(idPrefix + '-en')?.value || '').trim();
+        const ru = (document.getElementById(idPrefix + '-ru')?.value || '').trim();
+        if (ru) return { en, ru };
+        return en;
+    }
+
     function resetWizard() {
         currentStep = 0;
         editingItem = null;
@@ -308,7 +364,8 @@ const WorldBuilder = (() => {
 
         switch (step) {
             case 0: {
-                if (!worldData.id || !worldData.name) {
+                const nameVal = typeof worldData.name === 'object' ? worldData.name.en : worldData.name;
+                if (!worldData.id || !nameVal) {
                     msg.textContent = 'World ID and Name are required.';
                     msg.className = 'text-danger mt-1';
                     return false;
@@ -376,7 +433,7 @@ const WorldBuilder = (() => {
         container.innerHTML = `
             <div class="form-group mb-1">
                 <label>Name</label>
-                <input id="wb-name" value="${esc(worldData.name)}" placeholder="My World">
+                ${translatableField('wb-name', worldData.name)}
             </div>
             <div class="form-group mb-1">
                 <label>ID (slug)</label>
@@ -384,29 +441,38 @@ const WorldBuilder = (() => {
             </div>
             <div class="form-group mb-1">
                 <label>Description</label>
-                <textarea id="wb-desc" rows="3" style="width:100%">${esc(worldData.description)}</textarea>
+                ${translatableField('wb-desc', worldData.description, {tag: 'textarea', rows: 3})}
             </div>
         `;
 
-        const nameInput = document.getElementById('wb-name');
+        const nameEnInput = document.getElementById('wb-name-en');
+        const nameRuInput = document.getElementById('wb-name-ru');
         const idInput = document.getElementById('wb-id');
 
-        let idManuallyEdited = worldData.id && worldData.id !== slugify(worldData.name);
+        const nameStr = typeof worldData.name === 'object' ? (worldData.name.en || '') : (worldData.name || '');
+        let idManuallyEdited = worldData.id && worldData.id !== slugify(nameStr);
 
-        nameInput.addEventListener('input', () => {
-            worldData.name = nameInput.value;
+        nameEnInput.addEventListener('input', () => {
+            worldData.name = gatherTranslatable('wb-name');
             if (!idManuallyEdited) {
-                worldData.id = slugify(nameInput.value);
+                const nameEn = document.getElementById('wb-name-en').value;
+                worldData.id = slugify(nameEn);
                 idInput.value = worldData.id;
             }
+        });
+        nameRuInput.addEventListener('input', () => {
+            worldData.name = gatherTranslatable('wb-name');
         });
         idInput.addEventListener('input', () => {
             idManuallyEdited = true;
             worldData.id = slugify(idInput.value);
             idInput.value = worldData.id;
         });
-        document.getElementById('wb-desc').addEventListener('input', (e) => {
-            worldData.description = e.target.value;
+        document.getElementById('wb-desc-en').addEventListener('input', () => {
+            worldData.description = gatherTranslatable('wb-desc');
+        });
+        document.getElementById('wb-desc-ru').addEventListener('input', () => {
+            worldData.description = gatherTranslatable('wb-desc');
         });
     }
 
@@ -423,7 +489,7 @@ const WorldBuilder = (() => {
             card.innerHTML = `
                 <div class="flex justify-between items-center">
                     <div>
-                        <strong>${esc(r.name)}</strong>
+                        <strong>${esc(resolveText(r.name))}</strong>
                         <span class="text-dim">(${esc(rid)})</span>
                         &mdash; ${esc(r.terrain)},
                         lat ${r.latitude}, lon ${r.longitude}, elev ${r.elevation}
@@ -480,7 +546,7 @@ const WorldBuilder = (() => {
             <div class="form-row">
                 <div class="form-group grow">
                     <label>Name</label>
-                    <input id="wb-rg-name" value="${esc(existing?.name || '')}">
+                    ${translatableField('wb-rg-name', existing?.name || '')}
                 </div>
                 <div class="form-group grow">
                     <label>ID</label>
@@ -527,7 +593,7 @@ const WorldBuilder = (() => {
 
         // Auto-slug
         if (!existing) {
-            const nameIn = document.getElementById('wb-rg-name');
+            const nameIn = document.getElementById('wb-rg-name-en');
             const idIn = document.getElementById('wb-rg-id');
             let manualId = false;
             nameIn.addEventListener('input', () => {
@@ -538,9 +604,10 @@ const WorldBuilder = (() => {
 
         // Save button
         document.getElementById('wb-rg-save').addEventListener('click', () => {
-            const name = document.getElementById('wb-rg-name').value.trim();
+            const name = gatherTranslatable('wb-rg-name');
+            const nameStr = typeof name === 'object' ? name.en : name;
             const id = existing ? editingItem.id : slugify(document.getElementById('wb-rg-id').value);
-            if (!name || !id) {
+            if (!nameStr || !id) {
                 flashWbMsg('Region name and ID are required.', 'text-danger');
                 return;
             }
@@ -588,7 +655,7 @@ const WorldBuilder = (() => {
                         <select class="wb-conn-target">
                             <option value="">-- target --</option>
                             ${otherRegions.map(r =>
-                                `<option value="${esc(r)}"${r === c.target ? ' selected' : ''}>${esc(worldData.regions[r]?.name || r)}</option>`
+                                `<option value="${esc(r)}"${r === c.target ? ' selected' : ''}>${esc(resolveText(worldData.regions[r]?.name) || r)}</option>`
                             ).join('')}
                         </select>
                     </div>
@@ -629,7 +696,7 @@ const WorldBuilder = (() => {
                     <select class="wb-conn-target">
                         <option value="">-- target --</option>
                         ${otherRegions.map(r =>
-                            `<option value="${esc(r)}">${esc(worldData.regions[r]?.name || r)}</option>`
+                            `<option value="${esc(r)}">${esc(resolveText(worldData.regions[r]?.name) || r)}</option>`
                         ).join('')}
                     </select>
                 </div>
@@ -658,7 +725,7 @@ const WorldBuilder = (() => {
         regionIds.forEach(rid => {
             const region = worldData.regions[rid];
             const header = el('h3', { style: { marginTop: '1rem' } },
-                `${esc(region.name)} <span class="text-dim">(${esc(rid)})</span>`);
+                `${esc(resolveText(region.name))} <span class="text-dim">(${esc(rid)})</span>`);
             container.appendChild(header);
 
             // Settlement list for this region
@@ -667,7 +734,7 @@ const WorldBuilder = (() => {
                 card.innerHTML = `
                     <div class="flex justify-between items-center">
                         <div>
-                            <strong>${esc(s.name)}</strong>
+                            <strong>${esc(resolveText(s.name))}</strong>
                             <span class="text-dim">(${esc(s.id)})</span>
                             &mdash; ${esc(s.type)}, pop ${s.population},
                             prosp ${s.prosperity}, def ${s.defenses}
@@ -734,7 +801,7 @@ const WorldBuilder = (() => {
             <div class="form-row">
                 <div class="form-group grow">
                     <label>Name</label>
-                    <input id="wb-st-name" value="${esc(existing?.name || '')}">
+                    ${translatableField('wb-st-name', existing?.name || '')}
                 </div>
                 <div class="form-group grow">
                     <label>ID</label>
@@ -776,7 +843,7 @@ const WorldBuilder = (() => {
 
             // Auto-slug
             if (!existing) {
-                const nameIn = document.getElementById('wb-st-name');
+                const nameIn = document.getElementById('wb-st-name-en');
                 const idIn = document.getElementById('wb-st-id');
                 let manualId = false;
                 nameIn.addEventListener('input', () => {
@@ -786,9 +853,10 @@ const WorldBuilder = (() => {
             }
 
             document.getElementById('wb-st-save').addEventListener('click', () => {
-                const name = document.getElementById('wb-st-name').value.trim();
+                const name = gatherTranslatable('wb-st-name');
+                const nameStr = typeof name === 'object' ? name.en : name;
                 const id = existing ? existing.id : slugify(document.getElementById('wb-st-id').value);
-                if (!name || !id) {
+                if (!nameStr || !id) {
                     flashWbMsg('Settlement name and ID are required.', 'text-danger');
                     return;
                 }
@@ -855,7 +923,7 @@ const WorldBuilder = (() => {
             card.innerHTML = `
                 <div class="flex justify-between items-center">
                     <div>
-                        <strong>${esc(loc.name)}</strong>
+                        <strong>${esc(resolveText(loc.name))}</strong>
                         <span class="text-dim">(${esc(lid)})</span>
                         &mdash; region: ${esc(loc.region)}${loc.settlement ? ', settlement: ' + esc(loc.settlement) : ''}
                     </div>
@@ -864,7 +932,7 @@ const WorldBuilder = (() => {
                         <button class="small danger wb-del-loc" data-id="${esc(lid)}">Del</button>
                     </div>
                 </div>
-                ${loc.description ? `<div class="text-dim" style="margin-top:0.2rem">${esc(loc.description)}</div>` : ''}
+                ${loc.description ? `<div class="text-dim" style="margin-top:0.2rem">${esc(resolveText(loc.description))}</div>` : ''}
                 ${loc.neighbors.length
                     ? '<div class="text-dim" style="margin-top:0.2rem">Neighbors: ' +
                       loc.neighbors.map(n => `${esc(n.target)} (${n.distance}m)`).join(', ') + '</div>'
@@ -909,7 +977,7 @@ const WorldBuilder = (() => {
             <div class="form-row">
                 <div class="form-group grow">
                     <label>Name</label>
-                    <input id="wb-loc-name" value="${esc(existing?.name || '')}">
+                    ${translatableField('wb-loc-name', existing?.name || '')}
                 </div>
                 <div class="form-group grow">
                     <label>ID</label>
@@ -922,7 +990,7 @@ const WorldBuilder = (() => {
                     <select id="wb-loc-region">
                         <option value="">-- select --</option>
                         ${regionIds.map(r =>
-                            `<option value="${esc(r)}"${r === existing?.region ? ' selected' : ''}>${esc(worldData.regions[r].name)}</option>`
+                            `<option value="${esc(r)}"${r === existing?.region ? ' selected' : ''}>${esc(resolveText(worldData.regions[r].name))}</option>`
                         ).join('')}
                     </select>
                 </div>
@@ -931,14 +999,14 @@ const WorldBuilder = (() => {
                     <select id="wb-loc-sett">
                         <option value="">-- none --</option>
                         ${allSettlements.map(s =>
-                            `<option value="${esc(s.id)}"${s.id === existing?.settlement ? ' selected' : ''}>${esc(s.name)} (${esc(s.region)})</option>`
+                            `<option value="${esc(s.id)}"${s.id === existing?.settlement ? ' selected' : ''}>${esc(resolveText(s.name))} (${esc(s.region)})</option>`
                         ).join('')}
                     </select>
                 </div>
             </div>
             <div class="form-group mb-1">
                 <label>Description</label>
-                <textarea id="wb-loc-desc" rows="2" style="width:100%">${esc(existing?.description || '')}</textarea>
+                ${translatableField('wb-loc-desc', existing?.description || '', {tag: 'textarea', rows: 2})}
             </div>
             <div class="mb-1">
                 <label>Neighbors</label>
@@ -949,7 +1017,7 @@ const WorldBuilder = (() => {
                                 <select class="wb-nbr-target">
                                     <option value="">-- location --</option>
                                     ${otherLocations.map(l =>
-                                        `<option value="${esc(l)}"${l === n.target ? ' selected' : ''}>${esc(worldData.locations[l]?.name || l)}</option>`
+                                        `<option value="${esc(l)}"${l === n.target ? ' selected' : ''}>${esc(resolveText(worldData.locations[l]?.name) || l)}</option>`
                                     ).join('')}
                                 </select>
                             </div>
@@ -971,7 +1039,7 @@ const WorldBuilder = (() => {
 
         // Auto-slug
         if (!existing) {
-            const nameIn = document.getElementById('wb-loc-name');
+            const nameIn = document.getElementById('wb-loc-name-en');
             const idIn = document.getElementById('wb-loc-id');
             let manualId = false;
             nameIn.addEventListener('input', () => {
@@ -989,7 +1057,7 @@ const WorldBuilder = (() => {
                     <select class="wb-nbr-target">
                         <option value="">-- location --</option>
                         ${otherLocations.map(l =>
-                            `<option value="${esc(l)}">${esc(worldData.locations[l]?.name || l)}</option>`
+                            `<option value="${esc(l)}">${esc(resolveText(worldData.locations[l]?.name) || l)}</option>`
                         ).join('')}
                     </select>
                 </div>
@@ -1007,10 +1075,11 @@ const WorldBuilder = (() => {
 
         // Save
         document.getElementById('wb-loc-save').addEventListener('click', () => {
-            const name = document.getElementById('wb-loc-name').value.trim();
+            const name = gatherTranslatable('wb-loc-name');
+            const nameStr = typeof name === 'object' ? name.en : name;
             const id = existing ? editingItem.id : slugify(document.getElementById('wb-loc-id').value);
             const region = document.getElementById('wb-loc-region').value;
-            if (!name || !id || !region) {
+            if (!nameStr || !id || !region) {
                 flashWbMsg('Location name, ID, and region are required.', 'text-danger');
                 return;
             }
@@ -1025,7 +1094,7 @@ const WorldBuilder = (() => {
                 name,
                 region,
                 settlement: document.getElementById('wb-loc-sett').value || '',
-                description: document.getElementById('wb-loc-desc').value.trim(),
+                description: gatherTranslatable('wb-loc-desc'),
                 neighbors,
             };
             editingItem = null;
@@ -1054,10 +1123,10 @@ const WorldBuilder = (() => {
                 const locId = rid + '_clearing';
                 if (!worldData.locations[locId]) {
                     worldData.locations[locId] = {
-                        name: region.name + ' Clearing',
+                        name: resolveText(region.name) + ' Clearing',
                         region: rid,
                         settlement: '',
-                        description: 'An open area in ' + region.name + '.',
+                        description: 'An open area in ' + resolveText(region.name) + '.',
                         neighbors: [],
                     };
                 }
@@ -1074,10 +1143,10 @@ const WorldBuilder = (() => {
                                 market: 'Market',
                             };
                             worldData.locations[locId] = {
-                                name: sett.name + ' ' + names[tmpl],
+                                name: resolveText(sett.name) + ' ' + names[tmpl],
                                 region: rid,
                                 settlement: sett.id,
-                                description: 'The ' + names[tmpl].toLowerCase() + ' of ' + sett.name + '.',
+                                description: 'The ' + names[tmpl].toLowerCase() + ' of ' + resolveText(sett.name) + '.',
                                 neighbors: [],
                             };
                         }
@@ -1113,17 +1182,17 @@ const WorldBuilder = (() => {
             card.innerHTML = `
                 <div class="flex justify-between items-center">
                     <div>
-                        <strong>${esc(n.name)}</strong>
+                        <strong>${esc(resolveText(n.name))}</strong>
                         <span class="text-dim">(${esc(nid)})</span>
                         &mdash; W:${n.wealth} M:${n.military} S:${n.stability}
-                        ${n.leader ? `, Leader: ${esc(n.leader.name)} (${esc(n.leader.trait)})` : ''}
+                        ${n.leader ? `, Leader: ${esc(resolveText(n.leader.name))} (${esc(n.leader.trait)})` : ''}
                     </div>
                     <div>
                         <button class="small wb-edit-nation" data-id="${esc(nid)}">Edit</button>
                         <button class="small danger wb-del-nation" data-id="${esc(nid)}">Del</button>
                     </div>
                 </div>
-                <div class="text-dim" style="margin-top:0.2rem">Regions: ${n.regions.map(r => esc(worldData.regions[r]?.name || r)).join(', ') || 'none'}</div>
+                <div class="text-dim" style="margin-top:0.2rem">Regions: ${n.regions.map(r => esc(resolveText(worldData.regions[r]?.name) || r)).join(', ') || 'none'}</div>
             `;
             list.appendChild(card);
         });
@@ -1155,7 +1224,7 @@ const WorldBuilder = (() => {
             <div class="form-row">
                 <div class="form-group grow">
                     <label>Name</label>
-                    <input id="wb-nat-name" value="${esc(existing?.name || '')}">
+                    ${translatableField('wb-nat-name', existing?.name || '')}
                 </div>
                 <div class="form-group grow">
                     <label>ID</label>
@@ -1169,7 +1238,7 @@ const WorldBuilder = (() => {
                         <label style="display:flex;align-items:center;gap:0.3rem;cursor:pointer;color:var(--text)">
                             <input type="checkbox" class="wb-nat-rgn-cb" value="${esc(rid)}"
                                    ${existing?.regions.includes(rid) ? 'checked' : ''}>
-                            ${esc(worldData.regions[rid].name)}
+                            ${esc(resolveText(worldData.regions[rid].name))}
                         </label>
                     `).join('')}
                 </div>
@@ -1192,7 +1261,7 @@ const WorldBuilder = (() => {
             <div class="form-row">
                 <div class="form-group grow">
                     <label>Name</label>
-                    <input id="wb-nat-leader-name" value="${esc(existing?.leader?.name || '')}">
+                    ${translatableField('wb-nat-leader-name', existing?.leader?.name || '')}
                 </div>
                 <div class="form-group">
                     <label>Age</label>
@@ -1219,7 +1288,7 @@ const WorldBuilder = (() => {
 
         // Auto-slug
         if (!existing) {
-            const nameIn = document.getElementById('wb-nat-name');
+            const nameIn = document.getElementById('wb-nat-name-en');
             const idIn = document.getElementById('wb-nat-id');
             let manualId = false;
             nameIn.addEventListener('input', () => {
@@ -1230,17 +1299,19 @@ const WorldBuilder = (() => {
 
         // Save
         document.getElementById('wb-nat-save').addEventListener('click', () => {
-            const name = document.getElementById('wb-nat-name').value.trim();
+            const name = gatherTranslatable('wb-nat-name');
+            const nameStr = typeof name === 'object' ? name.en : name;
             const id = existing ? editingItem.id : slugify(document.getElementById('wb-nat-id').value);
-            if (!name || !id) {
+            if (!nameStr || !id) {
                 flashWbMsg('Nation name and ID are required.', 'text-danger');
                 return;
             }
             const regions = [];
             document.querySelectorAll('.wb-nat-rgn-cb:checked').forEach(cb => regions.push(cb.value));
 
-            const leaderName = document.getElementById('wb-nat-leader-name').value.trim();
-            const leader = leaderName ? {
+            const leaderName = gatherTranslatable('wb-nat-leader-name');
+            const leaderNameStr = typeof leaderName === 'object' ? leaderName.en : leaderName;
+            const leader = leaderNameStr ? {
                 name: leaderName,
                 age: parseInt(document.getElementById('wb-nat-leader-age').value) || 45,
                 trait: document.getElementById('wb-nat-leader-trait').value,
@@ -1281,7 +1352,7 @@ const WorldBuilder = (() => {
             card.innerHTML = `
                 <div class="flex justify-between items-center">
                     <div>
-                        <strong>${esc(npc.name)}</strong>
+                        <strong>${esc(resolveText(npc.name))}</strong>
                         <span class="text-dim">(${esc(nid)})</span>
                         &mdash; ${esc(npc.race)} ${esc(npc.class)}, ${esc(npc.role)},
                         HP:${npc.hp} AC:${npc.ac}, AI:${esc(npc.ai)}
@@ -1328,7 +1399,7 @@ const WorldBuilder = (() => {
             <div class="form-row">
                 <div class="form-group grow">
                     <label>Name</label>
-                    <input id="wb-npc-name" value="${esc(existing?.name || '')}">
+                    ${translatableField('wb-npc-name', existing?.name || '')}
                 </div>
                 <div class="form-group grow">
                     <label>ID</label>
@@ -1342,7 +1413,7 @@ const WorldBuilder = (() => {
                 </div>
                 <div class="form-group grow">
                     <label>Personality</label>
-                    <textarea id="wb-npc-personality" rows="2" style="width:100%">${esc(existing?.personality || '')}</textarea>
+                    ${translatableField('wb-npc-pers', existing?.personality || '', {tag: 'textarea', rows: 3})}
                 </div>
             </div>
 
@@ -1353,7 +1424,7 @@ const WorldBuilder = (() => {
                     <select id="wb-npc-sett">
                         <option value="">-- none --</option>
                         ${allSettlements.map(s =>
-                            `<option value="${esc(s.id)}"${s.id === existing?.settlement_id ? ' selected' : ''}>${esc(s.name)} (${esc(s.region)})</option>`
+                            `<option value="${esc(s.id)}"${s.id === existing?.settlement_id ? ' selected' : ''}>${esc(resolveText(s.name))} (${esc(s.region)})</option>`
                         ).join('')}
                     </select>
                 </div>
@@ -1362,7 +1433,7 @@ const WorldBuilder = (() => {
                     <select id="wb-npc-loc">
                         <option value="">-- select --</option>
                         ${allLocations.map(([lid, loc]) =>
-                            `<option value="${esc(lid)}"${lid === existing?.start_location ? ' selected' : ''}>${esc(loc.name)} (${esc(lid)})</option>`
+                            `<option value="${esc(lid)}"${lid === existing?.start_location ? ' selected' : ''}>${esc(resolveText(loc.name))} (${esc(lid)})</option>`
                         ).join('')}
                     </select>
                 </div>
@@ -1436,14 +1507,14 @@ const WorldBuilder = (() => {
             locSelect.innerHTML = '<option value="">-- select --</option>';
             allLocations.forEach(([lid, loc]) => {
                 if (!settId || loc.settlement === settId) {
-                    locSelect.innerHTML += `<option value="${esc(lid)}">${esc(loc.name)} (${esc(lid)})</option>`;
+                    locSelect.innerHTML += `<option value="${esc(lid)}">${esc(resolveText(loc.name))} (${esc(lid)})</option>`;
                 }
             });
         });
 
         // Auto-slug
         if (!existing) {
-            const nameIn = document.getElementById('wb-npc-name');
+            const nameIn = document.getElementById('wb-npc-name-en');
             const idIn = document.getElementById('wb-npc-id');
             let manualId = false;
             nameIn.addEventListener('input', () => {
@@ -1462,9 +1533,10 @@ const WorldBuilder = (() => {
 
         // Save
         document.getElementById('wb-npc-save').addEventListener('click', () => {
-            const name = document.getElementById('wb-npc-name').value.trim();
+            const name = gatherTranslatable('wb-npc-name');
+            const nameStr = typeof name === 'object' ? name.en : name;
             const id = existing ? editingItem.id : slugify(document.getElementById('wb-npc-id').value);
-            if (!name || !id) {
+            if (!nameStr || !id) {
                 flashWbMsg('NPC name and ID are required.', 'text-danger');
                 return;
             }
@@ -1481,7 +1553,7 @@ const WorldBuilder = (() => {
                 start_location: document.getElementById('wb-npc-loc').value || '',
                 settlement_id: document.getElementById('wb-npc-sett').value || '',
                 role: document.getElementById('wb-npc-role').value.trim(),
-                personality: document.getElementById('wb-npc-personality').value.trim(),
+                personality: gatherTranslatable('wb-npc-pers'),
                 race: document.getElementById('wb-npc-race').value,
                 class: document.getElementById('wb-npc-class').value,
                 hp: parseInt(document.getElementById('wb-npc-hp').value) || 18,
@@ -1596,14 +1668,14 @@ const WorldBuilder = (() => {
         container.innerHTML = `
             <div class="stat-grid mb-1">
                 <span class="stat-label">World ID</span><span class="stat-value">${esc(worldData.id)}</span>
-                <span class="stat-label">Name</span><span class="stat-value">${esc(worldData.name)}</span>
+                <span class="stat-label">Name</span><span class="stat-value">${esc(resolveText(worldData.name))}</span>
                 <span class="stat-label">Regions</span><span class="stat-value">${regionCount}</span>
                 <span class="stat-label">Settlements</span><span class="stat-value">${settCount}</span>
                 <span class="stat-label">Locations</span><span class="stat-value">${locCount}</span>
                 <span class="stat-label">Nations</span><span class="stat-value">${nationCount}</span>
                 <span class="stat-label">NPCs</span><span class="stat-value">${npcCount}</span>
             </div>
-            ${worldData.description ? `<p class="text-dim mb-1">${esc(worldData.description)}</p>` : ''}
+            ${worldData.description ? `<p class="text-dim mb-1">${esc(resolveText(worldData.description))}</p>` : ''}
             <details style="margin-top:1rem">
                 <summary style="cursor:pointer;color:var(--accent);margin-bottom:0.5rem">JSON Preview</summary>
                 <pre id="wb-json-preview" style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:0.75rem;overflow-x:auto;font-size:0.8rem;max-height:400px;overflow-y:auto"></pre>

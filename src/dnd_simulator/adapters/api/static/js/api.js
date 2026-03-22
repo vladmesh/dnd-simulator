@@ -27,7 +27,7 @@ const API = (() => {
     // ── Master ──
 
     const master = {
-        listWorlds: () => get('/master/worlds'),
+        listWorlds: (lang) => get('/master/worlds' + (lang ? '?lang=' + lang : '')),
 
         createWorld: (data) => post('/master/worlds', data),
 

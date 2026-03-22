@@ -5,6 +5,45 @@
 (() => {
     'use strict';
 
+    // ── I18n init ──
+
+    function detectLang() {
+        const saved = localStorage.getItem('dnd_lang');
+        if (saved) return saved;
+        const nav = (navigator.language || '').toLowerCase();
+        if (nav.startsWith('ru')) return 'ru';
+        return 'en';
+    }
+
+    function currentLang() {
+        return localStorage.getItem('dnd_lang') || 'en';
+    }
+
+    function setActiveLangFlags(lang) {
+        document.querySelectorAll('.lang-flag').forEach(el => {
+            el.classList.toggle('active', el.dataset.lang === lang);
+        });
+    }
+
+    const initLang = detectLang();
+    localStorage.setItem('dnd_lang', initLang);
+    setActiveLangFlags(initLang);
+    I18n.init(initLang).then(() => {
+        document.title = I18n.t('player.title');
+    });
+
+    document.querySelectorAll('.lang-flag').forEach(el => {
+        el.addEventListener('click', () => {
+            const lang = el.dataset.lang;
+            localStorage.setItem('dnd_lang', lang);
+            setActiveLangFlags(lang);
+            I18n.init(lang).then(() => {
+                document.title = I18n.t('player.title');
+                loadWorlds(); // reload world names in new language
+            });
+        });
+    });
+
     // ── State ──
 
     let sessionId = null;
@@ -92,10 +131,10 @@
 
     async function loadWorlds() {
         try {
-            worldsCache = await API.master.listWorlds();
+            worldsCache = await API.master.listWorlds(currentLang());
             worldSelect.innerHTML = '';
             if (worldsCache.length === 0) {
-                worldSelect.innerHTML = '<option value="">No worlds found</option>';
+                worldSelect.innerHTML = '<option value="">' + escapeHtml(I18n.t('player.setup.no_worlds')) + '</option>';
                 return;
             }
             for (const w of worldsCache) {
@@ -106,7 +145,7 @@
             }
             updateWorldDescription();
         } catch (e) {
-            worldSelect.innerHTML = '<option value="">Error loading worlds</option>';
+            worldSelect.innerHTML = '<option value="">' + escapeHtml(I18n.t('player.setup.error_loading_worlds')) + '</option>';
         }
     }
 
@@ -137,10 +176,11 @@
         if (!worldName) return;
         hideError(connectError);
         hideError(connectInfo);
+        const lang = currentLang();
         try {
-            const res = await API.master.createSession(worldName);
+            const res = await API.master.createSession(worldName, lang);
             sessionIdInput.value = res.session_id;
-            showError(connectInfo, 'Session created: ' + res.session_id);
+            showError(connectInfo, I18n.t('player.setup.session_created', { id: res.session_id }));
             await tryConnect(res.session_id);
         } catch (e) {
             showError(connectError, e.message);
@@ -150,6 +190,9 @@
     async function tryConnect(sid) {
         sessionId = sid;
         try {
+            // Set session language before connecting
+            const lang = currentLang();
+            await API.master.setLang(sid, lang).catch(() => {});
             const status = await API.player.getStatus(sid);
             saveSession(sid);
             enterGame(status);
@@ -166,7 +209,7 @@
             } else if (isSessionGone) {
                 clearSavedSession();
                 sessionId = null;
-                showError(connectError, 'Session expired. Create or join a new one.');
+                showError(connectError, I18n.t('player.setup.session_expired'));
             } else {
                 showError(connectError, msg);
                 clearSavedSession();
@@ -181,7 +224,7 @@
         hideError(chargenError);
         const name = $('#char-name').value.trim();
         if (!name) {
-            showError(chargenError, 'Name is required.');
+            showError(chargenError, I18n.t('chargen.name_required'));
             return;
         }
         const data = {
@@ -217,6 +260,9 @@
 
     function enterGame(status) {
         showPhase('game');
+        // Hide language switcher — can't change language mid-session
+        const flags = document.querySelector('.lang-flags');
+        if (flags) flags.style.display = 'none';
         updateStatus(status);
         connectWebSocket();
     }
@@ -234,7 +280,7 @@
         ws = new WebSocket(url);
 
         ws.onopen = () => {
-            appendEventHtml('<span class="text-success">Connected to game.</span>');
+            appendEventHtml('<span class="text-success">' + escapeHtml(I18n.t('game.connected')) + '</span>');
         };
 
         ws.onmessage = (event) => {
@@ -243,13 +289,13 @@
         };
 
         ws.onclose = () => {
-            appendEventHtml('<span class="text-dim">Disconnected from game.</span>');
+            appendEventHtml('<span class="text-dim">' + escapeHtml(I18n.t('game.disconnected')) + '</span>');
             ws = null;
             setInputEnabled(true);
         };
 
         ws.onerror = () => {
-            appendEventHtml('<span class="text-danger">WebSocket error.</span>');
+            appendEventHtml('<span class="text-danger">' + escapeHtml(I18n.t('game.ws_error')) + '</span>');
         };
     }
 
@@ -265,11 +311,11 @@
                 handleRoundResult(msg);
                 break;
             case 'error':
-                appendEventHtml('<span class="text-danger">Error: ' + escapeHtml(msg.message) + '</span>');
+                appendEventHtml('<span class="text-danger">' + escapeHtml(I18n.t('game.error', { message: msg.message })) + '</span>');
                 setInputEnabled(true);
                 break;
             case 'game_over':
-                appendEventHtml('<span class="text-danger">Game over.</span>');
+                appendEventHtml('<span class="text-danger">' + escapeHtml(I18n.t('game.game_over')) + '</span>');
                 setInputEnabled(false);
                 break;
         }
@@ -290,7 +336,7 @@
 
         // Show round header in combat
         if (msg.mode === 'combat' && msg.awareness && msg.awareness.round_number) {
-            appendEventHtml('<span class="text-dim">--- Round ' + msg.awareness.round_number + ', your turn ---</span>');
+            appendEventHtml('<span class="text-dim">' + escapeHtml(I18n.t('game.round_header', { round: msg.awareness.round_number })) + '</span>');
         }
 
         // Show events
@@ -309,7 +355,7 @@
     function handleRoundResult(msg) {
         if (msg.player) updateStatus(msg.player);
         if (msg.events && msg.events.length > 0) {
-            appendEventHtml('<span class="text-dim">--- Others\' actions ---</span>');
+            appendEventHtml('<span class="text-dim">' + escapeHtml(I18n.t('game.others_actions')) + '</span>');
         }
         showEvents(msg.events);
     }
@@ -382,9 +428,9 @@
 
         if (mode === 'combat') {
             // In combat, show minimal perception — combat panel has the details
-            let html = '<span class="text-danger">In combat</span>';
+            let html = '<span class="text-danger">' + escapeHtml(I18n.t('game.in_combat')) + '</span>';
             if (awareness.self_hp !== undefined) {
-                html += ` — HP: ${awareness.self_hp}/${awareness.self_max_hp}`;
+                html += ` — ${I18n.t('stat.hp')}: ${awareness.self_hp}/${awareness.self_max_hp}`;
             }
             perceptionBox.innerHTML = html;
             return;
@@ -423,21 +469,21 @@
         // Nearby entities
         const nearby = awareness.nearby || [];
         if (nearby.length > 0) {
-            html += `<div style="margin-bottom:0.5rem;"><strong>Nearby:</strong>`;
+            html += `<div style="margin-bottom:0.5rem;"><strong>${escapeHtml(I18n.t('game.nearby'))}</strong>`;
             for (const e of nearby) {
                 const eid = escapeHtml(e.id);
                 const desc = escapeHtml(e.description || e.id);
                 html += `<div style="margin:0.3rem 0;display:flex;align-items:center;gap:0.5rem;">` +
                     `<span>${desc}</span>` +
                     `<span class="text-dim" style="font-size:0.7rem;">(${eid})</span>` +
-                    `<button class="small npc-action" data-cmd="prefill" data-text="say " style="font-size:0.65rem;">Talk</button>` +
-                    `<button class="small danger npc-action" data-cmd="send" data-text="attack ${eid}" style="font-size:0.65rem;">Attack</button>` +
+                    `<button class="small npc-action" data-cmd="prefill" data-text="say " style="font-size:0.65rem;">${escapeHtml(I18n.t('game.talk'))}</button>` +
+                    `<button class="small danger npc-action" data-cmd="send" data-text="attack ${eid}" style="font-size:0.65rem;">${escapeHtml(I18n.t('game.attack'))}</button>` +
                     `</div>`;
             }
             html += `</div>`;
         }
 
-        perceptionBox.innerHTML = html || '<span class="text-dim">You see nothing special.</span>';
+        perceptionBox.innerHTML = html || '<span class="text-dim">' + escapeHtml(I18n.t('game.nothing_special')) + '</span>';
         wireNpcActions();
     }
 
@@ -464,7 +510,7 @@
         pathsEl.innerHTML = '';
         const paths = data.paths || [];
         if (paths.length === 0) {
-            pathsEl.innerHTML = '<p class="text-dim" style="font-size:0.75rem;">No paths</p>';
+            pathsEl.innerHTML = '<p class="text-dim" style="font-size:0.75rem;">' + escapeHtml(I18n.t('game.no_paths')) + '</p>';
             return;
         }
         for (const p of paths) {
@@ -536,9 +582,9 @@
         if (budget) {
             const budgetEl = $('#combat-map');
             const parts = [];
-            if (budget.actions !== undefined) parts.push(`Actions: ${budget.actions}`);
-            if (budget.bonus_actions !== undefined) parts.push(`Bonus: ${budget.bonus_actions}`);
-            if (budget.movement_remaining !== undefined) parts.push(`Move: ${budget.movement_remaining} ft`);
+            if (budget.actions !== undefined) parts.push(I18n.t('budget.actions', { n: budget.actions }));
+            if (budget.bonus_actions !== undefined) parts.push(I18n.t('budget.bonus', { n: budget.bonus_actions }));
+            if (budget.movement_remaining !== undefined) parts.push(I18n.t('budget.movement', { n: budget.movement_remaining }));
             budgetEl.textContent = parts.join(' | ');
             budgetEl.classList.remove('hidden');
         }
@@ -621,6 +667,26 @@
     function getSavedSession() {
         try { return localStorage.getItem('dnd_session_id'); } catch (_) { return null; }
     }
+
+    // ── Exit session ──
+
+    $('#btn-exit-session').addEventListener('click', () => {
+        if (ws) {
+            ws.close();
+            ws = null;
+        }
+        sessionId = null;
+        clearSavedSession();
+        commandHistory = [];
+        historyIndex = -1;
+        eventLog.innerHTML = '';
+        combatNearby = [];
+        connectSection.classList.remove('hidden');
+        chargenSection.classList.add('hidden');
+        hideError(connectError);
+        hideError(connectInfo);
+        showPhase('setup');
+    });
 
     // ── Init ──
 
