@@ -341,6 +341,31 @@ Flag if any of these are missing:
 
 ---
 
+#### Vision Drift
+
+A quick sanity check: has recent code diverged from the product vision (`docs/VISION.md`) or roadmap (`docs/ROADMAP.md`) in a way that breaks existing logic or contradicts core design decisions?
+
+This is not about missing features — it's about *conflicts*. The vision defines invariants that new code should not violate.
+
+1. Read `docs/VISION.md` and `docs/ROADMAP.md`.
+2. Check `git log --oneline --since="<last_audit_date>"` to see what landed recently (if first audit, use last 2 weeks).
+3. For each significant change, ask: does this contradict or break any of the vision invariants below?
+
+**Key invariants from the vision** (not exhaustive — read the doc for the full picture):
+
+- **Classic mode must work without LLM.** Every gameplay feature must have a rule-based fallback. If new code assumes LLM is always present (no RuleBrain path, no graceful degradation), that's a drift.
+- **Single global round.** All creatures share one round — no per-location or per-player time. If code introduces parallel time streams or lets entities advance time independently, that's a violation.
+- **Layers are independent.** Adding/removing a layer should not break the game. If new code couples layers tightly (layer A crashes without layer B's data), that's a problem.
+- **Master controls through endpoints only.** Master influence must go through the service layer, never direct state mutation. If new code exposes internal state to master UI without going through GameService, flag it.
+- **Brain is swappable at runtime.** Any creature's brain can be switched mid-session. If new code assumes a specific brain type or stores brain-specific state outside the brain itself, that's a violation.
+- **Content is data.** Game worlds are YAML templates. If new code hardcodes world-specific logic or makes assumptions about specific worlds, flag it.
+
+Don't flag planned-but-not-yet-implemented features as drift — only actual conflicts where new code broke or undermined something that was already working according to the vision.
+
+If nothing drifted — say so and move on. This section should be empty most of the time.
+
+---
+
 ### 2. Write Report
 
 Write/overwrite `docs/audit.md`:
@@ -359,6 +384,7 @@ Write/overwrite `docs/audit.md`:
 - Convention violations: N issues
 - Layer contract: N issues
 - Test gaps: N issues
+- Vision drift: N issues
 
 ## Dead Code
 | File | Issue | Action |
@@ -394,6 +420,11 @@ Write/overwrite `docs/audit.md`:
 | Source File | Expected Test | Status |
 |-------------|---------------|--------|
 | `rules/combat.py` | `tests/test_rules_combat.py` | missing |
+
+## Vision Drift
+| Change | Invariant Violated | Impact |
+|--------|-------------------|--------|
+| ... | ... | ... |
 ```
 
 ### 3. Commit

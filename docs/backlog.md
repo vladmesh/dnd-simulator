@@ -30,3 +30,11 @@ cancel на shutdown перед финальным autosave.
 `list_npcs` итерирует по регионам и ищет NPC в каждом.
 NPC в несуществующем регионе не попадёт в список. Мелочь, но стоит поправить —
 итерировать по entities напрямую.
+
+## Refactoring
+
+### world-builder.js — разбить на модули
+Файл 1700+ строк, 7 рендер-функций с копипастой паттерна "список карточек + CRUD-форма".
+Выделить общий `CrudStep` (список + add/edit/delete + auto-slug).
+Вынести form-builder helpers (translatableField, connectionEditor, neighborEditor).
+Разбить на файлы по шагам если появится bundler, или хотя бы на логические секции с чёткими границами.

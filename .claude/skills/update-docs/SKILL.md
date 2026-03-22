@@ -18,11 +18,39 @@ Keep living docs in sync with the codebase. Documentation lives in two places: m
 
 ### Markdown files
 
-| Doc | What it covers | Code signals |
-|-----|---------------|-------------|
-| `CLAUDE.md` | Dev commands, architecture overview, code style, environment | `pyproject.toml`, `Makefile`, `src/dnd_simulator/core/`, new layers, new adapters |
-| `ARCHITECTURE.md` | Detailed system design, module map, data flow, principles | `core/`, `layers/`, `service.py`, `adapters/`, `llm/`, `storage/` |
-| `README.md` | Project overview, quick start | Major feature additions, new dependencies |
+| Doc | What it covers | Code signals | Update policy |
+|-----|---------------|-------------|---------------|
+| `CLAUDE.md` | Dev commands, architecture overview, code style, environment | `pyproject.toml`, `Makefile`, `src/dnd_simulator/core/`, new layers, new adapters | **Conservative** — see below |
+| `ARCHITECTURE.md` | Detailed system design, module map, data flow, principles | `core/`, `layers/`, `service.py`, `adapters/`, `llm/`, `storage/` | Keep accurate |
+| `README.md` | Project overview, quick start | Major feature additions, new dependencies | Keep accurate |
+| `docs/ROADMAP.md` | Dev phases, current status, links to plans | Completed phases, new plans in `docs/plans/` | Move done items, add new plans |
+| `docs/backlog.md` | Known bugs and small feature requests | Bug fixes, feature implementations | Remove fixed bugs / done features |
+
+#### CLAUDE.md update policy
+
+CLAUDE.md is the file Claude reads at the start of every conversation — it shapes how Claude understands the project. Only update it when something **important and non-obvious** changed in the architecture or workflow. Examples of what warrants an update:
+- A new layer was added or removed from the stack
+- A key design principle changed (e.g. new dependency direction rule)
+- A new command was added to the Makefile
+- The entity hierarchy got a new level
+- A new adapter or brain type was introduced
+
+Do NOT update CLAUDE.md for: minor refactors, internal renames, new tests, new content YAML files, new utility functions, or anything a developer would discover naturally by reading the code. When in doubt, skip it — a lean CLAUDE.md is better than a bloated one.
+
+#### docs/ROADMAP.md update policy
+
+The roadmap tracks macro progress. When updating:
+- **Move completed work** from "In Progress" or "Planned" to "Done" — write a brief summary in the same style as existing Done entries (Russian, 1-3 sentences)
+- **Add new planned work** if a new `docs/plans/` or `docs/brainstorms/` file appeared and isn't referenced yet
+- **Don't invent phases** — only reflect what actually shipped or what has a plan/brainstorm doc
+- Keep the existing structure: Done → In Progress → Planned → Known Issues
+
+#### docs/backlog.md update policy
+
+The backlog is a short list of known bugs and small features. When updating:
+- **Remove items** whose underlying issue was fixed (check git log for evidence: relevant commits, changed files)
+- **Add new items** only if a bug or small feature request was explicitly discussed and not yet tracked
+- Don't speculatively add items you noticed while reading code — the backlog is curated by the user, this skill just keeps it in sync with reality
 
 ### Module docstrings (`__init__.py`)
 
@@ -46,9 +74,10 @@ When updating a docstring, match the existing style: top-level packages (`core`,
 
 ### Not managed by this skill
 
-- `BACKLOG.md` — maintained manually by the user
+- `docs/VISION.md` — product vision, changes only when the user rewrites it
 - `content/*.yaml` — game data, not documentation
 - `.claude/skills/*/SKILL.md` — managed by `/skill-creator`
+- `docs/brainstorms/`, `docs/plans/` — working docs, not living documentation
 - Class-level and function-level docstrings — too granular, updated inline when code changes
 
 ## Modes
@@ -91,6 +120,10 @@ git log --oneline --since="<last_run>" --name-only
 ```
 
 From changed files, use the "Code signals" column to determine which docs are potentially affected. Only review those.
+
+For `docs/backlog.md` — also check commit messages for keywords like "fix", "resolve", "close" that might indicate a backlog item was addressed. Read backlog items and see if any match the recently changed code.
+
+For `docs/ROADMAP.md` — check if any commit messages or changed files suggest a phase/feature was completed or a new plan was added.
 
 If nothing changed — say so and exit.
 
