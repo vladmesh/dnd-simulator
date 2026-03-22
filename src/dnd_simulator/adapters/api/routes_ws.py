@@ -34,6 +34,7 @@ from dnd_simulator.core.brain import PlayerBrain
 from dnd_simulator.core.character import Ability, Creature
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.turn_budget import TurnBudget
+from dnd_simulator.i18n import _
 from dnd_simulator.round import Round
 from dnd_simulator.service.session import GameSession
 
@@ -102,11 +103,13 @@ def _location_data(session: GameSession, location_id: str) -> dict[str, Any]:
     paths = []
     for edge in loc.edges:
         target = graph.get(edge.target_id) if graph.has(edge.target_id) else None
-        paths.append({
-            "target_id": edge.target_id,
-            "target_name": target.name if target else edge.target_id,
-            "distance_m": edge.distance_m,
-        })
+        paths.append(
+            {
+                "target_id": edge.target_id,
+                "target_name": target.name if target else edge.target_id,
+                "distance_m": edge.distance_m,
+            }
+        )
 
     return {
         "current_location": loc.name,
@@ -225,13 +228,13 @@ async def websocket_game(ws: WebSocket, session_id: str) -> None:
     try:
         session = service.get_session(session_id)
     except ValueError:
-        await ws.send_json({"type": "error", "message": f"Session '{session_id}' not found"})
+        await ws.send_json({"type": "error", "message": _("Session '{}' not found").format(session_id)})
         await ws.close()
         return
 
     player = session.get_player()
     if player is None:
-        await ws.send_json({"type": "error", "message": "No player in session"})
+        await ws.send_json({"type": "error", "message": _("No player in session")})
         await ws.close()
         return
     event_loop = asyncio.get_running_loop()
@@ -334,7 +337,7 @@ async def websocket_game(ws: WebSocket, session_id: str) -> None:
             rl_budget = min(rl_max_burst, rl_budget + (now - rl_last) * rl_per_sec)
             rl_last = now
             if rl_budget < 1.0:
-                await ws.send_json({"type": "error", "message": "Rate limited, slow down"})
+                await ws.send_json({"type": "error", "message": _("Rate limited, slow down")})
                 continue
             rl_budget -= 1.0
 
@@ -352,7 +355,7 @@ async def websocket_game(ws: WebSocket, session_id: str) -> None:
                 brain.submit_action(_parse_command(str(msg.get("text", ""))))
 
             else:
-                await ws.send_json({"type": "error", "message": f"Unknown message type: {msg_type}"})
+                await ws.send_json({"type": "error", "message": _("Unknown message type: {}").format(msg_type)})
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected for session %s", session_id)
@@ -363,4 +366,3 @@ async def websocket_game(ws: WebSocket, session_id: str) -> None:
         game_round.stop()
         brain.submit_action(Action(name="end_turn"))  # unblock queue
         round_thread.join(timeout=5)
-

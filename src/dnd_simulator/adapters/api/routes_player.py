@@ -10,6 +10,7 @@ from dnd_simulator.adapters.api.schemas import (
     PlayerStatusResponse,
 )
 from dnd_simulator.core.character import Ability
+from dnd_simulator.i18n import _
 
 router = APIRouter(prefix="/api/player", tags=["player"])
 
@@ -34,7 +35,7 @@ def get_status(session_id: str) -> PlayerStatusResponse:
     session = _get_session(service, session_id)
     p = session.get_player()
     if not p:
-        raise HTTPException(status_code=404, detail="No player in this session")
+        raise HTTPException(status_code=404, detail=_("No player in this session"))
     return _player_status(p)
 
 

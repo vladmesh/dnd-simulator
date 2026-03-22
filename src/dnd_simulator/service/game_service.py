@@ -21,6 +21,7 @@ from dnd_simulator.core.location import LocationGraph
 from dnd_simulator.core.models import GameDateTime, TimeDelta
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
+from dnd_simulator.i18n import _
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.geography.layer import GeographyLayer
 from dnd_simulator.layers.politics.layer import PoliticsLayer
@@ -64,11 +65,11 @@ class GameService(
         session_id = uuid.uuid4().hex[:8]
 
         world_path = self._content_dir / "worlds" / world_name
-        regions = load_world(world_path)
-        nations = load_nations(world_path)
-        settlements = load_settlements(world_path)
-        npcs = load_npcs(world_path)
-        locations = load_locations(world_path, regions)
+        regions = load_world(world_path, lang=lang)
+        nations = load_nations(world_path, lang=lang)
+        settlements = load_settlements(world_path, lang=lang)
+        npcs = load_npcs(world_path, lang=lang)
+        locations = load_locations(world_path, regions, lang=lang)
         location_graph = LocationGraph(locations)
         region_terrains = extract_region_terrains(regions)
 
@@ -149,7 +150,7 @@ class GameService(
         self._get_session(session_id)
         del self._sessions[session_id]
 
-    def list_worlds(self) -> list[dict[str, str]]:
+    def list_worlds(self, lang: str = "en") -> list[dict[str, str]]:
         """List available world templates."""
         worlds_dir = self._content_dir / "worlds"
         result: list[dict[str, str]] = []
@@ -159,7 +160,7 @@ class GameService(
             is_world_dir = entry.is_dir() and (entry / "world.yaml").exists()
             is_world_file = entry.suffix in (".yaml", ".yml") and entry.is_file()
             if is_world_dir or is_world_file:
-                meta = load_world_meta(entry)
+                meta = load_world_meta(entry, lang=lang)
                 result.append({"id": entry.name, **meta})
         return result
 
@@ -305,7 +306,7 @@ class GameService(
 
         session = self._get_session(session_id)
         if session.get_player() is not None:
-            raise ValueError("Session already has a player")
+            raise ValueError(_("Session already has a player"))
 
         player = parse_player(player_data)
 
@@ -324,7 +325,7 @@ class GameService(
     def _require_player(self, session: GameSession) -> PlayerCharacter:
         player = session.get_player()
         if player is None:
-            raise ValueError("No player in this session")
+            raise ValueError(_("No player in this session"))
         return player
 
     def _get_session(self, session_id: str) -> GameSession:

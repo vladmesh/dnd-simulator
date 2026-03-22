@@ -22,6 +22,7 @@ from dnd_simulator.adapters.api.schemas import (
     WorldStateResponse,
 )
 from dnd_simulator.core.models import Query
+from dnd_simulator.i18n import _
 
 router = APIRouter(prefix="/api/master", tags=["master"])
 
@@ -30,10 +31,10 @@ router = APIRouter(prefix="/api/master", tags=["master"])
 
 
 @router.get("/worlds", response_model=list[WorldListItem])
-def list_worlds() -> list[WorldListItem]:
+def list_worlds(lang: str = "en") -> list[WorldListItem]:
     """List available world templates."""
     service = get_service()
-    worlds = service.list_worlds()
+    worlds = service.list_worlds(lang=lang)
     return [WorldListItem(**w) for w in worlds]
 
 
@@ -44,7 +45,7 @@ def create_world(req: CreateWorldRequest) -> WorldListItem:
     try:
         result = service.create_world(req.model_dump())
     except FileExistsError as exc:
-        raise HTTPException(status_code=409, detail=f"World '{req.id}' already exists") from exc
+        raise HTTPException(status_code=409, detail=_("World '{}' already exists").format(req.id)) from exc
     return WorldListItem(id=result["id"], name=result["name"], description=req.description)
 
 
@@ -55,7 +56,7 @@ def get_world_template(world_id: str) -> dict[str, object]:
     try:
         return service.get_world_template(world_id)
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=f"World '{world_id}' not found") from exc
+        raise HTTPException(status_code=404, detail=_("World '{}' not found").format(world_id)) from exc
 
 
 @router.put("/worlds/{world_id}", response_model=WorldListItem)
@@ -65,7 +66,7 @@ def update_world(world_id: str, req: CreateWorldRequest) -> WorldListItem:
     try:
         result = service.update_world(world_id, req.model_dump())
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=f"World '{world_id}' not found") from exc
+        raise HTTPException(status_code=404, detail=_("World '{}' not found").format(world_id)) from exc
     return WorldListItem(id=result["id"], name=result["name"], description=req.description)
 
 
@@ -140,7 +141,7 @@ def delete_session(session_id: str) -> MessageResponse:
         service.delete_session(session_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    return MessageResponse(message=f"Session {session_id} deleted")
+    return MessageResponse(message=_("Session {} deleted").format(session_id))
 
 
 # -- Creatures --
@@ -188,12 +189,12 @@ def patch_creature(session_id: str, entity_id: str, body: PatchCreatureRequest) 
     service = get_service()
     updates = body.model_dump(exclude_none=True)
     if not updates:
-        raise HTTPException(status_code=400, detail="No fields to update")
+        raise HTTPException(status_code=400, detail=_("No fields to update"))
     try:
         service.patch_creature(session_id, entity_id, updates)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    return MessageResponse(message=f"Creature {entity_id} updated")
+    return MessageResponse(message=_("Creature {} updated").format(entity_id))
 
 
 @router.delete("/sessions/{session_id}/creatures/{entity_id}", response_model=MessageResponse)
@@ -204,7 +205,7 @@ def delete_creature(session_id: str, entity_id: str) -> MessageResponse:
         service.remove_creature(session_id, entity_id)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    return MessageResponse(message=f"Creature {entity_id} removed")
+    return MessageResponse(message=_("Creature {} removed").format(entity_id))
 
 
 @router.put("/sessions/{session_id}/creatures/{entity_id}/brain", response_model=MessageResponse)
@@ -215,7 +216,7 @@ def set_brain(session_id: str, entity_id: str, body: SetBrainRequest) -> Message
         service.set_creature_brain(session_id, entity_id, body.type, body.model)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    return MessageResponse(message=f"Creature {entity_id} brain set to {body.type}")
+    return MessageResponse(message=_("Creature {} brain set to {}").format(entity_id, body.type))
 
 
 # -- Nation/Settlement hot controls --
@@ -227,12 +228,12 @@ def patch_nation(session_id: str, nation_id: str, body: PatchNationRequest) -> M
     service = get_service()
     updates = body.model_dump(exclude_none=True)
     if not updates:
-        raise HTTPException(status_code=400, detail="No fields to update")
+        raise HTTPException(status_code=400, detail=_("No fields to update"))
     try:
         service.patch_nation(session_id, nation_id, updates)
     except (ValueError, KeyError) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    return MessageResponse(message=f"Nation {nation_id} updated")
+    return MessageResponse(message=_("Nation {} updated").format(nation_id))
 
 
 @router.patch("/sessions/{session_id}/settlements/{settlement_id}", response_model=MessageResponse)
@@ -241,12 +242,12 @@ def patch_settlement(session_id: str, settlement_id: str, body: PatchSettlementR
     service = get_service()
     updates = body.model_dump(exclude_none=True)
     if not updates:
-        raise HTTPException(status_code=400, detail="No fields to update")
+        raise HTTPException(status_code=400, detail=_("No fields to update"))
     try:
         service.patch_settlement(session_id, settlement_id, updates)
     except (ValueError, KeyError) as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    return MessageResponse(message=f"Settlement {settlement_id} updated")
+    return MessageResponse(message=_("Settlement {} updated").format(settlement_id))
 
 
 # -- Time --
@@ -260,9 +261,9 @@ def advance_time(session_id: str, body: AdvanceTimeRequest) -> MessageResponse:
         events = service.advance_time(session_id, body.hours)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    msg = f"Advanced {body.hours}h."
+    msg = _("Advanced {}h.").format(body.hours)
     if events:
-        msg += " Events: " + "; ".join(events)
+        msg += " " + _("Events:") + " " + "; ".join(events)
     return MessageResponse(message=msg)
 
 
@@ -275,7 +276,7 @@ def set_session_lang(session_id: str, body: SetLangRequest) -> MessageResponse:
     service = get_service()
     session = _get_session(service, session_id)
     session.lang = body.lang
-    return MessageResponse(message=f"Language set to '{body.lang}'")
+    return MessageResponse(message=_("Language set to '{}'").format(body.lang))
 
 
 # -- Saves --
@@ -298,7 +299,7 @@ def save_game(session_id: str, name: str | None = None) -> MessageResponse:
         save_name = service.save_game(session_id, name)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    return MessageResponse(message=f"Saved as '{save_name}'")
+    return MessageResponse(message=_("Saved as '{}'").format(save_name))
 
 
 @router.post("/sessions/{session_id}/saves/{save_name}/load", response_model=MessageResponse)
@@ -311,7 +312,7 @@ def load_save(session_id: str, save_name: str) -> MessageResponse:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    return MessageResponse(message=f"Loaded '{save_name}'")
+    return MessageResponse(message=_("Loaded '{}'").format(save_name))
 
 
 @router.delete("/sessions/{session_id}/saves/{save_name}", response_model=MessageResponse)
@@ -324,7 +325,7 @@ def delete_save(session_id: str, save_name: str) -> MessageResponse:
         raise HTTPException(status_code=404, detail=str(e)) from e
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    return MessageResponse(message=f"Deleted '{save_name}'")
+    return MessageResponse(message=_("Deleted '{}'").format(save_name))
 
 
 # -- Helpers --

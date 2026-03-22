@@ -163,23 +163,28 @@ class TestTurnCountPerRound:
             def choose_action(self, creature, awareness, events):  # type: ignore[override]
                 budget = awareness.turn_budget
                 action = super().choose_action(creature, awareness, events)
-                budget_trace.append({
-                    "creature": creature.name,
-                    "action": action.name,
-                    "budget_before": (
-                        f"a={budget.actions},b={budget.bonus_actions},m={budget.movement_remaining}"
-                        if budget else "None"
-                    ),
-                })
+                budget_trace.append(
+                    {
+                        "creature": creature.name,
+                        "action": action.name,
+                        "budget_before": (
+                            f"a={budget.actions},b={budget.bonus_actions},m={budget.movement_remaining}"
+                            if budget
+                            else "None"
+                        ),
+                    }
+                )
                 return action
 
         goblin.brain = TracingBrain()
 
         # Player: attack + end_turn
-        player.brain = ScriptedBrain([
-            Action(name="attack", params={"target_id": "goblin"}),
-            END_TURN,
-        ])
+        player.brain = ScriptedBrain(
+            [
+                Action(name="attack", params={"target_id": "goblin"}),
+                END_TURN,
+            ]
+        )
 
         # Also trace run_creature_turn
         turn_log: list[str] = []
@@ -251,10 +256,12 @@ class TestTurnCountPerRound:
         try:
             for i in range(3):
                 round_num = i + 1
-                player.brain = ScriptedBrain([
-                    Action(name="attack", params={"target_id": "goblin"}),
-                    END_TURN,
-                ])
+                player.brain = ScriptedBrain(
+                    [
+                        Action(name="attack", params={"target_id": "goblin"}),
+                        END_TURN,
+                    ]
+                )
                 game_round.run_round()
         finally:
             Creature.execute_action = original_execute  # type: ignore[assignment]
@@ -273,9 +280,7 @@ class TestTurnCountPerRound:
         print(f"Goblin executed attacks: {goblin_total_attacks}")
 
         # Goblin should execute at most 3 attacks across 3 rounds
-        assert goblin_total_attacks <= 3, (
-            f"Goblin executed {goblin_total_attacks} attacks in 3 rounds"
-        )
+        assert goblin_total_attacks <= 3, f"Goblin executed {goblin_total_attacks} attacks in 3 rounds"
 
         # Each round: at most 1 turn per creature
         for rn in range(1, 4):

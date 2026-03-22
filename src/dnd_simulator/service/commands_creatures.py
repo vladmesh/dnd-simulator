@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.models import Query
+from dnd_simulator.i18n import _
 from dnd_simulator.service.session import GameSession
 
 if TYPE_CHECKING:
@@ -41,9 +42,7 @@ class CreatureCommands:
     def get_creature_info(self, session_id: str, entity_id: str) -> dict[str, object]:
         """Get single entity detail."""
         session = self._get_session(session_id)  # type: ignore[attr-defined]
-        answer = session.world.query_layer(
-            "entities", Query(question="entity_info", params={"entity_id": entity_id})
-        )
+        answer = session.world.query_layer("entities", Query(question="entity_info", params={"entity_id": entity_id}))
         result: dict[str, object] = answer.value
         return result
 
@@ -74,7 +73,7 @@ class CreatureCommands:
         if entity is None:
             raise ValueError(f"Creature '{entity_id}' not found")
         if isinstance(entity, PlayerCharacter):
-            raise ValueError("Cannot edit player character from master panel")
+            raise ValueError(_("Cannot edit player character from master panel"))
         if not isinstance(entity, Creature):
             raise ValueError(f"Entity '{entity_id}' is not a creature")
 
@@ -106,7 +105,7 @@ class CreatureCommands:
         if entity is None:
             raise ValueError(f"Creature '{entity_id}' not found")
         if isinstance(entity, PlayerCharacter):
-            raise ValueError("Cannot remove player character from master panel")
+            raise ValueError(_("Cannot remove player character from master panel"))
         layer.remove_entity(entity_id)
 
     # -- Brain --
@@ -123,7 +122,7 @@ class CreatureCommands:
         if entity is None or not isinstance(entity, Creature):
             raise ValueError(f"Creature '{entity_id}' not found")
         if isinstance(entity, PlayerCharacter):
-            raise ValueError("Cannot change player brain from master panel")
+            raise ValueError(_("Cannot change player brain from master panel"))
 
         if brain_type == "rule_based":
             entity.brain = RuleBrain()
@@ -131,7 +130,7 @@ class CreatureCommands:
                 entity.ai_type = "rule_based"
         elif brain_type == "llm":
             if not self._llm:  # type: ignore[attr-defined]
-                raise ValueError("LLM not configured")
+                raise ValueError(_("LLM not configured"))
             from dnd_simulator.llm.brain import LlmBrain
 
             entity.brain = LlmBrain(self._llm)  # type: ignore[attr-defined]
