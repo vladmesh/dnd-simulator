@@ -62,19 +62,32 @@ export class WsClient {
   private doConnect(): void {
     if (!this.sessionId) return
 
+    // Close any previous WS to avoid stale onclose clobbering new connection
+    if (this.ws) {
+      this.ws.onopen = null
+      this.ws.onmessage = null
+      this.ws.onclose = null
+      this.ws.onerror = null
+      this.ws.close()
+      this.ws = null
+    }
+
     this.setStatus("connecting")
 
     const proto = location.protocol === "https:" ? "wss:" : "ws:"
     const url = `${proto}//${location.host}/api/ws/${this.sessionId}`
 
-    this.ws = new WebSocket(url)
+    const ws = new WebSocket(url)
+    this.ws = ws
 
-    this.ws.onopen = () => {
+    ws.onopen = () => {
+      if (this.ws !== ws) return // stale
       this.setStatus("connected")
       this.retryMs = INITIAL_RETRY_MS
     }
 
-    this.ws.onmessage = (event) => {
+    ws.onmessage = (event) => {
+      if (this.ws !== ws) return // stale
       try {
         const msg = JSON.parse(event.data as string) as ServerMessage
         for (const handler of this.messageHandlers) {
@@ -85,7 +98,8 @@ export class WsClient {
       }
     }
 
-    this.ws.onclose = () => {
+    ws.onclose = () => {
+      if (this.ws !== ws) return // stale — a newer WS replaced us
       this.ws = null
       if (!this.intentionalClose && this.sessionId) {
         this.setStatus("disconnected")
@@ -93,7 +107,8 @@ export class WsClient {
       }
     }
 
-    this.ws.onerror = () => {
+    ws.onerror = () => {
+      if (this.ws !== ws) return // stale
       this.setStatus("error")
     }
   }

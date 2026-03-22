@@ -16,31 +16,34 @@ export const createConnectionSlice: StateCreator<
   [],
   ConnectionSlice
 > = (set, get) => {
-  // Subscribe to WS status changes
+  // Subscribe to WS status changes — use setTimeout to avoid
+  // useSyncExternalStore tearing during React commit phase
   wsClient.onStatus((wsStatus) => {
-    set({ wsStatus })
+    setTimeout(() => set({ wsStatus }), 0)
   })
 
   // Subscribe to WS messages and dispatch to other slices
   wsClient.onMessage((msg) => {
-    const state = get()
-    switch (msg.type) {
-      case "turn":
-        state.onTurn(msg)
-        break
-      case "action_result":
-        state.onActionResult(msg)
-        break
-      case "round_result":
-        state.onRoundResult(msg)
-        break
-      case "error":
-        state.onError(msg)
-        break
-      case "game_over":
-        state.onGameOver()
-        break
-    }
+    setTimeout(() => {
+      const state = get()
+      switch (msg.type) {
+        case "turn":
+          state.onTurn(msg)
+          break
+        case "action_result":
+          state.onActionResult(msg)
+          break
+        case "round_result":
+          state.onRoundResult(msg)
+          break
+        case "error":
+          state.onError(msg)
+          break
+        case "game_over":
+          state.onGameOver()
+          break
+      }
+    }, 0)
   })
 
   return {

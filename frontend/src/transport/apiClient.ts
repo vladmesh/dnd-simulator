@@ -76,7 +76,8 @@ function del<T>(path: string) {
 
 const master = {
   // Worlds
-  getWorlds: () => get<WorldListItem[]>("/api/master/worlds"),
+  getWorlds: (lang?: string) =>
+    get<WorldListItem[]>(lang ? `/api/master/worlds?lang=${lang}` : "/api/master/worlds"),
 
   getWorld: (worldId: string) =>
     get<Record<string, unknown>>(`/api/master/worlds/${worldId}`),

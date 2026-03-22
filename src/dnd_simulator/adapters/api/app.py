@@ -82,6 +82,18 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+import logging
+
+_fe_log = logging.getLogger("frontend")
+
+
+@app.post("/api/frontend-error")
+async def frontend_error(request: Request) -> dict[str, str]:
+    body = await request.json()
+    _fe_log.error("FRONTEND ERROR: %s\n%s", body.get("message", "?"), body.get("stack", ""))
+    return {"status": "logged"}
+
+
 # Static files served AFTER API routes so /api/* takes priority.
 # Prefer React frontend build if available, fall back to legacy debug UI.
 _static_root = _FRONTEND_DIST if _FRONTEND_DIST.is_dir() else _STATIC_DIR

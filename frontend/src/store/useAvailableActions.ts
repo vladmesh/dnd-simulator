@@ -16,12 +16,10 @@ function isCombatAwareness(
 }
 
 export function useAvailableActions(): AvailableAction[] {
-  const { mode, awareness, budget, isMyTurn } = useGameStore((s) => ({
-    mode: s.mode,
-    awareness: s.awareness,
-    budget: s.budget,
-    isMyTurn: s.isMyTurn,
-  }))
+  const mode = useGameStore((s) => s.mode)
+  const awareness = useGameStore((s) => s.awareness)
+  const budget = useGameStore((s) => s.budget)
+  const isMyTurn = useGameStore((s) => s.isMyTurn)
 
   return useMemo(() => {
     if (!isMyTurn || !awareness) return []

@@ -7,10 +7,11 @@
 
 ```
 React 19 + TypeScript + Vite
-TailwindCSS 4 + shadcn/ui
+TailwindCSS 4 + shadcn/ui (base-nova style)
 Zustand (slices pattern)
-React Router
+React Router 7
 react-hook-form + zod (формы)
+react-i18next (en/ru, namespaced JSON)
 @tanstack/react-virtual (EventLog)
 ```
 
@@ -121,14 +122,14 @@ src/components/
 ```
 
 Шаги:
-- [ ] Роутинг: `/` → SetupScreen, `/play/:id` → GameScreen (пока заглушка)
-- [ ] WorldPicker: загрузить миры, показать карточки с именем и описанием
-- [ ] Кнопка "New Session" → POST /sessions → получить session_id
-- [ ] CharacterForm: имя, раса, класс, уровень, alignment, ability scores, HP, AC
-- [ ] Валидация через zod-схему (например: HP > 0, ability scores 1-30)
-- [ ] После создания персонажа → navigate(`/play/${sessionId}`)
-- [ ] SessionConnect: альтернативный путь — ввести ID существующей сессии
-- [ ] Проверить: от открытия страницы до попадания на /play/:id без ошибок
+- [x] Роутинг: `/` → SetupScreen, `/play/:id` → GameScreen (пока заглушка)
+- [x] WorldPicker: загрузить миры, показать карточки с именем и описанием
+- [x] Кнопка "New Session" → POST /sessions → получить session_id
+- [x] CharacterForm: имя, раса, класс, уровень, alignment, ability scores, HP, AC
+- [x] Валидация через zod-схему (например: HP > 0, ability scores 1-30)
+- [x] После создания персонажа → navigate(`/play/${sessionId}`)
+- [x] SessionConnect: альтернативный путь — ввести ID существующей сессии
+- [x] Проверить: от открытия страницы до попадания на /play/:id без ошибок
 
 Результат: полный onboarding flow работает.
 
@@ -164,16 +165,16 @@ Layout (desktop):
 ```
 
 Шаги:
-- [ ] GameScreen: useWebSocket hook — connect при mount, disconnect при unmount
-- [ ] Header: HP bar с цветом (green > 50%, yellow > 25%, red), данные из player slice
-- [ ] EventLog: @tanstack/react-virtual, автоскролл, моноширинный шрифт
-- [ ] Perception: список nearby из awareness, при клике — popover с действиями
-- [ ] LocationPanel: имя + описание + список путей как кнопки
-- [ ] PlayerStats: ability scores в сетке, AC/gold/level
-- [ ] ActionBar: кнопки из useAvailableActions, disable + spinner при ожидании ответа
-- [ ] ErrorBoundary: глобальный на App, toast для WS ошибок (shadcn Sonner)
-- [ ] Responsive: sidebar → drawer на md breakpoint
-- [ ] Проверить: создать сессию → мирный ход → look → go → wait → всё работает
+- [x] GameScreen: useWebSocket hook — connect при mount, disconnect при unmount
+- [x] Header: HP bar с цветом (green > 50%, yellow > 25%, red), данные из player slice
+- [x] EventLog: @tanstack/react-virtual, автоскролл, моноширинный шрифт
+- [x] Perception: список nearby из awareness, при клике — popover с действиями
+- [x] LocationPanel: имя + описание + список путей как кнопки
+- [x] PlayerStats: ability scores в сетке, AC/gold/level
+- [x] ActionBar: кнопки из useAvailableActions, disable + spinner при ожидании ответа
+- [x] ErrorBoundary: глобальный на App + отправка ошибок на бэкенд (POST /api/frontend-error)
+- [x] Responsive: sidebar → drawer на md breakpoint
+- [x] Проверить: создать сессию → мирный ход → look → go → wait → всё работает (Playwright)
 
 Результат: можно играть в мирном режиме через новый UI.
 
@@ -248,6 +249,47 @@ src/components/master/
 
 ---
 
+## Отклонения от плана
+
+### i18n — добавлен досрочно (между Phase 4 и Phase 5)
+
+Изначально `react-i18next` был в Out of Scope. Перенесён в скоуп, т.к. бэкенд и контент полностью двуязычные (en/ru) — бессмысленно не использовать.
+
+Реализация:
+- `react-i18next` + `i18next`, неймспейсы: `common`, `setup`, `game` (добавлять `master`, `combat` и т.д.)
+- JSON-файлы в `src/i18n/locales/{en,ru}/`
+- Автодетект по `navigator.language`, кнопка переключения EN/RU на экране выбора мира
+- `lang` передаётся в `getWorlds()` и `createSession()` → бэкенд отдаёт переведённый контент
+- Все компоненты Phase 3-4 переведены на `t()`
+- Новые компоненты пишутся сразу с `t()`
+
+### ErrorBoundary — расширен
+
+План предусматривал ErrorBoundary + toast (Sonner). Реализовано:
+- ErrorBoundary ловит React-краши, показывает ошибку, отправляет POST /api/frontend-error
+- window.onerror + unhandledrejection → тоже POST на бэкенд
+- Бэкенд логирует `FRONTEND ERROR: ...` — видно в серверных логах без браузера
+- Toast (Sonner) отложен на Phase 7
+
+### WebSocket — исправлена совместимость с StrictMode
+
+- Vite proxy: объединён `/api` + `/ws` в один proxy с `ws: true`
+- wsClient: добавлена защита от stale onclose (проверка `this.ws !== ws`)
+- connectionSlice: store updates из WS-коллбэков через `setTimeout(0)` (useSyncExternalStore tearing)
+- GameScreen: `useRef` guard против двойного подключения в StrictMode
+
+### Playwright MCP — добавлен для отладки
+
+Не был в плане. Добавлен headless Playwright через MCP для автоматизированного тестирования UI без ручного открытия браузера.
+
+---
+
+## Что дальше
+
+Следующая фаза: **Phase 5 — Combat Mode**. BattleMap, CombatPanel, BudgetDisplay, боевые действия.
+
+---
+
 ## Out of Scope (future)
 
 - Кликабельная 2D battle map (Canvas/SVG)
@@ -256,6 +298,6 @@ src/components/master/
 - Журнал квестов
 - Контекстное меню NPC (торговля, квесты)
 - Интерактивная карта мира для DM
-- i18n фреймворк (react-i18next)
+- ~~i18n фреймворк (react-i18next)~~ → реализовано
 - Тесты фронтенда (vitest + testing-library)
 - Mobile-specific layout
