@@ -2,11 +2,6 @@
 
 ## Bugs
 
-### move/dash не перемещает в бою
-`dash toward <target>` возвращает "Moved" но позиция на battle map не меняется.
-Баг в game engine (`combat_manager.resolve_move` / `move_toward`), не в API.
-Нужно дебажить логику `move_toward()` — возможно коллизия стен или ошибка в расчёте новой позиции.
-
 ### Персонаж создаётся без атак
 `POST /api/player/sessions/{id}/character` не принимает поле `attacks`.
 Персонаж дерётся кулаками (1 урон). Добавить `attacks` в `CreatePlayerRequest` и `parse_player`.
@@ -30,6 +25,26 @@ cancel на shutdown перед финальным autosave.
 `list_npcs` итерирует по регионам и ищет NPC в каждом.
 NPC в несуществующем регионе не попадёт в список. Мелочь, но стоит поправить —
 итерировать по entities напрямую.
+
+## Performance
+
+### Awareness rebuild — кэширование и инвалидация
+
+**Проблема:** `build_awareness()` делает 4-5 query к нижним слоям (geography, settlements, politics) при каждом вызове. Сейчас вызывается перед каждым ходом каждого существа — O(N) rebuilds за раунд. При масштабировании до десятков NPC с LlmBrain станет bottleneck: каждый query — dict lookup + копирование, а для LlmBrain результат ещё сериализуется в промпт.
+
+**Что дорого и почему:**
+- weather + region_info (2 query) — меняются раз в tick Geography, одинаковы для всех в регионе
+- settlements (1 query) — меняются раз в 30 дней, одинаковы для региона
+- politics + nation_info (2 query) — меняются раз в 30 дней, одинаковы для региона
+- nearby entities — O(N) scan, уникально per creature, но меняется только когда в локации что-то произошло
+
+**Решение в два слоя:**
+
+1. **WorldSnapshot (per region, per tick)** — frozen dataclass с weather, region_name, settlements, politics. Строится один раз при `advance_time()`, кэшируется по `(region_id, tick_number)`. Все существа в регионе берут готовый snapshot вместо 5 query. Инвалидация тривиальна: новый tick = новый snapshot.
+
+2. **Dirty flag per location для nearby entities** — действие в локации X помечает awareness всех существ в X как stale. `build_awareness()` проверяет флаг: чисто → кэш, грязно → пересобрать только nearby (не query к слоям). Существа в других локациях не затронуты.
+
+**Когда делать:** когда начнёт тормозить (>20 NPC с LlmBrain в одном мире). API awareness не меняется — те же PeacefulAwareness/CombatAwareness, просто собираются быстрее. Ничто из уровней 1-3 (conditions, inventory, spells) на это не завязано.
 
 ## Refactoring
 

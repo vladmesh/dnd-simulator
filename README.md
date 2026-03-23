@@ -9,11 +9,13 @@ See [docs/VISION.md](docs/VISION.md) for product vision and [docs/ROADMAP.md](do
 
 ## Development
 
-Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
+Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/). Frontend requires Node.js 18+.
 
 ```bash
-make install    # install dependencies
-make check      # run all checks (lint + typecheck + test)
-make format     # auto-format code
-make test       # run tests only
+make install        # install Python dependencies
+make check          # run all checks (lint + typecheck + test)
+make format         # auto-format code
+make test           # run tests only
+make serve          # start API server on :8001 (auto-builds frontend)
+make frontend-dev   # start Vite dev server for frontend
 ```

@@ -44,6 +44,7 @@ src/dnd_simulator/
 ├── i18n.py        — gettext internationalization, per-session language via contextvars
 ├── adapters/      — transport layer
 │   └── api/       — FastAPI REST + WebSocket adapter (master + player routes, WS game loop, i18n middleware)
+│                    also serves legacy debug UI (static/) and React SPA build
 ├── content_loader.py — loads content from YAML (single file or directory format)
 ├── content_saver.py  — saves world templates back to YAML
 ├── service/       — GameService + command modules
@@ -58,6 +59,14 @@ content/           — authored game data (YAML)
     ├── arena.yaml          — single-file format (combat arena)
     ├── village.yaml        — single-file format (village scenario)
     └── sword_vale/         — directory format (world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml)
+
+frontend/          — React + TypeScript SPA (Vite + shadcn/ui + Zustand)
+├── src/components/setup/   — world picker, character creation, session connect
+├── src/components/game/    — EventLog, BattleMap, ActionBar, CombatPanel, PlayerStats, Perception
+├── src/components/master/  — WorldOverview, CreatureList, TimeControl, SavesPanel
+├── src/store/              — Zustand store (slices: connection, player, turn, log)
+├── src/transport/          — apiClient (REST), wsClient (WebSocket)
+└── src/i18n/               — i18next with EN/RU locale files
 ```
 
 ## Data Flow
@@ -85,9 +94,15 @@ REST API flow (adapters/api/):
     I18nMiddleware sets session language before each request via contextvars
     Master routes: session CRUD, creature hot controls, nation/settlement patching, saves
     Player routes: character creation, perception, events, combat, map, actions
+
+WebSocket flow (React frontend):
+    Frontend wsClient → WS /api/ws/{session_id} → routes_ws.py
+    GameSession owns Round lifecycle (start/stop round thread)
+    Round thread fires callbacks → SessionEventListener → WS messages → Zustand store
+    Player actions: WS message → PlayerBrain queue → Round processes → broadcast result
 ```
 
-The `Round` class separates combat and peaceful turns. Combat locations use initiative order (d20 + DEX mod, rolled once at combat start); peaceful creatures use default order. Each creature's turn is a multi-action loop: a `TurnBudget` is created from creature stats, then the brain is called repeatedly until it returns `end_turn` or the budget is exhausted. `action_cost()` (in `rules/actions.py`) maps each action to its cost (standard action, bonus action, or movement feet). Brains receive structured awareness (`PeacefulAwareness` or `CombatAwareness` from `core/awareness.py`) with the current budget attached, so they can make informed decisions. Three brain types: `RuleBrain` (utility scoring), `LlmBrain` (LLM calls), `PlayerBrain` (queue + on_turn callback for interactive I/O). `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
+`GameSession` (in `service/session.py`) owns the `Round` lifecycle — starting and stopping the round thread, bridging events to transport listeners via `SessionEventListener` protocol. The `Round` class separates combat and peaceful turns. Combat locations use initiative order (d20 + DEX mod, rolled once at combat start); peaceful creatures use default order. Each creature's turn is a multi-action loop: a `TurnBudget` is created from creature stats, then the brain is called repeatedly until it returns `end_turn` or the budget is exhausted. `action_cost()` (in `rules/actions.py`) maps each action to its cost (standard action, bonus action, or movement feet). Brains receive structured awareness (`PeacefulAwareness` or `CombatAwareness` from `core/awareness.py`) with the current budget attached, so they can make informed decisions. Three brain types: `RuleBrain` (utility scoring), `LlmBrain` (LLM calls), `PlayerBrain` (queue + on_turn callback for interactive I/O). `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
 
 `World.handle_event()` sends an event to all layers in order. Each layer returns an `ActionResult` — if any layer returns `success=False`, propagation stops and the failure is returned to the caller. This lets layers validate and reject actions (e.g., EntitiesLayer rejects attacks on dead targets).
 
@@ -132,7 +147,7 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 
 **Turn order:** Initiative = d20 + DEX modifier, tiebreaker by DEX score. Order is fixed for the entire combat. Game loop iterates combatants in this order.
 
-**Battle map:** Each `CombatState` owns a `BattleMap` — a 2D grid (coordinates in feet, 5-ft cells). Entities have `Position`s on the map. `Wall` segments block movement between adjacent cells. Perimeter walls auto-generated from map dimensions. Movement uses `rules/movement.py`: D&D 5e alternating diagonal cost (5/10/5/…), wall collision, move-toward/away/direction helpers.
+**Battle map:** Each `CombatState` owns a `BattleMap` — a 2D grid (coordinates in feet, 5-ft cells). Entities have `Position`s on the map. `Wall` segments block movement between adjacent cells. Perimeter walls auto-generated from map dimensions. Movement uses `rules/movement.py`: atomic direction + distance steps, D&D 5e alternating diagonal cost (5/10/5/…), wall collision. Dash is a self-buff action that adds speed to the movement pool. Abstract moves (toward/away from target) are resolved to concrete directions server-side. Failed moves refund budget.
 
 **Dual awareness:** Creatures in combat get a focused prompt (HP, weapon, nearby combatants with positions/distances, round number — no weather/time/politics). Peaceful creatures get full world awareness. Two separate tool sets: combat (attack/move/dodge/flee/idle, no say — use description for flavor) and peaceful (say/attack/idle).
 

@@ -13,7 +13,9 @@ make format       # auto-fix formatting and lint issues
 make typecheck    # uv run mypy src/
 make messages     # extract translatable strings to .pot
 make compile-messages  # compile .po → .mo
-make serve        # uvicorn API server on :8001 with --reload
+make serve        # uvicorn API server on :8001 with --reload (auto-builds frontend if node_modules exist)
+make frontend-dev  # vite dev server for frontend
+make frontend-build # build frontend for production
 
 # Single test file
 uv run pytest tests/test_character.py
@@ -50,13 +52,14 @@ layers/            — concrete layer implementations (depend on core only)
 round.py           — Round orchestrator: multi-action turn loop with budget enforcement
 service/           — GameService + command modules (combat, creatures, politics, save, time, world)
   ↓
-adapters/          — CLI REPL, FastAPI REST API
+adapters/          — FastAPI REST + WebSocket API
 
 rules/             — pure D&D mechanics functions (no deps)
 llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
 storage/           — SaveStore interface, JsonFileStore
 content_loader.py  — loads worlds, nations, settlements, NPCs, player from YAML
 content/           — YAML world definitions (data, not code)
+frontend/          — React + TypeScript SPA (Vite, shadcn/ui, Zustand)
 ```
 
 ### Key Design Principles
