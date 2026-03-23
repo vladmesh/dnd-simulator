@@ -199,11 +199,15 @@ class CombatManager:
         return ActionResult(success=True)
 
     def resolve_attack(self, event: Event) -> ActionResult:
-        """Validate and resolve an attack: check constraints, roll dice, apply damage, log."""
+        """Resolve an attack: roll dice, apply damage, log.
+
+        Preconditions (alive, target valid, same location, reach) are checked
+        by the validator before dispatch. This method only does mechanics.
+        """
         attacker_id = str(event.data.get("attacker_id", ""))
         target_id = str(event.data.get("target_id", ""))
 
-        # --- Validation ---
+        # Look up entities — validator checks these before dispatch, but defend at layer boundary
         attacker = self._entities.get(attacker_id)
         if not isinstance(attacker, Creature):
             return ActionResult(success=False, error=_("Attacker '{id}' not found.").format(id=attacker_id))
@@ -211,15 +215,6 @@ class CombatManager:
         target = self._entities.get(target_id)
         if not isinstance(target, Creature):
             return ActionResult(success=False, error=_("Target '{id}' not found.").format(id=target_id))
-
-        if not attacker.is_alive:
-            return ActionResult(success=False, error=_("You are dead and cannot attack."))
-
-        if not target.is_alive:
-            return ActionResult(success=False, error=_("Target '{id}' is already dead.").format(id=target_id))
-
-        if attacker.location_id != target.location_id:
-            return ActionResult(success=False, error=_("Target '{id}' is not in this region.").format(id=target_id))
 
         # --- Enter combat for all creatures at the location ---
         if attacker.location_id not in self._combats:
@@ -231,19 +226,6 @@ class CombatManager:
             attack = attacker.attacks[0]
         else:
             attack = Attack(name=_("fist"), ability=Ability.STR, damage=(DamageComponent("1", DamageType.BLUDGEONING),))
-
-        # --- Reach check ---
-        combat = self._combats.get(attacker.location_id)
-        if combat:
-            a_pos = combat.battle_map.get_position(attacker_id)
-            t_pos = combat.battle_map.get_position(target_id)
-            if a_pos is not None and t_pos is not None:
-                dist = grid_distance(a_pos, t_pos)
-                if dist > attack.reach:
-                    return ActionResult(
-                        success=False,
-                        error=_("Target too far ({dist} ft, reach {reach} ft).").format(dist=dist, reach=attack.reach),
-                    )
 
         # --- Resolution: compute advantage/disadvantage from conditions ---
         is_melee = attack.reach <= 10

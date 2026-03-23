@@ -29,6 +29,8 @@ def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -
         return _perceive_flee(event, observer, get_entity)
     if event.event_type in (EventType.ENTITY_MOVE, EventType.ENTITY_DASH):
         return _perceive_move(event, observer, get_entity)
+    if event.event_type == EventType.ENTITY_USE_ITEM:
+        return _perceive_use_item(event, observer, get_entity)
     if event.event_type == EventType.TURN_SKIPPED:
         return _perceive_turn_skipped(event, observer, get_entity)
     if event.event_type == EventType.COMBAT_STARTED:
@@ -185,6 +187,17 @@ def _perceive_move(event: Event, observer: Character, get_entity: GetEntityFn) -
     return _("{entity} {verb} {direction} ({distance} ft){desc}").format(
         entity=desc, verb=verb, direction=dir_label, distance=distance_ft, desc=desc_suffix
     )
+
+
+def _perceive_use_item(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    entity_id = str(event.data.get("entity_id", ""))
+    item_name = str(event.data.get("item_name", _("an item")))
+    healed = event.data.get("healed", 0)
+
+    if entity_id == observer.id:
+        return _("You use {item} (healed {hp} HP)").format(item=item_name, hp=healed)
+    desc = _describe(observer, entity_id, get_entity)
+    return _("{entity} uses {item} (healed {hp} HP)").format(entity=desc, item=item_name, hp=healed)
 
 
 def _perceive_inspect(event: Event, observer: Character, get_entity: GetEntityFn) -> str:

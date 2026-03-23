@@ -14,6 +14,7 @@ from dnd_simulator.core.models import EventType
 
 if TYPE_CHECKING:
     from dnd_simulator.core.action import ActionType
+    from dnd_simulator.core.items import Item
     from dnd_simulator.core.turn_budget import TurnBudget
 
 
@@ -24,6 +25,22 @@ class NearbyEntity:
     id: str
     description: str
     is_wounded: bool = False
+
+
+@dataclass(frozen=True)
+class ItemInfo:
+    """An inventory item as seen in awareness — lightweight view for brains/UI."""
+
+    id: str
+    name: str
+    description: str  # e.g. "Healing Potion (heals 2d4+2 HP)"
+
+
+def describe_item(item: Item) -> str:
+    """Build a human-readable description of an item for awareness."""
+    if item.params.get("heal_dice"):
+        return f"{item.name} (heals {item.params['heal_dice']} HP)"
+    return item.name
 
 
 @dataclass(frozen=True)
@@ -57,6 +74,7 @@ class PeacefulAwareness:
     nearby: list[NearbyEntity] = field(default_factory=list)
     turn_budget: TurnBudget | None = None
     available_actions: list[ActionType] = field(default_factory=list)
+    available_items: list[ItemInfo] = field(default_factory=list)
 
 
 @dataclass
@@ -78,6 +96,7 @@ class CombatAwareness:
     turn_budget: TurnBudget | None = None
     self_conditions: frozenset[Condition] = field(default_factory=frozenset)
     available_actions: list[ActionType] = field(default_factory=list)
+    available_items: list[ItemInfo] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

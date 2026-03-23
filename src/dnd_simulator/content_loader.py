@@ -23,6 +23,7 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.combat import BattleMap, Wall
+from dnd_simulator.core.items import Item, ItemType
 from dnd_simulator.core.location import Location, LocationEdge
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.models import Npc, NpcMemory, resolve_schedule
@@ -103,6 +104,24 @@ def parse_ability_scores(data: dict[str, Any], key: str = "ability_scores") -> A
     if scores:
         return AbilityScores.from_dict(scores)
     return AbilityScores()
+
+
+def parse_items(items_data: list[dict[str, Any]]) -> list[Item]:
+    """Parse item definitions from YAML.
+
+    Each item dict must have ``name`` and ``type``.
+    Remaining keys become ``params`` (e.g. ``heal_dice`` for potions).
+    IDs are auto-generated as ``<snake_name>_<index>``.
+    """
+    items: list[Item] = []
+    for i, idata in enumerate(items_data):
+        name = str(idata["name"])
+        item_type = ItemType(idata["type"])
+        # Everything except name/type goes into params
+        params: dict[str, object] = {k: v for k, v in idata.items() if k not in ("name", "type")}
+        item_id = f"{name.lower().replace(' ', '_')}_{i}"
+        items.append(Item(id=item_id, name=name, item_type=item_type, params=params))
+    return items
 
 
 # -- Public loaders --
@@ -282,6 +301,8 @@ def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locati
     memory_data = ndata.get("memory")
     memory = NpcMemory.from_dict(memory_data) if isinstance(memory_data, dict) else NpcMemory()
 
+    inventory = parse_items(ndata.get("items") or [])
+
     npc = Npc(
         id=npc_id,
         name=resolve_text(ndata["name"], lang),
@@ -300,6 +321,7 @@ def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locati
         ability_scores=parse_ability_scores(ndata),
         ai_type=ai_type,
         memory=memory,
+        inventory=inventory,
     )
     # Brain is assigned by BrainFactory in GameService, not here.
     return npc
@@ -343,6 +365,8 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
 
     player_id = str(pdata.get("id", "")) or f"player_{uuid.uuid4().hex[:8]}"
 
+    inventory = parse_items(pdata.get("items") or [])
+
     return PlayerCharacter(
         id=player_id,
         name=str(pdata.get("name", "Adventurer")),
@@ -358,6 +382,7 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
         ac=int(pdata.get("ac", 10)),
         gold=int(pdata.get("gold", 0)),
         attacks=attacks,
+        inventory=inventory,
     )
 
 

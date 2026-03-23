@@ -167,29 +167,55 @@ def handle_dash(actor, action, emit_fn, ctx, world) -> ActionResult: ...
 
 **Результат:** LLM и UI не предлагают dodge вне боя, attack на мёртвого, move без бюджета. Dispatcher всё равно валидирует (defense in depth).
 
-### Фаза 4: Budget enforcement в validator
+### Фаза 4: Budget enforcement в validator ✅
 
 **Цель:** перенести `check_budget` и `check_reach` из ad-hoc проверок в цепочку `_CHECKS` валидатора.
 
-**Шаги:**
-1. `check_budget` — добавить в `rules/validation.py`. Использует `ctx.turn_budget`.
-2. `check_reach` — цель в досягаемости (через `ctx.combat_state` или BattleMap). Расширить ActionContext.
-3. `check_target_valid` — цель существует и жива.
-4. Убрать дублирующие проверки из CombatManager (alive, same location) — dispatcher уже проверил.
+**Что сделано:**
+1. ✅ `ActionContext` расширен: `combat_state: CombatState | None` (для reach check через BattleMap), `get_entity: EntityLookup | None` (для target validation).
+2. ✅ `check_budget` — добавлен в `_CHECKS`. Использует `ctx.turn_budget` и `action_cost()`. Inline budget check удалён из `ActionDispatcher.dispatch()` и `get_available_actions()`.
+3. ✅ `check_target_valid` — для targeted actions (attack): target exists, is Creature, is alive, same location. Без `target_id` в params — skip (для проб из `get_available_actions`). Без `get_entity` — skip (для контекстов без entity lookup).
+4. ✅ `check_reach` — для attack в combat: проверяет расстояние на BattleMap vs weapon reach (первая атака из `actor.attacks` или 5ft по умолчанию). Без `combat_state` — skip.
+5. ✅ Дублирующие проверки из `CombatManager.resolve_attack()` убраны (alive, same location, reach). Entity lookup оставлен defensive (`.get()` с error return) — защита на границе слоя.
+6. ✅ Round передаёт `combat_state` и `get_entity` в ActionContext (combat turn, peaceful turn, reactions).
+7. ✅ 18 новых тестов (TestBudgetValidation, TestTargetValidation, TestReachValidation). 3 старых теста из `test_attack_resolution.py` (cross_region, dead_target, out_of_reach) заменены тестами валидатора.
 
-**Результат:** validator — полная цепочка предусловий. CombatManager — только исполнение механик (damage roll, move resolution).
+**Отклонения от плана:**
+- `EntityLookup = Callable[[str], Entity | None]` вместо прямой ссылки на `dict[str, Entity]`. Причина: EntitiesLayer уже имеет `get_entity()`, не нужно обнажать внутренний dict.
+- `check_target_valid` и `check_reach` пропускают проверку при отсутствии params/target_id. Причина: `get_available_actions` создаёт probe-ы `Action(name=...)` без params. Целевая/reach-валидация при probe бессмысленна.
+- CombatManager оставлен defensive на entity lookup (не assert, а `.get()` + error). Причина: `handle_event` — граница слоя, события могут прийти из event system напрямую.
 
-### Фаза 5: ActionProvider (подготовка к инвентарю)
+**Результат:** validator — полная цепочка из 6 предусловий (alive, active, mode, budget, target, reach). CombatManager — только исполнение механик. Dispatcher не содержит бизнес-логики — только route + budget consume.
 
-**Цель:** динамические источники действий — не только хардкод, но и экипировка, фичи класса.
+### Фаза 5: ActionProvider + Healing Potion ✅
 
-**Шаги:**
-1. Определить `ActionProvider` protocol — `get_actions(creature, ctx) -> list[ActionDef]`.
-2. Базовые действия (dodge, dash, flee, idle, say, wait) — `BaseActionProvider`.
-3. Weapon actions (attack с параметрами оружия) — `WeaponActionProvider` (будущее, когда появится инвентарь).
-4. `dispatcher.get_available_actions(creature, ctx)` собирает из всех провайдеров + фильтрует через `is_available`.
+**Цель:** динамические источники действий + первый предмет инвентаря (зелье лечения).
 
-**Результат:** система готова к инвентарю (п. 2a из ecs-and-content) и заклинаниям (п. 3a).
+**Что сделано:**
+1. ✅ `Item` модель (`core/items.py`): id, name, item_type (ItemType enum), params dict. Frozen dataclass.
+2. ✅ `Creature.inventory: list[Item]` — мутабельный список, предметы внутри immutable.
+3. ✅ `ActionType.USE_ITEM` + `EventType.ENTITY_USE_ITEM` — новый тип действия и события.
+4. ✅ `handle_use_item` в `rules/action_handlers.py` — roll heal_dice, heal, remove from inventory, emit event. RuntimeError на неизвестный item_type.
+5. ✅ `check_has_item` в `rules/validation.py` — 7-й check в цепочке `_CHECKS` (после budget, перед target). Probe без item_id — skip.
+6. ✅ `ActionProvider` protocol в `rules/action_provider.py` — `get_action_types(creature, ctx) -> list[ActionType]`.
+7. ✅ `BaseActionProvider` — статические действия (все кроме provider-managed). `InventoryActionProvider` — USE_ITEM при наличии inventory.
+8. ✅ `ActionDispatcher` рефакторинг — `_providers: list[ActionProvider]`, `add_provider()`, `get_available_actions()` делегирует провайдерам.
+9. ✅ `ItemInfo` в `core/awareness.py` + `available_items` на обоих awareness типах. Round заполняет из inventory.
+10. ✅ `use_item` tool schema в `llm/tools.py` (peaceful + combat).
+11. ✅ RuleBrain: пьёт зелье при HP < 50% (до flee/dodge решений).
+12. ✅ Save/load: inventory сериализуется в entities layer + player save data.
+13. ✅ Content loader: `parse_items()` для YAML `items:` секции (NPC + player).
+14. ✅ Frontend: `use_item` в ActionName type.
+15. ✅ `ENTITY_USE_ITEM` в `_LOGGED_EVENTS` + `_perceive_use_item` в perception.py — событие видно в combat log.
+16. ✅ 70 unit-тестов в `test_action_dispatcher.py` (было 40). 604 total.
+17. ✅ E2E: арена с зельями, RuleBrain пьёт при < 50% HP, событие отображается в UI.
+
+**Отклонения от оригинального плана:**
+- **Без ActionDef.** Провайдеры возвращают `list[ActionType]`, не `list[ActionDef]`. Предметы передаются через `awareness.available_items` — аналогия с целями в `nearby`. ActionDef отложен до появления оружия с параметрами.
+- **Dice-based healing.** `Item.params["heal_dice"]` хранит выражение (`"2d4+2"`), роллится через `rules/dice.roll()` при использовании.
+- **USE_ITEM = 1 standard action.** Валиден в обоих режимах (combat + peaceful). Завершает peaceful turn.
+
+**Результат:** система готова к новым предметам (свитки, оружие) и новым провайдерам (заклинания, фичи класса). Два провайдера работают: BaseActionProvider (статические действия) + InventoryActionProvider (USE_ITEM из инвентаря).
 
 ---
 

@@ -286,8 +286,8 @@ class TestPeacefulTurn:
         assert len(actions) == 1
         assert actions[0].name == ActionType.SAY
 
-    def test_idle_loops_in_peaceful(self) -> None:
-        """Idle (look/status/map) does NOT end peaceful turn — loops until end_turn."""
+    def test_idle_ends_peaceful_turn(self) -> None:
+        """Idle means 'nothing to do' and ends the peaceful turn immediately."""
         brain = _ScriptedBrain([Action(name=ActionType.IDLE), Action(name=ActionType.IDLE), END_TURN])
         creature = Creature(id="c1", name="A", location_id="r1", brain=brain)
 
@@ -299,9 +299,9 @@ class TestPeacefulTurn:
         emit_fn = world._make_emit_fn("entities")
         actions = game_round.run_peaceful_turn(creature, world.time, query_fn, emit_fn)
 
-        # Both idles should execute, then end_turn exits
-        assert len(actions) == 2
-        assert all(a.name == ActionType.IDLE for a in actions)
+        # First idle ends the turn — second idle and end_turn never reached
+        assert len(actions) == 1
+        assert actions[0].name == ActionType.IDLE
 
     def test_no_budget_in_peaceful(self) -> None:
         """Peaceful awareness has turn_budget=None."""

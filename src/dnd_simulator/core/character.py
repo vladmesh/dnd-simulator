@@ -8,6 +8,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.items import Item
 from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
@@ -200,6 +201,7 @@ class Creature(Entity):
     in_combat: bool = False
     is_dodging: bool = False
     conditions: set[Condition] = field(default_factory=set)
+    inventory: list[Item] = field(default_factory=list)
     wake_at_seconds: int | None = None  # absolute game-time seconds; None = not waiting
     brain: Brain | None = field(default=None, repr=False)
 

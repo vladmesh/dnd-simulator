@@ -19,7 +19,9 @@ if TYPE_CHECKING:
 _FREE_ACTIONS = frozenset({ActionType.IDLE, ActionType.END_TURN, ActionType.SKIP})
 
 # Actions that cost 1 standard action
-_STANDARD_ACTIONS = frozenset({ActionType.ATTACK, ActionType.DODGE, ActionType.FLEE, ActionType.DASH})
+_STANDARD_ACTIONS = frozenset(
+    {ActionType.ATTACK, ActionType.DODGE, ActionType.FLEE, ActionType.DASH, ActionType.USE_ITEM}
+)
 
 # Actions that cost 1 bonus action
 _BONUS_ACTIONS: frozenset[str] = frozenset()
@@ -27,10 +29,11 @@ _BONUS_ACTIONS: frozenset[str] = frozenset()
 # Actions that use movement (cost = ft param)
 _MOVEMENT_ACTIONS = frozenset({ActionType.MOVE})
 
-# Peaceful actions that auto-end the turn (meaningful world interactions).
-# Queries (idle = look/status/map) do NOT end the turn — they just refresh awareness.
+# Peaceful actions that auto-end the turn.
+# idle = "nothing to do", so it ends the turn too (prevents NPC infinite loops).
 _TURN_ENDING_PEACEFUL = frozenset(
     {
+        ActionType.IDLE,
         ActionType.SAY,
         ActionType.ATTACK,
         ActionType.WAIT,
@@ -38,6 +41,7 @@ _TURN_ENDING_PEACEFUL = frozenset(
         ActionType.DASH,
         ActionType.FLEE,
         ActionType.DODGE,
+        ActionType.USE_ITEM,
     }
 )
 
@@ -45,7 +49,7 @@ _TURN_ENDING_PEACEFUL = frozenset(
 def action_cost(action: Action) -> ActionCost:
     """Determine the budget cost of an action.
 
-    Free actions (idle, say, end_turn, skip, look, status, map) cost nothing.
+    Free actions (idle, say, end_turn, skip) cost nothing.
     Standard actions (attack, dodge, dash, flee) cost 1 action.
     Movement costs feet based on creature speed (simplified: 5ft per move action for now).
     """
@@ -71,8 +75,8 @@ def action_cost(action: Action) -> ActionCost:
 def ends_peaceful_turn(action: Action) -> bool:
     """Whether this action auto-ends a peaceful turn.
 
-    Turn-ending actions are meaningful world interactions (say, attack, move, etc.).
-    Non-ending actions are UI queries (idle = look/status/map) that just refresh awareness.
+    All meaningful actions end the turn: say, attack, move, idle ("nothing to do"), etc.
+    Only end_turn/skip are non-action exits handled by the caller.
     """
     return action.name in _TURN_ENDING_PEACEFUL
 

@@ -37,6 +37,7 @@ _LOGGED_EVENTS = {
     EventType.ENTITY_FLEE,
     EventType.ENTITY_MOVE,
     EventType.ENTITY_DASH,
+    EventType.ENTITY_USE_ITEM,
     EventType.COMBAT_STARTED,
     EventType.COMBAT_ENDED,
 }
@@ -732,6 +733,11 @@ class EntitiesLayer(Layer):
                     data["wake_at_seconds"] = e.wake_at_seconds
                 if e.conditions:
                     data["conditions"] = sorted(c.value for c in e.conditions)
+                if e.inventory:
+                    data["inventory"] = [
+                        {"id": item.id, "name": item.name, "type": item.item_type.value, **item.params}
+                        for item in e.inventory
+                    ]
             if isinstance(e, PlayerCharacter):
                 data["entity_type"] = "player"
                 data.update(e.to_full_save_data())
@@ -780,6 +786,19 @@ class EntitiesLayer(Layer):
                     conditions_raw = edata.get("conditions")
                     if isinstance(conditions_raw, list):
                         entity.conditions = {Condition(str(c)) for c in conditions_raw}
+                    inv_raw = edata.get("inventory")
+                    if isinstance(inv_raw, list):
+                        from dnd_simulator.core.items import Item, ItemType
+
+                        entity.inventory = [
+                            Item(
+                                id=str(d["id"]),
+                                name=str(d["name"]),
+                                item_type=ItemType(d["type"]),
+                                params={k: v for k, v in d.items() if k not in ("id", "name", "type")},
+                            )
+                            for d in inv_raw
+                        ]
                 if isinstance(entity, PlayerCharacter):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
                     entity.gold = int(edata.get("gold", entity.gold))

@@ -5,6 +5,27 @@ from __future__ import annotations
 from typing import Any
 
 
+def _use_item_tool() -> dict[str, Any]:
+    """Tool schema for using an inventory item."""
+    return {
+        "type": "function",
+        "function": {
+            "name": "use_item",
+            "description": "Use an item from your inventory (potion, scroll, etc.).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "item_id": {
+                        "type": "string",
+                        "description": "ID of the item to use (from available_items in awareness)",
+                    },
+                },
+                "required": ["item_id"],
+            },
+        },
+    }
+
+
 def build_npc_tools() -> list[dict[str, Any]]:
     """Build OpenAI-compatible tool definitions for an NPC's available actions."""
     tools: list[dict[str, Any]] = [
@@ -58,12 +79,15 @@ def build_npc_tools() -> list[dict[str, Any]]:
         }
     )
 
+    tools.append(_use_item_tool())
+
     return tools
 
 
 def build_npc_combat_tools() -> list[dict[str, Any]]:
     """Build tool definitions for NPC combat actions — no say, focused on fighting."""
     return [
+        _use_item_tool(),
         {
             "type": "function",
             "function": {

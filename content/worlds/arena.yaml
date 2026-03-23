@@ -48,6 +48,10 @@ player:
   ac: 16
   gold: 0
   start_location: arena_floor
+  items:
+    - name: Healing Potion
+      type: potion
+      heal_dice: "2d4+2"
   attacks:
     - name: greataxe
       ability: str
@@ -77,6 +81,10 @@ npcs:
       Ты атакуешь ближайшего врага с яростью. Никаких переговоров.
       Если враг далеко — беги к нему. Если рядом — бей.
       Предпочитаешь бить самого раненого — добивать слабых.
+    items:
+      - name: Healing Potion
+        type: potion
+        heal_dice: "2d4+2"
     attacks:
       - name: greatsword
         ability: str
@@ -106,6 +114,10 @@ npcs:
       Если враг подходит вплотную — отступаешь (move away).
       Атакуешь самого опасного противника. Не лезешь в ближний бой.
       Используй стены как укрытие — стой за стеной и стреляй через проёмы.
+    items:
+      - name: Healing Potion
+        type: potion
+        heal_dice: "2d4+2"
     attacks:
       - name: shortbow
         ability: dex
@@ -142,6 +154,10 @@ npcs:
       Если сильно ранен — уходишь в dodge, чтобы перевести дух.
       Потом снова идёшь в бой. Никогда не бежишь.
       Помни про стены — обходи их через проёмы.
+    items:
+      - name: Healing Potion
+        type: potion
+        heal_dice: "2d4+2"
     attacks:
       - name: warhammer
         ability: str

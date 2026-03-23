@@ -136,37 +136,6 @@ class TestAttackResolution:
         assert not result.success
         assert "nonexistent" in result.error
 
-    def test_cross_region_attack_returns_error(self) -> None:
-        attacker = Character(id="attacker", name="Fighter", location_id="r1", attacks=(_sword(),))
-        target = Character(id="target", name="Goblin", location_id="r2", max_hp=20, current_hp=20)
-        layer = EntitiesLayer(entities=[attacker, target])
-
-        result = layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)
-        assert not result.success
-        assert "is not in this region" in result.error
-        assert target.current_hp == 20
-
-    def test_attack_dead_target_returns_error(self) -> None:
-        attacker = Character(id="attacker", name="Fighter", location_id="r1", attacks=(_sword(),))
-        target = Character(id="target", name="Goblin", location_id="r1", max_hp=20, current_hp=0)
-        layer = EntitiesLayer(entities=[attacker, target])
-
-        result = layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)
-        assert not result.success
-        assert "already dead" in result.error
-
-    def test_attack_out_of_reach_returns_error(self) -> None:
-        """Melee attack should fail if target is too far."""
-        attacker = Character(id="attacker", name="Fighter", location_id="r1", attacks=(_sword(),))
-        target = Character(id="target", name="Goblin", location_id="r1", max_hp=20, current_hp=20, ac=10)
-        layer = EntitiesLayer(entities=[attacker, target])
-
-        layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)  # start combat
-        combat = layer.get_combat("r1")
-        assert combat is not None
-        combat.battle_map.set_position("attacker", Position(0, 0))
-        combat.battle_map.set_position("target", Position(30, 0))
-
-        result = layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)
-        assert not result.success
-        assert "too far" in result.error
+    # cross_region, dead_target, and out_of_reach are now tested via
+    # the validator in tests/test_action_dispatcher.py::TestTargetValidation
+    # and TestReachValidation. CombatManager only does mechanics.

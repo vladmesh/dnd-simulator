@@ -141,6 +141,7 @@ export type ActionName =
   | "end_turn"
   | "skip"
   | "wait"
+  | "use_item"
 
 export interface Action {
   name: ActionName

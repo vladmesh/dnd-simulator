@@ -151,6 +151,13 @@ class RuleBrain(Brain):
         flee_threshold = 0.25 if has_tag(tags, NpcTag.SCARED) else 0.15
         dodge_threshold = 0.35 if has_tag(tags, NpcTag.SCARED) else 0.25
 
+        # --- Use healing potion if wounded and available ---
+        if hp_ratio < 0.5 and ActionType.USE_ITEM in awareness.available_actions and awareness.available_items:
+            potion = next((i for i in awareness.available_items if "heal" in i.description.lower()), None)
+            if potion:
+                logger.info("[RuleBrain:%s] → use %s (HP %.0f%%)", creature.name, potion.name, hp_ratio * 100)
+                return Action(name=ActionType.USE_ITEM, params={"item_id": potion.id})
+
         # --- Target selection: score each enemy, tag-aware ---
         hated_ids = find_tags(tags, NpcTag.HATES)
         feared_ids = find_tags(tags, NpcTag.FEARS)

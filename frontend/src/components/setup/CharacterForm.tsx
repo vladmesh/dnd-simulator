@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 
-const RACES = ["human", "elf", "dwarf", "halfling", "gnome", "half-orc", "half-elf", "tiefling", "dragonborn"] as const
+const RACES = ["human", "elf", "dwarf", "halfling", "gnome", "half_orc", "half_elf", "tiefling", "dragonborn"] as const
 const CLASSES = ["fighter", "wizard", "rogue", "cleric", "ranger", "paladin", "barbarian", "bard", "druid", "monk", "sorcerer", "warlock"] as const
 const ALIGNMENTS = [
   "lawful_good", "neutral_good", "chaotic_good",

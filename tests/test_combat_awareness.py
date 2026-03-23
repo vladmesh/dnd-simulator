@@ -197,7 +197,7 @@ class TestBuildNpcCombatTools:
     def test_has_combat_actions(self) -> None:
         tools = build_npc_combat_tools()
         names = {t["function"]["name"] for t in tools}
-        assert names == {"attack", "dodge", "flee", "idle", "move", "dash"}
+        assert names == {"attack", "dodge", "flee", "idle", "move", "dash", "use_item"}
 
     def test_no_say_tool(self) -> None:
         tools = build_npc_combat_tools()
@@ -374,7 +374,7 @@ class TestNpcCombatTurn:
         call_args = mock_llm.generate_with_tools.call_args
         tools_passed = call_args[0][1]
         tool_names = {t["function"]["name"] for t in tools_passed}
-        assert tool_names == {"attack", "dodge", "flee", "idle", "move", "dash"}
+        assert tool_names == {"attack", "dodge", "flee", "idle", "move", "dash", "use_item"}
         assert "say" not in tool_names
 
     def test_combat_turn_dodge(self) -> None:

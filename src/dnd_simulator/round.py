@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from dnd_simulator.core.action import Action, ActionType
-from dnd_simulator.core.awareness import PerceivedEvent
+from dnd_simulator.core.awareness import ItemInfo, PerceivedEvent, describe_item
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType, GameDateTime, QueryFn, TimeDelta
 from dnd_simulator.core.turn_budget import TurnBudget
@@ -88,6 +88,13 @@ class Round:
     def set_on_action(self, callback: OnActionCallback) -> None:
         """Set callback invoked after each action within a turn."""
         self._on_action = callback
+
+    @staticmethod
+    def _build_available_items(creature: Creature, available_actions: list[ActionType]) -> list[ItemInfo]:
+        """Build item info list for awareness when USE_ITEM is available."""
+        if ActionType.USE_ITEM not in available_actions:
+            return []
+        return [ItemInfo(id=item.id, name=item.name, description=describe_item(item)) for item in creature.inventory]
 
     def _execute_action(
         self,
@@ -164,12 +171,20 @@ class Round:
         actions: list[Action] = []
         consecutive_failures = 0
 
-        ctx = ActionContext(is_combat=True, current_turn_entity_id=creature.id, turn_budget=budget)
+        combat_state = self._entities.get_combat(creature.location_id)
+        ctx = ActionContext(
+            is_combat=True,
+            current_turn_entity_id=creature.id,
+            turn_budget=budget,
+            combat_state=combat_state,
+            get_entity=self._entities.get_entity,
+        )
 
         while True:
             awareness = self._entities.build_awareness(creature, time, query_fn)
             awareness.turn_budget = budget
             awareness.available_actions = self._dispatcher.get_available_actions(creature, ctx)
+            awareness.available_items = self._build_available_items(creature, awareness.available_actions)
             events = self._entities.get_perceived_events(creature)
 
             action = creature.brain.choose_action(creature, awareness, events)
@@ -221,12 +236,17 @@ class Round:
             return []
 
         actions: list[Action] = []
-        ctx = ActionContext(is_combat=False, current_turn_entity_id=creature.id)
+        ctx = ActionContext(
+            is_combat=False,
+            current_turn_entity_id=creature.id,
+            get_entity=self._entities.get_entity,
+        )
 
         while True:
             awareness = self._entities.build_awareness(creature, time, query_fn)
             # No budget in peaceful mode — awareness.turn_budget stays None
             awareness.available_actions = self._dispatcher.get_available_actions(creature, ctx)
+            awareness.available_items = self._build_available_items(creature, awareness.available_actions)
             events = self._entities.get_perceived_events(creature)
 
             action = creature.brain.choose_action(creature, awareness, events)
@@ -287,7 +307,13 @@ class Round:
             if action.name == ActionType.SKIP:
                 continue
 
-            ctx = ActionContext(is_combat=True, current_turn_entity_id=creature.id)
+            combat_state = self._entities.get_combat(creature.location_id)
+            ctx = ActionContext(
+                is_combat=True,
+                current_turn_entity_id=creature.id,
+                combat_state=combat_state,
+                get_entity=self._entities.get_entity,
+            )
             reaction_result = self._execute_action(creature, action, ctx, emit_fn)
             if reaction_result.success:
                 reactions.append(action)

@@ -11,8 +11,10 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from dnd_simulator.core.items import Item, ItemType
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.rules.conditions import effective_speed
+from dnd_simulator.rules.dice import roll
 
 if TYPE_CHECKING:
     from dnd_simulator.core.action import Action
@@ -174,3 +176,45 @@ def handle_wait(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
                 actor.wake_at_seconds,
             )
     return ActionResult()
+
+
+def _find_item(actor: Creature, item_id: str) -> Item:
+    """Find an item in actor's inventory by id. Raises KeyError if not found."""
+    for item in actor.inventory:
+        if item.id == item_id:
+            return item
+    raise KeyError(f"Item '{item_id}' not in {actor.name}'s inventory")
+
+
+def _apply_potion(actor: Creature, item: Item) -> int:
+    """Roll heal dice and apply healing. Returns actual HP restored."""
+    heal_dice = str(item.params["heal_dice"])
+    rolled = roll(heal_dice)
+    return actor.heal(rolled)
+
+
+def handle_use_item(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
+    """Use an item from inventory. Consumes the item on success."""
+    item_id = str(action.params["item_id"])
+    item = _find_item(actor, item_id)
+
+    if item.item_type == ItemType.POTION:
+        healed = _apply_potion(actor, item)
+        actor.inventory.remove(item)
+        logger.info("[%s] → use %s (healed %d HP)", actor.name, item.name, healed)
+        emit_fn(
+            Event(
+                event_type=EventType.ENTITY_USE_ITEM,
+                source_layer="entities",
+                data={
+                    "entity_id": actor.id,
+                    "item_id": item_id,
+                    "item_name": item.name,
+                    "item_type": item.item_type.value,
+                    "healed": healed,
+                },
+            )
+        )
+        return ActionResult()
+
+    raise RuntimeError(f"Unhandled item type: {item.item_type}")
