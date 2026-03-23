@@ -147,8 +147,12 @@ class CombatManager:
             self._location_log[location_id].append(event)
         return ActionResult()
 
-    def resolve_move(self, event: Event, *, dash: bool = False) -> ActionResult:
-        """Resolve a move (or dash) action: reposition the creature on the battle map."""
+    def resolve_move(self, event: Event) -> ActionResult:
+        """Resolve an atomic move: single step in a compass direction.
+
+        The brain has already resolved any 'toward/away' into a concrete direction.
+        Returns success=False if blocked (wall, occupied cell, off-map).
+        """
         entity_id = str(event.data.get("entity_id", ""))
         entity = self._entities.get(entity_id)
         if not isinstance(entity, Creature):
@@ -163,39 +167,18 @@ class CombatManager:
         if cur_pos is None:
             return ActionResult(success=False, error=_("Creature not on the battle map."))
 
-        speed = entity.speed * 2 if dash else entity.speed
-
-        # Determine movement type
-        toward_id = event.data.get("toward")
-        away_from_id = event.data.get("away_from")
-        direction = event.data.get("direction")
-
-        if isinstance(toward_id, str) and toward_id:
-            target_pos = bm.get_position(toward_id)
-            if target_pos is None:
-                return ActionResult(success=False, error=_("Target '{id}' not on the battle map.").format(id=toward_id))
-            new_pos = move_toward(cur_pos, target_pos, speed, bm, entity_id)
-        elif isinstance(away_from_id, str) and away_from_id:
-            target_pos = bm.get_position(away_from_id)
-            if target_pos is None:
-                return ActionResult(
-                    success=False, error=_("Target '{id}' not on the battle map.").format(id=away_from_id)
-                )
-            new_pos = move_away_from(cur_pos, target_pos, speed, bm, entity_id)
-        elif isinstance(direction, str) and direction:
-            new_pos = move_direction(cur_pos, direction, speed, bm, entity_id)
-        else:
-            return ActionResult(success=False, error=_("Specify direction: toward, away_from, or direction."))
+        direction = str(event.data.get("direction", ""))
+        ft = int(event.data.get("ft", 5))
+        new_pos = move_direction(cur_pos, direction, ft, bm, entity_id)
 
         if new_pos == cur_pos:
-            return ActionResult(success=True)
+            return ActionResult(success=False, error=_("Cannot move there — blocked."))
 
         bm.set_position(entity_id, new_pos)
         moved_ft = grid_distance(cur_pos, new_pos)
 
-        event_type = EventType.ENTITY_DASH if dash else EventType.ENTITY_MOVE
         log_event = Event(
-            event_type=event_type,
+            event_type=EventType.ENTITY_MOVE,
             source_layer="entities",
             data={
                 "entity_id": entity_id,
@@ -204,7 +187,6 @@ class CombatManager:
                 "to_x": new_pos.x,
                 "to_y": new_pos.y,
                 "distance_ft": moved_ft,
-                "description": event.data.get("description", ""),
             },
         )
         self._location_log[entity.location_id].append(log_event)
@@ -279,25 +261,26 @@ class CombatManager:
             log_data["damage"] = actual_damage
             log_data["damage_types"] = [d.type.value for d in result.damage]
 
-            if not target.is_alive:
-                target.active = False
-                target.in_combat = False
-                self._remove_from_combat(target.location_id, target_id)
-                death_event = Event(
-                    event_type=EventType.ENTITY_DIED,
-                    source_layer="entities",
-                    data={"entity_id": target_id},
-                )
-                result_events.append(death_event)
-                self._location_log[target.location_id].append(death_event)
-
-        # Log the attack in the attacker's location
+        # Log the attack BEFORE death/combat-end so event order is natural
         attack_log_event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
             data=log_data,
         )
         self._location_log[attacker.location_id].append(attack_log_event)
+
+        if result.hit and not target.is_alive:
+            target.active = False
+            target.in_combat = False
+            death_event = Event(
+                event_type=EventType.ENTITY_DIED,
+                source_layer="entities",
+                data={"entity_id": target_id},
+            )
+            result_events.append(death_event)
+            self._location_log[target.location_id].append(death_event)
+            # _remove_from_combat may trigger _end_combat → COMBAT_ENDED last
+            self._remove_from_combat(target.location_id, target_id)
 
         return ActionResult(success=True, events=result_events)
 

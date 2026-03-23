@@ -73,29 +73,11 @@ export function useAvailableActions(): AvailableAction[] {
       return actions
     }
 
-    // Peaceful mode
+    // Peaceful mode — no end_turn (meaningful actions auto-end the turn),
+    // talk targets are in the Perception panel with inline text input
     const actions: AvailableAction[] = [
-      { name: "idle", label: "Look", disabled: false },
       { name: "wait", label: "Wait 1h", disabled: false, params: { hours: 1 } },
     ]
-
-    // Talk targets
-    if (!isCombatAwareness(awareness)) {
-      for (const entity of awareness.nearby) {
-        actions.push({
-          name: "say",
-          label: `Talk to ${entity.id}`,
-          disabled: false,
-          params: { target_id: entity.id },
-        })
-      }
-    }
-
-    actions.push({
-      name: "end_turn",
-      label: "End Turn",
-      disabled: false,
-    })
 
     return actions
   }, [mode, awareness, budget, isMyTurn])

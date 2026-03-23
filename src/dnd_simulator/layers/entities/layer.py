@@ -225,6 +225,8 @@ class EntitiesLayer(Layer):
                     is_wounded=is_wounded,
                     distance_ft=distance_ft,
                     direction=direction,
+                    x=other_pos.x if other_pos else 0,
+                    y=other_pos.y if other_pos else 0,
                 )
             )
 
@@ -247,6 +249,8 @@ class EntitiesLayer(Layer):
             self_speed=creature.speed,
             self_weapon=weapon_name,
             self_weapon_damage=weapon_damage,
+            self_x=my_pos.x if my_pos else 0,
+            self_y=my_pos.y if my_pos else 0,
             nearby=nearby,
             round_number=round_number,
             walls=wall_descriptions,
@@ -334,9 +338,6 @@ class EntitiesLayer(Layer):
 
         if event.event_type == EventType.ENTITY_MOVE:
             return self._combat.resolve_move(event)
-
-        if event.event_type == EventType.ENTITY_DASH:
-            return self._combat.resolve_move(event, dash=True)
 
         if event.event_type in _LOGGED_EVENTS:
             location_id = self._event_location(event)

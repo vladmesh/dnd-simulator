@@ -17,14 +17,17 @@ if TYPE_CHECKING:
 # Actions that cost 0 budget (information-only, free actions)
 _FREE_ACTIONS = frozenset({"idle", "end_turn", "skip"})
 
-# Actions that cost 1 standard action
-_STANDARD_ACTIONS = frozenset({"attack", "dodge", "dash", "flee"})
+# Actions that cost 1 standard action (dash handled specially by Round)
+_STANDARD_ACTIONS = frozenset({"attack", "dodge", "flee"})
 
 # Actions that cost 1 bonus action
 _BONUS_ACTIONS: frozenset[str] = frozenset()
 
-# Actions that use movement (cost depends on params)
+# Actions that use movement (cost = ft param)
 _MOVEMENT_ACTIONS = frozenset({"move"})
+
+# Dash is a special action handled by Round: costs 1 action, adds speed to movement pool
+DASH_ACTION_COST = ActionCost(actions=1)
 
 # Peaceful actions that auto-end the turn (meaningful world interactions).
 # Queries (idle = look/status/map) do NOT end the turn — they just refresh awareness.
@@ -50,9 +53,8 @@ def action_cost(action: Action) -> ActionCost:
         return ActionCost(bonus_actions=1)
 
     if name in _MOVEMENT_ACTIONS:
-        # Movement cost in feet — for now, 5ft per move action.
-        # Will be refined when grid movement is tracked per-turn.
-        return ActionCost(movement_ft=5)
+        ft = int(action.params.get("ft", 5)) if action.params else 5
+        return ActionCost(movement_ft=ft)
 
     # Unknown actions are free (safe default — don't block gameplay)
     return ActionCost()

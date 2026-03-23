@@ -21,16 +21,23 @@ export interface TurnMessage {
 
 export interface ActionResultMessage {
   type: "action_result"
+  actor: string
   action: string
+  mode: GameMode
+  awareness: Awareness
   events: PerceivedEvent[]
   budget?: TurnBudget | null
   player: PlayerStatus
+  location: LocationData
 }
 
 export interface RoundResultMessage {
   type: "round_result"
+  mode: GameMode
+  awareness: Awareness
   events: PerceivedEvent[]
   player: PlayerStatus
+  location: LocationData
 }
 
 export interface ErrorMessage {

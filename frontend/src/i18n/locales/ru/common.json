@@ -23,5 +23,6 @@
   "ability_con": "ВЫН",
   "ability_int": "ИНТ",
   "ability_wis": "МДР",
-  "ability_cha": "ХАР"
+  "ability_cha": "ХАР",
+  "exit_session": "Выйти из сессии"
 }

@@ -26,13 +26,15 @@ class NearbyEntity:
 
 @dataclass(frozen=True)
 class CombatEntity:
-    """An entity visible in combat — includes distance and direction."""
+    """An entity visible in combat — includes distance, direction, and grid position."""
 
     id: str
     description: str
     is_wounded: bool = False
     distance_ft: int = 0
     direction: str = ""
+    x: int = 0
+    y: int = 0
 
 
 @dataclass
@@ -63,6 +65,8 @@ class CombatAwareness:
     self_speed: int
     self_weapon: str
     self_weapon_damage: str
+    self_x: int = 0
+    self_y: int = 0
     nearby: list[CombatEntity] = field(default_factory=list)
     round_number: int = 1
     walls: list[str] = field(default_factory=list)

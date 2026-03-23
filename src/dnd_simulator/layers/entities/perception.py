@@ -33,22 +33,19 @@ def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -
         return _perceive_combat_started(event, observer, get_entity)
     if event.event_type == EventType.COMBAT_ENDED:
         return _("Combat ended.")
+    if event.event_type == EventType.CUSTOM and event.data.get("inspect_target"):
+        return _perceive_inspect(event, observer, get_entity)
     return _("Something happened ({type})").format(type=event.event_type.value)
 
 
 def _describe(observer: Character, entity_id: str, get_entity: GetEntityFn) -> str:
-    """Get observer's perception of an entity by ID.
-
-    Includes entity ID in parentheses so LLM can cross-reference
-    event participants with the nearby entities list.
-    """
+    """Get observer's perception of an entity by ID."""
     entity = get_entity(entity_id)
     if entity is None:
         return _("someone")
     if entity.id == observer.id:
         return _("you")
-    desc = observer.perceive(entity)
-    return f"{desc} (id: {entity_id})"
+    return observer.perceive(entity)
 
 
 def _perceive_say(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
@@ -159,6 +156,25 @@ def _perceive_move(event: Event, observer: Character, get_entity: GetEntityFn) -
     return _("{entity} {verb} {direction} ({distance} ft){desc}").format(
         entity=desc, verb=verb, direction=dir_label, distance=distance_ft, desc=desc_suffix
     )
+
+
+def _perceive_inspect(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    from dnd_simulator.core.character import Creature
+
+    target_id = str(event.data.get("inspect_target", ""))
+    target = get_entity(target_id)
+    if target is None:
+        return _("You look around but see no one matching '{id}'.").format(id=target_id)
+    desc = observer.perceive(target)
+    parts = [_("You inspect {desc}.").format(desc=desc)]
+    if isinstance(target, Creature):
+        if target.current_hp < target.max_hp // 2:
+            parts.append(_("They look badly wounded."))
+        elif target.current_hp < target.max_hp:
+            parts.append(_("They have minor injuries."))
+        else:
+            parts.append(_("They look healthy."))
+    return " ".join(parts)
 
 
 def _perceive_combat_started(event: Event, observer: Character, get_entity: GetEntityFn) -> str:

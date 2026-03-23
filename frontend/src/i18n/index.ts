@@ -15,12 +15,23 @@ export const resources = {
   ru: { common: commonRu, setup: setupRu, game: gameRu },
 } as const
 
+function detectLanguage(): string {
+  const saved = localStorage.getItem("i18n_lang")
+  if (saved && (saved === "en" || saved === "ru")) return saved
+  return navigator.language.startsWith("ru") ? "ru" : "en"
+}
+
 i18n.use(initReactI18next).init({
   resources,
-  lng: navigator.language.startsWith("ru") ? "ru" : "en",
+  lng: detectLanguage(),
   fallbackLng: "en",
   defaultNS,
   interpolation: { escapeValue: false },
+})
+
+// Persist language changes
+i18n.on("languageChanged", (lng) => {
+  localStorage.setItem("i18n_lang", lng)
 })
 
 export default i18n

@@ -22,7 +22,9 @@ export function PlayerStats() {
       {expanded && (
         <div className="space-y-2 text-xs">
           <div className="text-sm">
-            {player.race} {player.char_class} L{player.level}
+            {t(`game:race_${player.race}`, { defaultValue: player.race })}{" "}
+            {t(`game:class_${player.char_class}`, { defaultValue: player.char_class })}{" "}
+            L{player.level}
           </div>
           <div className="flex gap-3">
             <span className="flex items-center gap-1">

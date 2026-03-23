@@ -1,6 +1,8 @@
+import { useNavigate } from "react-router"
 import { useTranslation } from "react-i18next"
 import { useGameStore } from "@/store/gameStore"
-import type { PeacefulAwareness } from "@/types/game"
+import { LogOut } from "lucide-react"
+import type { GameTime } from "@/store/slices/turnSlice"
 
 function hpColor(hp: number, max: number): string {
   const pct = max > 0 ? hp / max : 0
@@ -9,27 +11,22 @@ function hpColor(hp: number, max: number): string {
   return "bg-red-500"
 }
 
-function formatTime(a: PeacefulAwareness): string {
+function formatTime(t: GameTime): string {
   const pad = (n: number) => String(n).padStart(2, "0")
-  return `Y${a.year} M${a.month} D${a.day} ${pad(a.hour)}:00`
-}
-
-function weatherLabel(weather: Record<string, unknown>): string {
-  const desc = weather.description ?? weather.condition ?? weather.type
-  return typeof desc === "string" ? desc : ""
+  return `Y${t.year} M${t.month} D${t.day} ${pad(t.hour)}:00`
 }
 
 export function Header() {
-  const { t } = useTranslation(["game"])
+  const navigate = useNavigate()
+  const { t } = useTranslation(["game", "common"])
   const player = useGameStore((s) => s.player)
-  const awareness = useGameStore((s) => s.awareness)
+  const gameTime = useGameStore((s) => s.gameTime)
   const location = useGameStore((s) => s.location)
   const wsStatus = useGameStore((s) => s.wsStatus)
 
   if (!player) return null
 
   const pct = player.max_hp > 0 ? Math.round((player.hp / player.max_hp) * 100) : 0
-  const peaceful = awareness && "hour" in awareness ? (awareness as PeacefulAwareness) : null
 
   return (
     <header className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-border px-4 py-2 text-sm">
@@ -54,24 +51,29 @@ export function Header() {
         </span>
       )}
 
-      {/* Time & Weather */}
-      {peaceful && (
-        <>
-          <span className="text-muted-foreground">{formatTime(peaceful)}</span>
-          {peaceful.weather && weatherLabel(peaceful.weather) && (
-            <span className="text-muted-foreground">{weatherLabel(peaceful.weather)}</span>
-          )}
-        </>
+      {/* Time */}
+      {gameTime && (
+        <span className="text-muted-foreground">{formatTime(gameTime)}</span>
       )}
 
-      {/* WS status indicator */}
-      <span className="ml-auto">
+      {/* WS status + exit */}
+      <div className="ml-auto flex items-center gap-2">
         <span
           className={`inline-block size-2 rounded-full ${
             wsStatus === "connected" ? "bg-green-500" : wsStatus === "connecting" ? "bg-yellow-500" : "bg-red-500"
           }`}
         />
-      </span>
+        <button
+          className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          title={t("common:exit_session")}
+          onClick={() => {
+            useGameStore.getState().disconnect()
+            navigate("/")
+          }}
+        >
+          <LogOut className="size-4" />
+        </button>
+      </div>
     </header>
   )
 }

@@ -214,7 +214,21 @@ class Creature(Entity):
     def execute_action(self, action: Action, emit_fn: EmitFn) -> bool:
         """Execute a chosen action via emit_fn. Returns True if succeeded."""
         if action.name == "idle":
-            logger.info("[%s] → idle", self.name)
+            inspect_target = action.params.get("inspect_target") if action.params else None
+            if inspect_target:
+                logger.info("[%s] → inspect %s", self.name, inspect_target)
+                emit_fn(
+                    Event(
+                        event_type=EventType.CUSTOM,
+                        source_layer="entities",
+                        data={
+                            "entity_id": self.id,
+                            "inspect_target": str(inspect_target),
+                        },
+                    )
+                )
+            else:
+                logger.info("[%s] → idle", self.name)
             return True
         if action.name == "say":
             emit_fn(
@@ -263,20 +277,17 @@ class Creature(Entity):
                 )
             )
             return True
-        if action.name in ("move", "dash"):
-            event_type = EventType.ENTITY_DASH if action.name == "dash" else EventType.ENTITY_MOVE
-            event_data: dict[str, object] = {
-                "entity_id": self.id,
-                "description": action.params.get("description", ""),
-            }
-            if "toward" in action.params:
-                event_data["toward"] = action.params["toward"]
-            elif "away_from" in action.params:
-                event_data["away_from"] = action.params["away_from"]
-            elif "direction" in action.params:
-                event_data["direction"] = action.params["direction"]
-            logger.info("[%s] → %s", self.name, action.name)
-            result = emit_fn(Event(event_type=event_type, source_layer="entities", data=event_data))
+        if action.name == "move":
+            direction = action.params.get("direction", "")
+            ft = int(action.params.get("ft", 5))
+            logger.info("[%s] → move %s %dft", self.name, direction, ft)
+            result = emit_fn(
+                Event(
+                    event_type=EventType.ENTITY_MOVE,
+                    source_layer="entities",
+                    data={"entity_id": self.id, "direction": str(direction), "ft": ft},
+                )
+            )
             return result.success
         return False
 
@@ -324,7 +335,7 @@ class Character(Creature):
             if known:
                 parts.append(target.name)
             else:
-                race_label = target.race.value.replace("_", " ")
+                race_label = _(target.race.value.replace("_", " "))
                 parts.append(race_label)
                 if target.appearance:
                     parts.append(target.appearance)

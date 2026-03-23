@@ -56,6 +56,48 @@ def direction_label(dx: int, dy: int) -> str:
     return labels.get((sx, sy), _("here"))
 
 
+def calculate_direction(origin: Position, target: Position) -> str:
+    """Return compass direction name from origin toward target (for a single step)."""
+    dx = target.x - origin.x
+    dy = target.y - origin.y
+    if dx == 0 and dy == 0:
+        return ""
+    sx = 1 if dx > 0 else (-1 if dx < 0 else 0)
+    sy = 1 if dy > 0 else (-1 if dy < 0 else 0)
+    _reverse: dict[tuple[int, int], str] = {
+        (0, 1): "north",
+        (0, -1): "south",
+        (1, 0): "east",
+        (-1, 0): "west",
+        (1, 1): "northeast",
+        (-1, 1): "northwest",
+        (1, -1): "southeast",
+        (-1, -1): "southwest",
+    }
+    return _reverse.get((sx, sy), "")
+
+
+def calculate_away_direction(origin: Position, target: Position) -> str:
+    """Return compass direction name away from target (opposite of toward)."""
+    dx = origin.x - target.x
+    dy = origin.y - target.y
+    if dx == 0 and dy == 0:
+        return "north"  # arbitrary escape direction
+    sx = 1 if dx > 0 else (-1 if dx < 0 else 0)
+    sy = 1 if dy > 0 else (-1 if dy < 0 else 0)
+    _reverse: dict[tuple[int, int], str] = {
+        (0, 1): "north",
+        (0, -1): "south",
+        (1, 0): "east",
+        (-1, 0): "west",
+        (1, 1): "northeast",
+        (-1, 1): "northwest",
+        (1, -1): "southeast",
+        (-1, -1): "southwest",
+    }
+    return _reverse.get((sx, sy), "north")
+
+
 def move_toward(origin: Position, target: Position, speed: int, battle_map: BattleMap, mover_id: str = "") -> Position:
     """Move from *origin* toward *target*, up to *speed* feet.
 

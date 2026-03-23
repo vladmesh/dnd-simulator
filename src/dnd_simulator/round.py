@@ -18,7 +18,7 @@ from dnd_simulator.core.models import EmitFn, Event, GameDateTime, QueryFn, Time
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
-from dnd_simulator.rules.actions import action_cost, ends_peaceful_turn, get_num_actions, get_num_bonus_actions
+from dnd_simulator.rules.actions import DASH_ACTION_COST, action_cost, ends_peaceful_turn, get_num_actions, get_num_bonus_actions
 
 logger = logging.getLogger("dnd_simulator.round")
 
@@ -117,6 +117,18 @@ class Round:
             if action.name == "end_turn":
                 break
 
+            # Dash is special: costs 1 action, adds speed to movement pool, no world event
+            if action.name == "dash":
+                if not budget.can_afford(DASH_ACTION_COST):
+                    logger.warning("[Round] %s tried dash but no actions left", creature.name)
+                    break
+                budget.consume(DASH_ACTION_COST)
+                budget.movement_remaining += creature.speed
+                actions.append(action)
+                if self._on_action:
+                    self._on_action(creature, action, budget)
+                continue
+
             # Enforce budget
             cost = action_cost(action)
             if not budget.can_afford(cost):
@@ -128,7 +140,12 @@ class Round:
                 break
 
             budget.consume(cost)
-            creature.execute_action(action, emit_fn)
+            success = creature.execute_action(action, emit_fn)
+
+            # Refund movement if move failed (wall, occupied cell)
+            if not success and action.name == "move":
+                budget.movement_remaining += cost.movement_ft
+
             actions.append(action)
 
             if self._on_action:
@@ -136,7 +153,7 @@ class Round:
 
             # Special: wait action advances time immediately
             if action.name == "wait":
-                self._handle_wait(action)
+                self._handle_wait(action, creature)
 
             # If budget exhausted, end turn automatically
             if budget.turn_over:
@@ -180,7 +197,7 @@ class Round:
 
             # Special: wait action advances time immediately
             if action.name == "wait":
-                self._handle_wait(action)
+                self._handle_wait(action, creature)
 
             # Turn-ending actions auto-end the peaceful turn
             if ends_peaceful_turn(action):
@@ -271,9 +288,30 @@ class Round:
             if result.should_stop:
                 break
 
-    def _handle_wait(self, action: Action) -> None:
-        """Handle a 'wait' action by advancing time."""
-        raw = action.params.get("hours", 1)
-        hours = int(str(raw))
-        if hours > 0:
-            self._world.advance_time(TimeDelta.from_hours(hours))
+    def _handle_wait(self, action: Action, creature: Creature | None = None) -> None:
+        """Handle a 'wait' action by advancing time, optionally traveling."""
+        travel_to = action.params.get("travel_to")
+        if travel_to and creature:
+            target_id = str(travel_to)
+            graph = self._world.location_graph
+            try:
+                seconds = graph.travel_seconds(creature.location_id, target_id)
+                creature.location_id = target_id
+                self._world.advance_time(TimeDelta(seconds=seconds))
+            except ValueError:
+                # No direct path — try by name match
+                for loc_id in graph.all_ids():
+                    loc = graph.get(loc_id)
+                    if loc.name.lower() == target_id.lower():
+                        try:
+                            seconds = graph.travel_seconds(creature.location_id, loc_id)
+                            creature.location_id = loc_id
+                            self._world.advance_time(TimeDelta(seconds=seconds))
+                        except ValueError:
+                            pass
+                        break
+        else:
+            raw = action.params.get("hours", 1)
+            hours = int(str(raw))
+            if hours > 0:
+                self._world.advance_time(TimeDelta.from_hours(hours))

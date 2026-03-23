@@ -595,3 +595,47 @@ msgstr "Нельзя изменить мозг игрока из панели м
 
 msgid "LLM not configured"
 msgstr "LLM не настроен"
+
+#: Race names
+msgid "human"
+msgstr "человек"
+
+msgid "elf"
+msgstr "эльф"
+
+msgid "dwarf"
+msgstr "дварф"
+
+msgid "halfling"
+msgstr "полурослик"
+
+msgid "gnome"
+msgstr "гном"
+
+msgid "half orc"
+msgstr "полуорк"
+
+msgid "half elf"
+msgstr "полуэльф"
+
+msgid "tiefling"
+msgstr "тифлинг"
+
+msgid "dragonborn"
+msgstr "драконорождённый"
+
+#: Inspect action
+msgid "You look around but see no one matching '{id}'."
+msgstr "Вы осматриваетесь, но не видите никого похожего на '{id}'."
+
+msgid "You inspect {desc}."
+msgstr "Вы осматриваете {desc}."
+
+msgid "They look badly wounded."
+msgstr "Тяжело ранен."
+
+msgid "They have minor injuries."
+msgstr "Слегка ранен."
+
+msgid "They look healthy."
+msgstr "Выглядит здоровым."

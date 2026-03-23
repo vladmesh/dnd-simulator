@@ -37,6 +37,35 @@ class Brain(ABC):
     ) -> Action:
         """Decide what to do this turn. Must return a valid Action."""
 
+    # -- Movement helpers (available to all brains) --
+
+    @staticmethod
+    def move_toward_target(target: CombatEntity, awareness: CombatAwareness, ft: int = 5) -> Action:
+        """Calculate a concrete move action toward a combat target.
+
+        Uses grid positions from awareness to determine compass direction.
+        """
+        from dnd_simulator.core.combat import Position
+        from dnd_simulator.rules.movement import calculate_direction
+
+        origin = Position(awareness.self_x, awareness.self_y)
+        dest = Position(target.x, target.y)
+        direction = calculate_direction(origin, dest)
+        if not direction:
+            return END_TURN  # already at target
+        return Action(name="move", params={"direction": direction, "ft": ft})
+
+    @staticmethod
+    def move_away_from_target(target: CombatEntity, awareness: CombatAwareness, ft: int = 5) -> Action:
+        """Calculate a concrete move action away from a combat target."""
+        from dnd_simulator.core.combat import Position
+        from dnd_simulator.rules.movement import calculate_away_direction
+
+        origin = Position(awareness.self_x, awareness.self_y)
+        dest = Position(target.x, target.y)
+        direction = calculate_away_direction(origin, dest)
+        return Action(name="move", params={"direction": direction, "ft": ft})
+
 
 class RuleBrain(Brain):
     """Utility-scoring combat AI. Peaceful mode = idle.
@@ -134,14 +163,20 @@ class RuleBrain(Brain):
             logger.info("[RuleBrain:%s] → attack %s (dist %d ft)", creature.name, target_id, dist)
             return Action(name="attack", params={"target_id": target_id})
 
-        # 5. Move toward if within one move + reach
-        if dist <= speed + primary_reach:
+        # 5. Move toward if have movement remaining
+        budget = awareness.turn_budget
+        movement_left = budget.movement_remaining if budget else 0
+        if movement_left > 0:
             logger.info("[RuleBrain:%s] → move toward %s (dist %d ft)", creature.name, target_id, dist)
-            return Action(name="move", params={"toward": target_id})
+            return self.move_toward_target(target, awareness)
 
-        # 6. Dash toward otherwise
-        logger.info("[RuleBrain:%s] → dash toward %s (dist %d ft)", creature.name, target_id, dist)
-        return Action(name="dash", params={"toward": target_id})
+        # 6. Dash to get more movement (if have actions)
+        has_actions = (budget.actions if budget else 0) > 0
+        if has_actions:
+            logger.info("[RuleBrain:%s] → dash (dist %d ft)", creature.name, dist)
+            return Action(name="dash")
+
+        return END_TURN
 
     def _pick_target(
         self,

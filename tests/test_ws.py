@@ -108,8 +108,10 @@ class TestWebSocketTurnCycle:
             msg = ws.receive_json()
             assert msg["type"] == "round_result"
 
-            # Next turn starts
+            # NPC actions may produce action_result messages before next turn
             msg = ws.receive_json()
+            while msg["type"] == "action_result":
+                msg = ws.receive_json()
             assert msg["type"] == "turn"
 
     def test_unknown_message_type(self, tmp_path: object) -> None:

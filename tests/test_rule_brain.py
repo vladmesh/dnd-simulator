@@ -49,10 +49,16 @@ def _build_combat_awareness(
                 is_wounded=e.current_hp < e.max_hp // 2,
                 distance_ft=dist,
                 direction=direction,
+                x=other_pos.x if other_pos else 0,
+                y=other_pos.y if other_pos else 0,
             )
         )
     weapon_name = npc.attacks[0].name if npc.attacks else "fists"
     weapon_damage = str(npc.attacks[0].damage[0].dice) if npc.attacks else "1"
+
+    from dnd_simulator.core.turn_budget import TurnBudget
+    budget = TurnBudget(actions=1, bonus_actions=1, movement_remaining=npc.speed, reaction=1)
+
     return CombatAwareness(
         self_hp=npc.current_hp,
         self_max_hp=npc.max_hp,
@@ -60,7 +66,10 @@ def _build_combat_awareness(
         self_speed=npc.speed,
         self_weapon=weapon_name,
         self_weapon_damage=weapon_damage,
+        self_x=my_pos.x if my_pos else 0,
+        self_y=my_pos.y if my_pos else 0,
         nearby=nearby,
+        turn_budget=budget,
     )
 
 
@@ -156,19 +165,23 @@ class TestRuleBrainCombat:
         brain = RuleBrain()
         action = brain.choose_action(npc, awareness, [])
         assert action.name == "move"
-        assert action.params["toward"] == "e1"
+        assert action.params["direction"] == "north"  # e1 is directly north
+        assert action.params["ft"] == 5
 
-    def test_dash_when_far(self) -> None:
+    def test_dash_when_no_movement_left(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20, speed=30)
         enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=120, height=120)
         bm.set_position("n1", Position(0, 0))
         bm.set_position("e1", Position(60, 60))  # ~60 ft away — beyond speed+reach
         awareness = _build_combat_awareness(npc, [npc, enemy], bm)
+        # Exhaust movement so brain chooses dash
+        assert awareness.turn_budget is not None
+        awareness.turn_budget.movement_remaining = 0
         brain = RuleBrain()
         action = brain.choose_action(npc, awareness, [])
         assert action.name == "dash"
-        assert action.params["toward"] == "e1"
+        assert action.params == {}
 
     def test_flee_when_critically_wounded(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=100, current_hp=10)
@@ -236,12 +249,14 @@ class TestRuleBrainTags:
         close = Npc(id="close", name="Close", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=60, height=60)
         bm.set_position("n1", Position(10, 10))
-        bm.set_position("far", Position(10, 30))  # 20 ft
-        bm.set_position("close", Position(10, 15))  # 5 ft
+        bm.set_position("far", Position(10, 15))  # 5 ft — both in reach
+        bm.set_position("close", Position(15, 10))  # 5 ft — both in reach
         awareness = _build_combat_awareness(npc, [npc, far, close], bm)
         brain = RuleBrain()
         action = brain.choose_action(npc, awareness, [])
-        assert action.params.get("toward") == "far" or action.params.get("target_id") == "far"
+        # Hated target should be preferred when both are in reach
+        assert action.name == "attack"
+        assert action.params.get("target_id") == "far"
 
     def test_scared_npc_flees_earlier(self) -> None:
         npc = Npc(

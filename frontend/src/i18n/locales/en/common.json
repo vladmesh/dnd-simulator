@@ -23,5 +23,6 @@
   "ability_con": "CON",
   "ability_int": "INT",
   "ability_wis": "WIS",
-  "ability_cha": "CHA"
+  "ability_cha": "CHA",
+  "exit_session": "Exit session"
 }

@@ -35,7 +35,7 @@ from dnd_simulator.core.character import Ability, Creature
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.i18n import _
-from dnd_simulator.round import Round
+from dnd_simulator.round import Round, get_entities_layer
 from dnd_simulator.service.session import GameSession
 
 logger = logging.getLogger("dnd_simulator.ws")
@@ -144,6 +144,13 @@ def _parse_command(text: str) -> Action:
     if cmd in ("look", "status", "map"):
         return Action(name="idle")
 
+    # "look <target>" — inspect a specific entity
+    if cmd.startswith("look "):
+        target = raw[5:].strip()
+        if target:
+            return Action(name="idle", params={"inspect_target": target})
+        return Action(name="idle")
+
     if cmd == "idle":
         return Action(name="idle")
 
@@ -201,6 +208,41 @@ def _parse_command(text: str) -> Action:
 
 
 # ---------------------------------------------------------------------------
+# Move abstraction resolver
+# ---------------------------------------------------------------------------
+
+
+def _resolve_abstract_move(action: Action, player: Creature, entities_layer: "EntitiesLayer") -> Action:
+    """Translate toward/away_from into concrete direction + ft for a move action."""
+    from dnd_simulator.core.combat import Position
+    from dnd_simulator.rules.movement import calculate_away_direction, calculate_direction
+
+    combat = entities_layer._combat.get_combat(player.location_id)
+    if not combat:
+        return action  # no combat — pass through
+
+    bm = combat.battle_map
+    my_pos = bm.get_position(player.id)
+    if my_pos is None:
+        return action
+
+    toward = action.params.get("toward")
+    away_from = action.params.get("away_from")
+    target_id = str(toward or away_from or "")
+    target_pos = bm.get_position(target_id)
+    if target_pos is None:
+        return action
+
+    if toward:
+        direction = calculate_direction(my_pos, target_pos)
+    else:
+        direction = calculate_away_direction(my_pos, target_pos)
+
+    ft = int(action.params.get("ft", 5))
+    return Action(name="move", params={"direction": direction, "ft": ft})
+
+
+# ---------------------------------------------------------------------------
 # WebSocket endpoint
 # ---------------------------------------------------------------------------
 
@@ -233,13 +275,13 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
         session = service.get_session(session_id)
     except ValueError:
         await ws.send_json({"type": "error", "message": _("Session '{}' not found").format(session_id)})
-        await ws.close()
+        await ws.close(code=4004, reason="session_not_found")
         return
 
     player = session.get_player(player_id)
     if player is None:
         await ws.send_json({"type": "error", "message": _("No player in session")})
-        await ws.close()
+        await ws.close(code=4004, reason="no_player")
         return
     event_loop = asyncio.get_running_loop()
 
@@ -280,18 +322,28 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
     # Create Round with callbacks
     game_round = Round(session.world)
 
+    entities_layer = get_entities_layer(session.world)
+
+    def _build_player_awareness() -> PeacefulAwareness | CombatAwareness:
+        """Rebuild awareness for the player from current world state."""
+        query_fn = session.world._make_query_fn("entities")
+        return entities_layer.build_awareness(player, session.world.time, query_fn)
+
     def on_action(creature: Creature, action: Action, budget: TurnBudget | None) -> None:
-        """Send action_result after each action within a turn."""
-        if creature.id != player.id:
-            return  # only send action_result for the player
+        """Send action_result after each action by any creature."""
         perceived = game_round.get_perceived_events(player)
+        awareness = _build_player_awareness()
         msg: dict[str, Any] = {
             "type": "action_result",
+            "actor": creature.id,
             "action": action.name,
+            "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
+            "awareness": _awareness_to_dict(awareness),
             "events": _events_to_list(perceived),
             "player": _player_to_dict(player),
+            "location": _location_data(session, player.location_id),
         }
-        if budget is not None:
+        if budget is not None and creature.id == player.id:
             msg["budget"] = _budget_to_dict(budget)
         _ws_send_from_thread(msg)
 
@@ -300,10 +352,14 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
     def on_round_end(result: object) -> None:
         """Send perceived events after each round completes."""
         perceived = game_round.get_perceived_events(player)
+        awareness = _build_player_awareness()
         msg: dict[str, Any] = {
             "type": "round_result",
+            "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
+            "awareness": _awareness_to_dict(awareness),
             "events": _events_to_list(perceived),
             "player": _player_to_dict(player),
+            "location": _location_data(session, player.location_id),
         }
         _ws_send_from_thread(msg)
 
@@ -353,6 +409,9 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
                     name=str(msg.get("name", "idle")),
                     params=msg.get("params", {}),
                 )
+                # Translate toward/away_from into concrete direction for move
+                if action.name == "move" and ("toward" in action.params or "away_from" in action.params):
+                    action = _resolve_abstract_move(action, player, entities_layer)
                 brain.submit_action(action)
 
             elif msg_type == "command":
