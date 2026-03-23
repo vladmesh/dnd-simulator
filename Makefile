@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test check messages compile-messages serve stop frontend-dev frontend-build
+.PHONY: install lint format typecheck test check messages compile-messages serve stop frontend
 
 install:
 	uv sync
@@ -23,7 +23,6 @@ stop:
 	@fuser -k 8001/tcp 2>/dev/null && echo "Stopped server on :8001" || echo "Nothing running on :8001"
 
 serve: stop
-	@if [ -d frontend/node_modules ]; then $(MAKE) frontend-build; fi
 	uv run uvicorn dnd_simulator.adapters.api.app:app --host 0.0.0.0 --port 8001 --reload --reload-exclude 'saves/*'
 
 messages:
@@ -32,8 +31,5 @@ messages:
 compile-messages:
 	python3 -c "import subprocess; subprocess.run(['msgfmt', '-o', 'src/dnd_simulator/locale/ru/LC_MESSAGES/dnd_simulator.mo', 'src/dnd_simulator/locale/ru/LC_MESSAGES/dnd_simulator.po'])" 2>/dev/null || echo "msgfmt not available, use scripts/compile_po.py"
 
-frontend-dev:
+frontend:
 	cd frontend && npm run dev
-
-frontend-build:
-	cd frontend && npm run build

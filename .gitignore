@@ -1,5 +1,8 @@
 # Game saves
-saves/*.json
+saves/
+
+# E2E screenshots
+e2e_*.png
 
 __pycache__/
 *.py[cod]

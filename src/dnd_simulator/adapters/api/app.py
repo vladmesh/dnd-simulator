@@ -10,7 +10,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from dnd_simulator.adapters.api.deps import get_service, set_service
@@ -23,7 +22,6 @@ from dnd_simulator.service import GameService
 from dnd_simulator.storage.store import JsonFileStore
 
 DEFAULT_SAVES_DIR = Path(__file__).resolve().parents[4] / "saves"
-_FRONTEND_DIST = Path(__file__).resolve().parents[4] / "frontend" / "dist"
 
 _SESSION_ID_RE = re.compile(r"/api/(?:master|player)/sessions/([^/]+)")
 
@@ -90,8 +88,3 @@ async def frontend_error(request: Request) -> dict[str, str]:
     body = await request.json()
     _fe_log.error("FRONTEND ERROR: %s\n%s", body.get("message", "?"), body.get("stack", ""))
     return {"status": "logged"}
-
-
-# React frontend — serve built assets after API routes so /api/* takes priority.
-if _FRONTEND_DIST.is_dir():
-    app.mount("/", StaticFiles(directory=str(_FRONTEND_DIST), html=True), name="static")

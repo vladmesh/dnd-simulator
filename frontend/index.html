@@ -8,6 +8,17 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Suppress third-party promo logs whose emoji break Playwright MCP JSON serialization
+      var _info = console.info;
+      console.info = function() {
+        if (typeof arguments[0] === "string" && (
+          arguments[0].indexOf("i18next is made possible") !== -1 ||
+          arguments[0].indexOf("Download the React DevTools") !== -1
+        )) return;
+        _info.apply(console, arguments);
+      };
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
