@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import logging
 import threading
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -46,7 +46,13 @@ class SessionEventListener(Protocol):
 
 
 def _awareness_to_dict(awareness: PeacefulAwareness | CombatAwareness) -> dict[str, Any]:
-    return dataclasses.asdict(awareness)
+    d = dataclasses.asdict(awareness)
+    # frozenset[Condition] → sorted list of strings for JSON serialization
+    if isinstance(awareness, CombatAwareness):
+        d["self_conditions"] = sorted(c.value for c in awareness.self_conditions)
+        for i, nearby_entry in enumerate(awareness.nearby):
+            d["nearby"][i]["conditions"] = sorted(c.value for c in nearby_entry.conditions)
+    return d
 
 
 def _events_to_list(events: list[PerceivedEvent]) -> list[dict[str, Any]]:
@@ -138,12 +144,9 @@ def resolve_abstract_move(action: Action, player: Creature, entities_layer: Enti
     if target_pos is None:
         return action
 
-    if toward:
-        direction = calculate_direction(my_pos, target_pos)
-    else:
-        direction = calculate_away_direction(my_pos, target_pos)
+    direction = calculate_direction(my_pos, target_pos) if toward else calculate_away_direction(my_pos, target_pos)
 
-    ft = int(action.params.get("ft", 5))
+    ft = int(str(action.params.get("ft", 5)))
     return Action(name="move", params={"direction": direction, "ft": ft})
 
 
@@ -186,9 +189,7 @@ class GameSession:
 
     def get_player(self, player_id: str | None = None) -> PlayerCharacter | None:
         if player_id:
-            answer = self.world.query_layer(
-                "entities", Query(question="player", params={"id": player_id})
-            )
+            answer = self.world.query_layer("entities", Query(question="player", params={"id": player_id}))
             result = answer.value
             return result if isinstance(result, PlayerCharacter) else None
         players = self.get_players()
@@ -222,10 +223,8 @@ class GameSession:
     def remove_listener(self, listener: SessionEventListener) -> None:
         stop_round = False
         with self._lock:
-            try:
+            with contextlib.suppress(ValueError):
                 self._listeners.remove(listener)
-            except ValueError:
-                pass
             count = len(self._listeners)
             if not self._listeners and self._round is not None:
                 stop_round = True
@@ -338,9 +337,7 @@ class GameSession:
                     logger.exception("Round loop error in session %s", self.session_id)
                 self._fire("on_game_over")
 
-            thread = threading.Thread(
-                target=run_round_loop, daemon=True, name=f"round-{self.session_id}"
-            )
+            thread = threading.Thread(target=run_round_loop, daemon=True, name=f"round-{self.session_id}")
             self._round_thread = thread
             thread.start()
 

@@ -54,6 +54,7 @@ class PatchCreatureRequest(BaseModel):
     current_hp: int | None = Field(default=None, ge=0, le=999)
     ac: int | None = Field(default=None, ge=0, le=30)
     location_id: str | None = None
+    conditions: list[str] | None = None  # D&D 5e condition names
     # Character-level
     gold: int | None = Field(default=None, ge=0)
     # NPC-level
@@ -148,6 +149,7 @@ class CreatureResponse(BaseModel):
     hp: int
     max_hp: int
     ac: int
+    conditions: list[str] = Field(default_factory=list)
     entity_type: str = ""  # "player", "npc", or ""
     race: str = ""
     char_class: str = ""

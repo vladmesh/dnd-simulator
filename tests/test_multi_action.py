@@ -5,7 +5,7 @@ from __future__ import annotations
 from dnd_simulator.core.action import END_TURN, Action
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain
-from dnd_simulator.core.character import Ability, Attack, Creature, DamageComponent, DamageType
+from dnd_simulator.core.character import Creature
 from dnd_simulator.core.location import Location, LocationGraph
 from dnd_simulator.core.models import GameDateTime
 from dnd_simulator.core.turn_budget import ActionCost, TurnBudget
@@ -154,43 +154,39 @@ class TestMultiActionLoop:
         assert actions[0].name == "say"
 
     def test_budget_exhaustion_ends_turn(self) -> None:
-        """When budget runs out, turn ends even without end_turn."""
-        sword = Attack(
-            name="sword",
-            ability=Ability.STR,
-            damage=(DamageComponent(dice="1d8", type=DamageType.SLASHING),),
-            reach=5,
-        )
-        # Brain tries to attack twice, but only has 1 action
+        """When budget runs out, turn ends even without end_turn.
+
+        Uses dodge (always succeeds, costs 1 action) to reliably consume budget.
+        """
+        # Brain tries to dodge twice, but only has 1 action
         brain = _ScriptedBrain(
             [
-                Action(name="attack", params={"target_id": "target1"}),
-                Action(name="attack", params={"target_id": "target1"}),
+                Action(name="dodge"),
+                Action(name="dodge"),
             ]
         )
-        attacker = Creature(
+        creature = Creature(
             id="c1",
             name="A",
             location_id="r1",
             brain=brain,
             max_hp=20,
             current_hp=20,
-            attacks=(sword,),
             in_combat=True,
         )
         target = Creature(id="target1", name="T", location_id="r1", max_hp=100, current_hp=100)
 
-        world = _make_world([attacker, target])
+        world = _make_world([creature, target])
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
         game_round = Round(world, el)
 
         query_fn = world._make_query_fn("entities")
         emit_fn = world._make_emit_fn("entities")
-        actions = game_round.run_combat_turn(attacker, world.time, query_fn, emit_fn)
+        actions = game_round.run_combat_turn(creature, world.time, query_fn, emit_fn)
 
-        # Only 1 attack should have executed (budget has 1 action)
+        # Only 1 dodge should have executed (budget has 1 action)
         assert len(actions) == 1
-        assert actions[0].name == "attack"
+        assert actions[0].name == "dodge"
 
     def test_free_action_then_costly_action(self) -> None:
         """In combat: free action (say) + costly action (dodge) both execute."""

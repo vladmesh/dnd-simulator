@@ -45,4 +45,6 @@ class TestDirectoryFormat:
         assert len(npcs) == 3
         edgar = next(n for n in npcs if n.id == "edgar")
         assert edgar.role == "blacksmith"
-        assert edgar.brain is not None
+        assert edgar.ai_type == "rule_based"
+        # Brain is assigned by BrainFactory in GameService, not by content_loader
+        assert edgar.brain is None

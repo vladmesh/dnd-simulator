@@ -50,6 +50,15 @@ export function CombatPanel() {
           <span>{t("game:ac_display", { n: combat.self_ac })}</span>
           <span>{t("game:speed_display", { n: combat.self_speed })}</span>
         </div>
+        {combat.self_conditions && combat.self_conditions.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {combat.self_conditions.map((c) => (
+              <span key={c} className="rounded bg-orange-500/20 px-1.5 py-0.5 text-[10px] font-medium text-orange-400">
+                {c}
+              </span>
+            ))}
+          </div>
+        )}
         <p className="text-muted-foreground">
           {t("game:weapon_display", { name: combat.self_weapon, damage: combat.self_weapon_damage })}
         </p>
@@ -72,6 +81,15 @@ export function CombatPanel() {
               )}
             </div>
             <p className="mt-0.5 font-mono text-muted-foreground">{entity.id}</p>
+            {entity.conditions && entity.conditions.length > 0 && (
+              <div className="mt-0.5 flex flex-wrap gap-1">
+                {entity.conditions.map((c) => (
+                  <span key={c} className="rounded bg-orange-500/20 px-1.5 py-0.5 text-[10px] font-medium text-orange-400">
+                    {c}
+                  </span>
+                ))}
+              </div>
+            )}
             {entity.distance_ft != null && (
               <p className="text-muted-foreground">
                 {t("game:distance", { ft: entity.distance_ft, dir: entity.direction ?? "" })}

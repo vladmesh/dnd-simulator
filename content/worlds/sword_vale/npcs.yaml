@@ -30,6 +30,7 @@ marta:
   start_location: silverport_city_tavern
   settlement_id: silverport_city
   role: tavern_keeper
+  ai: llm
   personality:
     en: >
       Cheerful and gossipy. Knows everyone's business

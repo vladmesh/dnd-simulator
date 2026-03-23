@@ -128,6 +128,7 @@ export interface CreatureResponse {
   hp: number
   max_hp: number
   ac: number
+  conditions?: string[]
   entity_type?: string
   race?: string
   char_class?: string

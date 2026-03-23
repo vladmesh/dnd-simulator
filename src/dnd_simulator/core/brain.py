@@ -123,13 +123,24 @@ class RuleBrain(Brain):
 
         hp = awareness.self_hp
         max_hp = awareness.self_max_hp
-        speed = awareness.self_speed
         hp_ratio = hp / max_hp if max_hp > 0 else 0.0
 
         primary_reach = creature.attacks[0].reach if creature.attacks else 5
         is_ranged = primary_reach > 10
+        budget = awareness.turn_budget
 
         tags = self._get_tags(creature)
+
+        # Debug: log turn state
+        conditions_str = ", ".join(c.value for c in awareness.self_conditions) if awareness.self_conditions else "none"
+        logger.debug(
+            "[RuleBrain:%s] turn start: HP=%d/%d (%.0f%%), speed=%d, conditions=[%s], "
+            "budget=[actions=%d, move=%dft], enemies=%d",
+            creature.name, hp, max_hp, hp_ratio * 100,
+            awareness.self_speed, conditions_str,
+            budget.actions if budget else 0, budget.movement_remaining if budget else 0,
+            len(nearby),
+        )
 
         # Tag-adjusted thresholds
         flee_threshold = 0.25 if has_tag(tags, NpcTag.SCARED) else 0.15
@@ -141,6 +152,7 @@ class RuleBrain(Brain):
         target = self._pick_target(nearby, primary_reach, hated_ids, feared_ids)
         target_id = target.id
         dist = target.distance_ft
+        logger.debug("[RuleBrain:%s] target=%s dist=%dft", creature.name, target_id, dist)
 
         # 1. Flee if critically wounded (scared NPCs flee earlier)
         if hp_ratio < flee_threshold:
@@ -164,7 +176,6 @@ class RuleBrain(Brain):
             return Action(name="attack", params={"target_id": target_id})
 
         # 5. Move toward if have movement remaining
-        budget = awareness.turn_budget
         movement_left = budget.movement_remaining if budget else 0
         if movement_left > 0:
             logger.info("[RuleBrain:%s] → move toward %s (dist %d ft)", creature.name, target_id, dist)
@@ -176,6 +187,10 @@ class RuleBrain(Brain):
             logger.info("[RuleBrain:%s] → dash (dist %d ft)", creature.name, dist)
             return Action(name="dash")
 
+        logger.debug(
+            "[RuleBrain:%s] → end_turn (no budget: actions=%d, move=%dft)",
+            creature.name, budget.actions if budget else 0, movement_left,
+        )
         return END_TURN
 
     def _pick_target(
@@ -205,6 +220,12 @@ class RuleBrain(Brain):
             if dist <= reach:
                 score += 30.0
             score += max(0.0, 20.0 - dist * 0.2)
+
+            conds = ", ".join(sorted(c.value for c in enemy.conditions)) if enemy.conditions else ""
+            logger.debug(
+                "  target %s: dist=%dft wounded=%s conds=[%s] score=%.0f",
+                eid, dist, enemy.is_wounded, conds, score,
+            )
 
             if score > best_score:
                 best_score = score

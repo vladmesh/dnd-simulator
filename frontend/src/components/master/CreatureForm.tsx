@@ -26,6 +26,12 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
   const { t } = useTranslation(["master", "common"])
   const isEdit = creature !== null
 
+  const ALL_CONDITIONS = [
+    "blinded", "charmed", "deafened", "frightened", "grappled",
+    "incapacitated", "invisible", "paralyzed", "petrified", "poisoned",
+    "prone", "restrained", "stunned", "unconscious",
+  ]
+
   const [form, setForm] = useState({
     id: creature?.id ?? "",
     name: creature?.name ?? "",
@@ -39,6 +45,7 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
     settlement_id: creature?.settlement_id ?? "",
     ai: creature?.ai_type ?? "rule_based",
     gold: creature?.gold ?? 0,
+    conditions: creature?.conditions ?? [],
   })
 
   const [saving, setSaving] = useState(false)
@@ -58,6 +65,7 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
           location_id: form.start_location || null,
           gold: form.gold,
           personality: form.personality || null,
+          conditions: form.conditions,
         })
       : api.master.spawnCreature(sessionId, {
           id: form.id,
@@ -176,6 +184,38 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
             <div className="col-span-2">
               <Label>{t("master:field_settlement")}</Label>
               <Input value={form.settlement_id} onChange={(e) => set("settlement_id", e.target.value)} />
+            </div>
+          )}
+
+          {isEdit && (
+            <div className="col-span-2">
+              <Label>{t("master:field_conditions", "Conditions")}</Label>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {ALL_CONDITIONS.map((c) => {
+                  const active = form.conditions.includes(c)
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
+                        active
+                          ? "bg-orange-500/30 text-orange-300 border border-orange-500/50"
+                          : "bg-muted text-muted-foreground border border-transparent hover:bg-muted/80"
+                      }`}
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          conditions: active
+                            ? f.conditions.filter((x) => x !== c)
+                            : [...f.conditions, c],
+                        }))
+                      }
+                    >
+                      {c}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           )}
         </div>

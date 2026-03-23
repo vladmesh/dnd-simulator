@@ -57,6 +57,7 @@ def _build_combat_awareness(
     weapon_damage = str(npc.attacks[0].damage[0].dice) if npc.attacks else "1"
 
     from dnd_simulator.core.turn_budget import TurnBudget
+
     budget = TurnBudget(actions=1, bonus_actions=1, movement_remaining=npc.speed, reaction=1)
 
     return CombatAwareness(

@@ -29,6 +29,8 @@ def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -
         return _perceive_flee(event, observer, get_entity)
     if event.event_type in (EventType.ENTITY_MOVE, EventType.ENTITY_DASH):
         return _perceive_move(event, observer, get_entity)
+    if event.event_type == EventType.TURN_SKIPPED:
+        return _perceive_turn_skipped(event, observer, get_entity)
     if event.event_type == EventType.COMBAT_STARTED:
         return _perceive_combat_started(event, observer, get_entity)
     if event.event_type == EventType.COMBAT_ENDED:
@@ -66,6 +68,12 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
     hit = event.data.get("hit", True)
     damage = event.data.get("damage")
     weapon = event.data.get("weapon", "")
+    d20_roll = event.data.get("roll", 0)
+    total = event.data.get("total", 0)
+    ac = event.data.get("ac", 0)
+    critical = event.data.get("critical", False)
+    advantage = event.data.get("advantage", False)
+    disadvantage = event.data.get("disadvantage", False)
     assert isinstance(attacker_id, str)
     assert isinstance(target_id, str)
 
@@ -73,7 +81,26 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
     target = _describe(observer, target_id, get_entity)
 
     weapon_str = f" ({weapon})" if weapon else ""
-    if not hit:
+
+    # Dice roll detail: "d20(14)+3=17 vs AC 13"
+    roll_parts: list[str] = []
+    if advantage and not disadvantage:
+        roll_parts.append(_("adv "))
+    elif disadvantage and not advantage:
+        roll_parts.append(_("disadv "))
+    roll_parts.append(f"d20({d20_roll})")
+    modifier = int(total) - int(d20_roll)
+    if modifier >= 0:
+        roll_parts.append(f"+{modifier}")
+    else:
+        roll_parts.append(str(modifier))
+    roll_parts.append(f"={total}")
+    roll_parts.append(f" vs AC {ac}")
+    roll_str = " [" + "".join(roll_parts) + "]"
+
+    if critical and hit:
+        outcome_str = _(", CRIT! {damage} damage").format(damage=damage) if damage else _(", CRIT!")
+    elif not hit:
         outcome_str = _(", miss")
     elif damage is not None:
         outcome_str = _(", {damage} damage").format(damage=damage)
@@ -81,13 +108,15 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
         outcome_str = ""
 
     if attacker_id == observer.id:
-        return _("You attack {target}{weapon}{outcome}").format(target=target, weapon=weapon_str, outcome=outcome_str)
-    if target_id == observer.id:
-        return _("{attacker} attacks you{weapon}{outcome}").format(
-            attacker=attacker, weapon=weapon_str, outcome=outcome_str
+        return _("You attack {target}{weapon}{roll}{outcome}").format(
+            target=target, weapon=weapon_str, roll=roll_str, outcome=outcome_str
         )
-    return _("{attacker} attacks {target}{weapon}{outcome}").format(
-        attacker=attacker, target=target, weapon=weapon_str, outcome=outcome_str
+    if target_id == observer.id:
+        return _("{attacker} attacks you{weapon}{roll}{outcome}").format(
+            attacker=attacker, weapon=weapon_str, roll=roll_str, outcome=outcome_str
+        )
+    return _("{attacker} attacks {target}{weapon}{roll}{outcome}").format(
+        attacker=attacker, target=target, weapon=weapon_str, roll=roll_str, outcome=outcome_str
     )
 
 
@@ -175,6 +204,18 @@ def _perceive_inspect(event: Event, observer: Character, get_entity: GetEntityFn
         else:
             parts.append(_("They look healthy."))
     return " ".join(parts)
+
+
+def _perceive_turn_skipped(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    entity_id = event.data.get("entity_id", "")
+    conditions = event.data.get("conditions", [])
+    assert isinstance(entity_id, str)
+
+    cond_str = ", ".join(str(c) for c in conditions) if conditions else "?"
+    if entity_id == observer.id:
+        return _("You can't act ({conditions}) — turn skipped").format(conditions=cond_str)
+    desc = _describe(observer, entity_id, get_entity)
+    return _("{entity} can't act ({conditions}) — turn skipped").format(entity=desc, conditions=cond_str)
 
 
 def _perceive_combat_started(event: Event, observer: Character, get_entity: GetEntityFn) -> str:

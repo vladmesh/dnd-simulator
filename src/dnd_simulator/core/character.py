@@ -8,6 +8,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from dnd_simulator.core.action import Action
+from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType
 from dnd_simulator.i18n import _
 
@@ -200,6 +201,7 @@ class Creature(Entity):
     attacks: tuple[Attack, ...] = ()
     in_combat: bool = False
     is_dodging: bool = False
+    conditions: set[Condition] = field(default_factory=set)
     wake_at_seconds: int | None = None  # absolute game-time seconds; None = not waiting
     brain: Brain | None = field(default=None, repr=False)
 
@@ -279,7 +281,7 @@ class Creature(Entity):
             return ActionResult()
         if action.name == "move":
             direction = action.params.get("direction", "")
-            ft = int(action.params.get("ft", 5))
+            ft = int(str(action.params.get("ft", 5)))
             logger.info("[%s] → move %s %dft", self.name, direction, ft)
             return emit_fn(
                 Event(
@@ -330,6 +332,7 @@ class Character(Creature):
 
         Characters from the same settlement know each other by name.
         Strangers are described by race + appearance.
+        Visible conditions are appended.
         """
         if isinstance(target, Character):
             known = self._knows_by_name(target)
@@ -344,11 +347,16 @@ class Character(Creature):
             # Wound status
             if target.current_hp < target.max_hp // 2:
                 parts.append(_("looks wounded"))
+            # Visible conditions
+            if target.conditions:
+                parts.extend(_(c.value) for c in sorted(target.conditions, key=lambda c: c.value))
             return ", ".join(parts)
         if isinstance(target, Creature):
             parts = [target.name]
             if target.current_hp < target.max_hp // 2:
                 parts.append(_("looks wounded"))
+            if target.conditions:
+                parts.extend(_(c.value) for c in sorted(target.conditions, key=lambda c: c.value))
             return ", ".join(parts)
         return target.name
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import Query
 from dnd_simulator.i18n import _
 from dnd_simulator.service.session import GameSession
@@ -58,6 +59,14 @@ class CreatureCommands:
         session = self._get_session(session_id)  # type: ignore[attr-defined]
         known_locations = set(session.world.location_graph.all_ids())
         entity = _parse_spawn(data, known_locations=known_locations)
+        # Assign brain via factory
+        from dnd_simulator.core.character import Creature
+        from dnd_simulator.layers.entities.models import Npc
+
+        if isinstance(entity, Npc):
+            entity.brain = self._brain_factory.create(entity.ai_type)  # type: ignore[attr-defined]
+        elif isinstance(entity, Creature):
+            entity.brain = self._brain_factory.create(str(data.get("ai", "rule_based")))  # type: ignore[attr-defined]
         self._get_entities_layer(session).add_entity(entity)
         return entity
 
@@ -85,6 +94,8 @@ class CreatureCommands:
             entity.ac = int(updates["ac"])
         if "location_id" in updates:
             entity.location_id = str(updates["location_id"])
+        if "conditions" in updates:
+            entity.conditions = {Condition(str(c)) for c in updates["conditions"]}
 
         # Character-level fields
         if isinstance(entity, Character) and "gold" in updates:
@@ -113,7 +124,6 @@ class CreatureCommands:
 
     def set_creature_brain(self, session_id: str, entity_id: str, brain_type: str, model: str = "") -> None:
         """Switch creature brain (rule_based or llm)."""
-        from dnd_simulator.core.brain import RuleBrain
         from dnd_simulator.core.character import Creature
         from dnd_simulator.core.player import PlayerCharacter
         from dnd_simulator.layers.entities.models import Npc
@@ -125,20 +135,9 @@ class CreatureCommands:
         if isinstance(entity, PlayerCharacter):
             raise ValueError(_("Cannot change player brain from master panel"))
 
-        if brain_type == "rule_based":
-            entity.brain = RuleBrain()
-            if isinstance(entity, Npc):
-                entity.ai_type = "rule_based"
-        elif brain_type == "llm":
-            if not self._llm:  # type: ignore[attr-defined]
-                raise ValueError(_("LLM not configured"))
-            from dnd_simulator.llm.brain import LlmBrain
-
-            entity.brain = LlmBrain(self._llm)  # type: ignore[attr-defined]
-            if isinstance(entity, Npc):
-                entity.ai_type = "llm"
-        else:
-            raise ValueError(f"Unknown brain type: {brain_type}")
+        entity.brain = self._brain_factory.create(brain_type, strict=True)  # type: ignore[attr-defined]
+        if isinstance(entity, Npc):
+            entity.ai_type = brain_type
 
 
 def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) -> Entity:
@@ -152,14 +151,13 @@ def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) 
 
     # Monster / generic creature
     from dnd_simulator.content_loader import parse_ability_scores, parse_attacks
-    from dnd_simulator.core.brain import RuleBrain
     from dnd_simulator.core.character import Creature
 
     max_hp = int(data.get("hp", 10))
     attacks = parse_attacks(data.get("attacks") or [])
     location_id = str(data.get("start_location", data.get("region_id", "")))
 
-    creature = Creature(
+    return Creature(
         id=str(data["id"]),
         name=str(data["name"]),
         location_id=location_id,
@@ -170,5 +168,3 @@ def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) 
         attacks=attacks,
         ability_scores=parse_ability_scores(data),
     )
-    creature.brain = RuleBrain()
-    return creature

@@ -15,6 +15,7 @@ from dnd_simulator.core.awareness import (
 )
 from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState
+from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.layers.entities.combat_manager import CombatManager
@@ -271,10 +272,12 @@ class EntitiesLayer(Layer):
         battle_map_positions: dict[str, Position] = dict(combat.battle_map.positions) if combat else {}
         my_pos = battle_map_positions.get(creature.id)
 
-        # Build nearby list
+        # Build nearby list (exclude dead creatures)
         nearby: list[CombatEntity] = []
         for e in self._entities.values():
             if e.id == creature.id or not e.active or e.location_id != creature.location_id:
+                continue
+            if isinstance(e, Creature) and not e.is_alive:
                 continue
             # Build description using perceive if observer is a Character
             desc = creature.perceive(e) if isinstance(creature, Character) and isinstance(e, Entity) else e.name
@@ -287,6 +290,7 @@ class EntitiesLayer(Layer):
                 dx = other_pos.x - my_pos.x
                 dy = other_pos.y - my_pos.y
                 direction = direction_label(dx, dy)
+            e_conditions = frozenset(e.conditions) if isinstance(e, Creature) else frozenset()
             nearby.append(
                 CombatEntity(
                     id=e.id,
@@ -296,6 +300,7 @@ class EntitiesLayer(Layer):
                     direction=direction,
                     x=other_pos.x if other_pos else 0,
                     y=other_pos.y if other_pos else 0,
+                    conditions=e_conditions,
                 )
             )
 
@@ -324,6 +329,7 @@ class EntitiesLayer(Layer):
             round_number=round_number,
             walls=wall_descriptions,
             battle_map_ascii=battle_map_ascii,
+            self_conditions=frozenset(creature.conditions),
         )
 
     def build_nearby_entities(self, creature: Creature, hour: int) -> list[NearbyEntity]:
@@ -334,6 +340,8 @@ class EntitiesLayer(Layer):
             creature_location = creature.current_location(hour)
         for e in self._entities.values():
             if e.id == creature.id or not e.active:
+                continue
+            if isinstance(e, Creature) and not e.is_alive:
                 continue
             # Determine effective location
             e_location = e.location_id
@@ -663,6 +671,7 @@ class EntitiesLayer(Layer):
                     "hp": entity.current_hp,
                     "max_hp": entity.max_hp,
                     "ac": entity.ac,
+                    "conditions": sorted(c.value for c in entity.conditions),
                 }
             )
         if isinstance(entity, Character):
@@ -718,8 +727,11 @@ class EntitiesLayer(Layer):
                 "location_id": e.location_id,
                 "active": e.active,
             }
-            if isinstance(e, Creature) and e.wake_at_seconds is not None:
-                data["wake_at_seconds"] = e.wake_at_seconds
+            if isinstance(e, Creature):
+                if e.wake_at_seconds is not None:
+                    data["wake_at_seconds"] = e.wake_at_seconds
+                if e.conditions:
+                    data["conditions"] = sorted(c.value for c in e.conditions)
             if isinstance(e, PlayerCharacter):
                 data["entity_type"] = "player"
                 data.update(e.to_full_save_data())
@@ -765,6 +777,9 @@ class EntitiesLayer(Layer):
                 if isinstance(entity, Creature):
                     wake_at = edata.get("wake_at_seconds")
                     entity.wake_at_seconds = int(wake_at) if wake_at is not None else None
+                    conditions_raw = edata.get("conditions")
+                    if isinstance(conditions_raw, list):
+                        entity.conditions = {Condition(str(c)) for c in conditions_raw}
                 if isinstance(entity, PlayerCharacter):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
                     entity.gold = int(edata.get("gold", entity.gold))

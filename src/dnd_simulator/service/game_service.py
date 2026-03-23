@@ -28,6 +28,7 @@ from dnd_simulator.layers.settlements.layer import SettlementsLayer
 from dnd_simulator.llm.client import LlmClient
 from dnd_simulator.storage.store import SaveStore
 
+from .brain_factory import BrainFactory
 from .commands_creatures import CreatureCommands
 from .commands_politics import PoliticsCommands
 from .commands_save import SaveCommands
@@ -55,6 +56,7 @@ class GameService(
         self._store = store
         self._content_dir = content_dir
         self._llm = llm
+        self._brain_factory = BrainFactory(llm=llm)
 
     def start_game(self, world_name: str = "sword_vale", lang: str = "en") -> GameSession:
         """Create a new game session with a world loaded from content.
@@ -89,6 +91,13 @@ class GameService(
 
             summarizer = MemorySummarizer(self._llm)
         entities_layer = EntitiesLayer(entities=entities, summarizer=summarizer)
+
+        # Assign brains via factory (content_loader only parses data, not brains)
+        from dnd_simulator.layers.entities.models import Npc
+
+        for entity in entities:
+            if isinstance(entity, Npc):
+                entity.brain = self._brain_factory.create(entity.ai_type)
 
         world = World(
             layers=[geography, politics, settlements_layer, entities_layer],

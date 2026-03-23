@@ -51,7 +51,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     llm: LlmClient | None = None
     api_key = os.getenv("OPENROUTER_API_KEY", "")
     if api_key:
-        model = os.getenv("LLM_MODEL", "deepseek/deepseek-chat-v3-0324")
+        model = os.environ["LLM_MODEL"]  # no default — must be set explicitly
         llm = LlmClient(api_key=api_key, model=model)
 
     service = GameService(store=store, llm=llm)

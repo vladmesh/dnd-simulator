@@ -51,6 +51,7 @@ class EventType(Enum):
     ENTITY_FLEE = "entity_flee"
     ENTITY_MOVE = "entity_move"
     ENTITY_DASH = "entity_dash"
+    TURN_SKIPPED = "turn_skipped"
     COMBAT_STARTED = "combat_started"
     COMBAT_ENDED = "combat_ended"
     WEATHER_CHANGED = "weather_changed"

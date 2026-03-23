@@ -44,6 +44,7 @@ def resolve_attack(
     extra_damage: tuple[tuple[str, DamageType], ...] = (),
     advantage: bool = False,
     disadvantage: bool = False,
+    force_crit: bool = False,
     rng: random.Random | None = None,
 ) -> AttackResult:
     """Resolve a single-target attack.
@@ -75,7 +76,7 @@ def resolve_attack(
         )
 
     # Roll damage for each component
-    is_crit = check.critical and check.success
+    is_crit = (check.critical and check.success) or (check.success and force_crit)
     damage_results: list[DamageResult] = []
 
     for comp in attack.damage:

@@ -9,7 +9,13 @@ from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.combat import resolve_attack, roll_initiative
-from dnd_simulator.rules.movement import grid_distance, move_away_from, move_direction, move_toward
+from dnd_simulator.rules.conditions import (
+    attacker_has_disadvantage,
+    attacks_against_have_advantage,
+    attacks_against_have_disadvantage,
+    is_auto_crit,
+)
+from dnd_simulator.rules.movement import grid_distance, move_direction
 
 
 class CombatManager:
@@ -239,11 +245,26 @@ class CombatManager:
                         error=_("Target too far ({dist} ft, reach {reach} ft).").format(dist=dist, reach=attack.reach),
                     )
 
-        # --- Resolution ---
-        modifier = attacker.ability_scores.modifier(attack.ability)
-        result = resolve_attack(modifier=modifier, ac=target.ac, attack=attack, disadvantage=target.is_dodging)
+        # --- Resolution: compute advantage/disadvantage from conditions ---
+        is_melee = attack.reach <= 10
+        advantage = attacks_against_have_advantage(target.conditions, melee=is_melee)
+        disadvantage = (
+            target.is_dodging
+            or attacker_has_disadvantage(attacker.conditions)
+            or attacks_against_have_disadvantage(target.conditions, melee=is_melee)
+        )
 
-        # Build enriched event for the log (with damage info)
+        modifier = attacker.ability_scores.modifier(attack.ability)
+        result = resolve_attack(
+            modifier=modifier,
+            ac=target.ac,
+            attack=attack,
+            advantage=advantage,
+            disadvantage=disadvantage,
+            force_crit=is_auto_crit(target.conditions, melee=is_melee) if is_melee else False,
+        )
+
+        # Build enriched event for the log (with damage info + dice details)
         log_data: dict[str, Any] = {
             "attacker_id": attacker_id,
             "target_id": target_id,
@@ -252,6 +273,10 @@ class CombatManager:
             "critical": result.critical,
             "roll": result.attack_check.roll,
             "total": result.attack_check.total,
+            "modifier": modifier,
+            "ac": target.ac,
+            "advantage": advantage,
+            "disadvantage": disadvantage,
         }
 
         result_events: list[Event] = []
@@ -260,6 +285,9 @@ class CombatManager:
             actual_damage = target.take_damage(result.total_damage)
             log_data["damage"] = actual_damage
             log_data["damage_types"] = [d.type.value for d in result.damage]
+            log_data["damage_detail"] = [
+                {"amount": dr.amount, "type": dr.type.value} for dr in result.damage
+            ]
 
         # Log the attack BEFORE death/combat-end so event order is natural
         attack_log_event = Event(

@@ -9,6 +9,7 @@ export type EventType =
   | "entity_move"
   | "entity_dash"
   | "action_error"
+  | "turn_skipped"
   | "combat_started"
   | "combat_ended"
   | "weather_changed"
@@ -48,6 +49,7 @@ export interface CombatEntity {
   is_wounded?: boolean
   distance_ft?: number
   direction?: string
+  conditions?: string[]
 }
 
 export interface PeacefulAwareness {
@@ -77,6 +79,7 @@ export interface CombatAwareness {
   walls?: string[]
   battle_map_ascii?: string
   turn_budget?: TurnBudget | null
+  self_conditions?: string[]
 }
 
 export type Awareness = PeacefulAwareness | CombatAwareness

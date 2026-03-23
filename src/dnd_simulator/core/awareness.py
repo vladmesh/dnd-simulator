@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import EventType
 
 if TYPE_CHECKING:
@@ -35,6 +36,7 @@ class CombatEntity:
     direction: str = ""
     x: int = 0
     y: int = 0
+    conditions: frozenset[Condition] = field(default_factory=frozenset)
 
 
 @dataclass
@@ -72,6 +74,7 @@ class CombatAwareness:
     walls: list[str] = field(default_factory=list)
     battle_map_ascii: str = ""
     turn_budget: TurnBudget | None = None
+    self_conditions: frozenset[Condition] = field(default_factory=frozenset)
 
 
 @dataclass(frozen=True)

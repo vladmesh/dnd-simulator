@@ -14,11 +14,18 @@ from dataclasses import dataclass, field
 from dnd_simulator.core.action import SKIP, Action
 from dnd_simulator.core.awareness import PerceivedEvent
 from dnd_simulator.core.character import Creature
-from dnd_simulator.core.models import EmitFn, Event, GameDateTime, QueryFn, TimeDelta
+from dnd_simulator.core.models import EmitFn, Event, EventType, GameDateTime, QueryFn, TimeDelta
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
-from dnd_simulator.rules.actions import DASH_ACTION_COST, action_cost, ends_peaceful_turn, get_num_actions, get_num_bonus_actions
+from dnd_simulator.rules.actions import (
+    DASH_ACTION_COST,
+    action_cost,
+    ends_peaceful_turn,
+    get_num_actions,
+    get_num_bonus_actions,
+)
+from dnd_simulator.rules.conditions import effective_speed, is_incapacitated
 
 logger = logging.getLogger("dnd_simulator.round")
 
@@ -99,13 +106,38 @@ class Round:
         if creature.brain is None:
             return []
 
+        # Incapacitated creatures (stunned, paralyzed, etc.) skip their turn entirely
+        if is_incapacitated(creature.conditions):
+            logger.info("[Round] %s is incapacitated, skipping turn", creature.name)
+            reasons = sorted(c.value for c in creature.conditions if is_incapacitated({c}))
+            emit_fn(
+                Event(
+                    event_type=EventType.TURN_SKIPPED,
+                    source_layer="entities",
+                    data={
+                        "entity_id": creature.id,
+                        "reason": "incapacitated",
+                        "conditions": reasons,
+                    },
+                )
+            )
+            return []
+
+        speed = effective_speed(creature.speed, creature.conditions)
+        if speed != creature.speed:
+            logger.debug(
+                "[Round] %s speed reduced %d→%d by conditions: %s",
+                creature.name, creature.speed, speed,
+                ", ".join(c.value for c in creature.conditions),
+            )
         budget = TurnBudget(
             actions=get_num_actions(creature),
             bonus_actions=get_num_bonus_actions(creature),
-            movement_remaining=creature.speed,
+            movement_remaining=speed,
             reaction=1,
         )
         actions: list[Action] = []
+        consecutive_failures = 0
 
         while True:
             awareness = self._entities.build_awareness(creature, time, query_fn)
@@ -123,13 +155,13 @@ class Round:
                     logger.warning("[Round] %s tried dash but no actions left", creature.name)
                     break
                 budget.consume(DASH_ACTION_COST)
-                budget.movement_remaining += creature.speed
+                budget.movement_remaining += speed
                 actions.append(action)
                 if self._on_action:
                     self._on_action(creature, action, budget, "")
                 continue
 
-            # Enforce budget
+            # Enforce budget (check only, consume after success)
             cost = action_cost(action)
             if not budget.can_afford(cost):
                 logger.warning(
@@ -139,12 +171,20 @@ class Round:
                 )
                 break
 
-            budget.consume(cost)
             result = creature.execute_action(action, emit_fn)
 
-            # Refund movement if move failed (wall, occupied cell)
-            if not result.success and action.name == "move":
-                budget.movement_remaining += cost.movement_ft
+            # Only consume budget if the action actually succeeded
+            if result.success:
+                budget.consume(cost)
+                consecutive_failures = 0
+            else:
+                consecutive_failures += 1
+                if consecutive_failures >= 3:
+                    logger.warning(
+                        "[Round] %s failed %d actions in a row, ending turn",
+                        creature.name, consecutive_failures,
+                    )
+                    break
 
             actions.append(action)
 
@@ -308,9 +348,12 @@ class Round:
         """
         nearest_wake: int | None = None
         for e in self._entities._entities.values():
-            if isinstance(e, Creature) and e.wake_at_seconds is not None:
-                if nearest_wake is None or e.wake_at_seconds < nearest_wake:
-                    nearest_wake = e.wake_at_seconds
+            if (
+                isinstance(e, Creature)
+                and e.wake_at_seconds is not None
+                and (nearest_wake is None or e.wake_at_seconds < nearest_wake)
+            ):
+                nearest_wake = e.wake_at_seconds
 
         if nearest_wake is None:
             return False
@@ -367,5 +410,7 @@ class Round:
                 creature.active = False
                 logger.info(
                     "[Wait] %s sleeps for %dh (wake_at=%d)",
-                    creature.name, hours, creature.wake_at_seconds,
+                    creature.name,
+                    hours,
+                    creature.wake_at_seconds,
                 )

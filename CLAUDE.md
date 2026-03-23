@@ -98,7 +98,7 @@ Proximity-based activation: `EntitiesLayer.update_activation(time)` runs at the 
 ## Environment
 
 - Requires `.env` with `OPENROUTER_API_KEY` for LLM features (only if NPCs use `ai: llm`)
-- Default LLM model: `deepseek/deepseek-chat-v3-0324`
+- `LLM_MODEL` env var selects model (required if `OPENROUTER_API_KEY` is set, no default)
 - `DND_LANGUAGE` env var selects game language (default: `ru`); locale files in `src/dnd_simulator/locale/`
 - Save files: `saves/` directory (JSON)
 - Backend API: `make serve` → http://localhost:8001/docs (Swagger UI)

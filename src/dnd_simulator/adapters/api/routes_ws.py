@@ -28,7 +28,6 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from dnd_simulator.adapters.api.deps import get_service
 from dnd_simulator.core.action import Action
 from dnd_simulator.i18n import _
-from dnd_simulator.service.session import SessionEventListener
 
 logger = logging.getLogger("dnd_simulator.ws")
 

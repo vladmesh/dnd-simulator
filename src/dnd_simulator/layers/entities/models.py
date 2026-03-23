@@ -147,9 +147,7 @@ DEFAULT_SCHEDULE_TEMPLATES: dict[str, list[tuple[int, int, NpcActivity, str]]] =
 }
 
 
-def resolve_schedule(
-    role: str, settlement_id: str, known_locations: set[str] | None = None
-) -> list[ScheduleEntry]:
+def resolve_schedule(role: str, settlement_id: str, known_locations: set[str] | None = None) -> list[ScheduleEntry]:
     """Build a schedule from a role template, resolving relative location labels.
 
     If *known_locations* is provided, every resolved location_id must exist in the

@@ -257,7 +257,9 @@ class TestWaitAndFastForward:
     def test_wait_makes_player_dormant(self) -> None:
         """After wait action, player has wake_at set and is dormant."""
         player = PlayerCharacter(
-            id="player", name="Hero", location_id="r1",
+            id="player",
+            name="Hero",
+            location_id="r1",
             brain=_make_player_brain(Action(name="wait", params={"hours": 2})),
         )
         world = _make_world([player], hour=10)
@@ -268,14 +270,15 @@ class TestWaitAndFastForward:
 
         # Player went dormant, wake_at is set
         assert player.active is False
-        expected_wake = world.time.to_total_seconds() + 2 * 3600 - 6  # minus the 6s round advance
         # wake_at was set before the 6s advance
         assert player.wake_at_seconds is not None
 
     def test_fast_forward_advances_to_wake_at(self) -> None:
         """Fast-forward skips time to nearest wake_at when no active creatures."""
         player = PlayerCharacter(
-            id="player", name="Hero", location_id="r1",
+            id="player",
+            name="Hero",
+            location_id="r1",
             brain=_make_player_brain(Action(name="wait", params={"hours": 2})),
         )
         world = _make_world([player], hour=10)

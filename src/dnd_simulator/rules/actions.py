@@ -53,7 +53,7 @@ def action_cost(action: Action) -> ActionCost:
         return ActionCost(bonus_actions=1)
 
     if name in _MOVEMENT_ACTIONS:
-        ft = int(action.params.get("ft", 5)) if action.params else 5
+        ft = int(str(action.params.get("ft", 5))) if action.params else 5
         return ActionCost(movement_ft=ft)
 
     # Unknown actions are free (safe default — don't block gameplay)

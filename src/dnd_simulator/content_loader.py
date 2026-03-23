@@ -12,7 +12,6 @@ from typing import Any
 
 import yaml
 
-from dnd_simulator.core.brain import RuleBrain
 from dnd_simulator.core.character import (
     Ability,
     AbilityScores,
@@ -187,7 +186,6 @@ def _parse_locations(data: dict[str, Any], lang: str = "en") -> list[Location]:
     return locations
 
 
-
 def load_nations(path: Path, lang: str = "en") -> list[Nation]:
     """Load nations from a world YAML file or directory."""
     is_dir, path = _resolve_source(path)
@@ -303,8 +301,7 @@ def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locati
         ai_type=ai_type,
         memory=memory,
     )
-    if ai_type == "rule_based":
-        npc.brain = RuleBrain()
+    # Brain is assigned by BrainFactory in GameService, not here.
     return npc
 
 

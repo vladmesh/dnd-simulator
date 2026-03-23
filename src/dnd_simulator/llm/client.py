@@ -51,7 +51,7 @@ class LlmClient:
     def __init__(
         self,
         api_key: str,
-        model: str = "deepseek/deepseek-chat-v3-0324",
+        model: str,
         base_url: str = "https://openrouter.ai/api/v1",
     ) -> None:
         self._client = OpenAI(api_key=api_key, base_url=base_url)
