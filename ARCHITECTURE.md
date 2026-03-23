@@ -45,7 +45,7 @@ src/dnd_simulator/
 ├── adapters/      — transport layer
 │   └── api/       — FastAPI REST + WebSocket adapter (master + player routes, WS game loop, i18n middleware)
 │                    also serves legacy debug UI (static/) and React SPA build
-├── content_loader.py — loads content from YAML (single file or directory format)
+├── content_loader.py — loads content from YAML (single file or directory format); locations must be explicit
 ├── content_saver.py  — saves world templates back to YAML
 ├── service/       — GameService + command modules
 │   ├── game_service.py — session management, command routing, creature hot controls
@@ -73,6 +73,7 @@ frontend/          — React + TypeScript SPA (Vite + shadcn/ui + Zustand)
 
 ```
 Round orchestrator (round.py):
+    update_activation(time)               → proximity-based active/dormant
     for each active combat location (initiative order):
         for each combatant in turn_order:
             run_creature_turn:
@@ -85,6 +86,12 @@ Round orchestrator (round.py):
     for each peaceful creature (not in combat):
         run_creature_turn (same multi-action loop)
     world.advance_time(+1 round = 6 seconds)
+
+run_loop:
+    while not stopped:
+        update_activation → get active creatures
+        if none active → fast_forward to nearest wake_at or exit
+        run_round → on_round_end callback
 
 Player input flow (service/, command-based):
     Player input → Adapter (CLI/API/TG) → GameService → response
@@ -123,13 +130,15 @@ Calendar: 30 days/month, 12 months/year.
 
 ```
 Entity (id, name, location_id, active, on_tick)
-└── Creature (ability_scores, HP, AC, in_combat, is_dodging, brain, execute_action)
+└── Creature (ability_scores, HP, AC, in_combat, is_dodging, wake_at_seconds, brain, execute_action)
     └── Character (race, class, alignment, gold, appearance, perceive_by_id, get_npc_data)
         ├── PlayerCharacter (interactive I/O, overrides take_turn directly)
         └── Npc (role, personality, schedule, memory: NpcMemory, ai_type — brain assigned by content_loader/adapter)
 ```
 
 All tracked entities live on the `EntitiesLayer`. The layer's `tick()` is a no-op — the Round orchestrator calls `run_creature_turn` directly for both combat and peaceful turns. `Entity.on_tick(hour)` is called by the Round to update NPC activity based on daily schedule.
+
+**Activation system:** `EntitiesLayer.update_activation(time)` runs at the start of each round. Players without `wake_at_seconds` are anchors; creatures at an anchor's location become active, all others go dormant. Creatures in combat stay active. NPCs are moved to their scheduled location when activated. The `wait` action sets `wake_at_seconds` on the creature and marks it dormant. When no active creatures exist, `Round.run_loop()` fast-forwards `World.advance_time()` to the nearest `wake_at`, re-runs activation, and continues. If nobody has a `wake_at`, the loop exits.
 
 `World.location_graph` (`LocationGraph`) provides a flat graph of all locations. Each `Location` node has a `region_id` tag (for weather/terrain lookups) and an optional `settlement_id` tag (for economy/NPC binding). Entities hold a `location_id` and the graph resolves which region/settlement they are in. Edges between locations carry distances in meters; `travel_seconds()` computes travel time.
 

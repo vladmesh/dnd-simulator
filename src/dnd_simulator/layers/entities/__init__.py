@@ -2,11 +2,13 @@
 
 Includes attack resolution (via CombatManager), initiative/combat management,
 event perception, and visibility filtering. Manages CombatState per location.
-Npc is a pure data model (role, personality, schedule, memory, ai_type);
-decision-making is delegated to the brain field on Creature. NpcMemory holds
-structured tags (NpcTag), recent events, inner state, and conversation context.
-MemorySummarizer (in llm/) compresses events into memory after combat ends.
-Direct access: get_entity, add_entity, remove_entity for hot controls.
+Proximity-based activation: update_activation() marks creatures near players as
+active and others as dormant; NPCs are moved to their scheduled location on
+activation. Npc is a pure data model (role, personality, schedule, memory,
+ai_type); decision-making is delegated to the brain field on Creature. NpcMemory
+holds structured tags (NpcTag), recent events, inner state, and conversation
+context. MemorySummarizer (in llm/) compresses events into memory after combat
+ends. Direct access: get_entity, add_entity, remove_entity for hot controls.
 """
 
 from dnd_simulator.layers.entities.layer import EntitiesLayer

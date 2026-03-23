@@ -28,11 +28,13 @@ BattleMap (2D grid), инициатива, auto-exit после 2 idle раун�
 ### Frontend — React веб-интерфейс
 React + TypeScript + shadcn/ui, dark theme. Игровой экран (EventLog, BattleMap, ActionBar, Nearby/Location/Character панели) + мастер-панель (World/Creatures/Time/Saves). WebSocket для real-time взаимодействия.
 
+### Level 0 — Фундамент game loop
+Proximity-based активация существ: NPC рядом с игроком active, остальные dormant. Wait + fast-forward: `wake_at_seconds` на существе, Round.run_loop() мотает время до ближайшего пробуждения. Explicit locations — каждый мир обязан определить locations явно, убрана автогенерация из регионов. NPC перемещаются по расписанию при активации. Round lifecycle в GameSession.
+→ [брейншторм](brainstorms/ecs-and-content.md)
+
 ## In Progress
 
-### Level 0 — Фундамент game loop
-Активация/деактивация существ (active/dormant/dead), fast-forward времени.
-→ [брейншторм](brainstorms/ecs-and-content.md)
+(нет)
 
 ## Planned
 
