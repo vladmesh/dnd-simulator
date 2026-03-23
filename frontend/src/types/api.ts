@@ -149,4 +149,5 @@ export interface SessionListItem {
   player_name: string
   player_location: string
   time: string
+  world_name: string
 }

@@ -49,7 +49,7 @@ export function WorldPicker({ onWorldSelected }: Props) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {worlds.map((world) => (
-        <Card key={world.id} className="cursor-pointer transition-colors hover:bg-accent/50">
+        <Card key={world.id} className="transition-colors hover:bg-accent/50">
           <CardHeader>
             <CardTitle>{world.name}</CardTitle>
             <CardDescription>{world.description || world.id}</CardDescription>

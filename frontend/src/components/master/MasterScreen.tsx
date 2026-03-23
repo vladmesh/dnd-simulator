@@ -1,12 +1,14 @@
 import { useEffect, useState, useCallback } from "react"
 import { Link } from "react-router"
 import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
 import { api } from "@/transport/apiClient"
 import type { SessionListItem, WorldListItem } from "@/types/api"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select"
 import { LanguageToggle } from "@/components/setup/LanguageToggle"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Loader2, Trash2, Settings } from "lucide-react"
 
 export function MasterScreen() {
@@ -14,7 +16,6 @@ export function MasterScreen() {
   const [sessions, setSessions] = useState<SessionListItem[]>([])
   const [worlds, setWorlds] = useState<WorldListItem[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [selectedWorld, setSelectedWorld] = useState<string>("")
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -30,7 +31,7 @@ export function MasterScreen() {
         setWorlds(w)
         if (w.length > 0 && !selectedWorld) setSelectedWorld(w[0].id)
       })
-      .catch(() => setError(t("common:error")))
+      .catch(() => toast.error(t("common:error")))
       .finally(() => setLoading(false))
   }, [i18n.language, t, selectedWorld])
 
@@ -39,11 +40,10 @@ export function MasterScreen() {
   const createSession = () => {
     if (!selectedWorld) return
     setCreating(true)
-    setError(null)
     api.master
       .createSession({ world_name: selectedWorld, lang: i18n.language })
-      .then(() => refresh())
-      .catch(() => setError(t("common:error")))
+      .then(() => { refresh(); toast.success(t("master:new_session")) })
+      .catch(() => toast.error(t("common:error")))
       .finally(() => setCreating(false))
   }
 
@@ -52,8 +52,8 @@ export function MasterScreen() {
     setDeleting(id)
     api.master
       .deleteSession(id)
-      .then(() => refresh())
-      .catch(() => setError(t("common:error")))
+      .then(() => { refresh(); toast.success(t("master:session_deleted")) })
+      .catch(() => toast.error(t("common:error")))
       .finally(() => setDeleting(null))
   }
 
@@ -68,12 +68,6 @@ export function MasterScreen() {
           </Link>
         </div>
       </div>
-
-      {error && (
-        <div className="mb-4 rounded border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </div>
-      )}
 
       <div className="mb-6 flex items-center gap-2">
         <Select value={selectedWorld} onValueChange={(v) => { if (v) setSelectedWorld(v) }}>
@@ -95,16 +89,26 @@ export function MasterScreen() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="mt-1 h-4 w-32" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-28" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
-      ) : sessions.length === 0 ? (
+      ) : sessions.filter((s) => !selectedWorld || s.world_name === selectedWorld).length === 0 ? (
         <div className="py-8 text-center text-sm text-muted-foreground">
           {t("master:no_sessions")}
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {sessions.map((s) => (
+          {sessions.filter((s) => !selectedWorld || s.world_name === selectedWorld).map((s) => (
             <Card key={s.session_id}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base font-mono">{s.session_id.slice(0, 8)}</CardTitle>

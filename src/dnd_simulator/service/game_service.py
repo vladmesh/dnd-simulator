@@ -116,7 +116,7 @@ class GameService(
         for sid, s in self._sessions.items():
             players = s.get_players()
             player_name = players[0].name if players else ""
-            result[sid] = {"session_id": sid, "player_name": player_name}
+            result[sid] = {"session_id": sid, "player_name": player_name, "world_name": s.world_name}
 
         # Saved sessions on disk (not yet loaded) — scan all world subdirs
         from dnd_simulator.storage.store import JsonFileStore
@@ -127,7 +127,7 @@ class GameService(
                     if save_name.startswith("session_"):
                         sid = save_name[len("session_") :]
                         if sid not in result:
-                            result[sid] = {"session_id": sid, "player_name": "(saved)"}
+                            result[sid] = {"session_id": sid, "player_name": "(saved)", "world_name": world_name}
 
         return list(result.values())
 

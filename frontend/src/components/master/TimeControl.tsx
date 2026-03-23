@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
 import { api } from "@/transport/apiClient"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,7 +27,9 @@ export function TimeControl({ sessionId, onAdvanced }: Props) {
       .then((res) => {
         setResult(res.message)
         onAdvanced()
+        toast.success(t("master:time_advanced"))
       })
+      .catch(() => toast.error(t("common:error")))
       .finally(() => setAdvancing(false))
   }
 
@@ -48,10 +51,10 @@ export function TimeControl({ sessionId, onAdvanced }: Props) {
               max={8760}
               className="w-24"
               value={hours}
-              onChange={(e) => setHours(parseInt(e.target.value) || 1)}
+              onChange={(e) => setHours(parseInt(e.target.value, 10) || 0)}
             />
           </div>
-          <Button onClick={advance} disabled={advancing}>
+          <Button onClick={advance} disabled={advancing || hours < 1}>
             {advancing && <Loader2 className="mr-1 size-3 animate-spin" />}
             {t("master:advance")}
           </Button>
