@@ -8,6 +8,7 @@ export type EventType =
   | "entity_flee"
   | "entity_move"
   | "entity_dash"
+  | "action_error"
   | "combat_started"
   | "combat_ended"
   | "weather_changed"

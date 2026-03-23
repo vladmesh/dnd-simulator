@@ -13,18 +13,11 @@
 ### ~~BUG-43: State leak between sessions — wrong session data after creating new session~~ ✅ FIXED
 - **Fix:** d521563 — Reset all game slices (player, turn, log) in `connect()` before opening a new WebSocket.
 
-### BUG-17: Combat actions produce no events in EventLog
-- **Repro:** Enter combat, Attack, Move, any action.
-- **Expected:** EventLog shows "You attack Marta... hit/miss... X damage" or similar.
-- **Actual:** EventLog stays on "Waiting for events..." after attack and move. Only NPC turn events appear (after End Turn).
-- **Root cause:** Player's own action results (action_result WS messages) are not appended to EventLog. Only round_result events are.
-- **Severity:** CRITICAL — player has no feedback on their own actions.
+### ~~BUG-17: Combat actions produce no events in EventLog~~ ✅ FIXED
+- **Fix:** `execute_action` returns `ActionResult` (not bool), error propagated through `on_action` callback → `action_result` WS message → frontend EventLog. Failed actions (out of range, etc.) now show as `[action_error]` events. Successful actions were already working — the original bug manifested only when attacks failed silently (e.g. out of range).
 
-### BUG-26: Nation stability edit always fails with 422
-- **Repro:** Master > World > Edit any nation > change stability > save.
-- **Expected:** Save succeeds.
-- **Actual:** 422 Unprocessable Entity. Backend expects stability as 0.0-1.0 float, but frontend displays and sends raw integer (75 instead of 0.75).
-- **Severity:** CRITICAL — nation editing is broken for stability field. Wealth/military may also be affected if they have similar backend constraints.
+### ~~BUG-26: Nation stability edit always fails with 422~~ ✅ FIXED
+- **Fix:** Backend validation in `PatchNationRequest` and `PatchSettlementRequest` changed from `le=1.0` to `le=100.0` to match actual data scale (0-100).
 
 ### ~~BUG-38: Creature type filter (NPC/Monster) does nothing~~ ✅ FIXED
 - **Fix:** 18d569b — Added "monster" filter to `all_creatures` query in entities layer.
@@ -33,11 +26,8 @@
 
 ## HIGH (significant functionality issues)
 
-### BUG-2/5: Join non-existent session navigates to broken game screen
-- **Repro:** Setup screen > paste random ID > Join.
-- **Expected:** Error toast, stay on setup screen.
-- **Actual:** Navigates to `/play/<id>`, shows broken game screen with "Waiting for events..." and WS error. Error message from backend shown in Russian regardless of UI language. Contradictory toasts: both "Connection error" and "Connected".
-- **Severity:** HIGH — no input validation before navigation.
+### ~~BUG-2/5: Join non-existent session navigates to broken game screen~~ ✅ FIXED
+- **Fix:** GameScreen watches `wsStatus` and redirects to `/` on `"error"`. User sees "Connection error" toast and lands back on setup screen.
 
 ### BUG-12/14/16: Backend event text always in Russian regardless of UI language
 - **Repro:** Set UI to English, play game, perform any action.
@@ -61,15 +51,11 @@
 ### ~~BUG-30: Spawn Creature type selection ignored~~ ✅ FIXED
 - **Fix:** 18d569b — Set `entity_type="monster"` for bare Creatures in `_entity_detail`.
 
-### BUG-37: Blank page on unknown routes (no 404 page)
-- **Repro:** Navigate to `/nonexistent-page`.
-- **Expected:** 404 page or redirect to setup.
-- **Actual:** Completely blank white page. Console warning "No routes matched".
+### ~~BUG-37: Blank page on unknown routes (no 404 page)~~ ✅ FIXED
+- **Fix:** Added catch-all `<Route path="*">` that redirects to `/`.
 
-### BUG-27: Optimistic UI update without rollback on API error
-- **Repro:** Master > World > Edit nation > save (triggers 422 due to BUG-26).
-- **Expected:** Values revert to original on error.
-- **Actual:** UI shows updated values despite backend returning 422. Stale/incorrect data displayed.
+### ~~BUG-27: Optimistic UI update without rollback on API error~~ ✅ FIXED
+- **Fix:** Added `.catch()` to `saveEdit()` in NationsTable and SettlementsTable — reverts form values to original server data on error.
 
 ---
 
@@ -190,15 +176,15 @@
 
 | Severity | Count | Fixed |
 |----------|-------|-------|
-| CRITICAL | 4     | 2     |
-| HIGH     | 7     | 2     |
-| MEDIUM   | 12    | 2     |
+| CRITICAL | 4     | 4     |
+| HIGH     | 7     | 5     |
+| MEDIUM   | 12    | 3     |
 | LOW      | 5     | 1     |
-| **Total**| **28**| **7** |
+| **Total**| **28**| **13**|
 
-**Fixed:** BUG-43, BUG-38, BUG-30, BUG-40, BUG-24, BUG-32, BUG-46 + WS deadlock.
+**Fixed:** BUG-43, BUG-38, BUG-30, BUG-40, BUG-24, BUG-32, BUG-46, BUG-17, BUG-26, BUG-2/5, BUG-27, BUG-37 + WS deadlock.
 
-Top 3 remaining priorities:
-1. **BUG-17** — Player action results not shown in EventLog
-2. **BUG-26** — Nation stability edit fails (float validation)
-3. **BUG-12** — Backend events always in Russian (i18n ignored at runtime)
+Top remaining priorities:
+1. **BUG-12** — Backend events always in Russian (i18n ignored at runtime)
+2. **BUG-2/5** — Join non-existent session navigates to broken game screen
+3. **BUG-9** — ActionBar missing most action buttons in peaceful mode

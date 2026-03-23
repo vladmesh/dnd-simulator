@@ -1,6 +1,6 @@
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
-import { BrowserRouter, Routes, Route } from "react-router"
+import { BrowserRouter, Routes, Route, Navigate } from "react-router"
 import "./index.css"
 import "./i18n"
 
@@ -31,6 +31,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="play/:sessionId" element={<GameScreen />} />
             <Route path="master" element={<MasterScreen />} />
             <Route path="master/:sessionId" element={<SessionView />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
       </BrowserRouter>

@@ -78,7 +78,11 @@ export const createTurnSlice: StateCreator<
 
   onActionResult: (msg) => {
     get().updatePlayer(msg.player)
-    get().appendEvents(msg.events)
+    const events = [...msg.events]
+    if (msg.error) {
+      events.push({ description: msg.error, event_type: "action_error" })
+    }
+    get().appendEvents(events)
     const updates: Partial<TurnSlice> = {
       mode: msg.mode,
       awareness: msg.awareness,

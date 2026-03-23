@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react"
-import { useParams } from "react-router"
+import { useParams, useNavigate } from "react-router"
 import { useGameStore } from "@/store/gameStore"
 import { Header } from "./Header"
 import { EventLog } from "./EventLog"
@@ -15,8 +15,10 @@ export function GameScreen() {
   const lastError = useGameStore((s) => s.lastError)
   const gameOver = useGameStore((s) => s.gameOver)
   const mode = useGameStore((s) => s.mode)
+  const wsStatus = useGameStore((s) => s.wsStatus)
   const playerName = useGameStore((s) => s.player?.name)
   const connectedRef = useRef(false)
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (!sessionId) return
@@ -31,6 +33,13 @@ export function GameScreen() {
       useGameStore.getState().disconnect()
     }
   }, [sessionId])
+
+  // Redirect to home if WS connection permanently failed (e.g. session not found)
+  useEffect(() => {
+    if (wsStatus === "error") {
+      navigate("/", { replace: true })
+    }
+  }, [wsStatus, navigate])
 
   // Dynamic page title with character name
   useEffect(() => {

@@ -23,8 +23,8 @@ from dnd_simulator.rules.actions import DASH_ACTION_COST, action_cost, ends_peac
 logger = logging.getLogger("dnd_simulator.round")
 
 # Callback fired after each individual action within a turn.
-# (creature, action, budget) — budget is None for peaceful turns.
-OnActionCallback = Callable[[Creature, Action, TurnBudget | None], None]
+# (creature, action, budget, error) — budget is None for peaceful turns, error is "" on success.
+OnActionCallback = Callable[[Creature, Action, TurnBudget | None, str], None]
 
 
 @dataclass
@@ -126,7 +126,7 @@ class Round:
                 budget.movement_remaining += creature.speed
                 actions.append(action)
                 if self._on_action:
-                    self._on_action(creature, action, budget)
+                    self._on_action(creature, action, budget, "")
                 continue
 
             # Enforce budget
@@ -140,16 +140,16 @@ class Round:
                 break
 
             budget.consume(cost)
-            success = creature.execute_action(action, emit_fn)
+            result = creature.execute_action(action, emit_fn)
 
             # Refund movement if move failed (wall, occupied cell)
-            if not success and action.name == "move":
+            if not result.success and action.name == "move":
                 budget.movement_remaining += cost.movement_ft
 
             actions.append(action)
 
             if self._on_action:
-                self._on_action(creature, action, budget)
+                self._on_action(creature, action, budget, result.error)
 
             # Special: wait action advances time immediately
             if action.name == "wait":
@@ -189,11 +189,11 @@ class Round:
             if action.name == "end_turn":
                 break
 
-            creature.execute_action(action, emit_fn)
+            result = creature.execute_action(action, emit_fn)
             actions.append(action)
 
             if self._on_action:
-                self._on_action(creature, action, None)
+                self._on_action(creature, action, None, result.error)
 
             # Special: wait action advances time immediately
             if action.name == "wait":
@@ -241,8 +241,9 @@ class Round:
             if action.name == "skip" or action == SKIP:
                 continue
 
-            creature.execute_action(action, emit_fn)
-            reactions.append(action)
+            reaction_result = creature.execute_action(action, emit_fn)
+            if reaction_result.success:
+                reactions.append(action)
 
         return reactions
 

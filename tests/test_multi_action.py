@@ -229,7 +229,7 @@ class TestMultiActionLoop:
 
         callback_log: list[tuple[str, str, int]] = []
 
-        def on_action(c: Creature, a: Action, b: TurnBudget | None) -> None:
+        def on_action(c: Creature, a: Action, b: TurnBudget | None, error: str = "") -> None:
             assert b is not None
             callback_log.append((c.id, a.name, b.actions))
 
@@ -347,7 +347,7 @@ class TestPeacefulTurn:
 
         callback_log: list[tuple[str, str, TurnBudget | None]] = []
 
-        def on_action(c: Creature, a: Action, b: TurnBudget | None) -> None:
+        def on_action(c: Creature, a: Action, b: TurnBudget | None, error: str = "") -> None:
             callback_log.append((c.id, a.name, b))
 
         game_round.set_on_action(on_action)

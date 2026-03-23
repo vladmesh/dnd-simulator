@@ -65,15 +65,15 @@ class SetBrainRequest(BaseModel):
 
 
 class PatchNationRequest(BaseModel):
-    wealth: float | None = Field(default=None, ge=0.0)
-    military: float | None = Field(default=None, ge=0.0)
-    stability: float | None = Field(default=None, ge=0.0, le=1.0)
+    wealth: float | None = Field(default=None, ge=0.0, le=100.0)
+    military: float | None = Field(default=None, ge=0.0, le=100.0)
+    stability: float | None = Field(default=None, ge=0.0, le=100.0)
 
 
 class PatchSettlementRequest(BaseModel):
     population: int | None = Field(default=None, ge=0)
-    prosperity: float | None = Field(default=None, ge=0.0, le=1.0)
-    defenses: float | None = Field(default=None, ge=0.0, le=1.0)
+    prosperity: float | None = Field(default=None, ge=0.0, le=100.0)
+    defenses: float | None = Field(default=None, ge=0.0, le=100.0)
 
 
 class CreateWorldRequest(BaseModel):

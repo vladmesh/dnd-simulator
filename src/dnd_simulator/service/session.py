@@ -289,7 +289,7 @@ class GameSession:
             game_round = Round(self.world, entities_layer)
 
             # Wire on_action: fires after each action by any creature
-            def on_action(creature: Creature, action: Action, budget: TurnBudget | None) -> None:
+            def on_action(creature: Creature, action: Action, budget: TurnBudget | None, error: str) -> None:
                 self._last_turn_msg = None  # turn is being processed
                 perceived = game_round.get_perceived_events(player)
                 query_fn = self.world._make_query_fn("entities")
@@ -304,6 +304,8 @@ class GameSession:
                     "player": _player_to_dict(player),
                     "location": _location_data(self.world, player.location_id),
                 }
+                if error:
+                    msg["error"] = error
                 if budget is not None and creature.id == player.id:
                     msg["budget"] = _budget_to_dict(budget)
                 self._fire("on_action_result", msg)

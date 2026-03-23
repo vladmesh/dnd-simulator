@@ -29,6 +29,7 @@ export interface ActionResultMessage {
   budget?: TurnBudget | null
   player: PlayerStatus
   location: LocationData
+  error?: string
 }
 
 export interface RoundResultMessage {

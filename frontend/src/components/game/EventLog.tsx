@@ -12,6 +12,7 @@ const EVENT_COLORS: Record<string, string> = {
   entity_move: "text-muted-foreground",
   entity_dodge: "text-yellow-400",
   entity_flee: "text-yellow-400",
+  action_error: "text-red-300 italic",
   weather_changed: "text-sky-400",
   time_advanced: "text-muted-foreground",
 }

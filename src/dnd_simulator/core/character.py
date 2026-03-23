@@ -8,7 +8,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from dnd_simulator.core.action import Action
-from dnd_simulator.core.models import EmitFn, Event, EventType
+from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType
 from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
@@ -211,8 +211,8 @@ class Creature(Entity):
     def is_alive(self) -> bool:
         return self.current_hp > 0
 
-    def execute_action(self, action: Action, emit_fn: EmitFn) -> bool:
-        """Execute a chosen action via emit_fn. Returns True if succeeded."""
+    def execute_action(self, action: Action, emit_fn: EmitFn) -> ActionResult:
+        """Execute a chosen action via emit_fn. Returns ActionResult."""
         if action.name == "idle":
             inspect_target = action.params.get("inspect_target") if action.params else None
             if inspect_target:
@@ -229,7 +229,7 @@ class Creature(Entity):
                 )
             else:
                 logger.info("[%s] → idle", self.name)
-            return True
+            return ActionResult()
         if action.name == "say":
             emit_fn(
                 Event(
@@ -238,9 +238,9 @@ class Creature(Entity):
                     data={"entity_id": self.id, "text": action.params.get("text", "")},
                 )
             )
-            return True
+            return ActionResult()
         if action.name == "attack":
-            result = emit_fn(
+            return emit_fn(
                 Event(
                     event_type=EventType.ENTITY_ATTACK,
                     source_layer="entities",
@@ -250,7 +250,6 @@ class Creature(Entity):
                     },
                 )
             )
-            return result.success
         if action.name == "dodge":
             logger.info("[%s] → dodge", self.name)
             emit_fn(
@@ -263,7 +262,7 @@ class Creature(Entity):
                     },
                 )
             )
-            return True
+            return ActionResult()
         if action.name == "flee":
             logger.info("[%s] → flee", self.name)
             emit_fn(
@@ -276,20 +275,19 @@ class Creature(Entity):
                     },
                 )
             )
-            return True
+            return ActionResult()
         if action.name == "move":
             direction = action.params.get("direction", "")
             ft = int(action.params.get("ft", 5))
             logger.info("[%s] → move %s %dft", self.name, direction, ft)
-            result = emit_fn(
+            return emit_fn(
                 Event(
                     event_type=EventType.ENTITY_MOVE,
                     source_layer="entities",
                     data={"entity_id": self.id, "direction": str(direction), "ft": ft},
                 )
             )
-            return result.success
-        return False
+        return ActionResult(success=False, error=f"Unknown action: {action.name}")
 
     def take_damage(self, amount: int) -> int:
         """Apply damage, return actual damage dealt (after clamping to 0)."""

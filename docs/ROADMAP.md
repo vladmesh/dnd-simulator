@@ -25,38 +25,40 @@ Multi-action turn loop с TurnBudget. Единый раунд для боя и �
 ### Combat system
 BattleMap (2D grid), инициатива, auto-exit после 2 idle раундов. D&D 5e diagonal distance, стены, коллизии.
 
+### Frontend — React веб-интерфейс
+React + TypeScript + shadcn/ui, dark theme. Игровой экран (EventLog, BattleMap, ActionBar, Nearby/Location/Character панели) + мастер-панель (World/Creatures/Time/Saves). WebSocket для real-time взаимодействия.
+
 ## In Progress
 
-### Frontend — веб-интерфейс
-Мастер-панель и интерфейс игрока. Vanilla HTML/CSS/JS, dark theme.
-→ [план](plans/frontend-debug-ui.md)
+### Level 0 — Фундамент game loop
+Активация/деактивация существ (active/dormant/dead), fast-forward времени.
+→ [брейншторм](brainstorms/ecs-and-content.md)
 
 ## Planned
+
+### Level 1 — Conditions и вычисляемые статы
+Modifier pipeline (AC, speed), D&D conditions (Prone, Poisoned, etc.). Proof-of-concept для data-driven механик.
+→ [брейншторм](brainstorms/ecs-and-content.md)
+
+### Level 2 — Инвентарь, Action Dispatch, Ресурсы
+Экипировка с модификаторами, реестр обработчиков действий, расходуемые ресурсы (spell slots, ki, rage).
+→ [брейншторм](brainstorms/ecs-and-content.md)
+
+### Level 3 — Заклинания, пропсы, торговля
+Gameplay-системы поверх инфраструктуры Level 1-2. Заклинания как YAML, интерактивные объекты (двери, сундуки), торговля.
+→ [брейншторм](brainstorms/ecs-and-content.md)
 
 ### Phase 3 — Автономные тики и эволюция NPC
 Триггерные пробуждения NPC по событиям мира. Периодические тики для ключевых NPC. Batch LLM-вызовы для групповых реакций. Graceful degradation без LLM.
 → [брейншторм](brainstorms/npc-lifecycle.md), [брейншторм](brainstorms/game-loop-and-master.md)
 
-### Система триггеров пробуждения
-Предзаданные триггеры в контенте + ручное пробуждение мастером. Механика — отдельный брейншторм.
-
-### Магия мысли
-Заклинания как CRUD над памятью NPC. Работает на всех NPC независимо от мозга.
-→ [брейншторм](brainstorms/magic-as-prompt-api.md)
-
 ### World Builder
 UI-визард для создания миров (7 шагов). Часть продукта для конечных пользователей.
 → [план](plans/world-builder.md)
 
-### WebSocket транспорт
-Замена REST на WebSocket для real-time взаимодействия. Основа для мультиплеера.
-
 ### Мультиплеер
 Несколько игроков в одном мире. Механика активности уже поддерживает это — игре всё равно, PlayerBrain или LlmBrain.
 
-### Расширение правил D&D 5e
-Классы, расы, экипировка, заклинания — постепенное добавление.
-
 ## Known Issues
 
-См. [backlog.md](backlog.md) — баги и мелкие фичи.
+См. [e2e-report.md](e2e-report.md) — результаты E2E-тестирования фронтенда.

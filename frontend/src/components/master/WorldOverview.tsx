@@ -95,6 +95,10 @@ function NationsTable({
         stability: parseFloat(values.stability),
       })
       .then(() => setEditing(null))
+      .catch(() => {
+        const orig = nations.find((n) => String(n.id) === nationId)
+        if (orig) startEdit(orig)
+      })
       .finally(() => setSaving(false))
   }
 
@@ -151,9 +155,9 @@ function NationsTable({
                     {isEditing ? (
                       <Input
                         type="number"
-                        step="0.01"
+                        step="1"
                         min="0"
-                        max="1"
+                        max="100"
                         className="h-7 w-20"
                         value={values.stability}
                         onChange={(e) => setValues({ ...values, stability: e.target.value })}
@@ -222,6 +226,10 @@ function SettlementsTable({
         defenses: parseFloat(values.defenses),
       })
       .then(() => setEditing(null))
+      .catch(() => {
+        const orig = settlements.find((s) => String(s.id) === settlementId)
+        if (orig) startEdit(orig)
+      })
       .finally(() => setSaving(false))
   }
 
@@ -266,9 +274,9 @@ function SettlementsTable({
                     {isEditing ? (
                       <Input
                         type="number"
-                        step="0.01"
+                        step="1"
                         min="0"
-                        max="1"
+                        max="100"
                         className="h-7 w-20"
                         value={values.prosperity}
                         onChange={(e) => setValues({ ...values, prosperity: e.target.value })}
@@ -281,9 +289,9 @@ function SettlementsTable({
                     {isEditing ? (
                       <Input
                         type="number"
-                        step="0.01"
+                        step="1"
                         min="0"
-                        max="1"
+                        max="100"
                         className="h-7 w-20"
                         value={values.defenses}
                         onChange={(e) => setValues({ ...values, defenses: e.target.value })}
