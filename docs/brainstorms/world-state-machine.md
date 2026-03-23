@@ -15,14 +15,14 @@
 
 ### Конкретные баги которые можно воспроизвести
 
-1. **Мёртвый NPC действует** — `execute_action` не проверяет `is_alive`
+1. ~~**Мёртвый NPC действует**~~ ✅ Закрыто Phase 1: `check_actor_alive` в Round
 2. **Действие вне хода** — нет проверки "сейчас ход этого существа"
-3. **Combat-only действие в мирное время** — dodge/flee/move вне боя не блокируется
-4. **Peaceful-only действие в бою** — say в бою (через execute_action напрямую)
+3. ~~**Combat-only действие в мирное время**~~ ✅ Закрыто Phase 1: `check_action_mode` (dodge/flee/dash вне боя)
+4. ~~**Peaceful-only действие в бою**~~ ✅ Закрыто Phase 1: `check_action_mode` (say в бою)
 5. **HP ниже 0** — `take_damage` клэмпит, но прямое `creature.current_hp = -5` ничто не блокирует
 6. **Золото из воздуха** — `creature.gold += 1000` никем не контролируется
 7. **Движение без бюджета** — move эмитит Event → resolve_move двигает, но бюджет проверяет только Round
-8. **Dormant существо действует** — `execute_action` не проверяет `active`
+8. ~~**Dormant существо действует**~~ ✅ Закрыто Phase 1: `check_actor_active` в Round
 
 ---
 
@@ -223,15 +223,21 @@ class Creature:
 
 ## Порядок внедрения (инкрементальный)
 
-### Фаза 1: Фундамент (минимальный, тестируемый) ← **начать с этого**
+### Фаза 1: Фундамент (минимальный, тестируемый) ✅
 
-1. **`rules/validation.py`** — `ActionValidator` + `ActionContext` + 3 базовые проверки:
+1. **`rules/validation.py`** — `validate_action()` + `ActionContext` + 3 проверки:
    - `check_actor_alive`
-   - `check_actor_active` 
+   - `check_actor_active`
    - `check_action_mode`
-2. **Интеграция в `Creature.execute_action`** — добавить `context` parameter
-3. **Интеграция в `Round`** — передавать context при вызове execute_action
-4. **Тесты** — unit tests на каждую проверку + integration test "мёртвый не атакует"
+2. **Интеграция в `Round`** — валидация в 3 точках: combat turn, peaceful turn, reactions
+3. **Тесты** — 20 unit tests в `tests/test_validation.py`
+
+**Отклонения от плана:**
+- **Валидация в Round, не в `execute_action`.** Plan предлагал добавить `context` parameter в `execute_action` с `context=None` bypass. Отказались: Round — единственный caller `execute_action`, протаскивание контекста через сигнатуру добавляет сложность без пользы, а `context=None` bypass обесценивает валидацию. Если появится второй оркестратор — перенесём.
+- **Функция `validate_action()` вместо класса `ActionValidator`.** Статический класс с одним методом — лишняя обёртка. Простая функция + список `_CHECKS` достаточны.
+- **`ActionContext` без `turn_budget` и `combat_state`.** В Phase 1 проверки не используют бюджет/позицию, поэтому контекст минимален: `is_combat` + `current_turn_entity_id`. Расширится при необходимости.
+- **`move` НЕ в `_COMBAT_ONLY`.** Plan включал move в combat-only, но move допустим и в мирном режиме (перемещение по карте). `_COMBAT_ONLY = {"dodge", "flee", "dash"}`.
+- **`say` → `_COMBAT_BLOCKED` (не `_PEACEFUL_ONLY`).** Терминология: say не "только для мира", он "заблокирован в бою". Два отдельных frozenset для ясности.
 
 ### Фаза 2: Budget enforcement
 

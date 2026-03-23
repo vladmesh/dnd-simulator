@@ -285,9 +285,7 @@ class CombatManager:
             actual_damage = target.take_damage(result.total_damage)
             log_data["damage"] = actual_damage
             log_data["damage_types"] = [d.type.value for d in result.damage]
-            log_data["damage_detail"] = [
-                {"amount": dr.amount, "type": dr.type.value} for dr in result.damage
-            ]
+            log_data["damage_detail"] = [{"amount": dr.amount, "type": dr.type.value} for dr in result.damage]
 
         # Log the attack BEFORE death/combat-end so event order is natural
         attack_log_event = Event(

@@ -136,9 +136,14 @@ class RuleBrain(Brain):
         logger.debug(
             "[RuleBrain:%s] turn start: HP=%d/%d (%.0f%%), speed=%d, conditions=[%s], "
             "budget=[actions=%d, move=%dft], enemies=%d",
-            creature.name, hp, max_hp, hp_ratio * 100,
-            awareness.self_speed, conditions_str,
-            budget.actions if budget else 0, budget.movement_remaining if budget else 0,
+            creature.name,
+            hp,
+            max_hp,
+            hp_ratio * 100,
+            awareness.self_speed,
+            conditions_str,
+            budget.actions if budget else 0,
+            budget.movement_remaining if budget else 0,
             len(nearby),
         )
 
@@ -189,7 +194,9 @@ class RuleBrain(Brain):
 
         logger.debug(
             "[RuleBrain:%s] → end_turn (no budget: actions=%d, move=%dft)",
-            creature.name, budget.actions if budget else 0, movement_left,
+            creature.name,
+            budget.actions if budget else 0,
+            movement_left,
         )
         return END_TURN
 
@@ -224,7 +231,11 @@ class RuleBrain(Brain):
             conds = ", ".join(sorted(c.value for c in enemy.conditions)) if enemy.conditions else ""
             logger.debug(
                 "  target %s: dist=%dft wounded=%s conds=[%s] score=%.0f",
-                eid, dist, enemy.is_wounded, conds, score,
+                eid,
+                dist,
+                enemy.is_wounded,
+                conds,
+                score,
             )
 
             if score > best_score:

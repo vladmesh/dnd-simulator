@@ -189,10 +189,10 @@ class TestMultiActionLoop:
         assert actions[0].name == "dodge"
 
     def test_free_action_then_costly_action(self) -> None:
-        """In combat: free action (say) + costly action (dodge) both execute."""
+        """In combat: free action (idle) + costly action (dodge) both execute."""
         brain = _ScriptedBrain(
             [
-                Action(name="say", params={"text": "prepare!"}),
+                Action(name="idle"),
                 Action(name="dodge"),
                 END_TURN,
             ]
@@ -208,12 +208,12 @@ class TestMultiActionLoop:
         actions = game_round.run_combat_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(actions) == 2
-        assert actions[0].name == "say"
+        assert actions[0].name == "idle"
         assert actions[1].name == "dodge"
 
     def test_on_action_callback_fires(self) -> None:
         """on_action callback fires after each action with current budget in combat."""
-        brain = _ScriptedBrain([Action(name="say", params={"text": "hi"}), END_TURN])
+        brain = _ScriptedBrain([Action(name="idle"), END_TURN])
         creature = Creature(id="c1", name="A", location_id="r1", brain=brain, in_combat=True)
 
         world = _make_world([creature])
@@ -233,7 +233,7 @@ class TestMultiActionLoop:
         game_round.run_combat_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(callback_log) == 1
-        assert callback_log[0] == ("c1", "say", 1)  # say is free, actions still 1
+        assert callback_log[0] == ("c1", "idle", 1)  # idle is free, actions still 1
 
     def test_awareness_includes_budget_in_combat(self) -> None:
         """Combat awareness includes turn_budget."""

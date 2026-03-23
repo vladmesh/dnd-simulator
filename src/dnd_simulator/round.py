@@ -26,6 +26,7 @@ from dnd_simulator.rules.actions import (
     get_num_bonus_actions,
 )
 from dnd_simulator.rules.conditions import effective_speed, is_incapacitated
+from dnd_simulator.rules.validation import ActionContext, validate_action
 
 logger = logging.getLogger("dnd_simulator.round")
 
@@ -127,7 +128,9 @@ class Round:
         if speed != creature.speed:
             logger.debug(
                 "[Round] %s speed reduced %d→%d by conditions: %s",
-                creature.name, creature.speed, speed,
+                creature.name,
+                creature.speed,
+                speed,
                 ", ".join(c.value for c in creature.conditions),
             )
         budget = TurnBudget(
@@ -148,6 +151,21 @@ class Round:
 
             if action.name == "end_turn":
                 break
+
+            # Validate preconditions (alive, active, combat/peaceful mode)
+            ctx = ActionContext(is_combat=True, current_turn_entity_id=creature.id)
+            validation_error = validate_action(creature, action, ctx)
+            if validation_error:
+                logger.warning(
+                    "[Round] %s action '%s' rejected: %s",
+                    creature.name,
+                    action.name,
+                    validation_error.message,
+                )
+                consecutive_failures += 1
+                if consecutive_failures >= 3:
+                    break
+                continue
 
             # Dash is special: costs 1 action, adds speed to movement pool, no world event
             if action.name == "dash":
@@ -182,7 +200,8 @@ class Round:
                 if consecutive_failures >= 3:
                     logger.warning(
                         "[Round] %s failed %d actions in a row, ending turn",
-                        creature.name, consecutive_failures,
+                        creature.name,
+                        consecutive_failures,
                     )
                     break
 
@@ -227,6 +246,18 @@ class Round:
             action = creature.brain.choose_action(creature, awareness, events)
 
             if action.name == "end_turn":
+                break
+
+            # Validate preconditions (alive, active, combat/peaceful mode)
+            ctx = ActionContext(is_combat=False, current_turn_entity_id=creature.id)
+            validation_error = validate_action(creature, action, ctx)
+            if validation_error:
+                logger.warning(
+                    "[Round] %s action '%s' rejected: %s",
+                    creature.name,
+                    action.name,
+                    validation_error.message,
+                )
                 break
 
             result = creature.execute_action(action, emit_fn)
@@ -279,6 +310,18 @@ class Round:
             action = creature.brain.choose_action(creature, awareness, perceived)
 
             if action.name == "skip" or action == SKIP:
+                continue
+
+            # Validate preconditions
+            ctx = ActionContext(is_combat=True, current_turn_entity_id=creature.id)
+            validation_error = validate_action(creature, action, ctx)
+            if validation_error:
+                logger.warning(
+                    "[Round] %s reaction '%s' rejected: %s",
+                    creature.name,
+                    action.name,
+                    validation_error.message,
+                )
                 continue
 
             reaction_result = creature.execute_action(action, emit_fn)
