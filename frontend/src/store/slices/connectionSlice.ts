@@ -1,4 +1,6 @@
 import type { StateCreator } from "zustand"
+import { toast } from "sonner"
+import i18next from "i18next"
 import { wsClient } from "@/transport/wsClient"
 import type { WsStatus } from "@/transport/wsClient"
 import type { GameStore } from "../gameStore"
@@ -19,8 +21,20 @@ export const createConnectionSlice: StateCreator<
 > = (set, get) => {
   // Subscribe to WS status changes — use setTimeout to avoid
   // useSyncExternalStore tearing during React commit phase
+  let prevStatus: WsStatus = "disconnected"
   wsClient.onStatus((wsStatus) => {
-    setTimeout(() => set({ wsStatus }), 0)
+    setTimeout(() => {
+      set({ wsStatus })
+      const t = (key: string) => i18next.t(key, { ns: "common" })
+      if (wsStatus === "connected" && prevStatus !== "connected") {
+        toast.success(t("ws_connected"))
+      } else if (wsStatus === "error") {
+        toast.error(t("ws_error"))
+      } else if (wsStatus === "disconnected" && prevStatus === "connected") {
+        toast.warning(t("ws_disconnected"))
+      }
+      prevStatus = wsStatus
+    }, 0)
   })
 
   // Subscribe to WS messages and dispatch to other slices
@@ -53,7 +67,22 @@ export const createConnectionSlice: StateCreator<
     playerId: null,
 
     connect: (sessionId: string, playerId?: string) => {
-      set({ sessionId, playerId: playerId ?? null })
+      // Reset all game state before connecting to a new session (BUG-43)
+      get().clearLog()
+      set({
+        sessionId,
+        playerId: playerId ?? null,
+        player: null,
+        mode: "peaceful",
+        awareness: null,
+        location: null,
+        budget: null,
+        gameTime: null,
+        isMyTurn: false,
+        waitingForAction: false,
+        gameOver: false,
+        lastError: null,
+      })
       wsClient.connect(sessionId, playerId)
     },
 
