@@ -4,15 +4,17 @@ import { initReactI18next } from "react-i18next"
 import commonEn from "./locales/en/common.json"
 import setupEn from "./locales/en/setup.json"
 import gameEn from "./locales/en/game.json"
+import masterEn from "./locales/en/master.json"
 
 import commonRu from "./locales/ru/common.json"
 import setupRu from "./locales/ru/setup.json"
 import gameRu from "./locales/ru/game.json"
+import masterRu from "./locales/ru/master.json"
 
 export const defaultNS = "common"
 export const resources = {
-  en: { common: commonEn, setup: setupEn, game: gameEn },
-  ru: { common: commonRu, setup: setupRu, game: gameRu },
+  en: { common: commonEn, setup: setupEn, game: gameEn, master: masterEn },
+  ru: { common: commonRu, setup: setupRu, game: gameRu, master: masterRu },
 } as const
 
 function detectLanguage(): string {

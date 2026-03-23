@@ -219,15 +219,15 @@ src/components/master/
 ```
 
 Шаги:
-- [ ] Роутинг: `/master` → список сессий, `/master/:id` → управление конкретной
-- [ ] masterStore: отдельный Zustand store, REST polling каждые 5s
-- [ ] SessionList: карточки сессий, кнопки Create/Delete
-- [ ] WorldOverview: shadcn Table для регионов/наций/поселений
-- [ ] CreatureList: таблица с фильтрами, кнопки Edit/Delete/Spawn
-- [ ] CreatureForm: Dialog с формой, все поля SpawnCreatureRequest
-- [ ] TimeControl: input hours + кнопка "Advance"
-- [ ] Saves: список сейвов, Save/Load/Delete
-- [ ] Проверить: создать сессию → заспавнить NPC → поменять HP → промотать время
+- [x] Роутинг: `/master` → список сессий, `/master/:id` → управление конкретной
+- [x] masterStore: отдельный Zustand store, REST polling каждые 5s
+- [x] SessionList: карточки сессий, кнопки Create/Delete
+- [x] WorldOverview: shadcn Table для регионов/наций/поселений
+- [x] CreatureList: таблица с фильтрами, кнопки Edit/Delete/Spawn
+- [x] CreatureForm: Dialog с формой, все поля SpawnCreatureRequest
+- [x] TimeControl: input hours + кнопка "Advance"
+- [x] Saves: список сейвов, Save/Load/Delete
+- [x] Проверить: создать сессию → заспавнить NPC → поменять HP → промотать время
 
 Результат: DM может управлять игрой без curl/Swagger.
 
@@ -256,7 +256,7 @@ src/components/master/
 Изначально `react-i18next` был в Out of Scope. Перенесён в скоуп, т.к. бэкенд и контент полностью двуязычные (en/ru) — бессмысленно не использовать.
 
 Реализация:
-- `react-i18next` + `i18next`, неймспейсы: `common`, `setup`, `game` (добавлять `master`, `combat` и т.д.)
+- `react-i18next` + `i18next`, неймспейсы: `common`, `setup`, `game`, `master`
 - JSON-файлы в `src/i18n/locales/{en,ru}/`
 - Автодетект по `navigator.language`, кнопка переключения EN/RU на экране выбора мира
 - `lang` передаётся в `getWorlds()` и `createSession()` → бэкенд отдаёт переведённый контент
@@ -286,6 +286,14 @@ src/components/master/
 
 Изначально budget отображался inline в ActionBar. Вынесен в `BudgetDisplay.tsx` с иконками (Swords/Zap/Footprints/Shield) и визуальным затемнением исчерпанных ресурсов. Используется и в мирном, и в боевом режиме.
 
+### Master Panel — без отдельного Zustand store
+
+План предусматривал `masterStore` (отдельный Zustand store с REST polling). Реализовано проще: каждый компонент (`MasterScreen`, `SessionView`, `CreatureList`, `SavesPanel`) управляет своим состоянием через `useState` + `useCallback` + `useEffect`. Автообновление через `setInterval` в `SessionView` (каждые 5s). Отдельный store не нужен — master-компоненты не делят состояние между собой, а REST-ответы не требуют cross-component реактивности.
+
+### Master Panel — shadcn Dialog установлен для CreatureForm
+
+`CreatureForm` использует shadcn Dialog (`@base-ui/react/dialog`): фокус-трап, Escape для закрытия, aria-атрибуты, анимации. `DialogContent` с `max-h-[85vh] overflow-y-auto` для длинных форм.
+
 ### Playwright MCP — добавлен для отладки
 
 Не был в плане. Добавлен headless Playwright через MCP для автоматизированного тестирования UI без ручного открытия браузера.
@@ -294,7 +302,7 @@ src/components/master/
 
 ## Что дальше
 
-Следующая фаза: **Phase 6 — Master Panel**. MasterScreen, SessionList, WorldOverview, CreatureList/Form, TimeControl.
+Следующая фаза: **Phase 7 — Polish**. Toast, loading states, keyboard shortcuts, favicon, cleanup.
 
 ---
 

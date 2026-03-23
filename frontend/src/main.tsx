@@ -18,6 +18,8 @@ import App from "./App"
 import { ErrorBoundary } from "./components/ErrorBoundary"
 import { SetupScreen } from "./components/setup/SetupScreen"
 import { GameScreen } from "./components/game/GameScreen"
+import { MasterScreen } from "./components/master/MasterScreen"
+import { SessionView } from "./components/master/SessionView"
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -27,6 +29,8 @@ createRoot(document.getElementById("root")!).render(
           <Route element={<App />}>
             <Route index element={<SetupScreen />} />
             <Route path="play/:sessionId" element={<GameScreen />} />
+            <Route path="master" element={<MasterScreen />} />
+            <Route path="master/:sessionId" element={<SessionView />} />
           </Route>
         </Routes>
       </BrowserRouter>

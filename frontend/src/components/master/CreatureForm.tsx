@@ -1,0 +1,189 @@
+import { useState } from "react"
+import { useTranslation } from "react-i18next"
+import { api } from "@/transport/apiClient"
+import type { CreatureResponse } from "@/types/api"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Loader2 } from "lucide-react"
+
+interface Props {
+  sessionId: string
+  creature: CreatureResponse | null // null = spawn new
+  onClose: () => void
+  onSaved: () => void
+}
+
+export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
+  const { t } = useTranslation(["master", "common"])
+  const isEdit = creature !== null
+
+  const [form, setForm] = useState({
+    id: creature?.id ?? "",
+    name: creature?.name ?? "",
+    entity_type: creature?.entity_type ?? "npc",
+    hp: creature?.hp ?? 10,
+    ac: creature?.ac ?? 10,
+    speed: 30,
+    start_location: creature?.location_id ?? "",
+    role: creature?.role ?? "",
+    personality: creature?.personality ?? "",
+    settlement_id: creature?.settlement_id ?? "",
+    ai: creature?.ai_type ?? "rule_based",
+    gold: creature?.gold ?? 0,
+  })
+
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const set = (field: string, value: string | number) =>
+    setForm((f) => ({ ...f, [field]: value }))
+
+  const submit = () => {
+    setSaving(true)
+    setError(null)
+
+    const promise = isEdit
+      ? api.master.patchCreature(sessionId, creature.id, {
+          current_hp: form.hp,
+          ac: form.ac,
+          location_id: form.start_location || null,
+          gold: form.gold,
+          personality: form.personality || null,
+        })
+      : api.master.spawnCreature(sessionId, {
+          id: form.id,
+          name: form.name,
+          entity_type: form.entity_type,
+          hp: form.hp,
+          ac: form.ac,
+          speed: form.speed,
+          start_location: form.start_location,
+          role: form.role,
+          personality: form.personality,
+          settlement_id: form.settlement_id,
+          ai: form.ai,
+        })
+
+    promise
+      .then(() => onSaved())
+      .catch((err) => setError(String(err.body?.detail ?? err.message)))
+      .finally(() => setSaving(false))
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {isEdit ? t("master:edit_creature") : t("master:spawn_creature")}
+          </DialogTitle>
+        </DialogHeader>
+
+        {error && (
+          <div className="rounded border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3">
+          {!isEdit && (
+            <>
+              <div>
+                <Label>{t("master:field_id")}</Label>
+                <Input value={form.id} onChange={(e) => set("id", e.target.value)} />
+              </div>
+              <div>
+                <Label>{t("master:field_entity_type")}</Label>
+                <select
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                  value={form.entity_type}
+                  onChange={(e) => set("entity_type", e.target.value)}
+                >
+                  <option value="npc">NPC</option>
+                  <option value="monster">Monster</option>
+                </select>
+              </div>
+            </>
+          )}
+
+          <div className={isEdit ? "col-span-2" : ""}>
+            <Label>{t("master:field_name")}</Label>
+            <Input value={form.name} onChange={(e) => set("name", e.target.value)} disabled={isEdit} />
+          </div>
+
+          <div>
+            <Label>{t("master:field_hp")}</Label>
+            <Input type="number" min={0} max={999} value={form.hp} onChange={(e) => set("hp", parseInt(e.target.value) || 0)} />
+          </div>
+          <div>
+            <Label>{t("master:field_ac")}</Label>
+            <Input type="number" min={0} max={30} value={form.ac} onChange={(e) => set("ac", parseInt(e.target.value) || 0)} />
+          </div>
+
+          {!isEdit && (
+            <div>
+              <Label>{t("master:field_speed")}</Label>
+              <Input type="number" min={0} value={form.speed} onChange={(e) => set("speed", parseInt(e.target.value) || 0)} />
+            </div>
+          )}
+
+          <div>
+            <Label>{t("master:field_location")}</Label>
+            <Input value={form.start_location} onChange={(e) => set("start_location", e.target.value)} />
+          </div>
+
+          {!isEdit && (
+            <div>
+              <Label>{t("master:field_ai")}</Label>
+              <select
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                value={form.ai}
+                onChange={(e) => set("ai", e.target.value)}
+              >
+                <option value="rule_based">{t("master:brain_rule")}</option>
+                <option value="llm">{t("master:brain_llm")}</option>
+              </select>
+            </div>
+          )}
+
+          <div>
+            <Label>{t("master:field_gold")}</Label>
+            <Input type="number" min={0} value={form.gold} onChange={(e) => set("gold", parseInt(e.target.value) || 0)} />
+          </div>
+
+          <div className="col-span-2">
+            <Label>{t("master:field_role")}</Label>
+            <Input value={form.role} onChange={(e) => set("role", e.target.value)} disabled={isEdit} />
+          </div>
+          <div className="col-span-2">
+            <Label>{t("master:field_personality")}</Label>
+            <Input value={form.personality} onChange={(e) => set("personality", e.target.value)} />
+          </div>
+
+          {!isEdit && (
+            <div className="col-span-2">
+              <Label>{t("master:field_settlement")}</Label>
+              <Input value={form.settlement_id} onChange={(e) => set("settlement_id", e.target.value)} />
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>{t("common:cancel")}</Button>
+          <Button onClick={submit} disabled={saving || (!isEdit && !form.id)}>
+            {saving && <Loader2 className="mr-1 size-3 animate-spin" />}
+            {isEdit ? t("common:save") : t("master:spawn_creature")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
