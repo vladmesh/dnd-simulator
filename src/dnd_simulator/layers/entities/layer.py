@@ -503,6 +503,8 @@ class EntitiesLayer(Layer):
                     continue
                 if filter_type == "npc" and not isinstance(e, Npc):
                     continue
+                if filter_type == "monster" and (isinstance(e, (PlayerCharacter, Npc))):
+                    continue
                 result.append(self._entity_detail(e))
             return Answer(value=result)
 
@@ -605,7 +607,7 @@ class EntitiesLayer(Layer):
             )
         if isinstance(entity, PlayerCharacter):
             base["entity_type"] = "player"
-        if isinstance(entity, Npc):
+        elif isinstance(entity, Npc):
             base.update(
                 {
                     "entity_type": "npc",
@@ -616,6 +618,8 @@ class EntitiesLayer(Layer):
                     "memory": entity.memory.to_dict(),
                 }
             )
+        elif isinstance(entity, Creature):
+            base["entity_type"] = "monster"
         return base
 
     def _npc_detail(self, npc: Npc) -> dict[str, object]:

@@ -66,12 +66,12 @@ export function CombatPanel() {
         {combat.nearby.map((entity) => (
           <div key={entity.id} className="rounded border border-border p-2 text-xs">
             <div className="flex items-start justify-between gap-1">
-              <span className="font-medium">{entity.id}</span>
+              <span className="font-medium">{entity.description}</span>
               {entity.is_wounded && (
                 <span className="text-red-400">{t("game:wounded")}</span>
               )}
             </div>
-            <p className="mt-0.5 text-muted-foreground">{entity.description}</p>
+            <p className="mt-0.5 font-mono text-muted-foreground">{entity.id}</p>
             {entity.distance_ft != null && (
               <p className="text-muted-foreground">
                 {t("game:distance", { ft: entity.distance_ft, dir: entity.direction ?? "" })}
