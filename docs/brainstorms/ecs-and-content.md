@@ -35,25 +35,69 @@
 
 Без этого уровня остальное строить бессмысленно: нет рабочего цикла игры.
 
-### 0a. Активация / деактивация существ
+### 0a. Активация / деактивация существ ✅
 
-**Сейчас:** `active` = жив/мёртв. Все живые NPC ходят каждый раунд, везде. При 100 NPC это 100 вызовов brain.choose_action() каждые 6 секунд игрового времени.
+**Сейчас:** ~~`active` = жив/мёртв. Все живые NPC ходят каждый раунд, везде.~~ **Сделано.**
 
-**Нужно:** три состояния — active / dormant / dead. Правила:
-- Игрок всегда active.
-- Существа в локации с игроком — active автоматически, dormant при уходе игрока.
-- Пробуждённые вручную (мастер/триггер) — active пока не уснут.
-- Все остальные — dormant (живы, но не участвуют в раунде).
+**Реализовано:** `active: bool` — proximity-based, не трёхстатусный enum.
+- `active=True` — существо участвует в раундах (рядом с игроком или в бою).
+- `active=False` — dormant (живо, но не ходит).
+- Смерть = `is_alive` (hp <= 0), не `active=False`. Мёртвые не удаляются со слоя (видны как трупы), но не ходят (проверка `is_alive` в `run_round`). Убрана избыточная строка `target.active = False` при смерти в `combat_manager`.
 
-Описано в VISION ("Активность"), но не реализовано.
+**Отклонения от плана:**
+- **Без enum.** Вместо трёх состояний (active/dormant/dead) — булев `active` + `is_alive`. Dead не нужен отдельным значением: воскрешение = создание нового существа, а не переключение флага.
+- **Без ручного пробуждения (мастер/триггер).** Пока не реализовано — все dormant/active решается proximity. Можно добавить позже.
 
-### 0b. Fast-forward времени
+**Механика:**
+- `EntitiesLayer.update_activation(time)` вызывается в начале каждого `Round.run_round()`.
+- Находит все `PlayerCharacter`, собирает их `location_id`.
+- Для каждого не-игрока: `active = (effective_location in player_locations) or in_combat`.
+- NPC с расписанием: `effective_location = current_location(hour)` (расписание > `location_id`).
+- Без игроков (тесты без PlayerCharacter) — no-op, ничего не меняет.
+- `Round.run_loop()` получил параметр `max_rounds` для контролируемого завершения в тестах.
 
-**Сейчас:** когда никто не active — время стоит.
+### 0b. Fast-forward времени ✅
 
-**Нужно:** если нет active существ (все в пути, wait, dormant) — мгновенная перемотка тиками слоёв. Игрок идёт 6 часов → 6 тиков Geography, мгновенно.
+**Сейчас:** ~~когда никто не active — время стоит.~~ **Сделано.**
 
-Описано в VISION ("Быстрая перемотка"), но не реализовано.
+**Реализовано:** wait + fast-forward как единая система.
+- `wait(hours=N)` ставит `creature.wake_at_seconds = now + N*3600`, существо становится dormant.
+- Работает для всех существ, не только для игрока.
+- `Round.run_loop()`: после раунда, если нет active существ — `_fast_forward()` ищет ближайший `wake_at`, мотает `advance_time` до этой точки, вызывает `update_activation`.
+- Если `wake_at` нет ни у кого — loop завершается (мир замер).
+- Player с `wake_at` не является якорем — его proximity не активирует NPC рядом.
+- При пробуждении (timer expired) player снова якорь → NPC рядом реактивируются.
+
+**Пробуждение:**
+- По таймеру: `wake_at_seconds` достигнут → `update_activation` обнуляет wake_at, существо снова eligible для активации.
+- По proximity: если существо активировано proximity (якорь рядом), `wake_at` обнуляется (разбудили раньше).
+- По атаке: пока не реализовано (отдельная механика).
+- Мастером: пока не реализовано.
+
+**Отклонения от плана:**
+- Travel (`wait(travel_to=X)`) остался как legacy — мгновенный перенос + advance_time. Будет переделан.
+- `wake_at_seconds` персистится в save/load.
+
+**NPC и wait:**
+- NPC с расписанием при dormancy "растворяются в расписании" — существуют как запись schedule, активируются когда якорь оказывается в их scheduled location.
+- NPC brain может вернуть `wait` — NPC засыпает с таймером, просыпается по wake_at или по proximity.
+
+### 0d. Explicit locations + NPC schedule placement ✅
+
+**Сейчас:** ~~Location автогенерируется из Region (1 region = 1 location). NPC schedule ссылается на виртуальные `{settlement_id}_{label}` location_id которых нет в графе. Proximity activation не работает для миров с settlement NPC.~~ **Сделано.**
+
+**Реализовано:**
+- **Убрана `_generate_locations_from_regions`.** Каждый мир обязан определить locations явно — crash при отсутствии.
+- **Settlement locations в village.yaml:** 8 locations (village_square, millbrook_smithy, millbrook_tavern, millbrook_market, millbrook_home, millbrook_fields, millbrook_barracks, millbrook_patrol) с описаниями и edges.
+- **arena.yaml:** `arena_floor` как единственная location.
+- **NPC/player используют `start_location`** вместо `region_id`. `start_region` остался как legacy alias в API.
+- **Schedule validation:** `resolve_schedule` принимает `known_locations` — entries с несуществующими locations отбрасываются. `parse_npc` крашится если `start_location` не в known_locations. Spawn API тоже валидирует.
+- **NPC перемещение по расписанию:** `update_activation` теперь перемещает NPC в `effective_location` при активации (`e.location_id = effective_location`). Кузнец днём в кузнице, вечером в таверне. Canned dialogue зависит от activity.
+
+**Дизайн-решения:**
+- Settlement ≠ Location. Settlement — экономическая абстракция (Politics/Settlements layer). Location — конкретное место в LocationGraph.
+- Schedule labels (`smithy`, `tavern`) пока резолвятся как `{settlement_id}_{label}`. В будущем возможен маппинг через settlement role→location (Level 2+).
+- Маленькие settlements могут быть одной location. Большие — десятками. Это решение мастера.
 
 ### 0c. Round как часть ядра ✅
 

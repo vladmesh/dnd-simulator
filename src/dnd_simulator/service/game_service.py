@@ -67,9 +67,9 @@ class GameService(
         regions = load_world(world_path, lang=lang)
         nations = load_nations(world_path, lang=lang)
         settlements = load_settlements(world_path, lang=lang)
-        npcs = load_npcs(world_path, lang=lang)
         locations = load_locations(world_path, regions, lang=lang)
         location_graph = LocationGraph(locations)
+        npcs = load_npcs(world_path, lang=lang, known_locations=set(location_graph.all_ids()))
         region_terrains = extract_region_terrains(regions)
 
         # Players are created via API (create_player), not from templates
@@ -166,8 +166,8 @@ class GameService(
         regions = load_world(world_path)
         nations = load_nations(world_path)
         settlements = load_settlements(world_path)
-        npcs_list = load_npcs(world_path)
         locations = load_locations(world_path, regions)
+        npcs_list = load_npcs(world_path, known_locations={loc.id for loc in locations})
         battle_maps = load_battle_maps(world_path)
 
         return {

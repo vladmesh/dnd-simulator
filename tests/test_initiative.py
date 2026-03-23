@@ -486,9 +486,6 @@ class TestGameLoopCombat:
                 events: list[PerceivedEvent],
             ) -> Action:
                 turn_log.append(creature.id)
-                # Stop the loop after first round
-                if len(turn_log) >= 3:
-                    creature.active = False
                 return END_TURN
 
         c_combat1 = Character(
@@ -514,7 +511,7 @@ class TestGameLoopCombat:
         combat = layer.get_combat("r1")
         combat.turn_order = ["c1", "c2"]
 
-        Round(world, layer).run_loop()
+        Round(world, layer).run_loop(max_rounds=1)
 
         # c3 should have taken a turn (it's peaceful, in a different region)
         assert "c3" in turn_log

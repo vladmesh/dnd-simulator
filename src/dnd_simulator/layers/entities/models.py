@@ -147,20 +147,24 @@ DEFAULT_SCHEDULE_TEMPLATES: dict[str, list[tuple[int, int, NpcActivity, str]]] =
 }
 
 
-def resolve_schedule(role: str, settlement_id: str) -> list[ScheduleEntry]:
-    """Build a schedule from a role template, resolving relative location labels."""
+def resolve_schedule(
+    role: str, settlement_id: str, known_locations: set[str] | None = None
+) -> list[ScheduleEntry]:
+    """Build a schedule from a role template, resolving relative location labels.
+
+    If *known_locations* is provided, every resolved location_id must exist in the
+    set — entries pointing at non-existent locations are silently dropped.
+    """
     template = DEFAULT_SCHEDULE_TEMPLATES.get(role)
     if not template:
         return []
-    return [
-        ScheduleEntry(
-            start_hour=start,
-            end_hour=end,
-            activity=activity,
-            location_id=f"{settlement_id}_{label}" if settlement_id else label,
-        )
-        for start, end, activity, label in template
-    ]
+    entries: list[ScheduleEntry] = []
+    for start, end, activity, label in template:
+        loc = f"{settlement_id}_{label}" if settlement_id else label
+        if known_locations is not None and loc not in known_locations:
+            continue
+        entries.append(ScheduleEntry(start_hour=start, end_hour=end, activity=activity, location_id=loc))
+    return entries
 
 
 # Flavor text: what the NPC looks like they're doing.

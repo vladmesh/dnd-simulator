@@ -103,7 +103,7 @@ def _run_test(sid: str) -> None:
         "hp": 28,
         "ac": 16,
         "gold": 50,
-        "start_region": "silverport",
+        "start_location": "silverport_city_tavern",
         "ability_scores": {"str": 16, "dex": 14, "con": 14, "int": 10, "wis": 12, "cha": 8},
         "attacks": [
             {"name": "longbow", "ability": "dex", "damage": [{"dice": "1d8", "type": "piercing"}], "reach": 150},

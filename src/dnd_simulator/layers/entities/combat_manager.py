@@ -270,7 +270,6 @@ class CombatManager:
         self._location_log[attacker.location_id].append(attack_log_event)
 
         if result.hit and not target.is_alive:
-            target.active = False
             target.in_combat = False
             death_event = Event(
                 event_type=EventType.ENTITY_DIED,

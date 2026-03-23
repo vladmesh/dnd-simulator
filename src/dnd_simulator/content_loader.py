@@ -35,7 +35,6 @@ from dnd_simulator.layers.geography.models import (
 )
 from dnd_simulator.layers.politics.models import Leader, LeaderTrait, Nation
 from dnd_simulator.layers.settlements.models import Settlement, SettlementType
-from dnd_simulator.rules.geography import calculate_distance_km
 
 
 def resolve_text(value: object, lang: str = "en") -> str:
@@ -144,9 +143,7 @@ def load_world(path: Path, lang: str = "en") -> list[Region]:
 def load_locations(path: Path, regions: list[Region], lang: str = "en") -> list[Location]:
     """Load locations from a world YAML file or directory.
 
-    If locations.yaml exists, load from it.
-    Otherwise, auto-generate one location per region from region data
-    (backward compat for worlds without explicit locations).
+    Every world must define at least one location explicitly.
     """
     is_dir, resolved = _resolve_source(path)
 
@@ -160,11 +157,10 @@ def load_locations(path: Path, regions: list[Region], lang: str = "en") -> list[
         locations_data = data.get("locations", {})
         assert isinstance(locations_data, dict)
 
-    if locations_data:
-        return _parse_locations(locations_data, lang)
+    if not locations_data:
+        raise RuntimeError(f"No locations defined in world at {path}. Add a 'locations:' section.")
 
-    # Fallback: auto-generate from regions
-    return _generate_locations_from_regions(regions)
+    return _parse_locations(locations_data, lang)
 
 
 def _parse_locations(data: dict[str, Any], lang: str = "en") -> list[Location]:
@@ -190,30 +186,6 @@ def _parse_locations(data: dict[str, Any], lang: str = "en") -> list[Location]:
         )
     return locations
 
-
-def _generate_locations_from_regions(regions: list[Region]) -> list[Location]:
-    """Auto-generate one Location per Region for backward compat."""
-    region_map = {r.id: r for r in regions}
-    locations: list[Location] = []
-
-    for region in regions:
-        edges: list[LocationEdge] = []
-        for conn in region.connections:
-            target = region_map.get(conn.target_id)
-            if target:
-                dist_km = calculate_distance_km(region.latitude, region.longitude, target.latitude, target.longitude)
-                edges.append(LocationEdge(target_id=conn.target_id, distance_m=int(dist_km * 1000)))
-
-        locations.append(
-            Location(
-                id=region.id,
-                name=region.name,
-                region_id=region.id,
-                edges=tuple(edges),
-            )
-        )
-
-    return locations
 
 
 def load_nations(path: Path, lang: str = "en") -> list[Nation]:
@@ -273,25 +245,25 @@ def load_settlements(path: Path, lang: str = "en") -> list[Settlement]:
     return settlements
 
 
-def load_npcs(path: Path, lang: str = "en") -> list[Npc]:
+def load_npcs(path: Path, lang: str = "en", known_locations: set[str] | None = None) -> list[Npc]:
     """Load NPCs from a world YAML file or directory."""
     is_dir, path = _resolve_source(path)
     npcs_data = _load_section(path, is_dir, "npcs")
 
     npcs: list[Npc] = []
     for npc_id, ndata in npcs_data.items():
-        npcs.append(parse_npc(str(npc_id), ndata, lang=lang))
+        npcs.append(parse_npc(str(npc_id), ndata, lang=lang, known_locations=known_locations))
 
     return npcs
 
 
-def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en") -> Npc:
+def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locations: set[str] | None = None) -> Npc:
     """Parse a single NPC from YAML data."""
     role = str(ndata.get("role", ""))
     settlement_id = str(ndata.get("settlement_id", ""))
 
     # Resolve schedule: role-based template with settlement prefix
-    schedule = resolve_schedule(role, settlement_id)
+    schedule = resolve_schedule(role, settlement_id, known_locations=known_locations)
 
     race = Race(ndata["race"]) if "race" in ndata else Race.HUMAN
     char_class = CharClass(ndata["class"]) if "class" in ndata else CharClass.COMMONER
@@ -300,13 +272,13 @@ def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en") -> Npc:
     max_hp = int(ndata.get("hp", 4))
     ai_type = str(ndata.get("ai", "rule_based"))
 
-    # Location: prefer start_location, fall back to settlement default, then region
-    location_id = str(ndata.get("start_location", ""))
-    if not location_id and settlement_id:
-        # Default: NPC starts at their settlement's home location
-        location_id = f"{settlement_id}_home"
-    if not location_id:
-        location_id = str(ndata.get("region_id", ""))
+    # Location: start_location is required (or legacy region_id fallback)
+    location_id = str(ndata.get("start_location", "") or ndata.get("region_id", ""))
+    if known_locations is not None and location_id and location_id not in known_locations:
+        raise RuntimeError(
+            f"NPC '{npc_id}' has start_location '{location_id}' which is not a known location. "
+            f"Known: {sorted(known_locations)}"
+        )
 
     # Parse initial memory from YAML (optional)
     memory_data = ndata.get("memory")

@@ -200,6 +200,7 @@ class Creature(Entity):
     attacks: tuple[Attack, ...] = ()
     in_combat: bool = False
     is_dodging: bool = False
+    wake_at_seconds: int | None = None  # absolute game-time seconds; None = not waiting
     brain: Brain | None = field(default=None, repr=False)
 
     @property
@@ -287,6 +288,9 @@ class Creature(Entity):
                     data={"entity_id": self.id, "direction": str(direction), "ft": ft},
                 )
             )
+        if action.name == "wait":
+            logger.info("[%s] → wait", self.name)
+            return ActionResult()
         return ActionResult(success=False, error=f"Unknown action: {action.name}")
 
     def take_damage(self, amount: int) -> int:

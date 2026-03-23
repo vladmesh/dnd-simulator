@@ -253,6 +253,9 @@ class Round:
         emit_fn = self._world._make_emit_fn("entities")
         time = self._world.time
 
+        # Activate creatures near players, dormify the rest
+        self._entities.update_activation(time)
+
         # Combat rounds: iterate by initiative order per location
         for location_id in list(self._entities.get_combat_locations()):
             combat = self._entities.get_combat(location_id)
@@ -277,20 +280,64 @@ class Round:
 
         return RoundResult(events=tick_events)
 
-    def run_loop(self) -> None:
+    def run_loop(self, max_rounds: int | None = None) -> None:
         """Run rounds until no active creatures remain or stop() is called."""
+        rounds_run = 0
         while not self._stop_flag:
+            # Update activation before checking — resolves stale state from previous round
+            self._entities.update_activation(self._world.time)
             active = self._entities.get_active_creatures()
             if not active:
-                break
+                if not self._fast_forward():
+                    break
+                continue  # re-check active after fast-forward
             result = self.run_round()
+            rounds_run += 1
             if self._on_round_end:
                 self._on_round_end(result)
             if result.should_stop:
                 break
+            if max_rounds is not None and rounds_run >= max_rounds:
+                break
+
+    def _fast_forward(self) -> bool:
+        """Advance time to the nearest wake_at when no creatures are active.
+
+        Returns True if time was advanced (loop should continue), False if
+        there's nobody to wake up (loop should exit).
+        """
+        nearest_wake: int | None = None
+        for e in self._entities._entities.values():
+            if isinstance(e, Creature) and e.wake_at_seconds is not None:
+                if nearest_wake is None or e.wake_at_seconds < nearest_wake:
+                    nearest_wake = e.wake_at_seconds
+
+        if nearest_wake is None:
+            return False
+
+        now = self._world.time.to_total_seconds()
+        delta_seconds = nearest_wake - now
+        if delta_seconds <= 0:
+            # Timer already expired — just run update_activation
+            self._entities.update_activation(self._world.time)
+            return True
+
+        logger.info("[FastForward] Advancing %d seconds to next wake_at", delta_seconds)
+        tick_events = self._world.advance_time(TimeDelta(seconds=delta_seconds))
+        self._entities.update_activation(self._world.time)
+
+        if self._on_round_end:
+            self._on_round_end(RoundResult(events=tick_events))
+
+        return True
 
     def _handle_wait(self, action: Action, creature: Creature | None = None) -> None:
-        """Handle a 'wait' action by advancing time, optionally traveling."""
+        """Handle a 'wait' action — creature goes dormant until wake_at.
+
+        Travel: immediate move + advance (legacy, will be refactored).
+        Plain wait: set wake_at, creature becomes dormant. Fast-forward in run_loop
+        handles the actual time advancement.
+        """
         travel_to = action.params.get("travel_to")
         if travel_to and creature:
             target_id = str(travel_to)
@@ -311,8 +358,14 @@ class Round:
                         except ValueError:
                             pass
                         break
-        else:
+        elif creature:
             raw = action.params.get("hours", 1)
             hours = int(str(raw))
             if hours > 0:
-                self._world.advance_time(TimeDelta.from_hours(hours))
+                now = self._world.time.to_total_seconds()
+                creature.wake_at_seconds = now + hours * 3600
+                creature.active = False
+                logger.info(
+                    "[Wait] %s sleeps for %dh (wake_at=%d)",
+                    creature.name, hours, creature.wake_at_seconds,
+                )

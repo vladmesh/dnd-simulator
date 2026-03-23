@@ -142,10 +142,7 @@ class TestMultiActionLoop:
         """Brain does one action then end_turn. Round records it."""
         brain = _ScriptedBrain([Action(name="say", params={"text": "hi"}), END_TURN])
         creature = Creature(id="c1", name="A", location_id="r1", brain=brain)
-        creature.active = False  # prevent loop from repeating
-
         world = _make_world([creature])
-        creature.active = True
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
         game_round = Round(world, el)
 

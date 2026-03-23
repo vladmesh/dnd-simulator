@@ -128,7 +128,7 @@ class TestCreatureHotControls:
                 "id": "goblin_scout",
                 "name": "Goblin Scout",
                 "entity_type": "npc",
-                "region_id": "silverport",
+                "start_location": "silverport_city_gate",
                 "role": "guard",
                 "hp": 7,
                 "ac": 13,
@@ -150,7 +150,7 @@ class TestCreatureHotControls:
                 "id": "wolf_1",
                 "name": "Dire Wolf",
                 "entity_type": "monster",
-                "start_location": "silverport_city",
+                "start_location": "silverport_city_gate",
                 "hp": 37,
                 "ac": 14,
             },
@@ -298,7 +298,7 @@ class TestPlayerCharacterCreation:
                 "hp": 14,
                 "ac": 16,
                 "gold": 100,
-                "start_region": "silverport",
+                "start_location": "silverport_city_tavern",
             },
         )
         assert resp.status_code == 200
@@ -306,7 +306,7 @@ class TestPlayerCharacterCreation:
         assert data["name"] == "Thrain"
         assert data["race"] == "dwarf"
         assert data["hp"] == 14
-        assert data["location_id"] == "silverport"
+        assert data["location_id"] == "silverport_city_tavern"
 
     def test_create_character_default_region(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)

@@ -92,6 +92,75 @@ class EntitiesLayer(Layer):
         """Get all active creatures in the world (for the main game loop)."""
         return [e for e in self._entities.values() if isinstance(e, Creature) and e.active]
 
+    def update_activation(self, time: GameDateTime) -> None:
+        """Activate creatures near players, dormify the rest.
+
+        Rules:
+        - PlayerCharacter without wake_at is always active (anchor).
+        - PlayerCharacter with wake_at is dormant (not an anchor) until timer expires.
+        - Creatures at an anchor's location are active.
+        - Creatures in combat are active (don't interrupt fights).
+        - Creatures activated by proximity get wake_at cleared (woken early).
+        - Everyone else is dormant (active=False).
+
+        No-op if no players exist (e.g. in tests without PlayerCharacter).
+        """
+        from dnd_simulator.core.player import PlayerCharacter
+
+        now = time.to_total_seconds()
+
+        # First pass: expire wake_at timers, collect anchor locations
+        player_locations: set[str] = set()
+        has_players = False
+        for e in self._entities.values():
+            if not isinstance(e, PlayerCharacter):
+                continue
+            has_players = True
+            if not e.is_alive:
+                continue
+            # Check wake_at expiry
+            if e.wake_at_seconds is not None and now >= e.wake_at_seconds:
+                e.wake_at_seconds = None
+                logger.info("[Activation] %s woke up (timer expired)", e.id)
+            # Player is anchor only if not waiting
+            if e.wake_at_seconds is None:
+                e.active = True
+                player_locations.add(e.location_id)
+            else:
+                e.active = False
+
+        if not has_players:
+            return
+
+        # Second pass: activate/dormify non-player creatures
+        hour = time.hour
+        for e in self._entities.values():
+            if not isinstance(e, Creature) or isinstance(e, PlayerCharacter):
+                continue
+            if not e.is_alive:
+                continue
+
+            # Expire wake_at for non-players too
+            if e.wake_at_seconds is not None and now >= e.wake_at_seconds:
+                e.wake_at_seconds = None
+                logger.info("[Activation] %s woke up (timer expired)", e.id)
+
+            effective_location = e.location_id
+            if isinstance(e, Npc):
+                effective_location = e.current_location(hour)
+
+            should_activate = effective_location in player_locations or e.in_combat
+            e.active = should_activate
+
+            # Move NPC to their scheduled location when activated
+            if should_activate and effective_location != e.location_id:
+                e.location_id = effective_location
+
+            # Proximity wakeup: clear pending wait timer
+            if should_activate and e.wake_at_seconds is not None:
+                logger.info("[Activation] %s woken early by proximity", e.id)
+                e.wake_at_seconds = None
+
     # -- Combat (delegated to CombatManager) --
 
     def get_combat_locations(self) -> list[str]:
@@ -649,6 +718,8 @@ class EntitiesLayer(Layer):
                 "location_id": e.location_id,
                 "active": e.active,
             }
+            if isinstance(e, Creature) and e.wake_at_seconds is not None:
+                data["wake_at_seconds"] = e.wake_at_seconds
             if isinstance(e, PlayerCharacter):
                 data["entity_type"] = "player"
                 data.update(e.to_full_save_data())
@@ -691,6 +762,9 @@ class EntitiesLayer(Layer):
                 loc = edata.get("location_id") or edata.get("region_id")
                 if loc:
                     entity.location_id = str(loc)
+                if isinstance(entity, Creature):
+                    wake_at = edata.get("wake_at_seconds")
+                    entity.wake_at_seconds = int(wake_at) if wake_at is not None else None
                 if isinstance(entity, PlayerCharacter):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
                     entity.gold = int(edata.get("gold", entity.gold))

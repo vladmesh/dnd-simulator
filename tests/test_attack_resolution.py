@@ -97,7 +97,6 @@ class TestAttackResolution:
         result: ActionResult = ActionResult()
         for _ in range(20):
             target.current_hp = 1
-            target.active = True
             result = layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)
             if not result.success:
                 continue
@@ -107,7 +106,7 @@ class TestAttackResolution:
         death_events = [e for e in result.events if e.event_type == EventType.ENTITY_DIED]
         assert len(death_events) == 1
         assert death_events[0].data["entity_id"] == "target"
-        assert target.active is False
+        assert target.is_alive is False
 
     def test_unarmed_strike_when_no_weapons(self) -> None:
         """Creatures with no attacks fall back to unarmed strike (1 bludgeoning)."""

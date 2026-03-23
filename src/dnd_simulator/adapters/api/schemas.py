@@ -20,7 +20,8 @@ class CreatePlayerRequest(BaseModel):
     hp: int = Field(default=10, ge=1, le=999)
     ac: int = Field(default=10, ge=0, le=30)
     gold: int = Field(default=0, ge=0)
-    start_region: str = ""
+    start_location: str = ""
+    start_region: str = ""  # legacy alias for start_location
     ability_scores: dict[str, int] | None = None
     attacks: list[dict[str, object]] | None = None
 

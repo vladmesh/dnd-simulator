@@ -56,7 +56,8 @@ class CreatureCommands:
         - "monster" → Creature (bare creature with attacks)
         """
         session = self._get_session(session_id)  # type: ignore[attr-defined]
-        entity = _parse_spawn(data)
+        known_locations = set(session.world.location_graph.all_ids())
+        entity = _parse_spawn(data, known_locations=known_locations)
         self._get_entities_layer(session).add_entity(entity)
         return entity
 
@@ -140,14 +141,14 @@ class CreatureCommands:
             raise ValueError(f"Unknown brain type: {brain_type}")
 
 
-def _parse_spawn(data: dict[str, Any]) -> Entity:
+def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) -> Entity:
     """Create the right entity type based on entity_type field."""
     entity_type = str(data.get("entity_type", "npc"))
 
     if entity_type == "npc":
         from dnd_simulator.content_loader import parse_npc
 
-        return parse_npc(str(data["id"]), data)
+        return parse_npc(str(data["id"]), data, known_locations=known_locations)
 
     # Monster / generic creature
     from dnd_simulator.content_loader import parse_ability_scores, parse_attacks

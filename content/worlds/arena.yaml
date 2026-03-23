@@ -22,6 +22,12 @@ regions:
         - [0, 40, 25, 40]    # horizontal wall, west half
         - [55, 40, 80, 40]   # horizontal wall, east half (gap 25-55 in middle)
 
+locations:
+  arena_floor:
+    name: Кровавая Арена
+    region: arena
+    description: "Песчаная арена, окружённая каменными стенами. Толпа ревёт."
+
 nations: {}
 
 player:
@@ -41,7 +47,7 @@ player:
   hp: 30
   ac: 16
   gold: 0
-  start_region: arena
+  start_location: arena_floor
   attacks:
     - name: greataxe
       ability: str
@@ -52,7 +58,7 @@ player:
 npcs:
   razor:
     name: Разор Безумный
-    region_id: arena
+    start_location: arena_floor
     role: gladiator
     race: dragonborn
     class: barbarian
@@ -80,7 +86,7 @@ npcs:
 
   shadow:
     name: Тень Ночная
-    region_id: arena
+    start_location: arena_floor
     role: gladiator
     race: elf
     class: rogue
@@ -115,7 +121,7 @@ npcs:
 
   iron:
     name: Железный Горн
-    region_id: arena
+    start_location: arena_floor
     role: gladiator
     race: dwarf
     class: fighter
