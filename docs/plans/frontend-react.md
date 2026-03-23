@@ -238,13 +238,13 @@ src/components/master/
 Цель: довести до приемлемого уровня качества.
 
 Шаги:
-- [ ] Toast notifications: подключение/отключение WS, ошибки, успех операций
-- [ ] Loading states: Skeleton для всех async-данных
-- [ ] Keyboard shortcuts: Escape → закрыть модалку
+- [x] Toast notifications: подключение/отключение WS, ошибки, успех операций
+- [x] Loading states: Skeleton для всех async-данных
+- [x] Keyboard shortcuts: Escape → закрыть модалку
 - [x] Command input: текстовое поле внизу как fallback (для опытных пользователей) + Enter → отправить
-- [ ] Favicon + title с именем персонажа
-- [ ] Убрать старый debug UI из FastAPI static (или переместить в /debug)
-- [ ] Обновить Makefile: `make serve` поднимает бэкенд + отдаёт frontend/dist
+- [x] Favicon + title с именем персонажа
+- [x] Убрать старый debug UI из FastAPI static (удалён)
+- [x] Обновить Makefile: `make serve` поднимает бэкенд + отдаёт frontend/dist
 - [ ] Обновить README / docs
 
 ---
@@ -294,6 +294,29 @@ src/components/master/
 
 `CreatureForm` использует shadcn Dialog (`@base-ui/react/dialog`): фокус-трап, Escape для закрытия, aria-атрибуты, анимации. `DialogContent` с `max-h-[85vh] overflow-y-auto` для длинных форм.
 
+### Phase 7 — Toast через Sonner
+
+Выбрана библиотека `sonner` для toast-уведомлений. `<Toaster>` добавлен в `App.tsx`. Тосты:
+- WS: connected (success), disconnected (warning), error (error) — через `connectionSlice`
+- Master: все CRUD-операции (save/load/delete session, spawn/edit/delete creature, advance time)
+- Inline `error` state в `MasterScreen` заменён на `toast.error()`
+
+### Phase 7 — Skeleton вместо спиннеров
+
+Создан компонент `Skeleton` (`components/ui/skeleton.tsx`). Заменены `Loader2` спиннеры на контентные скелетоны:
+- `MasterScreen`: 4 пустые карточки сессий
+- `CreatureList`: таблица с 5 строками-заглушками
+- `SavesPanel`: 3 строки сохранений
+- `SessionView`: блоки-плейсхолдеры
+
+### Phase 7 — Legacy debug UI удалён
+
+Старый HTML-интерфейс (index.html, player.html, master.html, css/, js/, locales/) полностью удалён. React-фронтенд полностью покрывает функциональность. `app.py` монтирует только `frontend/dist` на `/`.
+
+### Phase 7 — Makefile serve с автосборкой
+
+`make serve` теперь автоматически собирает фронтенд (`make frontend-build`) если `frontend/node_modules` существует, затем запускает uvicorn.
+
 ### Playwright MCP — добавлен для отладки
 
 Не был в плане. Добавлен headless Playwright через MCP для автоматизированного тестирования UI без ручного открытия браузера.
@@ -302,7 +325,7 @@ src/components/master/
 
 ## Что дальше
 
-Следующая фаза: **Phase 7 — Polish**. Toast, loading states, keyboard shortcuts, favicon, cleanup.
+Все фазы 0-7 завершены. Остаётся обновить README/docs. Дальнейшая работа — из раздела Out of Scope.
 
 ---
 

@@ -15,6 +15,7 @@ export function GameScreen() {
   const lastError = useGameStore((s) => s.lastError)
   const gameOver = useGameStore((s) => s.gameOver)
   const mode = useGameStore((s) => s.mode)
+  const playerName = useGameStore((s) => s.player?.name)
   const connectedRef = useRef(false)
 
   useEffect(() => {
@@ -30,6 +31,12 @@ export function GameScreen() {
       useGameStore.getState().disconnect()
     }
   }, [sessionId])
+
+  // Dynamic page title with character name
+  useEffect(() => {
+    document.title = playerName ? `${playerName} — D&D Simulator` : "D&D Simulator"
+    return () => { document.title = "D&D Simulator" }
+  }, [playerName])
 
   const isCombat = mode === "combat"
 

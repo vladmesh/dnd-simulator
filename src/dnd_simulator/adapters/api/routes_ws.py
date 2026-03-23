@@ -17,11 +17,9 @@ Protocol (action → awareness cycle, no separate queries):
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 import json
 import logging
 import os
-import threading
 import time
 from typing import Any
 
@@ -29,96 +27,12 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from dnd_simulator.adapters.api.deps import get_service
 from dnd_simulator.core.action import Action
-from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
-from dnd_simulator.core.brain import PlayerBrain
-from dnd_simulator.core.character import Ability, Creature
-from dnd_simulator.core.player import PlayerCharacter
-from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.i18n import _
-from dnd_simulator.round import Round, get_entities_layer
-from dnd_simulator.service.session import GameSession
+from dnd_simulator.service.session import SessionEventListener
 
 logger = logging.getLogger("dnd_simulator.ws")
 
 router = APIRouter(tags=["websocket"])
-
-
-# ---------------------------------------------------------------------------
-# Serialization helpers
-# ---------------------------------------------------------------------------
-
-
-def _awareness_to_dict(awareness: PeacefulAwareness | CombatAwareness) -> dict[str, Any]:
-    """Serialize awareness dataclass to JSON-friendly dict."""
-    return dataclasses.asdict(awareness)
-
-
-def _events_to_list(events: list[PerceivedEvent]) -> list[dict[str, Any]]:
-    """Serialize perceived events to JSON-friendly list."""
-    result: list[dict[str, Any]] = []
-    for e in events:
-        d = dataclasses.asdict(e)
-        d["event_type"] = e.event_type.value
-        result.append(d)
-    return result
-
-
-def _budget_to_dict(budget: TurnBudget) -> dict[str, Any]:
-    """Serialize turn budget to JSON-friendly dict."""
-    return dataclasses.asdict(budget)
-
-
-def _player_to_dict(player: PlayerCharacter) -> dict[str, Any]:
-    """Serialize player stats for the status panel."""
-    scores = player.ability_scores
-    return {
-        "player_id": player.id,
-        "name": player.name,
-        "race": player.race.value,
-        "char_class": player.char_class.value,
-        "level": player.level,
-        "alignment": player.alignment.value,
-        "hp": player.current_hp,
-        "max_hp": player.max_hp,
-        "ac": player.ac,
-        "gold": player.gold,
-        "location_id": player.location_id,
-        "ability_scores": {
-            "str": scores[Ability.STR],
-            "dex": scores[Ability.DEX],
-            "con": scores[Ability.CON],
-            "int": scores[Ability.INT],
-            "wis": scores[Ability.WIS],
-            "cha": scores[Ability.CHA],
-        },
-    }
-
-
-def _location_data(session: GameSession, location_id: str) -> dict[str, Any]:
-    """Build location + paths data for the map panel."""
-    graph = session.world.location_graph
-    if not graph.has(location_id):
-        return {"current_location": location_id, "paths": []}
-
-    loc = graph.get(location_id)
-    paths = []
-    for edge in loc.edges:
-        target = graph.get(edge.target_id) if graph.has(edge.target_id) else None
-        paths.append(
-            {
-                "target_id": edge.target_id,
-                "target_name": target.name if target else edge.target_id,
-                "distance_m": edge.distance_m,
-            }
-        )
-
-    return {
-        "current_location": loc.name,
-        "current_location_id": loc.id,
-        "description": loc.description,
-        "region_id": loc.region_id,
-        "paths": paths,
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -127,24 +41,15 @@ def _location_data(session: GameSession, location_id: str) -> dict[str, Any]:
 
 
 def _parse_command(text: str) -> Action:
-    """Parse a text command into an Action.
-
-    All commands become actions submitted to the brain — including
-    informational ones like 'look' and 'status' which map to 'idle'
-    (they don't cost budget but cycle the turn so the player gets
-    fresh awareness).
-    """
+    """Parse a text command into an Action."""
     raw = text.strip()
     if not raw:
         return Action(name="idle")
     cmd = raw.lower()
 
-    # Informational commands — map to idle (costs nothing, but cycles turn
-    # so the player gets updated awareness + player + location data)
     if cmd in ("look", "status", "map"):
         return Action(name="idle")
 
-    # "look <target>" — inspect a specific entity
     if cmd.startswith("look "):
         target = raw[5:].strip()
         if target:
@@ -203,43 +108,45 @@ def _parse_command(text: str) -> Action:
             params["direction"] = keyword
         return Action(name="dash" if is_dash else "move", params=params)
 
-    # Unknown — treat as idle
     return Action(name="idle")
 
 
 # ---------------------------------------------------------------------------
-# Move abstraction resolver
+# WS event listener — bridges session events to a WebSocket connection
 # ---------------------------------------------------------------------------
 
 
-def _resolve_abstract_move(action: Action, player: Creature, entities_layer: "EntitiesLayer") -> Action:
-    """Translate toward/away_from into concrete direction + ft for a move action."""
-    from dnd_simulator.core.combat import Position
-    from dnd_simulator.rules.movement import calculate_away_direction, calculate_direction
+class WsEventListener:
+    """Bridges GameSession events to a WebSocket client.
 
-    combat = entities_layer._combat.get_combat(player.location_id)
-    if not combat:
-        return action  # no combat — pass through
+    All on_* methods are called from the Round thread.
+    Uses asyncio.run_coroutine_threadsafe to marshal sends to the event loop.
+    """
 
-    bm = combat.battle_map
-    my_pos = bm.get_position(player.id)
-    if my_pos is None:
-        return action
+    def __init__(self, ws: WebSocket, loop: asyncio.AbstractEventLoop) -> None:
+        self._ws = ws
+        self._loop = loop
 
-    toward = action.params.get("toward")
-    away_from = action.params.get("away_from")
-    target_id = str(toward or away_from or "")
-    target_pos = bm.get_position(target_id)
-    if target_pos is None:
-        return action
+    def _send(self, msg: dict[str, Any]) -> None:
+        if self._loop.is_closed():
+            return
+        try:
+            future = asyncio.run_coroutine_threadsafe(self._ws.send_json(msg), self._loop)
+            future.result(timeout=30)
+        except Exception:
+            pass  # WS closed — session will remove this listener
 
-    if toward:
-        direction = calculate_direction(my_pos, target_pos)
-    else:
-        direction = calculate_away_direction(my_pos, target_pos)
+    def on_turn(self, msg: dict[str, Any]) -> None:
+        self._send(msg)
 
-    ft = int(action.params.get("ft", 5))
-    return Action(name="move", params={"direction": direction, "ft": ft})
+    def on_action_result(self, msg: dict[str, Any]) -> None:
+        self._send(msg)
+
+    def on_round_result(self, msg: dict[str, Any]) -> None:
+        self._send(msg)
+
+    def on_game_over(self) -> None:
+        self._send({"type": "game_over"})
 
 
 # ---------------------------------------------------------------------------
@@ -251,14 +158,10 @@ def _resolve_abstract_move(action: Action, player: Creature, entities_layer: "En
 async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None = None) -> None:
     """WebSocket game loop for a session.
 
-    Expects the session to already exist (created via REST POST /api/master/sessions).
-    Wires a PlayerBrain, starts Round in a background thread, and bridges
-    WS messages to the game loop.
-
-    Query params:
-        player_id: which player to control (optional — defaults to first player in session)
+    Thin bridge: validates session, registers as listener, forwards actions.
+    Round lifecycle is owned by GameSession.
     """
-    # Origin check: if WS_ALLOWED_ORIGINS is set, reject connections from other origins
+    # Origin check
     allowed_raw = os.getenv("WS_ALLOWED_ORIGINS", "")
     if allowed_raw:
         allowed_origins = [o.strip() for o in allowed_raw.split(",") if o.strip()]
@@ -283,106 +186,25 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
         await ws.send_json({"type": "error", "message": _("No player in session")})
         await ws.close(code=4004, reason="no_player")
         return
-    event_loop = asyncio.get_running_loop()
 
-    # Wire PlayerBrain with queue pattern
-    brain = PlayerBrain()
+    # Register WS as event listener
+    listener = WsEventListener(ws, asyncio.get_running_loop())
 
-    def _ws_send_from_thread(msg: dict[str, Any]) -> None:
-        """Send a WS message from Round thread. Silently ignores closed connections."""
-        if event_loop.is_closed():
-            return
-        try:
-            future = asyncio.run_coroutine_threadsafe(ws.send_json(msg), event_loop)
-            future.result(timeout=30)
-        except Exception:
-            pass  # WS already closed — Round will stop soon via stop()
+    # Replay last turn BEFORE start_round: for reconnects the round is
+    # already running and won't re-fire on_turn, so the client needs
+    # the cached message.  For first connect _last_turn_msg is None.
+    # Done here (not in add_listener) to avoid deadlock: run_coroutine_threadsafe
+    # + future.result() from the event loop thread would block forever.
+    last_turn = session.get_last_turn_msg()
+    if last_turn is not None:
+        await ws.send_json(last_turn)
 
-    def on_turn(
-        creature: Creature,
-        awareness: PeacefulAwareness | CombatAwareness,
-        events: list[PerceivedEvent],
-    ) -> None:
-        """Called from Round thread when it's the player's turn."""
-        msg: dict[str, Any] = {
-            "type": "turn",
-            "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
-            "awareness": _awareness_to_dict(awareness),
-            "events": _events_to_list(events),
-            "player": _player_to_dict(player),
-            "location": _location_data(session, player.location_id),
-        }
-        if awareness.turn_budget is not None:
-            msg["budget"] = _budget_to_dict(awareness.turn_budget)
-        _ws_send_from_thread(msg)
+    session.add_listener(listener)
 
-    brain.set_on_turn(on_turn)
-    player.brain = brain
+    # Start round if not already running (idempotent)
+    session.start_round(player)
 
-    # Create Round with callbacks
-    game_round = Round(session.world)
-
-    entities_layer = get_entities_layer(session.world)
-
-    def _build_player_awareness() -> PeacefulAwareness | CombatAwareness:
-        """Rebuild awareness for the player from current world state."""
-        query_fn = session.world._make_query_fn("entities")
-        return entities_layer.build_awareness(player, session.world.time, query_fn)
-
-    def on_action(creature: Creature, action: Action, budget: TurnBudget | None) -> None:
-        """Send action_result after each action by any creature."""
-        perceived = game_round.get_perceived_events(player)
-        awareness = _build_player_awareness()
-        msg: dict[str, Any] = {
-            "type": "action_result",
-            "actor": creature.id,
-            "action": action.name,
-            "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
-            "awareness": _awareness_to_dict(awareness),
-            "events": _events_to_list(perceived),
-            "player": _player_to_dict(player),
-            "location": _location_data(session, player.location_id),
-        }
-        if budget is not None and creature.id == player.id:
-            msg["budget"] = _budget_to_dict(budget)
-        _ws_send_from_thread(msg)
-
-    game_round.set_on_action(on_action)
-
-    def on_round_end(result: object) -> None:
-        """Send perceived events after each round completes."""
-        perceived = game_round.get_perceived_events(player)
-        awareness = _build_player_awareness()
-        msg: dict[str, Any] = {
-            "type": "round_result",
-            "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
-            "awareness": _awareness_to_dict(awareness),
-            "events": _events_to_list(perceived),
-            "player": _player_to_dict(player),
-            "location": _location_data(session, player.location_id),
-        }
-        _ws_send_from_thread(msg)
-
-    game_round.set_on_round_end(on_round_end)
-
-    # Start Round loop in background thread
-    def run_round_loop() -> None:
-        try:
-            game_round.run_loop()
-        except Exception:
-            logger.exception("Round loop error in session %s", session_id)
-        # Signal game over (skip if loop is closed — WS already disconnected)
-        if not event_loop.is_closed():
-            try:
-                future = asyncio.run_coroutine_threadsafe(ws.send_json({"type": "game_over"}), event_loop)
-                future.result(timeout=5)
-            except Exception:
-                pass
-
-    round_thread = threading.Thread(target=run_round_loop, daemon=True, name=f"round-{session_id}")
-    round_thread.start()
-
-    # Rate limiting: token bucket (burst 10, refill 2 msg/sec)
+    # Rate limiting: token bucket
     rl_budget = 20.0
     rl_last = time.monotonic()
     rl_max_burst = 20.0
@@ -409,13 +231,10 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
                     name=str(msg.get("name", "idle")),
                     params=msg.get("params", {}),
                 )
-                # Translate toward/away_from into concrete direction for move
-                if action.name == "move" and ("toward" in action.params or "away_from" in action.params):
-                    action = _resolve_abstract_move(action, player, entities_layer)
-                brain.submit_action(action)
+                session.submit_player_action(action)
 
             elif msg_type == "command":
-                brain.submit_action(_parse_command(str(msg.get("text", ""))))
+                session.submit_player_action(_parse_command(str(msg.get("text", ""))))
 
             else:
                 await ws.send_json({"type": "error", "message": _("Unknown message type: {}").format(msg_type)})
@@ -425,7 +244,5 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
     except Exception:
         logger.exception("WebSocket error in session %s", session_id)
     finally:
-        # Clean shutdown: stop Round thread
-        game_round.stop()
-        brain.submit_action(Action(name="end_turn"))  # unblock queue
-        round_thread.join(timeout=5)
+        session.remove_listener(listener)
+        # Don't stop round — it lives with the session, not the WS connection

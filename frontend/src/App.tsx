@@ -1,4 +1,5 @@
 import { Outlet } from "react-router"
+import { Toaster } from "sonner"
 import { api } from "@/transport/apiClient"
 import { wsClient } from "@/transport/wsClient"
 import { useGameStore } from "@/store/gameStore"
@@ -16,7 +17,12 @@ window.ws = wsClient
 window.store = useGameStore
 
 function App() {
-  return <Outlet />
+  return (
+    <>
+      <Outlet />
+      <Toaster theme="dark" position="bottom-right" richColors />
+    </>
+  )
 }
 
 export default App

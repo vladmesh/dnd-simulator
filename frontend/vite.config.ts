@@ -10,6 +10,9 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  css: {
+    devSourcemap: false,
+  },
   server: {
     host: true,
     proxy: {

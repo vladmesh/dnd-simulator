@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback } from "react"
 import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
 import { api } from "@/transport/apiClient"
 import type { CreatureResponse } from "@/types/api"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { CreatureForm } from "./CreatureForm"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Loader2, Plus, Trash2, Brain } from "lucide-react"
 
 interface Props {
@@ -38,7 +40,8 @@ export function CreatureList({ sessionId }: Props) {
     setDeleting(c.id)
     api.master
       .deleteCreature(sessionId, c.id)
-      .then(() => refresh())
+      .then(() => { refresh(); toast.success(t("master:delete_creature")) })
+      .catch(() => toast.error(t("common:error")))
       .finally(() => setDeleting(null))
   }
 
@@ -46,7 +49,8 @@ export function CreatureList({ sessionId }: Props) {
     const newType = c.ai_type === "llm" ? "rule_based" : "llm"
     api.master
       .setBrain(sessionId, c.id, { type: newType })
-      .then(() => refresh())
+      .then(() => { refresh(); toast.success(t("master:set_brain")) })
+      .catch(() => toast.error(t("common:error")))
   }
 
   const filterButtons: { key: Filter; label: string }[] = [
@@ -77,8 +81,25 @@ export function CreatureList({ sessionId }: Props) {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <div className="overflow-x-auto rounded border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50">
+              <tr>
+                {[t("master:col_name"), t("master:col_type"), t("master:col_hp"), t("master:col_ac"), t("master:col_location"), t("master:col_ai"), t("master:col_active"), t("master:col_actions")].map((h) => (
+                  <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} className="border-t border-border">
+                  {Array.from({ length: 8 }).map((_, j) => (
+                    <td key={j} className="px-3 py-2"><Skeleton className="h-4 w-16" /></td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : creatures.length === 0 ? (
         <p className="py-8 text-center text-sm text-muted-foreground">{t("master:no_creatures")}</p>

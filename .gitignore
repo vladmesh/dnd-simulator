@@ -76,5 +76,10 @@ dmypy.json
 cython_debug/
 .ruff_cache/
 
+# Playwright MCP artifacts
+.playwright-mcp/
+page-*.png
+page-*.jpeg
+
 # Frontend
 node_modules/

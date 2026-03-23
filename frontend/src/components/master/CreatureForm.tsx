@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
 import { api } from "@/transport/apiClient"
 import type { CreatureResponse } from "@/types/api"
 import {
@@ -73,7 +74,10 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
         })
 
     promise
-      .then(() => onSaved())
+      .then(() => {
+        onSaved()
+        toast.success(isEdit ? t("master:edit_creature") : t("master:spawn_creature"))
+      })
       .catch((err) => setError(String(err.body?.detail ?? err.message)))
       .finally(() => setSaving(false))
   }

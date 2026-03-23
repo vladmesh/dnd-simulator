@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback } from "react"
 import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
 import { api } from "@/transport/apiClient"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Loader2, Save, Download, Trash2 } from "lucide-react"
 
 interface Props {
@@ -33,7 +35,8 @@ export function SavesPanel({ sessionId, onLoaded }: Props) {
     setSaving(true)
     api.master
       .save(sessionId, saveName || undefined)
-      .then(() => { setSaveName(""); refresh() })
+      .then(() => { setSaveName(""); refresh(); toast.success(t("master:saved")) })
+      .catch(() => toast.error(t("common:error")))
       .finally(() => setSaving(false))
   }
 
@@ -42,7 +45,8 @@ export function SavesPanel({ sessionId, onLoaded }: Props) {
     setOperating(name)
     api.master
       .loadSave(sessionId, name)
-      .then(() => { refresh(); onLoaded() })
+      .then(() => { refresh(); onLoaded(); toast.success(t("master:loaded")) })
+      .catch(() => toast.error(t("common:error")))
       .finally(() => setOperating(null))
   }
 
@@ -51,7 +55,8 @@ export function SavesPanel({ sessionId, onLoaded }: Props) {
     setOperating(name)
     api.master
       .deleteSave(sessionId, name)
-      .then(() => refresh())
+      .then(() => { refresh(); toast.success(t("master:save_deleted")) })
+      .catch(() => toast.error(t("common:error")))
       .finally(() => setOperating(null))
   }
 
@@ -87,8 +92,13 @@ export function SavesPanel({ sessionId, onLoaded }: Props) {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="flex justify-center py-4">
-              <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between rounded border border-border px-3 py-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-7 w-24" />
+                </div>
+              ))}
             </div>
           ) : saves.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("master:no_saves")}</p>

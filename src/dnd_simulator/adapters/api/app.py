@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -23,7 +24,6 @@ from dnd_simulator.storage.store import JsonFileStore
 
 DEFAULT_SAVES_DIR = Path(__file__).resolve().parents[4] / "saves"
 _FRONTEND_DIST = Path(__file__).resolve().parents[4] / "frontend" / "dist"
-_STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 _SESSION_ID_RE = re.compile(r"/api/(?:master|player)/sessions/([^/]+)")
 
@@ -82,8 +82,6 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-import logging
-
 _fe_log = logging.getLogger("frontend")
 
 
@@ -94,7 +92,6 @@ async def frontend_error(request: Request) -> dict[str, str]:
     return {"status": "logged"}
 
 
-# Static files served AFTER API routes so /api/* takes priority.
-# Prefer React frontend build if available, fall back to legacy debug UI.
-_static_root = _FRONTEND_DIST if _FRONTEND_DIST.is_dir() else _STATIC_DIR
-app.mount("/", StaticFiles(directory=str(_static_root), html=True), name="static")
+# React frontend — serve built assets after API routes so /api/* takes priority.
+if _FRONTEND_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=str(_FRONTEND_DIST), html=True), name="static")

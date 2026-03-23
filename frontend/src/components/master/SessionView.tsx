@@ -8,7 +8,8 @@ import { WorldOverview } from "./WorldOverview"
 import { CreatureList } from "./CreatureList"
 import { TimeControl } from "./TimeControl"
 import { SavesPanel } from "./SavesPanel"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { ArrowLeft } from "lucide-react"
 
 type Tab = "world" | "creatures" | "time" | "saves"
 
@@ -88,8 +89,9 @@ export function SessionView() {
       </div>
 
       {loading && !worldState ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-48 w-full" />
         </div>
       ) : (
         <>
