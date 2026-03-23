@@ -7,7 +7,7 @@ Reproduces the bug from docs/bug_double_attack.md:
 
 from __future__ import annotations
 
-from dnd_simulator.core.action import END_TURN, Action
+from dnd_simulator.core.action import END_TURN, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain, RuleBrain
 from dnd_simulator.core.character import Ability, Attack, Creature, DamageComponent, DamageType
@@ -21,6 +21,7 @@ from dnd_simulator.layers.geography.models import Region, TerrainType
 from dnd_simulator.layers.politics.layer import PoliticsLayer
 from dnd_simulator.layers.settlements.layer import SettlementsLayer
 from dnd_simulator.round import Round
+from dnd_simulator.service.action_dispatcher import ActionDispatcher
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -181,7 +182,7 @@ class TestTurnCountPerRound:
         # Player: attack + end_turn
         player.brain = ScriptedBrain(
             [
-                Action(name="attack", params={"target_id": "goblin"}),
+                Action(name=ActionType.ATTACK, params={"target_id": "goblin"}),
                 END_TURN,
             ]
         )
@@ -196,20 +197,20 @@ class TestTurnCountPerRound:
 
         game_round.run_creature_turn = tracking_run  # type: ignore[assignment]
 
-        # Patch execute_action to track actual executions
+        # Patch dispatcher.dispatch to track actual executions
         executed_actions: list[tuple[str, str]] = []
-        original_execute = Creature.execute_action
+        original_dispatch = ActionDispatcher.dispatch
 
-        def tracking_execute(self_creature, action, emit_fn):  # type: ignore[no-untyped-def]
-            executed_actions.append((self_creature.name, action.name))
-            return original_execute(self_creature, action, emit_fn)
+        def tracking_dispatch(self_disp, actor, action, ctx, emit_fn):  # type: ignore[no-untyped-def]
+            executed_actions.append((actor.name, action.name))
+            return original_dispatch(self_disp, actor, action, ctx, emit_fn)
 
-        Creature.execute_action = tracking_execute  # type: ignore[assignment]
+        ActionDispatcher.dispatch = tracking_dispatch  # type: ignore[assignment]
 
         try:
             game_round.run_round()
         finally:
-            Creature.execute_action = original_execute  # type: ignore[assignment]
+            ActionDispatcher.dispatch = original_dispatch  # type: ignore[assignment]
 
         print("\n=== Budget trace ===")
         for entry in budget_trace:
@@ -220,7 +221,7 @@ class TestTurnCountPerRound:
             print(f"  {name} → {action}")
 
         # Count EXECUTED goblin attacks (not brain proposals)
-        goblin_executed_attacks = sum(1 for n, a in executed_actions if n == "Goblin" and a == "attack")
+        goblin_executed_attacks = sum(1 for n, a in executed_actions if n == "Goblin" and a == ActionType.ATTACK)
         print(f"\nGoblin executed attacks: {goblin_executed_attacks}")
 
         assert turn_log.count("goblin") == 1, f"Goblin got {turn_log.count('goblin')} turns"
@@ -245,26 +246,26 @@ class TestTurnCountPerRound:
 
         game_round.run_creature_turn = tracking_run  # type: ignore[assignment]
 
-        original_execute = Creature.execute_action
+        original_dispatch = ActionDispatcher.dispatch
 
-        def tracking_execute(self_creature, action, emit_fn):  # type: ignore[no-untyped-def]
-            executed_actions.append((round_num, self_creature.name, action.name))
-            return original_execute(self_creature, action, emit_fn)
+        def tracking_dispatch(self_disp, actor, action, ctx, emit_fn):  # type: ignore[no-untyped-def]
+            executed_actions.append((round_num, actor.name, action.name))
+            return original_dispatch(self_disp, actor, action, ctx, emit_fn)
 
-        Creature.execute_action = tracking_execute  # type: ignore[assignment]
+        ActionDispatcher.dispatch = tracking_dispatch  # type: ignore[assignment]
 
         try:
             for i in range(3):
                 round_num = i + 1
                 player.brain = ScriptedBrain(
                     [
-                        Action(name="attack", params={"target_id": "goblin"}),
+                        Action(name=ActionType.ATTACK, params={"target_id": "goblin"}),
                         END_TURN,
                     ]
                 )
                 game_round.run_round()
         finally:
-            Creature.execute_action = original_execute  # type: ignore[assignment]
+            ActionDispatcher.dispatch = original_dispatch  # type: ignore[assignment]
 
         print("\n=== Turn log ===")
         for rn, cid in total_turn_log:
@@ -274,8 +275,8 @@ class TestTurnCountPerRound:
         for rn, name, action in executed_actions:
             print(f"  Round {rn}: {name} → {action}")
 
-        goblin_total_attacks = sum(1 for _, n, a in executed_actions if n == "Goblin" and a == "attack")
-        player_total_attacks = sum(1 for _, n, a in executed_actions if n == "Hero" and a == "attack")
+        goblin_total_attacks = sum(1 for _, n, a in executed_actions if n == "Goblin" and a == ActionType.ATTACK)
+        player_total_attacks = sum(1 for _, n, a in executed_actions if n == "Hero" and a == ActionType.ATTACK)
         print(f"\nPlayer executed attacks: {player_total_attacks}")
         print(f"Goblin executed attacks: {goblin_total_attacks}")
 

@@ -8,11 +8,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from dnd_simulator.core.action import Action
+from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
+    from dnd_simulator.core.turn_budget import TurnBudget
 
 
 @dataclass(frozen=True)
@@ -21,6 +22,7 @@ class ActionContext:
 
     is_combat: bool
     current_turn_entity_id: str | None = None  # whose turn (None = outside round)
+    turn_budget: TurnBudget | None = None
 
 
 @dataclass(frozen=True)
@@ -32,10 +34,10 @@ class ValidationError:
 
 
 # Actions that only make sense in combat
-_COMBAT_ONLY: frozenset[str] = frozenset({"dodge", "flee", "dash"})
+_COMBAT_ONLY: frozenset[ActionType] = frozenset({ActionType.DODGE, ActionType.FLEE, ActionType.DASH})
 
 # Actions blocked during combat (speech goes through action description field)
-_COMBAT_BLOCKED: frozenset[str] = frozenset({"say"})
+_COMBAT_BLOCKED: frozenset[ActionType] = frozenset({ActionType.SAY})
 
 
 def validate_action(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:

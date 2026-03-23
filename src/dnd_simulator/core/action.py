@@ -3,20 +3,35 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import StrEnum
+
+
+class ActionType(StrEnum):
+    """All known action types. Values match LLM tool names."""
+
+    IDLE = "idle"
+    SAY = "say"
+    ATTACK = "attack"
+    DODGE = "dodge"
+    FLEE = "flee"
+    MOVE = "move"
+    DASH = "dash"
+    WAIT = "wait"
+    END_TURN = "end_turn"
+    SKIP = "skip"
 
 
 @dataclass(frozen=True)
 class Action:
     """A creature's chosen action for this turn.
 
-    Name is one of: idle, say, attack, dodge, flee, move, dash, end_turn, skip.
     Params carry action-specific data (target_id, text, toward, etc.).
     """
 
-    name: str
+    name: ActionType
     params: dict[str, object] = field(default_factory=dict)
 
 
 # Sentinel actions — used by the multi-action turn loop.
-END_TURN = Action(name="end_turn")
-SKIP = Action(name="skip")
+END_TURN = Action(name=ActionType.END_TURN)
+SKIP = Action(name=ActionType.SKIP)

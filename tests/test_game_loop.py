@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dnd_simulator.core.action import END_TURN, Action
+from dnd_simulator.core.action import END_TURN, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain, PlayerBrain
 from dnd_simulator.core.character import Creature
@@ -110,7 +110,7 @@ class TestPlayerWaitViaRound:
             id="player",
             name="Hero",
             location_id="r1",
-            brain=_make_player_brain(Action(name="wait", params={"hours": 1})),
+            brain=_make_player_brain(Action(name=ActionType.WAIT, params={"hours": 1})),
         )
         world = _make_world([player], hour=10)
         entities_layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
@@ -132,7 +132,7 @@ class TestPlayerWaitViaRound:
             id="player",
             name="Hero",
             location_id="r1",
-            brain=_make_player_brain(Action(name="wait", params={"hours": 3})),
+            brain=_make_player_brain(Action(name=ActionType.WAIT, params={"hours": 3})),
         )
         world = _make_world([player], hour=10)
         entities_layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
@@ -260,7 +260,7 @@ class TestWaitAndFastForward:
             id="player",
             name="Hero",
             location_id="r1",
-            brain=_make_player_brain(Action(name="wait", params={"hours": 2})),
+            brain=_make_player_brain(Action(name=ActionType.WAIT, params={"hours": 2})),
         )
         world = _make_world([player], hour=10)
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
@@ -279,7 +279,7 @@ class TestWaitAndFastForward:
             id="player",
             name="Hero",
             location_id="r1",
-            brain=_make_player_brain(Action(name="wait", params={"hours": 2})),
+            brain=_make_player_brain(Action(name=ActionType.WAIT, params={"hours": 2})),
         )
         world = _make_world([player], hour=10)
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
@@ -307,7 +307,7 @@ class TestWaitAndFastForward:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                brain.submit_action(Action(name="wait", params={"hours": 1}))
+                brain.submit_action(Action(name=ActionType.WAIT, params={"hours": 1}))
             brain.submit_action(END_TURN)
 
         brain.set_on_turn(on_turn)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dnd_simulator.core.action import END_TURN, Action
+from dnd_simulator.core.action import END_TURN, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain
 from dnd_simulator.core.character import Creature
@@ -89,12 +89,12 @@ class TestTurnBudget:
 
 class TestActionCost:
     def test_attack_costs_one_action(self) -> None:
-        cost = action_cost(Action(name="attack", params={"target_id": "x"}))
+        cost = action_cost(Action(name=ActionType.ATTACK, params={"target_id": "x"}))
         assert cost.actions == 1
         assert cost.bonus_actions == 0
 
     def test_idle_is_free(self) -> None:
-        cost = action_cost(Action(name="idle"))
+        cost = action_cost(Action(name=ActionType.IDLE))
         assert cost.actions == 0 and cost.bonus_actions == 0 and cost.movement_ft == 0
 
     def test_end_turn_is_free(self) -> None:
@@ -102,15 +102,15 @@ class TestActionCost:
         assert cost.actions == 0
 
     def test_say_is_free(self) -> None:
-        cost = action_cost(Action(name="say", params={"text": "hi"}))
+        cost = action_cost(Action(name=ActionType.SAY, params={"text": "hi"}))
         assert cost.actions == 0
 
     def test_dodge_costs_one_action(self) -> None:
-        cost = action_cost(Action(name="dodge"))
+        cost = action_cost(Action(name=ActionType.DODGE))
         assert cost.actions == 1
 
     def test_move_costs_movement(self) -> None:
-        cost = action_cost(Action(name="move", params={"toward": "x"}))
+        cost = action_cost(Action(name=ActionType.MOVE, params={"toward": "x"}))
         assert cost.movement_ft == 5
 
 
@@ -140,7 +140,7 @@ class _ScriptedBrain(Brain):
 class TestMultiActionLoop:
     def test_single_action_then_end_turn(self) -> None:
         """Brain does one action then end_turn. Round records it."""
-        brain = _ScriptedBrain([Action(name="say", params={"text": "hi"}), END_TURN])
+        brain = _ScriptedBrain([Action(name=ActionType.SAY, params={"text": "hi"}), END_TURN])
         creature = Creature(id="c1", name="A", location_id="r1", brain=brain)
         world = _make_world([creature])
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
@@ -151,7 +151,7 @@ class TestMultiActionLoop:
         actions = game_round.run_creature_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(actions) == 1
-        assert actions[0].name == "say"
+        assert actions[0].name == ActionType.SAY
 
     def test_budget_exhaustion_ends_turn(self) -> None:
         """When budget runs out, turn ends even without end_turn.
@@ -161,8 +161,8 @@ class TestMultiActionLoop:
         # Brain tries to dodge twice, but only has 1 action
         brain = _ScriptedBrain(
             [
-                Action(name="dodge"),
-                Action(name="dodge"),
+                Action(name=ActionType.DODGE),
+                Action(name=ActionType.DODGE),
             ]
         )
         creature = Creature(
@@ -186,14 +186,14 @@ class TestMultiActionLoop:
 
         # Only 1 dodge should have executed (budget has 1 action)
         assert len(actions) == 1
-        assert actions[0].name == "dodge"
+        assert actions[0].name == ActionType.DODGE
 
     def test_free_action_then_costly_action(self) -> None:
         """In combat: free action (idle) + costly action (dodge) both execute."""
         brain = _ScriptedBrain(
             [
-                Action(name="idle"),
-                Action(name="dodge"),
+                Action(name=ActionType.IDLE),
+                Action(name=ActionType.DODGE),
                 END_TURN,
             ]
         )
@@ -208,12 +208,12 @@ class TestMultiActionLoop:
         actions = game_round.run_combat_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(actions) == 2
-        assert actions[0].name == "idle"
-        assert actions[1].name == "dodge"
+        assert actions[0].name == ActionType.IDLE
+        assert actions[1].name == ActionType.DODGE
 
     def test_on_action_callback_fires(self) -> None:
         """on_action callback fires after each action with current budget in combat."""
-        brain = _ScriptedBrain([Action(name="idle"), END_TURN])
+        brain = _ScriptedBrain([Action(name=ActionType.IDLE), END_TURN])
         creature = Creature(id="c1", name="A", location_id="r1", brain=brain, in_combat=True)
 
         world = _make_world([creature])
@@ -233,7 +233,7 @@ class TestMultiActionLoop:
         game_round.run_combat_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(callback_log) == 1
-        assert callback_log[0] == ("c1", "idle", 1)  # idle is free, actions still 1
+        assert callback_log[0] == ("c1", ActionType.IDLE, 1)  # idle is free, actions still 1
 
     def test_awareness_includes_budget_in_combat(self) -> None:
         """Combat awareness includes turn_budget."""
@@ -272,7 +272,7 @@ class TestMultiActionLoop:
 class TestPeacefulTurn:
     def test_say_ends_peaceful_turn(self) -> None:
         """Say is a turn-ending action in peaceful mode."""
-        brain = _ScriptedBrain([Action(name="say", params={"text": "hi"})])
+        brain = _ScriptedBrain([Action(name=ActionType.SAY, params={"text": "hi"})])
         creature = Creature(id="c1", name="A", location_id="r1", brain=brain)
 
         world = _make_world([creature])
@@ -284,11 +284,11 @@ class TestPeacefulTurn:
         actions = game_round.run_peaceful_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(actions) == 1
-        assert actions[0].name == "say"
+        assert actions[0].name == ActionType.SAY
 
     def test_idle_loops_in_peaceful(self) -> None:
         """Idle (look/status/map) does NOT end peaceful turn — loops until end_turn."""
-        brain = _ScriptedBrain([Action(name="idle"), Action(name="idle"), END_TURN])
+        brain = _ScriptedBrain([Action(name=ActionType.IDLE), Action(name=ActionType.IDLE), END_TURN])
         creature = Creature(id="c1", name="A", location_id="r1", brain=brain)
 
         world = _make_world([creature])
@@ -301,7 +301,7 @@ class TestPeacefulTurn:
 
         # Both idles should execute, then end_turn exits
         assert len(actions) == 2
-        assert all(a.name == "idle" for a in actions)
+        assert all(a.name == ActionType.IDLE for a in actions)
 
     def test_no_budget_in_peaceful(self) -> None:
         """Peaceful awareness has turn_budget=None."""
@@ -331,7 +331,7 @@ class TestPeacefulTurn:
 
     def test_on_action_callback_gets_none_budget(self) -> None:
         """Peaceful on_action callback receives budget=None."""
-        brain = _ScriptedBrain([Action(name="say", params={"text": "hi"})])
+        brain = _ScriptedBrain([Action(name=ActionType.SAY, params={"text": "hi"})])
         creature = Creature(id="c1", name="A", location_id="r1", brain=brain)
 
         world = _make_world([creature])
@@ -350,7 +350,7 @@ class TestPeacefulTurn:
         game_round.run_peaceful_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(callback_log) == 1
-        assert callback_log[0] == ("c1", "say", None)
+        assert callback_log[0] == ("c1", ActionType.SAY, None)
 
     def test_dispatcher_routes_by_combat_state(self) -> None:
         """run_creature_turn dispatches to combat or peaceful based on in_combat."""

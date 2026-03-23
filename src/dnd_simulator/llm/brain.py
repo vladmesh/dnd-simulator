@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from dnd_simulator.core.action import Action
+from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain
 from dnd_simulator.i18n import _
@@ -36,7 +36,7 @@ class LlmBrain(Brain):
         from dnd_simulator.core.character import Character
 
         if not isinstance(creature, Character):
-            return Action(name="idle")
+            return Action(name=ActionType.IDLE)
 
         is_combat = isinstance(awareness, CombatAwareness)
         logger.info("[NPC:%s] === starts turn (%s) ===", creature.name, "combat" if is_combat else "peace")
@@ -68,6 +68,11 @@ class LlmBrain(Brain):
             tools = build_npc_tools()
             retry_hint = _("You must choose an action: say, attack, or idle.")
 
+        # Filter tools to only available actions (if dispatcher populated the list)
+        if awareness.available_actions:
+            allowed = {a.value for a in awareness.available_actions}
+            tools = [t for t in tools if t["function"]["name"] in allowed]
+
         recent_events: list[str] = [e.description for e in events[-15:]]
 
         turn_prompt = _("Your turn. Choose an action.")
@@ -87,13 +92,13 @@ class LlmBrain(Brain):
             if response.is_tool_call:
                 assert response.tool_call is not None
                 tc = response.tool_call
-                return Action(name=tc.name, params=dict(tc.arguments))
+                return Action(name=ActionType(tc.name), params=dict(tc.arguments))
             # No tool call — ask LLM to retry
             messages.append({"role": "assistant", "content": response.text or ""})
             messages.append({"role": "user", "content": retry_hint})
 
         # Exhausted retries — idle as fallback
-        return Action(name="idle")
+        return Action(name=ActionType.IDLE)
 
 
 def _peaceful_awareness_to_dict(aw: PeacefulAwareness) -> dict[str, object]:

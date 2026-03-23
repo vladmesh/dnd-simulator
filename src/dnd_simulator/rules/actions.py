@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.turn_budget import ActionCost
 
 if TYPE_CHECKING:
@@ -15,23 +16,30 @@ if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
 
 # Actions that cost 0 budget (information-only, free actions)
-_FREE_ACTIONS = frozenset({"idle", "end_turn", "skip"})
+_FREE_ACTIONS = frozenset({ActionType.IDLE, ActionType.END_TURN, ActionType.SKIP})
 
-# Actions that cost 1 standard action (dash handled specially by Round)
-_STANDARD_ACTIONS = frozenset({"attack", "dodge", "flee"})
+# Actions that cost 1 standard action
+_STANDARD_ACTIONS = frozenset({ActionType.ATTACK, ActionType.DODGE, ActionType.FLEE, ActionType.DASH})
 
 # Actions that cost 1 bonus action
 _BONUS_ACTIONS: frozenset[str] = frozenset()
 
 # Actions that use movement (cost = ft param)
-_MOVEMENT_ACTIONS = frozenset({"move"})
-
-# Dash is a special action handled by Round: costs 1 action, adds speed to movement pool
-DASH_ACTION_COST = ActionCost(actions=1)
+_MOVEMENT_ACTIONS = frozenset({ActionType.MOVE})
 
 # Peaceful actions that auto-end the turn (meaningful world interactions).
 # Queries (idle = look/status/map) do NOT end the turn — they just refresh awareness.
-_TURN_ENDING_PEACEFUL = frozenset({"say", "attack", "wait", "move", "dash", "flee", "dodge"})
+_TURN_ENDING_PEACEFUL = frozenset(
+    {
+        ActionType.SAY,
+        ActionType.ATTACK,
+        ActionType.WAIT,
+        ActionType.MOVE,
+        ActionType.DASH,
+        ActionType.FLEE,
+        ActionType.DODGE,
+    }
+)
 
 
 def action_cost(action: Action) -> ActionCost:
@@ -43,7 +51,7 @@ def action_cost(action: Action) -> ActionCost:
     """
     name = action.name
 
-    if name in _FREE_ACTIONS or name == "say":
+    if name in _FREE_ACTIONS or name == ActionType.SAY:
         return ActionCost()
 
     if name in _STANDARD_ACTIONS:

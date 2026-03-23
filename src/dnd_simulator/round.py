@@ -10,23 +10,25 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
-from dnd_simulator.core.action import SKIP, Action
+from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.awareness import PerceivedEvent
 from dnd_simulator.core.character import Creature
-from dnd_simulator.core.models import EmitFn, Event, EventType, GameDateTime, QueryFn, TimeDelta
+from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType, GameDateTime, QueryFn, TimeDelta
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.rules.actions import (
-    DASH_ACTION_COST,
-    action_cost,
     ends_peaceful_turn,
     get_num_actions,
     get_num_bonus_actions,
 )
 from dnd_simulator.rules.conditions import effective_speed, is_incapacitated
-from dnd_simulator.rules.validation import ActionContext, validate_action
+from dnd_simulator.rules.validation import ActionContext
+
+if TYPE_CHECKING:
+    from dnd_simulator.service.action_dispatcher import ActionDispatcher
 
 logger = logging.getLogger("dnd_simulator.round")
 
@@ -58,9 +60,19 @@ class Round:
     Peaceful: no budget — turn-ending actions auto-end, queries loop.
     """
 
-    def __init__(self, world: World, entities_layer: EntitiesLayer | None = None) -> None:
+    def __init__(
+        self,
+        world: World,
+        entities_layer: EntitiesLayer | None = None,
+        dispatcher: ActionDispatcher | None = None,
+    ) -> None:
         self._world = world
         self._entities = entities_layer or get_entities_layer(world)
+        if dispatcher is None:
+            from dnd_simulator.service.action_dispatcher import create_dispatcher
+
+            dispatcher = create_dispatcher(world)
+        self._dispatcher = dispatcher
         self._stop_flag = False
         self._on_round_end: Callable[[RoundResult], None] | None = None
         self._on_action: OnActionCallback | None = None
@@ -76,6 +88,16 @@ class Round:
     def set_on_action(self, callback: OnActionCallback) -> None:
         """Set callback invoked after each action within a turn."""
         self._on_action = callback
+
+    def _execute_action(
+        self,
+        creature: Creature,
+        action: Action,
+        ctx: ActionContext,
+        emit_fn: EmitFn,
+    ) -> ActionResult:
+        """Execute action via dispatcher. Validates, checks budget, executes, consumes budget."""
+        return self._dispatcher.dispatch(creature, action, ctx, emit_fn)
 
     def get_perceived_events(self, creature: Creature) -> list[PerceivedEvent]:
         """Return perceived events for a creature (delegates to EntitiesLayer)."""
@@ -142,58 +164,23 @@ class Round:
         actions: list[Action] = []
         consecutive_failures = 0
 
+        ctx = ActionContext(is_combat=True, current_turn_entity_id=creature.id, turn_budget=budget)
+
         while True:
             awareness = self._entities.build_awareness(creature, time, query_fn)
             awareness.turn_budget = budget
+            awareness.available_actions = self._dispatcher.get_available_actions(creature, ctx)
             events = self._entities.get_perceived_events(creature)
 
             action = creature.brain.choose_action(creature, awareness, events)
 
-            if action.name == "end_turn":
+            if action.name == ActionType.END_TURN:
                 break
 
-            # Validate preconditions (alive, active, combat/peaceful mode)
-            ctx = ActionContext(is_combat=True, current_turn_entity_id=creature.id)
-            validation_error = validate_action(creature, action, ctx)
-            if validation_error:
-                logger.warning(
-                    "[Round] %s action '%s' rejected: %s",
-                    creature.name,
-                    action.name,
-                    validation_error.message,
-                )
-                consecutive_failures += 1
-                if consecutive_failures >= 3:
-                    break
-                continue
+            # Dispatcher handles: validation → budget check → execute → budget consume
+            result = self._execute_action(creature, action, ctx, emit_fn)
 
-            # Dash is special: costs 1 action, adds speed to movement pool, no world event
-            if action.name == "dash":
-                if not budget.can_afford(DASH_ACTION_COST):
-                    logger.warning("[Round] %s tried dash but no actions left", creature.name)
-                    break
-                budget.consume(DASH_ACTION_COST)
-                budget.movement_remaining += speed
-                actions.append(action)
-                if self._on_action:
-                    self._on_action(creature, action, budget, "")
-                continue
-
-            # Enforce budget (check only, consume after success)
-            cost = action_cost(action)
-            if not budget.can_afford(cost):
-                logger.warning(
-                    "[Round] %s tried %s but insufficient budget, forcing end_turn",
-                    creature.name,
-                    action.name,
-                )
-                break
-
-            result = creature.execute_action(action, emit_fn)
-
-            # Only consume budget if the action actually succeeded
             if result.success:
-                budget.consume(cost)
                 consecutive_failures = 0
             else:
                 consecutive_failures += 1
@@ -204,15 +191,12 @@ class Round:
                         consecutive_failures,
                     )
                     break
+                continue
 
             actions.append(action)
 
             if self._on_action:
                 self._on_action(creature, action, budget, result.error)
-
-            # Special: wait action advances time immediately
-            if action.name == "wait":
-                self._handle_wait(action, creature)
 
             # If budget exhausted, end turn automatically
             if budget.turn_over:
@@ -237,38 +221,29 @@ class Round:
             return []
 
         actions: list[Action] = []
+        ctx = ActionContext(is_combat=False, current_turn_entity_id=creature.id)
 
         while True:
             awareness = self._entities.build_awareness(creature, time, query_fn)
             # No budget in peaceful mode — awareness.turn_budget stays None
+            awareness.available_actions = self._dispatcher.get_available_actions(creature, ctx)
             events = self._entities.get_perceived_events(creature)
 
             action = creature.brain.choose_action(creature, awareness, events)
 
-            if action.name == "end_turn":
+            if action.name == ActionType.END_TURN:
                 break
 
-            # Validate preconditions (alive, active, combat/peaceful mode)
-            ctx = ActionContext(is_combat=False, current_turn_entity_id=creature.id)
-            validation_error = validate_action(creature, action, ctx)
-            if validation_error:
-                logger.warning(
-                    "[Round] %s action '%s' rejected: %s",
-                    creature.name,
-                    action.name,
-                    validation_error.message,
-                )
+            # Dispatcher handles validation + execution
+            result = self._execute_action(creature, action, ctx, emit_fn)
+            if not result.success:
+                logger.warning("[Round] %s action '%s' failed: %s", creature.name, action.name, result.error)
                 break
 
-            result = creature.execute_action(action, emit_fn)
             actions.append(action)
 
             if self._on_action:
                 self._on_action(creature, action, None, result.error)
-
-            # Special: wait action advances time immediately
-            if action.name == "wait":
-                self._handle_wait(action, creature)
 
             # Turn-ending actions auto-end the peaceful turn
             if ends_peaceful_turn(action):
@@ -309,22 +284,11 @@ class Round:
 
             action = creature.brain.choose_action(creature, awareness, perceived)
 
-            if action.name == "skip" or action == SKIP:
+            if action.name == ActionType.SKIP:
                 continue
 
-            # Validate preconditions
             ctx = ActionContext(is_combat=True, current_turn_entity_id=creature.id)
-            validation_error = validate_action(creature, action, ctx)
-            if validation_error:
-                logger.warning(
-                    "[Round] %s reaction '%s' rejected: %s",
-                    creature.name,
-                    action.name,
-                    validation_error.message,
-                )
-                continue
-
-            reaction_result = creature.execute_action(action, emit_fn)
+            reaction_result = self._execute_action(creature, action, ctx, emit_fn)
             if reaction_result.success:
                 reactions.append(action)
 
@@ -416,44 +380,3 @@ class Round:
             self._on_round_end(RoundResult(events=tick_events))
 
         return True
-
-    def _handle_wait(self, action: Action, creature: Creature | None = None) -> None:
-        """Handle a 'wait' action — creature goes dormant until wake_at.
-
-        Travel: immediate move + advance (legacy, will be refactored).
-        Plain wait: set wake_at, creature becomes dormant. Fast-forward in run_loop
-        handles the actual time advancement.
-        """
-        travel_to = action.params.get("travel_to")
-        if travel_to and creature:
-            target_id = str(travel_to)
-            graph = self._world.location_graph
-            try:
-                seconds = graph.travel_seconds(creature.location_id, target_id)
-                creature.location_id = target_id
-                self._world.advance_time(TimeDelta(seconds=seconds))
-            except ValueError:
-                # No direct path — try by name match
-                for loc_id in graph.all_ids():
-                    loc = graph.get(loc_id)
-                    if loc.name.lower() == target_id.lower():
-                        try:
-                            seconds = graph.travel_seconds(creature.location_id, loc_id)
-                            creature.location_id = loc_id
-                            self._world.advance_time(TimeDelta(seconds=seconds))
-                        except ValueError:
-                            pass
-                        break
-        elif creature:
-            raw = action.params.get("hours", 1)
-            hours = int(str(raw))
-            if hours > 0:
-                now = self._world.time.to_total_seconds()
-                creature.wake_at_seconds = now + hours * 3600
-                creature.active = False
-                logger.info(
-                    "[Wait] %s sleeps for %dh (wake_at=%d)",
-                    creature.name,
-                    hours,
-                    creature.wake_at_seconds,
-                )

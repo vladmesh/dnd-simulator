@@ -26,7 +26,7 @@ from typing import Any
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from dnd_simulator.adapters.api.deps import get_service
-from dnd_simulator.core.action import Action
+from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.i18n import _
 
 logger = logging.getLogger("dnd_simulator.ws")
@@ -43,29 +43,29 @@ def _parse_command(text: str) -> Action:
     """Parse a text command into an Action."""
     raw = text.strip()
     if not raw:
-        return Action(name="idle")
+        return Action(name=ActionType.IDLE)
     cmd = raw.lower()
 
     if cmd in ("look", "status", "map"):
-        return Action(name="idle")
+        return Action(name=ActionType.IDLE)
 
     if cmd.startswith("look "):
         target = raw[5:].strip()
         if target:
-            return Action(name="idle", params={"inspect_target": target})
-        return Action(name="idle")
+            return Action(name=ActionType.IDLE, params={"inspect_target": target})
+        return Action(name=ActionType.IDLE)
 
     if cmd == "idle":
-        return Action(name="idle")
+        return Action(name=ActionType.IDLE)
 
     if cmd in ("end_turn", "end"):
-        return Action(name="end_turn")
+        return Action(name=ActionType.END_TURN)
 
     if cmd == "dodge":
-        return Action(name="dodge")
+        return Action(name=ActionType.DODGE)
 
     if cmd == "flee":
-        return Action(name="flee")
+        return Action(name=ActionType.FLEE)
 
     if cmd == "wait" or cmd.startswith("wait "):
         parts = cmd.split()
@@ -75,28 +75,28 @@ def _parse_command(text: str) -> Action:
                 hours = max(1, int(parts[1]))
             except ValueError:
                 hours = 1
-        return Action(name="wait", params={"hours": hours})
+        return Action(name=ActionType.WAIT, params={"hours": hours})
 
     if cmd.startswith("say "):
-        return Action(name="say", params={"text": raw[4:].strip()})
+        return Action(name=ActionType.SAY, params={"text": raw[4:].strip()})
 
     if cmd.startswith("attack "):
         target_id = raw[7:].strip().split()[0] if raw[7:].strip() else ""
         if target_id:
-            return Action(name="attack", params={"target_id": target_id})
-        return Action(name="idle")
+            return Action(name=ActionType.ATTACK, params={"target_id": target_id})
+        return Action(name=ActionType.IDLE)
 
     if cmd.startswith("go "):
         target = raw[3:].strip()
         if target:
-            return Action(name="wait", params={"hours": 0, "travel_to": target})
-        return Action(name="idle")
+            return Action(name=ActionType.WAIT, params={"hours": 0, "travel_to": target})
+        return Action(name=ActionType.IDLE)
 
     if cmd.startswith("move ") or cmd.startswith("dash "):
         is_dash = cmd.startswith("dash ")
         args = raw[5:].strip().split()
         if not args:
-            return Action(name="idle")
+            return Action(name=ActionType.IDLE)
         params: dict[str, object] = {}
         keyword = args[0].lower()
         if keyword == "toward" and len(args) > 1:
@@ -105,9 +105,9 @@ def _parse_command(text: str) -> Action:
             params["away_from"] = args[1]
         else:
             params["direction"] = keyword
-        return Action(name="dash" if is_dash else "move", params=params)
+        return Action(name=ActionType.DASH if is_dash else ActionType.MOVE, params=params)
 
-    return Action(name="idle")
+    return Action(name=ActionType.IDLE)
 
 
 # ---------------------------------------------------------------------------
@@ -227,7 +227,7 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
 
             if msg_type == "action":
                 action = Action(
-                    name=str(msg.get("name", "idle")),
+                    name=ActionType(str(msg.get("name", "idle"))),
                     params=msg.get("params", {}),
                 )
                 session.submit_player_action(action)

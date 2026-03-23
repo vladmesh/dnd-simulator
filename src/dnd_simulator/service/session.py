@@ -7,7 +7,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from dnd_simulator.core.action import Action
+from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import PlayerBrain
 from dnd_simulator.core.character import Ability, Creature
@@ -17,6 +17,7 @@ from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.round import Round, get_entities_layer
+from dnd_simulator.service.action_dispatcher import create_dispatcher
 
 logger = logging.getLogger("dnd_simulator.session")
 
@@ -52,6 +53,8 @@ def _awareness_to_dict(awareness: PeacefulAwareness | CombatAwareness) -> dict[s
         d["self_conditions"] = sorted(c.value for c in awareness.self_conditions)
         for i, nearby_entry in enumerate(awareness.nearby):
             d["nearby"][i]["conditions"] = sorted(c.value for c in nearby_entry.conditions)
+    # ActionType enums → strings for JSON
+    d["available_actions"] = [str(a) for a in awareness.available_actions]
     return d
 
 
@@ -147,7 +150,7 @@ def resolve_abstract_move(action: Action, player: Creature, entities_layer: Enti
     direction = calculate_direction(my_pos, target_pos) if toward else calculate_away_direction(my_pos, target_pos)
 
     ft = int(str(action.params.get("ft", 5)))
-    return Action(name="move", params={"direction": direction, "ft": ft})
+    return Action(name=ActionType.MOVE, params={"direction": direction, "ft": ft})
 
 
 # ---------------------------------------------------------------------------
@@ -285,7 +288,8 @@ class GameSession:
             brain.set_on_turn(on_turn)
             player.brain = brain
 
-            game_round = Round(self.world, entities_layer)
+            dispatcher = create_dispatcher(self.world)
+            game_round = Round(self.world, entities_layer, dispatcher=dispatcher)
 
             # Wire on_action: fires after each action by any creature
             def on_action(creature: Creature, action: Action, budget: TurnBudget | None, error: str) -> None:
@@ -357,7 +361,7 @@ class GameSession:
         if game_round is not None:
             game_round.stop()
         if brain is not None:
-            brain.submit_action(Action(name="end_turn"))  # unblock queue
+            brain.submit_action(Action(name=ActionType.END_TURN))  # unblock queue
         if thread is not None:
             thread.join(timeout=5)
 
@@ -371,7 +375,7 @@ class GameSession:
             raise RuntimeError("Round not running — cannot submit action")
 
         # Resolve abstract move (toward/away_from) to concrete direction
-        if action.name == "move" and ("toward" in action.params or "away_from" in action.params):
+        if action.name == ActionType.MOVE and ("toward" in action.params or "away_from" in action.params):
             player = self.get_player()
             if player is not None:
                 entities_layer = get_entities_layer(self.world)

@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+from typing import cast
 from unittest.mock import MagicMock
 
 from dnd_simulator.core.character import Ability, Attack, DamageComponent, DamageType
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query
+from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.llm.brain import LlmBrain
 from dnd_simulator.llm.client import LlmResponse, ToolCall
 from dnd_simulator.llm.tools import build_npc_tools
+from dnd_simulator.rules.validation import ActionContext
+from dnd_simulator.service.action_dispatcher import create_dispatcher
 
 _SWORD = Attack(
     name="longsword",
@@ -29,14 +33,19 @@ def _noop_emit_fn(event: object) -> ActionResult:
     return ActionResult()
 
 
+_STUB_WORLD = cast(World, MagicMock(spec=World))
+
+
 def _run_turn(layer: EntitiesLayer, npc: Npc, emit_fn: object = None) -> None:
-    """Run a single brain→execute turn (replaces removed layer.run_creature_turn)."""
+    """Run a single brain→execute turn via dispatcher."""
     if npc.brain is None:
         return
     awareness = layer.build_awareness(npc, _TIME, _noop_query_fn)
     events = layer.get_perceived_events(npc)
     action = npc.brain.choose_action(npc, awareness, events)
-    npc.execute_action(action, emit_fn or _noop_emit_fn)
+    ctx = ActionContext(is_combat=npc.in_combat, current_turn_entity_id=npc.id)
+    dispatcher = create_dispatcher(_STUB_WORLD)
+    dispatcher.dispatch(npc, action, ctx, emit_fn or _noop_emit_fn)
 
 
 class TestBuildNpcTools:

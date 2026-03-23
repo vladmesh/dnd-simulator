@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from dnd_simulator.core.action import END_TURN, Action
+from dnd_simulator.core.action import END_TURN, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, CombatEntity, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.models import EventType
 from dnd_simulator.core.tags import NpcTag, find_tags, has_tag
@@ -53,7 +53,7 @@ class Brain(ABC):
         direction = calculate_direction(origin, dest)
         if not direction:
             return END_TURN  # already at target
-        return Action(name="move", params={"direction": direction, "ft": ft})
+        return Action(name=ActionType.MOVE, params={"direction": direction, "ft": ft})
 
     @staticmethod
     def move_away_from_target(target: CombatEntity, awareness: CombatAwareness, ft: int = 5) -> Action:
@@ -64,7 +64,7 @@ class Brain(ABC):
         origin = Position(awareness.self_x, awareness.self_y)
         dest = Position(target.x, target.y)
         direction = calculate_away_direction(origin, dest)
-        return Action(name="move", params={"direction": direction, "ft": ft})
+        return Action(name=ActionType.MOVE, params={"direction": direction, "ft": ft})
 
 
 class RuleBrain(Brain):
@@ -110,7 +110,7 @@ class RuleBrain(Brain):
             return END_TURN
 
         logger.info("[RuleBrain:%s] → say (canned: %s)", creature.name, response)
-        return Action(name="say", params={"text": response})
+        return Action(name=ActionType.SAY, params={"text": response})
 
     def _get_tags(self, creature: Creature) -> list[str]:
         """Get NPC tags if available, empty list otherwise."""
@@ -119,7 +119,7 @@ class RuleBrain(Brain):
     def _choose_combat_action(self, creature: Creature, awareness: CombatAwareness) -> Action:
         nearby = awareness.nearby
         if not nearby:
-            return Action(name="idle")
+            return Action(name=ActionType.IDLE)
 
         hp = awareness.self_hp
         max_hp = awareness.self_max_hp
@@ -162,23 +162,23 @@ class RuleBrain(Brain):
         # 1. Flee if critically wounded (scared NPCs flee earlier)
         if hp_ratio < flee_threshold:
             logger.info("[RuleBrain:%s] → flee (HP %.0f%%)", creature.name, hp_ratio * 100)
-            return Action(name="flee")
+            return Action(name=ActionType.FLEE)
 
         # 2. Dodge if badly hurt and enemy in melee reach
         nearest_dist = min(e.distance_ft for e in nearby)
         if hp_ratio < dodge_threshold and nearest_dist <= 5:
             logger.info("[RuleBrain:%s] → dodge (HP %.0f%%)", creature.name, hp_ratio * 100)
-            return Action(name="dodge")
+            return Action(name=ActionType.DODGE)
 
         # 3. Ranged attacker: shoot if target in range, move closer if not
         if is_ranged and dist <= primary_reach:
             logger.info("[RuleBrain:%s] → attack %s (ranged, dist %d ft)", creature.name, target_id, dist)
-            return Action(name="attack", params={"target_id": target_id})
+            return Action(name=ActionType.ATTACK, params={"target_id": target_id})
 
         # 4. Melee: attack if in weapon reach
         if dist <= primary_reach:
             logger.info("[RuleBrain:%s] → attack %s (dist %d ft)", creature.name, target_id, dist)
-            return Action(name="attack", params={"target_id": target_id})
+            return Action(name=ActionType.ATTACK, params={"target_id": target_id})
 
         # 5. Move toward if have movement remaining
         movement_left = budget.movement_remaining if budget else 0
@@ -190,7 +190,7 @@ class RuleBrain(Brain):
         has_actions = (budget.actions if budget else 0) > 0
         if has_actions:
             logger.info("[RuleBrain:%s] → dash (dist %d ft)", creature.name, dist)
-            return Action(name="dash")
+            return Action(name=ActionType.DASH)
 
         logger.debug(
             "[RuleBrain:%s] → end_turn (no budget: actions=%d, move=%dft)",

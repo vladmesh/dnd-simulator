@@ -13,6 +13,7 @@ from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import EventType
 
 if TYPE_CHECKING:
+    from dnd_simulator.core.action import ActionType
     from dnd_simulator.core.turn_budget import TurnBudget
 
 
@@ -55,6 +56,7 @@ class PeacefulAwareness:
     nation_info: dict[str, object] | None
     nearby: list[NearbyEntity] = field(default_factory=list)
     turn_budget: TurnBudget | None = None
+    available_actions: list[ActionType] = field(default_factory=list)
 
 
 @dataclass
@@ -75,6 +77,7 @@ class CombatAwareness:
     battle_map_ascii: str = ""
     turn_budget: TurnBudget | None = None
     self_conditions: frozenset[Condition] = field(default_factory=frozenset)
+    available_actions: list[ActionType] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

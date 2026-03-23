@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import cast
 from unittest.mock import MagicMock
 
 from dnd_simulator.core.character import (
@@ -15,6 +16,7 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query
+from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.perception import perceive_event
@@ -22,6 +24,10 @@ from dnd_simulator.llm.brain import LlmBrain
 from dnd_simulator.llm.client import LlmResponse, ToolCall
 from dnd_simulator.llm.prompts import build_npc_combat_prompt
 from dnd_simulator.llm.tools import build_npc_combat_tools
+from dnd_simulator.rules.action_handlers import handle_attack, handle_dodge, handle_flee
+from dnd_simulator.rules.validation import ActionContext
+
+_STUB_WORLD = cast(World, MagicMock(spec=World))
 
 
 def _noop_query_fn(layer: str, query: Query) -> Answer:
@@ -361,7 +367,8 @@ class TestNpcCombatTurn:
         awareness = layer.build_awareness(npc, time, _noop_query_fn)
         events = layer.get_perceived_events(npc)
         action = npc.brain.choose_action(npc, awareness, events)
-        npc.execute_action(action, capture_emit)
+        ctx = ActionContext(is_combat=True, current_turn_entity_id=npc.id)
+        handle_attack(npc, action, capture_emit, ctx, _STUB_WORLD)
 
         # Check that combat tools were used
         call_args = mock_llm.generate_with_tools.call_args
@@ -388,7 +395,8 @@ class TestNpcCombatTurn:
         awareness = layer.build_awareness(npc, time, _noop_query_fn)
         events = layer.get_perceived_events(npc)
         action = npc.brain.choose_action(npc, awareness, events)
-        npc.execute_action(action, capture_emit)
+        ctx = ActionContext(is_combat=True, current_turn_entity_id=npc.id)
+        handle_dodge(npc, action, capture_emit, ctx, _STUB_WORLD)
         assert len(emit_calls) == 1
         assert emit_calls[0].event_type == EventType.ENTITY_DODGE
 
@@ -410,7 +418,8 @@ class TestNpcCombatTurn:
         awareness = layer.build_awareness(npc, time, _noop_query_fn)
         events = layer.get_perceived_events(npc)
         action = npc.brain.choose_action(npc, awareness, events)
-        npc.execute_action(action, capture_emit)
+        ctx = ActionContext(is_combat=True, current_turn_entity_id=npc.id)
+        handle_flee(npc, action, capture_emit, ctx, _STUB_WORLD)
         assert len(emit_calls) == 1
         assert emit_calls[0].event_type == EventType.ENTITY_FLEE
 

@@ -7,9 +7,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from dnd_simulator.core.action import Action
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType
 from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
@@ -190,7 +188,7 @@ class Creature(Entity):
     """A living being with physical stats — animals, monsters, humanoids.
 
     Has ability scores, HP, and AC but no class, race, or alignment.
-    NPC turns are orchestrated by EntitiesLayer (brain.choose_action + execute_action).
+    Pure data + brain. Action execution goes through ActionDispatcher.
     """
 
     ability_scores: AbilityScores = field(default_factory=AbilityScores)
@@ -213,87 +211,6 @@ class Creature(Entity):
     @property
     def is_alive(self) -> bool:
         return self.current_hp > 0
-
-    def execute_action(self, action: Action, emit_fn: EmitFn) -> ActionResult:
-        """Execute a chosen action via emit_fn. Returns ActionResult."""
-        if action.name == "idle":
-            inspect_target = action.params.get("inspect_target") if action.params else None
-            if inspect_target:
-                logger.info("[%s] → inspect %s", self.name, inspect_target)
-                emit_fn(
-                    Event(
-                        event_type=EventType.CUSTOM,
-                        source_layer="entities",
-                        data={
-                            "entity_id": self.id,
-                            "inspect_target": str(inspect_target),
-                        },
-                    )
-                )
-            else:
-                logger.info("[%s] → idle", self.name)
-            return ActionResult()
-        if action.name == "say":
-            emit_fn(
-                Event(
-                    event_type=EventType.ENTITY_SAY,
-                    source_layer="entities",
-                    data={"entity_id": self.id, "text": action.params.get("text", "")},
-                )
-            )
-            return ActionResult()
-        if action.name == "attack":
-            return emit_fn(
-                Event(
-                    event_type=EventType.ENTITY_ATTACK,
-                    source_layer="entities",
-                    data={
-                        "attacker_id": self.id,
-                        "target_id": action.params.get("target_id", ""),
-                    },
-                )
-            )
-        if action.name == "dodge":
-            logger.info("[%s] → dodge", self.name)
-            emit_fn(
-                Event(
-                    event_type=EventType.ENTITY_DODGE,
-                    source_layer="entities",
-                    data={
-                        "entity_id": self.id,
-                        "description": action.params.get("description", ""),
-                    },
-                )
-            )
-            return ActionResult()
-        if action.name == "flee":
-            logger.info("[%s] → flee", self.name)
-            emit_fn(
-                Event(
-                    event_type=EventType.ENTITY_FLEE,
-                    source_layer="entities",
-                    data={
-                        "entity_id": self.id,
-                        "description": action.params.get("description", ""),
-                    },
-                )
-            )
-            return ActionResult()
-        if action.name == "move":
-            direction = action.params.get("direction", "")
-            ft = int(str(action.params.get("ft", 5)))
-            logger.info("[%s] → move %s %dft", self.name, direction, ft)
-            return emit_fn(
-                Event(
-                    event_type=EventType.ENTITY_MOVE,
-                    source_layer="entities",
-                    data={"entity_id": self.id, "direction": str(direction), "ft": ft},
-                )
-            )
-        if action.name == "wait":
-            logger.info("[%s] → wait", self.name)
-            return ActionResult()
-        return ActionResult(success=False, error=f"Unknown action: {action.name}")
 
     def take_damage(self, amount: int) -> int:
         """Apply damage, return actual damage dealt (after clamping to 0)."""
