@@ -12,7 +12,7 @@ from dnd_simulator.content_loader import (
     load_world_meta,
 )
 
-SWORD_VALE = Path(__file__).resolve().parents[1] / "content" / "worlds" / "sword_vale"
+SWORD_VALE = Path(__file__).resolve().parents[2] / "content" / "worlds" / "sword_vale"
 
 
 class TestDirectoryFormat:

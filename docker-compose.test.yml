@@ -1,0 +1,19 @@
+services:
+  backend:
+    build: .
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  integration-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      BACKEND_URL: http://backend:8001
+    entrypoint: ["uv", "run", "pytest", "tests/integration/", "-v"]

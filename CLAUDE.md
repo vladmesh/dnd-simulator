@@ -7,20 +7,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 make install      # uv sync — install all dependencies
 make check        # lint + typecheck + test (full CI validation)
-make test         # uv run pytest
+make test         # uv run pytest (all tests)
+make test-unit    # uv run pytest tests/unit/ (fast, no I/O)
+make test-integration  # docker compose — backend + integration tests
 make lint         # ruff check + format check
 make format       # auto-fix formatting and lint issues
 make typecheck    # uv run mypy src/
+make setup-hooks  # install pre-commit (auto-format) and pre-push (check) hooks
 make messages     # extract translatable strings to .pot
 make compile-messages  # compile .po → .mo
 make serve        # uvicorn API server on :8001 with --reload
 make frontend     # vite dev server on :5173, proxies /api → :8001
 
 # Single test file
-uv run pytest tests/test_character.py
+uv run pytest tests/unit/test_character.py
 
 # Single test
-uv run pytest tests/test_character.py::TestPerceive::test_perceive_character_sees_race
+uv run pytest tests/unit/test_character.py::TestPerceive::test_perceive_character_sees_race
 
 # Tests with coverage
 uv run pytest --cov=src/dnd_simulator

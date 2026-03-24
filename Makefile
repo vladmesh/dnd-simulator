@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test check messages compile-messages serve stop frontend
+.PHONY: install lint format typecheck test test-unit test-integration check setup-hooks messages compile-messages serve stop frontend
 
 install:
 	uv sync
@@ -17,7 +17,16 @@ typecheck:
 test:
 	uv run pytest
 
+test-unit:
+	uv run pytest tests/unit/ -q
+
+test-integration:
+	docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from integration-tests
+
 check: lint typecheck test
+
+setup-hooks:
+	@bash scripts/setup-hooks.sh
 
 stop:
 	@fuser -k 8001/tcp 2>/dev/null && echo "Stopped server on :8001" || echo "Nothing running on :8001"

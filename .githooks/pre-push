@@ -1,0 +1,31 @@
+#!/bin/bash
+# Pre-push hook: lint + typecheck + tests must pass
+
+set -e
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT"
+
+if ! command -v uv &> /dev/null; then
+    echo "uv not found. Install: https://docs.astral.sh/uv/getting-started/installation/"
+    exit 1
+fi
+
+echo "Running pre-push checks..."
+
+if ! make lint; then
+    echo "Lint failed. Fix before pushing."
+    exit 1
+fi
+
+if ! make typecheck; then
+    echo "Typecheck failed. Fix before pushing."
+    exit 1
+fi
+
+if ! make test-unit; then
+    echo "Tests failed. Fix before pushing."
+    exit 1
+fi
+
+echo "All checks passed."

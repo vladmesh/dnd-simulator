@@ -1,0 +1,27 @@
+#!/bin/bash
+# Pre-commit hook: auto-format staged Python files with ruff
+
+set -euo pipefail
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT"
+
+if ! command -v uv &> /dev/null; then
+    echo "uv not found. Install: https://docs.astral.sh/uv/getting-started/installation/"
+    exit 1
+fi
+
+mapfile -d '' -t STAGED_FILES < <(git diff --cached --name-only --diff-filter=ACM -z -- '*.py')
+
+if [ "${#STAGED_FILES[@]}" -eq 0 ]; then
+    exit 0
+fi
+
+if ! (uv run ruff format "${STAGED_FILES[@]}" && uv run ruff check --fix "${STAGED_FILES[@]}"); then
+    echo "Formatting failed. Aborting commit."
+    exit 1
+fi
+
+for file in "${STAGED_FILES[@]}"; do
+    git add "$file"
+done
