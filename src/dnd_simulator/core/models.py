@@ -93,6 +93,7 @@ class EventType(Enum):
     ENTITY_DASH = "entity_dash"
     ENTITY_USE_ITEM = "entity_use_item"
     ENTITY_BLESS = "entity_bless"
+    ENTITY_SECOND_WIND = "entity_second_wind"
     ENTITY_EQUIP = "entity_equip"
     ENTITY_UNEQUIP = "entity_unequip"
     TURN_SKIPPED = "turn_skipped"

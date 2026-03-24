@@ -27,6 +27,7 @@ class StatType(Enum):
     SPEED = "speed"
     ATTACK_ROLL = "attack_roll"
     INITIATIVE = "initiative"
+    DAMAGE = "damage"
 
 
 @dataclass(frozen=True)
@@ -52,6 +53,7 @@ class AttackModifiers:
     """Pre-computed attack parameters for combat_manager.resolve_attack()."""
 
     modifier: int
+    damage_bonus: int
     dice_bonuses: tuple[str, ...]
     advantage: bool
     disadvantage: bool

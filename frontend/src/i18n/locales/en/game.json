@@ -26,6 +26,7 @@
   "dash_toward": "Dash toward {{target}}",
   "dash_away": "Dash from {{target}}",
   "bless": "Bless",
+  "second_wind": "Second Wind",
   "use_item": "Use Item",
   "idle": "Look",
   "wait": "Wait",

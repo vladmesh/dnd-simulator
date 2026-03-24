@@ -26,6 +26,7 @@
   "dash_toward": "Рывок к {{target}}",
   "dash_away": "Рывок от {{target}}",
   "bless": "Благословение",
+  "second_wind": "Второе дыхание",
   "use_item": "Предмет",
   "idle": "Осмотреться",
   "wait": "Ждать",

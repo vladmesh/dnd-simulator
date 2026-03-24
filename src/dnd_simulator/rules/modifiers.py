@@ -9,6 +9,7 @@ Replaces ad-hoc stat computation scattered across combat_manager, conditions.py,
 from __future__ import annotations
 
 from dnd_simulator.core.character import Ability, Character, Creature
+from dnd_simulator.core.class_features import FighterFeatures, FightingStyle
 from dnd_simulator.core.conditions import Condition, ConditionsMap
 from dnd_simulator.core.modifiers import AttackModifiers, Modifier, ModifierOp, StatType
 from dnd_simulator.rules.proficiency import (
@@ -95,6 +96,11 @@ def collect_self_modifiers(creature: Creature) -> list[Modifier]:
             and not is_proficient_with_shield(creature.char_class)
         ):
             mods.append(Modifier(StatType.ATTACK_ROLL, ModifierOp.DISADVANTAGE, source="non_proficient_shield"))
+
+        # Fighting Style: Defense — +1 AC while wearing armor (PHB p.72)
+        fighter = creature.get_feature(FighterFeatures)
+        if fighter and fighter.fighting_style == FightingStyle.DEFENSE and creature.equipped_armor:
+            mods.append(Modifier(StatType.AC, ModifierOp.ADD, value=1, source="fighting_style_defense"))
 
     return mods
 
@@ -252,6 +258,16 @@ def attack_modifiers(attacker: Creature, target: Creature, *, melee: bool) -> At
     base_mod = ability_mod + prof
     flat_mod = compute_stat(base_mod, attacker_mods, StatType.ATTACK_ROLL)
 
+    # Damage bonus: Fighting Style Dueling (+2 damage with one-handed melee, no other weapon)
+    # D&D 5e PHB p.72: "wielding a melee weapon in one hand and no other weapons"
+    # We have a single weapon slot, so "no other weapons" is always true.
+    # TODO: exclude two-handed weapons when is_two_handed is added to WeaponDef
+    dmg_bonus = 0
+    if isinstance(attacker, Character) and melee:
+        fighter = attacker.get_feature(FighterFeatures)
+        if fighter and fighter.fighting_style == FightingStyle.DUELING and attacker.equipped_weapon:
+            dmg_bonus = 2
+
     # Dice bonuses (Bless +1d4, etc.)
     dice = collect_dice_bonuses(attacker_mods, StatType.ATTACK_ROLL)
 
@@ -262,6 +278,7 @@ def attack_modifiers(attacker: Creature, target: Creature, *, melee: bool) -> At
 
     return AttackModifiers(
         modifier=flat_mod,
+        damage_bonus=dmg_bonus,
         dice_bonuses=dice,
         advantage=adv,
         disadvantage=dis,

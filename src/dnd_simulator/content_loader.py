@@ -29,6 +29,7 @@ from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.items import ArmorCategory, ArmorDef, Item, ItemType, ShieldDef, WeaponCategory, WeaponDef
 from dnd_simulator.core.location import Location, LocationEdge
 from dnd_simulator.core.player import PlayerCharacter
+from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.layers.entities.models import Npc, NpcMemory, resolve_schedule
 from dnd_simulator.layers.geography.models import (
     Connection,
@@ -284,6 +285,17 @@ def parse_class_features(char_class: CharClass, data: dict[str, Any]) -> list[Cl
     return features
 
 
+def build_class_resource_pools(char_class: CharClass) -> list[ResourcePool]:
+    """Create default resource pools for a class.
+
+    Fighter: second_wind (1/short rest).
+    """
+    pools: list[ResourcePool] = []
+    if char_class == CharClass.FIGHTER:
+        pools.append(ResourcePool(id="second_wind", max_uses=1, current_uses=1, reset_on=RestType.SHORT_REST))
+    return pools
+
+
 # -- Public loaders --
 
 
@@ -495,6 +507,7 @@ def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locati
         equipped_armor=equipped_armor,
         equipped_shield=equipped_shield,
         class_features=parse_class_features(char_class, ndata),
+        resource_pools=build_class_resource_pools(char_class),
     )
     # Brain is assigned by BrainFactory in GameService, not here.
     return npc
@@ -550,6 +563,7 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
         equipped_armor=equipped_armor,
         equipped_shield=equipped_shield,
         class_features=parse_class_features(char_class, pdata),
+        resource_pools=build_class_resource_pools(char_class),
     )
 
 

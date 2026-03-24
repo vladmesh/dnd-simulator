@@ -99,6 +99,27 @@ class ArmorEquipmentProvider:
         return result
 
 
+class ClassFeatureActionProvider:
+    """Provides class-feature actions (Second Wind, etc.) when available."""
+
+    def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
+        from dnd_simulator.core.character import Character, CharClass
+        from dnd_simulator.rules.resources import has_resource
+
+        if not isinstance(creature, Character):
+            return []
+
+        result: list[ActionType] = []
+
+        # Fighter: Second Wind (requires resource pool)
+        if creature.char_class == CharClass.FIGHTER and has_resource(creature, "second_wind"):
+            probe = Action(name=ActionType.SECOND_WIND)
+            if validate_action(creature, probe, ctx) is None:
+                result.append(ActionType.SECOND_WIND)
+
+        return result
+
+
 class WeaponActionProvider:
     """Provides extra actions granted by equipped weapon (e.g. Bless)."""
 

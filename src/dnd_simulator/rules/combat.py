@@ -41,6 +41,7 @@ def resolve_attack(
     ac: int,
     attack: Attack,
     *,
+    damage_bonus: int = 0,
     extra_damage: tuple[tuple[str, DamageType], ...] = (),
     advantage: bool = False,
     disadvantage: bool = False,
@@ -87,7 +88,8 @@ def resolve_attack(
         amount = damage_roll(dice_expr, critical=is_crit, rng=rng)
         damage_results.append(DamageResult(amount=amount, type=dmg_type))
 
-    total = sum(d.amount for d in damage_results)
+    # Flat damage bonus (e.g. Dueling +2) — not doubled on crit
+    total = sum(d.amount for d in damage_results) + damage_bonus
 
     return AttackResult(
         hit=True,

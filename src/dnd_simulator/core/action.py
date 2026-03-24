@@ -25,6 +25,7 @@ class ActionType(StrEnum):
     UNEQUIP_ARMOR = "unequip_armor"
     EQUIP_SHIELD = "equip_shield"
     UNEQUIP_SHIELD = "unequip_shield"
+    SECOND_WIND = "second_wind"
     END_TURN = "end_turn"
     SKIP = "skip"
 

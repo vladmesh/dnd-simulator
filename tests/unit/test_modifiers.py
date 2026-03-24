@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
-from dnd_simulator.core.character import Ability, AbilityScores, Creature, DamageComponent, DamageType
+from dnd_simulator.core.character import (
+    Ability,
+    AbilityScores,
+    Character,
+    CharClass,
+    Creature,
+    DamageComponent,
+    DamageType,
+    Race,
+)
+from dnd_simulator.core.class_features import FighterFeatures, FightingStyle
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.items import Item, ItemType, WeaponCategory, WeaponDef
+from dnd_simulator.core.items import ArmorCategory, ArmorDef, Item, ItemType, WeaponCategory, WeaponDef
 from dnd_simulator.core.modifiers import Modifier, ModifierOp, StatType
 from dnd_simulator.rules.modifiers import (
     _CONDITION_DEFENSE_MODIFIERS,
@@ -465,3 +475,114 @@ class TestAttackModifiers:
         target = _creature(conditions={Condition.INVISIBLE: None})
         result = attack_modifiers(attacker, target, melee=True)
         assert result.disadvantage is True
+
+    def test_damage_bonus_zero_by_default(self) -> None:
+        attacker = _creature(str_score=14)
+        target = _creature()
+        result = attack_modifiers(attacker, target, melee=True)
+        assert result.damage_bonus == 0
+
+
+# ---------------------------------------------------------------------------
+# Fighting Style
+# ---------------------------------------------------------------------------
+
+_CHAIN_MAIL = ArmorDef(armor_id="chain_mail", category=ArmorCategory.HEAVY, base_ac=16, max_dex_bonus=0)
+_STUDDED_LEATHER = ArmorDef(armor_id="studded_leather", category=ArmorCategory.LIGHT, base_ac=12, max_dex_bonus=99)
+
+_LONGSWORD_DEF = WeaponDef(
+    weapon_id="longsword",
+    attack_name="slash",
+    category=WeaponCategory.MARTIAL,
+    damage=(DamageComponent("1d8", DamageType.SLASHING),),
+)
+
+
+def _fighter(
+    fighting_style: FightingStyle,
+    *,
+    strength: int = 14,
+    dexterity: int = 10,
+) -> Character:
+    return Character(
+        id="fighter",
+        name="Fighter",
+        location_id="loc",
+        max_hp=20,
+        current_hp=20,
+        ac=10,
+        ability_scores=AbilityScores(scores={**AbilityScores().scores, Ability.STR: strength, Ability.DEX: dexterity}),
+        race=Race.HUMAN,
+        char_class=CharClass.FIGHTER,
+        class_features=[FighterFeatures(fighting_style=fighting_style)],
+    )
+
+
+def _sword_item() -> Item:
+    return Item(id="sword_0", name="Longsword", item_type=ItemType.WEAPON, weapon_def=_LONGSWORD_DEF)
+
+
+def _armor_item(armor_def: ArmorDef) -> Item:
+    return Item(id="armor_0", name="Armor", item_type=ItemType.ARMOR, armor_def=armor_def)
+
+
+class TestFightingStyleDefense:
+    def test_defense_adds_1_ac_with_armor(self) -> None:
+        fighter = _fighter(FightingStyle.DEFENSE, dexterity=10)
+        fighter.equipped_armor = _armor_item(_CHAIN_MAIL)
+        # chain mail base 16, +0 DEX, +1 defense = 17
+        assert effective_ac(fighter) == 17
+
+    def test_defense_no_bonus_without_armor(self) -> None:
+        fighter = _fighter(FightingStyle.DEFENSE, dexterity=10)
+        # No armor → 10 + 0 DEX = 10, no defense bonus
+        assert effective_ac(fighter) == 10
+
+    def test_defense_works_with_light_armor(self) -> None:
+        fighter = _fighter(FightingStyle.DEFENSE, dexterity=14)
+        fighter.equipped_armor = _armor_item(_STUDDED_LEATHER)
+        # studded leather 12 + 2 DEX + 1 defense = 15
+        assert effective_ac(fighter) == 15
+
+    def test_dueling_style_no_ac_bonus(self) -> None:
+        fighter = _fighter(FightingStyle.DUELING)
+        fighter.equipped_armor = _armor_item(_CHAIN_MAIL)
+        # chain mail 16, no defense bonus
+        assert effective_ac(fighter) == 16
+
+
+class TestFightingStyleDueling:
+    def test_dueling_adds_2_damage_bonus(self) -> None:
+        fighter = _fighter(FightingStyle.DUELING, strength=14)
+        fighter.equipped_weapon = _sword_item()
+        target = _creature()
+        result = attack_modifiers(fighter, target, melee=True)
+        assert result.damage_bonus == 2
+
+    def test_dueling_no_bonus_without_weapon(self) -> None:
+        fighter = _fighter(FightingStyle.DUELING, strength=14)
+        # No weapon equipped → no dueling bonus
+        target = _creature()
+        result = attack_modifiers(fighter, target, melee=True)
+        assert result.damage_bonus == 0
+
+    def test_dueling_no_bonus_on_ranged(self) -> None:
+        fighter = _fighter(FightingStyle.DUELING, strength=14)
+        fighter.equipped_weapon = _sword_item()
+        target = _creature()
+        # melee=False → no dueling bonus
+        result = attack_modifiers(fighter, target, melee=False)
+        assert result.damage_bonus == 0
+
+    def test_defense_style_no_damage_bonus(self) -> None:
+        fighter = _fighter(FightingStyle.DEFENSE, strength=14)
+        fighter.equipped_weapon = _sword_item()
+        target = _creature()
+        result = attack_modifiers(fighter, target, melee=True)
+        assert result.damage_bonus == 0
+
+    def test_plain_creature_no_damage_bonus(self) -> None:
+        attacker = _creature(str_score=14)
+        target = _creature()
+        result = attack_modifiers(attacker, target, melee=True)
+        assert result.damage_bonus == 0

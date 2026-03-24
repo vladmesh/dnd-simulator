@@ -30,8 +30,8 @@
 
 ### Phase 2: Fighter L1
 
-7. [ ] **Fighting Style** — Defense (+1 AC в броне), Dueling (+2 dmg одноручное). Через modifier pipeline + class_features. Great Weapon Fighting → бэклог (нужен is_two_handed + dice reroll). `class-feature`
-8. [ ] **Second Wind** — bonus action, heal 1d10 + fighter level, 1 use / short rest. Использует ResourceTracker. Новый ActionType SECOND_WIND. `class-feature`
+7. [x] **Fighting Style** — Defense (+1 AC в броне), Dueling (+2 dmg одноручное). Через modifier pipeline + class_features. Great Weapon Fighting → бэклог (нужен is_two_handed + dice reroll). `class-feature`
+8. [x] **Second Wind** — bonus action, heal 1d10 + fighter level, 1 use / short rest. Использует ResourceTracker. Новый ActionType SECOND_WIND. `class-feature`
 
 ### Phase 3: Rogue L1
 
@@ -47,11 +47,15 @@
 
 ## Status
 
-**Current:** Phase 1 complete. E2E passed. Phase 2 next.
+**Current:** Phase 2 complete. E2E passed. Phase 3 next.
 
-Phase 1 (6/6) — done. E2E smoke test found and fixed 2 bugs:
+Phase 1 (6/6) — done. E2E found and fixed 2 bugs:
 - AC serialization: API returned raw `creature.ac` instead of `effective_ac()`
 - Heavy armor negative DEX: `min(dex_mod, 0)` penalized AC, now ignored for heavy armor
+
+Phase 2 (2/2) — done. E2E found and fixed 2 bugs:
+- ClassFeatureActionProvider checked FighterFeatures instead of CharClass → Second Wind not offered to frontend-created Fighters
+- Frontend missing `second_wind` action label and SIMPLE_ACTIONS entry
 
 ## Decisions
 

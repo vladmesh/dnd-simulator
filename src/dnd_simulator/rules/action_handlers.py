@@ -243,6 +243,32 @@ def handle_bless(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCo
     return ActionResult()
 
 
+def handle_second_wind(
+    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
+) -> ActionResult:
+    """Second Wind: Fighter bonus action — heal 1d10 + level, 1/short rest."""
+    from dnd_simulator.core.character import Character
+    from dnd_simulator.rules.dice import roll as roll_dice
+    from dnd_simulator.rules.resources import use_resource
+
+    if not isinstance(actor, Character):
+        return ActionResult(success=False, error="Only characters can use Second Wind")
+
+    use_resource(actor, "second_wind")
+    healing = roll_dice("1d10") + actor.level
+    healed = actor.heal(healing)
+
+    logger.info("second_wind", rolled=healing, healed=healed, level=actor.level)
+    emit_fn(
+        Event(
+            event_type=EventType.ENTITY_SECOND_WIND,
+            source_layer="entities",
+            data={"entity_id": actor.id, "healed": healed},
+        )
+    )
+    return ActionResult()
+
+
 def handle_equip(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
     """Equip a weapon from inventory. Free action (D&D 5e object interaction)."""
     from dnd_simulator.core.items import ItemType

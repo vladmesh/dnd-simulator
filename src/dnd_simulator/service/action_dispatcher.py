@@ -30,6 +30,7 @@ from dnd_simulator.rules.action_handlers import (
     handle_idle,
     handle_move,
     handle_say,
+    handle_second_wind,
     handle_unequip,
     handle_unequip_armor,
     handle_unequip_shield,
@@ -39,6 +40,7 @@ from dnd_simulator.rules.action_handlers import (
 from dnd_simulator.rules.action_provider import (
     ArmorEquipmentProvider,
     BaseActionProvider,
+    ClassFeatureActionProvider,
     EquipmentActionProvider,
     InventoryActionProvider,
     WeaponActionProvider,
@@ -140,6 +142,7 @@ _PROVIDER_MANAGED: frozenset[ActionType] = frozenset(
         ActionType.UNEQUIP_ARMOR,
         ActionType.EQUIP_SHIELD,
         ActionType.UNEQUIP_SHIELD,
+        ActionType.SECOND_WIND,
     }
 )
 
@@ -165,6 +168,7 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.register(ActionType.UNEQUIP_ARMOR, handle_unequip_armor)
     dispatcher.register(ActionType.EQUIP_SHIELD, handle_equip_shield)
     dispatcher.register(ActionType.UNEQUIP_SHIELD, handle_unequip_shield)
+    dispatcher.register(ActionType.SECOND_WIND, handle_second_wind)
 
     # Register providers
     base_types = frozenset(dispatcher._handlers) - _PROVIDER_MANAGED
@@ -173,5 +177,6 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.add_provider(EquipmentActionProvider())
     dispatcher.add_provider(ArmorEquipmentProvider())
     dispatcher.add_provider(WeaponActionProvider())
+    dispatcher.add_provider(ClassFeatureActionProvider())
 
     return dispatcher

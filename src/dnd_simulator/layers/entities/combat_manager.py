@@ -272,6 +272,7 @@ class CombatManager:
             modifier=modifier,
             ac=atk_mods.target_ac,
             attack=attack,
+            damage_bonus=atk_mods.damage_bonus,
             advantage=advantage,
             disadvantage=disadvantage,
             force_crit=atk_mods.force_crit,
