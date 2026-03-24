@@ -1,6 +1,9 @@
 """Tests for dice rolling mechanics."""
 
+import importlib
 import random
+
+import pytest
 
 from dnd_simulator.rules.dice import roll, roll_d20
 
@@ -79,3 +82,32 @@ class TestRoll:
         a = roll("4d6+2", rng=random.Random(99))
         b = roll("4d6+2", rng=random.Random(99))
         assert a == b
+
+
+class TestDiceSeedEnvVar:
+    def test_seed_env_var_makes_module_rng_deterministic(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import dnd_simulator.rules.dice as dice_mod
+
+        monkeypatch.setenv("DND_DICE_SEED", "42")
+        importlib.reload(dice_mod)
+        results_a = [dice_mod.roll_d20() for _ in range(10)]
+
+        importlib.reload(dice_mod)
+        results_b = [dice_mod.roll_d20() for _ in range(10)]
+
+        assert results_a == results_b
+
+        # Cleanup: reload without seed
+        monkeypatch.delenv("DND_DICE_SEED")
+        importlib.reload(dice_mod)
+
+    def test_no_seed_env_var_uses_random(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import dnd_simulator.rules.dice as dice_mod
+
+        monkeypatch.delenv("DND_DICE_SEED", raising=False)
+        importlib.reload(dice_mod)
+        # Module-level _rng should be unseeded — just verify it exists and works
+        result = dice_mod.roll_d20()
+        assert 1 <= result <= 20
+
+        importlib.reload(dice_mod)

@@ -20,6 +20,7 @@ from dnd_simulator.i18n import set_language
 from dnd_simulator.llm.client import LlmClient
 from dnd_simulator.logging_config import configure_logging
 from dnd_simulator.service import GameService
+from dnd_simulator.service.game_service import DEFAULT_CONTENT_DIR
 from dnd_simulator.storage.store import JsonFileStore
 
 DEFAULT_SAVES_DIR = Path(__file__).resolve().parents[4] / "saves"
@@ -59,7 +60,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         model = os.environ["LLM_MODEL"]  # no default — must be set explicitly
         llm = LlmClient(api_key=api_key, model=model)
 
-    service = GameService(store=store, llm=llm)
+    content_dir_env = os.getenv("DND_CONTENT_DIR")
+    content_dir = Path(content_dir_env) if content_dir_env else DEFAULT_CONTENT_DIR
+    service = GameService(store=store, llm=llm, content_dir=content_dir)
     set_service(service)
     try:
         yield
