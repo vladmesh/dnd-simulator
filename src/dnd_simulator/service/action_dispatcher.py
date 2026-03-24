@@ -40,7 +40,6 @@ from dnd_simulator.rules.action_handlers import (
     handle_wait,
 )
 from dnd_simulator.rules.action_provider import (
-    ArmorEquipmentProvider,
     BaseActionProvider,
     ClassFeatureActionProvider,
     EquipmentActionProvider,
@@ -162,7 +161,6 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.add_provider(BaseActionProvider(base_types))
     dispatcher.add_provider(InventoryActionProvider())
     dispatcher.add_provider(EquipmentActionProvider())
-    dispatcher.add_provider(ArmorEquipmentProvider())
     dispatcher.add_provider(WeaponActionProvider())
     dispatcher.add_provider(ClassFeatureActionProvider())
 

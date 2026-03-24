@@ -53,50 +53,28 @@ class InventoryActionProvider:
 
 
 class EquipmentActionProvider:
-    """Provides EQUIP if creature has weapons in inventory, UNEQUIP if weapon equipped."""
+    """Slot-driven equipment provider — handles all equipment slots generically."""
 
     def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
-        from dnd_simulator.core.items import ItemType
+        from dnd_simulator.rules.action_handlers import SLOT_CONFIGS
 
         result: list[ActionType] = []
-        has_inventory_weapons = any(i.item_type == ItemType.WEAPON for i in creature.inventory)
-        if has_inventory_weapons:
-            probe = Action(name=ActionType.EQUIP)
-            if validate_action(creature, probe, ctx) is None:
-                result.append(ActionType.EQUIP)
-        if creature.equipped_weapon is not None:
-            probe = Action(name=ActionType.UNEQUIP)
-            if validate_action(creature, probe, ctx) is None:
-                result.append(ActionType.UNEQUIP)
+        for cfg in SLOT_CONFIGS.values():
+            has_items = any(i.item_type == cfg.item_type for i in creature.inventory)
+            if has_items:
+                probe = Action(name=cfg.equip_action)
+                if validate_action(creature, probe, ctx) is None:
+                    result.append(cfg.equip_action)
+            equipped = getattr(creature, cfg.creature_field)
+            if equipped is not None:
+                probe = Action(name=cfg.unequip_action)
+                if validate_action(creature, probe, ctx) is None:
+                    result.append(cfg.unequip_action)
         return result
 
 
-class ArmorEquipmentProvider:
-    """Provides armor/shield equip/unequip actions based on inventory and slots."""
-
-    def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
-        from dnd_simulator.core.items import ItemType
-
-        result: list[ActionType] = []
-        has_armor = any(i.item_type == ItemType.ARMOR for i in creature.inventory)
-        if has_armor:
-            probe = Action(name=ActionType.EQUIP_ARMOR)
-            if validate_action(creature, probe, ctx) is None:
-                result.append(ActionType.EQUIP_ARMOR)
-        if creature.equipped_armor is not None:
-            probe = Action(name=ActionType.UNEQUIP_ARMOR)
-            if validate_action(creature, probe, ctx) is None:
-                result.append(ActionType.UNEQUIP_ARMOR)
-        has_shield = any(i.item_type == ItemType.SHIELD for i in creature.inventory)
-        if has_shield:
-            probe = Action(name=ActionType.EQUIP_SHIELD)
-            if validate_action(creature, probe, ctx) is None:
-                result.append(ActionType.EQUIP_SHIELD)
-        if creature.equipped_shield is not None:
-            probe = Action(name=ActionType.UNEQUIP_SHIELD)
-            if validate_action(creature, probe, ctx) is None:
-                result.append(ActionType.UNEQUIP_SHIELD)
-        return result
+# Backward compatibility alias — remove after callers migrate.
+ArmorEquipmentProvider = EquipmentActionProvider
 
 
 class ClassFeatureActionProvider:

@@ -39,12 +39,22 @@ These tests exercise the full chain: action dispatch → handler → creature st
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Net reduction in lines of code in action_handlers.py
-- [ ] All 6 existing equip/unequip action types work identically
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Net reduction in lines of code in action_handlers.py
+- [x] All 6 existing equip/unequip action types work identically
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Introduced `SlotConfig` dataclass + `SLOT_CONFIGS` dict in `action_handlers.py`. Generic `_handle_equip_slot`/`_handle_unequip_slot` replace ~170 lines of copy-paste with ~60 lines. Public wrapper functions preserved for backward compatibility.
+
+Fixed latent param key bug: `handle_equip_armor` and `handle_equip_shield` were reading `action.params["item_id"]` but their ActionDefs declared `armor_id`/`shield_id`. The generic mechanism now uses the correct param keys from SlotConfig.
+
+`ArmorEquipmentProvider` merged into `EquipmentActionProvider` (generic slot iteration). Alias kept for backward compatibility.
+
+action_handlers.py: 462 → 426 lines (-36 net). action_provider.py: 136 → 113 lines (-23 net).

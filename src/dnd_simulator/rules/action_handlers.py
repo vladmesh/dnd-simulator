@@ -8,11 +8,13 @@ Handlers do NOT check preconditions — the dispatcher already validated.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import structlog
 
-from dnd_simulator.core.items import Item, ItemType
+from dnd_simulator.core.action import ActionType
+from dnd_simulator.core.items import EquipmentSlot, Item, ItemType
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.rules.dice import roll
 from dnd_simulator.rules.modifiers import effective_speed
@@ -288,174 +290,137 @@ def handle_second_wind(
     return ActionResult()
 
 
-def handle_equip(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
-    """Equip a weapon from inventory. Free action (D&D 5e object interaction)."""
-    from dnd_simulator.core.items import ItemType
+# ---------------------------------------------------------------------------
+# Generic slot-based equip/unequip
+# ---------------------------------------------------------------------------
 
-    weapon_id = str(action.params["weapon_id"])
-    weapon = next((item for item in actor.inventory if item.id == weapon_id), None)
-    if weapon is None:
-        return ActionResult(success=False, error=f"Item {weapon_id} not in inventory")
-    if weapon.item_type != ItemType.WEAPON:
-        return ActionResult(success=False, error=f"Item {weapon_id} is not a weapon")
 
-    # Unequip current weapon → back to inventory
-    if actor.equipped_weapon is not None:
-        actor.inventory.append(actor.equipped_weapon)
-    # Equip new weapon
-    actor.inventory.remove(weapon)
-    actor.equipped_weapon = weapon
+@dataclass(frozen=True)
+class SlotConfig:
+    """Configuration for a single equipment slot."""
 
-    logger.info("equip", weapon=weapon.name)
+    item_type: ItemType
+    param_key: str  # action param name, e.g. "weapon_id"
+    creature_field: str  # attribute on Creature, e.g. "equipped_weapon"
+    event_field: str  # key in event data, e.g. "weapon_name"
+    equip_action: ActionType
+    unequip_action: ActionType
+
+
+SLOT_CONFIGS: dict[EquipmentSlot, SlotConfig] = {
+    EquipmentSlot.WEAPON: SlotConfig(
+        item_type=ItemType.WEAPON,
+        param_key="weapon_id",
+        creature_field="equipped_weapon",
+        event_field="weapon_name",
+        equip_action=ActionType.EQUIP,
+        unequip_action=ActionType.UNEQUIP,
+    ),
+    EquipmentSlot.ARMOR: SlotConfig(
+        item_type=ItemType.ARMOR,
+        param_key="armor_id",
+        creature_field="equipped_armor",
+        event_field="armor_name",
+        equip_action=ActionType.EQUIP_ARMOR,
+        unequip_action=ActionType.UNEQUIP_ARMOR,
+    ),
+    EquipmentSlot.SHIELD: SlotConfig(
+        item_type=ItemType.SHIELD,
+        param_key="shield_id",
+        creature_field="equipped_shield",
+        event_field="shield_name",
+        equip_action=ActionType.EQUIP_SHIELD,
+        unequip_action=ActionType.UNEQUIP_SHIELD,
+    ),
+}
+
+
+def _handle_equip_slot(cfg: SlotConfig, actor: Creature, action: Action, emit_fn: EmitFn) -> ActionResult:
+    """Generic equip: find item in inventory → swap into slot → emit event."""
+    item_id = str(action.params[cfg.param_key])
+    item = next((i for i in actor.inventory if i.id == item_id), None)
+    if item is None:
+        return ActionResult(success=False, error=f"Item {item_id} not in inventory")
+    if item.item_type != cfg.item_type:
+        return ActionResult(success=False, error=f"Item {item_id} is not a {cfg.item_type.value}")
+
+    old: Item | None = getattr(actor, cfg.creature_field)
+    if old is not None:
+        actor.inventory.append(old)
+    actor.inventory.remove(item)
+    setattr(actor, cfg.creature_field, item)
+
+    logger.info("equip", slot=cfg.creature_field, item=item.name)
     emit_fn(
         Event(
             event_type=EventType.ENTITY_EQUIP,
             source_layer="entities",
-            data={"entity_id": actor.id, "weapon_name": weapon.name},
+            data={"entity_id": actor.id, cfg.event_field: item.name},
         )
     )
     return ActionResult()
+
+
+def _handle_unequip_slot(cfg: SlotConfig, actor: Creature, action: Action, emit_fn: EmitFn) -> ActionResult:
+    """Generic unequip: remove from slot → return to inventory → emit event."""
+    item: Item | None = getattr(actor, cfg.creature_field)
+    if item is None:
+        return ActionResult(success=False, error=f"No {cfg.item_type.value} equipped")
+
+    actor.inventory.append(item)
+    setattr(actor, cfg.creature_field, None)
+
+    logger.info("unequip", slot=cfg.creature_field, item=item.name)
+    emit_fn(
+        Event(
+            event_type=EventType.ENTITY_UNEQUIP,
+            source_layer="entities",
+            data={"entity_id": actor.id, cfg.event_field: item.name},
+        )
+    )
+    return ActionResult()
+
+
+# Public wrappers — thin delegates to the generic mechanism.
+
+_WEAPON_CFG = SLOT_CONFIGS[EquipmentSlot.WEAPON]
+_ARMOR_CFG = SLOT_CONFIGS[EquipmentSlot.ARMOR]
+_SHIELD_CFG = SLOT_CONFIGS[EquipmentSlot.SHIELD]
+
+
+def handle_equip(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
+    """Equip a weapon from inventory. Free action (D&D 5e object interaction)."""
+    return _handle_equip_slot(_WEAPON_CFG, actor, action, emit_fn)
 
 
 def handle_unequip(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
     """Unequip current weapon → back to inventory. Free action."""
-    if actor.equipped_weapon is None:
-        return ActionResult(success=False, error="No weapon equipped")
-
-    weapon = actor.equipped_weapon
-    actor.inventory.append(weapon)
-    actor.equipped_weapon = None
-
-    logger.info("unequip", weapon=weapon.name)
-    emit_fn(
-        Event(
-            event_type=EventType.ENTITY_UNEQUIP,
-            source_layer="entities",
-            data={"entity_id": actor.id, "weapon_name": weapon.name},
-        )
-    )
-    return ActionResult()
-
-
-# ---------------------------------------------------------------------------
-# Armor equip/unequip
-# ---------------------------------------------------------------------------
+    return _handle_unequip_slot(_WEAPON_CFG, actor, action, emit_fn)
 
 
 def handle_equip_armor(
-    actor: Creature,
-    action: Action,
-    emit_fn: EmitFn,
-    ctx: ActionContext,
-    world: World,
+    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
 ) -> ActionResult:
     """Equip armor from inventory. Free action."""
-    item_id = str(action.params["item_id"])
-    item = next((i for i in actor.inventory if i.id == item_id), None)
-    if item is None:
-        return ActionResult(success=False, error=f"Item {item_id} not in inventory")
-    if item.item_type != ItemType.ARMOR:
-        return ActionResult(success=False, error=f"Item {item_id} is not armor")
-
-    if actor.equipped_armor is not None:
-        actor.inventory.append(actor.equipped_armor)
-    actor.inventory.remove(item)
-    actor.equipped_armor = item
-
-    logger.info("equip_armor", armor=item.name)
-    emit_fn(
-        Event(
-            event_type=EventType.ENTITY_EQUIP,
-            source_layer="entities",
-            data={"entity_id": actor.id, "armor_name": item.name},
-        )
-    )
-    return ActionResult()
+    return _handle_equip_slot(_ARMOR_CFG, actor, action, emit_fn)
 
 
 def handle_unequip_armor(
-    actor: Creature,
-    action: Action,
-    emit_fn: EmitFn,
-    ctx: ActionContext,
-    world: World,
+    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
 ) -> ActionResult:
     """Unequip armor → back to inventory. Free action."""
-    if actor.equipped_armor is None:
-        return ActionResult(success=False, error="No armor equipped")
-
-    armor = actor.equipped_armor
-    actor.inventory.append(armor)
-    actor.equipped_armor = None
-
-    logger.info("unequip_armor", armor=armor.name)
-    emit_fn(
-        Event(
-            event_type=EventType.ENTITY_UNEQUIP,
-            source_layer="entities",
-            data={"entity_id": actor.id, "armor_name": armor.name},
-        )
-    )
-    return ActionResult()
-
-
-# ---------------------------------------------------------------------------
-# Shield equip/unequip
-# ---------------------------------------------------------------------------
+    return _handle_unequip_slot(_ARMOR_CFG, actor, action, emit_fn)
 
 
 def handle_equip_shield(
-    actor: Creature,
-    action: Action,
-    emit_fn: EmitFn,
-    ctx: ActionContext,
-    world: World,
+    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
 ) -> ActionResult:
     """Equip shield from inventory. Free action."""
-    item_id = str(action.params["item_id"])
-    item = next((i for i in actor.inventory if i.id == item_id), None)
-    if item is None:
-        return ActionResult(success=False, error=f"Item {item_id} not in inventory")
-    if item.item_type != ItemType.SHIELD:
-        return ActionResult(success=False, error=f"Item {item_id} is not a shield")
-
-    if actor.equipped_shield is not None:
-        actor.inventory.append(actor.equipped_shield)
-    actor.inventory.remove(item)
-    actor.equipped_shield = item
-
-    logger.info("equip_shield", shield=item.name)
-    emit_fn(
-        Event(
-            event_type=EventType.ENTITY_EQUIP,
-            source_layer="entities",
-            data={"entity_id": actor.id, "shield_name": item.name},
-        )
-    )
-    return ActionResult()
+    return _handle_equip_slot(_SHIELD_CFG, actor, action, emit_fn)
 
 
 def handle_unequip_shield(
-    actor: Creature,
-    action: Action,
-    emit_fn: EmitFn,
-    ctx: ActionContext,
-    world: World,
+    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
 ) -> ActionResult:
     """Unequip shield → back to inventory. Free action."""
-    if actor.equipped_shield is None:
-        return ActionResult(success=False, error="No shield equipped")
-
-    shield = actor.equipped_shield
-    actor.inventory.append(shield)
-    actor.equipped_shield = None
-
-    logger.info("unequip_shield", shield=shield.name)
-    emit_fn(
-        Event(
-            event_type=EventType.ENTITY_UNEQUIP,
-            source_layer="entities",
-            data={"entity_id": actor.id, "shield_name": shield.name},
-        )
-    )
-    return ActionResult()
+    return _handle_unequip_slot(_SHIELD_CFG, actor, action, emit_fn)

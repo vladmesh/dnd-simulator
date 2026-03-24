@@ -1176,3 +1176,174 @@ class TestEquipToolSchemas:
         tools = get_tools([ActionType.UNEQUIP])
         assert len(tools) == 1
         assert tools[0]["function"]["name"] == "unequip"
+
+
+# ---------------------------------------------------------------------------
+# Generic equip/unequip — product-level regression tests
+# ---------------------------------------------------------------------------
+
+
+def _armor_item(name: str = "Chain Mail", item_id: str = "chain_mail_0") -> Item:
+    from dnd_simulator.core.items import ArmorCategory, ArmorDef
+
+    return Item(
+        id=item_id,
+        name=name,
+        item_type=ItemType.ARMOR,
+        armor_def=ArmorDef(
+            armor_id="chain_mail",
+            category=ArmorCategory.HEAVY,
+            base_ac=16,
+            max_dex_bonus=0,
+        ),
+    )
+
+
+def _shield_item(name: str = "Shield", item_id: str = "shield_0") -> Item:
+    from dnd_simulator.core.items import ShieldDef
+
+    return Item(
+        id=item_id,
+        name=name,
+        item_type=ItemType.SHIELD,
+        shield_def=ShieldDef(shield_id="shield", ac_bonus=2),
+    )
+
+
+class TestGenericEquipRegression:
+    """Product-level tests for equip/unequip across all slot types.
+
+    Verify the full chain: dispatch → handler → creature state → downstream effects.
+    """
+
+    def test_weapon_swap_changes_attack(self) -> None:
+        """Equipping a new weapon mid-combat → attack uses the new weapon's damage."""
+        from dnd_simulator.rules.weapons import get_weapon_attack
+
+        dagger = Item(
+            id="dagger_0",
+            name="Dagger",
+            item_type=ItemType.WEAPON,
+            weapon_def=WeaponDef(
+                weapon_id="dagger",
+                attack_name="stab",
+                category=WeaponCategory.SIMPLE,
+                damage=(DamageComponent("1d4", DamageType.PIERCING),),
+            ),
+        )
+        greatsword = Item(
+            id="gs_0",
+            name="Greatsword",
+            item_type=ItemType.WEAPON,
+            weapon_def=WeaponDef(
+                weapon_id="greatsword",
+                attack_name="slash",
+                category=WeaponCategory.MARTIAL,
+                damage=(DamageComponent("2d6", DamageType.SLASHING),),
+            ),
+        )
+        c = _creature()
+        c.equipped_weapon = dagger
+        c.inventory.append(greatsword)
+
+        # Attack uses dagger before swap
+        attack_before = get_weapon_attack(c)
+        assert attack_before.damage[0].dice == "1d4"
+
+        # Equip greatsword
+        d = create_dispatcher(_WORLD)
+        action = Action(name=ActionType.EQUIP, params={"weapon_id": "gs_0"})
+        result = d.dispatch(c, action, _PEACEFUL, _noop_emit)
+        assert result.success
+
+        # Attack now uses greatsword
+        attack_after = get_weapon_attack(c)
+        assert attack_after.damage[0].dice == "2d6"
+        assert dagger in c.inventory
+
+    def test_armor_equip_changes_ac(self) -> None:
+        """Equipping chain mail → effective_ac reflects armor base AC."""
+        from dnd_simulator.core.character import Character, CharClass, Race
+        from dnd_simulator.rules.modifiers import effective_ac
+
+        pc = Character(
+            id="pc",
+            name="Fighter",
+            location_id="loc",
+            char_class=CharClass.FIGHTER,
+            race=Race.HUMAN,
+            level=1,
+        )
+        ac_unarmored = effective_ac(pc)
+
+        armor = _armor_item()
+        pc.inventory.append(armor)
+
+        d = create_dispatcher(_WORLD)
+        action = Action(name=ActionType.EQUIP_ARMOR, params={"armor_id": "chain_mail_0"})
+        result = d.dispatch(pc, action, _PEACEFUL, _noop_emit)
+        assert result.success
+
+        ac_armored = effective_ac(pc)
+        assert ac_armored == 16  # chain mail base AC, heavy → 0 DEX bonus
+        assert ac_armored > ac_unarmored
+
+    def test_shield_equip_unequip_round_trip(self) -> None:
+        """Equip shield → AC +2, unequip → AC returns to original."""
+        from dnd_simulator.core.character import Character, CharClass, Race
+        from dnd_simulator.rules.modifiers import effective_ac
+
+        pc = Character(
+            id="pc",
+            name="Fighter",
+            location_id="loc",
+            char_class=CharClass.FIGHTER,
+            race=Race.HUMAN,
+            level=1,
+        )
+        base_ac = effective_ac(pc)
+
+        shield = _shield_item()
+        pc.inventory.append(shield)
+
+        d = create_dispatcher(_WORLD)
+
+        # Equip shield
+        equip = Action(name=ActionType.EQUIP_SHIELD, params={"shield_id": "shield_0"})
+        result = d.dispatch(pc, equip, _PEACEFUL, _noop_emit)
+        assert result.success
+        assert effective_ac(pc) == base_ac + 2
+
+        # Unequip shield
+        unequip = Action(name=ActionType.UNEQUIP_SHIELD)
+        result = d.dispatch(pc, unequip, _PEACEFUL, _noop_emit)
+        assert result.success
+        assert effective_ac(pc) == base_ac
+        assert shield in pc.inventory
+
+    def test_unequip_weapon_falls_back_to_unarmed(self) -> None:
+        """Unequipping weapon → creature falls back to unarmed strike."""
+        from dnd_simulator.rules.weapons import get_weapon_attack
+
+        sword = _sword_item()
+        c = _creature()
+        c.equipped_weapon = sword
+
+        d = create_dispatcher(_WORLD)
+        action = Action(name=ActionType.UNEQUIP)
+        result = d.dispatch(c, action, _PEACEFUL, _noop_emit)
+        assert result.success
+        assert c.equipped_weapon is None
+        assert sword in c.inventory
+
+        attack = get_weapon_attack(c)
+        assert attack.name == "fists"
+
+    def test_equip_missing_item_fails(self) -> None:
+        """Equipping an item not in inventory → failure, no state change."""
+        c = _creature()
+        d = create_dispatcher(_WORLD)
+        action = Action(name=ActionType.EQUIP, params={"weapon_id": "ghost_sword"})
+        result = d.dispatch(c, action, _PEACEFUL, _noop_emit)
+        assert not result.success
+        assert c.equipped_weapon is None

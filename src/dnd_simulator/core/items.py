@@ -21,6 +21,14 @@ class ItemType(StrEnum):
     SHIELD = "shield"
 
 
+class EquipmentSlot(StrEnum):
+    """Named equipment slots on a creature."""
+
+    WEAPON = "weapon"
+    ARMOR = "armor"
+    SHIELD = "shield"
+
+
 class WeaponCategory(StrEnum):
     """D&D 5e weapon categories for proficiency checks."""
 
