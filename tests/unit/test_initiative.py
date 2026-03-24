@@ -151,7 +151,12 @@ class TestEntitiesLayerCombat:
         assert c3.in_combat is True
 
     def test_second_attack_does_not_reroll_initiative(self) -> None:
-        layer, _c1, _c2, _c3 = self._make_layer()
+        # High AC so attacks always miss — no deaths changing turn_order
+        c1 = Character(id="c1", name="Fighter", location_id="r1", max_hp=20, current_hp=20, ac=30, attacks=(_SWORD,))
+        c2 = Character(id="c2", name="Rogue", location_id="r1", max_hp=15, current_hp=15, ac=30, attacks=(_SWORD,))
+        c3 = Character(id="c3", name="Bystander", location_id="r1", max_hp=10, current_hp=10, ac=30)
+        layer = EntitiesLayer([c1, c2, c3])
+
         atk = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
