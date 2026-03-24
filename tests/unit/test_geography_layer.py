@@ -1,6 +1,6 @@
 """Tests for the GeographyLayer."""
 
-from dnd_simulator.core.models import ActionResult, Answer, EventType, GameDateTime, Query, TimeDelta
+from dnd_simulator.core.models import ActionResult, Answer, EventType, GameDateTime, Query, QueryType, TimeDelta
 from dnd_simulator.layers.geography.layer import GeographyLayer
 from dnd_simulator.layers.geography.models import (
     Connection,
@@ -102,13 +102,13 @@ class TestGeographyLayer:
         regions[0].temperature = 18.5
         layer = GeographyLayer(regions=regions)
 
-        answer = layer.query(Query(question="weather", params={"region_id": "forest_vale"}))
+        answer = layer.query(Query(question=QueryType.WEATHER, params={"region_id": "forest_vale"}))
         assert answer.value["condition"] == "light_rain"
         assert answer.value["temperature"] == 18.5
 
     def test_query_connections(self) -> None:
         layer = GeographyLayer(regions=_make_test_regions())
-        answer = layer.query(Query(question="connections", params={"region_id": "forest_vale"}))
+        answer = layer.query(Query(question=QueryType.CONNECTIONS, params={"region_id": "forest_vale"}))
 
         assert len(answer.value) == 1
         assert answer.value[0]["target_id"] == "mountain_pass"
@@ -116,12 +116,12 @@ class TestGeographyLayer:
 
     def test_query_daylight(self) -> None:
         layer = GeographyLayer(regions=_make_test_regions())
-        answer = layer.query(Query(question="daylight", params={"region_id": "forest_vale", "month": 6}))
+        answer = layer.query(Query(question=QueryType.DAYLIGHT, params={"region_id": "forest_vale", "month": 6}))
         assert answer.value > 14.0  # Mid-latitude summer = long days
 
     def test_query_regions(self) -> None:
         layer = GeographyLayer(regions=_make_test_regions())
-        answer = layer.query(Query(question="regions", params={}))
+        answer = layer.query(Query(question=QueryType.REGIONS, params={}))
         assert set(answer.value) == {"forest_vale", "mountain_pass"}
 
     def test_query_unknown_raises(self) -> None:
@@ -175,5 +175,5 @@ class TestGeographySaveLoad:
     def test_load_empty_state(self) -> None:
         layer = GeographyLayer()
         layer.load_state({"regions": {}})
-        answer = layer.query(Query(question="regions", params={}))
+        answer = layer.query(Query(question=QueryType.REGIONS, params={}))
         assert answer.value == []

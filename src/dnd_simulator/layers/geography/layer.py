@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.layer import Layer
-from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
 from dnd_simulator.layers.geography.models import (
     Connection,
     Direction,
@@ -103,18 +103,18 @@ class GeographyLayer(Layer):
     def query(self, query: Query) -> Answer:
         """Answer queries about the physical world.
 
-        Supported queries:
-        - "weather": params={region_id} -> condition and temperature
-        - "connections": params={region_id} -> connected regions with directions
-        - "travel_time": params={from_id, to_id} -> travel hours, distance
-        - "daylight": params={region_id, month?} -> hours of daylight
-        - "region_info": params={region_id} -> full region data
-        - "regions": -> list of all region IDs
+        Supported queries (see QueryType enum):
+        - WEATHER: params={region_id} -> condition and temperature
+        - CONNECTIONS: params={region_id} -> connected regions with directions
+        - TRAVEL_TIME: params={from_id, to_id} -> travel hours, distance
+        - DAYLIGHT: params={region_id, month?} -> hours of daylight
+        - REGION_INFO: params={region_id} -> full region data
+        - REGIONS: -> list of all region IDs
         """
         q = query.question
         params = query.params
 
-        if q == "weather":
+        if q is QueryType.WEATHER:
             region = self.get_region(params["region_id"])
             return Answer(
                 value={
@@ -124,13 +124,13 @@ class GeographyLayer(Layer):
                 description=f"{region.name}: {region.weather.value}, {region.temperature}°C",
             )
 
-        if q == "connections":
+        if q is QueryType.CONNECTIONS:
             region = self.get_region(params["region_id"])
             return Answer(
                 value=[{"target_id": c.target_id, "direction": c.direction.value} for c in region.connections],
             )
 
-        if q == "travel_time":
+        if q is QueryType.TRAVEL_TIME:
             origin = self.get_region(params["from_id"])
             dest = self.get_region(params["to_id"])
             distance = calculate_distance_km(origin.latitude, origin.longitude, dest.latitude, dest.longitude)
@@ -141,13 +141,13 @@ class GeographyLayer(Layer):
                 description=f"{distance} km, ~{hours} hours on foot",
             )
 
-        if q == "daylight":
+        if q is QueryType.DAYLIGHT:
             region = self.get_region(params["region_id"])
             month = params.get("month", 6)
             hours = calculate_daylight_hours(region.latitude, int(month))
             return Answer(value=hours, description=f"{hours} hours of daylight")
 
-        if q == "region_info":
+        if q is QueryType.REGION_INFO:
             region = self.get_region(params["region_id"])
             return Answer(
                 value={
@@ -163,7 +163,7 @@ class GeographyLayer(Layer):
                 }
             )
 
-        if q == "regions":
+        if q is QueryType.REGIONS:
             return Answer(value=list(self._regions.keys()))
 
         raise ValueError(f"Unknown geography query: {q}")

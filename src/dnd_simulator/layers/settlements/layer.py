@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.layer import Layer
-from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
 from dnd_simulator.layers.settlements.models import Settlement, SettlementType
 from dnd_simulator.rules.settlements import (
     calculate_harvest_modifier,
@@ -76,7 +76,7 @@ class SettlementsLayer(Layer):
         for settlement in self._settlements.values():
             # 1. Weather -> harvest -> prosperity
             weather_answer = query_fn(
-                "geography", Query(question="weather", params={"region_id": settlement.region_id})
+                "geography", Query(question=QueryType.WEATHER, params={"region_id": settlement.region_id})
             )
             weather = str(weather_answer.value.get("condition", "clear")) if weather_answer.value else "clear"
 
@@ -85,11 +85,11 @@ class SettlementsLayer(Layer):
 
             # 2. Nation wealth/stability -> prosperity drift
             owner_answer = query_fn(
-                "politics", Query(question="region_owner", params={"region_id": settlement.region_id})
+                "politics", Query(question=QueryType.REGION_OWNER, params={"region_id": settlement.region_id})
             )
             if owner_answer.value:
                 nation_answer = query_fn(
-                    "politics", Query(question="nation_info", params={"nation_id": owner_answer.value})
+                    "politics", Query(question=QueryType.NATION_INFO, params={"nation_id": owner_answer.value})
                 )
                 if nation_answer.value:
                     drift = prosperity_drift(
@@ -146,19 +146,19 @@ class SettlementsLayer(Layer):
     def query(self, query: Query) -> Answer:
         """Answer queries about settlements.
 
-        Supported queries:
-        - "settlements": list all settlement IDs
-        - "settlement_info": params={settlement_id} -> full settlement data
-        - "region_settlements": params={region_id} -> settlements in a region
-        - "region_income": params={region_id} -> total income from settlements
+        Supported queries (see QueryType enum):
+        - SETTLEMENTS: list all settlement IDs
+        - SETTLEMENT_INFO: params={settlement_id} -> full settlement data
+        - REGION_SETTLEMENTS: params={region_id} -> settlements in a region
+        - REGION_INCOME: params={region_id} -> total income from settlements
         """
         q = query.question
         params = query.params
 
-        if q == "settlements":
+        if q is QueryType.SETTLEMENTS:
             return Answer(value=list(self._settlements.keys()))
 
-        if q == "settlement_info":
+        if q is QueryType.SETTLEMENT_INFO:
             s = self._settlements[params["settlement_id"]]
             return Answer(
                 value={
@@ -172,7 +172,7 @@ class SettlementsLayer(Layer):
                 },
             )
 
-        if q == "region_settlements":
+        if q is QueryType.REGION_SETTLEMENTS:
             region_id = params["region_id"]
             result = []
             for s in self._settlements.values():
@@ -189,7 +189,7 @@ class SettlementsLayer(Layer):
                     )
             return Answer(value=result)
 
-        if q == "region_income":
+        if q is QueryType.REGION_INCOME:
             return Answer(value=self.get_region_income(params["region_id"]))
 
         raise ValueError(f"Unknown settlements query: {q}")

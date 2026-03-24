@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from dnd_simulator.core.character import Creature, Entity
-from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query, TimeDelta
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query, QueryType, TimeDelta
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import (
@@ -164,14 +164,16 @@ class TestScheduleComputed:
 class TestEntitiesAtLocation:
     def test_entities_at_location(self) -> None:
         layer = _make_layer()
-        result = layer.query(Query(question="entities_at_location", params={"location_id": "silverport", "hour": 12}))
+        result = layer.query(
+            Query(question=QueryType.ENTITIES_AT_LOCATION, params={"location_id": "silverport", "hour": 12})
+        )
         # NPCs are at their scheduled locations, not at "silverport"
         # Only non-NPC entities at "silverport" would show
         assert len(result.value) == 0
 
     def test_entity_info(self) -> None:
         layer = _make_layer()
-        result = layer.query(Query(question="entity_info", params={"entity_id": "smith"}))
+        result = layer.query(Query(question=QueryType.ENTITY_INFO, params={"entity_id": "smith"}))
         assert result.value["name"] == "Edgar the Smith"
         assert result.value["role"] == "blacksmith"
         assert result.value["personality"] == "Gruff but fair."
@@ -187,7 +189,9 @@ class TestMixedEntities:
         npcs = _make_npcs()
         player = PlayerCharacter(id="player", name="Hero", location_id="silverport")
         layer = EntitiesLayer(entities=[*npcs, player])
-        result = layer.query(Query(question="entities_at_location", params={"location_id": "silverport", "hour": 12}))
+        result = layer.query(
+            Query(question=QueryType.ENTITIES_AT_LOCATION, params={"location_id": "silverport", "hour": 12})
+        )
         names = {e["name"] for e in result.value}
         assert "Hero" in names
         # NPCs are at scheduled locations, not at "silverport" directly
@@ -214,7 +218,7 @@ class TestSaveLoad:
         new_layer = EntitiesLayer(entities=_make_npcs())
         new_layer.load_state(state)
 
-        info = new_layer.query(Query(question="entity_info", params={"entity_id": "smith"}))
+        info = new_layer.query(Query(question=QueryType.ENTITY_INFO, params={"entity_id": "smith"}))
         assert info.value["location_id"] == "silverport"
 
     def test_npc_memory_persists(self) -> None:

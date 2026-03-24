@@ -11,7 +11,7 @@ from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import PlayerBrain
 from dnd_simulator.core.character import Ability, Creature
-from dnd_simulator.core.models import Query
+from dnd_simulator.core.models import Query, QueryType
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
@@ -184,7 +184,7 @@ class GameSession:
     # ---------------------------------------------------------------------------
 
     def get_players(self) -> list[PlayerCharacter]:
-        answer = self.world.query_layer("entities", Query(question="players", params={}))
+        answer = self.world.query_layer("entities", Query(question=QueryType.PLAYERS, params={}))
         result = answer.value
         if isinstance(result, list):
             return result
@@ -192,7 +192,7 @@ class GameSession:
 
     def get_player(self, player_id: str | None = None) -> PlayerCharacter | None:
         if player_id:
-            answer = self.world.query_layer("entities", Query(question="player", params={"id": player_id}))
+            answer = self.world.query_layer("entities", Query(question=QueryType.PLAYER, params={"id": player_id}))
             result = answer.value
             return result if isinstance(result, PlayerCharacter) else None
         players = self.get_players()

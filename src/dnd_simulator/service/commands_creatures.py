@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.models import Query
+from dnd_simulator.core.models import Query, QueryType
 from dnd_simulator.service.session import GameSession
 
 if TYPE_CHECKING:
@@ -35,14 +35,16 @@ class CreatureCommands:
             params["location_id"] = location_id
         if active is not None:
             params["active"] = active
-        answer = session.world.query_layer("entities", Query(question="all_creatures", params=params))
+        answer = session.world.query_layer("entities", Query(question=QueryType.ALL_CREATURES, params=params))
         result: list[dict[str, object]] = answer.value
         return result
 
     def get_creature_info(self, session_id: str, entity_id: str) -> dict[str, object]:
         """Get single entity detail."""
         session = self._get_session(session_id)  # type: ignore[attr-defined]
-        answer = session.world.query_layer("entities", Query(question="entity_info", params={"entity_id": entity_id}))
+        answer = session.world.query_layer(
+            "entities", Query(question=QueryType.ENTITY_INFO, params={"entity_id": entity_id})
+        )
         result: dict[str, object] = answer.value
         return result
 

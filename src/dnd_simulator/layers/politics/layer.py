@@ -7,7 +7,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.layer import Layer
-from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
 from dnd_simulator.layers.politics.models import (
     DiplomaticStatus,
     Leader,
@@ -460,19 +460,19 @@ class PoliticsLayer(Layer):
     def query(self, query: Query) -> Answer:
         """Answer queries about the political world.
 
-        Supported queries:
-        - "nations": list all nation IDs
-        - "nation_info": params={nation_id} -> full nation data
-        - "relations": params={nation_id} -> all relations for a nation
-        - "region_owner": params={region_id} -> owning nation ID or None
+        Supported queries (see QueryType enum):
+        - NATIONS: list all nation IDs
+        - NATION_INFO: params={nation_id} -> full nation data
+        - RELATIONS: params={nation_id} -> all relations for a nation
+        - REGION_OWNER: params={region_id} -> owning nation ID or None
         """
         q = query.question
         params = query.params
 
-        if q == "nations":
+        if q is QueryType.NATIONS:
             return Answer(value=list(self._nations.keys()))
 
-        if q == "nation_info":
+        if q is QueryType.NATION_INFO:
             nation = self._nations[params["nation_id"]]
             return Answer(
                 value={
@@ -492,7 +492,7 @@ class PoliticsLayer(Layer):
                 },
             )
 
-        if q == "relations":
+        if q is QueryType.RELATIONS:
             nation_id = params["nation_id"]
             result: list[dict[str, str]] = []
             for key, status in self._relations.items():
@@ -501,7 +501,7 @@ class PoliticsLayer(Layer):
                     result.append({"nation": other, "status": status.value})
             return Answer(value=result)
 
-        if q == "region_owner":
+        if q is QueryType.REGION_OWNER:
             owner = self.get_region_owner(params["region_id"])
             return Answer(value=owner)
 

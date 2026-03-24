@@ -61,7 +61,7 @@
 ## Convention Violations
 | File:Line | Violation | Rule |
 |-----------|-----------|------|
-| All layers + callers (~60 string comparisons) | Query system uses hardcoded strings (`"weather"`, `"connections"`, `"nations"`, etc.) instead of enum | Enums over hardcoded strings |
+| ~~All layers + callers (~60 string comparisons)~~ | ~~Query system uses hardcoded strings instead of enum~~ | **FIXED 2026-03-24**: Added `QueryType` enum to `core/models.py`, replaced all 60+ string comparisons across 4 layers, 3 service files, 1 adapter, and 5 test files |
 | `core/models.py:164` | `Query.params: dict[str, Any]` and `Answer.value: Any` | Use `object` not `Any` for strict mypy |
 | `adapters/api/routes_player.py:45,52` | Helper functions typed as `Any` | Use proper types |
 | `adapters/api/routes_master.py:346,351` | Helper functions typed as `Any` | Use proper types |

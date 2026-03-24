@@ -41,6 +41,45 @@ class Season(Enum):
     WINTER = "winter"
 
 
+class QueryType(Enum):
+    """Types of queries that can be sent to layers."""
+
+    # Geography
+    WEATHER = "weather"
+    CONNECTIONS = "connections"
+    TRAVEL_TIME = "travel_time"
+    DAYLIGHT = "daylight"
+    REGION_INFO = "region_info"
+    REGIONS = "regions"
+
+    # Politics
+    NATIONS = "nations"
+    NATION_INFO = "nation_info"
+    RELATIONS = "relations"
+    REGION_OWNER = "region_owner"
+
+    # Settlements
+    SETTLEMENTS = "settlements"
+    SETTLEMENT_INFO = "settlement_info"
+    REGION_SETTLEMENTS = "region_settlements"
+    REGION_INCOME = "region_income"
+
+    # Entities
+    PLAYERS = "players"
+    PLAYER = "player"
+    ENTITIES_AT_LOCATION = "entities_at_location"
+    ENTITY_INFO = "entity_info"
+    ALL_ENTITIES = "all_entities"
+    ALL_CREATURES = "all_creatures"
+    ALL_NPCS = "all_npcs"
+    NPC_INFO = "npc_info"
+    PERCEIVED_LOG = "perceived_log"
+    NEW_PERCEIVED_EVENTS = "new_perceived_events"
+    NEW_RAW_EVENTS = "new_raw_events"
+    COMBAT_INFO = "combat_info"
+    PERCEIVE_ENTITY = "perceive_entity"
+
+
 class EventType(Enum):
     """Types of events that can flow between layers."""
 
@@ -160,7 +199,7 @@ class ActionResult:
 class Query:
     """A question to a specific layer."""
 
-    question: str
+    question: QueryType
     params: dict[str, Any] = field(default_factory=dict)
 
 

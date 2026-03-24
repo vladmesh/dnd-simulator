@@ -2,7 +2,7 @@
 
 import pytest
 
-from dnd_simulator.core.models import ActionResult, Answer, GameDateTime, Query, TimeDelta
+from dnd_simulator.core.models import ActionResult, Answer, GameDateTime, Query, QueryType, TimeDelta
 from dnd_simulator.layers.politics.layer import PoliticsLayer
 from dnd_simulator.layers.politics.models import (
     DiplomaticStatus,
@@ -116,14 +116,14 @@ class TestTick:
         layer = _make_layer()
         layer.tick(TimeDelta.from_days(30), _TIME, _noop_query_fn, _noop_emit_fn)
         # Economy should have changed wealth
-        info = layer.query(Query(question="nation_info", params={"nation_id": "alpha"}))
+        info = layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "alpha"}))
         assert info.value["wealth"] != 60.0  # Should have changed from income/upkeep
 
     def test_multiple_months(self) -> None:
         layer = _make_layer()
         layer.tick(TimeDelta.from_days(90), _TIME, _noop_query_fn, _noop_emit_fn)
         # Should have processed 3 monthly ticks
-        info = layer.query(Query(question="nation_info", params={"nation_id": "alpha"}))
+        info = layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "alpha"}))
         # Wealth should have changed significantly over 3 months
         assert info.value["wealth"] != 60.0
 
@@ -150,13 +150,17 @@ class TestWarResolution:
         layer = _make_layer(seed=42)
         layer.set_relation("alpha", "beta", DiplomaticStatus.WAR)
 
-        alpha_mil = layer.query(Query(question="nation_info", params={"nation_id": "alpha"})).value["military"]
-        beta_mil = layer.query(Query(question="nation_info", params={"nation_id": "beta"})).value["military"]
+        alpha_mil = layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "alpha"})).value["military"]
+        beta_mil = layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "beta"})).value["military"]
 
         layer.tick(TimeDelta.from_days(30), _TIME, _noop_query_fn, _noop_emit_fn)
 
-        alpha_mil_after = layer.query(Query(question="nation_info", params={"nation_id": "alpha"})).value["military"]
-        beta_mil_after = layer.query(Query(question="nation_info", params={"nation_id": "beta"})).value["military"]
+        alpha_mil_after = layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "alpha"})).value[
+            "military"
+        ]
+        beta_mil_after = layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "beta"})).value[
+            "military"
+        ]
 
         # Both should lose military in war
         assert alpha_mil_after < alpha_mil
@@ -166,12 +170,12 @@ class TestWarResolution:
 class TestQueries:
     def test_nations_list(self) -> None:
         layer = _make_layer()
-        result = layer.query(Query(question="nations", params={}))
+        result = layer.query(Query(question=QueryType.NATIONS, params={}))
         assert sorted(result.value) == ["alpha", "beta"]
 
     def test_nation_info(self) -> None:
         layer = _make_layer()
-        result = layer.query(Query(question="nation_info", params={"nation_id": "alpha"}))
+        result = layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "alpha"}))
         assert result.value["name"] == "Kingdom of Alpha"
         assert result.value["wealth"] == 60.0
         assert result.value["leader"]["trait"] == "merchant"
@@ -179,14 +183,14 @@ class TestQueries:
     def test_relations_query(self) -> None:
         layer = _make_layer()
         layer.set_relation("alpha", "beta", DiplomaticStatus.WAR)
-        result = layer.query(Query(question="relations", params={"nation_id": "alpha"}))
+        result = layer.query(Query(question=QueryType.RELATIONS, params={"nation_id": "alpha"}))
         assert len(result.value) == 1
         assert result.value[0]["nation"] == "beta"
         assert result.value[0]["status"] == "war"
 
     def test_region_owner_query(self) -> None:
         layer = _make_layer()
-        result = layer.query(Query(question="region_owner", params={"region_id": "region_a"}))
+        result = layer.query(Query(question=QueryType.REGION_OWNER, params={"region_id": "region_a"}))
         assert result.value == "alpha"
 
     def test_unknown_query(self) -> None:
@@ -214,13 +218,13 @@ class TestSaveLoad:
         new_layer.load_state(state)
 
         # Check nations restored
-        result = new_layer.query(Query(question="nations", params={}))
+        result = new_layer.query(Query(question=QueryType.NATIONS, params={}))
         assert sorted(result.value) == ["alpha", "beta"]
 
         # Check relations restored
         assert new_layer.get_relation("alpha", "beta") == DiplomaticStatus.WAR
 
         # Check nation data restored
-        info = new_layer.query(Query(question="nation_info", params={"nation_id": "alpha"}))
+        info = new_layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "alpha"}))
         assert info.value["name"] == "Kingdom of Alpha"
         assert info.value["leader"]["name"] == "King Test"

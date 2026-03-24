@@ -17,7 +17,7 @@ from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.layer import Layer
-from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
 from dnd_simulator.layers.entities.combat_manager import CombatManager
 from dnd_simulator.layers.entities.models import Npc, NpcMemory, activity_flavor
 from dnd_simulator.layers.entities.perception import perceive_event
@@ -200,7 +200,7 @@ class EntitiesLayer(Layer):
         # Try to get region/location info from geography
         try:
             region_answer = query_fn(
-                "geography", Query(question="region_info", params={"region_id": creature.location_id})
+                "geography", Query(question=QueryType.REGION_INFO, params={"region_id": creature.location_id})
             )
             if region_answer.value and isinstance(region_answer.value, dict):
                 region_name = str(region_answer.value.get("name", region_name))
@@ -211,7 +211,7 @@ class EntitiesLayer(Layer):
         # Weather (default to clear if unavailable — prompts expect a weather dict)
         weather: dict[str, object] = {"condition": "clear", "temperature": 15}
         try:
-            weather_answer = query_fn("geography", Query(question="weather", params={"region_id": region_id}))
+            weather_answer = query_fn("geography", Query(question=QueryType.WEATHER, params={"region_id": region_id}))
             if weather_answer.value and isinstance(weather_answer.value, dict):
                 weather = dict(weather_answer.value)
         except Exception:
@@ -221,7 +221,7 @@ class EntitiesLayer(Layer):
         settlements: list[dict[str, object]] | None = None
         try:
             settlements_answer = query_fn(
-                "settlements", Query(question="region_settlements", params={"region_id": region_id})
+                "settlements", Query(question=QueryType.REGION_SETTLEMENTS, params={"region_id": region_id})
             )
             if settlements_answer.value:
                 settlements = list(settlements_answer.value)
@@ -232,11 +232,11 @@ class EntitiesLayer(Layer):
         territory_owner: str | None = None
         nation_info: dict[str, object] | None = None
         try:
-            owner_answer = query_fn("politics", Query(question="region_owner", params={"region_id": region_id}))
+            owner_answer = query_fn("politics", Query(question=QueryType.REGION_OWNER, params={"region_id": region_id}))
             if owner_answer.value:
                 territory_owner = str(owner_answer.value)
                 nation_answer = query_fn(
-                    "politics", Query(question="nation_info", params={"nation_id": territory_owner})
+                    "politics", Query(question=QueryType.NATION_INFO, params={"nation_id": territory_owner})
                 )
                 if nation_answer.value and isinstance(nation_answer.value, dict):
                     nation_info = dict(nation_answer.value)
@@ -520,12 +520,12 @@ class EntitiesLayer(Layer):
         q = query.question
         params = query.params
 
-        if q == "players":
+        if q is QueryType.PLAYERS:
             from dnd_simulator.core.player import PlayerCharacter
 
             return Answer(value=[e for e in self._entities.values() if isinstance(e, PlayerCharacter)])
 
-        if q == "player":
+        if q is QueryType.PLAYER:
             from dnd_simulator.core.player import PlayerCharacter
 
             pid = params.get("id")
@@ -538,7 +538,7 @@ class EntitiesLayer(Layer):
                     return Answer(value=e)
             return Answer(value=None)
 
-        if q == "entities_at_location":
+        if q is QueryType.ENTITIES_AT_LOCATION:
             location_id = params["location_id"]
             hour = int(params.get("hour", 12))
             result = []
@@ -552,18 +552,18 @@ class EntitiesLayer(Layer):
                     result.append(self._entity_summary(e))
             return Answer(value=result)
 
-        if q == "entity_info":
+        if q is QueryType.ENTITY_INFO:
             e = self._entities[params["entity_id"]]
             return Answer(value=self._entity_detail(e))
 
-        if q == "all_entities":
+        if q is QueryType.ALL_ENTITIES:
             result = []
             for e in self._entities.values():
                 if e.active:
                     result.append(self._entity_detail(e))
             return Answer(value=result)
 
-        if q == "all_creatures":
+        if q is QueryType.ALL_CREATURES:
             from dnd_simulator.core.player import PlayerCharacter
 
             # Filterable creature list for master panel
@@ -587,38 +587,38 @@ class EntitiesLayer(Layer):
                 result.append(self._entity_detail(e))
             return Answer(value=result)
 
-        if q == "all_npcs":
+        if q is QueryType.ALL_NPCS:
             result = []
             for e in self._entities.values():
                 if e.active and isinstance(e, Npc):
                     result.append(self._npc_detail(e))
             return Answer(value=result)
 
-        if q == "npc_info":
+        if q is QueryType.NPC_INFO:
             npc = self._entities.get(params["npc_id"])
             if npc is None or not isinstance(npc, Npc):
                 raise ValueError(f"NPC '{params['npc_id']}' not found")
             return Answer(value=self._npc_detail(npc))
 
-        if q == "perceived_log":
+        if q is QueryType.PERCEIVED_LOG:
             e = self._entities[params["entity_id"]]
             if isinstance(e, Character):
                 return Answer(value=self.get_perceived_log(e))
             return Answer(value=[])
 
-        if q == "new_perceived_events":
+        if q is QueryType.NEW_PERCEIVED_EVENTS:
             e = self._entities[params["entity_id"]]
             if isinstance(e, Character):
                 return Answer(value=self.get_new_perceived_events(e))
             return Answer(value=[])
 
-        if q == "new_raw_events":
+        if q is QueryType.NEW_RAW_EVENTS:
             e = self._entities[params["entity_id"]]
             if isinstance(e, Character):
                 return Answer(value=self.get_new_raw_events(e))
             return Answer(value=[])
 
-        if q == "combat_info":
+        if q is QueryType.COMBAT_INFO:
             location_id = params["location_id"]
             combat = self._combat.get_combat(location_id)
             if combat:
@@ -632,7 +632,7 @@ class EntitiesLayer(Layer):
                 )
             return Answer(value=None)
 
-        if q == "perceive_entity":
+        if q is QueryType.PERCEIVE_ENTITY:
             observer = self._entities.get(params["observer_id"])
             target = self._entities.get(params["target_id"])
             if observer and target and isinstance(observer, Character) and isinstance(target, Entity):

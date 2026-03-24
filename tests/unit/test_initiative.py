@@ -15,7 +15,7 @@ from dnd_simulator.core.character import (
 )
 from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.location import Location, LocationGraph
-from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query, QueryType
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.round import Round
@@ -389,8 +389,6 @@ class TestDeathRemovesFromCombat:
 
 class TestCombatInfoQuery:
     def test_returns_round_and_order(self) -> None:
-        from dnd_simulator.core.models import Query
-
         c1 = Character(id="c1", name="A", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
         c2 = Character(id="c2", name="B", location_id="r1", max_hp=15, current_hp=15)
         layer = EntitiesLayer([c1, c2])
@@ -404,17 +402,15 @@ class TestCombatInfoQuery:
             _noop_query_fn,
             _noop_emit_fn,
         )
-        answer = layer.query(Query(question="combat_info", params={"location_id": "r1"}))
+        answer = layer.query(Query(question=QueryType.COMBAT_INFO, params={"location_id": "r1"}))
         assert answer.value is not None
         assert answer.value["round_number"] == 1
         assert set(answer.value["turn_order"]) == {"c1", "c2"}
 
     def test_returns_none_outside_combat(self) -> None:
-        from dnd_simulator.core.models import Query
-
         c1 = Character(id="c1", name="A", location_id="r1")
         layer = EntitiesLayer([c1])
-        answer = layer.query(Query(question="combat_info", params={"location_id": "r1"}))
+        answer = layer.query(Query(question=QueryType.COMBAT_INFO, params={"location_id": "r1"}))
         assert answer.value is None
 
 

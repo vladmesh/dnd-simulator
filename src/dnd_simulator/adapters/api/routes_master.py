@@ -22,7 +22,7 @@ from dnd_simulator.adapters.api.schemas import (
     WorldListItem,
     WorldStateResponse,
 )
-from dnd_simulator.core.models import Query
+from dnd_simulator.core.models import Query, QueryType
 from dnd_simulator.i18n import _
 
 router = APIRouter(prefix="/api/master", tags=["master"])
@@ -102,26 +102,28 @@ def get_session_state(session_id: str) -> WorldStateResponse:
     session = _get_session(service, session_id)
     world = session.world
 
-    regions_answer = world.query_layer("geography", Query(question="regions", params={}))
+    regions_answer = world.query_layer("geography", Query(question=QueryType.REGIONS, params={}))
     region_list: list[dict[str, object]] = []
     for rid in regions_answer.value:
-        info = world.query_layer("geography", Query(question="region_info", params={"region_id": rid}))
-        weather = world.query_layer("geography", Query(question="weather", params={"region_id": rid}))
+        info = world.query_layer("geography", Query(question=QueryType.REGION_INFO, params={"region_id": rid}))
+        weather = world.query_layer("geography", Query(question=QueryType.WEATHER, params={"region_id": rid}))
         region_list.append({**info.value, "weather": weather.value})
 
-    nations_answer = world.query_layer("politics", Query(question="nations", params={}))
+    nations_answer = world.query_layer("politics", Query(question=QueryType.NATIONS, params={}))
     nation_list: list[dict[str, object]] = []
     for nid in nations_answer.value:
-        info = world.query_layer("politics", Query(question="nation_info", params={"nation_id": nid}))
+        info = world.query_layer("politics", Query(question=QueryType.NATION_INFO, params={"nation_id": nid}))
         nation_list.append(info.value)
 
     all_settlements: list[dict[str, object]] = []
     for rid in regions_answer.value:
-        answer = world.query_layer("settlements", Query(question="region_settlements", params={"region_id": rid}))
+        answer = world.query_layer(
+            "settlements", Query(question=QueryType.REGION_SETTLEMENTS, params={"region_id": rid})
+        )
         for s in answer.value:
             all_settlements.append(s)
 
-    entities_answer = world.query_layer("entities", Query(question="all_entities", params={}))
+    entities_answer = world.query_layer("entities", Query(question=QueryType.ALL_ENTITIES, params={}))
     entities_list: list[dict[str, object]] = entities_answer.value
 
     return WorldStateResponse(
