@@ -1,6 +1,9 @@
 # Game saves
 saves/
 
+# Debug logs
+logs/
+
 # E2E screenshots
 e2e_*.png
 

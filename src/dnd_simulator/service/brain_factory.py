@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import logging
+import structlog
 
 from dnd_simulator.core.brain import Brain, RuleBrain
 from dnd_simulator.llm.client import LlmClient
 
-logger = logging.getLogger("dnd_simulator.brain_factory")
+logger = structlog.get_logger(domain="brain")
 
 
 class BrainFactory:
@@ -30,7 +30,7 @@ class BrainFactory:
             if self._llm is None:
                 if strict:
                     raise ValueError("LLM not configured")
-                logger.warning("LLM not configured — falling back to RuleBrain for ai_type='llm'")
+                logger.warning("llm_not_configured_fallback", ai_type=ai_type)
                 return RuleBrain()
             from dnd_simulator.llm.brain import LlmBrain
 

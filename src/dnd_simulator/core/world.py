@@ -2,11 +2,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import structlog
+
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, EmitFn, Event, GameDateTime, Query, QueryFn, TimeDelta
 
 if TYPE_CHECKING:
     from dnd_simulator.core.location import LocationGraph
+
+logger = structlog.get_logger(domain="world")
 
 
 class LayerError(Exception):
@@ -36,6 +40,7 @@ class World:
 
     def advance_time(self, delta: TimeDelta) -> list[Event]:
         """Advance world time. Only ticks layers whose tick_interval has elapsed."""
+        logger.debug("advance_time", delta_seconds=delta.seconds)
         self.time = self.time.advance(seconds=delta.seconds)
         now = self.time.to_total_seconds()
         all_events: list[Event] = []

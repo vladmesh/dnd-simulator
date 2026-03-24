@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-import logging
 import time
 from dataclasses import dataclass
 from typing import Any
 
+import structlog
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageFunctionToolCall
 
-logger = logging.getLogger("dnd_simulator.llm")
+logger = structlog.get_logger(domain="llm")
 
 
 @dataclass(frozen=True)
@@ -65,22 +65,24 @@ class LlmClient:
     ) -> str:
         """Generate a plain text completion (no tools)."""
         t0 = time.monotonic()
-        response = self._client.chat.completions.create(
-            model=self._model,
-            messages=messages,  # type: ignore[arg-type]
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
+        try:
+            response = self._client.chat.completions.create(
+                model=self._model,
+                messages=messages,  # type: ignore[arg-type]
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+        except Exception:
+            elapsed_ms = (time.monotonic() - t0) * 1000
+            logger.error("llm_error", caller="summarizer", elapsed_ms=round(elapsed_ms))
+            raise
         elapsed_ms = (time.monotonic() - t0) * 1000
 
         msg = response.choices[0].message
         usage = response.usage
-        tokens_info = ""
-        if usage:
-            tokens_info = f" | tokens: {usage.prompt_tokens}→{usage.completion_tokens}"
 
         text = msg.content or ""
-        logger.info("[LLM] summarizer | %.0fms%s", elapsed_ms, tokens_info)
+        logger.info("llm_response", caller="summarizer", elapsed_ms=round(elapsed_ms), **_usage_kwargs(usage))
         return text
 
     def generate_with_tools(
@@ -91,29 +93,25 @@ class LlmClient:
         temperature: float = 0.8,
     ) -> LlmResponse:
         """Generate a completion that may include a tool call."""
-        # Extract caller context from system message
-        caller = "?"
-        for m in messages:
-            if m.get("role") == "system":
-                content = str(m.get("content", ""))
-                first_line = content.split("\n")[0][:80]
-                caller = first_line
-                break
-
         tool_names = []
         for t in tools:
             func = t.get("function")
             tool_names.append(func["name"] if isinstance(func, dict) else "?")
-        logger.info("[LLM] %s | tools: %s", caller, tool_names)
+        logger.info("llm_request", tools=tool_names)
 
         t0 = time.monotonic()
-        response = self._client.chat.completions.create(
-            model=self._model,
-            messages=messages,  # type: ignore[arg-type]
-            tools=tools,  # type: ignore[arg-type]
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
+        try:
+            response = self._client.chat.completions.create(
+                model=self._model,
+                messages=messages,  # type: ignore[arg-type]
+                tools=tools,  # type: ignore[arg-type]
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+        except Exception:
+            elapsed_ms = (time.monotonic() - t0) * 1000
+            logger.error("llm_error", elapsed_ms=round(elapsed_ms), tools=tool_names)
+            raise
         elapsed_ms = (time.monotonic() - t0) * 1000
 
         msg = response.choices[0].message
@@ -124,27 +122,55 @@ class LlmClient:
                 tool_call = _parse_tool_call(raw_tc)
 
         usage = response.usage
-        tokens_info = ""
-        if usage:
-            tokens_info = f" | tokens: {usage.prompt_tokens}→{usage.completion_tokens}"
 
         if tool_call:
             logger.info(
-                "[LLM] → tool: %s(%s) | %.0fms%s",
-                tool_call.name,
-                _compact_args(tool_call.arguments),
-                elapsed_ms,
-                tokens_info,
+                "llm_tool_call",
+                tool=tool_call.name,
+                args=_compact_args(tool_call.arguments),
+                elapsed_ms=round(elapsed_ms),
+                **_usage_kwargs(usage),
             )
         else:
             text_preview = (msg.content or "")[:80].replace("\n", " ")
-            logger.info('[LLM] → text: "%s" | %.0fms%s', text_preview, elapsed_ms, tokens_info)
+            logger.info(
+                "llm_text_response",
+                text_preview=text_preview,
+                elapsed_ms=round(elapsed_ms),
+                **_usage_kwargs(usage),
+            )
+
+        # Log full context for file dispatch (debug only)
+        logger.debug(
+            "llm_full_context",
+            domain="llm.context",
+            messages=messages,
+            tools=tools,
+            response_tool=tool_call.name if tool_call else None,
+            response_text=msg.content,
+            elapsed_ms=round(elapsed_ms),
+            **_usage_kwargs(usage),
+        )
 
         return LlmResponse(
             text=msg.content,
             tool_call=tool_call,
             raw_message=msg,
         )
+
+
+def _usage_kwargs(usage: object) -> dict[str, int]:
+    """Extract token usage into kwargs for structured logging."""
+    if usage is None:
+        return {}
+    tokens_in = getattr(usage, "prompt_tokens", None)
+    tokens_out = getattr(usage, "completion_tokens", None)
+    result: dict[str, int] = {}
+    if tokens_in is not None:
+        result["tokens_in"] = int(tokens_in)
+    if tokens_out is not None:
+        result["tokens_out"] = int(tokens_out)
+    return result
 
 
 def _compact_args(args: dict[str, Any]) -> str:

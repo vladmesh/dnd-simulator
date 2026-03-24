@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import logging
 import os
 import re
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import structlog
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,16 +18,11 @@ from dnd_simulator.adapters.api.routes_player import router as player_router
 from dnd_simulator.adapters.api.routes_ws import router as ws_router
 from dnd_simulator.i18n import set_language
 from dnd_simulator.llm.client import LlmClient
+from dnd_simulator.logging_config import configure_logging
 from dnd_simulator.service import GameService
 from dnd_simulator.storage.store import JsonFileStore
 
 DEFAULT_SAVES_DIR = Path(__file__).resolve().parents[4] / "saves"
-
-# Configure logging from LOG_LEVEL env var (default: WARNING)
-logging.basicConfig(
-    level=getattr(logging, os.environ.get("LOG_LEVEL", "WARNING").upper(), logging.WARNING),
-    format="%(levelname)s %(name)s: %(message)s",
-)
 
 _SESSION_ID_RE = re.compile(r"/api/(?:master|player)/sessions/([^/]+)")
 
@@ -51,6 +46,10 @@ class I18nMiddleware(BaseHTTPMiddleware):
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     load_dotenv()
+
+    debug = os.getenv("DEBUG", "") == "1"
+    log_dir_raw = os.getenv("LOG_DIR")
+    configure_logging(debug=debug, log_dir=Path(log_dir_raw) if log_dir_raw else None)
 
     store = JsonFileStore(DEFAULT_SAVES_DIR)
 
@@ -86,11 +85,11 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-_fe_log = logging.getLogger("frontend")
+_fe_log = structlog.get_logger(domain="transport.frontend")
 
 
 @app.post("/api/frontend-error")
 async def frontend_error(request: Request) -> dict[str, str]:
     body = await request.json()
-    _fe_log.error("FRONTEND ERROR: %s\n%s", body.get("message", "?"), body.get("stack", ""))
+    _fe_log.error("frontend_error", message=body.get("message", "?"), stack=body.get("stack", ""))
     return {"status": "logged"}

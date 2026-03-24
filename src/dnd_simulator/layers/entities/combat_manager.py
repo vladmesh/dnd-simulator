@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Any
+
+import structlog
 
 from dnd_simulator.core.character import Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState
@@ -15,7 +16,7 @@ from dnd_simulator.rules.modifiers import attack_modifiers
 from dnd_simulator.rules.movement import grid_distance, move_direction
 from dnd_simulator.rules.weapons import get_weapon_attack
 
-logger = logging.getLogger("dnd_simulator.combat_manager")
+logger = structlog.get_logger(domain="combat")
 
 
 class CombatManager:
@@ -71,6 +72,9 @@ class CombatManager:
         for c in creatures:
             c.in_combat = True
 
+        initiative = [(c.id, c.name) for c in ordered]
+        logger.info("combat_start", location_id=location_id, initiative=initiative)
+
         # Log combat start with initiative order
         self._location_log[location_id].append(
             Event(
@@ -108,6 +112,8 @@ class CombatManager:
             c.is_dodging = False
         self._combats.pop(location_id, None)
         self._attack_this_round.pop(location_id, None)
+
+        logger.info("combat_end", location_id=location_id)
 
         self._location_log[location_id].append(
             Event(
@@ -237,11 +243,11 @@ class CombatManager:
             for dice_expr in atk_mods.dice_bonuses:
                 bless_bonus += roll_dice(dice_expr)
             logger.debug(
-                "[Combat] %s dice bonuses: +%d (from %s), weapon=%s",
-                attacker.name,
-                bless_bonus,
-                ", ".join(atk_mods.dice_bonuses),
-                attack.name,
+                "dice_bonuses",
+                attacker=attacker.name,
+                bonus=bless_bonus,
+                dice=atk_mods.dice_bonuses,
+                weapon=attack.name,
             )
 
         modifier = atk_mods.modifier + bless_bonus
@@ -249,17 +255,17 @@ class CombatManager:
         disadvantage = atk_mods.disadvantage
 
         logger.info(
-            "[Combat] %s → %s: weapon=%s, mod=%d (base %d + bless %d), adv=%s, disadv=%s, force_crit=%s, target AC=%d",
-            attacker.name,
-            target.name,
-            attack.name,
-            modifier,
-            atk_mods.modifier,
-            bless_bonus,
-            advantage,
-            disadvantage,
-            atk_mods.force_crit,
-            atk_mods.target_ac,
+            "attack_roll",
+            attacker=attacker.name,
+            target=target.name,
+            weapon=attack.name,
+            modifier=modifier,
+            base_mod=atk_mods.modifier,
+            bless_bonus=bless_bonus,
+            advantage=advantage,
+            disadvantage=disadvantage,
+            force_crit=atk_mods.force_crit,
+            target_ac=atk_mods.target_ac,
         )
 
         result = resolve_attack(
@@ -272,15 +278,13 @@ class CombatManager:
         )
 
         hit_str = "CRIT!" if result.critical else ("HIT" if result.hit else "MISS")
-        dmg_str = f" → {result.total_damage} dmg" if result.hit else ""
         logger.info(
-            "[Combat] Result: d20(%d)+%d=%d vs AC %d → %s%s",
-            result.attack_check.roll,
-            modifier,
-            result.attack_check.total,
-            atk_mods.target_ac,
-            hit_str,
-            dmg_str,
+            "attack_result",
+            roll=result.attack_check.roll,
+            total=result.attack_check.total,
+            target_ac=atk_mods.target_ac,
+            outcome=hit_str,
+            damage=result.total_damage if result.hit else 0,
         )
 
         # Build enriched event for the log (with damage info + dice details)

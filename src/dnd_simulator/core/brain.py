@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-import logging
 import queue
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import TYPE_CHECKING
+
+import structlog
 
 from dnd_simulator.core.action import END_TURN, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, CombatEntity, ItemInfo, PeacefulAwareness, PerceivedEvent
@@ -16,7 +17,7 @@ from dnd_simulator.core.tags import NpcTag, find_tags, has_tag
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
 
-logger = logging.getLogger("dnd_simulator.brain")
+logger = structlog.get_logger(domain="brain")
 
 # Callback type: notified when it's the player's turn (awareness push).
 OnTurnCallback = Callable[
@@ -109,7 +110,7 @@ class RuleBrain(Brain):
         if not heard_speech:
             return END_TURN
 
-        logger.info("[RuleBrain:%s] → say (canned: %s)", creature.name, response)
+        logger.info("rule_say", response=response)
         return Action(name=ActionType.SAY, params={"text": response})
 
     def _get_tags(self, creature: Creature) -> list[str]:
@@ -134,19 +135,16 @@ class RuleBrain(Brain):
         tags = self._get_tags(creature)
 
         # Debug: log turn state
-        conditions_str = ", ".join(c.value for c in awareness.self_conditions) if awareness.self_conditions else "none"
         logger.debug(
-            "[RuleBrain:%s] turn start: HP=%d/%d (%.0f%%), speed=%d, conditions=[%s], "
-            "budget=[actions=%d, move=%dft], enemies=%d",
-            creature.name,
-            hp,
-            max_hp,
-            hp_ratio * 100,
-            awareness.self_speed,
-            conditions_str,
-            budget.actions if budget else 0,
-            budget.movement_remaining if budget else 0,
-            len(nearby),
+            "rule_turn_start",
+            hp=hp,
+            max_hp=max_hp,
+            hp_pct=round(hp_ratio * 100),
+            speed=awareness.self_speed,
+            conditions=[c.value for c in awareness.self_conditions],
+            budget_actions=budget.actions if budget else 0,
+            budget_move=budget.movement_remaining if budget else 0,
+            enemies=len(nearby),
         )
 
         # Tag-adjusted thresholds
@@ -169,14 +167,14 @@ class RuleBrain(Brain):
                     None,
                 )
             if weapon:
-                logger.info("[RuleBrain:%s] → equip %s (unarmed)", creature.name, weapon.name)
+                logger.info("rule_equip", weapon=weapon.name)
                 return Action(name=ActionType.EQUIP, params={"weapon_id": weapon.id})
 
         # --- Use healing potion if wounded and available ---
         if hp_ratio < 0.5 and ActionType.USE_ITEM in awareness.available_actions and awareness.available_items:
             potion = next((i for i in awareness.available_items if "heal" in i.description.lower()), None)
             if potion:
-                logger.info("[RuleBrain:%s] → use %s (HP %.0f%%)", creature.name, potion.name, hp_ratio * 100)
+                logger.info("rule_use_item", item=potion.name, hp_pct=round(hp_ratio * 100))
                 return Action(name=ActionType.USE_ITEM, params={"item_id": potion.id})
 
         # --- Target selection: score each enemy, tag-aware ---
@@ -185,46 +183,45 @@ class RuleBrain(Brain):
         target = self._pick_target(nearby, primary_reach, hated_ids, feared_ids)
         target_id = target.id
         dist = target.distance_ft
-        logger.debug("[RuleBrain:%s] target=%s dist=%dft", creature.name, target_id, dist)
+        logger.debug("rule_target_selected", target=target_id, distance_ft=dist)
 
         # 1. Flee if critically wounded (scared NPCs flee earlier)
         if hp_ratio < flee_threshold:
-            logger.info("[RuleBrain:%s] → flee (HP %.0f%%)", creature.name, hp_ratio * 100)
+            logger.info("rule_flee", hp_pct=round(hp_ratio * 100))
             return Action(name=ActionType.FLEE)
 
         # 2. Dodge if badly hurt and enemy in melee reach
         nearest_dist = min(e.distance_ft for e in nearby)
         if hp_ratio < dodge_threshold and nearest_dist <= 5:
-            logger.info("[RuleBrain:%s] → dodge (HP %.0f%%)", creature.name, hp_ratio * 100)
+            logger.info("rule_dodge", hp_pct=round(hp_ratio * 100))
             return Action(name=ActionType.DODGE)
 
         # 3. Ranged attacker: shoot if target in range, move closer if not
         if is_ranged and dist <= primary_reach:
-            logger.info("[RuleBrain:%s] → attack %s (ranged, dist %d ft)", creature.name, target_id, dist)
+            logger.info("rule_attack", target=target_id, ranged=True, distance_ft=dist)
             return Action(name=ActionType.ATTACK, params={"target_id": target_id})
 
         # 4. Melee: attack if in weapon reach
         if dist <= primary_reach:
-            logger.info("[RuleBrain:%s] → attack %s (dist %d ft)", creature.name, target_id, dist)
+            logger.info("rule_attack", target=target_id, distance_ft=dist)
             return Action(name=ActionType.ATTACK, params={"target_id": target_id})
 
         # 5. Move toward if have movement remaining
         movement_left = budget.movement_remaining if budget else 0
         if movement_left > 0:
-            logger.info("[RuleBrain:%s] → move toward %s (dist %d ft)", creature.name, target_id, dist)
+            logger.info("rule_move_toward", target=target_id, distance_ft=dist)
             return self.move_toward_target(target, awareness)
 
         # 6. Dash to get more movement (if have actions)
         has_actions = (budget.actions if budget else 0) > 0
         if has_actions:
-            logger.info("[RuleBrain:%s] → dash (dist %d ft)", creature.name, dist)
+            logger.info("rule_dash", distance_ft=dist)
             return Action(name=ActionType.DASH)
 
         logger.debug(
-            "[RuleBrain:%s] → end_turn (no budget: actions=%d, move=%dft)",
-            creature.name,
-            budget.actions if budget else 0,
-            movement_left,
+            "rule_end_turn",
+            budget_actions=budget.actions if budget else 0,
+            budget_move=movement_left,
         )
         return END_TURN
 
@@ -256,14 +253,13 @@ class RuleBrain(Brain):
                 score += 30.0
             score += max(0.0, 20.0 - dist * 0.2)
 
-            conds = ", ".join(sorted(c.value for c in enemy.conditions)) if enemy.conditions else ""
             logger.debug(
-                "  target %s: dist=%dft wounded=%s conds=[%s] score=%.0f",
-                eid,
-                dist,
-                enemy.is_wounded,
-                conds,
-                score,
+                "rule_score_target",
+                target=eid,
+                distance_ft=dist,
+                wounded=enemy.is_wounded,
+                conditions=[c.value for c in enemy.conditions] if enemy.conditions else [],
+                score=round(score),
             )
 
             if score > best_score:

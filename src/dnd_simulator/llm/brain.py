@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
+
+import structlog
 
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
@@ -16,7 +17,7 @@ from dnd_simulator.llm.tools import build_npc_combat_tools, build_npc_tools, get
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
 
-logger = logging.getLogger("dnd_simulator.npc")
+logger = structlog.get_logger(domain="llm.brain")
 
 _MAX_RETRIES = 3
 
@@ -39,7 +40,7 @@ class LlmBrain(Brain):
             return Action(name=ActionType.IDLE)
 
         is_combat = isinstance(awareness, CombatAwareness)
-        logger.info("[NPC:%s] === starts turn (%s) ===", creature.name, "combat" if is_combat else "peace")
+        logger.info("npc_turn_start", npc=creature.name, mode="combat" if is_combat else "peaceful")
 
         npc_data = creature.get_npc_data()
 
@@ -138,8 +139,10 @@ def _combat_awareness_to_dict(aw: CombatAwareness) -> dict[str, object]:
         "self_speed": aw.self_speed,
         "self_weapon": aw.self_weapon,
         "self_weapon_damage": aw.self_weapon_damage,
+        "self_conditions": [c.value for c in aw.self_conditions],
         "nearby": nearby_list,
         "round_number": aw.round_number,
         "walls": aw.walls,
+        "battle_map_ascii": aw.battle_map_ascii,
         "available_items": items_list,
     }

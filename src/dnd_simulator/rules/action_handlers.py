@@ -8,8 +8,9 @@ Handlers do NOT check preconditions — the dispatcher already validated.
 
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
+
+import structlog
 
 from dnd_simulator.core.items import Item, ItemType
 from dnd_simulator.core.models import ActionResult, Event, EventType
@@ -23,14 +24,14 @@ if TYPE_CHECKING:
     from dnd_simulator.core.world import World
     from dnd_simulator.rules.validation import ActionContext
 
-logger = logging.getLogger("dnd_simulator.action_handlers")
+logger = structlog.get_logger(domain="action")
 
 
 def handle_idle(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
     """Idle: optionally inspect a target, otherwise do nothing."""
     inspect_target = action.params.get("inspect_target") if action.params else None
     if inspect_target:
-        logger.info("[%s] → inspect %s", actor.name, inspect_target)
+        logger.info("inspect", target=str(inspect_target))
         emit_fn(
             Event(
                 event_type=EventType.CUSTOM,
@@ -42,12 +43,13 @@ def handle_idle(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
             )
         )
     else:
-        logger.info("[%s] → idle", actor.name)
+        logger.info("idle")
     return ActionResult()
 
 
 def handle_say(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
     """Say: emit speech event."""
+    logger.info("say", text=str(action.params.get("text", ""))[:80])
     emit_fn(
         Event(
             event_type=EventType.ENTITY_SAY,
@@ -60,6 +62,7 @@ def handle_say(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCont
 
 def handle_attack(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
     """Attack: emit attack event. CombatManager resolves via handle_event."""
+    logger.info("attack", target=str(action.params.get("target_id", "")))
     return emit_fn(
         Event(
             event_type=EventType.ENTITY_ATTACK,
@@ -74,7 +77,7 @@ def handle_attack(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionC
 
 def handle_dodge(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
     """Dodge: emit dodge event."""
-    logger.info("[%s] → dodge", actor.name)
+    logger.info("dodge")
     emit_fn(
         Event(
             event_type=EventType.ENTITY_DODGE,
@@ -90,7 +93,7 @@ def handle_dodge(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCo
 
 def handle_flee(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
     """Flee: emit flee event."""
-    logger.info("[%s] → flee", actor.name)
+    logger.info("flee")
     emit_fn(
         Event(
             event_type=EventType.ENTITY_FLEE,
@@ -108,7 +111,7 @@ def handle_move(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
     """Move: emit move event. CombatManager resolves via handle_event."""
     direction = action.params.get("direction", "")
     ft = int(str(action.params.get("ft", 5)))
-    logger.info("[%s] → move %s %dft", actor.name, direction, ft)
+    logger.info("move", direction=direction, ft=ft)
     return emit_fn(
         Event(
             event_type=EventType.ENTITY_MOVE,
@@ -129,7 +132,7 @@ def handle_dash(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
         return ActionResult(success=False, error="Dash requires a turn budget")
     speed = effective_speed(actor)
     budget.movement_remaining += speed
-    logger.info("[%s] → dash (+%dft movement)", actor.name, speed)
+    logger.info("dash", extra_movement_ft=speed)
     return ActionResult()
 
 
@@ -169,12 +172,7 @@ def handle_wait(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
             now = world.time.to_total_seconds()
             actor.wake_at_seconds = now + hours * 3600
             actor.active = False
-            logger.info(
-                "[Wait] %s sleeps for %dh (wake_at=%d)",
-                actor.name,
-                hours,
-                actor.wake_at_seconds,
-            )
+            logger.info("wait_sleep", hours=hours, wake_at=actor.wake_at_seconds)
     return ActionResult()
 
 
@@ -201,7 +199,7 @@ def handle_use_item(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Actio
     if item.item_type == ItemType.POTION:
         healed = _apply_potion(actor, item)
         actor.inventory.remove(item)
-        logger.info("[%s] → use %s (healed %d HP)", actor.name, item.name, healed)
+        logger.info("use_item", item=item.name, healed=healed)
         emit_fn(
             Event(
                 event_type=EventType.ENTITY_USE_ITEM,
@@ -231,7 +229,7 @@ def handle_bless(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCo
     # Don't stack — take max duration (None = permanent > any int)
     if existing is None or (isinstance(existing, int) and existing < _BLESS_DURATION_ROUNDS):
         actor.conditions[Condition.BLESSED] = _BLESS_DURATION_ROUNDS
-    logger.info("[%s] → bless (BLESSED for %d rounds)", actor.name, _BLESS_DURATION_ROUNDS)
+    logger.info("bless", duration_rounds=_BLESS_DURATION_ROUNDS)
     emit_fn(
         Event(
             event_type=EventType.ENTITY_BLESS,
@@ -263,7 +261,7 @@ def handle_equip(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCo
     actor.inventory.remove(weapon)
     actor.equipped_weapon = weapon
 
-    logger.info("[%s] → equip %s", actor.name, weapon.name)
+    logger.info("equip", weapon=weapon.name)
     emit_fn(
         Event(
             event_type=EventType.ENTITY_EQUIP,
@@ -283,7 +281,7 @@ def handle_unequip(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Action
     actor.inventory.append(weapon)
     actor.equipped_weapon = None
 
-    logger.info("[%s] → unequip %s", actor.name, weapon.name)
+    logger.info("unequip", weapon=weapon.name)
     emit_fn(
         Event(
             event_type=EventType.ENTITY_UNEQUIP,

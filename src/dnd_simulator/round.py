@@ -7,10 +7,11 @@ while queries (look/status/map) loop without ending.
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
+
+import structlog
 
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, ItemInfo, PerceivedEvent, describe_item
@@ -31,7 +32,7 @@ from dnd_simulator.rules.validation import ActionContext
 if TYPE_CHECKING:
     from dnd_simulator.service.action_dispatcher import ActionDispatcher
 
-logger = logging.getLogger("dnd_simulator.round")
+logger = structlog.get_logger(domain="round")
 
 # Callback fired after each individual action within a turn.
 # (creature, action, budget, error) — budget is None for peaceful turns, error is "" on success.
@@ -119,9 +120,15 @@ class Round:
         emit_fn: EmitFn,
     ) -> list[Action]:
         """Dispatch to combat or peaceful turn based on creature state."""
-        if creature.in_combat:
-            return self.run_combat_turn(creature, time, query_fn, emit_fn)
-        return self.run_peaceful_turn(creature, time, query_fn, emit_fn)
+        with structlog.contextvars.bound_contextvars(
+            entity_id=creature.id,
+            entity_name=creature.name,
+            phase="combat" if creature.in_combat else "peaceful",
+            location_id=creature.location_id,
+        ):
+            if creature.in_combat:
+                return self.run_combat_turn(creature, time, query_fn, emit_fn)
+            return self.run_peaceful_turn(creature, time, query_fn, emit_fn)
 
     def run_combat_turn(
         self,
@@ -140,11 +147,11 @@ class Round:
         # Tick timed conditions at the start of each turn
         expired = tick_conditions(creature.conditions)
         if expired:
-            logger.info("[Round] %s: conditions expired: %s", creature.name, ", ".join(c.value for c in expired))
+            logger.info("conditions_expired", conditions=[c.value for c in expired])
 
         # Incapacitated creatures (stunned, paralyzed, etc.) skip their turn entirely
         if is_incapacitated(creature.conditions):
-            logger.info("[Round] %s is incapacitated, skipping turn", creature.name)
+            logger.info("turn_skipped_incapacitated")
             reasons = sorted(c.value for c in creature.conditions if is_incapacitated({c: None}))
             emit_fn(
                 Event(
@@ -166,21 +173,15 @@ class Round:
             grants = [a.value for a in wd.grant_actions] if wd.grant_actions else []
             weapon_info = f"{wd.attack_name} (grants: {grants})" if grants else wd.attack_name
         conds_info = {c.value: r for c, r in creature.conditions.items()} if creature.conditions else {}
-        logger.debug(
-            "[Round] %s turn start: weapon=%s, conditions=%s",
-            creature.name,
-            weapon_info,
-            conds_info,
-        )
+        logger.debug("combat_turn_start", weapon=weapon_info, conditions=conds_info)
 
         speed = effective_speed(creature)
         if speed != creature.speed:
             logger.debug(
-                "[Round] %s speed reduced %d→%d by conditions: %s",
-                creature.name,
-                creature.speed,
-                speed,
-                ", ".join(c.value for c in creature.conditions),
+                "speed_reduced",
+                base_speed=creature.speed,
+                effective_speed=speed,
+                conditions=[c.value for c in creature.conditions],
             )
         budget = TurnBudget(
             actions=get_num_actions(creature),
@@ -212,11 +213,10 @@ class Round:
 
             if isinstance(awareness, CombatAwareness):
                 logger.debug(
-                    "[Round] %s actions=%s weapon=%s conds=%s",
-                    creature.name,
-                    [a.value for a in awareness.available_actions],
-                    awareness.self_weapon,
-                    [c.value for c in awareness.self_conditions],
+                    "combat_awareness",
+                    actions=[a.value for a in awareness.available_actions],
+                    weapon=awareness.self_weapon,
+                    conditions=[c.value for c in awareness.self_conditions],
                 )
 
             action = creature.brain.choose_action(creature, awareness, events)
@@ -231,21 +231,12 @@ class Round:
                 consecutive_failures = 0
             else:
                 consecutive_failures += 1
-                logger.info(
-                    "[Round] %s action '%s' failed: %s",
-                    creature.name,
-                    action.name.value,
-                    result.error,
-                )
+                logger.info("action_failed", action=action.name.value, error=result.error)
                 # Notify client about failed action (so UI can show error)
                 if self._on_action:
                     self._on_action(creature, action, budget, result.error)
                 if consecutive_failures >= 3:
-                    logger.warning(
-                        "[Round] %s failed %d actions in a row, ending turn",
-                        creature.name,
-                        consecutive_failures,
-                    )
+                    logger.warning("consecutive_failures_end_turn", failures=consecutive_failures)
                     break
                 continue
 
@@ -300,7 +291,7 @@ class Round:
             # Dispatcher handles validation + execution
             result = self._execute_action(creature, action, ctx, emit_fn)
             if not result.success:
-                logger.warning("[Round] %s action '%s' failed: %s", creature.name, action.name, result.error)
+                logger.warning("action_failed", action=action.name.value, error=result.error)
                 break
 
             actions.append(action)
@@ -372,6 +363,12 @@ class Round:
         # Activate creatures near players, dormify the rest
         self._entities.update_activation(time)
 
+        active_count = len(self._entities.get_active_creatures())
+        combat_locations = list(self._entities.get_combat_locations())
+        logger.info(
+            "round_start", game_time=str(time), active_creatures=active_count, combat_locations=len(combat_locations)
+        )
+
         # Combat rounds: iterate by initiative order per location
         for location_id in list(self._entities.get_combat_locations()):
             combat = self._entities.get_combat(location_id)
@@ -394,6 +391,7 @@ class Round:
         # Advance time by one round (6 seconds)
         tick_events = self._world.advance_time(TimeDelta.from_rounds(1))
 
+        logger.info("round_end", game_time=str(self._world.time), tick_events=len(tick_events))
         return RoundResult(events=tick_events)
 
     def run_loop(self, max_rounds: int | None = None) -> None:
@@ -441,7 +439,7 @@ class Round:
             self._entities.update_activation(self._world.time)
             return True
 
-        logger.info("[FastForward] Advancing %d seconds to next wake_at", delta_seconds)
+        logger.info("fast_forward", delta_seconds=delta_seconds)
         tick_events = self._world.advance_time(TimeDelta(seconds=delta_seconds))
         self._entities.update_activation(self._world.time)
 

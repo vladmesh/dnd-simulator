@@ -138,12 +138,24 @@ def build_npc_combat_prompt(
         "\n" + _("Around you:") + "\n" + "\n".join(entities_lines) if entities_lines else "\n" + _("Nobody around.")
     )
 
+    # Active conditions on self
+    conditions = combat_awareness.get("self_conditions", [])
+    conditions_ctx = ""
+    if conditions:
+        conditions_ctx = "\n- " + _("Active effects: {effects}").format(effects=", ".join(conditions))
+
     # Walls
     walls = combat_awareness.get("walls", [])
     walls_ctx = ""
     if walls:
         walls_lines = "\n".join(f"- {w}" for w in walls)
         walls_ctx = "\n" + _("Walls in the arena:") + f"\n{walls_lines}\n"
+
+    # Battle map ASCII
+    battle_map = combat_awareness.get("battle_map_ascii", "")
+    map_ctx = ""
+    if battle_map:
+        map_ctx = "\n" + _("Battle map:") + f"\n{battle_map}\n"
 
     round_num = combat_awareness.get("round_number", 1)
 
@@ -190,10 +202,11 @@ def build_npc_combat_prompt(
         + "\n"
         + "- "
         + _("Speed: {speed} ft").format(speed=speed)
-        + "\n"
+        + f"{conditions_ctx}\n"
         + f"{entities_ctx}"
         f"{items_ctx}"
         f"{hints_ctx}"
-        f"{walls_ctx}\n" + _("Round {num}.").format(num=round_num) + "\n"
+        f"{walls_ctx}"
+        f"{map_ctx}\n" + _("Round {num}.").format(num=round_num) + "\n"
         "\n" + rules
     )

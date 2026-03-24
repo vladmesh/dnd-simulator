@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING
+
+import structlog
 
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.items import Item
@@ -14,7 +15,7 @@ from dnd_simulator.i18n import _
 if TYPE_CHECKING:
     from dnd_simulator.core.brain import Brain
 
-logger = logging.getLogger("dnd_simulator.creature")
+logger = structlog.get_logger(domain="entity")
 
 # ---------------------------------------------------------------------------
 # Enums

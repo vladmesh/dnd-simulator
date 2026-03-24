@@ -10,9 +10,10 @@ that declare which action types a creature can perform given its state.
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING
+
+import structlog
 
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.models import ActionResult
@@ -45,7 +46,7 @@ if TYPE_CHECKING:
     from dnd_simulator.core.models import EmitFn
     from dnd_simulator.rules.action_provider import ActionProvider
 
-logger = logging.getLogger("dnd_simulator.action_dispatcher")
+logger = structlog.get_logger(domain="action")
 
 # Handler: receives actor, action, emit_fn, context, world; returns result.
 # Preconditions already validated by dispatcher — handler just executes.

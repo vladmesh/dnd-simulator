@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import json
-import logging
 from typing import TYPE_CHECKING
+
+import structlog
 
 from dnd_simulator.layers.entities.models import NpcMemory
 
 if TYPE_CHECKING:
     from dnd_simulator.llm.client import LlmClient
 
-logger = logging.getLogger("dnd_simulator.summarizer")
+logger = structlog.get_logger(domain="llm.summarizer")
 
 _SUMMARIZE_PROMPT = """\
 You are a memory compressor for an NPC in a fantasy RPG.
@@ -78,7 +79,7 @@ class MemorySummarizer:
             result.tags = list(memory.tags)
             return result
         except (json.JSONDecodeError, KeyError, TypeError):
-            logger.warning("Failed to parse summarizer response, keeping original memory")
+            logger.warning("summarizer_parse_failed")
             return memory
 
     def needs_compression(self, memory: NpcMemory) -> bool:

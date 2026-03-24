@@ -17,18 +17,18 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 import os
 import time
 from typing import Any
 
+import structlog
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from dnd_simulator.adapters.api.deps import get_service
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.i18n import _
 
-logger = logging.getLogger("dnd_simulator.ws")
+logger = structlog.get_logger(domain="transport")
 
 router = APIRouter(tags=["websocket"])
 
@@ -56,7 +56,7 @@ class WsEventListener:
             future = asyncio.run_coroutine_threadsafe(self._ws.send_json(msg), self._loop)
             future.result(timeout=30)
         except Exception:
-            logger.debug("WS send failed (connection likely closed)", exc_info=True)
+            logger.debug("ws_send_failed", exc_info=True)
 
     def on_turn(self, msg: dict[str, Any]) -> None:
         self._send(msg)
@@ -93,6 +93,7 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
             return
 
     await ws.accept()
+    logger.info("ws_connected", session_id=session_id, player_id=player_id)
     service = get_service()
 
     # Validate session and player
@@ -158,9 +159,9 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
                 await ws.send_json({"type": "error", "message": _("Unknown message type: {}").format(msg_type)})
 
     except WebSocketDisconnect:
-        logger.info("WebSocket disconnected for session %s", session_id)
+        logger.info("ws_disconnected", session_id=session_id)
     except Exception:
-        logger.exception("WebSocket error in session %s", session_id)
+        logger.exception("ws_error", session_id=session_id)
     finally:
         session.remove_listener(listener)
         # Don't stop round — it lives with the session, not the WS connection

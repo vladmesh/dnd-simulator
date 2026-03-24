@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import logging
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
+
+import structlog
 
 from dnd_simulator.core.awareness import (
     CombatAwareness,
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn, TimeDelta
     from dnd_simulator.llm.summarizer import MemorySummarizer
 
-logger = logging.getLogger("dnd_simulator.entities")
+logger = structlog.get_logger(domain="entity")
 
 # Event types that get recorded in the location log
 _LOGGED_EVENTS = {
@@ -126,7 +127,7 @@ class EntitiesLayer(Layer):
             # Check wake_at expiry
             if e.wake_at_seconds is not None and now >= e.wake_at_seconds:
                 e.wake_at_seconds = None
-                logger.info("[Activation] %s woke up (timer expired)", e.id)
+                logger.info("activation_wake_timer", entity_id=e.id)
             # Player is anchor only if not waiting
             if e.wake_at_seconds is None:
                 e.active = True
@@ -148,7 +149,7 @@ class EntitiesLayer(Layer):
             # Expire wake_at for non-players too
             if e.wake_at_seconds is not None and now >= e.wake_at_seconds:
                 e.wake_at_seconds = None
-                logger.info("[Activation] %s woke up (timer expired)", e.id)
+                logger.info("activation_wake_timer", entity_id=e.id)
 
             effective_location = e.location_id
             if isinstance(e, Npc):
@@ -163,7 +164,7 @@ class EntitiesLayer(Layer):
 
             # Proximity wakeup: clear pending wait timer
             if should_activate and e.wake_at_seconds is not None:
-                logger.info("[Activation] %s woken early by proximity", e.id)
+                logger.info("activation_wake_proximity", entity_id=e.id)
                 e.wake_at_seconds = None
 
     # -- Combat (delegated to CombatManager) --
@@ -208,7 +209,7 @@ class EntitiesLayer(Layer):
             if loc_answer.value and isinstance(loc_answer.value, str):
                 region_id = loc_answer.value
         except Exception:
-            logger.warning("Failed to resolve region for location %s", creature.location_id, exc_info=True)
+            logger.warning("region_resolve_failed", location_id=creature.location_id, exc_info=True)
 
         # Region-dependent data: weather, settlements, politics
         weather: dict[str, object] = {"condition": "clear", "temperature": 15}
@@ -224,7 +225,7 @@ class EntitiesLayer(Layer):
                 if region_answer.value and isinstance(region_answer.value, dict):
                     region_name = str(region_answer.value.get("name", region_name))
             except Exception:
-                logger.warning("Failed to query region info for %s", region_id, exc_info=True)
+                logger.warning("region_info_query_failed", region_id=region_id, exc_info=True)
 
             try:
                 weather_answer = query_fn(
@@ -233,7 +234,7 @@ class EntitiesLayer(Layer):
                 if weather_answer.value and isinstance(weather_answer.value, dict):
                     weather = dict(weather_answer.value)
             except Exception:
-                logger.warning("Failed to query weather for region %s", region_id, exc_info=True)
+                logger.warning("weather_query_failed", region_id=region_id, exc_info=True)
 
             try:
                 settlements_answer = query_fn(
@@ -242,7 +243,7 @@ class EntitiesLayer(Layer):
                 if settlements_answer.value:
                     settlements = list(settlements_answer.value)
             except Exception:
-                logger.warning("Failed to query settlements for region %s", region_id, exc_info=True)
+                logger.warning("settlements_query_failed", region_id=region_id, exc_info=True)
 
             try:
                 owner_answer = query_fn(
@@ -256,7 +257,7 @@ class EntitiesLayer(Layer):
                     if nation_answer.value and isinstance(nation_answer.value, dict):
                         nation_info = dict(nation_answer.value)
             except Exception:
-                logger.warning("Failed to query politics for region %s", region_id, exc_info=True)
+                logger.warning("politics_query_failed", region_id=region_id, exc_info=True)
 
         # Nearby entities (internal — no query needed)
         nearby = self.build_nearby_entities(creature, time.hour)
@@ -525,9 +526,9 @@ class EntitiesLayer(Layer):
                 entity.memory = self._summarizer.summarize(entity.memory, perceived, "combat_ended")
                 if self._summarizer.needs_compression(entity.memory):
                     entity.memory = self._summarizer.summarize(entity.memory, [], "recent_overflow")
-                logger.info("[Summarizer] Updated memory for NPC '%s' after combat", entity.name)
+                logger.info("npc_memory_updated", entity_id=entity.id, entity_name=entity.name, trigger="combat_ended")
             except Exception:
-                logger.exception("[Summarizer] Failed to summarize combat for NPC '%s'", entity.name)
+                logger.exception("npc_memory_summarize_failed", entity_id=entity.id, entity_name=entity.name)
 
     # -- Query --
 

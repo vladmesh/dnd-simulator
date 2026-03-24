@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import contextlib
+import contextvars
 import dataclasses
-import logging
 import threading
 from dataclasses import dataclass, field
 from typing import Any, Protocol
+
+import structlog
 
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
@@ -19,7 +21,7 @@ from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.round import Round, get_entities_layer
 from dnd_simulator.service.action_dispatcher import create_dispatcher
 
-logger = logging.getLogger("dnd_simulator.session")
+logger = structlog.get_logger(domain="session")
 
 
 # ---------------------------------------------------------------------------
@@ -213,17 +215,23 @@ class GameSession:
     # Listener management
     # ---------------------------------------------------------------------------
 
+    def _bind_session_context(self) -> None:
+        """Ensure session_id is bound in contextvars for all log calls."""
+        structlog.contextvars.bind_contextvars(session_id=self.session_id)
+
     def add_listener(self, listener: SessionEventListener) -> None:
+        self._bind_session_context()
         with self._lock:
             self._listeners.append(listener)
             count = len(self._listeners)
-        logger.info("[Session %s] add_listener: %d listeners", self.session_id, count)
+        logger.info("add_listener", listener_count=count)
 
     def get_last_turn_msg(self) -> dict[str, Any] | None:
         """Return the last turn message for replay by the caller."""
         return self._last_turn_msg
 
     def remove_listener(self, listener: SessionEventListener) -> None:
+        self._bind_session_context()
         stop_round = False
         with self._lock:
             with contextlib.suppress(ValueError):
@@ -231,7 +239,7 @@ class GameSession:
             count = len(self._listeners)
             if not self._listeners and self._round is not None:
                 stop_round = True
-        logger.info("[Session %s] remove_listener: %d listeners, stop_round=%s", self.session_id, count, stop_round)
+        logger.info("remove_listener", listener_count=count, stop_round=stop_round)
         if stop_round:
             self.stop_round()
 
@@ -243,7 +251,7 @@ class GameSession:
             try:
                 getattr(listener, method)(*args)
             except Exception:
-                logger.exception("Listener %s.%s failed", type(listener).__name__, method)
+                logger.exception("listener_error", listener=type(listener).__name__, method=method)
 
     # ---------------------------------------------------------------------------
     # Round lifecycle
@@ -255,11 +263,12 @@ class GameSession:
         Wires PlayerBrain, creates Round, starts background thread.
         Returns the Round (existing or new).
         """
+        self._bind_session_context()
         with self._lock:
             if self._round is not None and self._round_thread is not None and self._round_thread.is_alive():
-                logger.info("[Session %s] start_round: round already running", self.session_id)
+                logger.info("start_round_already_running")
                 return self._round
-            logger.info("[Session %s] start_round: creating new round", self.session_id)
+            logger.info("start_round_creating")
 
             brain = PlayerBrain()
             self._player_brain = brain
@@ -338,10 +347,14 @@ class GameSession:
                 try:
                     game_round.run_loop()
                 except Exception:
-                    logger.exception("Round loop error in session %s", self.session_id)
+                    logger.exception("round_loop_error")
                 self._fire("on_game_over")
 
-            thread = threading.Thread(target=run_round_loop, daemon=True, name=f"round-{self.session_id}")
+            # Copy contextvars (session_id etc.) into the round thread
+            ctx = contextvars.copy_context()
+            thread = threading.Thread(
+                target=ctx.run, args=(run_round_loop,), daemon=True, name=f"round-{self.session_id}"
+            )
             self._round_thread = thread
             thread.start()
 
@@ -349,7 +362,8 @@ class GameSession:
 
     def stop_round(self) -> None:
         """Stop the round loop and clean up."""
-        logger.info("[Session %s] stop_round called", self.session_id)
+        self._bind_session_context()
+        logger.info("stop_round")
         with self._lock:
             game_round = self._round
             brain = self._player_brain
