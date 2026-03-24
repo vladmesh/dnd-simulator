@@ -9,6 +9,7 @@ Stateless calculations that can be used by any layer or the Master:
 - action_handlers: per-action-type execution (attack, move, dodge, flee, use_item, bless, etc.)
 - action_provider: dynamic available-action sources (base, inventory, weapon) per creature+context
 - conditions: condition effects (is_incapacitated, effective_speed, attack_advantage, tick_conditions)
+- modifiers: centralized derived stat pipeline (collect modifiers, compute effective AC/speed/attack, resolve advantage)
 - weapons: get_weapon_attack — builds Attack from equipped weapon or fallback
 - movement: grid distance (D&D 5e diagonal rule), move toward/away/direction with wall collision
 - geography: temperature, daylight, travel time, distance calculations

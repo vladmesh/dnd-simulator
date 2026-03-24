@@ -56,7 +56,7 @@ service/           — GameService, ActionDispatcher, BrainFactory, command modu
   ↓
 adapters/          — FastAPI REST + WebSocket API
 
-rules/             — pure D&D mechanics: combat, validation, conditions, weapons, action providers (no deps)
+rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, action providers (no deps)
 llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
 storage/           — SaveStore interface, JsonFileStore
 content_loader.py  — loads worlds, nations, settlements, NPCs, player from YAML
@@ -90,7 +90,11 @@ Each creature's turn is a multi-action loop orchestrated by `Round` (in `round.p
 
 D&D 5e conditions (`core/conditions.py`) — `Condition` enum + `ConditionsMap` (condition → remaining rounds or permanent). Pure mechanics in `rules/conditions.py`: `is_incapacitated()`, `effective_speed()`, `attack_advantage()`. Conditions tick down at turn start; weapons can grant permanent conditions while equipped.
 
-Items (`core/items.py`) — `Item` with `ItemType` (WEAPON, POTION). `WeaponDef` defines attack name, damage, reach, ability, magic bonus, finesse, and can grant conditions/actions. `rules/weapons.py`: `get_weapon_attack()` builds `Attack` from equipped weapon or falls back to creature attacks / unarmed strike.
+Items (`core/items.py`) — `Item` with `ItemType` (WEAPON, POTION). `WeaponDef` defines attack name, damage, reach, ability, magic bonus, finesse, and can grant conditions/actions. `rules/weapons.py`: `get_weapon_attack()` builds `Attack` from equipped weapon or falls back to creature attacks / unarmed strike. Equip/unequip actions swap `equipped_weapon` from inventory.
+
+### Modifier Pipeline
+
+Centralized derived stat computation (`core/modifiers.py` data types, `rules/modifiers.py` pure functions). Modifiers represent effects on creature stats from conditions, equipment, spells, and class features. Each modifier has a `StatType` (AC, speed, attack_roll, initiative), a `ModifierOp` (ADD, OVERRIDE, ADVANTAGE, DISADVANTAGE), and an optional source (same source doesn't stack per D&D 5e). The pipeline collects modifiers from all sources via `collect_self_modifiers()` / `collect_defense_modifiers()`, then computes effective values: `effective_speed()`, `effective_ac()`, `attack_modifiers()`. Replaces ad-hoc stat computation that was scattered across combat_manager and conditions.
 
 ### Activation & Fast-Forward
 

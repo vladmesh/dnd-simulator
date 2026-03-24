@@ -10,6 +10,7 @@ Defines the core abstractions that everything else builds on:
 - TurnBudget, ActionCost — per-turn resource tracking (actions, bonus actions, movement, reaction)
 - Condition enum, ConditionsMap — D&D 5e status effects (rounds-based or permanent)
 - Item, WeaponDef, ItemType — equipment, consumables, weapon definitions
+- Modifier, ModifierOp, StatType, AttackModifiers — modifier pipeline data types for derived stat computation
 - Brain ABC, RuleBrain, PlayerBrain — strategy pattern for creature decision-making
 - CombatState — tracks initiative order, round number, and auto-exit counter per location
 - BattleMap, Position, Wall — 2D combat grid with entity positions, wall collision, random placement

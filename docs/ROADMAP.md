@@ -40,6 +40,13 @@ D&D 5e conditions (Prone, Poisoned, Stunned и др.) с `ConditionsMap` (rounds
 ActionDispatcher (`service/action_dispatcher.py`) — единый entry point: validate → handler → budget consume. ActionProvider определяет доступные действия по состоянию, инвентарю и оружию. Система предметов: `Item`/`WeaponDef` (`core/items.py`), `get_weapon_attack()` строит `Attack` из экипированного оружия. Healing potion как USE_ITEM. Dynamic ActionBar во фронте.
 → [план](plans/action-dispatcher.md)
 
+### Level 1.5a — Modifier pipeline, equip/unequip, logging
+Централизованный pipeline модификаторов (`core/modifiers.py` + `rules/modifiers.py`) — заменил разрозненную логику в combat_manager и conditions. Новые действия equip/unequip для смены оружия. Structlog логирование с file dispatch. Фикс awareness: LLM теперь видит регион/поселение текущей локации.
+→ [брейншторм](brainstorms/logging-architecture.md)
+
+### Audit quick wins
+Фиксы по результатам аудита: безопасность, конвенции, fail-fast. Тестовая инфраструктура: Docker integration tests, git hooks (pre-commit, pre-push).
+
 ## In Progress
 
 (нет)

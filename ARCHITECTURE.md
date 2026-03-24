@@ -32,14 +32,14 @@ Every layer implements the same interface:
 
 ```
 src/dnd_simulator/
-├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/Action, LocationGraph, Condition, Item/WeaponDef
+├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/Action, LocationGraph, Condition, Item/WeaponDef, Modifier
 ├── layers/        — concrete layer implementations
 │   ├── geography/ — physical world simulation
 │   ├── politics/  — factions and diplomacy
 │   ├── settlements/ — towns and local economy
 │   └── entities/  — all tracked creatures (player, NPCs, named monsters)
 ├── master/        — DM orchestrator (LLM-powered)
-├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation, conditions, weapons, action providers/handlers, physics, economics
+├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation, conditions, weapons, modifiers, action providers/handlers, physics, economics
 ├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, MemorySummarizer
 ├── i18n.py        — gettext internationalization, per-session language via contextvars
 ├── adapters/      — transport layer
@@ -176,7 +176,23 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 
 **Conditions** (`core/conditions.py`): D&D 5e status effects as a `Condition` enum (Blinded, Poisoned, Prone, Stunned, etc. + Blessed). `ConditionsMap` = `dict[Condition, int | None]` — maps active conditions to remaining rounds (`int`) or permanent (`None`). Pure mechanics in `rules/conditions.py`: `is_incapacitated()`, `effective_speed()`, `attack_advantage()`, `tick_conditions()` (decrement/expire at turn start).
 
-**Items** (`core/items.py`): `Item` dataclass with `ItemType` (WEAPON, POTION). Weapons carry a `WeaponDef` — attack name, damage components, reach, ability, magic bonus, finesse flag, and can grant passive conditions and bonus action types while equipped. `rules/weapons.py`: `get_weapon_attack()` builds `Attack` from equipped weapon, falling back to `creature.attacks` or unarmed strike (1 bludgeoning). `Creature.equipped_weapon` is the active weapon; inventory holds all items.
+**Items** (`core/items.py`): `Item` dataclass with `ItemType` (WEAPON, POTION). Weapons carry a `WeaponDef` — attack name, damage components, reach, ability, magic bonus, finesse flag, and can grant passive conditions and bonus action types while equipped. `rules/weapons.py`: `get_weapon_attack()` builds `Attack` from equipped weapon, falling back to `creature.attacks` or unarmed strike (1 bludgeoning). `Creature.equipped_weapon` is the active weapon; inventory holds all items. Equip/unequip actions swap `equipped_weapon` from inventory.
+
+## Modifier Pipeline
+
+Centralized derived stat computation replacing ad-hoc logic scattered across combat_manager and conditions. Data types in `core/modifiers.py`, pure functions in `rules/modifiers.py`.
+
+**Modifier** = `(StatType, ModifierOp, value, dice, source, melee_only, ranged_only)`. `StatType`: AC, speed, attack_roll, initiative. `ModifierOp`: ADD, OVERRIDE, ADVANTAGE, DISADVANTAGE. Same `source` string = don't stack (D&D 5e rule).
+
+**Collection:** `collect_self_modifiers(creature)` gathers modifiers affecting the creature's own stats (from conditions + equipment). `collect_defense_modifiers(creature)` gathers modifiers affecting attacks against the creature.
+
+**Resolution:** `compute_stat(base, modifiers, stat)` — OVERRIDE wins (most restrictive), then ADD (same source takes highest, then sum). `resolve_advantage(modifiers, stat, melee)` — any advantage + any disadvantage = flat roll. `attack_modifiers(attacker, target, melee)` → `AttackModifiers` (flat mod, dice bonuses, advantage, disadvantage, force_crit, target_ac).
+
+**Convenience API:** `effective_speed(creature)`, `effective_ac(creature)`, `attack_modifiers(attacker, target, melee)`.
+
+## Logging
+
+Structured logging via `structlog` (`logging_config.py`, `logging_file_dispatch.py`). Three modes: default (WARNING, JSON to stderr), `DEBUG=1` (DEBUG level, pretty console or JSON), `DEBUG=1 LOG_DIR=./logs` (additionally writes denormalized JSONL files per domain tag). See [docs/LOGGING.md](docs/LOGGING.md).
 
 ## Key Principles
 
