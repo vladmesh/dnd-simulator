@@ -47,7 +47,7 @@ Layered LLM-powered text RPG simulator built on a **layer stack** pattern. Each 
 ### Module Dependency Flow
 
 ```
-core/              — models, Layer ABC, World, Entity/Character hierarchy, Condition, Item (no deps)
+core/              — models, Layer ABC, World, Entity/Character hierarchy, Condition, Item, ClassFeatures, ResourcePool, ActionDef (no deps)
   ↓
 layers/            — concrete layer implementations (depend on core only)
   ↓
@@ -56,7 +56,7 @@ service/           — GameService, ActionDispatcher, BrainFactory, command modu
   ↓
 adapters/          — FastAPI REST + WebSocket API
 
-rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, action providers (no deps)
+rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, resources, action providers (no deps)
 llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
 storage/           — SaveStore interface, JsonFileStore
 content_loader.py  — loads worlds, nations, settlements, NPCs, player from YAML
@@ -80,7 +80,7 @@ frontend/          — React + TypeScript SPA (Vite, shadcn/ui, Zustand)
 
 ### Entity Hierarchy
 
-`Entity` (id, name, location_id, active, on_tick) → `Creature` (ability scores, HP, AC, in_combat, is_dodging, wake_at_seconds, brain) → `Character` (race, class, alignment) → `PlayerCharacter` / `Npc`. Creature delegates decisions to `brain.choose_action()` and executes via `execute_action()`. The `perceive()` method controls what information an observer sees about a target — LLM prompts never receive raw character data. All tracked entities live on the `EntitiesLayer`. `World.location_graph` (`LocationGraph`) maps locations to regions/settlements; entities reference `location_id`, and the graph resolves which region/settlement a location belongs to. NPCs have structured memory (`NpcMemory`: tags, recent, inner_state, current_conversation) readable by both LLM and RuleBrain; a `MemorySummarizer` compresses events into memory via LLM after combat/conversation ends. Combat is managed via `CombatState` (initiative order, round tracking, auto-exit after 2 idle rounds) and `BattleMap` (2D grid with positions, walls, and movement). Movement rules live in `rules/movement.py` (D&D 5e diagonal distance, wall collision, occupied-cell blocking).
+`Entity` (id, name, location_id, active, on_tick) → `Creature` (ability scores, HP, AC, in_combat, is_dodging, wake_at_seconds, brain, equipped_armor, equipped_shield, resource_pools) → `Character` (race, class, alignment, class_features) → `PlayerCharacter` / `Npc`. Creature delegates decisions to `brain.choose_action()` and executes via `execute_action()`. The `perceive()` method controls what information an observer sees about a target — LLM prompts never receive raw character data. All tracked entities live on the `EntitiesLayer`. `World.location_graph` (`LocationGraph`) maps locations to regions/settlements; entities reference `location_id`, and the graph resolves which region/settlement a location belongs to. NPCs have structured memory (`NpcMemory`: tags, recent, inner_state, current_conversation) readable by both LLM and RuleBrain; a `MemorySummarizer` compresses events into memory via LLM after combat/conversation ends. Combat is managed via `CombatState` (initiative order, round tracking, auto-exit after 2 idle rounds) and `BattleMap` (2D grid with positions, walls, and movement). Movement rules live in `rules/movement.py` (D&D 5e diagonal distance, wall collision, occupied-cell blocking).
 
 ### Multi-Action Turns
 
@@ -90,7 +90,15 @@ Each creature's turn is a multi-action loop orchestrated by `Round` (in `round.p
 
 D&D 5e conditions (`core/conditions.py`) — `Condition` enum + `ConditionsMap` (condition → remaining rounds or permanent). Pure mechanics in `rules/conditions.py`: `is_incapacitated()`, `effective_speed()`, `attack_advantage()`. Conditions tick down at turn start; weapons can grant permanent conditions while equipped.
 
-Items (`core/items.py`) — `Item` with `ItemType` (WEAPON, POTION). `WeaponDef` defines attack name, damage, reach, ability, magic bonus, finesse, and can grant conditions/actions. `rules/weapons.py`: `get_weapon_attack()` builds `Attack` from equipped weapon or falls back to creature attacks / unarmed strike. Equip/unequip actions swap `equipped_weapon` from inventory.
+Items (`core/items.py`) — `Item` with `ItemType` (WEAPON, POTION, ARMOR, SHIELD). `WeaponDef` defines attack name, damage, reach, ability, magic bonus, finesse, category, and can grant conditions/actions. `ArmorDef` defines base AC, DEX cap, armor category (light/medium/heavy). `ShieldDef` defines AC bonus. `rules/weapons.py`: `get_weapon_attack()` builds `Attack` from equipped weapon or falls back to creature attacks / unarmed strike. `rules/proficiency.py`: weapon/armor proficiency per class, proficiency bonus by level. Equip/unequip actions swap `equipped_weapon`/`equipped_armor`/`equipped_shield` from inventory.
+
+### Class Features & Resources
+
+Composition-based class mechanics (`core/class_features.py`). Each D&D class gets a frozen dataclass (`FighterFeatures`, `RogueFeatures`). `Character.class_features: list[ClassFeatures]` — multiclass gets multiple entries. `get_feature(FeatureType)` retrieves by type. Features define class-specific data consumed by `rules/`: Fighting Styles (Defense +1 AC, Dueling +2 damage) via modifier pipeline, Sneak Attack dice count, Cunning Action cost overrides (Dash/Disengage as bonus action).
+
+Resource pools (`core/resource.py`) — `ResourcePool(id, max_uses, current_uses, reset_on)` on `Creature.resource_pools`. `RestType` (SHORT_REST, LONG_REST) controls when pools reset. Used for Second Wind (1/short rest), future spell slots. Pure functions in `rules/resources.py`.
+
+Action definitions (`core/action_defs.py`) — centralized `ActionDef` registry: cost, params, combat mode, flags per `ActionType`. `CostOverride` allows class features to change action costs (e.g. Cunning Action makes Dash a bonus action).
 
 ### Modifier Pipeline
 

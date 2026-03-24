@@ -32,14 +32,14 @@ Every layer implements the same interface:
 
 ```
 src/dnd_simulator/
-├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/Action, LocationGraph, Condition, Item/WeaponDef, Modifier
+├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/Action, LocationGraph, Condition, Item/WeaponDef/ArmorDef, Modifier, ClassFeatures, ResourcePool, ActionDef
 ├── layers/        — concrete layer implementations
 │   ├── geography/ — physical world simulation
 │   ├── politics/  — factions and diplomacy
 │   ├── settlements/ — towns and local economy
 │   └── entities/  — all tracked creatures (player, NPCs, named monsters)
 ├── master/        — DM orchestrator (LLM-powered)
-├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation, conditions, weapons, modifiers, action providers/handlers, physics, economics
+├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation, conditions, weapons, modifiers, proficiency, sneak attack, resources, action providers/handlers, physics, economics
 ├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, MemorySummarizer
 ├── i18n.py        — gettext internationalization, per-session language via contextvars
 ├── adapters/      — transport layer
@@ -133,8 +133,8 @@ Calendar: 30 days/month, 12 months/year.
 
 ```
 Entity (id, name, location_id, active, on_tick)
-└── Creature (ability_scores, HP, AC, in_combat, is_dodging, wake_at_seconds, brain, execute_action)
-    └── Character (race, class, alignment, gold, appearance, perceive_by_id, get_npc_data)
+└── Creature (ability_scores, HP, AC, in_combat, is_dodging, wake_at_seconds, brain, equipped_armor, equipped_shield, resource_pools, execute_action)
+    └── Character (race, class, alignment, gold, appearance, class_features, perceive_by_id, get_npc_data)
         ├── PlayerCharacter (interactive I/O, overrides take_turn directly)
         └── Npc (role, personality, schedule, memory: NpcMemory, ai_type — brain assigned by content_loader/adapter)
 ```
@@ -176,7 +176,19 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 
 **Conditions** (`core/conditions.py`): D&D 5e status effects as a `Condition` enum (Blinded, Poisoned, Prone, Stunned, etc. + Blessed). `ConditionsMap` = `dict[Condition, int | None]` — maps active conditions to remaining rounds (`int`) or permanent (`None`). Pure mechanics in `rules/conditions.py`: `is_incapacitated()`, `effective_speed()`, `attack_advantage()`, `tick_conditions()` (decrement/expire at turn start).
 
-**Items** (`core/items.py`): `Item` dataclass with `ItemType` (WEAPON, POTION). Weapons carry a `WeaponDef` — attack name, damage components, reach, ability, magic bonus, finesse flag, and can grant passive conditions and bonus action types while equipped. `rules/weapons.py`: `get_weapon_attack()` builds `Attack` from equipped weapon, falling back to `creature.attacks` or unarmed strike (1 bludgeoning). `Creature.equipped_weapon` is the active weapon; inventory holds all items. Equip/unequip actions swap `equipped_weapon` from inventory.
+**Items** (`core/items.py`): `Item` dataclass with `ItemType` (WEAPON, POTION, ARMOR, SHIELD). Weapons carry a `WeaponDef` — attack name, damage components, reach, ability, magic bonus, finesse flag, `WeaponCategory` (simple/martial), and can grant passive conditions and bonus action types while equipped. Armor carries `ArmorDef` — base AC, DEX cap, `ArmorCategory` (light/medium/heavy). Shields carry `ShieldDef` — AC bonus. `rules/weapons.py`: `get_weapon_attack()` builds `Attack` from equipped weapon, falling back to `creature.attacks` or unarmed strike (1 bludgeoning). `rules/proficiency.py`: proficiency bonus by level, weapon/armor proficiency tables per class. `Creature.equipped_weapon`/`equipped_armor`/`equipped_shield` are the active equipment; inventory holds all items. Equip/unequip actions swap equipment from inventory.
+
+## Class Features & Resources
+
+Composition-based class mechanics (`core/class_features.py`). Each D&D class gets a frozen dataclass: `FighterFeatures` (fighting style, cost overrides), `RogueFeatures` (sneak attack dice). `Character.class_features: list[ClassFeatures]` — multiclass gets multiple entries. `get_feature(FeatureType)` retrieves by type. No logic in feature dataclasses — pure data consumed by `rules/`.
+
+**Fighter L1:** Fighting Style (Defense: +1 AC via modifier pipeline; Dueling: +2 melee damage via modifier pipeline). Second Wind (bonus action, 1d10+level heal, 1/short rest via ResourcePool).
+
+**Rogue L1:** Sneak Attack (+Nd6 when advantage or ally adjacent to target, finesse/ranged only, once per turn — tracked by CombatManager). Cunning Action (Dash/Disengage as bonus action via `CostOverride`). Pure functions in `rules/sneak_attack.py`.
+
+**Resource pools** (`core/resource.py`): `ResourcePool(id, max_uses, current_uses, reset_on: RestType)` on `Creature.resource_pools`. SHORT_REST / LONG_REST reset triggers. Pure management functions in `rules/resources.py`.
+
+**Action definitions** (`core/action_defs.py`): centralized `ActionDef` registry mapping each `ActionType` to its cost, params, combat mode, and flags. `CostOverride` lets class features change action costs. Consumers (LLM tools, frontend, validation) read from this registry.
 
 ## Modifier Pipeline
 

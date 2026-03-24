@@ -11,6 +11,9 @@ Stateless calculations that can be used by any layer or the Master:
 - conditions: condition effects (is_incapacitated, effective_speed, attack_advantage, tick_conditions)
 - modifiers: centralized derived stat pipeline (collect modifiers, compute effective AC/speed/attack, resolve advantage)
 - weapons: get_weapon_attack — builds Attack from equipped weapon or fallback
+- proficiency: proficiency bonus by level, weapon/armor proficiency per class
+- sneak_attack: Rogue sneak attack eligibility and dice count (pure functions)
+- resources: resource pool management (has_resource, use_resource, reset)
 - movement: grid distance (D&D 5e diagonal rule), move toward/away/direction with wall collision
 - geography: temperature, daylight, travel time, distance calculations
 - politics: warfare, trade, stability, diplomacy formulas

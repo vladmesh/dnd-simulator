@@ -47,14 +47,21 @@ ActionDispatcher (`service/action_dispatcher.py`) — единый entry point: 
 ### Audit quick wins
 Фиксы по результатам аудита: безопасность, конвенции, fail-fast. Тестовая инфраструктура: Docker integration tests, git hooks (pre-commit, pre-push).
 
+### Sprint 001 — Class Mechanics: Fighter & Rogue L1 (фазы 1-3.5)
+Инфраструктура классовых механик: proficiency system, armor/shield экипировка, ResourcePool (расходуемые ресурсы), ClassFeatures (композиция вместо наследования), ActionDef (централизованный реестр действий). Fighter L1: Fighting Style (Defense/Dueling) через modifier pipeline, Second Wind (bonus action heal). Rogue L1: Sneak Attack (+Nd6 finesse/ranged при advantage/ally adjacent), Cunning Action (Dash/Disengage как bonus action через CostOverride). Generic attack perception — компонентный лог атак вместо ad-hoc полей.
+→ [план спринта](sprints/001-class-mechanics/sprint.md)
+
 ## In Progress
 
 (нет)
 
 ## Planned
 
+### Sprint 001 Phase 4 — Content + Quality
+Armor/weapon items в YAML для village, Fighter и Rogue NPC, тесты, аудит.
+
 ### Level 2 — Расходуемые ресурсы и расширение инвентаря
-Spell slots, ki, rage. Расширение инвентаря: armor с AC-модификаторами, щиты. Система экипировки слотов.
+Spell slots, ki, rage. Расширение инвентаря: дополнительные типы брони и оружия.
 → [брейншторм](brainstorms/ecs-and-content.md)
 
 ### Level 3 — Заклинания, пропсы, торговля
