@@ -32,18 +32,22 @@ React + TypeScript + shadcn/ui, dark theme. Игровой экран (EventLog,
 Proximity-based активация существ: NPC рядом с игроком active, остальные dormant. Wait + fast-forward: `wake_at_seconds` на существе, Round.run_loop() мотает время до ближайшего пробуждения. Explicit locations — каждый мир обязан определить locations явно, убрана автогенерация из регионов. NPC перемещаются по расписанию при активации. Round lifecycle в GameSession.
 → [брейншторм](brainstorms/ecs-and-content.md)
 
+### Level 1 — Conditions, BrainFactory, валидация
+D&D 5e conditions (Prone, Poisoned, Stunned и др.) с `ConditionsMap` (rounds-based или permanent). Pure mechanics: `is_incapacitated()`, `effective_speed()`, `attack_advantage()`, `tick_conditions()`. BrainFactory — единая точка создания Brain из ai_type. ActionValidator — pipeline проверок (alive, active, action mode).
+→ [брейншторм](brainstorms/ecs-and-content.md)
+
+### Level 1.5 — ActionDispatcher, оружие, предметы
+ActionDispatcher (`service/action_dispatcher.py`) — единый entry point: validate → handler → budget consume. ActionProvider определяет доступные действия по состоянию, инвентарю и оружию. Система предметов: `Item`/`WeaponDef` (`core/items.py`), `get_weapon_attack()` строит `Attack` из экипированного оружия. Healing potion как USE_ITEM. Dynamic ActionBar во фронте.
+→ [план](plans/action-dispatcher.md)
+
 ## In Progress
 
 (нет)
 
 ## Planned
 
-### Level 1 — Conditions и вычисляемые статы
-Modifier pipeline (AC, speed), D&D conditions (Prone, Poisoned, etc.). Proof-of-concept для data-driven механик.
-→ [брейншторм](brainstorms/ecs-and-content.md)
-
-### Level 2 — Инвентарь, Action Dispatch, Ресурсы
-Экипировка с модификаторами, реестр обработчиков действий, расходуемые ресурсы (spell slots, ki, rage).
+### Level 2 — Расходуемые ресурсы и расширение инвентаря
+Spell slots, ki, rage. Расширение инвентаря: armor с AC-модификаторами, щиты. Система экипировки слотов.
 → [брейншторм](brainstorms/ecs-and-content.md)
 
 ### Level 3 — Заклинания, пропсы, торговля

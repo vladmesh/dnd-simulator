@@ -17,5 +17,5 @@ make check          # run all checks (lint + typecheck + test)
 make format         # auto-format code
 make test           # run tests only
 make serve          # start API server on :8001 (auto-builds frontend)
-make frontend-dev   # start Vite dev server for frontend
+make frontend       # start Vite dev server for frontend
 ```

@@ -32,14 +32,14 @@ Every layer implements the same interface:
 
 ```
 src/dnd_simulator/
-├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/Action, LocationGraph
+├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/Action, LocationGraph, Condition, Item/WeaponDef
 ├── layers/        — concrete layer implementations
 │   ├── geography/ — physical world simulation
 │   ├── politics/  — factions and diplomacy
 │   ├── settlements/ — towns and local economy
 │   └── entities/  — all tracked creatures (player, NPCs, named monsters)
 ├── master/        — DM orchestrator (LLM-powered)
-├── rules/         — pure functions: D&D mechanics, combat/initiative resolution, movement/pathfinding, physics, economics
+├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation, conditions, weapons, action providers/handlers, physics, economics
 ├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, MemorySummarizer
 ├── i18n.py        — gettext internationalization, per-session language via contextvars
 ├── adapters/      — transport layer
@@ -50,6 +50,8 @@ src/dnd_simulator/
 ├── service/       — GameService + command modules
 │   ├── game_service.py — session management, command routing, creature hot controls
 │   ├── session.py      — GameSession: world ref, player lookup via entities layer, autosave
+│   ├── action_dispatcher.py — validate → route → execute (single entry point for all actions)
+│   ├── brain_factory.py     — creates Brain instances from ai_type strings
 │   ├── commands_combat.py, commands_creatures.py, commands_politics.py, ...
 │   └── commands_save.py, commands_time.py, commands_world.py
 └── round.py       — Round orchestrator: multi-action turn loop with budget enforcement
@@ -79,8 +81,9 @@ Round orchestrator (round.py):
             run_creature_turn:
                 build TurnBudget from creature stats
                 loop:
-                    build_awareness → brain.choose_action → action_cost check
-                    → execute_action → on_action callback → repeat
+                    build_awareness → brain.choose_action
+                    → ActionDispatcher: validate (budget/target/reach) → handler → budget consume
+                    → on_action callback → repeat
                     until end_turn or budget exhausted
         end_combat_round()            → 2 rounds without attacks → combat ends
     for each peaceful creature (not in combat):
@@ -109,7 +112,7 @@ WebSocket flow (React frontend):
     Player actions: WS message → PlayerBrain queue → Round processes → broadcast result
 ```
 
-`GameSession` (in `service/session.py`) owns the `Round` lifecycle — starting and stopping the round thread, bridging events to transport listeners via `SessionEventListener` protocol. The `Round` class separates combat and peaceful turns. Combat locations use initiative order (d20 + DEX mod, rolled once at combat start); peaceful creatures use default order. Each creature's turn is a multi-action loop: a `TurnBudget` is created from creature stats, then the brain is called repeatedly until it returns `end_turn` or the budget is exhausted. `action_cost()` (in `rules/actions.py`) maps each action to its cost (standard action, bonus action, or movement feet). Brains receive structured awareness (`PeacefulAwareness` or `CombatAwareness` from `core/awareness.py`) with the current budget attached, so they can make informed decisions. Three brain types: `RuleBrain` (utility scoring), `LlmBrain` (LLM calls), `PlayerBrain` (queue + on_turn callback for interactive I/O). `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
+`GameSession` (in `service/session.py`) owns the `Round` lifecycle — starting and stopping the round thread, bridging events to transport listeners via `SessionEventListener` protocol. The `Round` class separates combat and peaceful turns. Combat locations use initiative order (d20 + DEX mod, rolled once at combat start); peaceful creatures use default order. Each creature's turn is a multi-action loop: a `TurnBudget` is created from creature stats, then the brain is called repeatedly until it returns `end_turn` or the budget is exhausted. `ActionDispatcher` (`service/action_dispatcher.py`) is the single entry point: it validates preconditions via `rules/validation.py` (alive, budget, target validity, weapon reach), routes to the appropriate handler in `rules/action_handlers.py`, and consumes budget on success. `ActionProvider` (`rules/action_provider.py`) determines available actions per creature based on state, inventory, and weapon. Brains receive structured awareness (`PeacefulAwareness` or `CombatAwareness` from `core/awareness.py`) with the current budget attached, so they can make informed decisions. Three brain types: `RuleBrain` (utility scoring), `LlmBrain` (LLM calls), `PlayerBrain` (queue + on_turn callback for interactive I/O). `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
 
 `World.handle_event()` sends an event to all layers in order. Each layer returns an `ActionResult` — if any layer returns `success=False`, propagation stops and the failure is returned to the caller. This lets layers validate and reject actions (e.g., EntitiesLayer rejects attacks on dead targets).
 
@@ -168,6 +171,12 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 - Death removes from turn order; if ≤1 left → end
 
 **Events:** `COMBAT_STARTED` and `COMBAT_ENDED` are logged and perceived by all creatures in the location. Attack events include entity IDs so LLM can unambiguously identify participants.
+
+## Conditions & Items
+
+**Conditions** (`core/conditions.py`): D&D 5e status effects as a `Condition` enum (Blinded, Poisoned, Prone, Stunned, etc. + Blessed). `ConditionsMap` = `dict[Condition, int | None]` — maps active conditions to remaining rounds (`int`) or permanent (`None`). Pure mechanics in `rules/conditions.py`: `is_incapacitated()`, `effective_speed()`, `attack_advantage()`, `tick_conditions()` (decrement/expire at turn start).
+
+**Items** (`core/items.py`): `Item` dataclass with `ItemType` (WEAPON, POTION). Weapons carry a `WeaponDef` — attack name, damage components, reach, ability, magic bonus, finesse flag, and can grant passive conditions and bonus action types while equipped. `rules/weapons.py`: `get_weapon_attack()` builds `Attack` from equipped weapon, falling back to `creature.attacks` or unarmed strike (1 bludgeoning). `Creature.equipped_weapon` is the active weapon; inventory holds all items.
 
 ## Key Principles
 

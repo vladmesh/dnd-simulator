@@ -5,6 +5,11 @@ Stateless calculations that can be used by any layer or the Master:
 - checks: D&D 5e check mechanics (attack_roll, ability_check, saving_throw, damage_roll)
 - combat: attack resolution (resolve_attack → AttackResult), initiative rolls (roll_initiative)
 - actions: action cost rules (action_cost → ActionCost), per-creature budget defaults
+- validation: precondition checks (alive, active, budget, target, reach) → ValidationError or None
+- action_handlers: per-action-type execution (attack, move, dodge, flee, use_item, bless, etc.)
+- action_provider: dynamic available-action sources (base, inventory, weapon) per creature+context
+- conditions: condition effects (is_incapacitated, effective_speed, attack_advantage, tick_conditions)
+- weapons: get_weapon_attack — builds Attack from equipped weapon or fallback
 - movement: grid distance (D&D 5e diagonal rule), move toward/away/direction with wall collision
 - geography: temperature, daylight, travel time, distance calculations
 - politics: warfare, trade, stability, diplomacy formulas

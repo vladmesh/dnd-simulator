@@ -5,9 +5,11 @@ Defines the core abstractions that everything else builds on:
 - Event, Query, Answer, ActionResult, QueryFn, EmitFn — communication protocol between layers
 - Layer — abstract base class; tick/handle_event receive query_fn + emit_fn for layer isolation
 - World — container that holds layers, manages per-layer tick scheduling, enforces layer ordering via query_fn/emit_fn
-- Entity → Creature (in_combat flag, brain) → Character hierarchy with activation, D&D ability scores, and perception
+- Entity → Creature (in_combat flag, brain, conditions, equipped_weapon) → Character hierarchy with activation, D&D ability scores, and perception
 - Action (name + params), END_TURN, SKIP — transport-agnostic creature actions
 - TurnBudget, ActionCost — per-turn resource tracking (actions, bonus actions, movement, reaction)
+- Condition enum, ConditionsMap — D&D 5e status effects (rounds-based or permanent)
+- Item, WeaponDef, ItemType — equipment, consumables, weapon definitions
 - Brain ABC, RuleBrain, PlayerBrain — strategy pattern for creature decision-making
 - CombatState — tracks initiative order, round number, and auto-exit counter per location
 - BattleMap, Position, Wall — 2D combat grid with entity positions, wall collision, random placement

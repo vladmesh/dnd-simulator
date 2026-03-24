@@ -44,16 +44,16 @@ Layered LLM-powered text RPG simulator built on a **layer stack** pattern. Each 
 ### Module Dependency Flow
 
 ```
-core/              — models, Layer ABC, World, Entity/Character hierarchy (no deps)
+core/              — models, Layer ABC, World, Entity/Character hierarchy, Condition, Item (no deps)
   ↓
 layers/            — concrete layer implementations (depend on core only)
   ↓
 round.py           — Round orchestrator: multi-action turn loop with budget enforcement
-service/           — GameService + command modules (combat, creatures, politics, save, time, world)
+service/           — GameService, ActionDispatcher, BrainFactory, command modules
   ↓
 adapters/          — FastAPI REST + WebSocket API
 
-rules/             — pure D&D mechanics functions (no deps)
+rules/             — pure D&D mechanics: combat, validation, conditions, weapons, action providers (no deps)
 llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
 storage/           — SaveStore interface, JsonFileStore
 content_loader.py  — loads worlds, nations, settlements, NPCs, player from YAML
@@ -81,7 +81,13 @@ frontend/          — React + TypeScript SPA (Vite, shadcn/ui, Zustand)
 
 ### Multi-Action Turns
 
-Each creature's turn is a multi-action loop orchestrated by `Round` (in `round.py`). A `TurnBudget` (actions, bonus_actions, movement_remaining, reaction) is created from creature stats at the start of each turn. The brain is called repeatedly: choose action → check budget via `action_cost()` (in `rules/actions.py`) → execute → rebuild awareness → repeat, until the brain returns `end_turn` or budget is exhausted. `PlayerBrain` uses a queue + callback pattern for interactive I/O.
+Each creature's turn is a multi-action loop orchestrated by `Round` (in `round.py`). A `TurnBudget` (actions, bonus_actions, movement_remaining, reaction) is created from creature stats at the start of each turn. The brain is called repeatedly: choose action → `ActionDispatcher` validates (budget, target, reach via `rules/validation.py`) → executes handler (`rules/action_handlers.py`) → rebuilds awareness → repeat, until the brain returns `end_turn` or budget is exhausted. `ActionProvider` (`rules/action_provider.py`) determines which actions are currently available to a creature. `PlayerBrain` uses a queue + callback pattern for interactive I/O.
+
+### Conditions & Items
+
+D&D 5e conditions (`core/conditions.py`) — `Condition` enum + `ConditionsMap` (condition → remaining rounds or permanent). Pure mechanics in `rules/conditions.py`: `is_incapacitated()`, `effective_speed()`, `attack_advantage()`. Conditions tick down at turn start; weapons can grant permanent conditions while equipped.
+
+Items (`core/items.py`) — `Item` with `ItemType` (WEAPON, POTION). `WeaponDef` defines attack name, damage, reach, ability, magic bonus, finesse, and can grant conditions/actions. `rules/weapons.py`: `get_weapon_attack()` builds `Attack` from equipped weapon or falls back to creature attacks / unarmed strike.
 
 ### Activation & Fast-Forward
 
