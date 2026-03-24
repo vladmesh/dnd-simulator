@@ -42,8 +42,16 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Developer Notes
 
-_(заполняется по завершении)_
+8 WS тестов: connect+turn, reconnect replay, invalid session, peaceful wait, attack→combat, end_turn, unknown message type, invalid action name.
+
+Ключевые решения:
+- WS тесты используют **отдельные сессии** (module-scoped fixtures), не shared с REST — round thread портит состояние.
+- Peaceful turn не содержит `budget`/`player` — только combat turn. Ассерты скорректированы.
+- Combat end_turn тест учитывает состояние от предыдущего attack теста (module scope).
+- `_recv_until()` хелпер для drain сообщений до нужного типа — round thread шлёт turn/round_result/action_result асинхронно.
+
+**Баг найден и пофикшен:** `routes_ws.py` не ловил `ValueError` от `ActionType()` при невалидном action name — WS закрывался вместо error message. Добавлен try/except с error response.

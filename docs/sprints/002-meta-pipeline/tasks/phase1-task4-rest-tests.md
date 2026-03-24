@@ -45,8 +45,8 @@
 
 ## Status
 
-`todo`
+`done`
 
 ## Developer Notes
 
-_(заполняется по завершении)_
+16 REST тестов: session CRUD, world listing, player creation+status, creature CRUD/patch, saves full lifecycle, time advancement. Найдены отклонения от ожиданий: spawn возвращает 200 (не 201), saves list — `{"saves": [...strings]}` (не list of dicts), world_name для legacy формата включает `.yaml`. Все ассерты скорректированы под реальный контракт API.

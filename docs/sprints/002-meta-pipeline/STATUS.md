@@ -2,12 +2,12 @@
 
 **Sprint:** 002-meta-pipeline
 **Phase:** 1 — Integration Tests
-**Task:** 4 — REST API Integration Tests
-**Updated:** 2026-03-24
+**Phase:** 1 — Integration Tests (COMPLETE)
+**Updated:** 2026-03-25
 
 ## Current
 
-Tasks 1-3 done. Infra работает: compose поднимает backend с seed=42 + test content, health test проходит. Следующая: task 4 (REST API тесты).
+Phase 1 done. 24 интеграционных теста (1 health + 16 REST + 7 WS) зелёные. E2E между фазами — следующий шаг, затем Phase 2 (скиллы).
 
 ## Next Steps
 

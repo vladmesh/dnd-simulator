@@ -165,7 +165,7 @@ npcs:
     role: gladiator
     race: human
     class: paladin
-    ai: rule
+    ai: rule_based
     hp: 30
     ac: 16
     ability_scores:

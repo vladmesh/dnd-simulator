@@ -48,7 +48,7 @@ def arena_session(api_url: str) -> Iterator[str]:
     """Create an arena session, yield session_id, delete on teardown."""
     resp = requests.post(
         f"{api_url}/sessions",
-        json={"world_name": "arena", "lang": "en"},
+        json={"world_name": "arena.yaml", "lang": "en"},
         timeout=10,
     )
     resp.raise_for_status()
@@ -67,7 +67,7 @@ def arena_player(player_api_url: str, arena_session: str) -> dict[str, Any]:
             "race": "human",
             "char_class": "fighter",
             "level": 1,
-            "alignment": "neutral",
+            "alignment": "true_neutral",
             "appearance": "A battle-worn warrior.",
             "hp": 30,
             "ac": 15,
@@ -96,7 +96,7 @@ def village_session(api_url: str) -> Iterator[str]:
     """Create a village session, yield session_id, delete on teardown."""
     resp = requests.post(
         f"{api_url}/sessions",
-        json={"world_name": "village", "lang": "en"},
+        json={"world_name": "village.yaml", "lang": "en"},
         timeout=10,
     )
     resp.raise_for_status()
@@ -115,7 +115,7 @@ def village_player(player_api_url: str, village_session: str) -> dict[str, Any]:
             "race": "human",
             "char_class": "fighter",
             "level": 1,
-            "alignment": "neutral",
+            "alignment": "true_neutral",
             "appearance": "A dusty traveler.",
             "hp": 20,
             "ac": 12,

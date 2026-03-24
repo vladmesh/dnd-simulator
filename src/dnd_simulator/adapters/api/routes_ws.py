@@ -150,10 +150,14 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
             msg_type = msg.get("type")
 
             if msg_type == "action":
-                action = Action(
-                    name=ActionType(str(msg.get("name", "idle"))),
-                    params=msg.get("params", {}),
-                )
+                try:
+                    action = Action(
+                        name=ActionType(str(msg.get("name", "idle"))),
+                        params=msg.get("params", {}),
+                    )
+                except ValueError:
+                    await ws.send_json({"type": "error", "message": _("Unknown action: {}").format(msg.get("name"))})
+                    continue
                 session.submit_player_action(action)
             else:
                 await ws.send_json({"type": "error", "message": _("Unknown message type: {}").format(msg_type)})
