@@ -25,6 +25,7 @@ Keep living docs in sync with the codebase. Documentation lives in two places: m
 | `README.md` | Project overview, quick start | Major feature additions, new dependencies | Keep accurate |
 | `docs/ROADMAP.md` | Dev phases, current status, links to plans | Completed phases, new plans in `docs/plans/` | Move done items, add new plans |
 | `docs/backlog.md` | Known bugs and small feature requests | Bug fixes, feature implementations | Remove fixed bugs / done features |
+| `docs/e2e-playbook.md` | E2E regression scenarios for Playwright | New game mechanics in `rules/`, `core/`, `adapters/`, `layers/`, `frontend/` | Add scenarios for new features, remove for deleted ones |
 
 #### CLAUDE.md update policy
 
@@ -51,6 +52,14 @@ The backlog is a short list of known bugs and small features. When updating:
 - **Remove items** whose underlying issue was fixed (check git log for evidence: relevant commits, changed files)
 - **Add new items** only if a bug or small feature request was explicitly discussed and not yet tracked
 - Don't speculatively add items you noticed while reading code — the backlog is curated by the user, this skill just keeps it in sync with reality
+
+#### docs/e2e-playbook.md update policy
+
+The playbook lists E2E regression scenarios for Playwright testing. When updating:
+- **Add scenarios** when a new user-facing mechanic lands (new action type, new UI panel, new game system). Each scenario: what to do + what to expect, 2-3 lines max.
+- **Remove scenarios** for features that were deleted or completely reworked (the old scenario no longer makes sense).
+- **Don't rewrite existing scenarios** unless the expected behavior genuinely changed. If the feature still works the same way, the scenario stays as-is.
+- Group new scenarios under the most fitting existing section, or create a new section if none fits.
 
 ### Module docstrings (`__init__.py`)
 

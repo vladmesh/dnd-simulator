@@ -1,0 +1,153 @@
+# E2E Playbook
+
+Сценарии для регрессионного тестирования через Playwright. Каждый сценарий — что делаем, что ожидаем. Обновляется при добавлении новых фич.
+
+**Последнее обновление:** 2026-03-25
+
+---
+
+## 1. Session Setup
+
+### 1.1 Create character and enter game
+- Открыть `/`, выбрать мир (arena.yaml), создать персонажа (fighter, human, STR 16)
+- **Ожидание:** редирект на `/play/:sessionId`, WebSocket подключён, первый turn в логе
+
+### 1.2 Language toggle
+- На SetupScreen переключить язык EN→RU
+- **Ожидание:** лейблы меняются на русские
+
+---
+
+## 2. Peaceful Mode
+
+### 2.1 Perception — nearby entities
+- В мирном режиме (village.yaml) увидеть список NPC в Perception Panel
+- **Ожидание:** имена NPC видны, кнопки Talk/Attack/Inspect
+
+### 2.2 Talk to NPC (rule-based)
+- Нажать Talk на rule-based NPC, ввести текст, отправить
+- **Ожидание:** в логе появляется реплика NPC (entity_say)
+
+### 2.3 Wait and time advance
+- Нажать Wait → время сдвигается на 1 час
+- **Ожидание:** время обновилось в Location Panel, возможно weather_changed в логе
+
+### 2.4 Move between locations
+- Нажать Move toward соседнюю локацию (если есть paths)
+- **Ожидание:** location_id меняется, Location Panel обновляется
+
+---
+
+## 3. Combat
+
+### 3.1 Initiate combat
+- Атаковать NPC в arena → бой начинается
+- **Ожидание:** combat_started в логе, sidebar переключается на CombatPanel, round number виден
+
+### 3.2 Attack and damage
+- В бою нажать Attack на врага
+- **Ожидание:** entity_attack в логе с броском [d20+X=Y vs AC Z], damage, HP врага обновляется
+
+### 3.3 End turn and NPC response
+- Нажать End Turn
+- **Ожидание:** NPC ходит, round_result в логе, новый turn приходит
+
+### 3.4 Combat ends
+- Убить врага (или несколько раундов)
+- **Ожидание:** entity_died в логе, combat_ended, sidebar возвращается в peaceful
+
+---
+
+## 4. Class Features
+
+### 4.1 Fighter — Second Wind
+- Создать fighter, получить урон, нажать Second Wind
+- **Ожидание:** HP восстановлены (1d10+level), кнопка исчезает (1 use/short rest)
+
+### 4.2 Fighter — Fighting Style (Defense)
+- Создать fighter с Defense style и бронёй
+- **Ожидание:** AC = base armor + DEX + 1 (Defense bonus) в статах
+
+### 4.3 Fighter — Fighting Style (Dueling)
+- Создать fighter с Dueling style, одноручное оружие, атаковать
+- **Ожидание:** damage включает +2 dueling в логе
+
+### 4.4 Rogue — Sneak Attack
+- Создать rogue с finesse оружием, атаковать stunned врага (advantage)
+- **Ожидание:** sneak_attack damage компонент в логе (+Nd6)
+
+### 4.5 Rogue — Cunning Action
+- Создать rogue L1+, в бою увидеть Dash/Disengage как bonus action
+- **Ожидание:** Dash потребляет bonus action (не action), Attack остаётся доступным
+
+---
+
+## 5. Equipment
+
+### 5.1 Equip weapon
+- Экипировать оружие из инвентаря
+- **Ожидание:** weapon_damage в статах обновляется, атака использует новое оружие
+
+### 5.2 Equip armor and shield
+- Экипировать броню и щит
+- **Ожидание:** AC пересчитывается (armor base + DEX cap + shield bonus)
+
+### 5.3 Use healing potion
+- Использовать зелье лечения (use_item)
+- **Ожидание:** HP восстановлены, зелье исчезает из инвентаря
+
+---
+
+## 6. Master Panel
+
+### 6.1 Create and manage session
+- `/master` → выбрать мир → New Session
+- **Ожидание:** сессия появляется в списке
+
+### 6.2 Spawn creature
+- В SessionView → Creatures → Spawn → заполнить форму (goblin, arena_floor)
+- **Ожидание:** существо появляется в таблице
+
+### 6.3 Edit creature HP
+- Клик на существо → изменить HP → Save
+- **Ожидание:** HP обновляется в таблице
+
+### 6.4 Toggle brain type
+- Нажать иконку Brain на существе
+- **Ожидание:** тип переключается rule_based ↔ llm
+
+### 6.5 Delete creature
+- Нажать Delete → подтвердить
+- **Ожидание:** существо исчезает из таблицы
+
+### 6.6 Advance time
+- Time tab → ввести 24 часа → Advance
+- **Ожидание:** время сдвигается на сутки
+
+### 6.7 Save and load
+- Saves tab → Save (name: "test") → Load → подтвердить
+- **Ожидание:** Save появляется в списке, после Load состояние восстанавливается
+
+---
+
+## 7. Conditions
+
+### 7.1 Apply condition via master
+- Master → Edit creature → toggle Prone
+- **Ожидание:** condition badge виден в CombatPanel, speed снижена
+
+### 7.2 Condition affects combat
+- Stunned враг → атака с advantage
+- **Ожидание:** [adv d20(...)] в логе атаки
+
+---
+
+## 8. LLM (only with --llm flag)
+
+### 8.1 Talk to LLM NPC
+- Переключить NPC на llm brain, поговорить
+- **Ожидание:** осмысленный ответ в логе, не шаблонная реплика
+
+### 8.2 LLM NPC combat decisions
+- LLM NPC в бою принимает решения
+- **Ожидание:** NPC действует осмысленно (атакует, лечится, убегает при низком HP)

@@ -1,0 +1,127 @@
+---
+name: close-sprint
+description: >
+  Close the current sprint: verify all phases done, audit completed, post-audit E2E green, integration
+  tests green, then update docs, commit, and push. Blocks if anything is off. Use when user says
+  "close sprint", "finish sprint", "sprint done", "wrap up sprint", or when all phases are complete
+  and it's time to finalize.
+allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Agent
+---
+
+# Close Sprint
+
+Finalize the current sprint. This is a gate — everything must be green or the sprint stays open.
+
+## Protocol
+
+### 1. Find the sprint
+
+Read `docs/sprints/` — highest-numbered folder. Read `STATUS.md` and `sprint.md`.
+
+If no active sprint — stop.
+
+### 2. Checklist
+
+Verify each item. If ANY fails — collect all failures, report them, and **do not proceed**.
+
+#### 2a. All phases complete
+
+Every phase in `sprint.md` must be marked complete (✓ or COMPLETE in STATUS.md). Check task files too — all must be `done`.
+
+**Blocker if:** any phase or task is not done.
+
+#### 2b. Audit exists and was triaged
+
+`docs/audit.md` must exist with a date AFTER the last phase was closed. Check the audit date vs the last phase completion date in STATUS.md.
+
+**Blocker if:** no audit, or audit predates last phase closure.
+
+#### 2c. Audit findings were handled
+
+Sprint-relevant findings from the audit should have been addressed — either fixed in a refactor phase/task, or explicitly deferred to backlog with a note. Check that `docs/BACKLOG.md` has entries for deferred items if any were mentioned in STATUS.md or sprint.md.
+
+**Blocker if:** audit findings exist but there's no evidence they were triaged (no refactor phase, no backlog entries, no notes in sprint.md).
+
+#### 2d. Post-audit E2E is green
+
+There must be an E2E report in `docs/e2e-reports/` dated AFTER the audit. The report must have zero blockers.
+
+**Blocker if:** no post-audit E2E report, or report has blockers.
+
+#### 2e. Integration tests pass
+
+```bash
+make test-integration
+```
+
+**Blocker if:** any test fails.
+
+### 3. If blocked
+
+Print all blockers:
+
+```
+Sprint NNN cannot be closed. Blockers:
+
+1. <blocker description>
+2. <blocker description>
+...
+
+Fix these and try again.
+```
+
+Do NOT modify any files. Do NOT commit. Do NOT push.
+
+### 4. If all green
+
+#### 4a. Update docs
+
+Run the `/update-docs` protocol inline (read git log since last run, update affected docs, update e2e-playbook if new mechanics landed).
+
+#### 4b. Fill in sprint results
+
+Update `sprint.md` Results section:
+
+```markdown
+## Results
+
+**Completed:** <date>
+
+<Brief summary: what was built, key metrics (tests added, files changed), notable decisions or discoveries.>
+
+**Deferred:** <list items that were punted to backlog, if any>
+```
+
+#### 4c. Close STATUS.md
+
+```markdown
+# Sprint NNN Status
+
+**Sprint:** NNN-slug
+**Status:** COMPLETE
+**Updated:** <date>
+
+## Summary
+
+<1-3 sentences: what the sprint delivered>
+```
+
+#### 4d. Commit and push
+
+```bash
+git add docs/ .claude/skills/update-docs/state.json
+git commit -m "sprint NNN: close — <goal summary>"
+git push
+```
+
+This is the only skill that pushes. The sprint is done.
+
+### 5. Report
+
+```
+Sprint NNN — <Title>: CLOSED
+  Phases: N completed
+  Tests: integration green, E2E green
+  Docs: updated
+  Pushed to remote.
+```
