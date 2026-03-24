@@ -1,13 +1,14 @@
 # Sprint 003 Status
 
 **Sprint:** 003-inventory-trading
-**Phase:** Planning (COMPLETE)
+**Phase:** 1 — Accessory Slots + Modifiers
 **Updated:** 2026-03-25
 
 ## Current
 
-Sprint planned. 3 phases. Ready for Phase 1 task generation.
+Phase 1 tasks generated. Ready to start task 1.
 
 ## Next Steps
 
-Phase 1 task generation.
+- Task 1: Generic equip/unequip mechanism — refactor 6 handlers into slot-based generic
+- Task 2: Accessory slots with modifier effects — AccessoryDef, head/feet/ring, modifier pipeline, YAML content

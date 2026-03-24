@@ -35,7 +35,8 @@ Sprint 001 заложил фундамент предметов: WeaponDef, Armo
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Generic Equip/Unequip Mechanism](tasks/phase1-task1-generic-equip.md)
+2. [Accessory Slots with Modifier Effects](tasks/phase1-task2-accessory-slots.md)
 
 ## Phase 2: Inventory UI + Gold
 
@@ -61,7 +62,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** Phase 1 tasks generated. Ready to start task 1.
 
 ## Decisions
 
