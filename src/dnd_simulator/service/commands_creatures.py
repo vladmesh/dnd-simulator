@@ -172,9 +172,9 @@ def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) 
     from dnd_simulator.content_loader import parse_ability_scores, parse_attacks
     from dnd_simulator.core.character import Creature
 
-    max_hp = int(data.get("hp", 10))
+    max_hp = int(data["hp"])
     attacks = parse_attacks(data.get("attacks") or [])
-    location_id = str(data.get("start_location", data.get("region_id", "")))
+    location_id = str(data.get("start_location") or data["region_id"])
 
     return Creature(
         id=str(data["id"]),
@@ -182,8 +182,8 @@ def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) 
         location_id=location_id,
         max_hp=max_hp,
         current_hp=max_hp,
-        ac=int(data.get("ac", 10)),
-        speed=int(data.get("speed", 30)),
+        ac=int(data["ac"]),
+        speed=int(data["speed"]),
         attacks=attacks,
         ability_scores=parse_ability_scores(data),
     )

@@ -382,7 +382,3 @@ class GameSession:
                 action = resolve_abstract_move(action, player, entities_layer)
 
         brain.submit_action(action)
-
-    @property
-    def round_running(self) -> bool:
-        return self._round_thread is not None and self._round_thread.is_alive()

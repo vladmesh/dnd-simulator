@@ -53,7 +53,7 @@ class NpcActivity(Enum):
     IDLE = "idle"
 
 
-@dataclass
+@dataclass(frozen=True)
 class ScheduleEntry:
     """A block of time in an NPC's daily routine."""
 

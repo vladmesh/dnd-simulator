@@ -56,7 +56,7 @@ class WsEventListener:
             future = asyncio.run_coroutine_threadsafe(self._ws.send_json(msg), self._loop)
             future.result(timeout=30)
         except Exception:
-            pass  # WS closed — session will remove this listener
+            logger.debug("WS send failed (connection likely closed)", exc_info=True)
 
     def on_turn(self, msg: dict[str, Any]) -> None:
         self._send(msg)

@@ -31,14 +31,14 @@ class SpawnCreatureRequest(BaseModel):
 
     id: str
     name: str
-    entity_type: str = "npc"  # "npc" or "monster"
+    entity_type: str  # "npc" or "monster"
     # Location
-    region_id: str = ""
-    start_location: str = ""
+    start_location: str
+    region_id: str = ""  # legacy alias
     # Creature stats
-    hp: int = Field(default=4, ge=1, le=999)
-    ac: int = Field(default=10, ge=0, le=30)
-    speed: int = Field(default=30, ge=0)
+    hp: int = Field(ge=1, le=999)
+    ac: int = Field(ge=0, le=30)
+    speed: int = Field(ge=0)
     attacks: list[dict[str, object]] | None = None
     ability_scores: dict[str, int] | None = None
     # NPC-specific (ignored for monsters)

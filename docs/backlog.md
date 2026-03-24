@@ -26,9 +26,9 @@ cancel на shutdown перед финальным autosave.
 NPC в несуществующем регионе не попадёт в список. Мелочь, но стоит поправить —
 итерировать по entities напрямую.
 
-### Flaky initiative test
-`test_second_attack_does_not_reroll_initiative` падает рандомно — одинаковые броски инициативы
-дают недетерминированный порядок. Нужен seed или мок `random` в `roll_initiative`.
+### ~~Flaky initiative test~~ ✅ FIXED
+~~`test_second_attack_does_not_reroll_initiative` падает рандомно~~ — причина: атаки убивали
+c2 (AC=12), удаляя из turn_order. Фикс: AC=30 чтобы атаки всегда мазали.
 
 ### `go`/travel реализован как хак через `wait`
 `LocationPanel` шлёт `Action(name=WAIT, params={hours: 0, travel_to: location_id})`.

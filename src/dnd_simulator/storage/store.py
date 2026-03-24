@@ -78,8 +78,15 @@ class JsonFileStore(SaveStore):
 
     def _world_dir(self, world: str) -> Path:
         if world:
-            return self._directory / world
+            resolved = (self._directory / world).resolve()
+            if not resolved.is_relative_to(self._directory.resolve()):
+                raise ValueError(f"Invalid world name: {world!r}")
+            return resolved
         return self._directory
 
     def _path_for(self, name: str, *, world: str = "") -> Path:
-        return self._world_dir(world) / f"{name}.json"
+        base = self._world_dir(world)
+        resolved = (base / f"{name}.json").resolve()
+        if not resolved.is_relative_to(self._directory.resolve()):
+            raise ValueError(f"Invalid save name: {name!r}")
+        return resolved

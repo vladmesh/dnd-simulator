@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 
 from dnd_simulator.core.action import Action, ActionType
@@ -200,10 +200,13 @@ class Round:
         )
 
         while True:
-            awareness = self._entities.build_awareness(creature, time, query_fn)
-            awareness.turn_budget = budget
-            awareness.available_actions = self._dispatcher.get_available_actions(creature, ctx)
-            awareness.available_items = self._build_available_items(creature, awareness.available_actions)
+            available = self._dispatcher.get_available_actions(creature, ctx)
+            awareness = replace(
+                self._entities.build_awareness(creature, time, query_fn),
+                turn_budget=budget,
+                available_actions=available,
+                available_items=self._build_available_items(creature, available),
+            )
             events = self._entities.get_perceived_events(creature)
 
             if isinstance(awareness, CombatAwareness):
@@ -271,10 +274,12 @@ class Round:
         )
 
         while True:
-            awareness = self._entities.build_awareness(creature, time, query_fn)
-            # No budget in peaceful mode — awareness.turn_budget stays None
-            awareness.available_actions = self._dispatcher.get_available_actions(creature, ctx)
-            awareness.available_items = self._build_available_items(creature, awareness.available_actions)
+            available = self._dispatcher.get_available_actions(creature, ctx)
+            awareness = replace(
+                self._entities.build_awareness(creature, time, query_fn),
+                available_actions=available,
+                available_items=self._build_available_items(creature, available),
+            )
             events = self._entities.get_perceived_events(creature)
 
             action = creature.brain.choose_action(creature, awareness, events)

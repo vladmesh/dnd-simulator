@@ -206,7 +206,7 @@ class EntitiesLayer(Layer):
                 region_name = str(region_answer.value.get("name", region_name))
                 region_id = creature.location_id
         except Exception:
-            pass
+            logger.warning("Failed to query region info for %s", creature.location_id, exc_info=True)
 
         # Weather (default to clear if unavailable — prompts expect a weather dict)
         weather: dict[str, object] = {"condition": "clear", "temperature": 15}
@@ -215,7 +215,7 @@ class EntitiesLayer(Layer):
             if weather_answer.value and isinstance(weather_answer.value, dict):
                 weather = dict(weather_answer.value)
         except Exception:
-            pass
+            logger.warning("Failed to query weather for region %s", region_id, exc_info=True)
 
         # Settlements
         settlements: list[dict[str, object]] | None = None
@@ -226,7 +226,7 @@ class EntitiesLayer(Layer):
             if settlements_answer.value:
                 settlements = list(settlements_answer.value)
         except Exception:
-            pass
+            logger.warning("Failed to query settlements for region %s", region_id, exc_info=True)
 
         # Politics
         territory_owner: str | None = None
@@ -241,7 +241,7 @@ class EntitiesLayer(Layer):
                 if nation_answer.value and isinstance(nation_answer.value, dict):
                     nation_info = dict(nation_answer.value)
         except Exception:
-            pass
+            logger.warning("Failed to query politics for region %s", region_id, exc_info=True)
 
         # Nearby entities (internal — no query needed)
         nearby = self.build_nearby_entities(creature, time.hour)

@@ -57,7 +57,7 @@ class CombatEntity:
     conditions: frozenset[Condition] = field(default_factory=frozenset)
 
 
-@dataclass
+@dataclass(frozen=True)
 class PeacefulAwareness:
     """What a creature knows in peacetime — weather, location, politics, nearby entities."""
 
@@ -77,7 +77,7 @@ class PeacefulAwareness:
     available_items: list[ItemInfo] = field(default_factory=list)
 
 
-@dataclass
+@dataclass(frozen=True)
 class CombatAwareness:
     """What a creature knows in combat — stats, enemies, terrain."""
 

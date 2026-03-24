@@ -24,7 +24,7 @@ class Direction(Enum):
     NW = "nw"
 
 
-@dataclass
+@dataclass(frozen=True)
 class Connection:
     """A link between two regions."""
 

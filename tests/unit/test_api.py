@@ -132,6 +132,7 @@ class TestCreatureHotControls:
                 "role": "guard",
                 "hp": 7,
                 "ac": 13,
+                "speed": 30,
             },
         )
         assert resp.status_code == 200
@@ -153,6 +154,7 @@ class TestCreatureHotControls:
                 "start_location": "silverport_city_gate",
                 "hp": 37,
                 "ac": 14,
+                "speed": 30,
             },
         )
         assert resp.status_code == 200
