@@ -107,7 +107,7 @@ export function CombatPanel() {
                 <Button
                   size="xs"
                   variant="ghost"
-                  onClick={() => wsClient.send({ type: "command", text: `look ${entity.id}` })}
+                  onClick={() => sendAction("idle", { inspect_target: entity.id })}
                 >
                   <Eye className="size-3" />
                 </Button>

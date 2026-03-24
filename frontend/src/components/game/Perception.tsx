@@ -24,11 +24,6 @@ export function Perception() {
     useGameStore.getState().setWaitingForAction(true)
   }
 
-  const sendCommand = (text: string) => {
-    wsClient.send({ type: "command", text })
-    useGameStore.getState().setWaitingForAction(true)
-  }
-
   const submitTalk = () => {
     if (talkText.trim()) {
       sendAction("say", { target_id: talkTarget, text: talkText.trim() })
@@ -85,7 +80,7 @@ export function Perception() {
                   <Button
                     size="xs"
                     variant="ghost"
-                    onClick={() => sendCommand(`look ${entity.id}`)}
+                    onClick={() => sendAction("idle", { inspect_target: entity.id })}
                   >
                     <Eye className="size-3" />
                   </Button>

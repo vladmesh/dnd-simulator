@@ -217,6 +217,118 @@ def handle_dash(actor, action, emit_fn, ctx, world) -> ActionResult: ...
 
 **Результат:** система готова к новым предметам (свитки, оружие) и новым провайдерам (заклинания, фичи класса). Два провайдера работают: BaseActionProvider (статические действия) + InventoryActionProvider (USE_ITEM из инвентаря).
 
+### Фаза 6: Оружие + timed conditions
+
+**Зачем:** Фаза 5 доказала, что ActionProvider + инвентарь работают для consumables (зелье). Но зелье — простейший случай: USE_ITEM, предмет расходуется, эффект на себя. Оружие — принципиально другой паттерн:
+
+- Действие **не расходует** предмет (оружие остаётся)
+- Действие **заменяет** базовую атаку (не USE_ITEM, а модифицированный ATTACK)
+- Параметры атаки **зависят от оружия** (урон, тип урона, reach, имя)
+- Некоторое оружие **даёт дополнительные действия** (Bless как bonus action)
+
+**Scope:** 4 оружия на арене. Три простых (палка, меч, рапира — заменяют безоружный удар на дробящее/режущее/колющее с кастомным названием) + один спецмеч (то же + даёт Bless: bonus action, +d4 к броскам атаки на N раундов).
+
+#### 6.1. WeaponDef — типизированное описание оружия
+
+Оружие — данные, действия — код. YAML хранит параметры оружия и **ссылки** на ActionType по имени. Handler-ы и стоимость действий определены в Python.
+
+```python
+# core/items.py
+@dataclass(frozen=True)
+class WeaponDef:
+    attack_name: str                            # "удар мечом" — заменяет имя атаки
+    damage: tuple[DamageComponent, ...]         # кости урона
+    reach: int = 5                              # футы
+    ability: Ability = Ability.STR              # модификатор атаки
+    modifier: int = 0                           # +1, +2 (магический бонус)
+    is_magic: bool = False
+    is_finesse: bool = False                    # max(STR, DEX)
+    grant_conditions: tuple[Condition, ...] = () # пассивные эффекты пока экипировано
+    grant_actions: tuple[ActionType, ...] = ()   # активные способности (Bless и т.д.)
+```
+
+Граница данных и кода:
+| Данные (YAML / WeaponDef) | Код (Python) |
+|---|---|
+| attack_name, damage, reach, ability | `get_weapon_attack()` строит Attack из WeaponDef |
+| modifier, is_magic, is_finesse | `resolve_attack()` учитывает модификатор и finesse |
+| grant_conditions | equip/unequip добавляет/убирает из creature.conditions |
+| grant_actions: `[bless]` | `ActionType.BLESS`, `handle_bless()`, `action_cost()` — в Python |
+
+Стоимость действия определяется `action_cost()` по ActionType. Оружие не перезаписывает стоимость.
+
+#### 6.2. Item + ItemType.WEAPON
+
+```python
+class ItemType(StrEnum):
+    POTION = "potion"
+    WEAPON = "weapon"
+
+@dataclass(frozen=True)
+class Item:
+    id: str
+    name: str
+    item_type: ItemType
+    params: dict[str, object] = field(default_factory=dict)
+    weapon_def: WeaponDef | None = None  # заполнено только для WEAPON
+```
+
+`weapon_def` — типизированная структура вместо сырого dict. `params` остаётся для type-specific данных (heal_dice для зелий).
+
+#### 6.3. Creature.equipped_weapon
+
+```python
+@dataclass
+class Creature(Entity):
+    ...
+    equipped_weapon: Item | None = None  # отдельно от inventory
+```
+
+Для PoC оружие предэкипировано в YAML. Нет действий equip/unequip. `inventory` — расходники, `equipped_weapon` — то что в руке.
+
+#### 6.4. get_weapon_attack() — чистая функция
+
+```python
+# rules/combat.py или rules/weapons.py
+def get_weapon_attack(creature: Creature) -> Attack:
+    """Attack из экипированного оружия или creature.attacks[0]."""
+```
+
+CombatManager вызывает вместо прямого `creature.attacks[0]`. Finesse: `max(STR, DEX)` modifier.
+
+#### 6.5. WeaponActionProvider — третий провайдер
+
+Читает `equipped_weapon.weapon_def.grant_actions`, возвращает эти ActionType если прошли валидацию. Регистрируется в `create_dispatcher()`.
+
+#### 6.6. Timed conditions — conditions с длительностью
+
+Миграция `creature.conditions` с `set[Condition]` на `dict[Condition, int | None]`:
+
+- Ключ — Condition enum
+- Значение — оставшиеся раунды (`int`) или бессрочно (`None`)
+- `condition in creature.conditions` работает (dict проверяет ключи)
+- Одинаковые эффекты не стакаются: при добавлении `max(existing, new)`, где `None > int`
+- `.add(cond)` → `conditions[cond] = None`
+- `.add(cond, rounds=3)` → `conditions[cond] = max(existing, 3)`
+- Декремент таймеров: чистая функция в `rules/`, вызывается Round в начале хода существа
+
+Bless от спец-меча: `handle_bless()` добавляет `Condition.BLESSED` на N раундов. `resolve_attack()` проверяет condition → роллит +d4 к броску атаки.
+
+Equipment-granted conditions (`grant_conditions`): добавляются с `None` при экипировке, убираются при снятии.
+
+#### 6.7. Конкретные предметы для арены
+
+| Оружие | damage | type | attack_name | grant_actions |
+|---|---|---|---|---|
+| Палка | 1d6 | bludgeoning | удар палкой | — |
+| Меч | 1d8 | slashing | удар мечом | — |
+| Рапира | 1d8 | piercing | удар рапирой | is_finesse=True |
+| Благословенный меч | 1d8 | slashing | удар мечом | BLESS |
+
+Благословенный меч: `is_magic=True`, `grant_actions=(ActionType.BLESS,)`. Bless стоит 1 bonus action, даёт +d4 к атакам на 3 раунда.
+
+**После реализации:** полный аудит архитектуры (`/audit`) — посмотреть как легло, где натяжки, что нужно менять до масштабирования.
+
 ---
 
 ## Что не входит

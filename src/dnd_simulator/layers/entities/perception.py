@@ -31,6 +31,8 @@ def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -
         return _perceive_move(event, observer, get_entity)
     if event.event_type == EventType.ENTITY_USE_ITEM:
         return _perceive_use_item(event, observer, get_entity)
+    if event.event_type == EventType.ENTITY_BLESS:
+        return _perceive_bless(event, observer, get_entity)
     if event.event_type == EventType.TURN_SKIPPED:
         return _perceive_turn_skipped(event, observer, get_entity)
     if event.event_type == EventType.COMBAT_STARTED:
@@ -229,6 +231,15 @@ def _perceive_turn_skipped(event: Event, observer: Character, get_entity: GetEnt
         return _("You can't act ({conditions}) — turn skipped").format(conditions=cond_str)
     desc = _describe(observer, entity_id, get_entity)
     return _("{entity} can't act ({conditions}) — turn skipped").format(entity=desc, conditions=cond_str)
+
+
+def _perceive_bless(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    entity_id = str(event.data.get("entity_id", ""))
+    duration = event.data.get("duration_rounds", "?")
+    if entity_id == observer.id:
+        return _("You invoke a blessing (+d4 to attack rolls for {n} rounds)").format(n=duration)
+    desc = _describe(observer, entity_id, get_entity)
+    return _("{entity} invokes a blessing (+d4 to attack rolls for {n} rounds)").format(entity=desc, n=duration)
 
 
 def _perceive_combat_started(event: Event, observer: Character, get_entity: GetEntityFn) -> str:

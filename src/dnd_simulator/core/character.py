@@ -200,8 +200,9 @@ class Creature(Entity):
     attacks: tuple[Attack, ...] = ()
     in_combat: bool = False
     is_dodging: bool = False
-    conditions: set[Condition] = field(default_factory=set)
+    conditions: dict[Condition, int | None] = field(default_factory=dict)
     inventory: list[Item] = field(default_factory=list)
+    equipped_weapon: Item | None = None
     wake_at_seconds: int | None = None  # absolute game-time seconds; None = not waiting
     brain: Brain | None = field(default=None, repr=False)
 

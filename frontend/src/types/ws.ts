@@ -65,9 +65,4 @@ export interface ActionMessage {
   params?: Record<string, unknown>
 }
 
-export interface CommandMessage {
-  type: "command"
-  text: string
-}
-
-export type ClientMessage = ActionMessage | CommandMessage
+export type ClientMessage = ActionMessage

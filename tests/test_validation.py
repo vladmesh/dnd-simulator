@@ -107,9 +107,13 @@ class TestCheckActionMode:
     def test_say_in_peaceful_ok(self) -> None:
         assert check_action_mode(_creature(), Action(name=ActionType.SAY), _PEACEFUL) is None
 
-    def test_idle_anywhere_ok(self) -> None:
-        assert check_action_mode(_creature(), Action(name=ActionType.IDLE), _COMBAT) is None
+    def test_idle_blocked_in_combat(self) -> None:
+        assert check_action_mode(_creature(), Action(name=ActionType.IDLE), _COMBAT) is not None
         assert check_action_mode(_creature(), Action(name=ActionType.IDLE), _PEACEFUL) is None
+
+    def test_wait_blocked_in_combat(self) -> None:
+        assert check_action_mode(_creature(), Action(name=ActionType.WAIT), _COMBAT) is not None
+        assert check_action_mode(_creature(), Action(name=ActionType.WAIT), _PEACEFUL) is None
 
     def test_move_anywhere_ok(self) -> None:
         assert check_action_mode(_creature(), Action(name=ActionType.MOVE), _COMBAT) is None

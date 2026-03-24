@@ -38,6 +38,7 @@ _LOGGED_EVENTS = {
     EventType.ENTITY_MOVE,
     EventType.ENTITY_DASH,
     EventType.ENTITY_USE_ITEM,
+    EventType.ENTITY_BLESS,
     EventType.COMBAT_STARTED,
     EventType.COMBAT_ENDED,
 }
@@ -305,11 +306,11 @@ class EntitiesLayer(Layer):
                 )
             )
 
-        weapon_name = "fists"
-        weapon_damage = "1"
-        if creature.attacks:
-            weapon_name = creature.attacks[0].name
-            weapon_damage = str(creature.attacks[0].damage[0].dice)
+        from dnd_simulator.rules.weapons import get_weapon_attack
+
+        weapon_attack = get_weapon_attack(creature)
+        weapon_name = weapon_attack.name
+        weapon_damage = str(weapon_attack.damage[0].dice) if weapon_attack.damage else "1"
 
         wall_descriptions: list[str] = []
         battle_map_ascii = ""
@@ -732,7 +733,7 @@ class EntitiesLayer(Layer):
                 if e.wake_at_seconds is not None:
                     data["wake_at_seconds"] = e.wake_at_seconds
                 if e.conditions:
-                    data["conditions"] = sorted(c.value for c in e.conditions)
+                    data["conditions"] = {c.value: r for c, r in e.conditions.items()}
                 if e.inventory:
                     data["inventory"] = [
                         {"id": item.id, "name": item.name, "type": item.item_type.value, **item.params}
@@ -784,8 +785,13 @@ class EntitiesLayer(Layer):
                     wake_at = edata.get("wake_at_seconds")
                     entity.wake_at_seconds = int(wake_at) if wake_at is not None else None
                     conditions_raw = edata.get("conditions")
-                    if isinstance(conditions_raw, list):
-                        entity.conditions = {Condition(str(c)) for c in conditions_raw}
+                    if isinstance(conditions_raw, dict):
+                        entity.conditions = {
+                            Condition(str(k)): int(v) if v is not None else None for k, v in conditions_raw.items()
+                        }
+                    elif isinstance(conditions_raw, list):
+                        # Legacy format: list of condition strings (all permanent)
+                        entity.conditions = {Condition(str(c)): None for c in conditions_raw}
                     inv_raw = edata.get("inventory")
                     if isinstance(inv_raw, list):
                         from dnd_simulator.core.items import Item, ItemType

@@ -10,6 +10,7 @@ from dnd_simulator.adapters.api.schemas import (
     CreateSessionRequest,
     CreateWorldRequest,
     CreatureResponse,
+    GiveItemRequest,
     MessageResponse,
     PatchCreatureRequest,
     PatchNationRequest,
@@ -206,6 +207,17 @@ def delete_creature(session_id: str, entity_id: str) -> MessageResponse:
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return MessageResponse(message=_("Creature {} removed").format(entity_id))
+
+
+@router.post("/sessions/{session_id}/creatures/{entity_id}/items")
+def give_item(session_id: str, entity_id: str, body: GiveItemRequest) -> dict[str, str]:
+    """Give an item (weapon, potion) to a creature."""
+    service = get_service()
+    item_data = {k: v for k, v in body.model_dump().items() if v is not None}
+    try:
+        return service.give_item(session_id, entity_id, item_data)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @router.put("/sessions/{session_id}/creatures/{entity_id}/brain", response_model=MessageResponse)

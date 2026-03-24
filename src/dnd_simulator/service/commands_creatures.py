@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import Query
-from dnd_simulator.i18n import _
 from dnd_simulator.service.session import GameSession
 
 if TYPE_CHECKING:
@@ -75,15 +74,12 @@ class CreatureCommands:
     def patch_creature(self, session_id: str, entity_id: str, updates: dict[str, Any]) -> None:
         """Update mutable creature fields. Applies only fields that exist on the entity type."""
         from dnd_simulator.core.character import Character, Creature
-        from dnd_simulator.core.player import PlayerCharacter
         from dnd_simulator.layers.entities.models import Npc
 
         session = self._get_session(session_id)  # type: ignore[attr-defined]
         entity = self._get_entities_layer(session).get_entity(entity_id)
         if entity is None:
             raise ValueError(f"Creature '{entity_id}' not found")
-        if isinstance(entity, PlayerCharacter):
-            raise ValueError(_("Cannot edit player character from master panel"))
         if not isinstance(entity, Creature):
             raise ValueError(f"Entity '{entity_id}' is not a creature")
 
@@ -95,7 +91,11 @@ class CreatureCommands:
         if "location_id" in updates:
             entity.location_id = str(updates["location_id"])
         if "conditions" in updates:
-            entity.conditions = {Condition(str(c)) for c in updates["conditions"]}
+            raw = updates["conditions"]
+            if isinstance(raw, dict):
+                entity.conditions = {Condition(str(k)): int(v) if v is not None else None for k, v in raw.items()}
+            else:
+                entity.conditions = {Condition(str(c)): None for c in raw}
 
         # Character-level fields
         if isinstance(entity, Character) and "gold" in updates:
@@ -109,32 +109,49 @@ class CreatureCommands:
 
     def remove_creature(self, session_id: str, entity_id: str) -> None:
         """Remove a creature from a live session."""
-        from dnd_simulator.core.player import PlayerCharacter
-
         session = self._get_session(session_id)  # type: ignore[attr-defined]
         layer = self._get_entities_layer(session)
         entity = layer.get_entity(entity_id)
         if entity is None:
             raise ValueError(f"Creature '{entity_id}' not found")
-        if isinstance(entity, PlayerCharacter):
-            raise ValueError(_("Cannot remove player character from master panel"))
         layer.remove_entity(entity_id)
+
+    # -- Items --
+
+    def give_item(self, session_id: str, entity_id: str, item_data: dict[str, Any]) -> dict[str, str]:
+        """Give an item to a creature. Auto-equips weapon if creature has none equipped."""
+        from dnd_simulator.content_loader import parse_equipped_weapon, parse_items
+        from dnd_simulator.core.character import Creature
+
+        session = self._get_session(session_id)  # type: ignore[attr-defined]
+        entity = self._get_entities_layer(session).get_entity(entity_id)
+        if entity is None or not isinstance(entity, Creature):
+            raise ValueError(f"Creature '{entity_id}' not found")
+
+        items = parse_items([item_data])
+        item = items[0]
+        entity.inventory.append(item)
+
+        # Auto-equip first weapon if nothing equipped
+        if entity.equipped_weapon is None:
+            weapon = parse_equipped_weapon(entity.inventory)
+            if weapon:
+                entity.equipped_weapon = weapon
+                entity.inventory = [i for i in entity.inventory if i.id != weapon.id]
+
+        return {"item_id": item.id, "name": item.name}
 
     # -- Brain --
 
     def set_creature_brain(self, session_id: str, entity_id: str, brain_type: str, model: str = "") -> None:
         """Switch creature brain (rule_based or llm)."""
         from dnd_simulator.core.character import Creature
-        from dnd_simulator.core.player import PlayerCharacter
         from dnd_simulator.layers.entities.models import Npc
 
         session = self._get_session(session_id)  # type: ignore[attr-defined]
         entity = self._get_entities_layer(session).get_entity(entity_id)
         if entity is None or not isinstance(entity, Creature):
             raise ValueError(f"Creature '{entity_id}' not found")
-        if isinstance(entity, PlayerCharacter):
-            raise ValueError(_("Cannot change player brain from master panel"))
-
         entity.brain = self._brain_factory.create(brain_type, strict=True)  # type: ignore[attr-defined]
         if isinstance(entity, Npc):
             entity.ai_type = brain_type

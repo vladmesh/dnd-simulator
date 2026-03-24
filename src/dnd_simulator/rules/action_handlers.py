@@ -218,3 +218,28 @@ def handle_use_item(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Actio
         return ActionResult()
 
     raise RuntimeError(f"Unhandled item type: {item.item_type}")
+
+
+_BLESS_DURATION_ROUNDS = 3
+
+
+def handle_bless(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
+    """Bless: grant +d4 to attack rolls for several rounds."""
+    from dnd_simulator.core.conditions import Condition
+
+    existing = actor.conditions.get(Condition.BLESSED)
+    # Don't stack — take max duration (None = permanent > any int)
+    if existing is None or (isinstance(existing, int) and existing < _BLESS_DURATION_ROUNDS):
+        actor.conditions[Condition.BLESSED] = _BLESS_DURATION_ROUNDS
+    logger.info("[%s] → bless (BLESSED for %d rounds)", actor.name, _BLESS_DURATION_ROUNDS)
+    emit_fn(
+        Event(
+            event_type=EventType.ENTITY_BLESS,
+            source_layer="entities",
+            data={
+                "entity_id": actor.id,
+                "duration_rounds": _BLESS_DURATION_ROUNDS,
+            },
+        )
+    )
+    return ActionResult()

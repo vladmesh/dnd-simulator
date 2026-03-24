@@ -91,19 +91,6 @@ locations:
 
 nations: {}
 
-player:
-  name: Странник
-  race: human
-  class: fighter
-  level: 1
-  alignment: true_neutral
-  appearance: "путник в потрёпанном плаще"
-  ability_scores: { str: 14, dex: 12, con: 12, int: 10, wis: 10, cha: 10 }
-  hp: 12
-  ac: 14
-  gold: 10
-  start_location: village_square
-
 npcs:
   olga:
     name: Ольга-кузнец

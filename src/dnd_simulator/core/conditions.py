@@ -22,3 +22,8 @@ class Condition(Enum):
     RESTRAINED = "restrained"
     STUNNED = "stunned"
     UNCONSCIOUS = "unconscious"
+    BLESSED = "blessed"
+
+
+# Mapping: Condition → remaining rounds (int) or permanent (None).
+ConditionsMap = dict[Condition, int | None]

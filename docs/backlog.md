@@ -26,6 +26,28 @@ cancel на shutdown перед финальным autosave.
 NPC в несуществующем регионе не попадёт в список. Мелочь, но стоит поправить —
 итерировать по entities напрямую.
 
+### Flaky initiative test
+`test_second_attack_does_not_reroll_initiative` падает рандомно — одинаковые броски инициативы
+дают недетерминированный порядок. Нужен seed или мок `random` в `roll_initiative`.
+
+### `go`/travel реализован как хак через `wait`
+`LocationPanel` шлёт `Action(name=WAIT, params={hours: 0, travel_to: location_id})`.
+Нужен отдельный `ActionType.TRAVEL` с собственным хендлером, валидацией маршрута и расчётом времени.
+
+### `inspect` реализован как параметр `idle`
+`CombatPanel`/`Perception` шлют `Action(name=IDLE, params={inspect_target: entity_id})`.
+Inspect должен быть отдельным query или free action, а не неявным параметром idle.
+
+## Features
+
+### Master panel: отображение inventory и equipped weapon
+`CreatureResponse` и `all_entities` query не включают inventory/equipped_weapon.
+Мастер не видит какие предметы у существ. Добавить поля в схему и query.
+
+### Master panel: UI для give_item
+Endpoint `POST /api/master/sessions/{id}/creatures/{entity_id}/items` есть, но кнопки нет.
+Добавить в карточку существа кнопку «Дать предмет» с формой (тип, название, параметры).
+
 ## Performance
 
 ### Awareness rebuild — кэширование и инвалидация

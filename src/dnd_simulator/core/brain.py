@@ -125,7 +125,9 @@ class RuleBrain(Brain):
         max_hp = awareness.self_max_hp
         hp_ratio = hp / max_hp if max_hp > 0 else 0.0
 
-        primary_reach = creature.attacks[0].reach if creature.attacks else 5
+        from dnd_simulator.rules.weapons import get_weapon_attack
+
+        primary_reach = get_weapon_attack(creature).reach
         is_ranged = primary_reach > 10
         budget = awareness.turn_budget
 

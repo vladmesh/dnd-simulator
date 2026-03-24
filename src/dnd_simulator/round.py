@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from dnd_simulator.core.action import Action, ActionType
-from dnd_simulator.core.awareness import ItemInfo, PerceivedEvent, describe_item
+from dnd_simulator.core.awareness import CombatAwareness, ItemInfo, PerceivedEvent, describe_item
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType, GameDateTime, QueryFn, TimeDelta
 from dnd_simulator.core.turn_budget import TurnBudget
@@ -24,7 +24,7 @@ from dnd_simulator.rules.actions import (
     get_num_actions,
     get_num_bonus_actions,
 )
-from dnd_simulator.rules.conditions import effective_speed, is_incapacitated
+from dnd_simulator.rules.conditions import effective_speed, is_incapacitated, tick_conditions
 from dnd_simulator.rules.validation import ActionContext
 
 if TYPE_CHECKING:
@@ -136,10 +136,15 @@ class Round:
         if creature.brain is None:
             return []
 
+        # Tick timed conditions at the start of each turn
+        expired = tick_conditions(creature.conditions)
+        if expired:
+            logger.info("[Round] %s: conditions expired: %s", creature.name, ", ".join(c.value for c in expired))
+
         # Incapacitated creatures (stunned, paralyzed, etc.) skip their turn entirely
         if is_incapacitated(creature.conditions):
             logger.info("[Round] %s is incapacitated, skipping turn", creature.name)
-            reasons = sorted(c.value for c in creature.conditions if is_incapacitated({c}))
+            reasons = sorted(c.value for c in creature.conditions if is_incapacitated({c: None}))
             emit_fn(
                 Event(
                     event_type=EventType.TURN_SKIPPED,
@@ -152,6 +157,20 @@ class Round:
                 )
             )
             return []
+
+        # Debug: log weapon and conditions at turn start
+        weapon_info = "fists"
+        if creature.equipped_weapon and creature.equipped_weapon.weapon_def:
+            wd = creature.equipped_weapon.weapon_def
+            grants = [a.value for a in wd.grant_actions] if wd.grant_actions else []
+            weapon_info = f"{wd.attack_name} (grants: {grants})" if grants else wd.attack_name
+        conds_info = {c.value: r for c, r in creature.conditions.items()} if creature.conditions else {}
+        logger.debug(
+            "[Round] %s turn start: weapon=%s, conditions=%s",
+            creature.name,
+            weapon_info,
+            conds_info,
+        )
 
         speed = effective_speed(creature.speed, creature.conditions)
         if speed != creature.speed:
@@ -186,6 +205,15 @@ class Round:
             awareness.available_actions = self._dispatcher.get_available_actions(creature, ctx)
             awareness.available_items = self._build_available_items(creature, awareness.available_actions)
             events = self._entities.get_perceived_events(creature)
+
+            if isinstance(awareness, CombatAwareness):
+                logger.debug(
+                    "[Round] %s actions=%s weapon=%s conds=%s",
+                    creature.name,
+                    [a.value for a in awareness.available_actions],
+                    awareness.self_weapon,
+                    [c.value for c in awareness.self_conditions],
+                )
 
             action = creature.brain.choose_action(creature, awareness, events)
 

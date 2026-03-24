@@ -188,32 +188,9 @@ class TestMultiActionLoop:
         assert len(actions) == 1
         assert actions[0].name == ActionType.DODGE
 
-    def test_free_action_then_costly_action(self) -> None:
-        """In combat: free action (idle) + costly action (dodge) both execute."""
-        brain = _ScriptedBrain(
-            [
-                Action(name=ActionType.IDLE),
-                Action(name=ActionType.DODGE),
-                END_TURN,
-            ]
-        )
-        creature = Creature(id="c1", name="A", location_id="r1", brain=brain, in_combat=True)
-
-        world = _make_world([creature])
-        el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
-        game_round = Round(world, el)
-
-        query_fn = world._make_query_fn("entities")
-        emit_fn = world._make_emit_fn("entities")
-        actions = game_round.run_combat_turn(creature, world.time, query_fn, emit_fn)
-
-        assert len(actions) == 2
-        assert actions[0].name == ActionType.IDLE
-        assert actions[1].name == ActionType.DODGE
-
     def test_on_action_callback_fires(self) -> None:
         """on_action callback fires after each action with current budget in combat."""
-        brain = _ScriptedBrain([Action(name=ActionType.IDLE), END_TURN])
+        brain = _ScriptedBrain([Action(name=ActionType.DODGE), END_TURN])
         creature = Creature(id="c1", name="A", location_id="r1", brain=brain, in_combat=True)
 
         world = _make_world([creature])
@@ -233,7 +210,7 @@ class TestMultiActionLoop:
         game_round.run_combat_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(callback_log) == 1
-        assert callback_log[0] == ("c1", ActionType.IDLE, 1)  # idle is free, actions still 1
+        assert callback_log[0] == ("c1", ActionType.DODGE, 0)  # dodge costs 1 action
 
     def test_awareness_includes_budget_in_combat(self) -> None:
         """Combat awareness includes turn_budget."""

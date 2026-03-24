@@ -12,6 +12,7 @@ from typing import Any
 
 import yaml
 
+from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.character import (
     Ability,
     AbilityScores,
@@ -23,7 +24,8 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.combat import BattleMap, Wall
-from dnd_simulator.core.items import Item, ItemType
+from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.items import Item, ItemType, WeaponDef
 from dnd_simulator.core.location import Location, LocationEdge
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.models import Npc, NpcMemory, resolve_schedule
@@ -106,22 +108,74 @@ def parse_ability_scores(data: dict[str, Any], key: str = "ability_scores") -> A
     return AbilityScores()
 
 
+_WEAPON_KEYS = frozenset(
+    {
+        "name",
+        "type",
+        "attack_name",
+        "damage",
+        "reach",
+        "ability",
+        "modifier",
+        "is_magic",
+        "is_finesse",
+        "grant_conditions",
+        "grant_actions",
+    }
+)
+
+
+def _parse_weapon_def(idata: dict[str, Any]) -> WeaponDef:
+    """Parse WeaponDef from YAML weapon item data."""
+    damage = tuple(DamageComponent(dice=str(d["dice"]), type=DamageType(d["type"])) for d in idata["damage"])
+    ability_raw = idata.get("ability")
+    ability = Ability(ability_raw) if ability_raw else None
+    grant_conditions = tuple(Condition(c) for c in idata.get("grant_conditions", []))
+    grant_actions = tuple(ActionType(a) for a in idata.get("grant_actions", []))
+    return WeaponDef(
+        attack_name=str(idata["attack_name"]),
+        damage=damage,
+        reach=int(idata.get("reach", 5)),
+        ability=ability,
+        modifier=int(idata.get("modifier", 0)),
+        is_magic=bool(idata.get("is_magic", False)),
+        is_finesse=bool(idata.get("is_finesse", False)),
+        grant_conditions=grant_conditions,
+        grant_actions=grant_actions,
+    )
+
+
 def parse_items(items_data: list[dict[str, Any]]) -> list[Item]:
     """Parse item definitions from YAML.
 
     Each item dict must have ``name`` and ``type``.
-    Remaining keys become ``params`` (e.g. ``heal_dice`` for potions).
+    For potions: remaining keys become ``params`` (e.g. ``heal_dice``).
+    For weapons: ``weapon_def`` is built from typed fields.
     IDs are auto-generated as ``<snake_name>_<index>``.
     """
     items: list[Item] = []
     for i, idata in enumerate(items_data):
         name = str(idata["name"])
         item_type = ItemType(idata["type"])
-        # Everything except name/type goes into params
-        params: dict[str, object] = {k: v for k, v in idata.items() if k not in ("name", "type")}
         item_id = f"{name.lower().replace(' ', '_')}_{i}"
-        items.append(Item(id=item_id, name=name, item_type=item_type, params=params))
+
+        weapon_def: WeaponDef | None = None
+        if item_type == ItemType.WEAPON:
+            weapon_def = _parse_weapon_def(idata)
+            params: dict[str, object] = {}
+        else:
+            params = {k: v for k, v in idata.items() if k not in ("name", "type")}
+
+        items.append(Item(id=item_id, name=name, item_type=item_type, params=params, weapon_def=weapon_def))
     return items
+
+
+def parse_equipped_weapon(items: list[Item]) -> Item | None:
+    """Find the first weapon in items list — used as equipped_weapon."""
+    for item in items:
+        if item.item_type == ItemType.WEAPON:
+            return item
+    return None
 
 
 # -- Public loaders --
@@ -302,6 +356,10 @@ def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locati
     memory = NpcMemory.from_dict(memory_data) if isinstance(memory_data, dict) else NpcMemory()
 
     inventory = parse_items(ndata.get("items") or [])
+    equipped_weapon = parse_equipped_weapon(inventory)
+    # Remove equipped weapon from inventory (it's in the weapon slot, not a carried item)
+    if equipped_weapon:
+        inventory = [i for i in inventory if i.id != equipped_weapon.id]
 
     npc = Npc(
         id=npc_id,
@@ -322,30 +380,10 @@ def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locati
         ai_type=ai_type,
         memory=memory,
         inventory=inventory,
+        equipped_weapon=equipped_weapon,
     )
     # Brain is assigned by BrainFactory in GameService, not here.
     return npc
-
-
-def load_player(path: Path) -> PlayerCharacter:
-    """Load player character from a world YAML file or directory.
-
-    Raises FileNotFoundError if no player data exists (directory format without player.yaml).
-    """
-    is_dir, path = _resolve_source(path)
-    if is_dir:
-        player_path = path / "player.yaml"
-        if not player_path.exists():
-            raise FileNotFoundError(f"No player.yaml in {path}")
-        pdata = _read_yaml(player_path)
-    else:
-        data = _read_yaml(path)
-        if "player" not in data:
-            raise KeyError("No 'player' section in world file")
-        pdata = data["player"]
-        assert isinstance(pdata, dict)
-
-    return parse_player(pdata)
 
 
 def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
@@ -366,6 +404,9 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
     player_id = str(pdata.get("id", "")) or f"player_{uuid.uuid4().hex[:8]}"
 
     inventory = parse_items(pdata.get("items") or [])
+    equipped_weapon = parse_equipped_weapon(inventory)
+    if equipped_weapon:
+        inventory = [i for i in inventory if i.id != equipped_weapon.id]
 
     return PlayerCharacter(
         id=player_id,
@@ -383,6 +424,7 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
         gold=int(pdata.get("gold", 0)),
         attacks=attacks,
         inventory=inventory,
+        equipped_weapon=equipped_weapon,
     )
 
 

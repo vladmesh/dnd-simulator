@@ -1,6 +1,6 @@
 """WebSocket endpoint for real-time game interaction.
 
-Protocol (action → awareness cycle, no separate queries):
+Protocol (action → awareness cycle):
     Server → Client:
         {"type": "turn", "mode": "peaceful|combat", "awareness": {...}, "events": [...],
          "budget": {...}, "player": {...}, "location": {...}}
@@ -11,7 +11,6 @@ Protocol (action → awareness cycle, no separate queries):
 
     Client → Server:
         {"type": "action", "name": "attack", "params": {"target_id": "..."}}
-        {"type": "command", "text": "attack goblin_1"}
 """
 
 from __future__ import annotations
@@ -32,82 +31,6 @@ from dnd_simulator.i18n import _
 logger = logging.getLogger("dnd_simulator.ws")
 
 router = APIRouter(tags=["websocket"])
-
-
-# ---------------------------------------------------------------------------
-# Text command → Action parser (mirrors CLI adapter logic)
-# ---------------------------------------------------------------------------
-
-
-def _parse_command(text: str) -> Action:
-    """Parse a text command into an Action."""
-    raw = text.strip()
-    if not raw:
-        return Action(name=ActionType.IDLE)
-    cmd = raw.lower()
-
-    if cmd in ("look", "status", "map"):
-        return Action(name=ActionType.IDLE)
-
-    if cmd.startswith("look "):
-        target = raw[5:].strip()
-        if target:
-            return Action(name=ActionType.IDLE, params={"inspect_target": target})
-        return Action(name=ActionType.IDLE)
-
-    if cmd == "idle":
-        return Action(name=ActionType.IDLE)
-
-    if cmd in ("end_turn", "end"):
-        return Action(name=ActionType.END_TURN)
-
-    if cmd == "dodge":
-        return Action(name=ActionType.DODGE)
-
-    if cmd == "flee":
-        return Action(name=ActionType.FLEE)
-
-    if cmd == "wait" or cmd.startswith("wait "):
-        parts = cmd.split()
-        hours = 1
-        if len(parts) > 1:
-            try:
-                hours = max(1, int(parts[1]))
-            except ValueError:
-                hours = 1
-        return Action(name=ActionType.WAIT, params={"hours": hours})
-
-    if cmd.startswith("say "):
-        return Action(name=ActionType.SAY, params={"text": raw[4:].strip()})
-
-    if cmd.startswith("attack "):
-        target_id = raw[7:].strip().split()[0] if raw[7:].strip() else ""
-        if target_id:
-            return Action(name=ActionType.ATTACK, params={"target_id": target_id})
-        return Action(name=ActionType.IDLE)
-
-    if cmd.startswith("go "):
-        target = raw[3:].strip()
-        if target:
-            return Action(name=ActionType.WAIT, params={"hours": 0, "travel_to": target})
-        return Action(name=ActionType.IDLE)
-
-    if cmd.startswith("move ") or cmd.startswith("dash "):
-        is_dash = cmd.startswith("dash ")
-        args = raw[5:].strip().split()
-        if not args:
-            return Action(name=ActionType.IDLE)
-        params: dict[str, object] = {}
-        keyword = args[0].lower()
-        if keyword == "toward" and len(args) > 1:
-            params["toward"] = args[1]
-        elif keyword == "away" and len(args) > 1:
-            params["away_from"] = args[1]
-        else:
-            params["direction"] = keyword
-        return Action(name=ActionType.DASH if is_dash else ActionType.MOVE, params=params)
-
-    return Action(name=ActionType.IDLE)
 
 
 # ---------------------------------------------------------------------------
@@ -231,10 +154,6 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
                     params=msg.get("params", {}),
                 )
                 session.submit_player_action(action)
-
-            elif msg_type == "command":
-                session.submit_player_action(_parse_command(str(msg.get("text", ""))))
-
             else:
                 await ws.send_json({"type": "error", "message": _("Unknown message type: {}").format(msg_type)})
 

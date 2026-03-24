@@ -24,7 +24,7 @@ _STANDARD_ACTIONS = frozenset(
 )
 
 # Actions that cost 1 bonus action
-_BONUS_ACTIONS: frozenset[str] = frozenset()
+_BONUS_ACTIONS = frozenset({ActionType.BLESS})
 
 # Actions that use movement (cost = ft param)
 _MOVEMENT_ACTIONS = frozenset({ActionType.MOVE})

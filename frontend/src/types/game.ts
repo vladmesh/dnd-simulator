@@ -8,6 +8,8 @@ export type EventType =
   | "entity_flee"
   | "entity_move"
   | "entity_dash"
+  | "entity_bless"
+  | "entity_use_item"
   | "action_error"
   | "turn_skipped"
   | "combat_started"
@@ -52,6 +54,12 @@ export interface CombatEntity {
   conditions?: string[]
 }
 
+export interface ItemInfo {
+  id: string
+  name: string
+  description: string
+}
+
 export interface PeacefulAwareness {
   hour: number
   day: number
@@ -65,6 +73,8 @@ export interface PeacefulAwareness {
   nation_info?: Record<string, unknown> | null
   nearby: NearbyEntity[]
   turn_budget?: TurnBudget | null
+  available_actions?: string[]
+  available_items?: ItemInfo[]
 }
 
 export interface CombatAwareness {
@@ -80,6 +90,8 @@ export interface CombatAwareness {
   battle_map_ascii?: string
   turn_budget?: TurnBudget | null
   self_conditions?: string[]
+  available_actions?: string[]
+  available_items?: ItemInfo[]
 }
 
 export type Awareness = PeacefulAwareness | CombatAwareness
@@ -142,6 +154,7 @@ export type ActionName =
   | "skip"
   | "wait"
   | "use_item"
+  | "bless"
 
 export interface Action {
   name: ActionName

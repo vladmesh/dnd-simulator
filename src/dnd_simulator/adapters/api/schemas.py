@@ -61,6 +61,20 @@ class PatchCreatureRequest(BaseModel):
     personality: str | None = None
 
 
+class GiveItemRequest(BaseModel):
+    name: str
+    type: str  # "potion" or "weapon"
+    # Potion fields
+    heal_dice: str | None = None
+    # Weapon fields
+    attack_name: str | None = None
+    damage: list[dict[str, str]] | None = None
+    ability: str | None = None
+    is_magic: bool | None = None
+    is_finesse: bool | None = None
+    grant_actions: list[str] | None = None
+
+
 class SetBrainRequest(BaseModel):
     type: str  # "rule_based" or "llm"
     model: str = ""

@@ -18,6 +18,7 @@ class ActionType(StrEnum):
     DASH = "dash"
     WAIT = "wait"
     USE_ITEM = "use_item"
+    BLESS = "bless"
     END_TURN = "end_turn"
     SKIP = "skip"
 

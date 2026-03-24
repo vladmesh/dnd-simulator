@@ -45,8 +45,8 @@ class ValidationError:
 # Actions that only make sense in combat
 _COMBAT_ONLY: frozenset[ActionType] = frozenset({ActionType.DODGE, ActionType.FLEE, ActionType.DASH})
 
-# Actions blocked during combat (speech goes through action description field)
-_COMBAT_BLOCKED: frozenset[ActionType] = frozenset({ActionType.SAY})
+# Actions blocked during combat
+_COMBAT_BLOCKED: frozenset[ActionType] = frozenset({ActionType.SAY, ActionType.IDLE, ActionType.WAIT})
 
 # Actions that take a target_id param
 _TARGETED: frozenset[ActionType] = frozenset({ActionType.ATTACK})
@@ -170,11 +170,12 @@ def check_reach(actor: Creature, action: Action, ctx: ActionContext) -> Validati
 
     from dnd_simulator.core.character import Creature as CreatureType
     from dnd_simulator.rules.movement import grid_distance
+    from dnd_simulator.rules.weapons import get_weapon_attack
 
     # Determine weapon reach
     reach = 5  # default unarmed
-    if isinstance(actor, CreatureType) and actor.attacks:
-        reach = actor.attacks[0].reach
+    if isinstance(actor, CreatureType):
+        reach = get_weapon_attack(actor).reach
 
     bm = ctx.combat_state.battle_map
     a_pos = bm.get_position(actor.id)

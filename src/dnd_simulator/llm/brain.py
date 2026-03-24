@@ -11,7 +11,7 @@ from dnd_simulator.core.brain import Brain
 from dnd_simulator.i18n import _
 from dnd_simulator.llm.client import LlmClient
 from dnd_simulator.llm.prompts import build_npc_combat_prompt, build_npc_system_prompt
-from dnd_simulator.llm.tools import build_npc_combat_tools, build_npc_tools
+from dnd_simulator.llm.tools import build_npc_combat_tools, build_npc_tools, get_tools
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
@@ -68,10 +68,9 @@ class LlmBrain(Brain):
             tools = build_npc_tools()
             retry_hint = _("You must choose an action: say, attack, or idle.")
 
-        # Filter tools to only available actions (if dispatcher populated the list)
+        # Use available_actions directly to build tools (dynamic, includes weapon-granted actions)
         if awareness.available_actions:
-            allowed = {a.value for a in awareness.available_actions}
-            tools = [t for t in tools if t["function"]["name"] in allowed]
+            tools = get_tools(awareness.available_actions)
 
         recent_events: list[str] = [e.description for e in events[-15:]]
 

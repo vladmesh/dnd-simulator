@@ -50,3 +50,18 @@ class InventoryActionProvider:
         if validate_action(creature, probe, ctx) is not None:
             return []
         return [ActionType.USE_ITEM]
+
+
+class WeaponActionProvider:
+    """Provides extra actions granted by equipped weapon (e.g. Bless)."""
+
+    def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
+        weapon = creature.equipped_weapon
+        if weapon is None or weapon.weapon_def is None or not weapon.weapon_def.grant_actions:
+            return []
+        result: list[ActionType] = []
+        for at in weapon.weapon_def.grant_actions:
+            probe = Action(name=at)
+            if validate_action(creature, probe, ctx) is None:
+                result.append(at)
+        return result

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
-from dnd_simulator.core.character import Ability, Attack, Creature, DamageComponent, DamageType, Entity
+from dnd_simulator.core.character import Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState
+from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.combat import resolve_attack, roll_initiative
@@ -16,6 +18,9 @@ from dnd_simulator.rules.conditions import (
     is_auto_crit,
 )
 from dnd_simulator.rules.movement import grid_distance, move_direction
+from dnd_simulator.rules.weapons import get_weapon_attack, get_weapon_modifier
+
+logger = logging.getLogger("dnd_simulator.combat_manager")
 
 
 class CombatManager:
@@ -221,11 +226,8 @@ class CombatManager:
             self.start_combat(attacker.location_id)
         self._attack_this_round[attacker.location_id] = True
 
-        # Use equipped (first) attack, or unarmed strike
-        if attacker.attacks:
-            attack = attacker.attacks[0]
-        else:
-            attack = Attack(name=_("fist"), ability=Ability.STR, damage=(DamageComponent("1", DamageType.BLUDGEONING),))
+        # Use equipped weapon → creature.attacks[0] → unarmed fallback
+        attack = get_weapon_attack(attacker)
 
         # --- Resolution: compute advantage/disadvantage from conditions ---
         is_melee = attack.reach <= 10
@@ -236,7 +238,23 @@ class CombatManager:
             or attacks_against_have_disadvantage(target.conditions, melee=is_melee)
         )
 
-        modifier = attacker.ability_scores.modifier(attack.ability)
+        modifier = attacker.ability_scores.modifier(attack.ability) + get_weapon_modifier(attacker)
+
+        # Blessed: +d4 to attack roll
+        bless_bonus = 0
+        if Condition.BLESSED in attacker.conditions:
+            from dnd_simulator.rules.dice import roll as roll_dice
+
+            bless_bonus = roll_dice("1d4")
+            modifier += bless_bonus
+            logger.debug(
+                "[Combat] %s BLESSED: +%d to attack (total mod %d), weapon=%s",
+                attacker.name,
+                bless_bonus,
+                modifier,
+                attack.name,
+            )
+
         result = resolve_attack(
             modifier=modifier,
             ac=target.ac,
@@ -259,6 +277,7 @@ class CombatManager:
             "ac": target.ac,
             "advantage": advantage,
             "disadvantage": disadvantage,
+            "bless_bonus": bless_bonus,
         }
 
         result_events: list[Event] = []

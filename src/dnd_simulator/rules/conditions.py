@@ -1,11 +1,11 @@
 """Pure functions for D&D 5e condition effects.
 
-No state, no I/O. Takes conditions set in, returns mechanical effects out.
+No state, no I/O. Takes conditions map in, returns mechanical effects out.
 """
 
 from __future__ import annotations
 
-from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.conditions import Condition, ConditionsMap
 
 # Conditions that include the Incapacitated effect (can't take actions/reactions)
 _INCAPACITATING: frozenset[Condition] = frozenset(
@@ -31,18 +31,18 @@ _SPEED_ZERO: frozenset[Condition] = frozenset(
 )
 
 
-def is_incapacitated(conditions: set[Condition]) -> bool:
+def is_incapacitated(conditions: ConditionsMap) -> bool:
     """Creature can't take actions or reactions."""
-    return bool(conditions & _INCAPACITATING)
+    return bool(conditions.keys() & _INCAPACITATING)
 
 
-def effective_speed(base_speed: int, conditions: set[Condition]) -> int:
+def effective_speed(base_speed: int, conditions: ConditionsMap) -> int:
     """Compute effective speed after condition modifiers.
 
     Grappled, Restrained, Paralyzed, Petrified, Stunned, Unconscious → speed 0.
     Prone doesn't reduce speed (standing up costs movement, handled separately).
     """
-    if conditions & _SPEED_ZERO:
+    if conditions.keys() & _SPEED_ZERO:
         return 0
     return base_speed
 
@@ -52,13 +52,13 @@ def prone_stand_cost(base_speed: int) -> int:
     return base_speed // 2
 
 
-def attacker_has_disadvantage(attacker_conditions: set[Condition]) -> bool:
+def attacker_has_disadvantage(attacker_conditions: ConditionsMap) -> bool:
     """Does the attacker roll with disadvantage due to their own conditions?
 
     Blinded, Frightened, Poisoned, Prone, Restrained → disadvantage on attacks.
     """
     return bool(
-        attacker_conditions
+        attacker_conditions.keys()
         & {
             Condition.BLINDED,
             Condition.FRIGHTENED,
@@ -69,13 +69,13 @@ def attacker_has_disadvantage(attacker_conditions: set[Condition]) -> bool:
     )
 
 
-def attacks_against_have_advantage(target_conditions: set[Condition], *, melee: bool) -> bool:
+def attacks_against_have_advantage(target_conditions: ConditionsMap, *, melee: bool) -> bool:
     """Do attacks against this target have advantage?
 
     Blinded, Paralyzed, Petrified, Restrained, Stunned, Unconscious → advantage.
     Prone → advantage for melee, disadvantage for ranged.
     """
-    if target_conditions & {
+    if target_conditions.keys() & {
         Condition.BLINDED,
         Condition.PARALYZED,
         Condition.PETRIFIED,
@@ -87,7 +87,7 @@ def attacks_against_have_advantage(target_conditions: set[Condition], *, melee: 
     return Condition.PRONE in target_conditions and melee
 
 
-def attacks_against_have_disadvantage(target_conditions: set[Condition], *, melee: bool) -> bool:
+def attacks_against_have_disadvantage(target_conditions: ConditionsMap, *, melee: bool) -> bool:
     """Do attacks against this target have disadvantage?
 
     Invisible → disadvantage on attacks against.
@@ -98,23 +98,23 @@ def attacks_against_have_disadvantage(target_conditions: set[Condition], *, mele
     return Condition.PRONE in target_conditions and not melee
 
 
-def is_auto_crit(target_conditions: set[Condition], *, melee: bool) -> bool:
+def is_auto_crit(target_conditions: ConditionsMap, *, melee: bool) -> bool:
     """Hits against this target are automatic crits (if they hit).
 
     Paralyzed, Unconscious → melee hits are auto-crits.
     """
     if not melee:
         return False
-    return bool(target_conditions & {Condition.PARALYZED, Condition.UNCONSCIOUS})
+    return bool(target_conditions.keys() & {Condition.PARALYZED, Condition.UNCONSCIOUS})
 
 
-def auto_fail_str_dex_saves(conditions: set[Condition]) -> bool:
+def auto_fail_str_dex_saves(conditions: ConditionsMap) -> bool:
     """Creature auto-fails STR and DEX saving throws.
 
     Paralyzed, Petrified, Stunned, Unconscious.
     """
     return bool(
-        conditions
+        conditions.keys()
         & {
             Condition.PARALYZED,
             Condition.PETRIFIED,
@@ -122,3 +122,17 @@ def auto_fail_str_dex_saves(conditions: set[Condition]) -> bool:
             Condition.UNCONSCIOUS,
         }
     )
+
+
+def tick_conditions(conditions: ConditionsMap) -> list[Condition]:
+    """Decrement timed conditions, remove expired ones. Returns list of removed conditions."""
+    expired: list[Condition] = []
+    for cond, remaining in list(conditions.items()):
+        if remaining is None:
+            continue
+        if remaining <= 1:
+            expired.append(cond)
+            del conditions[cond]
+        else:
+            conditions[cond] = remaining - 1
+    return expired

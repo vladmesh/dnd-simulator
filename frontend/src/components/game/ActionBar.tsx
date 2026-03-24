@@ -1,21 +1,35 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useGameStore } from "@/store/gameStore"
-import { useAvailableActions } from "@/store/useAvailableActions"
 import { wsClient } from "@/transport/wsClient"
 import { BudgetDisplay } from "./BudgetDisplay"
 import { Button } from "@/components/ui/button"
 import { Loader2, ChevronDown } from "lucide-react"
-import type { CombatAwareness } from "@/types/game"
+import type { CombatAwareness, Awareness } from "@/types/game"
 
-// Map action names to translation keys
-const ACTION_LABELS: Record<string, string> = {
-  idle: "game:look",
-  wait: "game:wait_1h",
-  end_turn: "game:end_turn",
-  dodge: "game:dodge",
-  flee: "game:flee",
-  dash: "game:dash",
+// Actions that need a target dropdown (enemy selection)
+const TARGET_ACTIONS = new Set(["attack"])
+
+// Actions that need a directional dropdown (toward/away per enemy)
+const DIRECTIONAL_ACTIONS = new Set(["move", "dash"])
+
+// Actions that need an item dropdown
+const ITEM_ACTIONS = new Set(["use_item"])
+
+// Actions that are just a button click (no params)
+const SIMPLE_ACTIONS = new Set(["dodge", "flee", "bless", "idle", "wait", "end_turn"])
+
+// Visual variants for specific actions
+const ACTION_VARIANT: Record<string, "destructive" | "secondary" | "outline"> = {
+  attack: "destructive",
+  end_turn: "outline",
+}
+
+function getActionLabel(t: (key: string) => string, name: string): string {
+  const key = `game:${name}`
+  const result = t(key)
+  // If i18n returns the key itself, it's missing — use raw name
+  return result === key ? name : result
 }
 
 export function ActionBar() {
@@ -25,18 +39,10 @@ export function ActionBar() {
   const budget = useGameStore((s) => s.budget)
   const mode = useGameStore((s) => s.mode)
   const awareness = useGameStore((s) => s.awareness)
-  const actions = useAvailableActions()
-  const [customCmd, setCustomCmd] = useState("")
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
   const sendAction = (name: string, params?: Record<string, unknown>) => {
     wsClient.send({ type: "action", name, params })
-    useGameStore.getState().setWaitingForAction(true)
-    setOpenDropdown(null)
-  }
-
-  const sendCommand = (text: string) => {
-    wsClient.send({ type: "command", text })
     useGameStore.getState().setWaitingForAction(true)
     setOpenDropdown(null)
   }
@@ -50,225 +56,246 @@ export function ActionBar() {
     )
   }
 
-  const actionLabel = (action: { name: string; label: string }) => {
-    const key = ACTION_LABELS[action.name]
-    return key ? t(key) : action.label
-  }
+  const available = awareness?.available_actions ?? []
+  const availableItems = awareness?.available_items ?? []
+  const has = (name: string) => available.includes(name)
 
   const isCombat = mode === "combat" && awareness && "self_hp" in awareness
-  const combatAwareness = isCombat ? (awareness as CombatAwareness) : null
-  const enemies = combatAwareness?.nearby ?? []
+  const enemies = isCombat ? (awareness as CombatAwareness).nearby : []
 
-  // In combat, group actions differently: Attack dropdown, Move dropdown, standalone buttons
-  if (isCombat) {
-    const hasAction = (budget?.actions ?? 0) > 0
-    const hasMovement = (budget?.movement_remaining ?? 0) > 0
+  // Backend already filters available_actions by budget — if it's in the list, it's affordable.
+  // Only disable while waiting for server response.
+  const isDisabled = () => waitingForAction
 
-    return (
-      <div className="border-t border-border px-4 py-2">
-        {/* Budget display */}
-        {budget && (
-          <div className="mb-2">
-            <BudgetDisplay budget={budget} />
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Attack dropdown */}
-          {enemies.length > 0 && (
-            <div className="relative">
-              <Button
-                size="sm"
-                variant="destructive"
-                disabled={!hasAction || waitingForAction}
-                onClick={() => {
-                  if (enemies.length === 1) {
-                    sendAction("attack", { target_id: enemies[0].id })
-                  } else {
-                    setOpenDropdown(openDropdown === "attack" ? null : "attack")
-                  }
-                }}
-              >
-                {t("game:attack")}
-                {enemies.length > 1 && <ChevronDown className="ml-1 size-3" />}
-              </Button>
-              {openDropdown === "attack" && enemies.length > 1 && (
-                <div className="absolute bottom-full left-0 z-10 mb-1 min-w-[160px] rounded border border-border bg-popover p-1 shadow-md">
-                  {enemies.map((e) => (
-                    <button
-                      key={e.id}
-                      className="w-full rounded px-2 py-1 text-left text-xs hover:bg-accent"
-                      onClick={() => sendAction("attack", { target_id: e.id })}
-                    >
-                      {t("game:attack_target", { target: e.id })}
-                      {e.distance_ft != null && (
-                        <span className="ml-1 text-muted-foreground">({e.distance_ft}ft)</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Move dropdown */}
-          <div className="relative">
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={!hasMovement || waitingForAction}
-              onClick={() => setOpenDropdown(openDropdown === "move" ? null : "move")}
-            >
-              {t("game:move")}
-              <ChevronDown className="ml-1 size-3" />
-            </Button>
-            {openDropdown === "move" && (
-              <div className="absolute bottom-full left-0 z-10 mb-1 min-w-[180px] rounded border border-border bg-popover p-1 shadow-md">
-                {enemies.map((e) => (
-                  <div key={e.id} className="flex gap-1">
-                    <button
-                      className="flex-1 rounded px-2 py-1 text-left text-xs hover:bg-accent"
-                      onClick={() => sendCommand(`move toward ${e.id}`)}
-                    >
-                      {t("game:move_toward", { target: e.id })}
-                    </button>
-                    <button
-                      className="flex-1 rounded px-2 py-1 text-left text-xs hover:bg-accent"
-                      onClick={() => sendCommand(`move away ${e.id}`)}
-                    >
-                      {t("game:move_away", { target: e.id })}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Dash dropdown */}
-          <div className="relative">
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={!hasAction || waitingForAction}
-              onClick={() => setOpenDropdown(openDropdown === "dash" ? null : "dash")}
-            >
-              {t("game:dash")}
-              <ChevronDown className="ml-1 size-3" />
-            </Button>
-            {openDropdown === "dash" && (
-              <div className="absolute bottom-full left-0 z-10 mb-1 min-w-[180px] rounded border border-border bg-popover p-1 shadow-md">
-                {enemies.map((e) => (
-                  <div key={e.id} className="flex gap-1">
-                    <button
-                      className="flex-1 rounded px-2 py-1 text-left text-xs hover:bg-accent"
-                      onClick={() => sendCommand(`dash toward ${e.id}`)}
-                    >
-                      {t("game:dash_toward", { target: e.id })}
-                    </button>
-                    <button
-                      className="flex-1 rounded px-2 py-1 text-left text-xs hover:bg-accent"
-                      onClick={() => sendCommand(`dash away ${e.id}`)}
-                    >
-                      {t("game:dash_away", { target: e.id })}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Standalone combat actions */}
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={!hasAction || waitingForAction}
-            onClick={() => sendAction("dodge")}
-          >
-            {t("game:dodge")}
-          </Button>
-
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={!hasAction || waitingForAction}
-            onClick={() => sendAction("flee")}
-          >
-            {t("game:flee")}
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={waitingForAction}
-            onClick={() => sendAction("end_turn")}
-          >
-            {t("game:end_turn")}
-          </Button>
-
-          {/* Custom command input */}
-          <input
-            className="ml-auto h-8 w-48 rounded-lg border border-border bg-transparent px-2.5 text-sm placeholder:text-muted-foreground"
-            placeholder={t("game:command_placeholder")}
-            value={customCmd}
-            onChange={(e) => setCustomCmd(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && customCmd.trim()) {
-                sendCommand(customCmd.trim())
-                setCustomCmd("")
-              }
-            }}
-          />
-        </div>
-      </div>
-    )
-  }
-
-  // Peaceful mode — original layout
   return (
     <div className="border-t border-border px-4 py-2">
-      {/* Budget display */}
       {budget && (
         <div className="mb-2">
           <BudgetDisplay budget={budget} />
         </div>
       )}
 
-      {/* Action buttons */}
       <div className="flex flex-wrap items-center gap-2">
-        {actions.map((action, i) => (
-          <Button
-            key={`${action.name}-${i}`}
-            size="sm"
-            variant={action.name === "end_turn" ? "outline" : "secondary"}
-            disabled={action.disabled || waitingForAction}
-            onClick={() => {
-              if (action.name === "wait") {
-                sendCommand("wait 1")
-              } else if (action.params) {
-                sendAction(action.name, action.params)
-              } else {
-                sendAction(action.name)
-              }
-            }}
-          >
-            {actionLabel(action)}
-          </Button>
-        ))}
+        {available.map((name) => {
+          // Target dropdown: attack
+          if (TARGET_ACTIONS.has(name) && enemies.length > 0) {
+            return (
+              <TargetDropdown
+                key={name}
+                name={name}
+                enemies={enemies}
+                disabled={isDisabled()}
+                openDropdown={openDropdown}
+                setOpenDropdown={setOpenDropdown}
+                sendAction={sendAction}
+                t={t}
+              />
+            )
+          }
 
-        {/* Custom command input */}
-        <input
-          className="ml-auto h-8 w-48 rounded-lg border border-border bg-transparent px-2.5 text-sm placeholder:text-muted-foreground"
-          placeholder={t("game:command_placeholder")}
-          value={customCmd}
-          onChange={(e) => setCustomCmd(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && customCmd.trim()) {
-              sendCommand(customCmd.trim())
-              setCustomCmd("")
-            }
-          }}
-        />
+          // Directional dropdown: move, dash
+          if (DIRECTIONAL_ACTIONS.has(name) && enemies.length > 0) {
+            return (
+              <DirectionalDropdown
+                key={name}
+                name={name}
+                enemies={enemies}
+                disabled={isDisabled()}
+                openDropdown={openDropdown}
+                setOpenDropdown={setOpenDropdown}
+                sendAction={sendAction}
+                t={t}
+              />
+            )
+          }
+
+          // Item dropdown: use_item
+          if (ITEM_ACTIONS.has(name) && availableItems.length > 0) {
+            return (
+              <ItemDropdown
+                key={name}
+                items={availableItems}
+                disabled={isDisabled()}
+                openDropdown={openDropdown}
+                setOpenDropdown={setOpenDropdown}
+                sendAction={sendAction}
+                t={t}
+              />
+            )
+          }
+
+          // Simple button
+          if (SIMPLE_ACTIONS.has(name) || !TARGET_ACTIONS.has(name) && !DIRECTIONAL_ACTIONS.has(name) && !ITEM_ACTIONS.has(name)) {
+            return (
+              <Button
+                key={name}
+                size="sm"
+                variant={ACTION_VARIANT[name] ?? "secondary"}
+                disabled={isDisabled()}
+                onClick={() => {
+                  if (name === "wait") {
+                    sendAction("wait", { hours: 1 })
+                  } else {
+                    sendAction(name)
+                  }
+                }}
+              >
+                {getActionLabel(t, name)}
+              </Button>
+            )
+          }
+
+          return null
+        })}
+
+        {/* end_turn is always available even if not in the list */}
+        {!has("end_turn") && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={waitingForAction}
+            onClick={() => sendAction("end_turn")}
+          >
+            {getActionLabel(t, "end_turn")}
+          </Button>
+        )}
       </div>
+    </div>
+  )
+}
+
+// --- Sub-components for dropdowns ---
+
+interface DropdownProps {
+  openDropdown: string | null
+  setOpenDropdown: (v: string | null) => void
+  sendAction: (name: string, params?: Record<string, unknown>) => void
+  t: (key: string, opts?: Record<string, unknown>) => string
+  disabled: boolean
+}
+
+interface TargetDropdownProps extends DropdownProps {
+  name: string
+  enemies: { id: string; distance_ft?: number }[]
+}
+
+function TargetDropdown({ name, enemies, disabled, openDropdown, setOpenDropdown, sendAction, t }: TargetDropdownProps) {
+  return (
+    <div className="relative">
+      <Button
+        size="sm"
+        variant={ACTION_VARIANT[name] ?? "secondary"}
+        disabled={disabled}
+        onClick={() => {
+          if (enemies.length === 1) {
+            sendAction(name, { target_id: enemies[0].id })
+          } else {
+            setOpenDropdown(openDropdown === name ? null : name)
+          }
+        }}
+      >
+        {getActionLabel(t, name)}
+        {enemies.length > 1 && <ChevronDown className="ml-1 size-3" />}
+      </Button>
+      {openDropdown === name && enemies.length > 1 && (
+        <div className="absolute bottom-full left-0 z-10 mb-1 min-w-[160px] rounded border border-border bg-popover p-1 shadow-md">
+          {enemies.map((e) => (
+            <button
+              key={e.id}
+              className="w-full rounded px-2 py-1 text-left text-xs hover:bg-accent"
+              onClick={() => sendAction(name, { target_id: e.id })}
+            >
+              {t("game:attack_target", { target: e.id })}
+              {e.distance_ft != null && (
+                <span className="ml-1 text-muted-foreground">({e.distance_ft}ft)</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface DirectionalDropdownProps extends DropdownProps {
+  name: string
+  enemies: { id: string }[]
+}
+
+function DirectionalDropdown({ name, enemies, disabled, openDropdown, setOpenDropdown, sendAction, t }: DirectionalDropdownProps) {
+  const towardKey = name === "dash" ? "game:dash_toward" : "game:move_toward"
+  const awayKey = name === "dash" ? "game:dash_away" : "game:move_away"
+
+  return (
+    <div className="relative">
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={disabled}
+        onClick={() => setOpenDropdown(openDropdown === name ? null : name)}
+      >
+        {getActionLabel(t, name)}
+        <ChevronDown className="ml-1 size-3" />
+      </Button>
+      {openDropdown === name && (
+        <div className="absolute bottom-full left-0 z-10 mb-1 min-w-[180px] rounded border border-border bg-popover p-1 shadow-md">
+          {enemies.map((e) => (
+            <div key={e.id} className="flex gap-1">
+              <button
+                className="flex-1 rounded px-2 py-1 text-left text-xs hover:bg-accent"
+                onClick={() => sendAction(name, { toward: e.id })}
+              >
+                {t(towardKey, { target: e.id })}
+              </button>
+              <button
+                className="flex-1 rounded px-2 py-1 text-left text-xs hover:bg-accent"
+                onClick={() => sendAction(name, { away_from: e.id })}
+              >
+                {t(awayKey, { target: e.id })}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface ItemDropdownProps extends DropdownProps {
+  items: { id: string; name: string; description: string }[]
+}
+
+function ItemDropdown({ items, disabled, openDropdown, setOpenDropdown, sendAction, t }: ItemDropdownProps) {
+  return (
+    <div className="relative">
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={disabled}
+        onClick={() => {
+          if (items.length === 1) {
+            sendAction("use_item", { item_id: items[0].id })
+          } else {
+            setOpenDropdown(openDropdown === "use_item" ? null : "use_item")
+          }
+        }}
+      >
+        {getActionLabel(t, "use_item")}
+        {items.length > 1 && <ChevronDown className="ml-1 size-3" />}
+      </Button>
+      {openDropdown === "use_item" && items.length > 1 && (
+        <div className="absolute bottom-full left-0 z-10 mb-1 min-w-[180px] rounded border border-border bg-popover p-1 shadow-md">
+          {items.map((item) => (
+            <button
+              key={item.id}
+              className="w-full rounded px-2 py-1 text-left text-xs hover:bg-accent"
+              onClick={() => sendAction("use_item", { item_id: item.id })}
+            >
+              {item.description || item.name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

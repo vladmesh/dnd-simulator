@@ -10,12 +10,14 @@ import pytest
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.character import Ability, Attack, Creature, DamageComponent, DamageType
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
-from dnd_simulator.core.items import Item, ItemType
+from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.items import Item, ItemType, WeaponDef
 from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.rules.action_handlers import (
     handle_attack,
+    handle_bless,
     handle_dash,
     handle_dodge,
     handle_flee,
@@ -26,6 +28,7 @@ from dnd_simulator.rules.action_handlers import (
     handle_wait,
 )
 from dnd_simulator.rules.validation import ActionContext, validate_action
+from dnd_simulator.rules.weapons import get_weapon_attack, get_weapon_modifier
 from dnd_simulator.service.action_dispatcher import create_dispatcher
 
 
@@ -146,9 +149,9 @@ class TestDispatchBudget:
         assert result.success
 
     def test_budget_not_consumed_for_free_action(self) -> None:
-        """Idle and say cost nothing — budget unchanged after dispatch."""
+        """Free actions cost nothing — budget unchanged after dispatch."""
         budget = TurnBudget(actions=1, bonus_actions=0, movement_remaining=30)
-        ctx = _combat_ctx(budget)
+        ctx = ActionContext(is_combat=False, current_turn_entity_id="test", get_entity=_get_entity)
         d = create_dispatcher(_WORLD)
         result = d.dispatch(_creature(), Action(name=ActionType.IDLE), ctx, _noop_emit)
         assert result.success
@@ -438,8 +441,8 @@ class TestGetAvailableActions:
         assert ActionType.ATTACK not in available
         assert ActionType.DODGE not in available
         assert ActionType.DASH not in available
-        # Free actions still available
-        assert ActionType.IDLE in available
+        # Idle/wait/say blocked in combat
+        assert ActionType.IDLE not in available
         # Movement still available
         assert ActionType.MOVE in available
 
@@ -798,3 +801,208 @@ class TestProviderIntegration:
         assert ActionType.IDLE in available
         assert ActionType.ATTACK in available
         assert ActionType.WAIT in available
+
+
+# ---------------------------------------------------------------------------
+# get_weapon_attack: weapon → Attack
+# ---------------------------------------------------------------------------
+
+
+def _sword_weapon() -> Item:
+    return Item(
+        id="sword_0",
+        name="Меч",
+        item_type=ItemType.WEAPON,
+        weapon_def=WeaponDef(
+            attack_name="удар мечом",
+            damage=(DamageComponent("1d8", DamageType.SLASHING),),
+            ability=Ability.STR,
+        ),
+    )
+
+
+def _rapier_weapon() -> Item:
+    return Item(
+        id="rapier_0",
+        name="Рапира",
+        item_type=ItemType.WEAPON,
+        weapon_def=WeaponDef(
+            attack_name="удар рапирой",
+            damage=(DamageComponent("1d8", DamageType.PIERCING),),
+            is_finesse=True,
+        ),
+    )
+
+
+def _blessed_sword() -> Item:
+    return Item(
+        id="blessed_sword_0",
+        name="Благословенный Меч",
+        item_type=ItemType.WEAPON,
+        weapon_def=WeaponDef(
+            attack_name="удар мечом",
+            damage=(DamageComponent("1d8", DamageType.SLASHING),),
+            is_magic=True,
+            grant_actions=(ActionType.BLESS,),
+        ),
+    )
+
+
+class TestGetWeaponAttack:
+    def test_no_weapon_uses_creature_attacks(self) -> None:
+        actor = _creature()
+        bite = Attack(name="bite", ability=Ability.STR, damage=(DamageComponent("1d6", DamageType.PIERCING),))
+        actor.attacks = (bite,)
+        attack = get_weapon_attack(actor)
+        assert attack.name == "bite"
+
+    def test_no_weapon_no_attacks_unarmed(self) -> None:
+        actor = _creature()
+        attack = get_weapon_attack(actor)
+        assert attack.name == "fists"
+        assert attack.damage[0].type == DamageType.BLUDGEONING
+
+    def test_equipped_weapon_overrides(self) -> None:
+        actor = _creature()
+        actor.equipped_weapon = _sword_weapon()
+        attack = get_weapon_attack(actor)
+        assert attack.name == "удар мечом"
+        assert attack.damage[0].type == DamageType.SLASHING
+
+    def test_finesse_uses_higher_stat(self) -> None:
+        actor = _creature()
+        actor.ability_scores[Ability.STR] = 10  # +0
+        actor.ability_scores[Ability.DEX] = 18  # +4
+        actor.equipped_weapon = _rapier_weapon()
+        attack = get_weapon_attack(actor)
+        assert attack.ability == Ability.DEX
+
+    def test_finesse_uses_str_when_higher(self) -> None:
+        actor = _creature()
+        actor.ability_scores[Ability.STR] = 18  # +4
+        actor.ability_scores[Ability.DEX] = 10  # +0
+        actor.equipped_weapon = _rapier_weapon()
+        attack = get_weapon_attack(actor)
+        assert attack.ability == Ability.STR
+
+    def test_weapon_modifier(self) -> None:
+        actor = _creature()
+        actor.equipped_weapon = Item(
+            id="magic_sword",
+            name="+2 Sword",
+            item_type=ItemType.WEAPON,
+            weapon_def=WeaponDef(
+                attack_name="magic slash",
+                damage=(DamageComponent("1d8", DamageType.SLASHING),),
+                modifier=2,
+                is_magic=True,
+            ),
+        )
+        assert get_weapon_modifier(actor) == 2
+
+    def test_no_weapon_zero_modifier(self) -> None:
+        assert get_weapon_modifier(_creature()) == 0
+
+
+# ---------------------------------------------------------------------------
+# handle_bless: grants BLESSED condition
+# ---------------------------------------------------------------------------
+
+
+class TestHandleBless:
+    def test_bless_adds_condition(self) -> None:
+        actor = _creature()
+        emitted, emit = _capture_emit()
+        result = handle_bless(actor, Action(name=ActionType.BLESS), emit, _COMBAT, _WORLD)
+        assert result.success
+        assert Condition.BLESSED in actor.conditions
+        assert isinstance(actor.conditions[Condition.BLESSED], int)
+        assert len(emitted) == 1
+        assert emitted[0].event_type == EventType.ENTITY_BLESS
+
+    def test_bless_does_not_downgrade_duration(self) -> None:
+        actor = _creature()
+        actor.conditions[Condition.BLESSED] = 10  # already blessed for longer
+        handle_bless(actor, Action(name=ActionType.BLESS), _noop_emit, _COMBAT, _WORLD)
+        assert actor.conditions[Condition.BLESSED] == 10
+
+    def test_bless_costs_bonus_action(self) -> None:
+        actor = _creature()
+        actor.equipped_weapon = _blessed_sword()
+        budget = TurnBudget(actions=1, bonus_actions=1, movement_remaining=30)
+        ctx = _combat_ctx(budget)
+        d = create_dispatcher(_WORLD)
+        result = d.dispatch(actor, Action(name=ActionType.BLESS), ctx, _noop_emit)
+        assert result.success
+        assert budget.bonus_actions == 0
+        assert budget.actions == 1  # standard action not consumed
+
+    def test_bless_rejected_without_bonus_action(self) -> None:
+        actor = _creature()
+        actor.equipped_weapon = _blessed_sword()
+        budget = TurnBudget(actions=1, bonus_actions=0, movement_remaining=30)
+        ctx = _combat_ctx(budget)
+        d = create_dispatcher(_WORLD)
+        result = d.dispatch(actor, Action(name=ActionType.BLESS), ctx, _noop_emit)
+        assert not result.success
+
+
+# ---------------------------------------------------------------------------
+# WeaponActionProvider: grant_actions from weapon
+# ---------------------------------------------------------------------------
+
+
+class TestWeaponActionProvider:
+    def test_bless_available_with_blessed_sword(self) -> None:
+        d = create_dispatcher(_WORLD)
+        actor = _creature()
+        actor.equipped_weapon = _blessed_sword()
+        available = d.get_available_actions(actor, _COMBAT)
+        assert ActionType.BLESS in available
+
+    def test_bless_not_available_without_weapon(self) -> None:
+        d = create_dispatcher(_WORLD)
+        actor = _creature()
+        available = d.get_available_actions(actor, _COMBAT)
+        assert ActionType.BLESS not in available
+
+    def test_bless_not_available_with_normal_weapon(self) -> None:
+        d = create_dispatcher(_WORLD)
+        actor = _creature()
+        actor.equipped_weapon = _sword_weapon()
+        available = d.get_available_actions(actor, _COMBAT)
+        assert ActionType.BLESS not in available
+
+    def test_bless_not_available_when_dead(self) -> None:
+        d = create_dispatcher(_WORLD)
+        actor = _creature(alive=False)
+        actor.equipped_weapon = _blessed_sword()
+        available = d.get_available_actions(actor, _COMBAT)
+        assert ActionType.BLESS not in available
+
+
+# ---------------------------------------------------------------------------
+# LLM tools: dynamic from available_actions
+# ---------------------------------------------------------------------------
+
+
+class TestToolSchemaRegistry:
+    def test_get_tools_returns_matching_schemas(self) -> None:
+        from dnd_simulator.llm.tools import get_tools
+
+        tools = get_tools([ActionType.ATTACK, ActionType.BLESS])
+        names = {t["function"]["name"] for t in tools}
+        assert names == {"attack", "bless"}
+
+    def test_get_tools_skips_unknown(self) -> None:
+        from dnd_simulator.llm.tools import get_tools
+
+        tools = get_tools([ActionType.END_TURN])  # no schema for end_turn
+        assert len(tools) == 0
+
+    def test_get_tools_preserves_order(self) -> None:
+        from dnd_simulator.llm.tools import get_tools
+
+        tools = get_tools([ActionType.DODGE, ActionType.ATTACK, ActionType.IDLE])
+        names = [t["function"]["name"] for t in tools]
+        assert names == ["dodge", "attack", "idle"]

@@ -12,7 +12,7 @@ export function LocationPanel() {
   if (!location) return null
 
   const sendGo = (locationId: string) => {
-    wsClient.send({ type: "command", text: `go ${locationId}` })
+    wsClient.send({ type: "action", name: "wait", params: { hours: 0, travel_to: locationId } })
     useGameStore.getState().setWaitingForAction(true)
   }
 
