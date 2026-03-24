@@ -11,7 +11,7 @@ from __future__ import annotations
 from dnd_simulator.core.character import Ability, Character, Creature
 from dnd_simulator.core.class_features import FighterFeatures, FightingStyle
 from dnd_simulator.core.conditions import Condition, ConditionsMap
-from dnd_simulator.core.modifiers import AttackModifiers, Modifier, ModifierOp, StatType
+from dnd_simulator.core.modifiers import AttackModifiers, Modifier, ModifierOp, RollComponent, StatType
 from dnd_simulator.rules.proficiency import (
     is_proficient_with_armor,
     is_proficient_with_shield,
@@ -258,18 +258,33 @@ def attack_modifiers(attacker: Creature, target: Creature, *, melee: bool) -> At
     base_mod = ability_mod + prof
     flat_mod = compute_stat(base_mod, attacker_mods, StatType.ATTACK_ROLL)
 
+    # Build roll component breakdown
+    roll_components: list[RollComponent] = [RollComponent(source="ability", value=ability_mod)]
+    if prof:
+        roll_components.append(RollComponent(source="proficiency", value=prof))
+    for m in attacker_mods:
+        if m.stat == StatType.ATTACK_ROLL and m.op == ModifierOp.ADD and m.value:
+            roll_components.append(RollComponent(source=m.source, value=m.value))
+
     # Damage bonus: Fighting Style Dueling (+2 damage with one-handed melee, no other weapon)
     # D&D 5e PHB p.72: "wielding a melee weapon in one hand and no other weapons"
     # We have a single weapon slot, so "no other weapons" is always true.
     # TODO: exclude two-handed weapons when is_two_handed is added to WeaponDef
     dmg_bonus = 0
+    dmg_components: list[RollComponent] = []
     if isinstance(attacker, Character) and melee:
         fighter = attacker.get_feature(FighterFeatures)
         if fighter and fighter.fighting_style == FightingStyle.DUELING and attacker.equipped_weapon:
             dmg_bonus = 2
+            dmg_components.append(RollComponent(source="dueling", value=2))
 
-    # Dice bonuses (Bless +1d4, etc.)
+    # Dice bonuses (Bless +1d4, etc.) — unresolved, rolled later by combat_manager
     dice = collect_dice_bonuses(attacker_mods, StatType.ATTACK_ROLL)
+    dice_roll_components = tuple(
+        RollComponent(source=m.source, value=0, dice=m.dice)
+        for m in attacker_mods
+        if m.stat == StatType.ATTACK_ROLL and m.op == ModifierOp.ADD and m.dice
+    )
 
     # Advantage/disadvantage: merge attacker self + target defense
     all_adv_mods = [m for m in attacker_mods if m.stat == StatType.ATTACK_ROLL]
@@ -284,4 +299,6 @@ def attack_modifiers(attacker: Creature, target: Creature, *, melee: bool) -> At
         disadvantage=dis,
         force_crit=is_auto_crit_target(target.conditions, melee=melee),
         target_ac=effective_ac(target),
+        roll_components=tuple(roll_components) + dice_roll_components,
+        damage_components=tuple(dmg_components),
     )

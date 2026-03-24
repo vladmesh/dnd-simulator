@@ -49,6 +49,15 @@ class Modifier:
 
 
 @dataclass(frozen=True)
+class RollComponent:
+    """One labeled component of a d20 roll or damage total."""
+
+    source: str  # "ability", "proficiency", "bless", "weapon_magic", "dueling"
+    value: int  # already-resolved numeric value
+    dice: str = ""  # original dice expression if rolled (display only)
+
+
+@dataclass(frozen=True)
 class AttackModifiers:
     """Pre-computed attack parameters for combat_manager.resolve_attack()."""
 
@@ -59,3 +68,5 @@ class AttackModifiers:
     disadvantage: bool
     force_crit: bool
     target_ac: int
+    roll_components: tuple[RollComponent, ...] = ()
+    damage_components: tuple[RollComponent, ...] = ()

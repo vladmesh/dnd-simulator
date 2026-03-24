@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.character import Creature
 from dnd_simulator.rules.validation import (
@@ -144,6 +146,7 @@ class TestValidateAction:
         assert error is not None
         assert error.code == "WRONG_MODE"
 
-    def test_unknown_action_passes(self) -> None:
-        # Unknown actions pass validation (fail-safe: don't block gameplay)
-        assert validate_action(_creature(), Action(name="unknown_spell"), _COMBAT) is None
+    def test_unknown_action_crashes(self) -> None:
+        # Unknown actions crash — they're programming errors, not user input
+        with pytest.raises(KeyError):
+            validate_action(_creature(), Action(name="unknown_spell"), _COMBAT)

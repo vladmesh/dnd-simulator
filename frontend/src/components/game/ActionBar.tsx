@@ -5,22 +5,7 @@ import { wsClient } from "@/transport/wsClient"
 import { BudgetDisplay } from "./BudgetDisplay"
 import { Button } from "@/components/ui/button"
 import { Loader2, ChevronDown } from "lucide-react"
-import type { CombatAwareness, Awareness } from "@/types/game"
-
-// Actions that need a target dropdown (enemy selection)
-const TARGET_ACTIONS = new Set(["attack"])
-
-// Actions that need a directional dropdown (toward/away per enemy)
-const DIRECTIONAL_ACTIONS = new Set(["move", "dash"])
-
-// Actions that need an item dropdown
-const ITEM_ACTIONS = new Set(["use_item"])
-
-// Actions that need a weapon dropdown (pick from inventory weapons)
-const WEAPON_ACTIONS = new Set(["equip"])
-
-// Actions that are just a button click (no params)
-const SIMPLE_ACTIONS = new Set(["dodge", "flee", "disengage", "bless", "second_wind", "unequip", "idle", "wait", "end_turn"])
+import type { CombatAwareness, Awareness, ActionInfo } from "@/types/game"
 
 // Visual variants for specific actions
 const ACTION_VARIANT: Record<string, "destructive" | "secondary" | "outline"> = {
@@ -28,10 +13,14 @@ const ACTION_VARIANT: Record<string, "destructive" | "secondary" | "outline"> = 
   end_turn: "outline",
 }
 
+/** Check if an action has a specific param by name. */
+function hasParam(action: ActionInfo, paramName: string): boolean {
+  return action.params.some((p) => p.name === paramName)
+}
+
 function getActionLabel(t: (key: string) => string, name: string): string {
   const key = `game:${name}`
   const result = t(key)
-  // If i18n returns the key itself, it's missing — use raw name
   return result === key ? name : result
 }
 
@@ -61,13 +50,11 @@ export function ActionBar() {
 
   const available = awareness?.available_actions ?? []
   const availableItems = awareness?.available_items ?? []
-  const has = (name: string) => available.includes(name)
+  const hasAction = (name: string) => available.some((a) => a.name === name)
 
   const isCombat = mode === "combat" && awareness && "self_hp" in awareness
   const enemies = isCombat ? (awareness as CombatAwareness).nearby : []
 
-  // Backend already filters available_actions by budget — if it's in the list, it's affordable.
-  // Only disable while waiting for server response.
   const isDisabled = () => waitingForAction
 
   return (
@@ -79,13 +66,16 @@ export function ActionBar() {
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        {available.map((name) => {
-          // Target dropdown: attack
-          if (TARGET_ACTIONS.has(name) && enemies.length > 0) {
+        {available.map((action) => {
+          const { name } = action
+
+          // Has target_id param → target dropdown
+          if (hasParam(action, "target_id") && enemies.length > 0) {
             return (
               <TargetDropdown
                 key={name}
                 name={name}
+                description={action.description}
                 enemies={enemies}
                 disabled={isDisabled()}
                 openDropdown={openDropdown}
@@ -96,12 +86,13 @@ export function ActionBar() {
             )
           }
 
-          // Directional dropdown: move, dash
-          if (DIRECTIONAL_ACTIONS.has(name) && enemies.length > 0) {
+          // Has toward/away_from/direction params → directional dropdown
+          if ((hasParam(action, "toward") || hasParam(action, "direction")) && enemies.length > 0) {
             return (
               <DirectionalDropdown
                 key={name}
                 name={name}
+                description={action.description}
                 enemies={enemies}
                 disabled={isDisabled()}
                 openDropdown={openDropdown}
@@ -112,11 +103,12 @@ export function ActionBar() {
             )
           }
 
-          // Item dropdown: use_item
-          if (ITEM_ACTIONS.has(name) && availableItems.length > 0) {
+          // Has item_id param → item dropdown
+          if (hasParam(action, "item_id") && availableItems.length > 0) {
             return (
               <ItemDropdown
                 key={name}
+                description={action.description}
                 items={availableItems}
                 disabled={isDisabled()}
                 openDropdown={openDropdown}
@@ -127,8 +119,8 @@ export function ActionBar() {
             )
           }
 
-          // Weapon dropdown: equip
-          if (WEAPON_ACTIONS.has(name)) {
+          // Has weapon_id param → weapon dropdown
+          if (hasParam(action, "weapon_id")) {
             const weapons = availableItems.filter((i) => i.description.toLowerCase().includes("weapon"))
             if (weapons.length > 0) {
               return (
@@ -137,6 +129,7 @@ export function ActionBar() {
                     size="sm"
                     variant="secondary"
                     disabled={isDisabled()}
+                    title={action.description}
                     onClick={() => {
                       if (weapons.length === 1) {
                         sendAction("equip", { weapon_id: weapons[0].id })
@@ -167,32 +160,29 @@ export function ActionBar() {
             return null
           }
 
-          // Simple button
-          if (SIMPLE_ACTIONS.has(name) || !TARGET_ACTIONS.has(name) && !DIRECTIONAL_ACTIONS.has(name) && !ITEM_ACTIONS.has(name) && !WEAPON_ACTIONS.has(name)) {
-            return (
-              <Button
-                key={name}
-                size="sm"
-                variant={ACTION_VARIANT[name] ?? "secondary"}
-                disabled={isDisabled()}
-                onClick={() => {
-                  if (name === "wait") {
-                    sendAction("wait", { hours: 1 })
-                  } else {
-                    sendAction(name)
-                  }
-                }}
-              >
-                {getActionLabel(t, name)}
-              </Button>
-            )
-          }
-
-          return null
+          // Simple button — no special params
+          return (
+            <Button
+              key={name}
+              size="sm"
+              variant={ACTION_VARIANT[name] ?? "secondary"}
+              disabled={isDisabled()}
+              title={action.description}
+              onClick={() => {
+                if (name === "wait") {
+                  sendAction("wait", { hours: 1 })
+                } else {
+                  sendAction(name)
+                }
+              }}
+            >
+              {getActionLabel(t, name)}
+            </Button>
+          )
         })}
 
         {/* end_turn is always available even if not in the list */}
-        {!has("end_turn") && (
+        {!hasAction("end_turn") && (
           <Button
             size="sm"
             variant="outline"
@@ -215,6 +205,7 @@ interface DropdownProps {
   sendAction: (name: string, params?: Record<string, unknown>) => void
   t: (key: string, opts?: Record<string, unknown>) => string
   disabled: boolean
+  description: string
 }
 
 interface TargetDropdownProps extends DropdownProps {
@@ -222,13 +213,14 @@ interface TargetDropdownProps extends DropdownProps {
   enemies: { id: string; distance_ft?: number }[]
 }
 
-function TargetDropdown({ name, enemies, disabled, openDropdown, setOpenDropdown, sendAction, t }: TargetDropdownProps) {
+function TargetDropdown({ name, description, enemies, disabled, openDropdown, setOpenDropdown, sendAction, t }: TargetDropdownProps) {
   return (
     <div className="relative">
       <Button
         size="sm"
         variant={ACTION_VARIANT[name] ?? "secondary"}
         disabled={disabled}
+        title={description}
         onClick={() => {
           if (enemies.length === 1) {
             sendAction(name, { target_id: enemies[0].id })
@@ -265,7 +257,7 @@ interface DirectionalDropdownProps extends DropdownProps {
   enemies: { id: string }[]
 }
 
-function DirectionalDropdown({ name, enemies, disabled, openDropdown, setOpenDropdown, sendAction, t }: DirectionalDropdownProps) {
+function DirectionalDropdown({ name, description, enemies, disabled, openDropdown, setOpenDropdown, sendAction, t }: DirectionalDropdownProps) {
   const towardKey = name === "dash" ? "game:dash_toward" : "game:move_toward"
   const awayKey = name === "dash" ? "game:dash_away" : "game:move_away"
 
@@ -275,6 +267,7 @@ function DirectionalDropdown({ name, enemies, disabled, openDropdown, setOpenDro
         size="sm"
         variant="secondary"
         disabled={disabled}
+        title={description}
         onClick={() => setOpenDropdown(openDropdown === name ? null : name)}
       >
         {getActionLabel(t, name)}
@@ -304,17 +297,19 @@ function DirectionalDropdown({ name, enemies, disabled, openDropdown, setOpenDro
   )
 }
 
-interface ItemDropdownProps extends DropdownProps {
+interface ItemDropdownProps extends Omit<DropdownProps, "description"> {
   items: { id: string; name: string; description: string }[]
+  description: string
 }
 
-function ItemDropdown({ items, disabled, openDropdown, setOpenDropdown, sendAction, t }: ItemDropdownProps) {
+function ItemDropdown({ items, description, disabled, openDropdown, setOpenDropdown, sendAction, t }: ItemDropdownProps) {
   return (
     <div className="relative">
       <Button
         size="sm"
         variant="secondary"
         disabled={disabled}
+        title={description}
         onClick={() => {
           if (items.length === 1) {
             sendAction("use_item", { item_id: items[0].id })

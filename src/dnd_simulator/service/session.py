@@ -10,6 +10,7 @@ from typing import Any, Protocol
 import structlog
 
 from dnd_simulator.core.action import Action, ActionType
+from dnd_simulator.core.action_defs import get_action_def
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import PlayerBrain
 from dnd_simulator.core.character import Ability, Creature
@@ -17,8 +18,10 @@ from dnd_simulator.core.models import Query, QueryType
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
+from dnd_simulator.i18n import _
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.round import Round, get_entities_layer
+from dnd_simulator.rules.actions import collect_cost_overrides
 from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.service.action_dispatcher import create_dispatcher
 
@@ -49,15 +52,38 @@ class SessionEventListener(Protocol):
 # ---------------------------------------------------------------------------
 
 
-def _awareness_to_dict(awareness: PeacefulAwareness | CombatAwareness) -> dict[str, Any]:
+def _awareness_to_dict(
+    awareness: PeacefulAwareness | CombatAwareness,
+    creature: Creature | None = None,
+) -> dict[str, Any]:
     d = dataclasses.asdict(awareness)
     # frozenset[Condition] → sorted list of strings for JSON serialization
     if isinstance(awareness, CombatAwareness):
         d["self_conditions"] = sorted(c.value for c in awareness.self_conditions)
         for i, nearby_entry in enumerate(awareness.nearby):
             d["nearby"][i]["conditions"] = sorted(c.value for c in nearby_entry.conditions)
-    # ActionType enums → strings for JSON
-    d["available_actions"] = [str(a) for a in awareness.available_actions]
+
+    # Build structured action info with descriptions, params, and cost options
+    overrides = collect_cost_overrides(creature) if creature else []
+    actions_out: list[dict[str, Any]] = []
+    for a in awareness.available_actions:
+        ad = get_action_def(a)
+        if ad.internal:
+            continue
+        action_info: dict[str, Any] = {
+            "name": str(a),
+            "description": _(ad.description),
+            "params": [{"name": p.name, "type": p.param_type, "required": p.required} for p in ad.params],
+        }
+        # Include cost options if creature has overrides for this action
+        action_overrides = [ov for ov in overrides if ov.action_type == a]
+        if action_overrides:
+            action_info["cost_options"] = [
+                {"cost_type": ad.cost_type.value, "source": "default"},
+                *[{"cost_type": ov.cost_type.value, "source": ov.source} for ov in action_overrides],
+            ]
+        actions_out.append(action_info)
+    d["available_actions"] = actions_out
     return d
 
 
@@ -285,7 +311,7 @@ class GameSession:
                 msg: dict[str, Any] = {
                     "type": "turn",
                     "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
-                    "awareness": _awareness_to_dict(awareness),
+                    "awareness": _awareness_to_dict(awareness, creature=creature),
                     "events": _events_to_list(events),
                     "player": _player_to_dict(player),
                     "location": _location_data(self.world, player.location_id),
@@ -312,7 +338,7 @@ class GameSession:
                     "actor": creature.id,
                     "action": action.name,
                     "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
-                    "awareness": _awareness_to_dict(awareness),
+                    "awareness": _awareness_to_dict(awareness, creature=player),
                     "events": _events_to_list(perceived),
                     "player": _player_to_dict(player),
                     "location": _location_data(self.world, player.location_id),
@@ -333,7 +359,7 @@ class GameSession:
                 msg: dict[str, Any] = {
                     "type": "round_result",
                     "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
-                    "awareness": _awareness_to_dict(awareness),
+                    "awareness": _awareness_to_dict(awareness, creature=player),
                     "events": _events_to_list(perceived),
                     "player": _player_to_dict(player),
                     "location": _location_data(self.world, player.location_id),

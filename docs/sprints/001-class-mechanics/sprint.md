@@ -38,16 +38,21 @@
 9. [x] **Sneak Attack** — sneak_attack_dice на RogueFeatures. +Nd6 при advantage или союзник в 5ft. Только finesse/ranged. Раз в ход. Hook в resolve_attack(). `class-feature`
 10. [x] **Cunning Action** — Dash, Disengage как bonus action. Проверка isinstance RogueFeatures. ActionProvider для Rogue. `class-feature`
 
+### Phase 3.5: Generic Attack Perception
+
+15. [x] **Component-based attack logging** — заменить ad-hoc плоские поля в event data на структурированные списки компонентов. Perception итерирует их обобщённо — ноль знаний о конкретных фичах. `engine` `refactor`
+16. [x] **E2E Sneak Attack через Playwright** — тестовый мир `sneak_test.yaml`, рог + рапира + stunned враг. SA виден в UI-журнале боя. `e2e`
+
 ### Phase 4: Content + Quality
 
-11. [ ] **Armor/weapon items в YAML** — leather armor, chain mail, shield, rapier, shortsword, longbow для village.yaml. Equip на существующих NPC. `content`
-12. [ ] **Fighter и Rogue NPC** — хотя бы один Fighter и один Rogue в village с полной экипировкой и class features. `content`
-13. [ ] **Tests** — unit tests для каждой новой механики. ClassFeatures, Fighting Styles, Second Wind, Sneak Attack, Cunning Action. `test`
-14. [ ] **Audit + cleanup** — /audit после всех изменений, правки по результатам. `quality`
+17. [ ] **Armor/weapon items в YAML** — leather armor, chain mail, shield, rapier, shortsword, longbow для village.yaml. Equip на существующих NPC. `content`
+18. [ ] **Fighter и Rogue NPC** — хотя бы один Fighter и один Rogue в village с полной экипировкой и class features. `content`
+19. [ ] **Tests** — unit tests для каждой новой механики. ClassFeatures, Fighting Styles, Second Wind, Sneak Attack, Cunning Action. `test`
+20. [ ] **Audit + cleanup** — /audit после всех изменений, правки по результатам. `quality`
 
 ## Status
 
-**Current:** Phase 3 complete. E2E passed. Phase 4 next.
+**Current:** Phase 3.5 complete. Phase 4 next.
 
 Phase 1 (6/6) — done. E2E found and fixed 2 bugs:
 - AC serialization: API returned raw `creature.ac` instead of `effective_ac()`
@@ -62,6 +67,33 @@ Phase 3 (2/2) — done. E2E passed, 0 bugs:
 - Cunning Action: Dash consumed bonus action (not standard), player retained Attack action
 - Disengage button appears in combat, disappears when bonus spent
 - Unarmed attacks correctly do NOT trigger SA (no finesse weapon)
+
+Phase 3.5 (2/2) — done. Рефакторинг attack perception + E2E проверка.
+
+**#15 — Component-based attack logging.** Проблема: каждая новая боевая фича (Bless, SA, Dueling, будущий Smite/Hex) требовала ручных правок и в `combat_manager` log_data, и в `_perceive_attack`. Решение — обобщённый контракт данных:
+
+Новые типы:
+- `RollComponent(source, value, dice)` — подписанная компонента броска/урона (`core/modifiers.py`)
+- `ExtraDamage(dice, type, source)` — именованный доп. урон, заменяет `tuple[str, DamageType]` (`rules/combat.py`)
+- `DamageResult` расширен полями `source`, `dice` для трассировки
+
+Изменения в pipeline:
+- `AttackModifiers` получил `roll_components` и `damage_components` — breakdown бонусов атаки и урона
+- `attack_modifiers()` строит компоненты: ability, proficiency, weapon_magic, blessed, dueling и т.д.
+- `combat_manager.resolve_attack()` формирует `log_data` со структурированными `attack_roll.components[]` и `damage_components[]`
+
+Perception стала полностью generic:
+- `_format_roll(atk_roll, ac)` — итерирует components, строит `[adv d20(14)+6=20 vs AC 13]`
+- `_format_damage(damage, components, critical)` — итерирует damage_components, строит `10 damage (1d8 piercing + 1d6 sneak_attack + +2 dueling)`
+- Ни одна из функций не знает о конкретных фичах — всё определяется source/dice полями
+
+Файлы: `core/modifiers.py`, `rules/combat.py`, `rules/modifiers.py`, `layers/entities/combat_manager.py`, `layers/entities/perception.py`, `tests/unit/test_combat.py`, `tests/unit/test_perception.py`. Все 816 тестов проходят.
+
+**#16 — E2E Sneak Attack через Playwright.** Создан тестовый мир `content/worlds/sneak_test.yaml` (1 локация, 1 dummy NPC). Сценарий: рог (DEX 18) + рапира (finesse) + stunned враг → advantage → SA. Результат в UI-журнале:
+```
+You attack human, stunned (rapier strike) [adv d20(9)+6=15 vs AC 9], 10 damage (1d8 piercing + 1d6 sneak_attack)
+```
+Debug logs (`DEBUG=1`) подтвердили: `sneak_attack` event с `reason: "advantage"`, `dice: "1d6"`. Первая атака fists корректно НЕ дала SA (не finesse).
 
 ## Decisions
 
@@ -78,6 +110,7 @@ Phase 3 (2/2) — done. E2E passed, 0 bugs:
 - **Thieves' Cant** — чистый флейвор, нет механического эффекта.
 - **Saving throw proficiencies** — Fighter STR+CON, Rogue DEX+INT. Требует системы saving throws. Отдельный спринт.
 - **Hide action** — часть Cunning Action, но реализация Hide требует Stealth vs Perception (skill checks). В первой версии Cunning Action = только Dash + Disengage.
+- **SA ally-adjacency faction check** — сейчас любое живое существо в 5ft от цели считается "союзником" для SA. Нужна система фракций/hostility чтобы отличать реального союзника от враждебного NPC.
 
 ## Results
 

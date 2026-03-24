@@ -6,6 +6,12 @@
 `POST /api/player/sessions/{id}/character` не принимает поле `attacks`.
 Персонаж дерётся кулаками (1 урон). Добавить `attacks` в `CreatePlayerRequest` и `parse_player`.
 
+### Sneak Attack ally-adjacency не проверяет фракцию
+`combat_manager.resolve_attack()` считает "союзником рядом с целью" любое живое существо в 5ft,
+не различая дружественных и враждебных NPC. Нужна система фракций/hostility.
+Без неё SA через ally-adjacent путь может сработать некорректно (враг рядом с врагом = "союзник").
+Через advantage path (stunned, invisible и т.д.) SA работает корректно.
+
 ### `look` через action — English hardcode
 `_cmd_look` в GameService использует хардкод-строки ("Terrain:", "Weather:"), а не `_()`.
 Не критично — perception API отдаёт сырые данные, фронт переведёт.

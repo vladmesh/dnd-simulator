@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from dnd_simulator.core.action import Action, ActionType
+from dnd_simulator.core.action_defs import CombatMode, get_action_def
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.actions import action_cost
 
@@ -42,18 +43,6 @@ class ValidationError:
     message: str
 
 
-# Actions that only make sense in combat
-_COMBAT_ONLY: frozenset[ActionType] = frozenset(
-    {ActionType.DODGE, ActionType.FLEE, ActionType.DASH, ActionType.DISENGAGE}
-)
-
-# Actions blocked during combat
-_COMBAT_BLOCKED: frozenset[ActionType] = frozenset({ActionType.SAY, ActionType.IDLE, ActionType.WAIT})
-
-# Actions that take a target_id param
-_TARGETED: frozenset[ActionType] = frozenset({ActionType.ATTACK})
-
-
 def validate_action(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
     """Run all precondition checks. Returns first error or None if valid."""
     for check in _CHECKS:
@@ -79,12 +68,13 @@ def check_actor_active(actor: Creature, action: Action, ctx: ActionContext) -> V
 
 def check_action_mode(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
     """Combat-only actions outside combat and vice versa."""
-    if ctx.is_combat and action.name in _COMBAT_BLOCKED:
+    d = get_action_def(action.name)
+    if ctx.is_combat and d.combat_mode == CombatMode.PEACEFUL_ONLY:
         return ValidationError(
             "WRONG_MODE",
             _("'{action}' is not available in combat").format(action=action.name),
         )
-    if not ctx.is_combat and action.name in _COMBAT_ONLY:
+    if not ctx.is_combat and d.combat_mode == CombatMode.COMBAT_ONLY:
         return ValidationError(
             "WRONG_MODE",
             _("'{action}' is not available outside combat").format(action=action.name),
@@ -107,7 +97,7 @@ def check_budget(actor: Creature, action: Action, ctx: ActionContext) -> Validat
 
 def check_target_valid(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
     """For targeted actions: target must exist, be a Creature, be alive, be at same location."""
-    if action.name not in _TARGETED:
+    if not get_action_def(action.name).targeted:
         return None
 
     target_id = action.params.get("target_id") if action.params else None

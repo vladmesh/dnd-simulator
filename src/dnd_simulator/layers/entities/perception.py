@@ -70,51 +70,76 @@ def _perceive_say(event: Event, observer: Character, get_entity: GetEntityFn) ->
     return _('{speaker} says: "{text}"').format(speaker=speaker, text=text)
 
 
+def _format_roll(atk_roll: dict[str, object], ac: object) -> str:
+    """Build attack roll string from structured components.
+
+    Format: [adv d20(14)+5=19 vs AC 13]
+    Components are generic — no knowledge of specific bonuses.
+    """
+    parts: list[str] = []
+    if atk_roll["advantage"] and not atk_roll["disadvantage"]:
+        parts.append(_("adv "))
+    elif atk_roll["disadvantage"] and not atk_roll["advantage"]:
+        parts.append(_("disadv "))
+
+    parts.append(f"d20({atk_roll['natural']})")
+
+    components = atk_roll["components"]
+    assert isinstance(components, list)
+    modifier_total = sum(c["value"] for c in components)
+    if modifier_total >= 0:
+        parts.append(f"+{modifier_total}")
+    else:
+        parts.append(str(modifier_total))
+    parts.append(f"={atk_roll['total']}")
+    parts.append(f" vs AC {ac}")
+    return " [" + "".join(parts) + "]"
+
+
+def _format_damage(damage: object, damage_components: list[dict[str, object]], critical: bool) -> str:
+    """Build damage string from structured components.
+
+    Format: , 10 damage (1d8 slashing + 1d6 sneak_attack + 2 dueling)
+    """
+    detail_parts: list[str] = []
+    for dc in damage_components:
+        if dc["dice"] and dc["source"] != "weapon":
+            detail_parts.append(f"{dc['dice']} {dc['source']}")
+        elif dc["dice"]:
+            detail_parts.append(f"{dc['dice']} {dc['type']}")
+        elif dc["amount"]:
+            detail_parts.append(f"+{dc['amount']} {dc['source']}")
+    detail = " (" + " + ".join(detail_parts) + ")" if detail_parts else ""
+
+    if critical:
+        return _(", CRIT! {damage} damage{detail}").format(damage=damage, detail=detail)
+    return _(", {damage} damage{detail}").format(damage=damage, detail=detail)
+
+
 def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    attacker_id = event.data.get("attacker_id", "")
-    target_id = event.data.get("target_id", "")
-    hit = event.data.get("hit", True)
-    damage = event.data.get("damage")
-    weapon = event.data.get("weapon", "")
-    d20_roll = event.data.get("roll", 0)
-    total = event.data.get("total", 0)
-    ac = event.data.get("ac", 0)
-    critical = event.data.get("critical", False)
-    advantage = event.data.get("advantage", False)
-    disadvantage = event.data.get("disadvantage", False)
-    bless_bonus = event.data.get("bless_bonus", 0)
-    assert isinstance(attacker_id, str)
-    assert isinstance(target_id, str)
+    d = event.data
+    attacker_id = str(d["attacker_id"])
+    target_id = str(d["target_id"])
+    hit = d["hit"]
+    weapon = d.get("weapon", "")
+    critical = d.get("critical", False)
+    atk_roll = d["attack_roll"]
+    assert isinstance(atk_roll, dict)
 
     attacker = _describe(observer, attacker_id, get_entity)
     target = _describe(observer, target_id, get_entity)
 
     weapon_str = f" ({weapon})" if weapon else ""
+    roll_str = _format_roll(atk_roll, d["ac"])
 
-    # Dice roll detail: "d20(14)+3=17 vs AC 13"
-    roll_parts: list[str] = []
-    if advantage and not disadvantage:
-        roll_parts.append(_("adv "))
-    elif disadvantage and not advantage:
-        roll_parts.append(_("disadv "))
-    roll_parts.append(f"d20({d20_roll})")
-    modifier = int(total) - int(d20_roll)
-    if modifier >= 0:
-        roll_parts.append(f"+{modifier}")
-    else:
-        roll_parts.append(str(modifier))
-    if bless_bonus:
-        roll_parts.append(f"+{bless_bonus}bless")
-    roll_parts.append(f"={total}")
-    roll_parts.append(f" vs AC {ac}")
-    roll_str = " [" + "".join(roll_parts) + "]"
-
-    if critical and hit:
-        outcome_str = _(", CRIT! {damage} damage").format(damage=damage) if damage else _(", CRIT!")
-    elif not hit:
+    if not hit:
         outcome_str = _(", miss")
-    elif damage is not None:
-        outcome_str = _(", {damage} damage").format(damage=damage)
+    elif "damage_components" in d:
+        damage_components = d["damage_components"]
+        assert isinstance(damage_components, list)
+        outcome_str = _format_damage(d["damage"], damage_components, bool(critical))
+    elif "damage" in d:
+        outcome_str = _(", {damage} damage").format(damage=d["damage"])
     else:
         outcome_str = ""
 

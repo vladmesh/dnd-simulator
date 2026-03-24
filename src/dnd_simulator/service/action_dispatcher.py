@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.action import Action, ActionType
+from dnd_simulator.core.action_defs import get_action_def
 from dnd_simulator.core.models import ActionResult
 from dnd_simulator.core.world import World
 from dnd_simulator.rules.action_handlers import (
@@ -132,22 +133,6 @@ class ActionDispatcher:
         return result
 
 
-# Provider-managed action types — excluded from BaseActionProvider
-_PROVIDER_MANAGED: frozenset[ActionType] = frozenset(
-    {
-        ActionType.USE_ITEM,
-        ActionType.BLESS,
-        ActionType.EQUIP,
-        ActionType.UNEQUIP,
-        ActionType.EQUIP_ARMOR,
-        ActionType.UNEQUIP_ARMOR,
-        ActionType.EQUIP_SHIELD,
-        ActionType.UNEQUIP_SHIELD,
-        ActionType.SECOND_WIND,
-    }
-)
-
-
 def create_dispatcher(world: World) -> ActionDispatcher:
     """Create an ActionDispatcher with all standard handlers and providers."""
     dispatcher = ActionDispatcher(world)
@@ -172,8 +157,8 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.register(ActionType.UNEQUIP_SHIELD, handle_unequip_shield)
     dispatcher.register(ActionType.SECOND_WIND, handle_second_wind)
 
-    # Register providers
-    base_types = frozenset(dispatcher._handlers) - _PROVIDER_MANAGED
+    # Register providers — base types exclude provider-managed actions
+    base_types = frozenset(at for at in dispatcher._handlers if not get_action_def(at).provider_managed)
     dispatcher.add_provider(BaseActionProvider(base_types))
     dispatcher.add_provider(InventoryActionProvider())
     dispatcher.add_provider(EquipmentActionProvider())

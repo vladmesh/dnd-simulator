@@ -60,6 +60,24 @@ export interface ItemInfo {
   description: string
 }
 
+export interface ActionParamInfo {
+  name: string
+  type: string
+  required: boolean
+}
+
+export interface CostOption {
+  cost_type: string
+  source: string
+}
+
+export interface ActionInfo {
+  name: string
+  description: string
+  params: ActionParamInfo[]
+  cost_options?: CostOption[]
+}
+
 export interface PeacefulAwareness {
   hour: number
   day: number
@@ -73,7 +91,7 @@ export interface PeacefulAwareness {
   nation_info?: Record<string, unknown> | null
   nearby: NearbyEntity[]
   turn_budget?: TurnBudget | null
-  available_actions?: string[]
+  available_actions?: ActionInfo[]
   available_items?: ItemInfo[]
 }
 
@@ -90,7 +108,7 @@ export interface CombatAwareness {
   battle_map_ascii?: string
   turn_budget?: TurnBudget | null
   self_conditions?: string[]
-  available_actions?: string[]
+  available_actions?: ActionInfo[]
   available_items?: ItemInfo[]
 }
 

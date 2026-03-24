@@ -63,13 +63,16 @@ class PatchCreatureRequest(BaseModel):
 
 class GiveItemRequest(BaseModel):
     name: str
-    type: str  # "potion" or "weapon"
+    type: str  # "potion", "weapon", "armor", "shield"
     # Potion fields
     heal_dice: str | None = None
     # Weapon fields
+    weapon_id: str | None = None
+    category: str | None = None
     attack_name: str | None = None
     damage: list[dict[str, str]] | None = None
     ability: str | None = None
+    reach: int | None = None
     is_magic: bool | None = None
     is_finesse: bool | None = None
     grant_actions: list[str] | None = None

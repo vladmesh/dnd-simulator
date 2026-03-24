@@ -1,111 +1,66 @@
 """Action cost rules — determines what each action costs in turn budget.
 
-Pure functions, no state. Concrete per-class/per-level rules will be added later;
-for now uses D&D 5e defaults.
+Pure functions, no state.  Costs are derived from the central ActionDef
+registry; class-specific overrides (Cunning Action, Metamagic, etc.) are
+expressed as CostOverride data on ClassFeatures and selected at runtime
+via the ``cost_mode`` action param.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from dnd_simulator.core.action import ActionType
+from dnd_simulator.core.action_defs import CostOverride, CostType, get_action_def
 from dnd_simulator.core.turn_budget import ActionCost
 
 if TYPE_CHECKING:
     from dnd_simulator.core.action import Action
     from dnd_simulator.core.character import Creature
 
-# Cunning Action: Rogue uses Dash/Disengage as bonus action (PHB p.96)
-_CUNNING_ACTION_TYPES = frozenset({ActionType.DASH, ActionType.DISENGAGE})
-
-# Actions that cost 0 budget (information-only, free actions)
-_FREE_ACTIONS = frozenset(
-    {
-        ActionType.IDLE,
-        ActionType.END_TURN,
-        ActionType.SKIP,
-        ActionType.EQUIP,
-        ActionType.UNEQUIP,
-        ActionType.EQUIP_ARMOR,
-        ActionType.UNEQUIP_ARMOR,
-        ActionType.EQUIP_SHIELD,
-        ActionType.UNEQUIP_SHIELD,
-    }
-)
-
-# Actions that cost 1 standard action
-_STANDARD_ACTIONS = frozenset(
-    {ActionType.ATTACK, ActionType.DODGE, ActionType.FLEE, ActionType.DASH, ActionType.DISENGAGE, ActionType.USE_ITEM}
-)
-
-# Actions that cost 1 bonus action
-_BONUS_ACTIONS = frozenset({ActionType.BLESS, ActionType.SECOND_WIND})
-
-# Actions that use movement (cost = ft param)
-_MOVEMENT_ACTIONS = frozenset({ActionType.MOVE})
-
-# Peaceful actions that auto-end the turn.
-# idle = "nothing to do", so it ends the turn too (prevents NPC infinite loops).
-_TURN_ENDING_PEACEFUL = frozenset(
-    {
-        ActionType.IDLE,
-        ActionType.SAY,
-        ActionType.ATTACK,
-        ActionType.WAIT,
-        ActionType.MOVE,
-        ActionType.DASH,
-        ActionType.DISENGAGE,
-        ActionType.FLEE,
-        ActionType.DODGE,
-        ActionType.USE_ITEM,
-        ActionType.EQUIP,
-        ActionType.UNEQUIP,
-    }
-)
-
 
 def action_cost(action: Action, creature: Creature | None = None) -> ActionCost:
     """Determine the budget cost of an action.
 
-    Free actions (idle, say, end_turn, skip) cost nothing.
-    Standard actions (attack, dodge, dash, flee) cost 1 action.
-    Bonus actions (bless, second_wind) cost 1 bonus action.
-    Movement costs feet based on creature speed.
-
-    Class overrides:
-    - Rogue Cunning Action: Dash/Disengage cost bonus action instead of standard.
+    If the action carries a ``cost_mode`` param, look up a matching
+    CostOverride on the creature's class features and use that cost.
+    Otherwise use the default cost from ActionDef.
     """
-    name = action.name
+    d = get_action_def(action.name)
+    cost_mode = str(action.params["cost_mode"]) if action.params and "cost_mode" in action.params else None
 
-    if name in _FREE_ACTIONS or name == ActionType.SAY:
-        return ActionCost()
+    if cost_mode and creature is not None:
+        for ov in collect_cost_overrides(creature):
+            if ov.action_type == action.name and ov.cost_type.value == cost_mode:
+                return _cost_type_to_cost(ov.cost_type, action)
+        raise ValueError(f"No cost override '{cost_mode}' available for {action.name}")
 
-    # Cunning Action: Rogue uses Dash/Disengage as bonus action (PHB p.96)
-    if name in _CUNNING_ACTION_TYPES and creature is not None and _has_cunning_action(creature):
-        return ActionCost(bonus_actions=1)
-
-    if name in _STANDARD_ACTIONS:
-        return ActionCost(actions=1)
-
-    if name in _BONUS_ACTIONS:
-        return ActionCost(bonus_actions=1)
-
-    if name in _MOVEMENT_ACTIONS:
-        ft = int(str(action.params.get("ft", 5))) if action.params else 5
-        return ActionCost(movement_ft=ft)
-
-    # Unknown actions are free (safe default — don't block gameplay)
-    return ActionCost()
+    return _cost_type_to_cost(d.cost_type, action)
 
 
-def _has_cunning_action(creature: Creature) -> bool:
-    """Check if creature has Cunning Action (Rogue class feature)."""
+def _cost_type_to_cost(cost_type: CostType, action: Action) -> ActionCost:
+    """Convert a CostType enum to a concrete ActionCost."""
+    match cost_type:
+        case CostType.FREE:
+            return ActionCost()
+        case CostType.ACTION:
+            return ActionCost(actions=1)
+        case CostType.BONUS_ACTION:
+            return ActionCost(bonus_actions=1)
+        case CostType.MOVEMENT:
+            ft = int(str(action.params["ft"])) if action.params and "ft" in action.params else 5
+            return ActionCost(movement_ft=ft)
+
+
+def collect_cost_overrides(creature: Creature) -> list[CostOverride]:
+    """Gather all cost overrides from a creature's class features."""
     from dnd_simulator.core.character import Character
-    from dnd_simulator.core.class_features import RogueFeatures
 
     if not isinstance(creature, Character):
-        return False
-    return creature.get_feature(RogueFeatures) is not None
+        return []
+    result: list[CostOverride] = []
+    for feat in creature.class_features:
+        result.extend(feat.cost_overrides)
+    return result
 
 
 def ends_peaceful_turn(action: Action) -> bool:
@@ -114,7 +69,7 @@ def ends_peaceful_turn(action: Action) -> bool:
     All meaningful actions end the turn: say, attack, move, idle ("nothing to do"), etc.
     Only end_turn/skip are non-action exits handled by the caller.
     """
-    return action.name in _TURN_ENDING_PEACEFUL
+    return get_action_def(action.name).ends_peaceful_turn
 
 
 def get_num_actions(creature: Creature) -> int:

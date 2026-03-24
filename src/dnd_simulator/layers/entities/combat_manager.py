@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import structlog
 
 from dnd_simulator.core.character import Creature, DamageType, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import ActionResult, Event, EventType
+from dnd_simulator.core.modifiers import RollComponent
 from dnd_simulator.i18n import _
-from dnd_simulator.rules.combat import resolve_attack, roll_initiative
+from dnd_simulator.rules.combat import ExtraDamage, resolve_attack, roll_initiative
 from dnd_simulator.rules.modifiers import attack_modifiers
 from dnd_simulator.rules.movement import grid_distance, move_direction
 from dnd_simulator.rules.sneak_attack import is_sneak_attack_eligible, sneak_attack_dice
@@ -239,26 +238,30 @@ class CombatManager:
         atk_mods = attack_modifiers(attacker, target, melee=is_melee)
 
         # Roll dice bonuses (Bless +1d4, etc.)
-        bless_bonus = 0
+        rolled_dice: list[RollComponent] = []
+        dice_total = 0
         if atk_mods.dice_bonuses:
             from dnd_simulator.rules.dice import roll as roll_dice
 
-            for dice_expr in atk_mods.dice_bonuses:
-                bless_bonus += roll_dice(dice_expr)
+            for rc in atk_mods.roll_components:
+                if rc.dice:
+                    rolled_value = roll_dice(rc.dice)
+                    rolled_dice.append(RollComponent(source=rc.source, value=rolled_value, dice=rc.dice))
+                    dice_total += rolled_value
             logger.debug(
                 "dice_bonuses",
                 attacker=attacker.name,
-                bonus=bless_bonus,
+                bonus=dice_total,
                 dice=atk_mods.dice_bonuses,
                 weapon=attack.name,
             )
 
-        modifier = atk_mods.modifier + bless_bonus
+        modifier = atk_mods.modifier + dice_total
         advantage = atk_mods.advantage
         disadvantage = atk_mods.disadvantage
 
         # --- Sneak Attack (Rogue) ---
-        extra_damage: tuple[tuple[str, DamageType], ...] = ()
+        extra_damage: tuple[ExtraDamage, ...] = ()
         sa_dice = sneak_attack_dice(attacker)
         if sa_dice > 0 and attacker.id not in self._sneak_attack_used:
             # Check ally within 5ft of target on the battle map
@@ -282,12 +285,13 @@ class CombatManager:
                 has_disadvantage=disadvantage,
                 ally_adjacent_to_target=ally_adjacent,
             ):
-                extra_damage = ((f"{sa_dice}d6", DamageType.PIERCING),)
+                sa_expr = f"{sa_dice}d6"
+                extra_damage = (ExtraDamage(dice=sa_expr, type=DamageType.PIERCING, source="sneak_attack"),)
                 self._sneak_attack_used.add(attacker.id)
                 logger.info(
                     "sneak_attack",
                     attacker=attacker.name,
-                    dice=f"{sa_dice}d6",
+                    dice=sa_expr,
                     reason="advantage" if advantage else "ally_adjacent",
                 )
 
@@ -298,7 +302,7 @@ class CombatManager:
             weapon=attack.name,
             modifier=modifier,
             base_mod=atk_mods.modifier,
-            bless_bonus=bless_bonus,
+            dice_bonus=dice_total,
             advantage=advantage,
             disadvantage=disadvantage,
             force_crit=atk_mods.force_crit,
@@ -326,21 +330,28 @@ class CombatManager:
             damage=result.total_damage if result.hit else 0,
         )
 
-        # Build enriched event for the log (with damage info + dice details)
-        log_data: dict[str, Any] = {
+        # Build structured event — generic component lists, no feature-specific fields
+        # Roll components: flat bonuses (already resolved) + dice bonuses (just rolled)
+        all_roll_components = [
+            {"source": rc.source, "value": rc.value, "dice": rc.dice}
+            for rc in atk_mods.roll_components
+            if not rc.dice  # flat components only
+        ] + [{"source": rc.source, "value": rc.value, "dice": rc.dice} for rc in rolled_dice]
+
+        log_data: dict[str, object] = {
             "attacker_id": attacker_id,
             "target_id": target_id,
             "weapon": attack.name,
             "hit": result.hit,
             "critical": result.critical,
-            "roll": result.attack_check.roll,
-            "total": result.attack_check.total,
-            "modifier": modifier,
             "ac": atk_mods.target_ac,
-            "advantage": advantage,
-            "disadvantage": disadvantage,
-            "bless_bonus": bless_bonus,
-            "sneak_attack": bool(extra_damage),
+            "attack_roll": {
+                "natural": result.attack_check.roll,
+                "components": all_roll_components,
+                "total": result.attack_check.total,
+                "advantage": advantage,
+                "disadvantage": disadvantage,
+            },
         }
 
         result_events: list[Event] = []
@@ -348,8 +359,16 @@ class CombatManager:
         if result.hit:
             actual_damage = target.take_damage(result.total_damage)
             log_data["damage"] = actual_damage
-            log_data["damage_types"] = [d.type.value for d in result.damage]
-            log_data["damage_detail"] = [{"amount": dr.amount, "type": dr.type.value} for dr in result.damage]
+            # Damage components: weapon dice + extra sources + flat bonuses
+            damage_components: list[dict[str, object]] = [
+                {"source": dr.source, "dice": dr.dice, "amount": dr.amount, "type": dr.type.value}
+                for dr in result.damage
+            ]
+            for dbc in atk_mods.damage_components:
+                damage_components.append(
+                    {"source": dbc.source, "dice": "", "amount": dbc.value, "type": result.damage[0].type.value}
+                )
+            log_data["damage_components"] = damage_components
 
         # Log the attack BEFORE death/combat-end so event order is natural
         attack_log_event = Event(

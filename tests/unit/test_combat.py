@@ -11,7 +11,7 @@ from dnd_simulator.core.character import (
     DamageType,
     ResolveType,
 )
-from dnd_simulator.rules.combat import resolve_attack
+from dnd_simulator.rules.combat import ExtraDamage, resolve_attack
 
 
 def _sword() -> Attack:
@@ -104,7 +104,7 @@ class TestResolveAttack:
             modifier=3,
             ac=10,
             attack=_sword(),
-            extra_damage=(("2d8", DamageType.RADIANT),),
+            extra_damage=(ExtraDamage(dice="2d8", type=DamageType.RADIANT, source="divine_smite"),),
             rng=rng,
         )
         assert result.hit is True

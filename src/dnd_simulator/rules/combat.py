@@ -14,11 +14,22 @@ from dnd_simulator.rules.dice import roll_d20
 
 
 @dataclass(frozen=True)
+class ExtraDamage:
+    """Additional damage source (Sneak Attack, Divine Smite, etc.)."""
+
+    dice: str
+    type: DamageType
+    source: str
+
+
+@dataclass(frozen=True)
 class DamageResult:
     """Damage dealt by a single component."""
 
     amount: int
     type: DamageType
+    source: str = ""
+    dice: str = ""
 
 
 @dataclass(frozen=True)
@@ -42,7 +53,7 @@ def resolve_attack(
     attack: Attack,
     *,
     damage_bonus: int = 0,
-    extra_damage: tuple[tuple[str, DamageType], ...] = (),
+    extra_damage: tuple[ExtraDamage, ...] = (),
     advantage: bool = False,
     disadvantage: bool = False,
     force_crit: bool = False,
@@ -54,7 +65,7 @@ def resolve_attack(
         modifier: attacker's ability modifier for this attack
         ac: target's armor class
         attack: the Attack being used (contains damage components and resolve type)
-        extra_damage: additional damage components (e.g. smite) as (dice_expr, type) tuples
+        extra_damage: additional labeled damage sources (Sneak Attack, Smite, etc.)
         advantage: roll with advantage
         disadvantage: roll with disadvantage
         rng: random source for reproducible tests
@@ -82,11 +93,11 @@ def resolve_attack(
 
     for comp in attack.damage:
         amount = damage_roll(comp.dice, critical=is_crit, rng=rng)
-        damage_results.append(DamageResult(amount=amount, type=comp.type))
+        damage_results.append(DamageResult(amount=amount, type=comp.type, source="weapon", dice=comp.dice))
 
-    for dice_expr, dmg_type in extra_damage:
-        amount = damage_roll(dice_expr, critical=is_crit, rng=rng)
-        damage_results.append(DamageResult(amount=amount, type=dmg_type))
+    for ed in extra_damage:
+        amount = damage_roll(ed.dice, critical=is_crit, rng=rng)
+        damage_results.append(DamageResult(amount=amount, type=ed.type, source=ed.source, dice=ed.dice))
 
     # Flat damage bonus (e.g. Dueling +2) — not doubled on crit
     total = sum(d.amount for d in damage_results) + damage_bonus

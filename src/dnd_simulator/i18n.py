@@ -33,6 +33,16 @@ def _(message: str) -> str:
     return _get_translation(lang).gettext(message)
 
 
+def N_(message: str) -> str:  # noqa: N802 — standard gettext convention
+    """Mark a string for .po extraction without translating.
+
+    Use in module-level constants (frozen dataclasses, registries) where
+    eager ``_()`` would lock in one language at import time.  Apply ``_()``
+    at the point of use instead.
+    """
+    return message
+
+
 def set_language(lang: str) -> None:
     """Set the language for the current context (thread/coroutine)."""
     current_lang.set(lang)

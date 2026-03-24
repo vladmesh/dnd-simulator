@@ -52,7 +52,25 @@ class TestPerceiveEvent:
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data={"attacker_id": "player", "target_id": "smith", "weapon": "longsword", "damage": 5},
+            data={
+                "attacker_id": "player",
+                "target_id": "smith",
+                "weapon": "longsword",
+                "hit": True,
+                "critical": False,
+                "ac": 13,
+                "attack_roll": {
+                    "natural": 14,
+                    "components": [{"source": "ability", "value": 3, "dice": ""}],
+                    "total": 17,
+                    "advantage": False,
+                    "disadvantage": False,
+                },
+                "damage": 5,
+                "damage_components": [
+                    {"source": "weapon", "dice": "1d8", "amount": 5, "type": "slashing"},
+                ],
+            },
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, attacker))
         assert "attacks you" in result
@@ -65,10 +83,25 @@ class TestPerceiveEvent:
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data={"attacker_id": "player", "target_id": "smith", "weapon": "longsword"},
+            data={
+                "attacker_id": "player",
+                "target_id": "smith",
+                "weapon": "longsword",
+                "hit": False,
+                "critical": False,
+                "ac": 15,
+                "attack_roll": {
+                    "natural": 8,
+                    "components": [{"source": "ability", "value": 3, "dice": ""}],
+                    "total": 11,
+                    "advantage": False,
+                    "disadvantage": False,
+                },
+            },
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, target))
         assert "You attack" in result
+        assert "miss" in result
 
     def test_attack_observer_is_bystander(self) -> None:
         observer = Character(id="guard", name="Guard", location_id="r1")
@@ -77,7 +110,25 @@ class TestPerceiveEvent:
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data={"attacker_id": "player", "target_id": "smith"},
+            data={
+                "attacker_id": "player",
+                "target_id": "smith",
+                "weapon": "",
+                "hit": True,
+                "critical": False,
+                "ac": 10,
+                "attack_roll": {
+                    "natural": 15,
+                    "components": [],
+                    "total": 15,
+                    "advantage": False,
+                    "disadvantage": False,
+                },
+                "damage": 3,
+                "damage_components": [
+                    {"source": "weapon", "dice": "1d4", "amount": 3, "type": "bludgeoning"},
+                ],
+            },
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, attacker, target))
         assert "elf" in result

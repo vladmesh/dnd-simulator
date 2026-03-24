@@ -1,0 +1,336 @@
+"""Centralized action definitions — single source of truth for action metadata.
+
+Each ActionType gets an ActionDef with description, cost, params, combat mode,
+and flags. Consumers (LLM tools, frontend, validation, cost calculation) read
+from this registry instead of maintaining their own scattered constants.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import StrEnum
+
+from dnd_simulator.core.action import ActionType
+from dnd_simulator.i18n import N_
+
+
+class CostType(StrEnum):
+    FREE = "free"
+    ACTION = "action"
+    BONUS_ACTION = "bonus_action"
+    MOVEMENT = "movement"
+
+
+class CombatMode(StrEnum):
+    ANY = "any"
+    COMBAT_ONLY = "combat_only"
+    PEACEFUL_ONLY = "peaceful_only"
+
+
+@dataclass(frozen=True)
+class ParamDef:
+    """Definition of a single action parameter."""
+
+    name: str
+    param_type: str  # JSON Schema type: "string", "integer"
+    description: str
+    required: bool = False
+
+
+@dataclass(frozen=True)
+class CostOverride:
+    """An alternative cost a class feature grants for an action.
+
+    E.g. Rogue Cunning Action: DASH/DISENGAGE as bonus_action.
+    The brain/player chooses which cost to use via ``cost_mode`` param.
+    """
+
+    action_type: ActionType
+    cost_type: CostType
+    source: str  # "cunning_action", "quickened_spell", etc.
+
+
+@dataclass(frozen=True)
+class ActionDef:
+    """Metadata for a single ActionType — the single source of truth."""
+
+    action_type: ActionType
+    description: str  # English base; mark with N_() for .po extraction
+    cost_type: CostType
+    combat_mode: CombatMode = CombatMode.ANY
+    params: tuple[ParamDef, ...] = ()
+    llm_hint: str = ""  # overrides description for LLM tool schema
+    targeted: bool = False  # requires target_id validation
+    ends_peaceful_turn: bool = False
+    internal: bool = False  # END_TURN, SKIP — excluded from LLM/frontend
+    provider_managed: bool = False  # excluded from BaseActionProvider probing
+
+
+# ---------------------------------------------------------------------------
+# Registry
+# ---------------------------------------------------------------------------
+
+ACTION_DEFS: dict[ActionType, ActionDef] = {}
+
+
+def _reg(d: ActionDef) -> None:
+    ACTION_DEFS[d.action_type] = d
+
+
+def get_action_def(action_type: ActionType) -> ActionDef:
+    """Look up ActionDef. Crashes if missing — every ActionType must be registered."""
+    return ACTION_DEFS[action_type]
+
+
+# ---------------------------------------------------------------------------
+# Registrations — one per ActionType
+# ---------------------------------------------------------------------------
+
+_reg(
+    ActionDef(
+        action_type=ActionType.IDLE,
+        description=N_("Do nothing this turn."),
+        cost_type=CostType.FREE,
+        combat_mode=CombatMode.PEACEFUL_ONLY,
+        ends_peaceful_turn=True,
+        params=(ParamDef("description", "string", N_("Flavor text")),),
+        llm_hint="Do nothing this turn. Use when there is nothing meaningful to do.",
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.SAY,
+        description=N_("Say something out loud."),
+        cost_type=CostType.FREE,
+        combat_mode=CombatMode.PEACEFUL_ONLY,
+        ends_peaceful_turn=True,
+        params=(ParamDef("text", "string", N_("What to say (in character)"), required=True),),
+        llm_hint="Say something out loud. Use for dialog, greetings, threats, etc.",
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.ATTACK,
+        description=N_("Attack a target with your equipped weapon or fists."),
+        cost_type=CostType.ACTION,
+        targeted=True,
+        ends_peaceful_turn=True,
+        params=(
+            ParamDef("target_id", "string", N_("ID of the target entity"), required=True),
+            ParamDef("description", "string", N_("Flavor text for the attack")),
+        ),
+        llm_hint=(
+            "Attack a target with your equipped weapon (or fists if unarmed). Target must be within weapon reach."
+        ),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.DODGE,
+        description=N_("Take a defensive stance. Attacks against you have disadvantage until your next turn."),
+        cost_type=CostType.ACTION,
+        combat_mode=CombatMode.COMBAT_ONLY,
+        ends_peaceful_turn=True,
+        params=(ParamDef("description", "string", N_("Flavor text")),),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.FLEE,
+        description=N_("Try to escape from combat."),
+        cost_type=CostType.ACTION,
+        combat_mode=CombatMode.COMBAT_ONLY,
+        ends_peaceful_turn=True,
+        params=(ParamDef("description", "string", N_("Flavor text")),),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.MOVE,
+        description=N_("Move up to your speed."),
+        cost_type=CostType.MOVEMENT,
+        ends_peaceful_turn=True,
+        params=(
+            ParamDef("toward", "string", N_("ID of entity to move toward")),
+            ParamDef("away_from", "string", N_("ID of entity to move away from")),
+            ParamDef("direction", "string", N_("Compass direction: north, south, east, west, etc.")),
+            ParamDef("description", "string", N_("Flavor text")),
+        ),
+        llm_hint=(
+            "Move up to your speed (in feet). Use toward/away_from with a target ID, "
+            "or direction (north/south/east/west/northeast/northwest/southeast/southwest)."
+        ),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.DASH,
+        description=N_("Sprint: move up to double your speed. Costs 1 action."),
+        cost_type=CostType.ACTION,
+        combat_mode=CombatMode.COMBAT_ONLY,
+        ends_peaceful_turn=True,
+        params=(
+            ParamDef("toward", "string", N_("ID of entity to dash toward")),
+            ParamDef("away_from", "string", N_("ID of entity to dash away from")),
+            ParamDef("direction", "string", N_("Compass direction: north, south, east, west, etc.")),
+            ParamDef("description", "string", N_("Flavor text")),
+        ),
+        llm_hint=(
+            "Sprint: move up to DOUBLE your speed. Uses your action — you cannot attack this turn. "
+            "Same parameters as move."
+        ),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.DISENGAGE,
+        description=N_("Your movement doesn't provoke opportunity attacks this turn."),
+        cost_type=CostType.ACTION,
+        combat_mode=CombatMode.COMBAT_ONLY,
+        ends_peaceful_turn=True,
+        llm_hint=(
+            "Disengage: your movement doesn't provoke opportunity attacks this turn. "
+            "Costs 1 action (bonus action for Rogues via Cunning Action)."
+        ),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.WAIT,
+        description=N_("Wait for a period of time."),
+        cost_type=CostType.FREE,
+        combat_mode=CombatMode.PEACEFUL_ONLY,
+        ends_peaceful_turn=True,
+        params=(ParamDef("hours", "integer", N_("How many hours to wait"), required=True),),
+        llm_hint="Wait and do nothing for a period of time. Useful when nothing is happening.",
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.USE_ITEM,
+        description=N_("Use a consumable item from your inventory."),
+        cost_type=CostType.ACTION,
+        ends_peaceful_turn=True,
+        provider_managed=True,
+        params=(ParamDef("item_id", "string", N_("ID of the item to use"), required=True),),
+        llm_hint=(
+            "Use a consumable item from your inventory (potion, scroll, etc.). Costs 1 action. Item is consumed."
+        ),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.BLESS,
+        description=N_("Invoke a blessing. Grants +d4 to attack rolls for several rounds."),
+        cost_type=CostType.BONUS_ACTION,
+        provider_managed=True,
+        llm_hint=(
+            "Invoke a blessing from your weapon. Costs a bonus action. "
+            "Grants +d4 to all your attack rolls for several rounds."
+        ),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.EQUIP,
+        description=N_("Equip a weapon from your inventory."),
+        cost_type=CostType.FREE,
+        ends_peaceful_turn=True,
+        provider_managed=True,
+        params=(ParamDef("weapon_id", "string", N_("ID of the weapon to equip"), required=True),),
+        llm_hint=(
+            "Equip a weapon from your inventory. Free action. "
+            "Attacking with a weapon deals more damage than fists. "
+            "Your current weapon (if any) goes back to inventory."
+        ),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.UNEQUIP,
+        description=N_("Put away your equipped weapon. You will fight with fists."),
+        cost_type=CostType.FREE,
+        ends_peaceful_turn=True,
+        provider_managed=True,
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.EQUIP_ARMOR,
+        description=N_("Equip armor from your inventory."),
+        cost_type=CostType.FREE,
+        provider_managed=True,
+        params=(ParamDef("armor_id", "string", N_("ID of the armor to equip"), required=True),),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.UNEQUIP_ARMOR,
+        description=N_("Remove your equipped armor."),
+        cost_type=CostType.FREE,
+        provider_managed=True,
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.EQUIP_SHIELD,
+        description=N_("Equip a shield from your inventory. +2 AC."),
+        cost_type=CostType.FREE,
+        provider_managed=True,
+        params=(ParamDef("shield_id", "string", N_("ID of the shield to equip"), required=True),),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.UNEQUIP_SHIELD,
+        description=N_("Remove your equipped shield."),
+        cost_type=CostType.FREE,
+        provider_managed=True,
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.SECOND_WIND,
+        description=N_("Heal yourself for 1d10 + fighter level HP. Once per short rest."),
+        cost_type=CostType.BONUS_ACTION,
+        provider_managed=True,
+        llm_hint=(
+            "Second Wind: heal yourself for 1d10 + your fighter level HP. Costs a bonus action. Once per short rest."
+        ),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.END_TURN,
+        description=N_("End your turn."),
+        cost_type=CostType.FREE,
+        internal=True,
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.SKIP,
+        description=N_("Skip (system use)."),
+        cost_type=CostType.FREE,
+        internal=True,
+    )
+)
