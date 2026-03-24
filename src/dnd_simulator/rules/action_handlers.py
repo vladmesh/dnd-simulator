@@ -136,6 +136,25 @@ def handle_dash(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
     return ActionResult()
 
 
+def handle_disengage(
+    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
+) -> ActionResult:
+    """Disengage: movement doesn't provoke opportunity attacks this turn.
+
+    Currently a no-op since opportunity attacks aren't implemented.
+    Budget cost is handled by the dispatcher.
+    """
+    logger.info("disengage", entity_id=actor.id)
+    emit_fn(
+        Event(
+            event_type=EventType.ENTITY_DISENGAGE,
+            source_layer="entities",
+            data={"entity_id": actor.id},
+        )
+    )
+    return ActionResult()
+
+
 def handle_wait(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
     """Wait: creature goes dormant until wake_at, or travels to a location.
 

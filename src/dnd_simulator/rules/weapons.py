@@ -33,6 +33,7 @@ def get_weapon_attack(creature: Creature) -> Attack:
             ability=ability,
             damage=wd.damage,
             reach=wd.reach,
+            is_finesse=wd.is_finesse,
         )
     if creature.attacks:
         return creature.attacks[0]

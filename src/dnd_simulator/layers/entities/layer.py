@@ -39,6 +39,7 @@ _LOGGED_EVENTS = {
     EventType.ENTITY_FLEE,
     EventType.ENTITY_MOVE,
     EventType.ENTITY_DASH,
+    EventType.ENTITY_DISENGAGE,
     EventType.ENTITY_USE_ITEM,
     EventType.ENTITY_BLESS,
     EventType.ENTITY_EQUIP,

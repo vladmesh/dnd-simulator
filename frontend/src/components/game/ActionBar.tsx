@@ -20,7 +20,7 @@ const ITEM_ACTIONS = new Set(["use_item"])
 const WEAPON_ACTIONS = new Set(["equip"])
 
 // Actions that are just a button click (no params)
-const SIMPLE_ACTIONS = new Set(["dodge", "flee", "bless", "second_wind", "unequip", "idle", "wait", "end_turn"])
+const SIMPLE_ACTIONS = new Set(["dodge", "flee", "disengage", "bless", "second_wind", "unequip", "idle", "wait", "end_turn"])
 
 // Visual variants for specific actions
 const ACTION_VARIANT: Record<string, "destructive" | "secondary" | "outline"> = {

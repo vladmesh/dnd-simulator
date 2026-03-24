@@ -91,6 +91,7 @@ class EventType(Enum):
     ENTITY_FLEE = "entity_flee"
     ENTITY_MOVE = "entity_move"
     ENTITY_DASH = "entity_dash"
+    ENTITY_DISENGAGE = "entity_disengage"
     ENTITY_USE_ITEM = "entity_use_item"
     ENTITY_BLESS = "entity_bless"
     ENTITY_SECOND_WIND = "entity_second_wind"

@@ -35,8 +35,8 @@
 
 ### Phase 3: Rogue L1
 
-9. [ ] **Sneak Attack** — sneak_attack_dice на RogueFeatures. +Nd6 при advantage или союзник в 5ft. Только finesse/ranged. Раз в ход. Hook в resolve_attack(). `class-feature`
-10. [ ] **Cunning Action** — Dash, Disengage как bonus action. Проверка isinstance RogueFeatures. ActionProvider для Rogue. `class-feature`
+9. [x] **Sneak Attack** — sneak_attack_dice на RogueFeatures. +Nd6 при advantage или союзник в 5ft. Только finesse/ranged. Раз в ход. Hook в resolve_attack(). `class-feature`
+10. [x] **Cunning Action** — Dash, Disengage как bonus action. Проверка isinstance RogueFeatures. ActionProvider для Rogue. `class-feature`
 
 ### Phase 4: Content + Quality
 
@@ -47,7 +47,7 @@
 
 ## Status
 
-**Current:** Phase 2 complete. E2E passed. Phase 3 next.
+**Current:** Phase 3 complete. E2E passed. Phase 4 next.
 
 Phase 1 (6/6) — done. E2E found and fixed 2 bugs:
 - AC serialization: API returned raw `creature.ac` instead of `effective_ac()`
@@ -56,6 +56,12 @@ Phase 1 (6/6) — done. E2E found and fixed 2 bugs:
 Phase 2 (2/2) — done. E2E found and fixed 2 bugs:
 - ClassFeatureActionProvider checked FighterFeatures instead of CharClass → Second Wind not offered to frontend-created Fighters
 - Frontend missing `second_wind` action label and SIMPLE_ACTIONS entry
+
+Phase 3 (2/2) — done. E2E passed, 0 bugs:
+- Sneak Attack: elf rogue dealt 9 damage with rapier (1d8 max=8), proving 1d6 SA dice triggered via ally-adjacent condition
+- Cunning Action: Dash consumed bonus action (not standard), player retained Attack action
+- Disengage button appears in combat, disappears when bonus spent
+- Unarmed attacks correctly do NOT trigger SA (no finesse weapon)
 
 ## Decisions
 

@@ -23,6 +23,7 @@
   "move_toward": "К {{target}}",
   "move_away": "От {{target}}",
   "dash": "Рывок",
+  "disengage": "Отход",
   "dash_toward": "Рывок к {{target}}",
   "dash_away": "Рывок от {{target}}",
   "bless": "Благословение",

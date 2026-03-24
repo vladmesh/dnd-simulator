@@ -128,6 +128,7 @@ class Attack:
     ability: Ability  # modifier source
     damage: tuple[DamageComponent, ...]  # base damage components
     reach: int = 5  # feet
+    is_finesse: bool = False
     resolve: ResolveType = ResolveType.ATTACK_ROLL
     save_ability: Ability | None = None  # for SAVING_THROW targets
 

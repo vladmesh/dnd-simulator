@@ -167,6 +167,20 @@ _TOOL_SCHEMAS: dict[ActionType, dict[str, Any]] = {
             },
         },
     },
+    ActionType.DISENGAGE: {
+        "type": "function",
+        "function": {
+            "name": "disengage",
+            "description": (
+                "Disengage: your movement doesn't provoke opportunity attacks this turn. "
+                "Costs 1 action (bonus action for Rogues via Cunning Action)."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {},
+            },
+        },
+    },
     ActionType.USE_ITEM: {
         "type": "function",
         "function": {

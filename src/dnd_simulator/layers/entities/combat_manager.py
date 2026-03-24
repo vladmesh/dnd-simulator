@@ -6,7 +6,7 @@ from typing import Any
 
 import structlog
 
-from dnd_simulator.core.character import Creature, Entity
+from dnd_simulator.core.character import Creature, DamageType, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import ActionResult, Event, EventType
@@ -14,6 +14,7 @@ from dnd_simulator.i18n import _
 from dnd_simulator.rules.combat import resolve_attack, roll_initiative
 from dnd_simulator.rules.modifiers import attack_modifiers
 from dnd_simulator.rules.movement import grid_distance, move_direction
+from dnd_simulator.rules.sneak_attack import is_sneak_attack_eligible, sneak_attack_dice
 from dnd_simulator.rules.weapons import get_weapon_attack
 
 logger = structlog.get_logger(domain="combat")
@@ -35,6 +36,7 @@ class CombatManager:
         self._location_log = location_log
         self._combats: dict[str, CombatState] = {}
         self._attack_this_round: dict[str, bool] = {}
+        self._sneak_attack_used: set[str] = set()  # creature IDs that used SA this round
         self._battle_map_configs: dict[str, BattleMap] = battle_map_configs or {}
 
     # -- Combat queries --
@@ -100,6 +102,7 @@ class CombatManager:
         else:
             combat.rounds_without_attack += 1
         self._attack_this_round[location_id] = False
+        self._sneak_attack_used.clear()
         combat.round_number += 1
 
         if combat.rounds_without_attack >= 2:
@@ -254,6 +257,40 @@ class CombatManager:
         advantage = atk_mods.advantage
         disadvantage = atk_mods.disadvantage
 
+        # --- Sneak Attack (Rogue) ---
+        extra_damage: tuple[tuple[str, DamageType], ...] = ()
+        sa_dice = sneak_attack_dice(attacker)
+        if sa_dice > 0 and attacker.id not in self._sneak_attack_used:
+            # Check ally within 5ft of target on the battle map
+            ally_adjacent = False
+            combat = self._combats.get(attacker.location_id)
+            if combat:
+                target_pos = combat.battle_map.get_position(target_id)
+                if target_pos:
+                    for eid, pos in combat.battle_map.positions.items():
+                        if eid in (attacker_id, target_id):
+                            continue
+                        e = self._entities.get(eid)
+                        if isinstance(e, Creature) and e.is_alive and grid_distance(target_pos, pos) <= 5:
+                            ally_adjacent = True
+                            break
+
+            if is_sneak_attack_eligible(
+                attacker,
+                attack,
+                has_advantage=advantage,
+                has_disadvantage=disadvantage,
+                ally_adjacent_to_target=ally_adjacent,
+            ):
+                extra_damage = ((f"{sa_dice}d6", DamageType.PIERCING),)
+                self._sneak_attack_used.add(attacker.id)
+                logger.info(
+                    "sneak_attack",
+                    attacker=attacker.name,
+                    dice=f"{sa_dice}d6",
+                    reason="advantage" if advantage else "ally_adjacent",
+                )
+
         logger.info(
             "attack_roll",
             attacker=attacker.name,
@@ -273,6 +310,7 @@ class CombatManager:
             ac=atk_mods.target_ac,
             attack=attack,
             damage_bonus=atk_mods.damage_bonus,
+            extra_damage=extra_damage,
             advantage=advantage,
             disadvantage=disadvantage,
             force_crit=atk_mods.force_crit,
@@ -302,6 +340,7 @@ class CombatManager:
             "advantage": advantage,
             "disadvantage": disadvantage,
             "bless_bonus": bless_bonus,
+            "sneak_attack": bool(extra_damage),
         }
 
         result_events: list[Event] = []

@@ -23,6 +23,7 @@
   "move_toward": "Toward {{target}}",
   "move_away": "Away from {{target}}",
   "dash": "Dash",
+  "disengage": "Disengage",
   "dash_toward": "Dash toward {{target}}",
   "dash_away": "Dash from {{target}}",
   "bless": "Bless",

@@ -43,7 +43,9 @@ class ValidationError:
 
 
 # Actions that only make sense in combat
-_COMBAT_ONLY: frozenset[ActionType] = frozenset({ActionType.DODGE, ActionType.FLEE, ActionType.DASH})
+_COMBAT_ONLY: frozenset[ActionType] = frozenset(
+    {ActionType.DODGE, ActionType.FLEE, ActionType.DASH, ActionType.DISENGAGE}
+)
 
 # Actions blocked during combat
 _COMBAT_BLOCKED: frozenset[ActionType] = frozenset({ActionType.SAY, ActionType.IDLE, ActionType.WAIT})
@@ -94,7 +96,7 @@ def check_budget(actor: Creature, action: Action, ctx: ActionContext) -> Validat
     """Turn budget must cover the action cost."""
     if ctx.turn_budget is None:
         return None
-    cost = action_cost(action)
+    cost = action_cost(action, creature=actor)
     if not ctx.turn_budget.can_afford(cost):
         return ValidationError(
             "INSUFFICIENT_BUDGET",

@@ -22,6 +22,7 @@ from dnd_simulator.rules.action_handlers import (
     handle_attack,
     handle_bless,
     handle_dash,
+    handle_disengage,
     handle_dodge,
     handle_equip,
     handle_equip_armor,
@@ -105,7 +106,7 @@ class ActionDispatcher:
         result = handler(actor, action, emit_fn, ctx, self._world)
 
         # 3. Consume budget only on success
-        cost = action_cost(action)
+        cost = action_cost(action, creature=actor)
         if result.success and ctx.turn_budget:
             ctx.turn_budget.consume(cost)
 
@@ -159,6 +160,7 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.register(ActionType.FLEE, handle_flee)
     dispatcher.register(ActionType.MOVE, handle_move)
     dispatcher.register(ActionType.DASH, handle_dash)
+    dispatcher.register(ActionType.DISENGAGE, handle_disengage)
     dispatcher.register(ActionType.WAIT, handle_wait)
     dispatcher.register(ActionType.USE_ITEM, handle_use_item)
     dispatcher.register(ActionType.BLESS, handle_bless)

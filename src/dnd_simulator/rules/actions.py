@@ -15,6 +15,9 @@ if TYPE_CHECKING:
     from dnd_simulator.core.action import Action
     from dnd_simulator.core.character import Creature
 
+# Cunning Action: Rogue uses Dash/Disengage as bonus action (PHB p.96)
+_CUNNING_ACTION_TYPES = frozenset({ActionType.DASH, ActionType.DISENGAGE})
+
 # Actions that cost 0 budget (information-only, free actions)
 _FREE_ACTIONS = frozenset(
     {
@@ -32,7 +35,7 @@ _FREE_ACTIONS = frozenset(
 
 # Actions that cost 1 standard action
 _STANDARD_ACTIONS = frozenset(
-    {ActionType.ATTACK, ActionType.DODGE, ActionType.FLEE, ActionType.DASH, ActionType.USE_ITEM}
+    {ActionType.ATTACK, ActionType.DODGE, ActionType.FLEE, ActionType.DASH, ActionType.DISENGAGE, ActionType.USE_ITEM}
 )
 
 # Actions that cost 1 bonus action
@@ -51,6 +54,7 @@ _TURN_ENDING_PEACEFUL = frozenset(
         ActionType.WAIT,
         ActionType.MOVE,
         ActionType.DASH,
+        ActionType.DISENGAGE,
         ActionType.FLEE,
         ActionType.DODGE,
         ActionType.USE_ITEM,
@@ -60,17 +64,25 @@ _TURN_ENDING_PEACEFUL = frozenset(
 )
 
 
-def action_cost(action: Action) -> ActionCost:
+def action_cost(action: Action, creature: Creature | None = None) -> ActionCost:
     """Determine the budget cost of an action.
 
     Free actions (idle, say, end_turn, skip) cost nothing.
     Standard actions (attack, dodge, dash, flee) cost 1 action.
-    Movement costs feet based on creature speed (simplified: 5ft per move action for now).
+    Bonus actions (bless, second_wind) cost 1 bonus action.
+    Movement costs feet based on creature speed.
+
+    Class overrides:
+    - Rogue Cunning Action: Dash/Disengage cost bonus action instead of standard.
     """
     name = action.name
 
     if name in _FREE_ACTIONS or name == ActionType.SAY:
         return ActionCost()
+
+    # Cunning Action: Rogue uses Dash/Disengage as bonus action (PHB p.96)
+    if name in _CUNNING_ACTION_TYPES and creature is not None and _has_cunning_action(creature):
+        return ActionCost(bonus_actions=1)
 
     if name in _STANDARD_ACTIONS:
         return ActionCost(actions=1)
@@ -84,6 +96,16 @@ def action_cost(action: Action) -> ActionCost:
 
     # Unknown actions are free (safe default — don't block gameplay)
     return ActionCost()
+
+
+def _has_cunning_action(creature: Creature) -> bool:
+    """Check if creature has Cunning Action (Rogue class feature)."""
+    from dnd_simulator.core.character import Character
+    from dnd_simulator.core.class_features import RogueFeatures
+
+    if not isinstance(creature, Character):
+        return False
+    return creature.get_feature(RogueFeatures) is not None
 
 
 def ends_peaceful_turn(action: Action) -> bool:
