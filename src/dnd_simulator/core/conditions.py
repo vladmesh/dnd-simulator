@@ -23,6 +23,7 @@ class Condition(Enum):
     STUNNED = "stunned"
     UNCONSCIOUS = "unconscious"
     BLESSED = "blessed"
+    DODGING = "dodging"
 
 
 # Mapping: Condition → remaining rounds (int) or permanent (None).

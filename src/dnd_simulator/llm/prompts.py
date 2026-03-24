@@ -1,4 +1,9 @@
-"""LLM prompt builders for NPC dialog and combat."""
+"""LLM prompt builders for NPC dialog and combat.
+
+Prompts provide CONTEXT (who you are, what you see, status).
+Actions are described by TOOL SCHEMAS — the prompt does not list them.
+Only situational hints (e.g. "you are unarmed but have weapons") are added.
+"""
 
 from __future__ import annotations
 
@@ -48,6 +53,13 @@ def build_npc_system_prompt(
             lines.append(f"  - {e['description']} (id: {e['id']})")
         entities_ctx = "\n" + _("Near you:") + "\n" + "\n".join(lines)
 
+    # Inventory items
+    items = awareness.get("available_items", [])
+    items_ctx = ""
+    if items:
+        items_lines = "\n".join(f"  - {i['name']}: {i['description']} (id: {i['id']})" for i in items)
+        items_ctx = "\n" + _("Your inventory:") + "\n" + items_lines
+
     weather_desc = w["condition"].replace("_", " ")
 
     rules = _(
@@ -56,12 +68,8 @@ def build_npc_system_prompt(
         "- Answer briefly (1-3 sentences)\n"
         "- Speak as a medieval fantasy character\n"
         "- Always respond in the game language\n"
-        "- By default use idle() — do nothing\n"
-        "- Use say() only if there is a reason to speak: someone addressed you,\n"
-        "  something important happened, or you need to react to a threat\n"
-        "- Do NOT speak just because it is your turn — silence is normal\n"
-        "- Use attack(target_id) only if you have a good reason to fight.\n"
-        "  target_id is the id of a creature from the nearby list"
+        "- Choose one of the available tools. Default to idle if nothing to do\n"
+        "- Do NOT speak just because it is your turn — silence is normal"
     )
 
     return (
@@ -88,6 +96,7 @@ def build_npc_system_prompt(
         + f"{nation_ctx}"
         f"{settlement_lines}"
         f"{entities_ctx}"
+        f"{items_ctx}"
         f"{memory_ctx}\n"
         f"\n" + rules
     )
@@ -97,7 +106,11 @@ def build_npc_combat_prompt(
     npc_data: dict[str, Any],
     combat_awareness: dict[str, Any],
 ) -> str:
-    """Build a focused combat prompt for an NPC — no weather, politics, or schedules."""
+    """Build a focused combat prompt for an NPC — no weather, politics, or schedules.
+
+    Action descriptions come from tool schemas, not this prompt.
+    Only situational context and hints are included here.
+    """
     hp = combat_awareness["self_hp"]
     max_hp = combat_awareness["self_max_hp"]
     weapon = combat_awareness["self_weapon"]
@@ -134,16 +147,34 @@ def build_npc_combat_prompt(
 
     round_num = combat_awareness.get("round_number", 1)
 
-    combat_rules = _(
+    # Inventory items
+    items = combat_awareness.get("available_items", [])
+    items_ctx = ""
+    if items:
+        items_lines = "\n".join(f"- {i['name']}: {i['description']} (id: {i['id']})" for i in items)
+        items_ctx = "\n" + _("Your inventory:") + "\n" + items_lines + "\n"
+
+    # Situational hints
+    hints: list[str] = []
+    if weapon == "fists" and any("weapon" in str(i.get("description", "")).lower() for i in items):
+        hints.append(
+            _(
+                "IMPORTANT: You are fighting UNARMED (fists, 1 damage). "
+                "You have weapons in your inventory! Use equip(weapon_id) — it's a FREE action."
+            )
+        )
+
+    hints_ctx = ""
+    if hints:
+        hints_ctx = "\n" + "\n".join(hints) + "\n"
+
+    rules = _(
         "Rules:\n"
-        "- Choose one action: attack, dodge, move, dash, flee, or idle\n"
-        "- attack(target_id) — strike a target (must be within weapon reach)\n"
-        "- move(toward/away_from/direction) — move up to {speed} ft\n"
-        "- dash(toward/away_from/direction) — sprint up to {dash_speed} ft (instead of attacking)\n"
+        "- Choose one of the available tools\n"
         "- Walls block movement — you cannot move through a wall\n"
-        "- Want to say something — put it in description\n"
+        "- Want to say something — put it in the description parameter of any action\n"
         "- Respond in the game language"
-    ).format(speed=speed, dash_speed=speed * 2)
+    )
 
     return (
         _("You are {name}, {role}. You are in combat!").format(name=npc_data["name"], role=npc_data["role"]) + "\n"
@@ -161,6 +192,8 @@ def build_npc_combat_prompt(
         + _("Speed: {speed} ft").format(speed=speed)
         + "\n"
         + f"{entities_ctx}"
+        f"{items_ctx}"
+        f"{hints_ctx}"
         f"{walls_ctx}\n" + _("Round {num}.").format(num=round_num) + "\n"
-        "\n" + combat_rules
+        "\n" + rules
     )

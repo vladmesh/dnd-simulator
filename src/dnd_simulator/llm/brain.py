@@ -102,6 +102,9 @@ class LlmBrain(Brain):
 
 def _peaceful_awareness_to_dict(aw: PeacefulAwareness) -> dict[str, object]:
     """Convert PeacefulAwareness to dict format expected by prompt builders."""
+    items_list: list[dict[str, str]] = [
+        {"id": i.id, "name": i.name, "description": i.description} for i in aw.available_items
+    ]
     return {
         "time": {"hour": aw.hour, "day": aw.day, "month": aw.month, "year": aw.year},
         "weather": aw.weather,
@@ -109,6 +112,7 @@ def _peaceful_awareness_to_dict(aw: PeacefulAwareness) -> dict[str, object]:
         "settlements": aw.settlements,
         "territory": aw.territory_owner,
         "nation": aw.nation_info,
+        "available_items": items_list,
     }
 
 
@@ -124,6 +128,9 @@ def _combat_awareness_to_dict(aw: CombatAwareness) -> dict[str, object]:
         if e.direction:
             entry["direction"] = e.direction
         nearby_list.append(entry)
+    items_list: list[dict[str, str]] = [
+        {"id": i.id, "name": i.name, "description": i.description} for i in aw.available_items
+    ]
     return {
         "self_hp": aw.self_hp,
         "self_max_hp": aw.self_max_hp,
@@ -134,4 +141,5 @@ def _combat_awareness_to_dict(aw: CombatAwareness) -> dict[str, object]:
         "nearby": nearby_list,
         "round_number": aw.round_number,
         "walls": aw.walls,
+        "available_items": items_list,
     }

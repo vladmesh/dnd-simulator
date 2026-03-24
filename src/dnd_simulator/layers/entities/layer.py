@@ -39,6 +39,8 @@ _LOGGED_EVENTS = {
     EventType.ENTITY_DASH,
     EventType.ENTITY_USE_ITEM,
     EventType.ENTITY_BLESS,
+    EventType.ENTITY_EQUIP,
+    EventType.ENTITY_UNEQUIP,
     EventType.COMBAT_STARTED,
     EventType.COMBAT_ENDED,
 }
@@ -193,55 +195,68 @@ class EntitiesLayer(Layer):
 
     def build_peaceful_awareness(self, creature: Creature, time: GameDateTime, query_fn: QueryFn) -> PeacefulAwareness:
         """Build peaceful awareness using query_fn + internal data."""
-        region_id = creature.location_id  # fallback
         location_name = creature.location_id
         region_name = creature.location_id
 
-        # Try to get region/location info from geography
+        # Resolve location → region (location may or may not belong to a region)
+        region_id: str | None = None
         try:
-            region_answer = query_fn(
-                "geography", Query(question=QueryType.REGION_INFO, params={"region_id": creature.location_id})
+            loc_answer = query_fn(
+                "geography",
+                Query(question=QueryType.LOCATION_REGION, params={"location_id": creature.location_id}),
             )
-            if region_answer.value and isinstance(region_answer.value, dict):
-                region_name = str(region_answer.value.get("name", region_name))
-                region_id = creature.location_id
+            if loc_answer.value and isinstance(loc_answer.value, str):
+                region_id = loc_answer.value
         except Exception:
-            logger.warning("Failed to query region info for %s", creature.location_id, exc_info=True)
+            logger.warning("Failed to resolve region for location %s", creature.location_id, exc_info=True)
 
-        # Weather (default to clear if unavailable — prompts expect a weather dict)
+        # Region-dependent data: weather, settlements, politics
         weather: dict[str, object] = {"condition": "clear", "temperature": 15}
-        try:
-            weather_answer = query_fn("geography", Query(question=QueryType.WEATHER, params={"region_id": region_id}))
-            if weather_answer.value and isinstance(weather_answer.value, dict):
-                weather = dict(weather_answer.value)
-        except Exception:
-            logger.warning("Failed to query weather for region %s", region_id, exc_info=True)
-
-        # Settlements
         settlements: list[dict[str, object]] | None = None
-        try:
-            settlements_answer = query_fn(
-                "settlements", Query(question=QueryType.REGION_SETTLEMENTS, params={"region_id": region_id})
-            )
-            if settlements_answer.value:
-                settlements = list(settlements_answer.value)
-        except Exception:
-            logger.warning("Failed to query settlements for region %s", region_id, exc_info=True)
-
-        # Politics
         territory_owner: str | None = None
         nation_info: dict[str, object] | None = None
-        try:
-            owner_answer = query_fn("politics", Query(question=QueryType.REGION_OWNER, params={"region_id": region_id}))
-            if owner_answer.value:
-                territory_owner = str(owner_answer.value)
-                nation_answer = query_fn(
-                    "politics", Query(question=QueryType.NATION_INFO, params={"nation_id": territory_owner})
+
+        if region_id is not None:
+            try:
+                region_answer = query_fn(
+                    "geography", Query(question=QueryType.REGION_INFO, params={"region_id": region_id})
                 )
-                if nation_answer.value and isinstance(nation_answer.value, dict):
-                    nation_info = dict(nation_answer.value)
-        except Exception:
-            logger.warning("Failed to query politics for region %s", region_id, exc_info=True)
+                if region_answer.value and isinstance(region_answer.value, dict):
+                    region_name = str(region_answer.value.get("name", region_name))
+            except Exception:
+                logger.warning("Failed to query region info for %s", region_id, exc_info=True)
+
+            try:
+                weather_answer = query_fn(
+                    "geography", Query(question=QueryType.WEATHER, params={"region_id": region_id})
+                )
+                if weather_answer.value and isinstance(weather_answer.value, dict):
+                    weather = dict(weather_answer.value)
+            except Exception:
+                logger.warning("Failed to query weather for region %s", region_id, exc_info=True)
+
+            try:
+                settlements_answer = query_fn(
+                    "settlements", Query(question=QueryType.REGION_SETTLEMENTS, params={"region_id": region_id})
+                )
+                if settlements_answer.value:
+                    settlements = list(settlements_answer.value)
+            except Exception:
+                logger.warning("Failed to query settlements for region %s", region_id, exc_info=True)
+
+            try:
+                owner_answer = query_fn(
+                    "politics", Query(question=QueryType.REGION_OWNER, params={"region_id": region_id})
+                )
+                if owner_answer.value:
+                    territory_owner = str(owner_answer.value)
+                    nation_answer = query_fn(
+                        "politics", Query(question=QueryType.NATION_INFO, params={"nation_id": territory_owner})
+                    )
+                    if nation_answer.value and isinstance(nation_answer.value, dict):
+                        nation_info = dict(nation_answer.value)
+            except Exception:
+                logger.warning("Failed to query politics for region %s", region_id, exc_info=True)
 
         # Nearby entities (internal — no query needed)
         nearby = self.build_nearby_entities(creature, time.hour)
@@ -306,6 +321,7 @@ class EntitiesLayer(Layer):
                 )
             )
 
+        from dnd_simulator.rules.modifiers import effective_ac, effective_speed
         from dnd_simulator.rules.weapons import get_weapon_attack
 
         weapon_attack = get_weapon_attack(creature)
@@ -321,8 +337,8 @@ class EntitiesLayer(Layer):
         return CombatAwareness(
             self_hp=creature.current_hp,
             self_max_hp=creature.max_hp,
-            self_ac=creature.ac,
-            self_speed=creature.speed,
+            self_ac=effective_ac(creature),
+            self_speed=effective_speed(creature),
             self_weapon=weapon_name,
             self_weapon_damage=weapon_damage,
             self_x=my_pos.x if my_pos else 0,

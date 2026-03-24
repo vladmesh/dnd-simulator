@@ -11,14 +11,9 @@ from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.combat import resolve_attack, roll_initiative
-from dnd_simulator.rules.conditions import (
-    attacker_has_disadvantage,
-    attacks_against_have_advantage,
-    attacks_against_have_disadvantage,
-    is_auto_crit,
-)
+from dnd_simulator.rules.modifiers import attack_modifiers
 from dnd_simulator.rules.movement import grid_distance, move_direction
-from dnd_simulator.rules.weapons import get_weapon_attack, get_weapon_modifier
+from dnd_simulator.rules.weapons import get_weapon_attack
 
 logger = logging.getLogger("dnd_simulator.combat_manager")
 
@@ -141,6 +136,7 @@ class CombatManager:
         entity = self._entities.get(entity_id)
         if isinstance(entity, Creature):
             entity.is_dodging = True
+            entity.conditions[Condition.DODGING] = 1
         location_id = self._event_location(event)
         if location_id:
             self._location_log[location_id].append(event)
@@ -229,39 +225,62 @@ class CombatManager:
         # Use equipped weapon → creature.attacks[0] → unarmed fallback
         attack = get_weapon_attack(attacker)
 
-        # --- Resolution: compute advantage/disadvantage from conditions ---
+        # --- Resolution via modifier pipeline ---
         is_melee = attack.reach <= 10
-        advantage = attacks_against_have_advantage(target.conditions, melee=is_melee)
-        disadvantage = (
-            target.is_dodging
-            or attacker_has_disadvantage(attacker.conditions)
-            or attacks_against_have_disadvantage(target.conditions, melee=is_melee)
-        )
+        atk_mods = attack_modifiers(attacker, target, melee=is_melee)
 
-        modifier = attacker.ability_scores.modifier(attack.ability) + get_weapon_modifier(attacker)
-
-        # Blessed: +d4 to attack roll
+        # Roll dice bonuses (Bless +1d4, etc.)
         bless_bonus = 0
-        if Condition.BLESSED in attacker.conditions:
+        if atk_mods.dice_bonuses:
             from dnd_simulator.rules.dice import roll as roll_dice
 
-            bless_bonus = roll_dice("1d4")
-            modifier += bless_bonus
+            for dice_expr in atk_mods.dice_bonuses:
+                bless_bonus += roll_dice(dice_expr)
             logger.debug(
-                "[Combat] %s BLESSED: +%d to attack (total mod %d), weapon=%s",
+                "[Combat] %s dice bonuses: +%d (from %s), weapon=%s",
                 attacker.name,
                 bless_bonus,
-                modifier,
+                ", ".join(atk_mods.dice_bonuses),
                 attack.name,
             )
 
+        modifier = atk_mods.modifier + bless_bonus
+        advantage = atk_mods.advantage
+        disadvantage = atk_mods.disadvantage
+
+        logger.info(
+            "[Combat] %s → %s: weapon=%s, mod=%d (base %d + bless %d), adv=%s, disadv=%s, force_crit=%s, target AC=%d",
+            attacker.name,
+            target.name,
+            attack.name,
+            modifier,
+            atk_mods.modifier,
+            bless_bonus,
+            advantage,
+            disadvantage,
+            atk_mods.force_crit,
+            atk_mods.target_ac,
+        )
+
         result = resolve_attack(
             modifier=modifier,
-            ac=target.ac,
+            ac=atk_mods.target_ac,
             attack=attack,
             advantage=advantage,
             disadvantage=disadvantage,
-            force_crit=is_auto_crit(target.conditions, melee=is_melee) if is_melee else False,
+            force_crit=atk_mods.force_crit,
+        )
+
+        hit_str = "CRIT!" if result.critical else ("HIT" if result.hit else "MISS")
+        dmg_str = f" → {result.total_damage} dmg" if result.hit else ""
+        logger.info(
+            "[Combat] Result: d20(%d)+%d=%d vs AC %d → %s%s",
+            result.attack_check.roll,
+            modifier,
+            result.attack_check.total,
+            atk_mods.target_ac,
+            hit_str,
+            dmg_str,
         )
 
         # Build enriched event for the log (with damage info + dice details)
@@ -274,7 +293,7 @@ class CombatManager:
             "roll": result.attack_check.roll,
             "total": result.attack_check.total,
             "modifier": modifier,
-            "ac": target.ac,
+            "ac": atk_mods.target_ac,
             "advantage": advantage,
             "disadvantage": disadvantage,
             "bless_bonus": bless_bonus,

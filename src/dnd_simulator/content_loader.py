@@ -163,6 +163,8 @@ def parse_items(items_data: list[dict[str, Any]]) -> list[Item]:
         if item_type == ItemType.WEAPON:
             weapon_def = _parse_weapon_def(idata)
             params: dict[str, object] = {}
+            if idata.get("equipped"):
+                params["equipped"] = True
         else:
             params = {k: v for k, v in idata.items() if k not in ("name", "type")}
 
@@ -171,9 +173,12 @@ def parse_items(items_data: list[dict[str, Any]]) -> list[Item]:
 
 
 def parse_equipped_weapon(items: list[Item]) -> Item | None:
-    """Find the first weapon in items list — used as equipped_weapon."""
+    """Find the weapon marked ``equipped: true`` in items list.
+
+    If no weapon has the flag, returns None (creature starts unarmed).
+    """
     for item in items:
-        if item.item_type == ItemType.WEAPON:
+        if item.item_type == ItemType.WEAPON and item.params.get("equipped"):
             return item
     return None
 
@@ -357,7 +362,6 @@ def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locati
 
     inventory = parse_items(ndata.get("items") or [])
     equipped_weapon = parse_equipped_weapon(inventory)
-    # Remove equipped weapon from inventory (it's in the weapon slot, not a carried item)
     if equipped_weapon:
         inventory = [i for i in inventory if i.id != equipped_weapon.id]
 

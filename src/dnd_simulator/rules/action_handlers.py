@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING
 
 from dnd_simulator.core.items import Item, ItemType
 from dnd_simulator.core.models import ActionResult, Event, EventType
-from dnd_simulator.rules.conditions import effective_speed
 from dnd_simulator.rules.dice import roll
+from dnd_simulator.rules.modifiers import effective_speed
 
 if TYPE_CHECKING:
     from dnd_simulator.core.action import Action
@@ -127,7 +127,7 @@ def handle_dash(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
     budget = ctx.turn_budget
     if budget is None:
         return ActionResult(success=False, error="Dash requires a turn budget")
-    speed = effective_speed(actor.speed, actor.conditions)
+    speed = effective_speed(actor)
     budget.movement_remaining += speed
     logger.info("[%s] → dash (+%dft movement)", actor.name, speed)
     return ActionResult()
@@ -240,6 +240,55 @@ def handle_bless(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCo
                 "entity_id": actor.id,
                 "duration_rounds": _BLESS_DURATION_ROUNDS,
             },
+        )
+    )
+    return ActionResult()
+
+
+def handle_equip(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
+    """Equip a weapon from inventory. Free action (D&D 5e object interaction)."""
+    from dnd_simulator.core.items import ItemType
+
+    weapon_id = str(action.params["weapon_id"])
+    weapon = next((item for item in actor.inventory if item.id == weapon_id), None)
+    if weapon is None:
+        return ActionResult(success=False, error=f"Item {weapon_id} not in inventory")
+    if weapon.item_type != ItemType.WEAPON:
+        return ActionResult(success=False, error=f"Item {weapon_id} is not a weapon")
+
+    # Unequip current weapon → back to inventory
+    if actor.equipped_weapon is not None:
+        actor.inventory.append(actor.equipped_weapon)
+    # Equip new weapon
+    actor.inventory.remove(weapon)
+    actor.equipped_weapon = weapon
+
+    logger.info("[%s] → equip %s", actor.name, weapon.name)
+    emit_fn(
+        Event(
+            event_type=EventType.ENTITY_EQUIP,
+            source_layer="entities",
+            data={"entity_id": actor.id, "weapon_name": weapon.name},
+        )
+    )
+    return ActionResult()
+
+
+def handle_unequip(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
+    """Unequip current weapon → back to inventory. Free action."""
+    if actor.equipped_weapon is None:
+        return ActionResult(success=False, error="No weapon equipped")
+
+    weapon = actor.equipped_weapon
+    actor.inventory.append(weapon)
+    actor.equipped_weapon = None
+
+    logger.info("[%s] → unequip %s", actor.name, weapon.name)
+    emit_fn(
+        Event(
+            event_type=EventType.ENTITY_UNEQUIP,
+            source_layer="entities",
+            data={"entity_id": actor.id, "weapon_name": weapon.name},
         )
     )
     return ActionResult()

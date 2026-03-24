@@ -155,6 +155,8 @@ export type ActionName =
   | "wait"
   | "use_item"
   | "bless"
+  | "equip"
+  | "unequip"
 
 export interface Action {
   name: ActionName

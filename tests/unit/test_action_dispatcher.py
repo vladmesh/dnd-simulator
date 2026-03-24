@@ -1006,3 +1006,163 @@ class TestToolSchemaRegistry:
         tools = get_tools([ActionType.DODGE, ActionType.ATTACK, ActionType.IDLE])
         names = [t["function"]["name"] for t in tools]
         assert names == ["dodge", "attack", "idle"]
+
+
+# ---------------------------------------------------------------------------
+# Equip / Unequip
+# ---------------------------------------------------------------------------
+
+
+def _sword_item(name: str = "Sword", item_id: str = "sword_0") -> Item:
+    return Item(
+        id=item_id,
+        name=name,
+        item_type=ItemType.WEAPON,
+        weapon_def=WeaponDef(
+            attack_name="sword slash",
+            damage=(DamageComponent("1d8", DamageType.SLASHING),),
+        ),
+    )
+
+
+class TestEquipHandler:
+    def test_equip_weapon_from_inventory(self) -> None:
+        from dnd_simulator.rules.action_handlers import handle_equip
+
+        sword = _sword_item()
+        c = _creature()
+        c.inventory.append(sword)
+        assert c.equipped_weapon is None
+
+        events, emit = _capture_emit()
+        action = Action(name=ActionType.EQUIP, params={"weapon_id": "sword_0"})
+        result = handle_equip(c, action, emit, _COMBAT, _WORLD)
+        assert result.success
+        assert c.equipped_weapon is sword
+        assert sword not in c.inventory
+        assert len(events) == 1
+        assert events[0].event_type == EventType.ENTITY_EQUIP
+
+    def test_equip_swaps_weapon(self) -> None:
+        from dnd_simulator.rules.action_handlers import handle_equip
+
+        old_sword = _sword_item("Old Sword", "old_0")
+        new_sword = _sword_item("New Sword", "new_0")
+        c = _creature()
+        c.equipped_weapon = old_sword
+        c.inventory.append(new_sword)
+
+        action = Action(name=ActionType.EQUIP, params={"weapon_id": "new_0"})
+        result = handle_equip(c, action, _noop_emit, _COMBAT, _WORLD)
+        assert result.success
+        assert c.equipped_weapon is new_sword
+        assert old_sword in c.inventory
+        assert new_sword not in c.inventory
+
+    def test_equip_nonexistent_item_fails(self) -> None:
+        from dnd_simulator.rules.action_handlers import handle_equip
+
+        c = _creature()
+        action = Action(name=ActionType.EQUIP, params={"weapon_id": "missing"})
+        result = handle_equip(c, action, _noop_emit, _COMBAT, _WORLD)
+        assert not result.success
+
+    def test_equip_non_weapon_fails(self) -> None:
+        from dnd_simulator.rules.action_handlers import handle_equip
+
+        potion = Item(id="pot_0", name="Potion", item_type=ItemType.POTION, params={"heal_dice": "2d4+2"})
+        c = _creature()
+        c.inventory.append(potion)
+        action = Action(name=ActionType.EQUIP, params={"weapon_id": "pot_0"})
+        result = handle_equip(c, action, _noop_emit, _COMBAT, _WORLD)
+        assert not result.success
+
+
+class TestUnequipHandler:
+    def test_unequip_weapon(self) -> None:
+        from dnd_simulator.rules.action_handlers import handle_unequip
+
+        sword = _sword_item()
+        c = _creature()
+        c.equipped_weapon = sword
+
+        events, emit = _capture_emit()
+        action = Action(name=ActionType.UNEQUIP)
+        result = handle_unequip(c, action, emit, _COMBAT, _WORLD)
+        assert result.success
+        assert c.equipped_weapon is None
+        assert sword in c.inventory
+        assert len(events) == 1
+        assert events[0].event_type == EventType.ENTITY_UNEQUIP
+
+    def test_unequip_when_unarmed_fails(self) -> None:
+        from dnd_simulator.rules.action_handlers import handle_unequip
+
+        c = _creature()
+        action = Action(name=ActionType.UNEQUIP)
+        result = handle_unequip(c, action, _noop_emit, _COMBAT, _WORLD)
+        assert not result.success
+
+
+class TestEquipmentProvider:
+    def test_equip_available_with_inventory_weapon(self) -> None:
+        from dnd_simulator.rules.action_provider import EquipmentActionProvider
+
+        c = _creature()
+        c.inventory.append(_sword_item())
+        provider = EquipmentActionProvider()
+        actions = provider.get_action_types(c, _COMBAT)
+        assert ActionType.EQUIP in actions
+
+    def test_unequip_available_when_weapon_equipped(self) -> None:
+        from dnd_simulator.rules.action_provider import EquipmentActionProvider
+
+        c = _creature()
+        c.equipped_weapon = _sword_item()
+        provider = EquipmentActionProvider()
+        actions = provider.get_action_types(c, _COMBAT)
+        assert ActionType.UNEQUIP in actions
+
+    def test_no_equip_without_inventory_weapon(self) -> None:
+        from dnd_simulator.rules.action_provider import EquipmentActionProvider
+
+        c = _creature()
+        provider = EquipmentActionProvider()
+        actions = provider.get_action_types(c, _COMBAT)
+        assert ActionType.EQUIP not in actions
+
+    def test_no_unequip_when_unarmed(self) -> None:
+        from dnd_simulator.rules.action_provider import EquipmentActionProvider
+
+        c = _creature()
+        provider = EquipmentActionProvider()
+        actions = provider.get_action_types(c, _COMBAT)
+        assert ActionType.UNEQUIP not in actions
+
+    def test_equip_is_free_action(self) -> None:
+        from dnd_simulator.rules.actions import action_cost
+
+        cost = action_cost(Action(name=ActionType.EQUIP))
+        assert cost.actions == 0
+        assert cost.bonus_actions == 0
+
+    def test_equip_ends_peaceful_turn(self) -> None:
+        from dnd_simulator.rules.actions import ends_peaceful_turn
+
+        assert ends_peaceful_turn(Action(name=ActionType.EQUIP))
+
+
+class TestEquipToolSchemas:
+    def test_equip_schema_exists(self) -> None:
+        from dnd_simulator.llm.tools import get_tools
+
+        tools = get_tools([ActionType.EQUIP])
+        assert len(tools) == 1
+        assert tools[0]["function"]["name"] == "equip"
+
+    def test_unequip_schema_exists(self) -> None:
+        from dnd_simulator.llm.tools import get_tools
+
+        tools = get_tools([ActionType.UNEQUIP])
+        assert len(tools) == 1
+        assert tools[0]["function"]["name"] == "unequip"

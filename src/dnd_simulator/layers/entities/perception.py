@@ -33,6 +33,10 @@ def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -
         return _perceive_use_item(event, observer, get_entity)
     if event.event_type == EventType.ENTITY_BLESS:
         return _perceive_bless(event, observer, get_entity)
+    if event.event_type == EventType.ENTITY_EQUIP:
+        return _perceive_equip(event, observer, get_entity)
+    if event.event_type == EventType.ENTITY_UNEQUIP:
+        return _perceive_unequip(event, observer, get_entity)
     if event.event_type == EventType.TURN_SKIPPED:
         return _perceive_turn_skipped(event, observer, get_entity)
     if event.event_type == EventType.COMBAT_STARTED:
@@ -78,6 +82,7 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
     critical = event.data.get("critical", False)
     advantage = event.data.get("advantage", False)
     disadvantage = event.data.get("disadvantage", False)
+    bless_bonus = event.data.get("bless_bonus", 0)
     assert isinstance(attacker_id, str)
     assert isinstance(target_id, str)
 
@@ -98,6 +103,8 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
         roll_parts.append(f"+{modifier}")
     else:
         roll_parts.append(str(modifier))
+    if bless_bonus:
+        roll_parts.append(f"+{bless_bonus}bless")
     roll_parts.append(f"={total}")
     roll_parts.append(f" vs AC {ac}")
     roll_str = " [" + "".join(roll_parts) + "]"
@@ -240,6 +247,24 @@ def _perceive_bless(event: Event, observer: Character, get_entity: GetEntityFn) 
         return _("You invoke a blessing (+d4 to attack rolls for {n} rounds)").format(n=duration)
     desc = _describe(observer, entity_id, get_entity)
     return _("{entity} invokes a blessing (+d4 to attack rolls for {n} rounds)").format(entity=desc, n=duration)
+
+
+def _perceive_equip(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    entity_id = str(event.data.get("entity_id", ""))
+    weapon_name = str(event.data.get("weapon_name", _("a weapon")))
+    if entity_id == observer.id:
+        return _("You equip {weapon}").format(weapon=weapon_name)
+    desc = _describe(observer, entity_id, get_entity)
+    return _("{entity} equips {weapon}").format(entity=desc, weapon=weapon_name)
+
+
+def _perceive_unequip(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    entity_id = str(event.data.get("entity_id", ""))
+    weapon_name = str(event.data.get("weapon_name", _("a weapon")))
+    if entity_id == observer.id:
+        return _("You put away {weapon}").format(weapon=weapon_name)
+    desc = _describe(observer, entity_id, get_entity)
+    return _("{entity} puts away {weapon}").format(entity=desc, weapon=weapon_name)
 
 
 def _perceive_combat_started(event: Event, observer: Character, get_entity: GetEntityFn) -> str:

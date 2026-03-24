@@ -117,76 +117,74 @@ CLI и REST теперь могут запускать раунды через `
 
 ## Уровень 1 — Механическая база
 
-### 1a. Conditions (состояния D&D)
+### 1a. Conditions (состояния D&D) — частично ✅
 
-**Зачем:** Prone, Grappled, Poisoned, Frightened, Stunned — базовые условия D&D. Каждое condition = набор эффектов (disadvantage на атаки, speed = 0, и т.д.). Это **простейшая** форма модификаторов и proof-of-concept для всей системы.
+**Реализовано (через action-dispatcher Phase 6):**
+- `Creature.conditions: dict[Condition, int | None]` (ConditionsMap) — timed и permanent conditions.
+- `Condition` enum: PRONE, GRAPPLED, INCAPACITATED, STUNNED, UNCONSCIOUS, BLESSED, DODGING.
+- `tick_conditions()` в `rules/conditions.py` — декремент таймеров, удаление истёкших.
+- `rules/conditions.py`: `is_incapacitated()`, `effective_speed()`, `attack_advantage()` — чистые функции, учитывают conditions при резолве.
+- Интеграция: Round тикает conditions в начале хода, resolve_attack проверяет BLESSED (+d4), DODGING (disadvantage).
 
-**Как работает:**
-- `Creature` получает поле `conditions: set[Condition]`.
-- Condition — это enum или data-class с набором эффектов.
-- Эффекты учитываются при вычислении статов (→ 1b) и при резолве действий.
+**Что осталось:**
+- **Эффекты conditions не систематизированы.** Каждый condition проверяется ad-hoc в конкретных местах (resolve_attack, effective_speed). Нет единого маппинга condition → effects.
+- **Не все D&D conditions реализованы.** Poisoned (disadvantage на атаки + ability checks), Frightened (disadvantage + не может приближаться к источнику), Restrained, Blinded, Deafened — отсутствуют.
+- **Condition application через прямую мутацию dict.** Нет `add_condition()` / `remove_condition()` API — код напрямую пишет в dict.
+- **Saving throws для снятия conditions** — не реализованы (dead code `auto_fail_str_dex_saves()` есть, но не подключен).
 
-**Почему первым:** не требует инвентаря, заклинаний, UI. Но заставляет решить как хранить и применять модификаторы. Валидирует архитектуру modifier pipeline на минимальном примере.
+### 1b. Вычисляемые статы (derived stats) ✅
 
-### 1b. Вычисляемые статы (derived stats)
+**Реализовано:**
+- `core/modifiers.py` — data types: `Modifier`, `ModifierOp` (ADD, OVERRIDE, ADVANTAGE, DISADVANTAGE), `StatType` (AC, SPEED, ATTACK_ROLL, INITIATIVE), `AttackModifiers`.
+- `rules/modifiers.py` — pipeline: declarative condition→modifier mapping (16 conditions), `compute_stat()`, `resolve_advantage()`, `collect_dice_bonuses()`.
+- Convenience API: `effective_ac(creature)`, `effective_speed(creature)`, `attack_modifiers(attacker, target, melee=)`.
+- D&D 5e stacking: same `source` doesn't stack (take highest). OVERRIDE wins (most restrictive). Advantage + disadvantage cancel.
+- `melee_only` / `ranged_only` on Modifier for context-dependent effects (Prone).
+- `Condition.DODGING` added to enum, set in `resolve_dodge` alongside `is_dodging` bool.
+- Combat manager replaced: 30+ lines of inline stat computation → single `attack_modifiers()` call.
+- Old ad-hoc functions removed from `rules/conditions.py`: `effective_speed`, `attacker_has_disadvantage`, `attacks_against_have_advantage`, `attacks_against_have_disadvantage`, `is_auto_crit`.
+- 71 unit tests in `test_modifiers.py`.
 
-**Зачем:** AC, speed, attack bonus — не просто числа, а `база + модификаторы`. Без этого невозможны баффы, экипировка, conditions.
-
-**Как работает:**
-Pipeline: `Базовое значение → [модификаторы] → Итог`.
-
-Модификатор:
-- `target`: что меняем (AC, speed, attack roll, saving throw...)
-- `op`: как (ADD, OVERRIDE, ADVANTAGE, DISADVANTAGE)
-- `value`: числовое значение (для ADD/OVERRIDE)
-- `source`: откуда пришёл (id предмета, заклинания, condition)
-- `duration`: когда истекает (permanent, end_of_turn, timed, concentration)
-
-Начать с двух статов: `effective_ac` и `effective_speed`. Они учитывают conditions из 1a. Потом — equipment из 2a.
-
-**Нюансы D&D 5e, которые pipeline должен учитывать:**
-- Stacking: одинаковые источники не стакаются (два Ring of Protection +1 = всё равно +1).
-- Order of operations: OVERRIDE задаёт базу, затем ADD поверх (Mage Armor base 13+DEX, Shield +5 → 18+DEX).
-- Advantage/disadvantage: не суммируются, любое количество = одно; adv + disadv = ни того ни другого.
-- Concentration: ровно одно заклинание, новый каст снимает старый.
+**Что осталось для расширения (не блокирует):**
+- Duration на модификаторах не нужен — conditions владеют длительностью через ConditionsMap.
+- `SET_BASE` operation (для Mage Armor: base 13+DEX) — добавить когда появится armor system.
+- `MULTIPLY` operation (для Haste: double speed) — добавить когда появятся заклинания.
+- Concentration tracking — отдельная система поверх conditions.
+- Equipment modifiers через `grant_conditions` на WeaponDef — пока не применяются автоматически.
 
 ---
 
 ## Уровень 2 — Строительные блоки контента
 
-### 2a. Инвентарь и экипировка
+### 2a. Инвентарь и экипировка ✅
 
-**Зачем:** отделить "лежит в рюкзаке" от "надето и даёт бонусы".
+**Реализовано (action-dispatcher Phases 5-6 + equip/unequip):**
+- `Item` (frozen dataclass): id, name, item_type (POTION/WEAPON), params, weapon_def.
+- `Creature.inventory: list[Item]` — предметы в рюкзаке. `USE_ITEM` расходует, `EQUIP` перемещает в weapon slot.
+- `Creature.equipped_weapon: Item | None` — текущее оружие. `UNEQUIP` возвращает в inventory.
+- `WeaponDef` — типизированное описание оружия (damage, reach, ability, finesse, magic bonus, grant_actions, grant_conditions).
+- `EQUIP` / `UNEQUIP` — free actions (D&D 5e object interaction). Swap: старое оружие → inventory, новое → slot.
+- `EquipmentActionProvider` — EQUIP доступен если в inventory есть weapons, UNEQUIP если weapon equipped.
+- Content loader: `equipped: true` flag в YAML для pre-equipped weapons. Без флага — всё в inventory, NPC экипируют сами.
+- RuleBrain: автоматически equip на первом ходу если unarmed.
+- LLM brain: видит inventory + equip tool + situational hint ("you are UNARMED, use equip"). Экипирует сам.
+- Frontend: equip dropdown (показывает weapons из inventory), unequip button.
+- Perception: equip/unequip события видны в combat log.
 
-**Как работает:**
-- `Inventory` = список предметов.
-- `EquipmentSlots` = слоты (head, chest, main_hand, off_hand, ...). Набор слотов определяется контентом, не хардкодом.
-- Предмет — YAML-объект: id, name, slot, base_value, modifiers[], granted_actions[].
-- **Equip:** предмет регистрирует свои модификаторы на владельце (source = item_id).
-- **Unequip:** удаляет все модификаторы с source = item_id. Чистка стейта — бесплатно.
+**Что осталось:**
+- **Нет EquipmentSlots.** Только `equipped_weapon` — один слот. Для брони, колец, щитов нужна система слотов.
+- **Нет modifiers от экипировки.** `grant_conditions` парсится но не применяется автоматически при equip. Pipeline (1b) готов, нужен hook.
+- **Нет base_value / gold cost** у предметов.
 
-```yaml
-item_id: dwarven_plate
-type: equipment
-slot: chest
-base_value: 1500
-modifiers:
-  - target: AC
-    op: OVERRIDE
-    value: 18
-```
+### 2b. Диспатч действий (Action Dispatch) ✅
 
-Движок читает YAML → предмет работает. Без кода.
+**Полностью реализовано.** См. `docs/plans/action-dispatcher.md` (Phases 0-6).
 
-### 2b. Диспатч действий (Action Dispatch)
-
-**Зачем:** заменить if/elif в execute_action на реестр обработчиков. К этому моменту типов действий будет >10 (базовые + equip/unequip/use_item), и if/elif начнёт мешать.
-
-**Как работает:**
-1. **ActionProvider** — интерфейс: "я даю список доступных действий". Реализуют: экипированное оружие, фичи класса, заклинания.
-2. `Creature.get_available_actions()` собирает: базовые (dodge, dash, flee) + от провайдеров.
-3. **ActionDispatcher** — реестр: action_name → handler function. Handler — чистая функция в `rules/`.
-4. `Creature.execute_action()` → `dispatcher.dispatch(action, creature, emit_fn)`.
+- `ActionDispatcher` — реестр handler-ов + validate → execute pipeline.
+- `ActionProvider` protocol — 4 провайдера: BaseActionProvider, InventoryActionProvider, EquipmentActionProvider, WeaponActionProvider.
+- `Creature.execute_action()` удалён. Creature — чистые данные + brain.
+- 11 action types: idle, say, attack, dodge, flee, move, dash, wait, bless, use_item, equip, unequip.
+- Budget enforcement, target/reach validation — в цепочке `_CHECKS` валидатора.
 
 ### 2c. Ресурсы (Spell Slots, Ki, Rage, Charges)
 
@@ -272,9 +270,9 @@ effects:
 
 ## Порядок внедрения
 
-1. **Уровень 0** — закрыть фундамент: активация, fast-forward, Round в ядре. Без этого нет рабочего game loop.
-2. **Уровень 1** — Conditions + derived stats. Proof-of-concept modifier pipeline на минимальном примере (AC, speed, conditions).
-3. **Уровень 2** — Inventory/Equipment → Action Dispatch → Resources. Каждый шаг добавляет потребителей в modifier pipeline.
-4. **Уровень 3** — Заклинания, пропсы, торговля. К этому моменту инфраструктура на месте.
+1. **Уровень 0** ✅ — активация, fast-forward, Round в ядре.
+2. **Уровень 1** ✅ — Conditions (1a) + derived stats / modifier pipeline (1b). **Следующий шаг: Level 2.**
+3. **Уровень 2** — частично ✅. Action Dispatch (2b) ✅. Inventory/Equipment (2a) ✅ (equip/unequip, weapon swap, все мозги работают). Resources (2c) — не начато.
+4. **Уровень 3** — Заклинания, пропсы, торговля. Не начато.
 
 Каждый уровень валидирует архитектурные решения предыдущего. Не строить следующий пока предыдущий не работает.

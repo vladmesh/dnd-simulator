@@ -40,6 +40,18 @@ def describe_item(item: Item) -> str:
     """Build a human-readable description of an item for awareness."""
     if item.params.get("heal_dice"):
         return f"{item.name} (heals {item.params['heal_dice']} HP)"
+    if item.weapon_def is not None:
+        wd = item.weapon_def
+        dmg = ", ".join(f"{d.dice} {d.type.value}" for d in wd.damage)
+        extras: list[str] = []
+        if wd.is_finesse:
+            extras.append("finesse")
+        if wd.is_magic:
+            extras.append("magic")
+        if wd.modifier:
+            extras.append(f"+{wd.modifier}")
+        suffix = f" [{', '.join(extras)}]" if extras else ""
+        return f"{item.name} (weapon: {dmg}, reach {wd.reach}ft{suffix})"
     return item.name
 
 

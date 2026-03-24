@@ -9,7 +9,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from dnd_simulator.core.action import END_TURN, Action, ActionType
-from dnd_simulator.core.awareness import CombatAwareness, CombatEntity, PeacefulAwareness, PerceivedEvent
+from dnd_simulator.core.awareness import CombatAwareness, CombatEntity, ItemInfo, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.models import EventType
 from dnd_simulator.core.tags import NpcTag, find_tags, has_tag
 
@@ -152,6 +152,25 @@ class RuleBrain(Brain):
         # Tag-adjusted thresholds
         flee_threshold = 0.25 if has_tag(tags, NpcTag.SCARED) else 0.15
         dodge_threshold = 0.35 if has_tag(tags, NpcTag.SCARED) else 0.25
+
+        # --- Equip weapon if unarmed and have one in inventory ---
+        if ActionType.EQUIP in awareness.available_actions and creature.equipped_weapon is None:
+            from dnd_simulator.core.items import ItemType
+
+            weapon = next((i for i in awareness.available_items if "weapon" in i.description.lower()), None)
+            if weapon is None:
+                # Fallback: pick first item that looks like a weapon from inventory
+                weapon = next(
+                    (
+                        ItemInfo(id=i.id, name=i.name, description=f"weapon: {i.name}")
+                        for i in creature.inventory
+                        if i.item_type == ItemType.WEAPON
+                    ),
+                    None,
+                )
+            if weapon:
+                logger.info("[RuleBrain:%s] → equip %s (unarmed)", creature.name, weapon.name)
+                return Action(name=ActionType.EQUIP, params={"weapon_id": weapon.id})
 
         # --- Use healing potion if wounded and available ---
         if hp_ratio < 0.5 and ActionType.USE_ITEM in awareness.available_actions and awareness.available_items:

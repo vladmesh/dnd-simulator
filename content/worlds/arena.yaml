@@ -63,12 +63,6 @@ npcs:
           - dice: "1d8"
             type: slashing
         ability: str
-    attacks:
-      - name: greatsword
-        ability: str
-        damage:
-          - dice: "2d6"
-            type: slashing
 
   shadow:
     name: Тень Ночная
@@ -103,18 +97,6 @@ npcs:
           - dice: "1d8"
             type: piercing
         is_finesse: true
-    attacks:
-      - name: shortbow
-        ability: dex
-        reach: 80
-        damage:
-          - dice: "1d6"
-            type: piercing
-      - name: dagger
-        ability: dex
-        damage:
-          - dice: "1d4"
-            type: piercing
 
   iron:
     name: Железный Горн
@@ -150,12 +132,6 @@ npcs:
           - dice: "1d6"
             type: bludgeoning
         ability: str
-    attacks:
-      - name: warhammer
-        ability: str
-        damage:
-          - dice: "1d10"
-            type: bludgeoning
 
   paladin:
     name: Сэр Люциус
@@ -192,9 +168,3 @@ npcs:
         ability: str
         is_magic: true
         grant_actions: [bless]
-    attacks:
-      - name: longsword
-        ability: str
-        damage:
-          - dice: "1d8"
-            type: slashing

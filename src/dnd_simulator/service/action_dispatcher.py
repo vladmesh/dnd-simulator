@@ -22,14 +22,21 @@ from dnd_simulator.rules.action_handlers import (
     handle_bless,
     handle_dash,
     handle_dodge,
+    handle_equip,
     handle_flee,
     handle_idle,
     handle_move,
     handle_say,
+    handle_unequip,
     handle_use_item,
     handle_wait,
 )
-from dnd_simulator.rules.action_provider import BaseActionProvider, InventoryActionProvider, WeaponActionProvider
+from dnd_simulator.rules.action_provider import (
+    BaseActionProvider,
+    EquipmentActionProvider,
+    InventoryActionProvider,
+    WeaponActionProvider,
+)
 from dnd_simulator.rules.actions import action_cost
 from dnd_simulator.rules.validation import ActionContext, validate_action
 
@@ -117,7 +124,9 @@ class ActionDispatcher:
 
 
 # Provider-managed action types — excluded from BaseActionProvider
-_PROVIDER_MANAGED: frozenset[ActionType] = frozenset({ActionType.USE_ITEM, ActionType.BLESS})
+_PROVIDER_MANAGED: frozenset[ActionType] = frozenset(
+    {ActionType.USE_ITEM, ActionType.BLESS, ActionType.EQUIP, ActionType.UNEQUIP}
+)
 
 
 def create_dispatcher(world: World) -> ActionDispatcher:
@@ -135,11 +144,14 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.register(ActionType.WAIT, handle_wait)
     dispatcher.register(ActionType.USE_ITEM, handle_use_item)
     dispatcher.register(ActionType.BLESS, handle_bless)
+    dispatcher.register(ActionType.EQUIP, handle_equip)
+    dispatcher.register(ActionType.UNEQUIP, handle_unequip)
 
     # Register providers
     base_types = frozenset(dispatcher._handlers) - _PROVIDER_MANAGED
     dispatcher.add_provider(BaseActionProvider(base_types))
     dispatcher.add_provider(InventoryActionProvider())
+    dispatcher.add_provider(EquipmentActionProvider())
     dispatcher.add_provider(WeaponActionProvider())
 
     return dispatcher

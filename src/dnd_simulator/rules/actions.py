@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
 
 # Actions that cost 0 budget (information-only, free actions)
-_FREE_ACTIONS = frozenset({ActionType.IDLE, ActionType.END_TURN, ActionType.SKIP})
+_FREE_ACTIONS = frozenset({ActionType.IDLE, ActionType.END_TURN, ActionType.SKIP, ActionType.EQUIP, ActionType.UNEQUIP})
 
 # Actions that cost 1 standard action
 _STANDARD_ACTIONS = frozenset(
@@ -42,6 +42,8 @@ _TURN_ENDING_PEACEFUL = frozenset(
         ActionType.FLEE,
         ActionType.DODGE,
         ActionType.USE_ITEM,
+        ActionType.EQUIP,
+        ActionType.UNEQUIP,
     }
 )
 

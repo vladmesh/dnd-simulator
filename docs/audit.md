@@ -78,11 +78,12 @@
 ## Test Gaps
 | Source File | Expected Test | Status |
 |-------------|---------------|--------|
-| `rules/action_handlers.py` | `test_rules_action_handlers.py` | **missing** (critical — newest pure-function code) |
-| `rules/action_provider.py` | `test_rules_action_provider.py` | **missing** |
-| `rules/weapons.py` | `test_rules_weapons.py` | **missing** |
-| `rules/conditions.py` | `test_rules_conditions.py` | **missing** |
-| `rules/actions.py` | `test_rules_actions.py` | **missing** |
+| `rules/action_handlers.py` | `test_rules_action_handlers.py` | covered by `test_action_dispatcher.py` (102 tests incl. equip/unequip) |
+| `rules/action_provider.py` | `test_rules_action_provider.py` | covered by `test_action_dispatcher.py` (EquipmentProvider tests) |
+| `rules/weapons.py` | `test_rules_weapons.py` | covered by `test_action_dispatcher.py` + `test_modifiers.py` |
+| `rules/conditions.py` | `test_rules_conditions.py` | covered by `test_conditions.py` + `test_modifiers.py` (71 tests) |
+| `rules/actions.py` | `test_rules_actions.py` | covered by `test_action_dispatcher.py` (cost/budget tests) |
+| `rules/modifiers.py` | `test_modifiers.py` | **71 tests** — pipeline, conditions mapping, effective stats |
 | `core/awareness.py` | `test_awareness.py` | missing |
 | `core/items.py` | `test_items.py` | missing |
 | `core/world.py` | `test_world.py` | missing |

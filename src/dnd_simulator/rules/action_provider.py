@@ -52,6 +52,25 @@ class InventoryActionProvider:
         return [ActionType.USE_ITEM]
 
 
+class EquipmentActionProvider:
+    """Provides EQUIP if creature has weapons in inventory, UNEQUIP if weapon equipped."""
+
+    def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
+        from dnd_simulator.core.items import ItemType
+
+        result: list[ActionType] = []
+        has_inventory_weapons = any(i.item_type == ItemType.WEAPON for i in creature.inventory)
+        if has_inventory_weapons:
+            probe = Action(name=ActionType.EQUIP)
+            if validate_action(creature, probe, ctx) is None:
+                result.append(ActionType.EQUIP)
+        if creature.equipped_weapon is not None:
+            probe = Action(name=ActionType.UNEQUIP)
+            if validate_action(creature, probe, ctx) is None:
+                result.append(ActionType.UNEQUIP)
+        return result
+
+
 class WeaponActionProvider:
     """Provides extra actions granted by equipped weapon (e.g. Bless)."""
 

@@ -140,11 +140,12 @@ def check_target_valid(actor: Creature, action: Action, ctx: ActionContext) -> V
 
 
 def check_has_item(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
-    """For USE_ITEM: item must exist in actor's inventory."""
-    if action.name != ActionType.USE_ITEM:
+    """For USE_ITEM/EQUIP: item must exist in actor's inventory."""
+    if action.name not in (ActionType.USE_ITEM, ActionType.EQUIP):
         return None
 
-    item_id = action.params.get("item_id") if action.params else None
+    param_key = "weapon_id" if action.name == ActionType.EQUIP else "item_id"
+    item_id = action.params.get(param_key) if action.params else None
     if not item_id:
         return None  # probe — no item specified, skip
 

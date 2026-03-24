@@ -23,6 +23,12 @@ from dnd_simulator.storage.store import JsonFileStore
 
 DEFAULT_SAVES_DIR = Path(__file__).resolve().parents[4] / "saves"
 
+# Configure logging from LOG_LEVEL env var (default: WARNING)
+logging.basicConfig(
+    level=getattr(logging, os.environ.get("LOG_LEVEL", "WARNING").upper(), logging.WARNING),
+    format="%(levelname)s %(name)s: %(message)s",
+)
+
 _SESSION_ID_RE = re.compile(r"/api/(?:master|player)/sessions/([^/]+)")
 
 

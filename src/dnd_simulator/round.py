@@ -24,7 +24,8 @@ from dnd_simulator.rules.actions import (
     get_num_actions,
     get_num_bonus_actions,
 )
-from dnd_simulator.rules.conditions import effective_speed, is_incapacitated, tick_conditions
+from dnd_simulator.rules.conditions import is_incapacitated, tick_conditions
+from dnd_simulator.rules.modifiers import effective_speed
 from dnd_simulator.rules.validation import ActionContext
 
 if TYPE_CHECKING:
@@ -91,8 +92,8 @@ class Round:
 
     @staticmethod
     def _build_available_items(creature: Creature, available_actions: list[ActionType]) -> list[ItemInfo]:
-        """Build item info list for awareness when USE_ITEM is available."""
-        if ActionType.USE_ITEM not in available_actions:
+        """Build item info list for awareness when USE_ITEM or EQUIP is available."""
+        if ActionType.USE_ITEM not in available_actions and ActionType.EQUIP not in available_actions:
             return []
         return [ItemInfo(id=item.id, name=item.name, description=describe_item(item)) for item in creature.inventory]
 
@@ -172,7 +173,7 @@ class Round:
             conds_info,
         )
 
-        speed = effective_speed(creature.speed, creature.conditions)
+        speed = effective_speed(creature)
         if speed != creature.speed:
             logger.debug(
                 "[Round] %s speed reduced %d→%d by conditions: %s",
@@ -230,6 +231,15 @@ class Round:
                 consecutive_failures = 0
             else:
                 consecutive_failures += 1
+                logger.info(
+                    "[Round] %s action '%s' failed: %s",
+                    creature.name,
+                    action.name.value,
+                    result.error,
+                )
+                # Notify client about failed action (so UI can show error)
+                if self._on_action:
+                    self._on_action(creature, action, budget, result.error)
                 if consecutive_failures >= 3:
                     logger.warning(
                         "[Round] %s failed %d actions in a row, ending turn",

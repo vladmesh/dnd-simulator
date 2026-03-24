@@ -1,4 +1,9 @@
-"""Tests for D&D 5e Conditions mechanics."""
+"""Tests for D&D 5e Conditions mechanics.
+
+Note: advantage/disadvantage, speed reduction, and auto-crit tests have been moved
+to test_modifiers.py (modifier pipeline). This file tests: is_incapacitated,
+prone_stand_cost, tick_conditions, Creature condition fields, save/load.
+"""
 
 from __future__ import annotations
 
@@ -16,11 +21,6 @@ from dnd_simulator.core.character import (
 from dnd_simulator.core.conditions import Condition, ConditionsMap
 from dnd_simulator.rules.combat import resolve_attack
 from dnd_simulator.rules.conditions import (
-    attacker_has_disadvantage,
-    attacks_against_have_advantage,
-    attacks_against_have_disadvantage,
-    effective_speed,
-    is_auto_crit,
     is_incapacitated,
     prone_stand_cost,
     tick_conditions,
@@ -32,15 +32,6 @@ def _sword() -> Attack:
         name="longsword",
         ability=Ability.STR,
         damage=(DamageComponent("1d8", DamageType.SLASHING),),
-    )
-
-
-def _bow() -> Attack:
-    return Attack(
-        name="longbow",
-        ability=Ability.DEX,
-        damage=(DamageComponent("1d8", DamageType.PIERCING),),
-        reach=150,
     )
 
 
@@ -87,84 +78,12 @@ class TestIsIncapacitated:
         assert not is_incapacitated(_conds(Condition.PRONE))
 
 
-class TestEffectiveSpeed:
-    def test_no_conditions(self) -> None:
-        assert effective_speed(30, {}) == 30
-
-    def test_grappled(self) -> None:
-        assert effective_speed(30, _conds(Condition.GRAPPLED)) == 0
-
-    def test_restrained(self) -> None:
-        assert effective_speed(30, _conds(Condition.RESTRAINED)) == 0
-
-    def test_stunned(self) -> None:
-        assert effective_speed(30, _conds(Condition.STUNNED)) == 0
-
-    def test_prone_does_not_reduce_speed(self) -> None:
-        assert effective_speed(30, _conds(Condition.PRONE)) == 30
-
-    def test_prone_stand_cost(self) -> None:
+class TestProneStandCost:
+    def test_half_speed(self) -> None:
         assert prone_stand_cost(30) == 15
 
-
-class TestAttackerDisadvantage:
-    def test_blinded(self) -> None:
-        assert attacker_has_disadvantage(_conds(Condition.BLINDED))
-
-    def test_frightened(self) -> None:
-        assert attacker_has_disadvantage(_conds(Condition.FRIGHTENED))
-
-    def test_poisoned(self) -> None:
-        assert attacker_has_disadvantage(_conds(Condition.POISONED))
-
-    def test_prone(self) -> None:
-        assert attacker_has_disadvantage(_conds(Condition.PRONE))
-
-    def test_restrained(self) -> None:
-        assert attacker_has_disadvantage(_conds(Condition.RESTRAINED))
-
-    def test_grappled_no_disadvantage(self) -> None:
-        assert not attacker_has_disadvantage(_conds(Condition.GRAPPLED))
-
-
-class TestAttacksAgainstTarget:
-    def test_stunned_gives_advantage(self) -> None:
-        assert attacks_against_have_advantage(_conds(Condition.STUNNED), melee=True)
-        assert attacks_against_have_advantage(_conds(Condition.STUNNED), melee=False)
-
-    def test_paralyzed_gives_advantage(self) -> None:
-        assert attacks_against_have_advantage(_conds(Condition.PARALYZED), melee=True)
-
-    def test_prone_melee_advantage(self) -> None:
-        assert attacks_against_have_advantage(_conds(Condition.PRONE), melee=True)
-
-    def test_prone_ranged_disadvantage(self) -> None:
-        assert not attacks_against_have_advantage(_conds(Condition.PRONE), melee=False)
-        assert attacks_against_have_disadvantage(_conds(Condition.PRONE), melee=False)
-
-    def test_prone_ranged_no_advantage(self) -> None:
-        assert not attacks_against_have_advantage(_conds(Condition.PRONE), melee=False)
-
-    def test_invisible_gives_disadvantage(self) -> None:
-        assert attacks_against_have_disadvantage(_conds(Condition.INVISIBLE), melee=True)
-
-    def test_no_conditions_no_effect(self) -> None:
-        assert not attacks_against_have_advantage({}, melee=True)
-        assert not attacks_against_have_disadvantage({}, melee=True)
-
-
-class TestAutoCrit:
-    def test_paralyzed_melee_auto_crit(self) -> None:
-        assert is_auto_crit(_conds(Condition.PARALYZED), melee=True)
-
-    def test_unconscious_melee_auto_crit(self) -> None:
-        assert is_auto_crit(_conds(Condition.UNCONSCIOUS), melee=True)
-
-    def test_paralyzed_ranged_no_auto_crit(self) -> None:
-        assert not is_auto_crit(_conds(Condition.PARALYZED), melee=False)
-
-    def test_stunned_no_auto_crit(self) -> None:
-        assert not is_auto_crit(_conds(Condition.STUNNED), melee=True)
+    def test_zero_speed(self) -> None:
+        assert prone_stand_cost(0) == 0
 
 
 # ---------------------------------------------------------------------------

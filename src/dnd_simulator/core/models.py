@@ -51,6 +51,7 @@ class QueryType(Enum):
     DAYLIGHT = "daylight"
     REGION_INFO = "region_info"
     REGIONS = "regions"
+    LOCATION_REGION = "location_region"
 
     # Politics
     NATIONS = "nations"
@@ -92,6 +93,8 @@ class EventType(Enum):
     ENTITY_DASH = "entity_dash"
     ENTITY_USE_ITEM = "entity_use_item"
     ENTITY_BLESS = "entity_bless"
+    ENTITY_EQUIP = "entity_equip"
+    ENTITY_UNEQUIP = "entity_unequip"
     TURN_SKIPPED = "turn_skipped"
     COMBAT_STARTED = "combat_started"
     COMBAT_ENDED = "combat_ended"

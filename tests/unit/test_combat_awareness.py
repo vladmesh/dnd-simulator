@@ -15,6 +15,7 @@ from dnd_simulator.core.character import (
     Entity,
     Race,
 )
+from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -510,6 +511,7 @@ class TestDodgeMechanics:
         for seed in range(200):
             target.current_hp = 100
             target.is_dodging = True
+            target.conditions[Condition.DODGING] = 1
             random.seed(seed)
             layer.handle_event(
                 Event(

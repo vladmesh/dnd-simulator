@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.layer import Layer
+from dnd_simulator.core.location import LocationGraph
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
 from dnd_simulator.layers.geography.models import (
     Connection,
@@ -34,12 +35,14 @@ class GeographyLayer(Layer):
         self,
         regions: list[Region] | None = None,
         weather_seed: int | None = None,
+        location_graph: LocationGraph | None = None,
     ) -> None:
         self._regions: dict[str, Region] = {}
         if regions:
             for r in regions:
                 self._regions[r.id] = r
         self._weather = WeatherEngine(seed=weather_seed)
+        self._location_graph = location_graph
 
     @property
     def name(self) -> str:
@@ -165,6 +168,16 @@ class GeographyLayer(Layer):
 
         if q is QueryType.REGIONS:
             return Answer(value=list(self._regions.keys()))
+
+        if q is QueryType.LOCATION_REGION:
+            location_id = str(params["location_id"])
+            if self._location_graph is None:
+                return Answer(value=None)
+            try:
+                region_id = self._location_graph.region_of(location_id)
+            except KeyError:
+                return Answer(value=None)
+            return Answer(value=region_id)
 
         raise ValueError(f"Unknown geography query: {q}")
 

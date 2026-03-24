@@ -16,8 +16,11 @@ const DIRECTIONAL_ACTIONS = new Set(["move", "dash"])
 // Actions that need an item dropdown
 const ITEM_ACTIONS = new Set(["use_item"])
 
+// Actions that need a weapon dropdown (pick from inventory weapons)
+const WEAPON_ACTIONS = new Set(["equip"])
+
 // Actions that are just a button click (no params)
-const SIMPLE_ACTIONS = new Set(["dodge", "flee", "bless", "idle", "wait", "end_turn"])
+const SIMPLE_ACTIONS = new Set(["dodge", "flee", "bless", "unequip", "idle", "wait", "end_turn"])
 
 // Visual variants for specific actions
 const ACTION_VARIANT: Record<string, "destructive" | "secondary" | "outline"> = {
@@ -124,8 +127,48 @@ export function ActionBar() {
             )
           }
 
+          // Weapon dropdown: equip
+          if (WEAPON_ACTIONS.has(name)) {
+            const weapons = availableItems.filter((i) => i.description.toLowerCase().includes("weapon"))
+            if (weapons.length > 0) {
+              return (
+                <div key={name} className="relative">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={isDisabled()}
+                    onClick={() => {
+                      if (weapons.length === 1) {
+                        sendAction("equip", { weapon_id: weapons[0].id })
+                      } else {
+                        setOpenDropdown(openDropdown === "equip" ? null : "equip")
+                      }
+                    }}
+                  >
+                    {getActionLabel(t, "equip")}
+                    {weapons.length > 1 && <ChevronDown className="ml-1 size-3" />}
+                  </Button>
+                  {openDropdown === "equip" && weapons.length > 1 && (
+                    <div className="absolute bottom-full left-0 z-10 mb-1 min-w-[180px] rounded border border-border bg-popover p-1 shadow-md">
+                      {weapons.map((w) => (
+                        <button
+                          key={w.id}
+                          className="w-full rounded px-2 py-1 text-left text-xs hover:bg-accent"
+                          onClick={() => sendAction("equip", { weapon_id: w.id })}
+                        >
+                          {w.description || w.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            }
+            return null
+          }
+
           // Simple button
-          if (SIMPLE_ACTIONS.has(name) || !TARGET_ACTIONS.has(name) && !DIRECTIONAL_ACTIONS.has(name) && !ITEM_ACTIONS.has(name)) {
+          if (SIMPLE_ACTIONS.has(name) || !TARGET_ACTIONS.has(name) && !DIRECTIONAL_ACTIONS.has(name) && !ITEM_ACTIONS.has(name) && !WEAPON_ACTIONS.has(name)) {
             return (
               <Button
                 key={name}

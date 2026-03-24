@@ -77,7 +77,7 @@ class GameService(
         # Players are created via API (create_player), not from templates
         entities: list[Entity] = [*npcs]
 
-        geography = GeographyLayer(regions=regions)
+        geography = GeographyLayer(regions=regions, location_graph=location_graph)
         settlements_layer = SettlementsLayer(settlements=settlements, region_terrains=region_terrains)
         politics = PoliticsLayer(
             nations=nations,

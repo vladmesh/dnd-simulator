@@ -36,7 +36,7 @@ _TOOL_SCHEMAS: dict[ActionType, dict[str, Any]] = {
         "type": "function",
         "function": {
             "name": "idle",
-            "description": "Do nothing this turn.",
+            "description": "Do nothing this turn. Use when there is nothing meaningful to do.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -52,7 +52,9 @@ _TOOL_SCHEMAS: dict[ActionType, dict[str, Any]] = {
         "type": "function",
         "function": {
             "name": "attack",
-            "description": "Attack a target with your equipped weapon (or fists if unarmed).",
+            "description": (
+                "Attack a target with your equipped weapon (or fists if unarmed). Target must be within weapon reach."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -73,7 +75,9 @@ _TOOL_SCHEMAS: dict[ActionType, dict[str, Any]] = {
         "type": "function",
         "function": {
             "name": "dodge",
-            "description": "Take a defensive stance. Harder to hit this round.",
+            "description": (
+                "Take a defensive stance. Attacks against you have disadvantage until your next turn. Costs 1 action."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -89,7 +93,7 @@ _TOOL_SCHEMAS: dict[ActionType, dict[str, Any]] = {
         "type": "function",
         "function": {
             "name": "flee",
-            "description": "Try to escape from combat.",
+            "description": "Try to escape from combat. Costs 1 action.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -167,7 +171,9 @@ _TOOL_SCHEMAS: dict[ActionType, dict[str, Any]] = {
         "type": "function",
         "function": {
             "name": "use_item",
-            "description": "Use an item from your inventory (potion, scroll, etc.).",
+            "description": (
+                "Use a consumable item from your inventory (potion, scroll, etc.). Costs 1 action. Item is consumed."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -188,6 +194,38 @@ _TOOL_SCHEMAS: dict[ActionType, dict[str, Any]] = {
                 "Invoke a blessing from your weapon. Costs a bonus action. "
                 "Grants +d4 to all your attack rolls for several rounds."
             ),
+            "parameters": {
+                "type": "object",
+                "properties": {},
+            },
+        },
+    },
+    ActionType.EQUIP: {
+        "type": "function",
+        "function": {
+            "name": "equip",
+            "description": (
+                "Equip a weapon from your inventory. Free action. "
+                "Attacking with a weapon deals more damage than fists. "
+                "Your current weapon (if any) goes back to inventory."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "weapon_id": {
+                        "type": "string",
+                        "description": "ID of the weapon to equip (from available_items in your awareness)",
+                    },
+                },
+                "required": ["weapon_id"],
+            },
+        },
+    },
+    ActionType.UNEQUIP: {
+        "type": "function",
+        "function": {
+            "name": "unequip",
+            "description": "Put away your equipped weapon. Free action. You will fight with fists.",
             "parameters": {
                 "type": "object",
                 "properties": {},
