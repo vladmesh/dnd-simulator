@@ -23,9 +23,10 @@ from dnd_simulator.core.character import (
     DamageType,
     Race,
 )
+from dnd_simulator.core.class_features import ClassFeatures, FighterFeatures, FightingStyle, RogueFeatures
 from dnd_simulator.core.combat import BattleMap, Wall
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.items import Item, ItemType, WeaponDef
+from dnd_simulator.core.items import ArmorCategory, ArmorDef, Item, ItemType, ShieldDef, WeaponCategory, WeaponDef
 from dnd_simulator.core.location import Location, LocationEdge
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.models import Npc, NpcMemory, resolve_schedule
@@ -112,7 +113,9 @@ _WEAPON_KEYS = frozenset(
     {
         "name",
         "type",
+        "weapon_id",
         "attack_name",
+        "category",
         "damage",
         "reach",
         "ability",
@@ -133,7 +136,9 @@ def _parse_weapon_def(idata: dict[str, Any]) -> WeaponDef:
     grant_conditions = tuple(Condition(c) for c in idata.get("grant_conditions", []))
     grant_actions = tuple(ActionType(a) for a in idata.get("grant_actions", []))
     return WeaponDef(
+        weapon_id=str(idata["weapon_id"]),
         attack_name=str(idata["attack_name"]),
+        category=WeaponCategory(idata["category"]),
         damage=damage,
         reach=int(idata.get("reach", 5)),
         ability=ability,
@@ -145,12 +150,45 @@ def _parse_weapon_def(idata: dict[str, Any]) -> WeaponDef:
     )
 
 
+def _parse_armor_def(idata: dict[str, Any]) -> ArmorDef:
+    """Parse ArmorDef from YAML armor item data."""
+    category = ArmorCategory(idata["category"])
+    max_dex: int
+    if category == ArmorCategory.LIGHT:
+        max_dex = 99
+    elif category == ArmorCategory.MEDIUM:
+        max_dex = int(idata.get("max_dex_bonus", 2))
+    else:
+        max_dex = int(idata.get("max_dex_bonus", 0))
+    return ArmorDef(
+        armor_id=str(idata["armor_id"]),
+        category=category,
+        base_ac=int(idata["base_ac"]),
+        max_dex_bonus=max_dex,
+        strength_req=int(idata.get("strength_req", 0)),
+    )
+
+
+def _parse_shield_def(idata: dict[str, Any]) -> ShieldDef:
+    """Parse ShieldDef from YAML shield item data."""
+    return ShieldDef(
+        shield_id=str(idata.get("shield_id", "shield")),
+        ac_bonus=int(idata.get("ac_bonus", 2)),
+    )
+
+
+_ARMOR_KEYS = frozenset(
+    {"name", "type", "armor_id", "category", "base_ac", "max_dex_bonus", "strength_req", "equipped"}
+)
+_SHIELD_KEYS = frozenset({"name", "type", "shield_id", "ac_bonus", "equipped"})
+
+
 def parse_items(items_data: list[dict[str, Any]]) -> list[Item]:
     """Parse item definitions from YAML.
 
     Each item dict must have ``name`` and ``type``.
     For potions: remaining keys become ``params`` (e.g. ``heal_dice``).
-    For weapons: ``weapon_def`` is built from typed fields.
+    For weapons/armor/shields: typed defs are built from structured fields.
     IDs are auto-generated as ``<snake_name>_<index>``.
     """
     items: list[Item] = []
@@ -160,15 +198,36 @@ def parse_items(items_data: list[dict[str, Any]]) -> list[Item]:
         item_id = f"{name.lower().replace(' ', '_')}_{i}"
 
         weapon_def: WeaponDef | None = None
+        armor_def: ArmorDef | None = None
+        shield_def: ShieldDef | None = None
+        params: dict[str, object] = {}
+
         if item_type == ItemType.WEAPON:
             weapon_def = _parse_weapon_def(idata)
-            params: dict[str, object] = {}
+            if idata.get("equipped"):
+                params["equipped"] = True
+        elif item_type == ItemType.ARMOR:
+            armor_def = _parse_armor_def(idata)
+            if idata.get("equipped"):
+                params["equipped"] = True
+        elif item_type == ItemType.SHIELD:
+            shield_def = _parse_shield_def(idata)
             if idata.get("equipped"):
                 params["equipped"] = True
         else:
             params = {k: v for k, v in idata.items() if k not in ("name", "type")}
 
-        items.append(Item(id=item_id, name=name, item_type=item_type, params=params, weapon_def=weapon_def))
+        items.append(
+            Item(
+                id=item_id,
+                name=name,
+                item_type=item_type,
+                params=params,
+                weapon_def=weapon_def,
+                armor_def=armor_def,
+                shield_def=shield_def,
+            )
+        )
     return items
 
 
@@ -181,6 +240,48 @@ def parse_equipped_weapon(items: list[Item]) -> Item | None:
         if item.item_type == ItemType.WEAPON and item.params.get("equipped"):
             return item
     return None
+
+
+def parse_equipped_armor(items: list[Item]) -> Item | None:
+    """Find the armor marked ``equipped: true`` in items list."""
+    for item in items:
+        if item.item_type == ItemType.ARMOR and item.params.get("equipped"):
+            return item
+    return None
+
+
+def parse_equipped_shield(items: list[Item]) -> Item | None:
+    """Find the shield marked ``equipped: true`` in items list."""
+    for item in items:
+        if item.item_type == ItemType.SHIELD and item.params.get("equipped"):
+            return item
+    return None
+
+
+def parse_class_features(char_class: CharClass, data: dict[str, Any]) -> list[ClassFeatures]:
+    """Build class features list from YAML ``class_features`` block + class type.
+
+    Fighter YAML example::
+
+        class_features:
+          fighting_style: defense
+
+    Rogue gets RogueFeatures automatically from class; sneak_attack_dice
+    can be overridden in YAML (defaults to 1 for level 1).
+    """
+    cf_data = data.get("class_features") or {}
+    features: list[ClassFeatures] = []
+
+    if char_class == CharClass.FIGHTER:
+        style_raw = cf_data.get("fighting_style")
+        if style_raw:
+            features.append(FighterFeatures(fighting_style=FightingStyle(style_raw)))
+
+    if char_class == CharClass.ROGUE:
+        sneak_dice = int(cf_data.get("sneak_attack_dice", 1))
+        features.append(RogueFeatures(sneak_attack_dice=sneak_dice))
+
+    return features
 
 
 # -- Public loaders --
@@ -364,6 +465,12 @@ def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locati
     equipped_weapon = parse_equipped_weapon(inventory)
     if equipped_weapon:
         inventory = [i for i in inventory if i.id != equipped_weapon.id]
+    equipped_armor = parse_equipped_armor(inventory)
+    if equipped_armor:
+        inventory = [i for i in inventory if i.id != equipped_armor.id]
+    equipped_shield = parse_equipped_shield(inventory)
+    if equipped_shield:
+        inventory = [i for i in inventory if i.id != equipped_shield.id]
 
     npc = Npc(
         id=npc_id,
@@ -385,6 +492,9 @@ def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locati
         memory=memory,
         inventory=inventory,
         equipped_weapon=equipped_weapon,
+        equipped_armor=equipped_armor,
+        equipped_shield=equipped_shield,
+        class_features=parse_class_features(char_class, ndata),
     )
     # Brain is assigned by BrainFactory in GameService, not here.
     return npc
@@ -411,13 +521,21 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
     equipped_weapon = parse_equipped_weapon(inventory)
     if equipped_weapon:
         inventory = [i for i in inventory if i.id != equipped_weapon.id]
+    equipped_armor = parse_equipped_armor(inventory)
+    if equipped_armor:
+        inventory = [i for i in inventory if i.id != equipped_armor.id]
+    equipped_shield = parse_equipped_shield(inventory)
+    if equipped_shield:
+        inventory = [i for i in inventory if i.id != equipped_shield.id]
+
+    char_class = CharClass(pdata["class"]) if "class" in pdata else CharClass.FIGHTER
 
     return PlayerCharacter(
         id=player_id,
         name=str(pdata.get("name", "Adventurer")),
         location_id=location_id,
         race=Race(pdata["race"]) if "race" in pdata else Race.HUMAN,
-        char_class=CharClass(pdata["class"]) if "class" in pdata else CharClass.FIGHTER,
+        char_class=char_class,
         level=int(pdata.get("level", 1)),
         alignment=Alignment(pdata["alignment"]) if "alignment" in pdata else Alignment.TRUE_NEUTRAL,
         appearance=str(pdata.get("appearance", "")),
@@ -429,6 +547,9 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
         attacks=attacks,
         inventory=inventory,
         equipped_weapon=equipped_weapon,
+        equipped_armor=equipped_armor,
+        equipped_shield=equipped_shield,
+        class_features=parse_class_features(char_class, pdata),
     )
 
 

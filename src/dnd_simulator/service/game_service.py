@@ -26,6 +26,7 @@ from dnd_simulator.layers.geography.layer import GeographyLayer
 from dnd_simulator.layers.politics.layer import PoliticsLayer
 from dnd_simulator.layers.settlements.layer import SettlementsLayer
 from dnd_simulator.llm.client import LlmClient
+from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.storage.store import SaveStore
 
 from .brain_factory import BrainFactory
@@ -245,7 +246,7 @@ class GameService(
                     "race": npc.race.value,
                     "char_class": npc.char_class.value,
                     "hp": npc.max_hp,
-                    "ac": npc.ac,
+                    "ac": effective_ac(npc),
                     "ai_type": npc.ai_type,
                 }
                 for npc in npcs_list

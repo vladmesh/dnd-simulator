@@ -16,10 +16,10 @@
 ## Dead Code
 | File | Issue | Action |
 |------|-------|--------|
-| `layers/entities/layer.py:86` | `active_creatures_at_location()` — zero callers | remove or backlog |
+| ~~`layers/entities/layer.py:86`~~ | ~~`active_creatures_at_location()` — zero callers~~ | **FIXED 2026-03-24**: removed |
 | `rules/conditions.py:111` | `auto_fail_str_dex_saves()` — never invoked | backlog (future saving throw system) |
-| `core/location.py:55` | `region_of()` — zero callers | remove or backlog |
-| `core/location.py:59` | `settlement_of()` — zero callers | remove or backlog |
+| ~~`core/location.py:55`~~ | ~~`region_of()` — false positive, called from geography/layer.py~~ | **NOT DEAD** |
+| ~~`core/location.py:59`~~ | ~~`settlement_of()` — zero callers~~ | **FIXED 2026-03-24**: removed |
 | `core/brain.py:59` | `move_away_from_target()` — zero callers | backlog (future movement AI) |
 | `core/turn_budget.py:54` | `refund()` — zero callers | backlog (future reaction system) |
 | `round.py:302` | `check_reactions()` — stubbed, zero callers | backlog (future reaction system) |
@@ -37,7 +37,7 @@
 | ~~`adapters/api/routes_ws.py:58`~~ | ~~`except Exception: pass` in WS send — silent swallow~~ | **FIXED 2026-03-24**: replaced with `logger.debug(...)` |
 | Service command mixins (27 occurrences) | `# type: ignore[attr-defined]` proliferation | Add a `Protocol` or ABC for the shared mixin interface |
 | `llm/client.py:70,112,113` | `# type: ignore[arg-type]` on OpenAI SDK calls | Use typed dicts or `cast()` |
-| `layers/politics/layer.py:338` | Magic number `0.08` for trade agreement probability | Extract to named constant or function like other probabilities |
+| ~~`layers/politics/layer.py:338`~~ | ~~Magic number `0.08` for trade agreement probability~~ | **FIXED 2026-03-24**: extracted to `trade_agreement_chance()` in `rules/politics.py` |
 
 ## Security
 | File:Line | Issue | Severity |

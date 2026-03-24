@@ -22,6 +22,7 @@ from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Qu
 from dnd_simulator.layers.entities.combat_manager import CombatManager
 from dnd_simulator.layers.entities.models import Npc, NpcMemory, activity_flavor
 from dnd_simulator.layers.entities.perception import perceive_event
+from dnd_simulator.rules.modifiers import effective_ac
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn, TimeDelta
@@ -85,14 +86,6 @@ class EntitiesLayer(Layer):
     def remove_entity(self, entity_id: str) -> None:
         """Remove an entity from the layer."""
         self._entities.pop(entity_id, None)
-
-    def active_creatures_at_location(self, location_id: str, exclude_id: str = "") -> list[Creature]:
-        """Get active creatures at a location (for turn polling)."""
-        return [
-            e
-            for e in self._entities.values()
-            if isinstance(e, Creature) and e.active and e.location_id == location_id and e.id != exclude_id
-        ]
 
     def get_active_creatures(self) -> list[Creature]:
         """Get all active creatures in the world (for the main game loop)."""
@@ -689,7 +682,7 @@ class EntitiesLayer(Layer):
                 {
                     "hp": entity.current_hp,
                     "max_hp": entity.max_hp,
-                    "ac": entity.ac,
+                    "ac": effective_ac(entity),
                     "conditions": sorted(c.value for c in entity.conditions),
                 }
             )
@@ -729,7 +722,7 @@ class EntitiesLayer(Layer):
             "personality": npc.personality,
             "hp": npc.current_hp,
             "max_hp": npc.max_hp,
-            "ac": npc.ac,
+            "ac": effective_ac(npc),
             "ai_type": npc.ai_type,
             "active": npc.active,
         }

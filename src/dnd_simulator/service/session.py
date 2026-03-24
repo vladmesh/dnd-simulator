@@ -19,6 +19,7 @@ from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.round import Round, get_entities_layer
+from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.service.action_dispatcher import create_dispatcher
 
 logger = structlog.get_logger(domain="session")
@@ -84,7 +85,7 @@ def _player_to_dict(player: PlayerCharacter) -> dict[str, Any]:
         "alignment": player.alignment.value,
         "hp": player.current_hp,
         "max_hp": player.max_hp,
-        "ac": player.ac,
+        "ac": effective_ac(player),
         "gold": player.gold,
         "location_id": player.location_id,
         "ability_scores": {

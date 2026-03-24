@@ -4,16 +4,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 import structlog
 
+from dnd_simulator.core.class_features import ClassFeatures
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.items import Item
+from dnd_simulator.core.resource import ResourcePool
 from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
     from dnd_simulator.core.brain import Brain
+
+_F = TypeVar("_F", bound=ClassFeatures)
 
 logger = structlog.get_logger(domain="entity")
 
@@ -204,6 +208,9 @@ class Creature(Entity):
     conditions: dict[Condition, int | None] = field(default_factory=dict)
     inventory: list[Item] = field(default_factory=list)
     equipped_weapon: Item | None = None
+    equipped_armor: Item | None = None
+    equipped_shield: Item | None = None
+    resource_pools: list[ResourcePool] = field(default_factory=list)
     wake_at_seconds: int | None = None  # absolute game-time seconds; None = not waiting
     brain: Brain | None = field(default=None, repr=False)
 
@@ -243,6 +250,14 @@ class Character(Creature):
     alignment: Alignment = Alignment.TRUE_NEUTRAL
     appearance: str = ""
     gold: int = 0
+    class_features: list[ClassFeatures] = field(default_factory=list)
+
+    def get_feature(self, feature_type: type[_F]) -> _F | None:
+        """Return the first class feature of the given type, or None."""
+        for f in self.class_features:
+            if isinstance(f, feature_type):
+                return f
+        return None
 
     def get_npc_data(self) -> dict[str, str]:
         """Return NPC metadata for LLM prompts. Override in Npc."""

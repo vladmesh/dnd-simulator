@@ -17,6 +17,23 @@ class ItemType(StrEnum):
 
     POTION = "potion"
     WEAPON = "weapon"
+    ARMOR = "armor"
+    SHIELD = "shield"
+
+
+class WeaponCategory(StrEnum):
+    """D&D 5e weapon categories for proficiency checks."""
+
+    SIMPLE = "simple"
+    MARTIAL = "martial"
+
+
+class ArmorCategory(StrEnum):
+    """D&D 5e armor weight classes."""
+
+    LIGHT = "light"
+    MEDIUM = "medium"
+    HEAVY = "heavy"
 
 
 @dataclass(frozen=True)
@@ -28,7 +45,9 @@ class WeaponDef:
     Action cost and handlers are defined in Python, not here.
     """
 
-    attack_name: str  # replaces default attack name, e.g. "удар мечом"
+    weapon_id: str  # mechanical identifier, e.g. "longsword", "rapier"
+    attack_name: str  # display name for attack, e.g. "удар мечом"
+    category: WeaponCategory
     damage: tuple[DamageComponent, ...]
     reach: int = 5
     ability: Ability | None = None  # None → STR (resolved by get_weapon_attack)
@@ -40,13 +59,36 @@ class WeaponDef:
 
 
 @dataclass(frozen=True)
+class ArmorDef:
+    """D&D 5e armor definition.
+
+    ``max_dex_bonus`` — cap on DEX modifier added to AC.
+    Light armor: 99 (unlimited). Medium: 2. Heavy: 0.
+    """
+
+    armor_id: str  # "leather", "chain_mail", "plate"
+    category: ArmorCategory
+    base_ac: int  # 11 for leather, 16 for chain mail, 18 for plate
+    max_dex_bonus: int  # 99 for light, 2 for medium, 0 for heavy
+    strength_req: int = 0  # min STR to avoid speed penalty (future)
+
+
+@dataclass(frozen=True)
+class ShieldDef:
+    """D&D 5e shield definition."""
+
+    shield_id: str  # "shield", "tower_shield"
+    ac_bonus: int = 2
+
+
+@dataclass(frozen=True)
 class Item:
     """A single inventory item instance.
 
     ``params`` carries type-specific data:
     - Potion: ``{"heal_dice": "2d4+2"}``
 
-    ``weapon_def`` is set only for WEAPON items.
+    Typed defs are set for their respective item types.
     """
 
     id: str  # unique instance id, e.g. "healing_potion_0"
@@ -54,3 +96,5 @@ class Item:
     item_type: ItemType
     params: dict[str, object] = field(default_factory=dict)
     weapon_def: WeaponDef | None = None
+    armor_def: ArmorDef | None = None
+    shield_def: ShieldDef | None = None

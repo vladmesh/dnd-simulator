@@ -11,7 +11,7 @@ from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.character import Ability, Attack, Creature, DamageComponent, DamageType
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.items import Item, ItemType, WeaponDef
+from dnd_simulator.core.items import Item, ItemType, WeaponCategory, WeaponDef
 from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
@@ -814,7 +814,9 @@ def _sword_weapon() -> Item:
         name="Меч",
         item_type=ItemType.WEAPON,
         weapon_def=WeaponDef(
+            weapon_id="longsword",
             attack_name="удар мечом",
+            category=WeaponCategory.MARTIAL,
             damage=(DamageComponent("1d8", DamageType.SLASHING),),
             ability=Ability.STR,
         ),
@@ -827,7 +829,9 @@ def _rapier_weapon() -> Item:
         name="Рапира",
         item_type=ItemType.WEAPON,
         weapon_def=WeaponDef(
+            weapon_id="rapier",
             attack_name="удар рапирой",
+            category=WeaponCategory.MARTIAL,
             damage=(DamageComponent("1d8", DamageType.PIERCING),),
             is_finesse=True,
         ),
@@ -840,7 +844,9 @@ def _blessed_sword() -> Item:
         name="Благословенный Меч",
         item_type=ItemType.WEAPON,
         weapon_def=WeaponDef(
+            weapon_id="longsword",
             attack_name="удар мечом",
+            category=WeaponCategory.MARTIAL,
             damage=(DamageComponent("1d8", DamageType.SLASHING),),
             is_magic=True,
             grant_actions=(ActionType.BLESS,),
@@ -892,7 +898,9 @@ class TestGetWeaponAttack:
             name="+2 Sword",
             item_type=ItemType.WEAPON,
             weapon_def=WeaponDef(
+                weapon_id="longsword",
                 attack_name="magic slash",
+                category=WeaponCategory.MARTIAL,
                 damage=(DamageComponent("1d8", DamageType.SLASHING),),
                 modifier=2,
                 is_magic=True,
@@ -1019,7 +1027,9 @@ def _sword_item(name: str = "Sword", item_id: str = "sword_0") -> Item:
         name=name,
         item_type=ItemType.WEAPON,
         weapon_def=WeaponDef(
+            weapon_id="longsword",
             attack_name="sword slash",
+            category=WeaponCategory.MARTIAL,
             damage=(DamageComponent("1d8", DamageType.SLASHING),),
         ),
     )

@@ -58,6 +58,8 @@ npcs:
         heal_dice: "2d4+2"
       - name: Меч
         type: weapon
+        weapon_id: longsword
+        category: martial
         attack_name: удар мечом
         damage:
           - dice: "1d8"
@@ -92,11 +94,19 @@ npcs:
         heal_dice: "2d4+2"
       - name: Рапира
         type: weapon
+        weapon_id: rapier
+        category: martial
         attack_name: удар рапирой
         damage:
           - dice: "1d8"
             type: piercing
         is_finesse: true
+      - name: Кожаный доспех
+        type: armor
+        armor_id: studded_leather
+        category: light
+        base_ac: 12
+        equipped: true
 
   iron:
     name: Железный Горн
@@ -104,6 +114,8 @@ npcs:
     role: gladiator
     race: dwarf
     class: fighter
+    class_features:
+      fighting_style: defense
     hp: 40
     ac: 18
     speed: 25
@@ -127,11 +139,25 @@ npcs:
         heal_dice: "2d4+2"
       - name: Палка
         type: weapon
+        weapon_id: quarterstaff
+        category: simple
         attack_name: удар палкой
         damage:
           - dice: "1d6"
             type: bludgeoning
         ability: str
+      - name: Кольчуга
+        type: armor
+        armor_id: chain_mail
+        category: heavy
+        base_ac: 16
+        strength_req: 13
+        equipped: true
+      - name: Щит
+        type: shield
+        shield_id: shield
+        ac_bonus: 2
+        equipped: true
 
   paladin:
     name: Сэр Люциус
@@ -161,6 +187,8 @@ npcs:
         heal_dice: "2d4+2"
       - name: Благословенный Меч
         type: weapon
+        weapon_id: longsword
+        category: martial
         attack_name: удар святым мечом
         damage:
           - dice: "1d8"
@@ -168,3 +196,15 @@ npcs:
         ability: str
         is_magic: true
         grant_actions: [bless]
+      - name: Кольчуга
+        type: armor
+        armor_id: chain_mail
+        category: heavy
+        base_ac: 16
+        strength_req: 13
+        equipped: true
+      - name: Щит
+        type: shield
+        shield_id: shield
+        ac_bonus: 2
+        equipped: true

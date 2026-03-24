@@ -71,6 +71,34 @@ class EquipmentActionProvider:
         return result
 
 
+class ArmorEquipmentProvider:
+    """Provides armor/shield equip/unequip actions based on inventory and slots."""
+
+    def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
+        from dnd_simulator.core.items import ItemType
+
+        result: list[ActionType] = []
+        has_armor = any(i.item_type == ItemType.ARMOR for i in creature.inventory)
+        if has_armor:
+            probe = Action(name=ActionType.EQUIP_ARMOR)
+            if validate_action(creature, probe, ctx) is None:
+                result.append(ActionType.EQUIP_ARMOR)
+        if creature.equipped_armor is not None:
+            probe = Action(name=ActionType.UNEQUIP_ARMOR)
+            if validate_action(creature, probe, ctx) is None:
+                result.append(ActionType.UNEQUIP_ARMOR)
+        has_shield = any(i.item_type == ItemType.SHIELD for i in creature.inventory)
+        if has_shield:
+            probe = Action(name=ActionType.EQUIP_SHIELD)
+            if validate_action(creature, probe, ctx) is None:
+                result.append(ActionType.EQUIP_SHIELD)
+        if creature.equipped_shield is not None:
+            probe = Action(name=ActionType.UNEQUIP_SHIELD)
+            if validate_action(creature, probe, ctx) is None:
+                result.append(ActionType.UNEQUIP_SHIELD)
+        return result
+
+
 class WeaponActionProvider:
     """Provides extra actions granted by equipped weapon (e.g. Bless)."""
 

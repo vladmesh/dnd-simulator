@@ -8,9 +8,15 @@ Replaces ad-hoc stat computation scattered across combat_manager, conditions.py,
 
 from __future__ import annotations
 
-from dnd_simulator.core.character import Creature
+from dnd_simulator.core.character import Ability, Character, Creature
 from dnd_simulator.core.conditions import Condition, ConditionsMap
 from dnd_simulator.core.modifiers import AttackModifiers, Modifier, ModifierOp, StatType
+from dnd_simulator.rules.proficiency import (
+    is_proficient_with_armor,
+    is_proficient_with_shield,
+    is_proficient_with_weapon,
+    proficiency_bonus,
+)
 from dnd_simulator.rules.weapons import get_weapon_attack, get_weapon_modifier
 
 # ---------------------------------------------------------------------------
@@ -64,7 +70,7 @@ _AUTO_CRIT_MELEE: frozenset[Condition] = frozenset({Condition.PARALYZED, Conditi
 def collect_self_modifiers(creature: Creature) -> list[Modifier]:
     """Gather modifiers that affect the creature's own stats.
 
-    Sources: conditions, equipment. Future: spells, class features.
+    Sources: conditions, equipment, armor proficiency.
     """
     mods: list[Modifier] = []
     for condition in creature.conditions:
@@ -74,6 +80,21 @@ def collect_self_modifiers(creature: Creature) -> list[Modifier]:
     weapon_mod = get_weapon_modifier(creature)
     if weapon_mod:
         mods.append(Modifier(StatType.ATTACK_ROLL, ModifierOp.ADD, value=weapon_mod, source="weapon_magic"))
+
+    # Non-proficient armor/shield → disadvantage on attack rolls (D&D 5e PHB p.144)
+    if isinstance(creature, Character):
+        if (
+            creature.equipped_armor
+            and creature.equipped_armor.armor_def
+            and not is_proficient_with_armor(creature.char_class, creature.equipped_armor.armor_def)
+        ):
+            mods.append(Modifier(StatType.ATTACK_ROLL, ModifierOp.DISADVANTAGE, source="non_proficient_armor"))
+        if (
+            creature.equipped_shield
+            and creature.equipped_shield.shield_def
+            and not is_proficient_with_shield(creature.char_class)
+        ):
+            mods.append(Modifier(StatType.ATTACK_ROLL, ModifierOp.DISADVANTAGE, source="non_proficient_shield"))
 
     return mods
 
@@ -179,10 +200,26 @@ def effective_speed(creature: Creature) -> int:
 def effective_ac(creature: Creature) -> int:
     """Compute effective AC after all modifiers.
 
-    Currently: base AC only. Future: armor, shield, spells.
+    Characters: armor base + DEX (capped by armor type) + shield + modifiers.
+    Unarmored Characters: max(creature.ac, 10 + DEX) for backwards compat.
+    Monsters (plain Creature): stat-block AC as-is (DEX already baked in).
     """
+    dex_mod = creature.ability_scores.modifier(Ability.DEX)
+
+    if isinstance(creature, Character) and creature.equipped_armor and creature.equipped_armor.armor_def:
+        armor = creature.equipped_armor.armor_def
+        dex_bonus = min(dex_mod, armor.max_dex_bonus) if armor.max_dex_bonus > 0 else 0
+        base = armor.base_ac + dex_bonus
+    elif isinstance(creature, Character):
+        base = max(creature.ac, 10 + dex_mod)
+    else:
+        base = creature.ac
+
+    if isinstance(creature, Character) and creature.equipped_shield and creature.equipped_shield.shield_def:
+        base += creature.equipped_shield.shield_def.ac_bonus
+
     mods = collect_self_modifiers(creature)
-    return compute_stat(creature.ac, mods, StatType.AC)
+    return compute_stat(base, mods, StatType.AC)
 
 
 def attack_modifiers(attacker: Creature, target: Creature, *, melee: bool) -> AttackModifiers:
@@ -194,9 +231,25 @@ def attack_modifiers(attacker: Creature, target: Creature, *, melee: bool) -> At
     attacker_mods = collect_self_modifiers(attacker)
     target_defense_mods = collect_defense_modifiers(target)
 
-    # Flat modifier: ability + weapon magic + flat bonuses from conditions
+    # Flat modifier: ability + proficiency + weapon magic + flat bonuses from conditions
     attack = get_weapon_attack(attacker)
-    base_mod = attacker.ability_scores.modifier(attack.ability)
+    ability_mod = attacker.ability_scores.modifier(attack.ability)
+
+    # Proficiency bonus: Characters check class/weapon proficiency; plain Creatures
+    # (monsters) are proficient with their natural attacks.
+    prof = 0
+    if isinstance(attacker, Character):
+        weapon = attacker.equipped_weapon
+        if weapon and weapon.weapon_def and is_proficient_with_weapon(attacker.char_class, weapon.weapon_def):
+            prof = proficiency_bonus(attacker.level)
+        elif not weapon and not attacker.attacks:
+            # Unarmed strike — all characters are proficient
+            prof = proficiency_bonus(attacker.level)
+    elif attacker.attacks:
+        # Non-Character creatures are proficient with their own attacks
+        prof = 2
+
+    base_mod = ability_mod + prof
     flat_mod = compute_stat(base_mod, attacker_mods, StatType.ATTACK_ROLL)
 
     # Dice bonuses (Bless +1d4, etc.)

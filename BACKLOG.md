@@ -1,86 +1,62 @@
 # Backlog
 
-## Время и тики
+Приоритеты: **must** — блокирует следующие уровни или играбельность, **should** — заметно улучшает качество, **could** — nice to have.
 
-- [x] GameDateTime с точностью до секунды (раунда = 6 сек)
-- [x] tick_interval на каждом слое (география ~1ч, политика ~30 дней, NPC ~1 мин)
-- [x] Слои тикают только когда прошло достаточно времени с последнего тика
-- [x] Убрать _hours_accumulated из слоёв, вынести логику в World
-- [~] Разговор тратит время (1 реплика = 6 секунд)
+Механики и контент с зависимостями — в [ecs-and-content.md](docs/brainstorms/ecs-and-content.md).
+Валидация и инварианты — в [world-state-machine.md](docs/brainstorms/world-state-machine.md).
+Что сделано — в [ROADMAP.md](docs/ROADMAP.md).
 
-## Боевая система
+---
 
-- [x] Creature(Entity) — HP, ability scores, AC, без класса/alignment
-- [x] AC (armor class) на Character (наследуется от Creature)
-- [ ] Базовые атаки (оружие: меч 1d8+STR, кулак 1+STR)
-- [ ] Инициатива (DEX check, порядок ходов)
-- [ ] Бросок атаки (d20 + модификатор vs AC)
-- [ ] Урон (dice roll), HP трекинг, смерть при 0 HP
-- [ ] Боевой режим в GameSession (аналог conversation mode)
-- [ ] Combat actions как набор методов: move(), attack(), dodge(), dash()
-- [ ] Каждый action валидирует себя (хватает movement, action, зона досягаемости)
-- [~] NPC в бою: LLM через tool use дёргает те же combat actions что и игрок
-- [~] Невалидный tool call → ошибка → LLM исправляется
-- [ ] Спавн монстров — где, когда, сколько
+## Gameplay
 
-## NPC в бою
+- [ ] **must** `monster-spawn` — Система спавна монстров: триггеры (proximity, time, event), таблицы встреч по региону/локации, CR-бюджет
+- [ ] **must** `quest-system` — Система квестов: цели, триггеры завершения, награды. Минимум: fetch/kill/escort
+- [ ] **should** `key-npcs` — Ключевые NPC (антагонист, компаньон): глубокая память, реакция на мировые события, персональные цели
+- [ ] **should** `npc-wandering` — Динамические маршруты NPC между поселениями (сейчас только статичные расписания)
+- [ ] **should** `npc-death-on-war` — NPC гибнут/исчезают при захвате поселения, войне
+- [ ] **should** `combat-reassess` — NPC переоценивает стратегию при смене ситуации (союзник упал, новый враг появился)
+- [ ] **could** `conversation-costs-time` — Каждая реплика разговора тратит 6 секунд игрового времени (частично)
 
-- [~] NpcLayer меняет tick_interval при начале боя (1ч → 6 сек)
-- [~] Итератор обновляет только NPC в зоне боя
-- [~] LLM решает стратегию: убегать/прятаться/драться за X
-- [~] LLM планирует, автомат исполняет (NpcPlan паттерн)
-- [ ] Переоценка при смене ситуации (союзник упал, новый враг)
+## World Simulation
 
-## NPC
-
-- [x] Фоновые NPC (крестьяне, стражники) — конечный автомат + LLM при talk
-- [~] Важные NPC (герои, злодеи) — LLM-планирование + автомат исполнения
-- [ ] Ключевые NPC (антагонист, компаньон) — глубокая память, реакция на события
-- [x] Базовый класс Character (общий для игрока и NPC)
-- [x] Awareness — сборка контекста из слоёв мира для промпта
-- [x] Perceive — NPC видит расу/внешность/раны, не сырые данные
-- [ ] Память NPC — summary прошлых разговоров, сжатие через LLM
-- [ ] NPC смерть/исчезновение при войне, захвате
-- [ ] Бродячие NPC — маршруты между поселениями
-- [~] NpcPlan — цель, шаги, invalidated_by события мира
+- [ ] **should** `settlement-defenses` — Восстановление defenses поселений со временем
+- [ ] **should** `population-economy` — Влияние населения на доход (сейчас только prosperity)
+- [ ] **could** `settlement-lifecycle` — Создание/уничтожение поселений динамически
+- [ ] **could** `alliance-logic` — Логика альянсов (ALLIANCE статус есть, механики нет)
+- [ ] **could** `vassalage` — Вассалитет между нациями
+- [ ] **could** `trade-routes` — Торговые маршруты между конкретными поселениями
+- [ ] **could** `seasonal-travel` — Сезонные эффекты на путешествия
+- [ ] **could** `procedural-gen` — Процедурная генерация регионов/мира
 
 ## LLM
 
-- [x] Подключение LLM для диалогов (talk <npc>)
-- [x] System prompt: personality + awareness + history
-- [ ] Интерпретация абстрактных изменений мира в конкретные нарративы
-- [ ] Выбор модели: дорогая для ключевых NPC, дешёвая для фоновых
+- [ ] **should** `llm-model-tiering` — Выбор модели по важности NPC: дорогая для ключевых, дешёвая для фоновых
+- [ ] **could** `llm-narrator` — Интерпретация абстрактных изменений мира в нарративные описания
+- [ ] **could** `npc-language` — Динамический выбор языка NPC (из настроек или по языку игрока)
 
-## Поселения
+## Tech Debt (from audit 2026-03-24)
 
-- [ ] Восстановление defenses со временем
-- [ ] Влияние населения на доход (сейчас только prosperity)
-- [ ] Создание/уничтожение поселений
+- [ ] **should** `god-class-entities` — EntitiesLayer 821 строк, 30 методов. Выделить awareness builder, activation manager, query handler
+- [ ] **should** `god-class-politics` — PoliticsLayer 587 строк. Выделить подсистемы
+- [ ] **should** `test-gaps` — Нет тестов: awareness, items, world, turn_budget, location, brain_factory, commands_*, session, store
+- [ ] **should** `mixin-type-ignores` — 27x `# type: ignore[attr-defined]` в service command mixins. Добавить Protocol/ABC
+- [ ] **should** `llm-client-type-ignores` — `# type: ignore[arg-type]` в llm/client.py на вызовах OpenAI SDK
+- [ ] **should** `hardcoded-content` — ~120 строк game content (расписания, реплики) в entities/models.py вместо YAML
+- [ ] **could** `long-methods` — query() 125 строк, run_combat_turn 124, resolve_attack 106
+- [ ] **could** `action-parsing-in-adapter` — Adapter (routes_ws) парсит Action из JSON, должен service layer
+- [ ] **could** `magic-number-trade` — Magic number 0.08 в politics/layer.py:338
 
-## Политика
+## Security (from audit 2026-03-24)
 
-- [ ] Альянсы (ALLIANCE статус уже есть, логики нет)
-- [ ] Вассалитет
-- [ ] Торговые маршруты между конкретными поселениями
+- [ ] **should** `cors-wildcard` — CORS allow_origins=["*"] в app.py
+- [ ] **could** `ws-max-size` — Нет лимита на размер WebSocket сообщений
+- [ ] **could** `action-params-validation` — Action params из клиента без schema validation
+- [ ] **could** `log-injection` — /api/frontend-error пишет unsanitized JSON в логи
 
-## География
+## Dead Code (from audit 2026-03-24)
 
-- [ ] Новые регионы / процедурная генерация
-- [ ] Сезонные эффекты на путешествия
-
-## Игрок
-
-- [x] PlayerCharacter как наследник Character
-- [x] Entity → Character иерархия с D&D атрибутами
-- [ ] Инвентарь (хотя бы оружие для боёвки)
-- [ ] Способности
-- [ ] Взаимодействие с NPC (торговля, бой, квесты)
-
-## Локализация
-
-- [ ] Динамический выбор языка NPC (из настроек или по языку игрока)
-
-## Общее
-
-- [ ] Система квестов
-- [ ] Процедурная генерация мира
+- [ ] `dead-move-away-from-target` — core/brain.py:59, zero callers (future movement AI)
+- [ ] `dead-auto-fail-saves` — rules/conditions.py:111 (future saving throws)
+- [ ] `dead-refund` — core/turn_budget.py:54 (future reaction system)
+- [ ] `dead-check-reactions` — round.py:302, stubbed (future reaction system)

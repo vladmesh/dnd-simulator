@@ -56,10 +56,6 @@ class LocationGraph:
         """Shortcut: get the region tag for a location."""
         return self.get(location_id).region_id
 
-    def settlement_of(self, location_id: str) -> str:
-        """Shortcut: get the settlement tag for a location."""
-        return self.get(location_id).settlement_id
-
     def has(self, location_id: str) -> bool:
         """Check if a location exists."""
         return location_id in self._locations

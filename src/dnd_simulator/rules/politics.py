@@ -112,6 +112,11 @@ def peace_chance(months_at_war: int) -> float:
     return min(0.3, round(base, 2))
 
 
+def trade_agreement_chance() -> float:
+    """Monthly probability that a merchant/diplomat leader proposes a trade agreement."""
+    return 0.08
+
+
 def clamp(value: float, low: float = 0.0, high: float = 100.0) -> float:
     """Clamp value to range."""
     return max(low, min(high, value))

@@ -21,6 +21,10 @@ class ActionType(StrEnum):
     BLESS = "bless"
     EQUIP = "equip"
     UNEQUIP = "unequip"
+    EQUIP_ARMOR = "equip_armor"
+    UNEQUIP_ARMOR = "unequip_armor"
+    EQUIP_SHIELD = "equip_shield"
+    UNEQUIP_SHIELD = "unequip_shield"
     END_TURN = "end_turn"
     SKIP = "skip"
 

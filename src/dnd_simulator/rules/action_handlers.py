@@ -290,3 +290,127 @@ def handle_unequip(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Action
         )
     )
     return ActionResult()
+
+
+# ---------------------------------------------------------------------------
+# Armor equip/unequip
+# ---------------------------------------------------------------------------
+
+
+def handle_equip_armor(
+    actor: Creature,
+    action: Action,
+    emit_fn: EmitFn,
+    ctx: ActionContext,
+    world: World,
+) -> ActionResult:
+    """Equip armor from inventory. Free action."""
+    item_id = str(action.params["item_id"])
+    item = next((i for i in actor.inventory if i.id == item_id), None)
+    if item is None:
+        return ActionResult(success=False, error=f"Item {item_id} not in inventory")
+    if item.item_type != ItemType.ARMOR:
+        return ActionResult(success=False, error=f"Item {item_id} is not armor")
+
+    if actor.equipped_armor is not None:
+        actor.inventory.append(actor.equipped_armor)
+    actor.inventory.remove(item)
+    actor.equipped_armor = item
+
+    logger.info("equip_armor", armor=item.name)
+    emit_fn(
+        Event(
+            event_type=EventType.ENTITY_EQUIP,
+            source_layer="entities",
+            data={"entity_id": actor.id, "armor_name": item.name},
+        )
+    )
+    return ActionResult()
+
+
+def handle_unequip_armor(
+    actor: Creature,
+    action: Action,
+    emit_fn: EmitFn,
+    ctx: ActionContext,
+    world: World,
+) -> ActionResult:
+    """Unequip armor → back to inventory. Free action."""
+    if actor.equipped_armor is None:
+        return ActionResult(success=False, error="No armor equipped")
+
+    armor = actor.equipped_armor
+    actor.inventory.append(armor)
+    actor.equipped_armor = None
+
+    logger.info("unequip_armor", armor=armor.name)
+    emit_fn(
+        Event(
+            event_type=EventType.ENTITY_UNEQUIP,
+            source_layer="entities",
+            data={"entity_id": actor.id, "armor_name": armor.name},
+        )
+    )
+    return ActionResult()
+
+
+# ---------------------------------------------------------------------------
+# Shield equip/unequip
+# ---------------------------------------------------------------------------
+
+
+def handle_equip_shield(
+    actor: Creature,
+    action: Action,
+    emit_fn: EmitFn,
+    ctx: ActionContext,
+    world: World,
+) -> ActionResult:
+    """Equip shield from inventory. Free action."""
+    item_id = str(action.params["item_id"])
+    item = next((i for i in actor.inventory if i.id == item_id), None)
+    if item is None:
+        return ActionResult(success=False, error=f"Item {item_id} not in inventory")
+    if item.item_type != ItemType.SHIELD:
+        return ActionResult(success=False, error=f"Item {item_id} is not a shield")
+
+    if actor.equipped_shield is not None:
+        actor.inventory.append(actor.equipped_shield)
+    actor.inventory.remove(item)
+    actor.equipped_shield = item
+
+    logger.info("equip_shield", shield=item.name)
+    emit_fn(
+        Event(
+            event_type=EventType.ENTITY_EQUIP,
+            source_layer="entities",
+            data={"entity_id": actor.id, "shield_name": item.name},
+        )
+    )
+    return ActionResult()
+
+
+def handle_unequip_shield(
+    actor: Creature,
+    action: Action,
+    emit_fn: EmitFn,
+    ctx: ActionContext,
+    world: World,
+) -> ActionResult:
+    """Unequip shield → back to inventory. Free action."""
+    if actor.equipped_shield is None:
+        return ActionResult(success=False, error="No shield equipped")
+
+    shield = actor.equipped_shield
+    actor.inventory.append(shield)
+    actor.equipped_shield = None
+
+    logger.info("unequip_shield", shield=shield.name)
+    emit_fn(
+        Event(
+            event_type=EventType.ENTITY_UNEQUIP,
+            source_layer="entities",
+            data={"entity_id": actor.id, "shield_name": shield.name},
+        )
+    )
+    return ActionResult()

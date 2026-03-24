@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dnd_simulator.core.character import Ability, AbilityScores, Creature, DamageComponent, DamageType
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.items import Item, ItemType, WeaponDef
+from dnd_simulator.core.items import Item, ItemType, WeaponCategory, WeaponDef
 from dnd_simulator.core.modifiers import Modifier, ModifierOp, StatType
 from dnd_simulator.rules.modifiers import (
     _CONDITION_DEFENSE_MODIFIERS,
@@ -51,7 +51,9 @@ def _magic_sword(modifier: int = 1) -> Item:
         name="Magic Sword",
         item_type=ItemType.WEAPON,
         weapon_def=WeaponDef(
+            weapon_id="longsword",
             attack_name="magic sword",
+            category=WeaponCategory.MARTIAL,
             damage=(DamageComponent("1d8", DamageType.SLASHING),),
             modifier=modifier,
         ),

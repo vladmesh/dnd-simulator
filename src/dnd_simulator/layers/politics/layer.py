@@ -24,6 +24,7 @@ from dnd_simulator.rules.politics import (
     leader_death_chance,
     peace_chance,
     rebellion_chance,
+    trade_agreement_chance,
     war_declaration_chance,
 )
 
@@ -335,7 +336,7 @@ class PoliticsLayer(Layer):
                             if (
                                 n.leader
                                 and n.leader.trait in (LeaderTrait.MERCHANT, LeaderTrait.DIPLOMAT)
-                                and self._rng.random() < 0.08
+                                and self._rng.random() < trade_agreement_chance()
                             ):
                                 self._relations[key] = DiplomaticStatus.TRADE_AGREEMENT
                                 events.append(
