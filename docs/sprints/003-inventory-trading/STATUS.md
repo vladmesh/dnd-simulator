@@ -6,7 +6,12 @@
 
 ## Current
 
-Phase 4 created. Audit triage identified 3 sprint-relevant items: rules/→layers/ dependency violation in trade code, hardcoded "merchant" string, hardcoded NPC content in models.py. Quick-fixes applied (fail-fast params, Any typing). Tasks pending generation.
+Phase 4 tasks generated. Ready to start task 1.
+
+## Next Steps
+
+- Task 1: NpcRole enum + fix rules→layers dependency (enum replaces hardcoded "merchant", rules/ stops importing from layers/)
+- Task 2: Extract NPC content tables (schedules, flavor, dialogue) from models.py to YAML
 
 ## Audit Triage
 
