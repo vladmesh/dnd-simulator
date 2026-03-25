@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 2, Task 2: Faction-Aware Hostile AI — done. RuleBrain attacks hostiles on sight, scores faction enemies higher in combat.
+Phase 2 complete. All 3 tasks done.
 
 ## Next Steps
 

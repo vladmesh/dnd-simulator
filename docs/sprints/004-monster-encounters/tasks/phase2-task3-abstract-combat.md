@@ -48,4 +48,8 @@ Scenarios:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward implementation. Pure function in `rules/abstract_combat.py` with two frozen dataclasses (`TriggeredEncounter`, `AbstractCombatResult`). Deterministic formula, no randomness in v1. 8 tests covering all edge cases including zero strength, fractional CR, and empty encounters.
