@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 3 tasks generated. Ready to start task 1 (EcologyLayer skeleton + squad migration).
+Phase 3, Task 1: EcologyLayer Skeleton + Squad Ownership — done.
 
 ## Next Steps
 

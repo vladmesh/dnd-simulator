@@ -66,6 +66,10 @@ class QueryType(Enum):
     REGION_SETTLEMENTS = "region_settlements"
     REGION_INCOME = "region_income"
 
+    # Ecology
+    SQUADS_AT_LOCATION = "squads_at_location"
+    SQUAD_INFO = "squad_info"
+
     # Entities
     PLAYERS = "players"
     PLAYER = "player"

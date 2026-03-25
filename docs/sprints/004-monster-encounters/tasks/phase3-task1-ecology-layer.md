@@ -52,4 +52,8 @@ EntitiesLayer can query down: everything including ecology.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Clean migration — squads were stored on EntitiesLayer but never used there (no queries, no serialization, no logic). Removed `squads` param from EntitiesLayer, created EcologyLayer with squad ownership. Layer stack is now [geography, politics, settlements, ecology, entities]. Added `QueryType.SQUADS_AT_LOCATION` and `QueryType.SQUAD_INFO`. No existing tests broke because no tests were passing squads to EntitiesLayer.

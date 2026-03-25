@@ -24,6 +24,7 @@ from dnd_simulator.core.models import GameDateTime, TimeDelta
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
 from dnd_simulator.i18n import _
+from dnd_simulator.layers.ecology.layer import EcologyLayer
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.geography.layer import GeographyLayer
 from dnd_simulator.layers.politics.layer import PoliticsLayer
@@ -99,12 +100,12 @@ class GameService(
             from dnd_simulator.llm.summarizer import MemorySummarizer
 
             summarizer = MemorySummarizer(self._llm)
+        ecology_layer = EcologyLayer(squads=list(squads.values()))
         entities_layer = EntitiesLayer(
             entities=entities,
             summarizer=summarizer,
             monster_templates=monster_templates,
             encounter_tables=encounter_tables,
-            squads=squads,
         )
 
         # Assign brains via factory (content_loader only parses data, not brains)
@@ -115,7 +116,7 @@ class GameService(
                 entity.brain = self._brain_factory.create(entity.ai_type)
 
         world = World(
-            layers=[geography, politics, settlements_layer, entities_layer],
+            layers=[geography, politics, settlements_layer, ecology_layer, entities_layer],
             time=GameDateTime(year=1490, month=6, day=1, hour=10),
             location_graph=location_graph,
         )
