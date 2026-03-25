@@ -61,7 +61,7 @@ Tasks 1-2 из оригинального Phase 1. Код переиспольз
 1. [Factions — faction_id + Faction Relations](tasks/phase1-task3-factions.md)
 2. [Squad Model + squads.yaml](tasks/phase1-task4-squad-model.md)
 
-## Phase 2: Generalize Encounters + Hostile AI
+## Phase 2: Generalize Encounters + Hostile AI ✓
 
 Encounter table rolls для любого active character (не только PlayerCharacter). Encounter table rolls для сквадов (абстрактный бой: squad strength vs encounter strength по формуле). Hostile AI в RuleBrain: faction-aware, враг по faction relations → атака. Abstract combat formula.
 
