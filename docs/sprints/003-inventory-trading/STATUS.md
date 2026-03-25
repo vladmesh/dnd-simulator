@@ -1,11 +1,15 @@
 # Sprint 003 Status
 
 **Sprint:** 003-inventory-trading
-**Phase:** 2 — Inventory UI + Gold (COMPLETE)
+**Phase:** 3 — Trading
 **Updated:** 2026-03-25
 
 ## Current
 
-Phase 2 complete. Inventory panel with 6 equipment slots, bag with equip/unequip/use actions, gold display, item prices. Fixed equip/unequip param mapping between frontend and backend during E2E.
+Phase 3 tasks generated. Ready to start task 1.
 
-Ready for Phase 3 task generation.
+## Next Steps
+
+- Task 1: Merchant model + trade rules — NPC merchant flag, gold on NPCs, pure buy/sell validation, YAML merchant content
+- Task 2: Buy/sell handlers + dispatch — wire through action pipeline, perception, awareness with merchant info
+- Task 3: Trade UI — Trade button in ActionBar, trade modal with buy/sell

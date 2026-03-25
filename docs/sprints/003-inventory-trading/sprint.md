@@ -57,13 +57,15 @@ Merchant-флаг на NPC, инвентарь торговца, buy/sell экш
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Merchant Model + Trade Rules](tasks/phase3-task1-merchant-model-trade-rules.md)
+2. [Buy/Sell Action Handlers + Dispatch](tasks/phase3-task2-buy-sell-handlers.md)
+3. [Trade UI](tasks/phase3-task3-trade-ui.md)
 
 ---
 
 ## Status
 
-**Current:** Phase 2 complete. Ready for Phase 3 task generation.
+**Current:** Phase 3 tasks generated. Ready to start task 1.
 
 ## Decisions
 
