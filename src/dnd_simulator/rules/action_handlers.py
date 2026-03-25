@@ -52,12 +52,13 @@ def handle_idle(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
 
 def handle_say(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
     """Say: emit speech event."""
-    logger.info("say", text=str(action.params.get("text", ""))[:80])
+    text = str(action.params["text"])
+    logger.info("say", text=text[:80])
     emit_fn(
         Event(
             event_type=EventType.ENTITY_SAY,
             source_layer="entities",
-            data={"entity_id": actor.id, "text": action.params.get("text", "")},
+            data={"entity_id": actor.id, "text": text},
         )
     )
     return ActionResult()
@@ -65,14 +66,14 @@ def handle_say(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCont
 
 def handle_attack(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
     """Attack: emit attack event. CombatManager resolves via handle_event."""
-    logger.info("attack", target=str(action.params.get("target_id", "")))
+    logger.info("attack", target=str(action.params["target_id"]))
     return emit_fn(
         Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
             data={
                 "attacker_id": actor.id,
-                "target_id": action.params.get("target_id", ""),
+                "target_id": action.params["target_id"],
             },
         )
     )
@@ -87,7 +88,7 @@ def handle_dodge(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCo
             source_layer="entities",
             data={
                 "entity_id": actor.id,
-                "description": action.params.get("description", ""),
+                "description": str(action.params.get("description", "")),
             },
         )
     )
@@ -103,7 +104,7 @@ def handle_flee(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
             source_layer="entities",
             data={
                 "entity_id": actor.id,
-                "description": action.params.get("description", ""),
+                "description": str(action.params.get("description", "")),
             },
         )
     )
@@ -112,8 +113,8 @@ def handle_flee(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
 
 def handle_move(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
     """Move: emit move event. CombatManager resolves via handle_event."""
-    direction = action.params.get("direction", "")
-    ft = int(str(action.params.get("ft", 5)))
+    direction = str(action.params["direction"])
+    ft = int(str(action.params["ft"]))
     logger.info("move", direction=direction, ft=ft)
     return emit_fn(
         Event(
@@ -188,8 +189,7 @@ def handle_wait(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
                         pass
                     break
     else:
-        raw = action.params.get("hours", 1)
-        hours = int(str(raw))
+        hours = int(str(action.params.get("hours", 1)))
         if hours > 0:
             now = world.time.to_total_seconds()
             actor.wake_at_seconds = now + hours * 3600

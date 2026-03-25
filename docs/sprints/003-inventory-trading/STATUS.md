@@ -1,9 +1,13 @@
 # Sprint 003 Status
 
 **Sprint:** 003-inventory-trading
-**Phase:** 3 — Trading (COMPLETE)
+**Phase:** 4 — Audit Refactor
 **Updated:** 2026-03-25
 
 ## Current
 
-Phase 3 complete. Merchant model, buy/sell actions, trade UI all working end-to-end. Fixed merchant schedule location matching bug during E2E. All phases complete. Ready for sprint closure.
+Phase 4 created. Audit triage identified 3 sprint-relevant items: rules/→layers/ dependency violation in trade code, hardcoded "merchant" string, hardcoded NPC content in models.py. Quick-fixes applied (fail-fast params, Any typing). Tasks pending generation.
+
+## Audit Triage
+
+Triaged on 2026-03-25. Quick-fix: 3 applied (fail-fast params, Any→proper types in routes_player, routes_master). Sprint-relevant: 3 (→ Phase 4 refactor). Backlog: 30 added/updated.

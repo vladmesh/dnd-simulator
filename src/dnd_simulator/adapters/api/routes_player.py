@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, HTTPException
 
 from dnd_simulator.adapters.api.deps import get_service
@@ -10,7 +8,10 @@ from dnd_simulator.adapters.api.schemas import (
     PlayerStatusResponse,
 )
 from dnd_simulator.core.character import Ability
+from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.i18n import _
+from dnd_simulator.service.game_service import GameService
+from dnd_simulator.service.session import GameSession
 
 router = APIRouter(prefix="/api/player", tags=["player"])
 
@@ -42,14 +43,14 @@ def get_status(session_id: str) -> PlayerStatusResponse:
 # -- Helpers --
 
 
-def _get_session(service: Any, session_id: str) -> Any:
+def _get_session(service: GameService, session_id: str) -> GameSession:
     try:
         return service.get_session(session_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
 
 
-def _player_status(p: Any) -> PlayerStatusResponse:
+def _player_status(p: PlayerCharacter) -> PlayerStatusResponse:
     scores = p.ability_scores
     return PlayerStatusResponse(
         player_id=p.id,

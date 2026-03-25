@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, HTTPException
 
 from dnd_simulator.adapters.api.deps import get_service
@@ -24,6 +22,8 @@ from dnd_simulator.adapters.api.schemas import (
 )
 from dnd_simulator.core.models import Query, QueryType
 from dnd_simulator.i18n import _
+from dnd_simulator.service.game_service import GameService
+from dnd_simulator.service.session import GameSession
 
 router = APIRouter(prefix="/api/master", tags=["master"])
 
@@ -345,12 +345,12 @@ def delete_save(session_id: str, save_name: str) -> MessageResponse:
 # -- Helpers --
 
 
-def _format_time(session: Any) -> str:
+def _format_time(session: GameSession) -> str:
     t = session.world.time
     return f"Y{t.year} M{t.month} D{t.day} {t.hour:02d}:{t.minute:02d}"
 
 
-def _get_session(service: Any, session_id: str) -> Any:
+def _get_session(service: GameService, session_id: str) -> GameSession:
     try:
         return service.get_session(session_id)
     except ValueError as e:
