@@ -1,13 +1,15 @@
 # Sprint 004 Status
 
 **Sprint:** 004-monster-encounters
-**Phase:** Planning (COMPLETE)
+**Phase:** 1 — Spawn Foundation
 **Updated:** 2026-03-25
 
 ## Current
 
-Sprint planned. 3 phases. Ready for Phase 1 task generation.
+Phase 1 tasks generated. Ready to start task 1.
 
 ## Next Steps
 
-Phase 1 task generation.
+- Task 1: MonsterTemplate + EncounterTable models & YAML loading
+- Task 2: Spawn engine + temporary creature lifecycle
+- Task 3: Hostile AI — RuleBrain initiates combat

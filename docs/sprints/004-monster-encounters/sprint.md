@@ -45,7 +45,9 @@ MonsterTemplate (frozen dataclass из YAML), таблицы встреч на �
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [MonsterTemplate + EncounterTable Models & YAML Loading](tasks/phase1-task1-monster-template-model.md)
+2. [Spawn Engine + Temporary Creature Lifecycle](tasks/phase1-task2-spawn-engine.md)
+3. [Hostile AI — RuleBrain Initiates Combat](tasks/phase1-task3-hostile-ai.md)
 
 ## Phase 2: Loot + Lairs
 
