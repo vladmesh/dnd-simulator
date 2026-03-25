@@ -42,4 +42,12 @@ The lookup functions (`resolve_schedule`, `activity_flavor`, `canned_line`) stay
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Extracted schedules and activity flavor text (~80 lines) to `content/npc_behaviors.yaml`. Dialogue (CANNED_DIALOGUE, MOOD_DIALOGUE) kept in Python because it uses `_()` for i18n — `pygettext3` only scans `.py` files, so moving to YAML would break string extraction.
+
+New module `layers/entities/npc_behaviors.py` loads YAML lazily on first access, fails hard if file missing. The lookup functions (`resolve_schedule`, `activity_flavor`) unchanged in signature — they now delegate to the loader internally.
+
+`DEFAULT_SCHEDULE_TEMPLATES` and `ACTIVITY_FLAVOR` removed from `models.py` and `__init__.py` exports.

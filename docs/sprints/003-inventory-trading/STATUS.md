@@ -6,11 +6,11 @@
 
 ## Current
 
-Phase 4, Task 1: NpcRole Enum + Fix rules→layers Dependency — done. rules/ has zero imports from layers/. All role strings replaced by NpcRole enum.
+Phase 4, Task 2: Extract NPC Content Tables to YAML — done. Schedules + flavor in YAML, dialogue stays in Python for i18n.
 
 ## Next Steps
 
-- Task 2: Extract NPC content tables (schedules, flavor, dialogue) from models.py to YAML
+- All Phase 4 tasks complete. Ready for /close_phase.
 
 ## Audit Triage
 

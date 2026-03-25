@@ -1,0 +1,51 @@
+# NPC behavior data — schedules and activity flavor text.
+# Loaded at runtime by layers/entities/npc_behaviors.py.
+# Dialogue stays in Python (layers/entities/models.py) for i18n support.
+
+schedules:
+  blacksmith:
+    - [21, 7, sleeping, home]
+    - [7, 19, working, smithy]
+    - [19, 21, idle, tavern]
+  tavern_keeper:
+    - [3, 10, sleeping, home]
+    - [10, 3, working, tavern]
+  guard:
+    - [22, 6, sleeping, barracks]
+    - [6, 22, working, patrol]
+  merchant:
+    - [22, 7, sleeping, home]
+    - [7, 18, working, market]
+    - [18, 22, idle, tavern]
+  farmer:
+    - [20, 5, sleeping, home]
+    - [5, 18, working, fields]
+    - [18, 20, idle, home]
+
+activity_flavor:
+  blacksmith:
+    working: "hammering at the anvil"
+    idle: "sitting with a mug of ale"
+    sleeping: "sleeping"
+  tavern_keeper:
+    working: "wiping down the bar"
+    idle: "resting behind the counter"
+    sleeping: "sleeping"
+  guard:
+    working: "standing watch"
+    idle: "leaning against the wall"
+    sleeping: "sleeping in the barracks"
+  merchant:
+    working: "hawking wares to passersby"
+    idle: "counting coins at a table"
+    sleeping: "sleeping"
+  farmer:
+    working: "tending the fields"
+    idle: "resting on the porch"
+    sleeping: "sleeping"
+
+# Generic fallbacks when a role has no specific entry
+activity_flavor_generic:
+  working: "busy at work"
+  idle: "standing around"
+  sleeping: "sleeping"

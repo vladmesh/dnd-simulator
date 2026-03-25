@@ -123,42 +123,15 @@ class Npc(Character):
         }
 
 
-# Default schedules by role — uses relative location labels.
-# At NPC creation, these are resolved to "{settlement_id}_{label}" IDs.
-DEFAULT_SCHEDULE_TEMPLATES: dict[NpcRole, list[tuple[int, int, NpcActivity, str]]] = {
-    NpcRole.BLACKSMITH: [
-        (21, 7, NpcActivity.SLEEPING, "home"),
-        (7, 19, NpcActivity.WORKING, "smithy"),
-        (19, 21, NpcActivity.IDLE, "tavern"),
-    ],
-    NpcRole.TAVERN_KEEPER: [
-        (3, 10, NpcActivity.SLEEPING, "home"),
-        (10, 3, NpcActivity.WORKING, "tavern"),
-    ],
-    NpcRole.GUARD: [
-        (22, 6, NpcActivity.SLEEPING, "barracks"),
-        (6, 22, NpcActivity.WORKING, "patrol"),
-    ],
-    NpcRole.MERCHANT: [
-        (22, 7, NpcActivity.SLEEPING, "home"),
-        (7, 18, NpcActivity.WORKING, "market"),
-        (18, 22, NpcActivity.IDLE, "tavern"),
-    ],
-    NpcRole.FARMER: [
-        (20, 5, NpcActivity.SLEEPING, "home"),
-        (5, 18, NpcActivity.WORKING, "fields"),
-        (18, 20, NpcActivity.IDLE, "home"),
-    ],
-}
-
-
 def resolve_schedule(role: NpcRole, settlement_id: str, known_locations: set[str] | None = None) -> list[ScheduleEntry]:
     """Build a schedule from a role template, resolving relative location labels.
 
     If *known_locations* is provided, every resolved location_id must exist in the
     set — entries pointing at non-existent locations are silently dropped.
     """
-    template = DEFAULT_SCHEDULE_TEMPLATES.get(role)
+    from dnd_simulator.layers.entities.npc_behaviors import get_schedule_templates
+
+    template = get_schedule_templates().get(role)
     if not template:
         return []
     entries: list[ScheduleEntry] = []
@@ -170,42 +143,11 @@ def resolve_schedule(role: NpcRole, settlement_id: str, known_locations: set[str
     return entries
 
 
-# Flavor text: what the NPC looks like they're doing.
-# Keyed by (role, activity). Falls back to activity-only, then generic.
-ACTIVITY_FLAVOR: dict[tuple[NpcRole, NpcActivity], str] = {
-    # Blacksmith
-    (NpcRole.BLACKSMITH, NpcActivity.WORKING): "hammering at the anvil",
-    (NpcRole.BLACKSMITH, NpcActivity.IDLE): "sitting with a mug of ale",
-    (NpcRole.BLACKSMITH, NpcActivity.SLEEPING): "sleeping",
-    # Tavern keeper
-    (NpcRole.TAVERN_KEEPER, NpcActivity.WORKING): "wiping down the bar",
-    (NpcRole.TAVERN_KEEPER, NpcActivity.IDLE): "resting behind the counter",
-    (NpcRole.TAVERN_KEEPER, NpcActivity.SLEEPING): "sleeping",
-    # Guard
-    (NpcRole.GUARD, NpcActivity.WORKING): "standing watch",
-    (NpcRole.GUARD, NpcActivity.IDLE): "leaning against the wall",
-    (NpcRole.GUARD, NpcActivity.SLEEPING): "sleeping in the barracks",
-    # Merchant
-    (NpcRole.MERCHANT, NpcActivity.WORKING): "hawking wares to passersby",
-    (NpcRole.MERCHANT, NpcActivity.IDLE): "counting coins at a table",
-    (NpcRole.MERCHANT, NpcActivity.SLEEPING): "sleeping",
-    # Farmer
-    (NpcRole.FARMER, NpcActivity.WORKING): "tending the fields",
-    (NpcRole.FARMER, NpcActivity.IDLE): "resting on the porch",
-    (NpcRole.FARMER, NpcActivity.SLEEPING): "sleeping",
-}
-
-# Generic fallbacks by activity (when role has no specific entry)
-_ACTIVITY_GENERIC: dict[NpcActivity, str] = {
-    NpcActivity.WORKING: "busy at work",
-    NpcActivity.IDLE: "standing around",
-    NpcActivity.SLEEPING: "sleeping",
-}
-
-
 def activity_flavor(role: NpcRole, activity: NpcActivity) -> str:
     """Get a short flavor description of what an NPC is doing."""
-    return ACTIVITY_FLAVOR.get((role, activity), _ACTIVITY_GENERIC.get(activity, activity.value))
+    from dnd_simulator.layers.entities.npc_behaviors import get_activity_flavor, get_activity_generic
+
+    return get_activity_flavor().get((role, activity), get_activity_generic().get(activity, activity.value))
 
 
 # Canned dialogue for RuleBrain NPCs — response when someone talks to them.
