@@ -27,6 +27,7 @@ class SaveCommands:
                 "session_id": session_id,
                 "world_name": session.world_name,
                 "lang": session.lang,
+                "default_player_faction": session.default_player_faction,
             },
             "world": session.world.save(),
         }

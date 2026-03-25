@@ -220,6 +220,7 @@ class GameSession:
     world: World
     lang: str = "en"
     world_name: str = ""
+    default_player_faction: str = ""
 
     # Round lifecycle (managed, not serialized)
     _round: Round | None = field(default=None, init=False, repr=False)

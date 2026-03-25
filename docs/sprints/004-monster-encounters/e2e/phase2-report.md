@@ -6,36 +6,59 @@
 
 ## New Functionality Tested
 
-Phase 2 changes are internal mechanics (encounter trigger generalization, faction-aware hostile AI, abstract combat formula). No new API endpoints or protocol changes. The `is_hostile` field flows through awareness to the frontend as a data addition on existing structures.
+### 1. Encounter Triggers (any active creature)
+
+Player travels from Silverport to Forest Road (`silverport_greenwood_road`). Encounter table fires, goblins and wolves spawn.
 
 | Scenario | Expected | Actual | Status |
 |----------|----------|--------|--------|
-| Sword Vale world loads, player can travel | World loads, locations navigable | Player created, moved through 3 locations (tavern → market → gates → forest road) | pass |
-| Blood Arena combat — NPCs fight each other | NPCs attack using RuleBrain | Combat started automatically, paladin blessed + attacked razor (3 dmg), shadow equipped rapier + attacked razor (4 dmg), iron attacked paladin | pass |
-| Player combat actions | Attack, dash, move work | Attack out-of-range correctly rejected ("target too far"), dash toward target worked, move updated battle map positions | pass |
-| NPC dialogue (Quiet Village) | RuleBrain canned responses | Tanya responded "Что будете заказывать?" to greeting | pass |
+| Player moves to location with encounter table | `encounter_check_moved` logged with `has_table: true`, encounters roll | Logged: `encounter_rolling`, `encounter_roll_miss` / `encounter_spawn` | pass |
+| Encounter creatures spawn at location | Goblins/wolves appear in Nearby panel | 3 goblins + 3 wolves spawned, visible in UI | pass |
+| Cooldown prevents re-roll at same location | No second roll within 600s | Confirmed via logs — no re-roll on same location within cooldown | pass |
+| Safe locations have no encounter table | `has_table: false` for city locations | All city locations logged with `has_table: false` | pass |
+
+### 2. Faction-Aware Hostile AI
+
+| Scenario | Expected | Actual | Status |
+|----------|----------|--------|--------|
+| Player (kingdom) sees goblins (goblin_tribe) | `faction_hostility_check`: hostile=true | `relation: hostile, hostile: true` for all 3 goblins | pass |
+| Player sees wolves (wildlife) | `faction_hostility_check`: hostile=false | `relation: neutral, hostile: false` for all 3 wolves | pass |
+| Player sees kingdom NPCs (Marta, Gretta) | No hostility (same faction) | `hostile: false` — same faction short-circuits, no query logged | pass |
+| Goblin RuleBrain attacks player on sight | `rule_hostile_attack` in peaceful mode | goblin_1 attacked player via `rule_hostile_attack` → combat started | pass |
+| Combat starts from hostile encounter | Initiative roll, battle map, full combat UI | `[combat_started]` event, 7 combatants, battle map rendered | pass |
+
+### 3. Abstract Squad Combat (unit test only)
+
+Pure function in `rules/abstract_combat.py` — no API exposure, no UI. Covered by 8 unit tests.
 
 ## Regression
 
 | Scenario | Status | Notes |
 |----------|--------|-------|
-| Load world (Sword Vale) | pass | 4 worlds listed, session created, character customization works |
-| Load world (Blood Arena) | pass | Combat auto-starts with 4 arena fighters |
-| Load world (Quiet Village) | pass | Village locations, NPC present at tavern |
-| Basic combat | pass | Full flow: initiative, battle map, multi-action turns, distance validation |
-| NPC interaction | pass | RuleBrain dialogue works (no LLM needed) |
-| Navigation | pass | Location paths, movement between areas |
-| UI elements | pass | HP bar, nearby panel, location info, character sheet, inventory, action bar |
+| Load world (Sword Vale) | pass | Session created, character created, locations navigable |
+| NPC at location (Marta at tavern) | pass | Visible in Nearby panel, dialogue works |
+| Merchant (Gretta at market) | pass | Trade panel visible, buy/sell buttons present |
+| Navigation (5 locations) | pass | Tavern → Market → Gates → Forest Road, all paths correct |
+| Combat UI | pass | Battle map, initiative order, action budget, attack/move/dodge buttons |
 
-## Quick Fixes Applied
+## Content Fixes Applied
 
-- None needed.
+- **Encounter table keys** fixed: `greenwood_deep_forest` → `silverport_greenwood_road`, `highfield_mountain_pass` → `highfield_iron_road` (keys must match location IDs)
+- **Player faction**: added `default_player_faction: kingdom` to Sword Vale `world.yaml`, plumbed through `GameSession` → `create_player`. Without this, player had empty `faction_id` and faction hostility never triggered.
+- **Encounter chances** tuned: goblin 0.3→0.4, wolf 0.15→0.2 (original values too low for reliable gameplay)
+
+## Code Changes
+
+- **Logging added** to: `_check_encounters` (move detection, roll results), `_roll_encounters` (per-entry rolls), `_check_faction_hostility` (relation query results), `build_nearby_entities` (nearby list with hostility), `RuleBrain._peaceful_action` (hostile attack with faction info), `Round.run_loop` (active creature count per iteration)
+- **`parse_player`**: reads `faction` from player data
+- **`GameSession`**: new `default_player_faction` field, populated from `world.yaml`
+- **`create_player`**: applies `default_player_faction` when player data has no faction
 
 ## Log Analysis
 
-- **No errors in session logs** for Sword Vale or Quiet Village sessions.
-- **One `round_loop_error` in Blood Arena** — LLM (paladin NPC) returned malformed tool call args after player death. Pre-existing LLM parsing edge case, not related to Phase 2 changes.
-- **No warnings or exceptions** related to faction hostility, encounter triggers, or abstract combat.
+- No errors in session logs for any of the test sessions
+- All encounter/faction/hostility flows visible in structured logs
+- `loop_check` debug log confirmed round loop continues correctly when only player is active (no spurious exit)
 
 ## Blockers
 
@@ -43,4 +66,4 @@ Phase 2 changes are internal mechanics (encounter trigger generalization, factio
 
 ## Minor Issues
 
-- Encounter table keys in `content/worlds/sword_vale/monsters.yaml` (`greenwood_deep_forest`, `highfield_mountain_pass`) don't match any actual location IDs in `locations.yaml`. Encounters never trigger in Sword Vale. Pre-existing content gap from before Phase 2 — should be fixed when EcologyLayer (Phase 3) adds wilderness locations or updates encounter table keys to match existing locations.
+- First WS connection sometimes disconnects immediately and reconnects (race condition in session startup). Pre-existing, not related to Phase 2. Does not affect gameplay — reconnect is automatic and transparent.

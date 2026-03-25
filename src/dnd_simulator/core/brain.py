@@ -105,7 +105,13 @@ class RuleBrain(Brain):
         # Faction hostility: attack nearest hostile on sight
         hostile = next((n for n in awareness.nearby if n.is_hostile), None)
         if hostile is not None:
-            logger.info("rule_hostile_attack", target=hostile.id)
+            logger.info(
+                "rule_hostile_attack",
+                creature=creature.id,
+                creature_faction=creature.faction_id,
+                target=hostile.id,
+                target_desc=hostile.description,
+            )
             return Action(name=ActionType.ATTACK, params={"target_id": hostile.id})
 
         response = creature.get_canned_response(awareness.hour)

@@ -456,8 +456,15 @@ class Round:
             # Update activation before checking — resolves stale state from previous round
             self._entities.update_activation(self._world.time)
             active = self._entities.get_active_creatures()
+            logger.debug(
+                "loop_check",
+                active_count=len(active),
+                active_ids=[c.id for c in active],
+                stop_flag=self._stop_flag,
+            )
             if not active:
                 if not self._fast_forward():
+                    logger.debug("loop_exit_no_active")
                     break
                 continue  # re-check active after fast-forward
             result = self.run_round()

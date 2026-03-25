@@ -603,6 +603,7 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
         id=player_id,
         name=str(pdata.get("name", "Adventurer")),
         location_id=location_id,
+        faction_id=str(pdata.get("faction", "")),
         race=Race(pdata["race"]) if "race" in pdata else Race.HUMAN,
         char_class=char_class,
         level=int(pdata.get("level", 1)),
@@ -649,18 +650,20 @@ def load_battle_maps(path: Path) -> dict[str, BattleMap]:
 
 
 def load_world_meta(path: Path, lang: str = "en") -> dict[str, str]:
-    """Load world metadata (name, description) from directory format."""
+    """Load world metadata (name, description, default_player_faction) from directory format."""
     is_dir, path = _resolve_source(path)
     if is_dir:
         meta = _read_yaml(path / "world.yaml")
         return {
             "name": resolve_text(meta.get("name", path.name), lang),
             "description": resolve_text(meta.get("description", ""), lang),
+            "default_player_faction": str(meta.get("default_player_faction", "")),
         }
     data = _read_yaml(path)
     return {
         "name": resolve_text(data.get("name", path.stem), lang),
         "description": resolve_text(data.get("description", ""), lang),
+        "default_player_faction": str(data.get("default_player_faction", "")),
     }
 
 

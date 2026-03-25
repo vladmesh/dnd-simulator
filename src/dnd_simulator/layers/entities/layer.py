@@ -202,12 +202,21 @@ class EntitiesLayer(Layer):
             if e.location_id == prev:
                 continue  # didn't move
 
+            logger.info(
+                "encounter_check_moved",
+                entity_id=e.id,
+                from_location=prev or "(new)",
+                to_location=e.location_id,
+                has_table=e.location_id in self._encounter_tables,
+            )
+
             if e.location_id not in self._encounter_tables:
                 continue  # no encounters here
 
             # Check cooldown
             last_roll = self._encounter_cooldowns.get(e.location_id, 0)
             if now - last_roll < self.ENCOUNTER_COOLDOWN_SECONDS:
+                logger.info("encounter_check_cooldown", location=e.location_id, entity_id=e.id)
                 continue
 
             self._encounter_cooldowns[e.location_id] = now
@@ -220,8 +229,17 @@ class EntitiesLayer(Layer):
         entries = self._encounter_tables[location_id]
         spawned_names: list[str] = []
 
+        logger.info("encounter_rolling", location=location_id, entries=len(entries))
         for entry in entries:
-            if random.random() >= entry.chance:
+            roll = random.random()
+            if roll >= entry.chance:
+                logger.info(
+                    "encounter_roll_miss",
+                    location=location_id,
+                    template=entry.template_id,
+                    roll=round(roll, 3),
+                    chance=entry.chance,
+                )
                 continue
             template = self._monster_templates[entry.template_id]
             count = random.randint(entry.count_min, entry.count_max)
@@ -452,6 +470,13 @@ class EntitiesLayer(Layer):
             is_wounded = isinstance(e, Creature) and e.current_hp < e.max_hp // 2
             is_hostile = self._check_faction_hostility(creature, e, query_fn)
             result.append(NearbyEntity(id=e.id, description=desc, is_wounded=is_wounded, is_hostile=is_hostile))
+        if result:
+            logger.info(
+                "awareness_nearby",
+                creature_id=creature.id,
+                location=creature_location,
+                nearby=[{"id": n.id, "hostile": n.is_hostile} for n in result],
+            )
         return result
 
     def _check_faction_hostility(self, observer: Entity, other: Entity, query_fn: QueryFn | None) -> bool:
@@ -467,7 +492,18 @@ class EntitiesLayer(Layer):
                 "politics",
                 Query(question=QueryType.FACTION_RELATION, params={"a": observer.faction_id, "b": other.faction_id}),
             )
-            return str(answer.value) == "hostile"
+            relation = str(answer.value)
+            is_hostile = relation == "hostile"
+            logger.info(
+                "faction_hostility_check",
+                observer=observer.id,
+                other=other.id,
+                observer_faction=observer.faction_id,
+                other_faction=other.faction_id,
+                relation=relation,
+                hostile=is_hostile,
+            )
+            return is_hostile
         except Exception:
             logger.warning(
                 "faction_relation_query_failed",

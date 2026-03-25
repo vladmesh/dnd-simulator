@@ -70,6 +70,7 @@ class GameService(
         session_id = uuid.uuid4().hex[:8]
 
         world_path = self._content_dir / "worlds" / world_name
+        meta = load_world_meta(world_path, lang=lang)
         regions = load_world(world_path, lang=lang)
         nations = load_nations(world_path, lang=lang)
         settlements = load_settlements(world_path, lang=lang)
@@ -127,6 +128,7 @@ class GameService(
             world=world,
             lang=lang,
             world_name=world_name,
+            default_player_faction=meta.get("default_player_faction", ""),
         )
         self._sessions[session_id] = session
         return session
@@ -323,6 +325,10 @@ class GameService(
         session = self._get_session(session_id)
 
         player = parse_player(player_data)
+
+        # Default faction from world config if not specified by player
+        if not player.faction_id and session.default_player_faction:
+            player.faction_id = session.default_player_faction
 
         # Default to first location if not specified
         if not player.location_id:
