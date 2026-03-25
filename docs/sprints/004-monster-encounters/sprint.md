@@ -50,7 +50,7 @@ Tasks 1-2 из оригинального Phase 1. Код переиспольз
 
 ---
 
-## Phase 1: Data Foundation
+## Phase 1: Data Foundation ✓
 
 `faction_id` на Creature и MonsterTemplate. Матрица отношений фракций на PoliticsLayer с запросом `get_relation()`. `Squad` model (frozen dataclass): id, faction_id, group_type, behavior, route/territory, strength, member_templates. `squads.yaml` в контенте мира. `squad_id` на Creature (заполняется при материализации).
 

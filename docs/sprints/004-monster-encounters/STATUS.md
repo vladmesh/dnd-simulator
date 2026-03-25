@@ -1,18 +1,18 @@
 # Sprint 004 Status
 
 **Sprint:** 004-monster-encounters → 004-living-world (replanned)
-**Phase:** 1 — Data Foundation
+**Phase:** 1 — Data Foundation (COMPLETE)
 **Updated:** 2026-03-25
 
 ## Current
 
-Phase 1, Task 4: Squad model + squads.yaml — done.
+Phase 1 complete. MonsterTemplate, EncounterTable, FactionRelation, Squad models all in place. YAML loading for all. 929 unit tests, 33 integration tests passing. E2E clean.
 
-## Completed (pre-pivot)
+Ready for Phase 2 task generation.
 
-- Task 1: MonsterTemplate + EncounterTable models & YAML loading ✓
-- Task 2: Spawn engine + temporary creature lifecycle ✓
+## Completed
 
-## Next Steps
-
-- Phase 1 complete — ready to close.
+- Task 1 (pre-pivot): MonsterTemplate + EncounterTable models & YAML loading ✓
+- Task 2 (pre-pivot): Spawn engine + temporary creature lifecycle ✓
+- Task 3: Factions — faction_id + Faction Relations ✓
+- Task 4: Squad model + squads.yaml ✓

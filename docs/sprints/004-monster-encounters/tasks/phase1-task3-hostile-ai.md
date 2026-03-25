@@ -41,4 +41,8 @@ Make hostile creatures attack on sight. Currently RuleBrain peaceful mode only r
 
 ## Status
 
-`pending`
+`superseded`
+
+## Developer Notes
+
+Pre-pivot task from original Phase 1 ("Spawn Foundation"). Sprint was pivoted to living world architecture on 2026-03-25. Hostile AI moved to Phase 2 of the new plan with faction-aware targeting instead of a simple `hostile` flag. This task file is no longer active.
