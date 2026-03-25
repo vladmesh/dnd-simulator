@@ -48,4 +48,8 @@ Methods to extract:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Extracted 5 methods (build_awareness, build_peaceful_awareness, build_combat_awareness, build_nearby_entities, _check_faction_hostility) into AwarenessBuilder class. The private `_check_faction_hostility` was renamed to `check_faction_hostility` (public on the new class) since tests need direct access. EntitiesLayer delegates via `self._awareness` — public API unchanged. Layer.py: 1214 → 1002 LOC. No old tests modified.

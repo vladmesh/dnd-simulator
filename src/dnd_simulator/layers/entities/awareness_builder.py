@@ -1,0 +1,273 @@
+"""Awareness building — assembles what a creature perceives by querying lower layers."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+import structlog
+
+from dnd_simulator.core.awareness import (
+    CombatAwareness,
+    CombatEntity,
+    NearbyEntity,
+    PeacefulAwareness,
+)
+from dnd_simulator.core.character import Character, Creature, Entity
+from dnd_simulator.core.models import Event, Query, QueryType
+from dnd_simulator.layers.entities.models import Npc
+
+if TYPE_CHECKING:
+    from dnd_simulator.core.models import GameDateTime, QueryFn
+    from dnd_simulator.layers.entities.combat_manager import CombatManager
+
+logger = structlog.get_logger(domain="entity")
+
+
+class AwarenessBuilder:
+    """Builds awareness data for creatures by querying geography, politics, and settlements layers.
+
+    Operates on shared entity and combat references owned by EntitiesLayer.
+    """
+
+    def __init__(
+        self,
+        entities: dict[str, Entity],
+        location_log: dict[str, list[Event]],
+        combat: CombatManager,
+    ) -> None:
+        self._entities = entities
+        self._location_log = location_log
+        self._combat = combat
+
+    def build_awareness(
+        self, creature: Creature, time: GameDateTime, query_fn: QueryFn
+    ) -> PeacefulAwareness | CombatAwareness:
+        """Build awareness for a creature — dispatches by combat state."""
+        if creature.in_combat:
+            return self.build_combat_awareness(creature, query_fn)
+        return self.build_peaceful_awareness(creature, time, query_fn)
+
+    def build_peaceful_awareness(self, creature: Creature, time: GameDateTime, query_fn: QueryFn) -> PeacefulAwareness:
+        """Build peaceful awareness using query_fn + internal data."""
+        location_name = creature.location_id
+        region_name = creature.location_id
+
+        # Resolve location → region (location may or may not belong to a region)
+        region_id: str | None = None
+        try:
+            loc_answer = query_fn(
+                "geography",
+                Query(question=QueryType.LOCATION_REGION, params={"location_id": creature.location_id}),
+            )
+            if loc_answer.value and isinstance(loc_answer.value, str):
+                region_id = loc_answer.value
+        except Exception:
+            logger.warning("region_resolve_failed", location_id=creature.location_id, exc_info=True)
+
+        # Region-dependent data: weather, settlements, politics
+        weather: dict[str, object] = {"condition": "clear", "temperature": 15}
+        settlements: list[dict[str, object]] | None = None
+        territory_owner: str | None = None
+        nation_info: dict[str, object] | None = None
+
+        if region_id is not None:
+            try:
+                region_answer = query_fn(
+                    "geography", Query(question=QueryType.REGION_INFO, params={"region_id": region_id})
+                )
+                if region_answer.value and isinstance(region_answer.value, dict):
+                    region_name = str(region_answer.value.get("name", region_name))
+            except Exception:
+                logger.warning("region_info_query_failed", region_id=region_id, exc_info=True)
+
+            try:
+                weather_answer = query_fn(
+                    "geography", Query(question=QueryType.WEATHER, params={"region_id": region_id})
+                )
+                if weather_answer.value and isinstance(weather_answer.value, dict):
+                    weather = dict(weather_answer.value)
+            except Exception:
+                logger.warning("weather_query_failed", region_id=region_id, exc_info=True)
+
+            try:
+                settlements_answer = query_fn(
+                    "settlements", Query(question=QueryType.REGION_SETTLEMENTS, params={"region_id": region_id})
+                )
+                if settlements_answer.value:
+                    settlements = list(settlements_answer.value)
+            except Exception:
+                logger.warning("settlements_query_failed", region_id=region_id, exc_info=True)
+
+            try:
+                owner_answer = query_fn(
+                    "politics", Query(question=QueryType.REGION_OWNER, params={"region_id": region_id})
+                )
+                if owner_answer.value:
+                    territory_owner = str(owner_answer.value)
+                    nation_answer = query_fn(
+                        "politics", Query(question=QueryType.NATION_INFO, params={"nation_id": territory_owner})
+                    )
+                    if nation_answer.value and isinstance(nation_answer.value, dict):
+                        nation_info = dict(nation_answer.value)
+            except Exception:
+                logger.warning("politics_query_failed", region_id=region_id, exc_info=True)
+
+        # Nearby entities (uses query_fn for faction hostility)
+        nearby = self.build_nearby_entities(creature, time.hour, query_fn)
+
+        # NPC scheduled location name
+        if isinstance(creature, Npc):
+            location_name = creature.current_location(time.hour)
+
+        return PeacefulAwareness(
+            hour=time.hour,
+            day=time.day,
+            month=time.month,
+            year=time.year,
+            weather=weather,
+            location_name=location_name,
+            region_name=region_name,
+            settlements=settlements,
+            territory_owner=territory_owner,
+            nation_info=nation_info,
+            nearby=nearby,
+        )
+
+    def build_combat_awareness(self, creature: Creature, query_fn: QueryFn | None = None) -> CombatAwareness:
+        """Build combat awareness using internal data + optional faction queries."""
+        from dnd_simulator.core.combat import Position
+        from dnd_simulator.rules.movement import direction_label, grid_distance
+
+        combat = self._combat.get_combat(creature.location_id)
+        round_number = combat.round_number if combat else 1
+        battle_map_positions: dict[str, Position] = dict(combat.battle_map.positions) if combat else {}
+        my_pos = battle_map_positions.get(creature.id)
+
+        # Build nearby list (exclude dead creatures)
+        nearby: list[CombatEntity] = []
+        for e in self._entities.values():
+            if e.id == creature.id or not e.active or e.location_id != creature.location_id:
+                continue
+            if isinstance(e, Creature) and not e.is_alive:
+                continue
+            # Build description using perceive if observer is a Character
+            desc = creature.perceive(e) if isinstance(creature, Character) and isinstance(e, Entity) else e.name
+            is_wounded = isinstance(e, Creature) and e.current_hp < e.max_hp // 2
+            distance_ft = 0
+            direction = ""
+            other_pos = battle_map_positions.get(e.id)
+            if my_pos is not None and other_pos is not None:
+                distance_ft = grid_distance(my_pos, other_pos)
+                dx = other_pos.x - my_pos.x
+                dy = other_pos.y - my_pos.y
+                direction = direction_label(dx, dy)
+            e_conditions = frozenset(e.conditions) if isinstance(e, Creature) else frozenset()
+            is_hostile = self.check_faction_hostility(creature, e, query_fn)
+            nearby.append(
+                CombatEntity(
+                    id=e.id,
+                    description=desc,
+                    is_wounded=is_wounded,
+                    is_hostile=is_hostile,
+                    distance_ft=distance_ft,
+                    direction=direction,
+                    x=other_pos.x if other_pos else 0,
+                    y=other_pos.y if other_pos else 0,
+                    conditions=e_conditions,
+                )
+            )
+
+        from dnd_simulator.rules.modifiers import effective_ac, effective_speed
+        from dnd_simulator.rules.weapons import get_weapon_attack
+
+        weapon_attack = get_weapon_attack(creature)
+        weapon_name = weapon_attack.name
+        weapon_damage = str(weapon_attack.damage[0].dice) if weapon_attack.damage else "1"
+
+        wall_descriptions: list[str] = []
+        battle_map_ascii = ""
+        if combat:
+            wall_descriptions = combat.battle_map.describe_walls()
+            battle_map_ascii = combat.battle_map.render_ascii(creature.id)
+
+        return CombatAwareness(
+            self_hp=creature.current_hp,
+            self_max_hp=creature.max_hp,
+            self_ac=effective_ac(creature),
+            self_speed=effective_speed(creature),
+            self_weapon=weapon_name,
+            self_weapon_damage=weapon_damage,
+            self_x=my_pos.x if my_pos else 0,
+            self_y=my_pos.y if my_pos else 0,
+            nearby=nearby,
+            round_number=round_number,
+            walls=wall_descriptions,
+            battle_map_ascii=battle_map_ascii,
+            self_conditions=frozenset(creature.conditions),
+        )
+
+    def build_nearby_entities(
+        self, creature: Creature, hour: int, query_fn: QueryFn | None = None
+    ) -> list[NearbyEntity]:
+        """Build list of nearby entities for peaceful awareness."""
+        result: list[NearbyEntity] = []
+        creature_location = creature.location_id
+        if isinstance(creature, Npc):
+            creature_location = creature.current_location(hour)
+        for e in self._entities.values():
+            if e.id == creature.id or not e.active:
+                continue
+            if isinstance(e, Creature) and not e.is_alive:
+                continue
+            # Determine effective location
+            e_location = e.location_id
+            if isinstance(e, Npc):
+                e_location = e.current_location(hour)
+            if e_location != creature_location:
+                continue
+            desc = creature.perceive(e) if isinstance(creature, Character) and isinstance(e, Entity) else e.name
+            is_wounded = isinstance(e, Creature) and e.current_hp < e.max_hp // 2
+            is_hostile = self.check_faction_hostility(creature, e, query_fn)
+            result.append(NearbyEntity(id=e.id, description=desc, is_wounded=is_wounded, is_hostile=is_hostile))
+        if result:
+            logger.info(
+                "awareness_nearby",
+                creature_id=creature.id,
+                location=creature_location,
+                nearby=[{"id": n.id, "hostile": n.is_hostile} for n in result],
+            )
+        return result
+
+    def check_faction_hostility(self, observer: Entity, other: Entity, query_fn: QueryFn | None) -> bool:
+        """Check if two entities are hostile based on faction relations."""
+        if not observer.faction_id or not other.faction_id:
+            return False
+        if observer.faction_id == other.faction_id:
+            return False
+        if query_fn is None:
+            return False
+        try:
+            answer = query_fn(
+                "politics",
+                Query(question=QueryType.FACTION_RELATION, params={"a": observer.faction_id, "b": other.faction_id}),
+            )
+            relation = str(answer.value)
+            is_hostile = relation == "hostile"
+            logger.info(
+                "faction_hostility_check",
+                observer=observer.id,
+                other=other.id,
+                observer_faction=observer.faction_id,
+                other_faction=other.faction_id,
+                relation=relation,
+                hostile=is_hostile,
+            )
+            return is_hostile
+        except Exception:
+            logger.warning(
+                "faction_relation_query_failed",
+                a=observer.faction_id,
+                b=other.faction_id,
+                exc_info=True,
+            )
+            return False

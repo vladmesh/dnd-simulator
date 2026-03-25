@@ -6,10 +6,9 @@
 
 ## Current
 
-Phase 2 tasks generated. EntitiesLayer (1214 LOC) split into 3 extractions. PoliticsLayer deferred — not a god class at 609 LOC. Ready to start task 1.
+Phase 2, Task 1: Extract AwarenessBuilder — done. 212 LOC moved to awareness_builder.py, layer.py 1214→1002.
 
 ## Next Steps
 
-- Task 1: Extract AwarenessBuilder (~227 LOC) — awareness building methods → awareness_builder.py
 - Task 2: Extract ActivationManager (~353 LOC) — activation, encounters, squads → activation_manager.py
 - Task 3: Extract QueryHandler (~247 LOC) — query dispatch, entity details, perception log → query_handler.py
