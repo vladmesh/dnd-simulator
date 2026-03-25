@@ -201,10 +201,15 @@ def _build_nearby_merchants_fn(world: World) -> NearbyMerchantsFn:
     def get_nearby_merchants(location_id: str) -> list[Npc]:
         if entities_layer is None:
             return []
+        hour = world.time.hour
         return [
             e
             for e in entities_layer._entities.values()
-            if isinstance(e, Npc) and e.is_merchant and e.location_id == location_id and e.active and e.is_alive
+            if isinstance(e, Npc)
+            and e.is_merchant
+            and e.current_location(hour) == location_id
+            and e.active
+            and e.is_alive
         ]
 
     return get_nearby_merchants

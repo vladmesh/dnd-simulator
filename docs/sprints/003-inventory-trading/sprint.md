@@ -49,7 +49,7 @@ Sprint 001 заложил фундамент предметов: WeaponDef, Armo
 1. [Inventory & Equipment Awareness](tasks/phase2-task1-inventory-awareness.md)
 2. [Frontend Inventory & Equipment Panel](tasks/phase2-task2-inventory-panel.md)
 
-## Phase 3: Trading
+## Phase 3: Trading ✓
 
 Merchant-флаг на NPC, инвентарь торговца, buy/sell экшены + хендлеры. Trade UI на фронте. YAML-контент: торговец в деревне с товарами.
 

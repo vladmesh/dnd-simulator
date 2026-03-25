@@ -132,12 +132,13 @@ class Round:
         """Build merchant info for creatures at the same location."""
         from dnd_simulator.layers.entities.models import Npc
 
+        hour = self._world.time.hour
         result: list[MerchantInfo] = []
         for e in self._entities._entities.values():
             if (
                 isinstance(e, Npc)
                 and e.is_merchant
-                and e.location_id == creature.location_id
+                and e.current_location(hour) == creature.location_id
                 and e.active
                 and e.is_alive
             ):
