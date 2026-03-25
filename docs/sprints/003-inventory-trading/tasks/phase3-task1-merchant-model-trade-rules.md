@@ -64,4 +64,13 @@ Scenarios for `tests/unit/test_trade.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward implementation — all foundation pieces (Item.price, role field, schedule templates) already existed.
+- Added `Npc.is_merchant` property, `BUY`/`SELL` ActionType + EventType + ActionDef entries
+- Created `rules/trade.py` with pure validate/execute functions
+- Wired NPC gold parsing in content_loader (was missing, player had it)
+- Added merchant NPC "Gretta" to sword_vale with gold and priced items
+- Updated `test_content_loader_dir` NPC count from 3→4 (intentional, new NPC added)

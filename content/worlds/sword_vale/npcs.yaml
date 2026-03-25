@@ -47,6 +47,40 @@ marta:
       любому тифлингу, угощает бесплатной выпивкой
       и всячески старается им помочь.
 
+gretta:
+  name:
+    en: Gretta the Merchant
+    ru: Гретта Торговка
+  start_location: silverport_city_market
+  settlement_id: silverport_city
+  role: merchant
+  hp: 10
+  ac: 10
+  gold: 500
+  personality:
+    en: >
+      A shrewd but honest trader. Knows the value of every
+      coin and every item. Friendly to repeat customers.
+    ru: >
+      Хитрая, но честная торговка. Знает цену каждой
+      монете и каждому товару. Приветлива с постоянными покупателями.
+  items:
+    - name: Health Potion
+      type: potion
+      heal_dice: "2d4+2"
+      price: 50
+    - name: Dagger
+      type: weapon
+      weapon_id: dagger
+      category: simple
+      attack_name: dagger strike
+      damage:
+        - dice: "1d4"
+          type: piercing
+      ability: dex
+      is_finesse: true
+      price: 200
+
 rodrik:
   name:
     en: Guard Captain Rodrik

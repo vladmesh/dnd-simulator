@@ -97,6 +97,8 @@ class EventType(Enum):
     ENTITY_SECOND_WIND = "entity_second_wind"
     ENTITY_EQUIP = "entity_equip"
     ENTITY_UNEQUIP = "entity_unequip"
+    ENTITY_BUY = "entity_buy"
+    ENTITY_SELL = "entity_sell"
     TURN_SKIPPED = "turn_skipped"
     COMBAT_STARTED = "combat_started"
     COMBAT_ENDED = "combat_ended"

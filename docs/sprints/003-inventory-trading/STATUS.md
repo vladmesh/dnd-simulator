@@ -6,10 +6,9 @@
 
 ## Current
 
-Phase 3 tasks generated. Ready to start task 1.
+Phase 3, Task 1: Merchant model + trade rules — done. Added is_merchant, BUY/SELL actions, pure trade rules, merchant NPC.
 
 ## Next Steps
 
-- Task 1: Merchant model + trade rules — NPC merchant flag, gold on NPCs, pure buy/sell validation, YAML merchant content
 - Task 2: Buy/sell handlers + dispatch — wire through action pipeline, perception, awareness with merchant info
 - Task 3: Trade UI — Trade button in ActionBar, trade modal with buy/sell

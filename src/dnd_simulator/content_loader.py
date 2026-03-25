@@ -557,6 +557,7 @@ def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locati
         ability_scores=parse_ability_scores(ndata),
         ai_type=ai_type,
         memory=memory,
+        gold=int(ndata.get("gold", 0)),
         inventory=inventory,
         equipped_weapon=equipped["equipped_weapon"],
         equipped_armor=equipped["equipped_armor"],

@@ -33,6 +33,8 @@ class ActionType(StrEnum):
     UNEQUIP_RING = "unequip_ring"
     DISENGAGE = "disengage"
     SECOND_WIND = "second_wind"
+    BUY = "buy"
+    SELL = "sell"
     END_TURN = "end_turn"
     SKIP = "skip"
 

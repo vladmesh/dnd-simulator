@@ -376,6 +376,36 @@ _reg(
 
 _reg(
     ActionDef(
+        action_type=ActionType.BUY,
+        description=N_("Buy an item from a merchant."),
+        cost_type=CostType.FREE,
+        combat_mode=CombatMode.PEACEFUL_ONLY,
+        provider_managed=True,
+        params=(
+            ParamDef("merchant_id", "string", N_("ID of the merchant NPC"), required=True),
+            ParamDef("item_id", "string", N_("ID of the item to buy"), required=True),
+        ),
+        llm_hint="Buy an item from a merchant's inventory. You must be at the same location and have enough gold.",
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.SELL,
+        description=N_("Sell an item to a merchant."),
+        cost_type=CostType.FREE,
+        combat_mode=CombatMode.PEACEFUL_ONLY,
+        provider_managed=True,
+        params=(
+            ParamDef("merchant_id", "string", N_("ID of the merchant NPC"), required=True),
+            ParamDef("item_id", "string", N_("ID of the item to sell"), required=True),
+        ),
+        llm_hint="Sell an item from your inventory to a merchant. You must be at the same location.",
+    )
+)
+
+_reg(
+    ActionDef(
         action_type=ActionType.END_TURN,
         description=N_("End your turn."),
         cost_type=CostType.FREE,

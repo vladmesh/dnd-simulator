@@ -100,6 +100,11 @@ class Npc(Character):
         return self.scheduled_location(hour)
 
     @property
+    def is_merchant(self) -> bool:
+        """Whether this NPC is a merchant (derived from role)."""
+        return self.role == "merchant"
+
+    @property
     def memory_tags(self) -> list[str]:
         return self.memory.tags
 

@@ -42,7 +42,7 @@ class TestDirectoryFormat:
 
     def test_load_npcs(self) -> None:
         npcs = load_npcs(SWORD_VALE)
-        assert len(npcs) == 3
+        assert len(npcs) == 4
         edgar = next(n for n in npcs if n.id == "edgar")
         assert edgar.role == "blacksmith"
         assert edgar.ai_type == "rule_based"
