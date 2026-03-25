@@ -50,7 +50,7 @@ from dnd_simulator.layers.geography.models import (
     Region,
     TerrainType,
 )
-from dnd_simulator.layers.politics.models import Leader, LeaderTrait, Nation
+from dnd_simulator.layers.politics.models import FactionRelation, Leader, LeaderTrait, Nation
 from dnd_simulator.layers.settlements.models import Settlement, SettlementType
 
 
@@ -546,6 +546,7 @@ def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locati
         id=npc_id,
         name=resolve_text(ndata["name"], lang),
         location_id=location_id,
+        faction_id=str(ndata.get("faction", "")),
         race=race,
         char_class=char_class,
         role=role,
@@ -662,6 +663,33 @@ def load_world_meta(path: Path, lang: str = "en") -> dict[str, str]:
     }
 
 
+def load_factions(path: Path) -> dict[tuple[str, str], FactionRelation]:
+    """Load faction relations from factions.yaml.
+
+    Returns a dict of (faction_a, faction_b) → FactionRelation.
+    Keys are canonically sorted (min, max). Missing file → empty dict.
+    """
+    is_dir, resolved = _resolve_source(path)
+    if is_dir:
+        factions_data = _read_yaml(resolved / "factions.yaml")
+    else:
+        data = _read_yaml(resolved)
+        factions_data = data.get("factions", {})
+        assert isinstance(factions_data, dict)
+
+    if not factions_data:
+        return {}
+
+    relations: dict[tuple[str, str], FactionRelation] = {}
+    for faction_id, fdata in factions_data.items():
+        if not isinstance(fdata, dict):
+            continue
+        for other_id, rel_str in fdata.get("relations", {}).items():
+            key = (min(str(faction_id), str(other_id)), max(str(faction_id), str(other_id)))
+            relations[key] = FactionRelation(str(rel_str))
+    return relations
+
+
 def parse_monster_template(template_id: str, data: dict[str, Any], lang: str = "en") -> MonsterTemplate:
     """Parse a single monster template from YAML data."""
     return MonsterTemplate(
@@ -673,6 +701,7 @@ def parse_monster_template(template_id: str, data: dict[str, Any], lang: str = "
         ability_scores=parse_ability_scores(data),
         attacks=parse_attacks(data.get("attacks", [])),
         cr=float(data["cr"]),
+        faction_id=str(data.get("faction", "")),
     )
 
 

@@ -197,6 +197,7 @@ class Entity:
     location_id: str
     active: bool = True
     temporary: bool = False
+    faction_id: str = ""
     _last_seen_log_index: int = field(default=0, repr=False)
 
     def on_tick(self, hour: int) -> None:

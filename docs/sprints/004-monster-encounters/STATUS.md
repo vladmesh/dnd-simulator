@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 1 tasks generated. Ready to start task 3 (factions).
+Phase 1, Task 3: Factions — faction_id + Faction Relations — done.
 
 ## Completed (pre-pivot)
 
@@ -15,5 +15,4 @@ Phase 1 tasks generated. Ready to start task 3 (factions).
 
 ## Next Steps
 
-- Task 3: Factions — faction_id on Creature/MonsterTemplate + faction relations on PoliticsLayer
 - Task 4: Squad model + squads.yaml

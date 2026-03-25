@@ -19,6 +19,7 @@ class MonsterTemplate:
     ability_scores: AbilityScores
     attacks: tuple[Attack, ...]
     cr: float
+    faction_id: str = ""
 
     def spawn(self, location_id: str, instance_id: str) -> Creature:
         """Create a temporary Creature from this template."""
@@ -27,6 +28,7 @@ class MonsterTemplate:
             name=self.name,
             location_id=location_id,
             temporary=True,
+            faction_id=self.faction_id,
             ability_scores=AbilityScores.from_dict(self.ability_scores.to_dict()),
             max_hp=self.hp,
             current_hp=self.hp,

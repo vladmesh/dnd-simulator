@@ -4,6 +4,7 @@ edgar:
     ru: Эдгар Кузнец
   start_location: silverport_city_smithy
   settlement_id: silverport_city
+  faction: kingdom
   role: blacksmith
   hp: 18
   ac: 12
@@ -29,6 +30,7 @@ marta:
     ru: Марта
   start_location: silverport_city_tavern
   settlement_id: silverport_city
+  faction: kingdom
   role: tavern_keeper
   ai: llm
   personality:
@@ -53,6 +55,7 @@ gretta:
     ru: Гретта Торговка
   start_location: silverport_city_market
   settlement_id: silverport_city
+  faction: kingdom
   role: merchant
   hp: 10
   ac: 10
@@ -87,6 +90,7 @@ rodrik:
     ru: Капитан стражи Родрик
   start_location: silverport_city_barracks
   settlement_id: silverport_city
+  faction: kingdom
   role: guard
   hp: 32
   ac: 16

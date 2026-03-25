@@ -23,6 +23,14 @@ class DiplomaticStatus(Enum):
     ALLIANCE = "alliance"
 
 
+class FactionRelation(Enum):
+    """Creature-level faction relation. Drives hostility/alliance."""
+
+    HOSTILE = "hostile"
+    NEUTRAL = "neutral"
+    FRIENDLY = "friendly"
+
+
 @dataclass
 class Leader:
     """A nation's ruler."""

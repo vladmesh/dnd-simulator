@@ -1,6 +1,7 @@
 templates:
   goblin:
     name: {en: Goblin, ru: Гоблин}
+    faction: goblin_tribe
     hp: 7
     ac: 15
     speed: 30
@@ -16,6 +17,7 @@ templates:
 
   wolf:
     name: {en: Wolf, ru: Волк}
+    faction: wildlife
     hp: 11
     ac: 13
     speed: 40
@@ -31,6 +33,7 @@ templates:
 
   bandit:
     name: {en: Bandit, ru: Бандит}
+    faction: bandits
     hp: 11
     ac: 12
     speed: 30

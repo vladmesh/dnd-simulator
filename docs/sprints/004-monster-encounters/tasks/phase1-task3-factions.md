@@ -77,4 +77,8 @@ goblin_tribe:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Clean implementation. FactionRelation enum in politics/models.py. PoliticsLayer gets `_faction_relations` dict, `set_faction_relation()`, `get_faction_relation()` (same-faction = FRIENDLY, unspecified = NEUTRAL, symmetric via canonical key). FACTION_RELATION query type added. Content loader gets `load_factions()` + faction field parsing in NPC and monster template parsers. All 4 Sword Vale NPCs get `faction: kingdom`. Monster templates get wildlife/goblin_tribe/bandits factions. Faction relations are content-defined (loaded from YAML), not persisted in save state — reloaded on session start. No old tests broken.

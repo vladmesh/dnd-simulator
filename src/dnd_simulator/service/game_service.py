@@ -8,6 +8,7 @@ from typing import Any
 from dnd_simulator.content_loader import (
     extract_region_adjacency,
     extract_region_terrains,
+    load_factions,
     load_locations,
     load_monsters,
     load_nations,
@@ -75,6 +76,7 @@ class GameService(
         location_graph = LocationGraph(locations)
         npcs = load_npcs(world_path, lang=lang, known_locations=set(location_graph.all_ids()))
         monster_templates, encounter_tables = load_monsters(world_path, lang=lang)
+        faction_relations = load_factions(world_path)
         region_terrains = extract_region_terrains(regions)
 
         # Players are created via API (create_player), not from templates
@@ -87,6 +89,7 @@ class GameService(
             region_terrains=region_terrains,
             region_adjacency=extract_region_adjacency(regions),
             region_income_fn=settlements_layer.get_region_income,
+            faction_relations=faction_relations,
         )
         summarizer = None
         if self._llm:

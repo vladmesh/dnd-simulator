@@ -58,6 +58,7 @@ class QueryType(Enum):
     NATION_INFO = "nation_info"
     RELATIONS = "relations"
     REGION_OWNER = "region_owner"
+    FACTION_RELATION = "faction_relation"
 
     # Settlements
     SETTLEMENTS = "settlements"

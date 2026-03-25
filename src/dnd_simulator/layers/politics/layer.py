@@ -10,6 +10,7 @@ from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
 from dnd_simulator.layers.politics.models import (
     DiplomaticStatus,
+    FactionRelation,
     Leader,
     LeaderTrait,
     Nation,
@@ -73,6 +74,7 @@ class PoliticsLayer(Layer):
         region_adjacency: dict[str, list[str]] | None = None,
         seed: int | None = None,
         region_income_fn: Callable[[str], float] | None = None,
+        faction_relations: dict[tuple[str, str], FactionRelation] | None = None,
     ) -> None:
         self._nations: dict[str, Nation] = {}
         if nations:
@@ -83,6 +85,7 @@ class PoliticsLayer(Layer):
         self._region_adjacency: dict[str, list[str]] = region_adjacency or {}
         self._relations: dict[tuple[str, str], DiplomaticStatus] = {}
         self._war_durations: dict[tuple[str, str], int] = {}
+        self._faction_relations: dict[tuple[str, str], FactionRelation] = faction_relations or {}
         self._rng = random.Random(seed)
 
         # Income from settlements (if available), else fall back to terrain-based
@@ -115,6 +118,20 @@ class PoliticsLayer(Layer):
     def get_relation(self, nation_a: str, nation_b: str) -> DiplomaticStatus:
         """Get diplomatic status between two nations."""
         return self._relations.get(_relation_key(nation_a, nation_b), DiplomaticStatus.PEACE)
+
+    def set_faction_relation(self, faction_a: str, faction_b: str, relation: FactionRelation) -> None:
+        """Set relation between two factions."""
+        key = _relation_key(faction_a, faction_b)
+        self._faction_relations[key] = relation
+
+    def get_faction_relation(self, faction_a: str, faction_b: str) -> FactionRelation:
+        """Get relation between two factions.
+
+        Same faction = FRIENDLY. Unspecified = NEUTRAL.
+        """
+        if faction_a == faction_b:
+            return FactionRelation.FRIENDLY
+        return self._faction_relations.get(_relation_key(faction_a, faction_b), FactionRelation.NEUTRAL)
 
     def get_region_owner(self, region_id: str) -> str | None:
         """Which nation owns a region, if any."""
@@ -505,6 +522,10 @@ class PoliticsLayer(Layer):
         if q is QueryType.REGION_OWNER:
             owner = self.get_region_owner(params["region_id"])
             return Answer(value=owner)
+
+        if q is QueryType.FACTION_RELATION:
+            relation = self.get_faction_relation(str(params["a"]), str(params["b"]))
+            return Answer(value=relation.value)
 
         raise ValueError(f"Unknown politics query: {q}")
 
