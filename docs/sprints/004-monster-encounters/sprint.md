@@ -73,7 +73,7 @@ Encounter table rolls для любого active character (не только Pl
 2. [Faction-Aware Hostile AI](tasks/phase2-task2-hostile-ai.md)
 3. [Abstract Squad Combat Formula](tasks/phase2-task3-abstract-combat.md)
 
-## Phase 3: Squad Movement + Materialization
+## Phase 3: Squad Movement + Materialization ✓
 
 EcologyLayer (новый слой между Settlements и Entities): tick-based движение сквадов по графу локаций. Squad + active character в одной локации → материализация (MonsterTemplate.spawn для каждого члена, squad_id на Creature). Squad + hostile squad → абстрактный бой. Dematerialization при уходе active character. YAML контент: 3-4 сквада для Sword Vale (патруль стражников, банда бандитов, стая волков, орочий рейд).
 
@@ -99,7 +99,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 2 complete. Phase 3 ready for task generation.
+**Current:** Phase 3 complete. Phase 4 ready for task generation.
 
 ## Decisions
 

@@ -1,0 +1,86 @@
+name: Squad Test World
+description: >
+  Minimal world for testing EcologyLayer squads.
+  Three locations in a line with a patrol squad.
+
+regions:
+  testland:
+    name: Testland
+    latitude: 45.0
+    longitude: 10.0
+    elevation: 200
+    terrain: plains
+    water_proximity: 0.1
+    connections: []
+    settlements:
+      - id: test_town
+        name: Test Town
+        type: village
+        population: 50
+
+locations:
+  road_west:
+    name: West Road
+    region: testland
+    description: "A dusty road heading west."
+    neighbors:
+      - { target: road_center, distance: 100 }
+
+  road_center:
+    name: Central Crossroads
+    region: testland
+    settlement: test_town
+    description: "A crossroads in the middle of town."
+    neighbors:
+      - { target: road_west, distance: 100 }
+      - { target: road_east, distance: 100 }
+
+  road_east:
+    name: East Road
+    region: testland
+    description: "A paved road heading east."
+    neighbors:
+      - { target: road_center, distance: 100 }
+
+nations: {}
+
+npcs: {}
+
+factions:
+  kingdom:
+    relations:
+      bandits: hostile
+  bandits:
+    relations:
+      kingdom: hostile
+
+monsters:
+  templates:
+    bandit:
+      name: Bandit
+      hp: 11
+      ac: 12
+      speed: 30
+      str: 11
+      dex: 12
+      con: 12
+      int: 10
+      wis: 10
+      cha: 10
+      cr: 0.125
+      faction: bandits
+      attacks:
+        - name: scimitar slash
+          damage: [{ dice: "1d6+1", type: slashing }]
+
+squads:
+  test_patrol:
+    name: Kingdom Patrol
+    faction: kingdom
+    type: patrol
+    behavior: patrol
+    start_location: road_west
+    route: [road_west, road_center, road_east]
+    strength: 5
+    members: [bandit, bandit]
+    tick_interval: 3600
