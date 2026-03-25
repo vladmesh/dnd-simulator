@@ -51,21 +51,22 @@ ActionDispatcher (`service/action_dispatcher.py`) — единый entry point: 
 Инфраструктура классовых механик: proficiency system, armor/shield экипировка, ResourcePool (расходуемые ресурсы), ClassFeatures (композиция вместо наследования), ActionDef (централизованный реестр действий). Fighter L1: Fighting Style (Defense/Dueling) через modifier pipeline, Second Wind (bonus action heal). Rogue L1: Sneak Attack (+Nd6 finesse/ranged при advantage/ally adjacent), Cunning Action (Dash/Disengage как bonus action через CostOverride). Generic attack perception — компонентный лог атак вместо ad-hoc полей.
 → [план спринта](sprints/001-class-mechanics/sprint.md)
 
+### Sprint 003 — Inventory & Trading (фазы 1-4)
+Полноценная система инвентаря и торговли. Phase 1: generic equip/unequip + accessory slots (head, feet, ring) с модификаторами через modifier pipeline. Phase 2: awareness для инвентаря/экипировки + фронтенд панель (6 слотов + сумка + золото). Phase 3: Merchant-флаг на NPC, buy/sell экшены, Trade UI. Phase 4 (audit refactor): NpcRole enum, вынос контента NPC в YAML, фикс rules→layers зависимости.
+→ [план спринта](sprints/003-inventory-trading/sprint.md)
+
 ## In Progress
 
 (нет)
 
 ## Planned
 
-### Sprint 001 Phase 4 — Content + Quality
-Armor/weapon items в YAML для village, Fighter и Rogue NPC, тесты, аудит.
-
-### Level 2 — Расходуемые ресурсы и расширение инвентаря
-Spell slots, ki, rage. Расширение инвентаря: дополнительные типы брони и оружия.
+### Level 2 — Расходуемые ресурсы
+Spell slots, ki, rage. Дополнительные типы брони и оружия.
 → [брейншторм](brainstorms/ecs-and-content.md)
 
-### Level 3 — Заклинания, пропсы, торговля
-Gameplay-системы поверх инфраструктуры Level 1-2. Заклинания как YAML, интерактивные объекты (двери, сундуки), торговля.
+### Level 3 — Заклинания, пропсы
+Заклинания как YAML, интерактивные объекты (двери, сундуки).
 → [брейншторм](brainstorms/ecs-and-content.md)
 
 ### Phase 3 — Автономные тики и эволюция NPC

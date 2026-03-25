@@ -88,4 +88,10 @@ _(заполняется по ходу спринта)_
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-03-25
+
+Full inventory and trading system: 6 equipment slots (weapon, armor, shield, head, feet, ring) with accessories providing modifiers via pipeline, gold on creatures, merchant NPCs with buy/sell actions, frontend inventory panel and trade UI. Audit refactor: NpcRole enum, NPC content extraction to YAML, rules→layers dependency fix.
+
+9 tasks across 4 phases. 882 unit tests, 33 integration tests. E2E verified for all phases via Playwright.
+
+**Deferred:** loot from monsters, price negotiation, weight limits, two-handed weapons, hands/cloak/amulet slots → backlog
