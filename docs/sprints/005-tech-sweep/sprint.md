@@ -24,7 +24,7 @@
 2. [Remove legacy single-file loading code and fallback aliases](tasks/phase1-task2-remove-legacy-loading.md)
 3. [Update integration test world references](tasks/phase1-task3-update-test-references.md)
 
-## Phase 2: God Class Splits
+## Phase 2: God Class Splits ✓
 
 EntitiesLayer (1215 LOC) → выделяем awareness builder, activation manager, query handler в отдельные модули. Тесты перекладываются, публичный API слоёв не меняется.
 
