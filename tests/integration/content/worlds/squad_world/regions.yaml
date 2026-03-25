@@ -1,0 +1,13 @@
+testland:
+  name: Testland
+  latitude: 45.0
+  longitude: 10.0
+  elevation: 200
+  terrain: plains
+  water_proximity: 0.1
+  connections: []
+  settlements:
+  - id: test_town
+    name: Test Town
+    type: village
+    population: 50

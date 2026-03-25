@@ -39,12 +39,16 @@ Same process for integration test worlds under `tests/integration/content/worlds
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] All 7 worlds converted to directory format
-- [ ] Original single-file `.yaml` files deleted
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
+- [x] Tests written and RED (before implementation)
+- [x] All 7 worlds converted to directory format
+- [x] Original single-file `.yaml` files deleted
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Used `yaml.dump` to split files programmatically. Output formatting is less pretty than hand-written YAML (flow-style lists become block, multiline strings get quoted) but loads identically. Battle map wall tests needed adjustment — `BattleMap` auto-adds 4 boundary walls, so arena has 8 total (4 authored + 4 boundary) and sneak_test has 4 (0 authored + 4 boundary).

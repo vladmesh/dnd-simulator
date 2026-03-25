@@ -1,0 +1,29 @@
+arena:
+  name: Кровавая Арена
+  latitude: 40.0
+  longitude: 0.0
+  elevation: 50
+  terrain: plains
+  water_proximity: 0.0
+  connections: []
+  settlements: []
+  battle_map:
+    width: 80
+    height: 80
+    walls:
+    - - 40
+      - 0
+      - 40
+      - 30
+    - - 40
+      - 50
+      - 40
+      - 80
+    - - 0
+      - 40
+      - 25
+      - 40
+    - - 55
+      - 40
+      - 80
+      - 40

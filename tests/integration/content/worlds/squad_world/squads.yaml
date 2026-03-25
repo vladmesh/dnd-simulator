@@ -1,0 +1,15 @@
+test_patrol:
+  name: Kingdom Patrol
+  faction: kingdom
+  type: patrol
+  behavior: patrol
+  start_location: road_west
+  route:
+  - road_west
+  - road_center
+  - road_east
+  strength: 5
+  members:
+  - bandit
+  - bandit
+  tick_interval: 3600

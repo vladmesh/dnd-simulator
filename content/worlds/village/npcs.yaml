@@ -1,0 +1,50 @@
+olga:
+  name: Ольга-кузнец
+  start_location: millbrook_home
+  role: blacksmith
+  personality: Грубоватая, но справедливая.
+  settlement_id: millbrook
+sergei:
+  name: Стражник Сергей
+  start_location: millbrook_barracks
+  role: guard
+  personality: Дисциплинированный и серьёзный.
+  settlement_id: millbrook
+masha:
+  name: Маша-торговка
+  start_location: millbrook_home
+  role: merchant
+  personality: Весёлая и разговорчивая.
+  settlement_id: millbrook
+  gold: 200
+  items:
+  - name: Health Potion
+    type: potion
+    heal_dice: 2d4+2
+    price: 50
+  - name: Dagger
+    type: weapon
+    weapon_id: dagger
+    category: simple
+    attack_name: stab
+    damage:
+    - dice: 1d4
+      type: piercing
+    ability: dex
+    is_finesse: true
+    price: 10
+ivan:
+  name: Дед Иван
+  start_location: millbrook_home
+  role: farmer
+  personality: Молчаливый старик.
+  settlement_id: millbrook
+  memory:
+    tags:
+    - grieving
+tanya:
+  name: Таня-трактирщица
+  start_location: millbrook_tavern
+  role: tavern_keeper
+  personality: Гостеприимная хозяйка.
+  settlement_id: millbrook

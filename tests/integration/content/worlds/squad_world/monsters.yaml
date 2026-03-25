@@ -1,0 +1,19 @@
+templates:
+  bandit:
+    name: Bandit
+    hp: 11
+    ac: 12
+    speed: 30
+    str: 11
+    dex: 12
+    con: 12
+    int: 10
+    wis: 10
+    cha: 10
+    cr: 0.125
+    faction: bandits
+    attacks:
+    - name: scimitar slash
+      damage:
+      - dice: 1d6+1
+        type: slashing

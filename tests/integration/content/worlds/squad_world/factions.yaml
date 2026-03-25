@@ -1,0 +1,6 @@
+kingdom:
+  relations:
+    bandits: hostile
+bandits:
+  relations:
+    kingdom: hostile

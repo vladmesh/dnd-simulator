@@ -1,0 +1,169 @@
+razor:
+  name: Разор Безумный
+  start_location: arena_floor
+  role: gladiator
+  race: dragonborn
+  class: barbarian
+  hp: 35
+  ac: 13
+  ability_scores:
+    str: 18
+    dex: 12
+    con: 16
+    int: 6
+    wis: 8
+    cha: 10
+  personality: 'Ты — Разор, драконорождённый берсерк на Кровавой Арене. Здесь каждый сам за себя. Убей или умри. Ты атакуешь
+    ближайшего врага с яростью. Никаких переговоров. Если враг далеко — беги к нему. Если рядом — бей. Предпочитаешь бить
+    самого раненого — добивать слабых.
+
+    '
+  items:
+  - name: Healing Potion
+    type: potion
+    heal_dice: 2d4+2
+  - name: Меч
+    type: weapon
+    weapon_id: longsword
+    category: martial
+    attack_name: удар мечом
+    damage:
+    - dice: 1d8
+      type: slashing
+    ability: str
+shadow:
+  name: Тень Ночная
+  start_location: arena_floor
+  role: gladiator
+  race: elf
+  class: rogue
+  hp: 20
+  ac: 15
+  ability_scores:
+    str: 10
+    dex: 18
+    con: 12
+    int: 14
+    wis: 14
+    cha: 12
+  personality: 'Ты — Тень, эльфийка-ассасин на Кровавой Арене. Здесь каждый сам за себя. Убей или умри. Ты хитрая и расчётливая.
+    Держишься на расстоянии, стреляешь из лука. Если враг подходит вплотную — отступаешь (move away). Атакуешь самого опасного
+    противника. Не лезешь в ближний бой. Используй стены как укрытие — стой за стеной и стреляй через проёмы.
+
+    '
+  items:
+  - name: Healing Potion
+    type: potion
+    heal_dice: 2d4+2
+  - name: Рапира
+    type: weapon
+    weapon_id: rapier
+    category: martial
+    attack_name: удар рапирой
+    damage:
+    - dice: 1d8
+      type: piercing
+    is_finesse: true
+  - name: Кожаный доспех
+    type: armor
+    armor_id: studded_leather
+    category: light
+    base_ac: 12
+    equipped: true
+iron:
+  name: Железный Горн
+  start_location: arena_floor
+  role: gladiator
+  race: dwarf
+  class: fighter
+  class_features:
+    fighting_style: defense
+  hp: 40
+  ac: 18
+  speed: 25
+  ability_scores:
+    str: 16
+    dex: 8
+    con: 18
+    int: 10
+    wis: 14
+    cha: 8
+  personality: 'Ты — Железный Горн, дварф-танк на Кровавой Арене. Здесь каждый сам за себя. Убей или умри. Ты медленный но
+    несокрушимый. Идёшь к ближайшему врагу и бьёшь. Если сильно ранен — уходишь в dodge, чтобы перевести дух. Потом снова
+    идёшь в бой. Никогда не бежишь. Помни про стены — обходи их через проёмы.
+
+    '
+  items:
+  - name: Healing Potion
+    type: potion
+    heal_dice: 2d4+2
+  - name: Палка
+    type: weapon
+    weapon_id: quarterstaff
+    category: simple
+    attack_name: удар палкой
+    damage:
+    - dice: 1d6
+      type: bludgeoning
+    ability: str
+  - name: Кольчуга
+    type: armor
+    armor_id: chain_mail
+    category: heavy
+    base_ac: 16
+    strength_req: 13
+    equipped: true
+  - name: Щит
+    type: shield
+    shield_id: shield
+    ac_bonus: 2
+    equipped: true
+paladin:
+  name: Сэр Люциус
+  start_location: arena_floor
+  role: gladiator
+  race: human
+  class: paladin
+  ai: llm
+  hp: 30
+  ac: 16
+  ability_scores:
+    str: 16
+    dex: 10
+    con: 14
+    int: 10
+    wis: 14
+    cha: 16
+  personality: 'Ты — Сэр Люциус, паладин света на Кровавой Арене. Здесь каждый сам за себя. Убей или умри. Ты благородный
+    воин. В начале боя благослови своё оружие (bless), потом атакуй. Если ранен ниже половины здоровья — выпей зелье лечения
+    (use_item). Предпочитаешь атаковать ближайшего врага. Если враг далеко — подойди (move toward).
+
+    '
+  items:
+  - name: Healing Potion
+    type: potion
+    heal_dice: 2d4+2
+  - name: Благословенный Меч
+    type: weapon
+    weapon_id: longsword
+    category: martial
+    attack_name: удар святым мечом
+    damage:
+    - dice: 1d8
+      type: slashing
+    ability: str
+    is_magic: true
+    grant_actions:
+    - bless
+  - name: Кольчуга
+    type: armor
+    armor_id: chain_mail
+    category: heavy
+    base_ac: 16
+    strength_req: 13
+    equipped: true
+  - name: Щит
+    type: shield
+    shield_id: shield
+    ac_bonus: 2
+    equipped: true

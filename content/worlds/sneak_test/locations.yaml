@@ -1,0 +1,4 @@
+test_floor:
+  name: Test Arena Floor
+  region: test_arena
+  description: A simple test arena.

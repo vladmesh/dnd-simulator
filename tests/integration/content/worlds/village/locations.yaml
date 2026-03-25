@@ -1,0 +1,76 @@
+village_square:
+  name: Деревенская площадь
+  region: village
+  settlement: millbrook
+  description: Небольшая площадь в центре деревни. Колодец, скамейки, старый дуб.
+  neighbors:
+  - target: millbrook_smithy
+    distance: 50
+  - target: millbrook_tavern
+    distance: 40
+  - target: millbrook_market
+    distance: 30
+  - target: millbrook_home
+    distance: 80
+  - target: millbrook_fields
+    distance: 200
+  - target: millbrook_barracks
+    distance: 60
+millbrook_smithy:
+  name: Кузница
+  region: village
+  settlement: millbrook
+  description: Жар от горна, лязг молота. Запах раскалённого железа.
+  neighbors:
+  - target: village_square
+    distance: 50
+millbrook_tavern:
+  name: Таверна «У Ручья»
+  region: village
+  settlement: millbrook
+  description: Низкий потолок, тёплый свет, запах хлеба и похлёбки.
+  neighbors:
+  - target: village_square
+    distance: 40
+millbrook_market:
+  name: Торговые ряды
+  region: village
+  settlement: millbrook
+  description: Несколько прилавков под навесами. Овощи, ткани, мелкий скобяной товар.
+  neighbors:
+  - target: village_square
+    distance: 30
+millbrook_home:
+  name: Жилые дома
+  region: village
+  settlement: millbrook
+  description: Деревянные избы вдоль тропинки. Тихо, пахнет дымом.
+  neighbors:
+  - target: village_square
+    distance: 80
+millbrook_fields:
+  name: Поля за деревней
+  region: village
+  settlement: millbrook
+  description: Пшеница по пояс, жужжание пчёл, далёкий лес на горизонте.
+  neighbors:
+  - target: village_square
+    distance: 200
+millbrook_barracks:
+  name: Сторожка у ворот
+  region: village
+  settlement: millbrook
+  description: Бревенчатая будка с лавкой и копьём у стены.
+  neighbors:
+  - target: village_square
+    distance: 60
+millbrook_patrol:
+  name: Деревенская дорога
+  region: village
+  settlement: millbrook
+  description: Утоптанная тропа вдоль забора. Стражник обходит деревню.
+  neighbors:
+  - target: village_square
+    distance: 100
+  - target: millbrook_barracks
+    distance: 50
