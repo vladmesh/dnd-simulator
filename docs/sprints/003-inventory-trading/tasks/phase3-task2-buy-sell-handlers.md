@@ -56,4 +56,14 @@ Scenarios for `tests/unit/test_trade_handlers.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Full dispatch pipeline wired: handlers → dispatcher → provider → perception → awareness.
+- `handle_buy`/`handle_sell` in action_handlers: resolve merchant via ctx.get_entity, delegate to rules/trade.py, emit events.
+- `MerchantActionProvider` takes a `NearbyMerchantsFn` callable (injected by dispatcher factory), returns BUY/SELL when merchants co-located.
+- Perception: "You buy X from Y for Z gold" / third-person variants.
+- `MerchantInfo` dataclass added to awareness; `PeacefulAwareness.merchants` populated in round.py peaceful turn.
+- Used `build_peaceful_awareness` directly (not `build_awareness`) to satisfy mypy — peaceful turn always produces `PeacefulAwareness`.
+- Dispatcher factory builds the nearby-merchants callable by closing over the `EntitiesLayer` reference.

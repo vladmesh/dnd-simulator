@@ -93,6 +93,16 @@ class CombatEntity:
 
 
 @dataclass(frozen=True)
+class MerchantInfo:
+    """A nearby merchant's trade info for awareness — what they sell and how much gold they have."""
+
+    id: str
+    name: str
+    gold: int
+    items: list[ItemInfo] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
 class PeacefulAwareness:
     """What a creature knows in peacetime — weather, location, politics, nearby entities."""
 
@@ -111,6 +121,7 @@ class PeacefulAwareness:
     available_actions: list[ActionType] = field(default_factory=list)
     available_items: list[ItemInfo] = field(default_factory=list)
     equipped: list[EquippedInfo] = field(default_factory=list)
+    merchants: list[MerchantInfo] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

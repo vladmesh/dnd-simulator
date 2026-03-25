@@ -22,6 +22,7 @@ from dnd_simulator.core.world import World
 from dnd_simulator.rules.action_handlers import (
     handle_attack,
     handle_bless,
+    handle_buy,
     handle_dash,
     handle_disengage,
     handle_dodge,
@@ -36,6 +37,7 @@ from dnd_simulator.rules.action_handlers import (
     handle_move,
     handle_say,
     handle_second_wind,
+    handle_sell,
     handle_unequip,
     handle_unequip_armor,
     handle_unequip_feet,
@@ -50,6 +52,8 @@ from dnd_simulator.rules.action_provider import (
     ClassFeatureActionProvider,
     EquipmentActionProvider,
     InventoryActionProvider,
+    MerchantActionProvider,
+    NearbyMerchantsFn,
     WeaponActionProvider,
 )
 from dnd_simulator.rules.actions import action_cost
@@ -167,6 +171,8 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.register(ActionType.EQUIP_RING, handle_equip_ring)
     dispatcher.register(ActionType.UNEQUIP_RING, handle_unequip_ring)
     dispatcher.register(ActionType.SECOND_WIND, handle_second_wind)
+    dispatcher.register(ActionType.BUY, handle_buy)
+    dispatcher.register(ActionType.SELL, handle_sell)
 
     # Register providers — base types exclude provider-managed actions
     base_types = frozenset(at for at in dispatcher._handlers if not get_action_def(at).provider_managed)
@@ -175,5 +181,30 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.add_provider(EquipmentActionProvider())
     dispatcher.add_provider(WeaponActionProvider())
     dispatcher.add_provider(ClassFeatureActionProvider())
+    dispatcher.add_provider(MerchantActionProvider(_build_nearby_merchants_fn(world)))
 
     return dispatcher
+
+
+def _build_nearby_merchants_fn(world: World) -> NearbyMerchantsFn:
+    """Build a callable that returns merchant NPCs at a given location."""
+    from dnd_simulator.layers.entities.layer import EntitiesLayer
+    from dnd_simulator.layers.entities.models import Npc
+
+    # Resolve the entities layer once at creation time
+    entities_layer: EntitiesLayer | None = None
+    for layer in world.layers:
+        if isinstance(layer, EntitiesLayer):
+            entities_layer = layer
+            break
+
+    def get_nearby_merchants(location_id: str) -> list[Npc]:
+        if entities_layer is None:
+            return []
+        return [
+            e
+            for e in entities_layer._entities.values()
+            if isinstance(e, Npc) and e.is_merchant and e.location_id == location_id and e.active and e.is_alive
+        ]
+
+    return get_nearby_merchants

@@ -9,6 +9,7 @@ InventoryActionProvider adds USE_ITEM when the creature has usable items.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Protocol
 
 from dnd_simulator.core.action import Action, ActionType
@@ -16,7 +17,11 @@ from dnd_simulator.rules.validation import validate_action
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
+    from dnd_simulator.layers.entities.models import Npc
     from dnd_simulator.rules.validation import ActionContext
+
+# Callable that returns merchant NPCs at a given location ID.
+NearbyMerchantsFn = Callable[[str], "list[Npc]"]
 
 
 class ActionProvider(Protocol):
@@ -107,6 +112,24 @@ class WeaponActionProvider:
             return []
         result: list[ActionType] = []
         for at in weapon.weapon_def.grant_actions:
+            probe = Action(name=at)
+            if validate_action(creature, probe, ctx) is None:
+                result.append(at)
+        return result
+
+
+class MerchantActionProvider:
+    """Provides BUY/SELL when creature is at the same location as a merchant."""
+
+    def __init__(self, get_nearby_merchants: NearbyMerchantsFn) -> None:
+        self._get_nearby_merchants = get_nearby_merchants
+
+    def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
+        merchants = self._get_nearby_merchants(creature.location_id)
+        if not merchants:
+            return []
+        result: list[ActionType] = []
+        for at in (ActionType.BUY, ActionType.SELL):
             probe = Action(name=at)
             if validate_action(creature, probe, ctx) is None:
                 result.append(at)

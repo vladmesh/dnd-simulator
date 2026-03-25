@@ -14,7 +14,14 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.action import Action, ActionType
-from dnd_simulator.core.awareness import CombatAwareness, EquippedInfo, ItemInfo, PerceivedEvent, describe_item
+from dnd_simulator.core.awareness import (
+    CombatAwareness,
+    EquippedInfo,
+    ItemInfo,
+    MerchantInfo,
+    PerceivedEvent,
+    describe_item,
+)
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType, GameDateTime, QueryFn, TimeDelta
 from dnd_simulator.core.turn_budget import TurnBudget
@@ -119,6 +126,27 @@ class Round:
 
                 assert isinstance(item, Item)
                 result.append(EquippedInfo(slot=slot, item_id=item.id, name=item.name, description=describe_item(item)))
+        return result
+
+    def _build_merchants(self, creature: Creature) -> list[MerchantInfo]:
+        """Build merchant info for creatures at the same location."""
+        from dnd_simulator.layers.entities.models import Npc
+
+        result: list[MerchantInfo] = []
+        for e in self._entities._entities.values():
+            if (
+                isinstance(e, Npc)
+                and e.is_merchant
+                and e.location_id == creature.location_id
+                and e.active
+                and e.is_alive
+            ):
+                items = [
+                    ItemInfo(id=item.id, name=item.name, description=describe_item(item), price=item.price)
+                    for item in e.inventory
+                    if item.price is not None
+                ]
+                result.append(MerchantInfo(id=e.id, name=e.name, gold=e.gold, items=items))
         return result
 
     def _execute_action(
@@ -301,10 +329,11 @@ class Round:
         while True:
             available = self._dispatcher.get_available_actions(creature, ctx)
             awareness = replace(
-                self._entities.build_awareness(creature, time, query_fn),
+                self._entities.build_peaceful_awareness(creature, time, query_fn),
                 available_actions=available,
                 available_items=self._build_available_items(creature, available),
                 equipped=self._build_equipped(creature),
+                merchants=self._build_merchants(creature),
             )
             events = self._entities.get_perceived_events(creature)
 

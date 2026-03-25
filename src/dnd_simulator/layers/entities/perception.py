@@ -37,6 +37,10 @@ def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -
         return _perceive_equip(event, observer, get_entity)
     if event.event_type == EventType.ENTITY_UNEQUIP:
         return _perceive_unequip(event, observer, get_entity)
+    if event.event_type == EventType.ENTITY_BUY:
+        return _perceive_buy(event, observer, get_entity)
+    if event.event_type == EventType.ENTITY_SELL:
+        return _perceive_sell(event, observer, get_entity)
     if event.event_type == EventType.TURN_SKIPPED:
         return _perceive_turn_skipped(event, observer, get_entity)
     if event.event_type == EventType.COMBAT_STARTED:
@@ -290,6 +294,40 @@ def _perceive_unequip(event: Event, observer: Character, get_entity: GetEntityFn
         return _("You put away {weapon}").format(weapon=weapon_name)
     desc = _describe(observer, entity_id, get_entity)
     return _("{entity} puts away {weapon}").format(entity=desc, weapon=weapon_name)
+
+
+def _perceive_buy(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    buyer_id = str(event.data.get("buyer_id", ""))
+    merchant_id = str(event.data.get("merchant_id", ""))
+    item_name = str(event.data.get("item_name", _("an item")))
+    price = event.data.get("price", 0)
+
+    merchant = _describe(observer, merchant_id, get_entity)
+    if buyer_id == observer.id:
+        return _("You buy {item} from {merchant} for {price} gold").format(
+            item=item_name, merchant=merchant, price=price
+        )
+    buyer = _describe(observer, buyer_id, get_entity)
+    return _("{buyer} buys {item} from {merchant} for {price} gold").format(
+        buyer=buyer, item=item_name, merchant=merchant, price=price
+    )
+
+
+def _perceive_sell(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    seller_id = str(event.data.get("seller_id", ""))
+    merchant_id = str(event.data.get("merchant_id", ""))
+    item_name = str(event.data.get("item_name", _("an item")))
+    price = event.data.get("price", 0)
+
+    merchant = _describe(observer, merchant_id, get_entity)
+    if seller_id == observer.id:
+        return _("You sell {item} to {merchant} for {price} gold").format(
+            item=item_name, merchant=merchant, price=price
+        )
+    seller = _describe(observer, seller_id, get_entity)
+    return _("{seller} sells {item} to {merchant} for {price} gold").format(
+        seller=seller, item=item_name, merchant=merchant, price=price
+    )
 
 
 def _perceive_combat_started(event: Event, observer: Character, get_entity: GetEntityFn) -> str:

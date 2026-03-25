@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 3, Task 1: Merchant model + trade rules — done. Added is_merchant, BUY/SELL actions, pure trade rules, merchant NPC.
+Phase 3, Task 2: Buy/sell handlers + dispatch — done. Full pipeline wired: handlers, provider, perception, awareness.
 
 ## Next Steps
 
-- Task 2: Buy/sell handlers + dispatch — wire through action pipeline, perception, awareness with merchant info
 - Task 3: Trade UI — Trade button in ActionBar, trade modal with buy/sell
