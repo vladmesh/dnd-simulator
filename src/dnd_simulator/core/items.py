@@ -122,3 +122,4 @@ class Item:
     armor_def: ArmorDef | None = None
     shield_def: ShieldDef | None = None
     accessory_def: AccessoryDef | None = None
+    price: int | None = None

@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.action import Action, ActionType
-from dnd_simulator.core.awareness import CombatAwareness, ItemInfo, PerceivedEvent, describe_item
+from dnd_simulator.core.awareness import CombatAwareness, EquippedInfo, ItemInfo, PerceivedEvent, describe_item
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType, GameDateTime, QueryFn, TimeDelta
 from dnd_simulator.core.turn_budget import TurnBudget
@@ -93,10 +93,33 @@ class Round:
 
     @staticmethod
     def _build_available_items(creature: Creature, available_actions: list[ActionType]) -> list[ItemInfo]:
-        """Build item info list for awareness when USE_ITEM or EQUIP is available."""
-        if ActionType.USE_ITEM not in available_actions and ActionType.EQUIP not in available_actions:
-            return []
-        return [ItemInfo(id=item.id, name=item.name, description=describe_item(item)) for item in creature.inventory]
+        """Build item info list for awareness — always returns full inventory."""
+        return [
+            ItemInfo(id=item.id, name=item.name, description=describe_item(item), price=item.price)
+            for item in creature.inventory
+        ]
+
+    @staticmethod
+    def _build_equipped(creature: Creature) -> list[EquippedInfo]:
+        """Build equipped item info from all 6 equipment slots."""
+        from dnd_simulator.core.items import EquipmentSlot
+
+        slots: list[tuple[EquipmentSlot, object | None]] = [
+            (EquipmentSlot.WEAPON, creature.equipped_weapon),
+            (EquipmentSlot.ARMOR, creature.equipped_armor),
+            (EquipmentSlot.SHIELD, creature.equipped_shield),
+            (EquipmentSlot.HEAD, creature.equipped_head),
+            (EquipmentSlot.FEET, creature.equipped_feet),
+            (EquipmentSlot.RING, creature.equipped_ring),
+        ]
+        result: list[EquippedInfo] = []
+        for slot, item in slots:
+            if item is not None:
+                from dnd_simulator.core.items import Item
+
+                assert isinstance(item, Item)
+                result.append(EquippedInfo(slot=slot, item_id=item.id, name=item.name, description=describe_item(item)))
+        return result
 
     def _execute_action(
         self,
@@ -208,6 +231,7 @@ class Round:
                 turn_budget=budget,
                 available_actions=available,
                 available_items=self._build_available_items(creature, available),
+                equipped=self._build_equipped(creature),
             )
             events = self._entities.get_perceived_events(creature)
 
@@ -280,6 +304,7 @@ class Round:
                 self._entities.build_awareness(creature, time, query_fn),
                 available_actions=available,
                 available_items=self._build_available_items(creature, available),
+                equipped=self._build_equipped(creature),
             )
             events = self._entities.get_perceived_events(creature)
 

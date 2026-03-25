@@ -254,6 +254,9 @@ def parse_items(items_data: list[dict[str, Any]]) -> list[Item]:
         else:
             params = {k: v for k, v in idata.items() if k not in ("name", "type")}
 
+        price_raw = idata.get("price")
+        price = int(price_raw) if price_raw is not None else None
+
         items.append(
             Item(
                 id=item_id,
@@ -264,6 +267,7 @@ def parse_items(items_data: list[dict[str, Any]]) -> list[Item]:
                 armor_def=armor_def,
                 shield_def=shield_def,
                 accessory_def=accessory_def,
+                price=price,
             )
         )
     return items

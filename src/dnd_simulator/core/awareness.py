@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.items import EquipmentSlot
 from dnd_simulator.core.models import EventType
 
 if TYPE_CHECKING:
@@ -34,6 +35,17 @@ class ItemInfo:
     id: str
     name: str
     description: str  # e.g. "Healing Potion (heals 2d4+2 HP)"
+    price: int | None = None
+
+
+@dataclass(frozen=True)
+class EquippedInfo:
+    """An equipped item as seen in awareness — slot, id, name, description."""
+
+    slot: EquipmentSlot
+    item_id: str
+    name: str
+    description: str
 
 
 def describe_item(item: Item) -> str:
@@ -98,6 +110,7 @@ class PeacefulAwareness:
     turn_budget: TurnBudget | None = None
     available_actions: list[ActionType] = field(default_factory=list)
     available_items: list[ItemInfo] = field(default_factory=list)
+    equipped: list[EquippedInfo] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -120,6 +133,7 @@ class CombatAwareness:
     self_conditions: frozenset[Condition] = field(default_factory=frozenset)
     available_actions: list[ActionType] = field(default_factory=list)
     available_items: list[ItemInfo] = field(default_factory=list)
+    equipped: list[EquippedInfo] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

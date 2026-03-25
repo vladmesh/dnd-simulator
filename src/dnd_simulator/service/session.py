@@ -101,7 +101,18 @@ def _budget_to_dict(budget: TurnBudget) -> dict[str, Any]:
 
 
 def _player_to_dict(player: PlayerCharacter) -> dict[str, Any]:
+    from dnd_simulator.core.awareness import describe_item
+    from dnd_simulator.round import Round
+
     scores = player.ability_scores
+    equipped = [
+        {"slot": e.slot.value, "item_id": e.item_id, "name": e.name, "description": e.description}
+        for e in Round._build_equipped(player)
+    ]
+    inventory = [
+        {"id": item.id, "name": item.name, "description": describe_item(item), "price": item.price}
+        for item in player.inventory
+    ]
     return {
         "player_id": player.id,
         "name": player.name,
@@ -122,6 +133,8 @@ def _player_to_dict(player: PlayerCharacter) -> dict[str, Any]:
             "wis": scores[Ability.WIS],
             "cha": scores[Ability.CHA],
         },
+        "equipped": equipped,
+        "inventory": inventory,
     }
 
 

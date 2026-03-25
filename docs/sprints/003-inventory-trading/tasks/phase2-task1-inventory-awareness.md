@@ -53,4 +53,17 @@ Key changes:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward implementation — no deviations from the plan. Key changes:
+- `Item.price` field added (optional int)
+- `ItemInfo.price` field added
+- `EquippedInfo` dataclass added to awareness
+- `equipped` field added to both `PeacefulAwareness` and `CombatAwareness`
+- `_build_available_items` no longer gates on USE_ITEM/EQUIP — always returns full inventory
+- `_build_equipped` static method on `Round` reads all 6 slots
+- `_player_to_dict` now includes `equipped` and `inventory` lists
+- `content_loader.parse_items` parses `price` from YAML
+- No old tests modified — all 830 existing tests unaffected
