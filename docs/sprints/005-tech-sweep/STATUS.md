@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 2, Task 2: Extract ActivationManager — done. 346 LOC moved, layer.py 1002→656.
+Phase 2, Task 3: Extract QueryHandler — done. 274 LOC moved, layer.py 656→443.
 
 ## Next Steps
 
-- Task 2: Extract ActivationManager (~353 LOC) — activation, encounters, squads → activation_manager.py
-- Task 3: Extract QueryHandler (~247 LOC) — query dispatch, entity details, perception log → query_handler.py
+All phase 2 tasks complete. Ready for phase close.

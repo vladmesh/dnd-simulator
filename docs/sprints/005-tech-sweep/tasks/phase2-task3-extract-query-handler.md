@@ -56,4 +56,19 @@ Total ~247 LOC. This is pure data assembly with no side effects — cleanest ext
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Extracted QueryHandler (274 LOC) from EntitiesLayer. layer.py dropped from 656→443 LOC.
+
+Moved:
+- `query()` — full dispatch for 13 query types
+- `_entity_summary()`, `_entity_detail()`, `_npc_detail()` — detail builders
+- `get_perceived_log()`, `get_new_perceived_events()`, `get_new_raw_events()` — perception log methods
+
+EntitiesLayer retains thin forwarding methods for `get_perceived_log`, `get_new_perceived_events`, `get_new_raw_events` since they're called directly by external code (round.py, service layer). `_event_location` stayed in layer.py — it's used by `handle_event`, not by query logic.
+
+`query_handler.py` uses a `_get_entity` callback method for `perceive_event` instead of referencing `EntitiesLayer.get_entity` — no circular dependency.
+
+No old tests modified. 6 new tests added covering ENTITIES_AT_LOCATION, ENTITY_INFO, NPC_INFO, COMBAT_INFO, and PERCEIVED_LOG queries.
