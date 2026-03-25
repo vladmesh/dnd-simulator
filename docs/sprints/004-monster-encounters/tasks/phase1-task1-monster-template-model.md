@@ -67,4 +67,8 @@ Content loader: add `parse_monsters(data, lang)` to parse templates, `parse_enco
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward implementation. MonsterTemplate in `core/monster.py` with Attack reuse from existing `parse_attacks()`. EncounterEntry alongside it. Content loader gets `parse_monster_template()`, `parse_encounters()`, and `load_monsters()`. Sword Vale gets 3 templates (goblin, wolf, bandit) and 2 encounter locations (deep forest, mountain pass). Not yet wired into GameService/EntitiesLayer — that happens in task 2 when the spawn engine needs them.

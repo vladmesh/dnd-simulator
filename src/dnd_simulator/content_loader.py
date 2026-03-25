@@ -40,6 +40,7 @@ from dnd_simulator.core.items import (
 )
 from dnd_simulator.core.location import Location, LocationEdge
 from dnd_simulator.core.modifiers import Modifier, ModifierOp, StatType
+from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.layers.entities.models import Npc, NpcMemory, resolve_schedule
@@ -659,6 +660,73 @@ def load_world_meta(path: Path, lang: str = "en") -> dict[str, str]:
         "name": resolve_text(data.get("name", path.stem), lang),
         "description": resolve_text(data.get("description", ""), lang),
     }
+
+
+def parse_monster_template(template_id: str, data: dict[str, Any], lang: str = "en") -> MonsterTemplate:
+    """Parse a single monster template from YAML data."""
+    return MonsterTemplate(
+        id=template_id,
+        name=resolve_text(data["name"], lang),
+        hp=int(data["hp"]),
+        ac=int(data["ac"]),
+        speed=int(data["speed"]),
+        ability_scores=parse_ability_scores(data),
+        attacks=parse_attacks(data.get("attacks", [])),
+        cr=float(data["cr"]),
+    )
+
+
+def parse_encounters(data: dict[str, Any], known_templates: set[str]) -> dict[str, list[EncounterEntry]]:
+    """Parse encounter tables from YAML data.
+
+    Each key is a location_id mapping to a list of encounter entries.
+    """
+    result: dict[str, list[EncounterEntry]] = {}
+    for location_id, entries in data.items():
+        parsed: list[EncounterEntry] = []
+        for entry in entries:
+            template_id = str(entry["template"])
+            if template_id not in known_templates:
+                raise RuntimeError(f"Encounter at '{location_id}' references unknown monster template '{template_id}'")
+            count = entry["count"]
+            parsed.append(
+                EncounterEntry(
+                    template_id=template_id,
+                    chance=float(entry["chance"]),
+                    count_min=int(count[0]),
+                    count_max=int(count[1]),
+                )
+            )
+        result[location_id] = parsed
+    return result
+
+
+def load_monsters(path: Path, lang: str = "en") -> tuple[dict[str, MonsterTemplate], dict[str, list[EncounterEntry]]]:
+    """Load monster templates and encounter tables from a world directory.
+
+    Returns (templates_by_id, encounters_by_location_id).
+    Missing monsters.yaml → empty dicts (worlds without monsters are valid).
+    """
+    is_dir, resolved = _resolve_source(path)
+    if is_dir:
+        monsters_data = _read_yaml(resolved / "monsters.yaml")
+    else:
+        data = _read_yaml(resolved)
+        monsters_data = data.get("monsters", {})
+        assert isinstance(monsters_data, dict)
+
+    if not monsters_data:
+        return {}, {}
+
+    templates_data = monsters_data.get("templates", {})
+    templates: dict[str, MonsterTemplate] = {}
+    for tid, tdata in templates_data.items():
+        templates[str(tid)] = parse_monster_template(str(tid), tdata, lang)
+
+    encounters_data = monsters_data.get("encounters", {})
+    encounters = parse_encounters(encounters_data, set(templates.keys())) if encounters_data else {}
+
+    return templates, encounters
 
 
 def extract_region_adjacency(regions: list[Region]) -> dict[str, list[str]]:

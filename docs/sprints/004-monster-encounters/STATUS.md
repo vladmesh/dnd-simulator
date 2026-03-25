@@ -6,10 +6,9 @@
 
 ## Current
 
-Phase 1 tasks generated. Ready to start task 1.
+Phase 1, Task 1: MonsterTemplate + EncounterTable Models & YAML Loading — done.
 
 ## Next Steps
 
-- Task 1: MonsterTemplate + EncounterTable models & YAML loading
 - Task 2: Spawn engine + temporary creature lifecycle
 - Task 3: Hostile AI — RuleBrain initiates combat

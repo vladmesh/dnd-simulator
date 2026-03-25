@@ -1,0 +1,31 @@
+"""Monster template and encounter table models."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from dnd_simulator.core.character import AbilityScores, Attack
+
+
+@dataclass(frozen=True)
+class MonsterTemplate:
+    """Blueprint for spawning monster Creatures. Not an Entity — just data."""
+
+    id: str
+    name: str
+    hp: int
+    ac: int
+    speed: int
+    ability_scores: AbilityScores
+    attacks: tuple[Attack, ...]
+    cr: float
+
+
+@dataclass(frozen=True)
+class EncounterEntry:
+    """One possible monster spawn in an encounter table."""
+
+    template_id: str
+    chance: float  # 0.0-1.0
+    count_min: int
+    count_max: int
