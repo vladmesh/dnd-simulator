@@ -20,7 +20,9 @@
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Convert all single-file worlds to directory format](tasks/phase1-task1-convert-worlds.md)
+2. [Remove legacy single-file loading code and fallback aliases](tasks/phase1-task2-remove-legacy-loading.md)
+3. [Update integration test world references](tasks/phase1-task3-update-test-references.md)
 
 ## Phase 2: God Class Splits
 
