@@ -58,7 +58,8 @@ Tasks 1-2 из оригинального Phase 1. Код переиспольз
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Factions — faction_id + Faction Relations](tasks/phase1-task3-factions.md)
+2. [Squad Model + squads.yaml](tasks/phase1-task4-squad-model.md)
 
 ## Phase 2: Generalize Encounters + Hostile AI
 

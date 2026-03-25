@@ -1,12 +1,12 @@
 # Sprint 004 Status
 
 **Sprint:** 004-monster-encounters → 004-living-world (replanned)
-**Phase:** 1 — Data Foundation (pending task generation)
+**Phase:** 1 — Data Foundation
 **Updated:** 2026-03-25
 
 ## Current
 
-Sprint replanned mid-flight. Original Phase 1 tasks 1-2 completed (MonsterTemplate, spawn engine). Sprint goal changed from player-centric encounters to living world architecture. Phase 1 (Data Foundation) ready for task generation.
+Phase 1 tasks generated. Ready to start task 3 (factions).
 
 ## Completed (pre-pivot)
 
@@ -15,4 +15,5 @@ Sprint replanned mid-flight. Original Phase 1 tasks 1-2 completed (MonsterTempla
 
 ## Next Steps
 
-Phase 1 task generation: faction_id, faction relations, Squad model, squads.yaml.
+- Task 3: Factions — faction_id on Creature/MonsterTemplate + faction relations on PoliticsLayer
+- Task 4: Squad model + squads.yaml
