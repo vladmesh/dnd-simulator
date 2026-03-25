@@ -1,12 +1,18 @@
 # Sprint 004 Status
 
 **Sprint:** 004-monster-encounters → 004-living-world (replanned)
-**Phase:** 3 — Squad Movement + Materialization (COMPLETE)
+**Phase:** 4 — Frontend + E2E
 **Updated:** 2026-03-25
 
 ## Current
 
-Phase 3 complete. EcologyLayer with tick-based squad movement, squad-vs-squad abstract combat, and materialization/dematerialization all implemented and tested. Integration tests green (36 total, 3 new squad tests). E2E green — no blockers. Ready for Phase 4 task generation.
+Phase 4 tasks generated. Ready to start task 1.
+
+## Next Steps
+
+- Task 1: Squad events in perception pipeline — fix 4 breaks so squad events reach the player via WebSocket
+- Task 2: Frontend squad event rendering — add event types and colors to EventLog
+- Task 3: E2E squad lifecycle — Playwright test covering movement, materialization, combat events
 
 ## Completed
 

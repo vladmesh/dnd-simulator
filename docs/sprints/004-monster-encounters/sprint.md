@@ -93,13 +93,15 @@ EcologyLayer (новый слой между Settlements и Entities): tick-base
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Squad Events in Perception Pipeline](tasks/phase4-task1-squad-events-pipeline.md)
+2. [Frontend Squad Event Rendering](tasks/phase4-task2-frontend-squad-events.md)
+3. [E2E — Squad Lifecycle Flow](tasks/phase4-task3-e2e-squad-lifecycle.md)
 
 ---
 
 ## Status
 
-**Current:** Phase 3 complete. Phase 4 ready for task generation.
+**Current:** Phase 4 tasks generated. Ready to start task 1.
 
 ## Decisions
 
