@@ -1,69 +1,90 @@
-# Sprint 004 — Monster Encounters
+# Sprint 004 — Living World: Squads & Encounters
 
-**Goal:** Рандомные энкаунтеры с монстрами в опасных локациях, логова с persistent существами, автолут.
+**Goal:** Мир, который живёт сам. Абстрактные группы (squads) перемещаются по графу локаций, сталкиваются друг с другом и с active characters. Encounter tables — свойство зоны, срабатывают на любого путешественника. Фракции определяют кто враг, кто союзник.
 
 **Started:** 2026-03-25
 
+> **Pivot note (2026-03-25):** Спринт был переписан в процессе. Исходный план (player-centric random encounters) заменён на living world архитектуру после обсуждения [living-world.md](../../brainstorms/living-world.md) и обновления [VISION.md](../../VISION.md). Задачи Phase 1 (tasks 1-2) выполнены до пивота — MonsterTemplate и spawn engine переиспользуются в новом дизайне. Task 3 (hostile AI) не начата, переносится в Phase 2 нового плана.
+
 ## Context
 
-Sprint 001 дал боевую систему и предметы, Sprint 003 — инвентарь и торговлю. Но в мире нечего убивать — нет враждебных существ, которые появляются органически. Этот спринт закрывает core gameplay loop: исследование → встреча с монстрами → бой → лут → торговля. Разблокирует квестовую систему (kill quests нужны монстры) и делает боевую систему востребованной в обычной игре.
+Sprint 001 дал боевую систему, Sprint 003 — инвентарь и торговлю. Но мир завязан на игрока: ничего не происходит без его присутствия. Нужна инфраструктура живого мира — фракции, группы, зоны опасности, которые работают одинаково для игрока, NPC и абстрактных сквадов.
 
-Два типа монстров:
-- **Random encounters** — таблицы встреч на локациях, при входе игрока бросок на шанс, спавн temporary creatures из шаблонов. После смерти исчезают.
-- **Lair monsters** — полноценные Creature из YAML с hostile-флагом. Живут в конкретной локации, при смерти исчезают навсегда.
+Две ключевых абстракции:
 
-Всё определяется контентом: статблоки, таблицы встреч, уровень опасности, логова — YAML, не код.
+1. **Active Character** — "наблюдатель", при котором мир рендерится детально. Обычно игрок, но может быть LLM/Rule NPC с пробуждённым мозгом. Квантовые энкаунтеры коллапсируют, сквады материализуются, NPC активируются.
+
+2. **Squad** — абстрактная группа (1-15 членов) со своими механиками: перемещение, абстрактный бой, рост/потери. Существует как запись с полями, пока не встретится с active character → материализуется в конкретных Creature.
+
+Отдельно: **faction_id** на Creature — принадлежность к стороне (kingdom, orcs, bandits, wildlife). Определяет союзников/врагов. Два стражника из разных патрулей — союзники (одна фракция). Не путать со squad_id — это разные вещи. Глубокая проработка фракций (репутация, дипломатия, переходы) — отдельный спринт.
 
 **В скоупе:**
-- MonsterTemplate (frozen dataclass из YAML): HP, AC, attacks, CR, loot table
-- Encounter tables на локациях (chance, monster refs, count)
-- Spawn engine: вход игрока → бросок → temporary Creatures на EntitiesLayer
-- Hostile AI в RuleBrain: враждебные существа инициируют бой
-- Cleanup temporary creatures после смерти
-- Loot tables: предметы + золото, автодроп в инвентарь убийцы
-- Lair monsters: persistent Creature, hostile, permanent death
-- YAML-контент: 5-8 статблоков, опасные локации + логово в Sword Vale
-- Frontend: энкаунтеры в event log, монстры в nearby panel
+- Faction relations: `faction_id` на Creature/Squad, матрица отношений на PoliticsLayer
+- Squad model: абстрактная группа с movement, strength, behavior
+- Encounter tables как свойство зоны — срабатывают на любого active character и на squads
+- Hostile AI: faction-aware, враг по faction relations → атака
+- Abstract combat: squad vs encounter, squad vs squad (формулы)
+- Materialization: squad при контакте с active character → конкретные Creature
+- EcologyLayer: tick-based движение сквадов по графу
+- YAML контент: фракции, 3-4 сквада, 5-8 monster templates для Sword Vale
 
 **Вне скоупа:**
-- Scripted/triggered encounters (квестовая система)
-- Wandering monsters (autonomous NPC ticks)
-- CR-балансировка по размеру партии
-- Corpse entity + loot action (сейчас автодроп)
-- AoE, damage types, resistance
-- Respawn таблиц (кулдаун есть, но без восстановления убитых lair monsters)
+- Фракционная репутация, дипломатия, переход из фракции в фракцию
+- Loot tables и автодроп (следующий спринт)
+- Lair monsters (следующий спринт)
+- Respawn сквадов, recruitment из поселений
+- CR-балансировка
+- Travel through intermediate locations (пока travel мгновенный)
+- Settlement-as-squad unification
 
-**Ссылки:** [ROADMAP.md](../../ROADMAP.md), [BACKLOG.md](../../BACKLOG.md), [Sprint 003](../003-inventory-trading/sprint.md), [ecs-and-content.md](../../brainstorms/ecs-and-content.md)
+**Ссылки:** [VISION.md](../../VISION.md), [living-world.md](../../brainstorms/living-world.md), [ROADMAP.md](../../ROADMAP.md), [Sprint 003](../003-inventory-trading/sprint.md)
 
 ---
 
-## Phase 1: Spawn Foundation
+## Completed before pivot
 
-MonsterTemplate (frozen dataclass из YAML), таблицы встреч на локациях, spawn engine (вход игрока → бросок → спавн temporary Creatures). Hostile AI в RuleBrain — враждебные существа инициируют бой. Удаление temporary creatures после смерти.
+Tasks 1-2 из оригинального Phase 1. Код переиспользуется:
+- **MonsterTemplate** + YAML loading → используется для member_templates сквадов и encounter spawning
+- **Spawn engine** (`_check_encounters`, `temporary` flag, death cleanup) → обобщается на всех active characters в Phase 2
+- **EncounterEntry/EncounterTable** → остаётся, encounter tables — свойство зоны
 
-**Верификация:** зайти в опасную локацию → монстры появляются → бой начинается автоматически → убитые монстры исчезают. `make test-unit` зелёный.
+---
 
-**Tasks:**
+## Phase 1: Data Foundation
 
-1. [MonsterTemplate + EncounterTable Models & YAML Loading](tasks/phase1-task1-monster-template-model.md)
-2. [Spawn Engine + Temporary Creature Lifecycle](tasks/phase1-task2-spawn-engine.md)
-3. [Hostile AI — RuleBrain Initiates Combat](tasks/phase1-task3-hostile-ai.md)
+`faction_id` на Creature и MonsterTemplate. Матрица отношений фракций на PoliticsLayer с запросом `get_relation()`. `Squad` model (frozen dataclass): id, faction_id, group_type, behavior, route/territory, strength, member_templates. `squads.yaml` в контенте мира. `squad_id` на Creature (заполняется при материализации).
 
-## Phase 2: Loot + Lairs
-
-Лут-таблицы на темплейтах (предметы + золото), автодроп в инвентарь убийцы. Lair monsters — обычные Creature в YAML с hostile-флагом, при смерти исчезают навсегда. YAML-контент: 5-8 статблоков монстров, опасные локации + логово в Sword Vale.
-
-**Верификация:** убил монстра → золото/предметы в инвентаре. Убил lair monster → он больше не появляется при возвращении. `make test-unit` зелёный.
+**Верификация:** faction relation query работает. Squad парсится из YAML. Creature с faction_id корректно определяет враг/союзник. `make check` зелёный.
 
 **Tasks:**
 
 _(генерируются отдельно перед началом фазы)_
 
-## Phase 3: Frontend + E2E
+## Phase 2: Generalize Encounters + Hostile AI
 
-Отображение энкаунтеров в event log, монстры в nearby panel, encounter-специфичные сообщения. E2E прогон всех сценариев.
+Encounter table rolls для любого active character (не только PlayerCharacter). Encounter table rolls для сквадов (абстрактный бой: squad strength vs encounter strength по формуле). Hostile AI в RuleBrain: faction-aware, враг по faction relations → атака. Abstract combat formula.
 
-**Верификация:** в браузере видно появление монстров, бой, лут. E2E зелёный.
+**Верификация:** LLM NPC приходит в опасную локацию → монстры спавнятся → бой. Сквад стражников входит в болото → абстрактный бой, сквад теряет strength. Hostile creature видит врага по faction → атакует. `make check` зелёный.
+
+**Tasks:**
+
+_(генерируются отдельно перед началом фазы)_
+
+## Phase 3: Squad Movement + Materialization
+
+EcologyLayer (новый слой между Settlements и Entities): tick-based движение сквадов по графу локаций. Squad + active character в одной локации → материализация (MonsterTemplate.spawn для каждого члена, squad_id на Creature). Squad + hostile squad → абстрактный бой. Dematerialization при уходе active character. YAML контент: 3-4 сквада для Sword Vale (патруль стражников, банда бандитов, стая волков, орочий рейд).
+
+**Верификация:** сквады двигаются по маршрутам. Игрок приходит в локацию со сквадом → сквад материализуется. Два враждебных сквада в одной локации → абстрактный бой, проигравший теряет strength. `make check` зелёный.
+
+**Tasks:**
+
+_(генерируются отдельно перед началом фазы)_
+
+## Phase 4: Frontend + E2E
+
+Отображение сквад-событий в event log ("Орочий патруль прошёл через Лесную дорогу", "Стража разбила стаю волков на болоте"). Материализованные сквады в nearby panel. E2E прогон всех сценариев.
+
+**Верификация:** в браузере видно перемещение сквадов, бои, материализацию. E2E зелёный.
 
 **Tasks:**
 
@@ -73,15 +94,21 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** Sprint replanned. Phase 1 ready for task generation.
 
 ## Decisions
 
-_(заполняется по ходу спринта)_
+- **Pivot (2026-03-25):** Player-centric encounters → living world. Encounter tables остаются, но как свойство зоны для всех, не только для игрока.
+- **Squad ≠ alliance:** `squad_id` — принадлежность к абстрактной группе (механика). `faction_id` — принадлежность к стороне (alliance/hostility). Не смешивать.
+- **Village ≠ squad:** Поселения не моделируются как сквады. NPC поселений — именованные Entity с расписаниями. `faction_id` определяет их сторону.
 
 ## Deferred
 
-_(заполняется по ходу спринта)_
+- Loot tables + автодроп — отдельный спринт
+- Lair monsters — отдельный спринт
+- Фракционная репутация, дипломатия — отдельный спринт
+- Travel through intermediate locations
+- Squad respawn / recruitment
 
 ## Results
 
