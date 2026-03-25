@@ -19,7 +19,7 @@ class TestSessionLifecycle:
     def test_create_session(self, api_url: str) -> None:
         resp = requests.post(
             f"{api_url}/sessions",
-            json={"world_name": "arena.yaml", "lang": "en"},
+            json={"world_name": "arena", "lang": "en"},
             timeout=10,
         )
         assert resp.status_code == HTTPStatus.OK
@@ -49,7 +49,7 @@ class TestSessionLifecycle:
         # Create a throwaway session
         create = requests.post(
             f"{api_url}/sessions",
-            json={"world_name": "sneak_test.yaml", "lang": "en"},
+            json={"world_name": "sneak_test", "lang": "en"},
             timeout=10,
         )
         session_id = create.json()["session_id"]
@@ -75,9 +75,9 @@ class TestWorldListing:
         assert resp.status_code == HTTPStatus.OK
         worlds = resp.json()
         world_ids = [w["id"] for w in worlds]
-        assert "arena.yaml" in world_ids
-        assert "village.yaml" in world_ids
-        assert "sneak_test.yaml" in world_ids
+        assert "arena" in world_ids
+        assert "village" in world_ids
+        assert "sneak_test" in world_ids
 
 
 # ── Player ────────────────────────────────────────────────────────────

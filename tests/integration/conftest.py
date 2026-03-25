@@ -48,7 +48,7 @@ def arena_session(api_url: str) -> Iterator[str]:
     """Create an arena session, yield session_id, delete on teardown."""
     resp = requests.post(
         f"{api_url}/sessions",
-        json={"world_name": "arena.yaml", "lang": "en"},
+        json={"world_name": "arena", "lang": "en"},
         timeout=10,
     )
     resp.raise_for_status()
@@ -96,7 +96,7 @@ def village_session(api_url: str) -> Iterator[str]:
     """Create a village session, yield session_id, delete on teardown."""
     resp = requests.post(
         f"{api_url}/sessions",
-        json={"world_name": "village.yaml", "lang": "en"},
+        json={"world_name": "village", "lang": "en"},
         timeout=10,
     )
     resp.raise_for_status()

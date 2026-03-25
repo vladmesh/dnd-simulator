@@ -33,7 +33,7 @@ def _urls(backend_url: str) -> tuple[str, str, str]:
 def ws_arena(_urls: tuple[str, str, str]) -> Iterator[tuple[str, str, str]]:
     """Fresh arena session for WS tests. Yields (ws_base_url, session_id, player_id)."""
     api, player_api, ws_base = _urls
-    resp = requests.post(f"{api}/sessions", json={"world_name": "arena.yaml", "lang": "en"}, timeout=10)
+    resp = requests.post(f"{api}/sessions", json={"world_name": "arena", "lang": "en"}, timeout=10)
     resp.raise_for_status()
     sid = resp.json()["session_id"]
 
@@ -63,7 +63,7 @@ def ws_arena(_urls: tuple[str, str, str]) -> Iterator[tuple[str, str, str]]:
 def ws_village(_urls: tuple[str, str, str]) -> Iterator[tuple[str, str, str]]:
     """Fresh village session for WS tests. Yields (ws_base_url, session_id, player_id)."""
     api, player_api, ws_base = _urls
-    resp = requests.post(f"{api}/sessions", json={"world_name": "village.yaml", "lang": "en"}, timeout=10)
+    resp = requests.post(f"{api}/sessions", json={"world_name": "village", "lang": "en"}, timeout=10)
     resp.raise_for_status()
     sid = resp.json()["session_id"]
 
@@ -233,7 +233,7 @@ class TestInventoryEquipment:
     def ws_equipped(self, _urls: tuple[str, str, str]) -> Iterator[tuple[str, str, str]]:
         """Village session where player starts with a weapon and gold (no combat)."""
         api, player_api, ws_base = _urls
-        resp = requests.post(f"{api}/sessions", json={"world_name": "village.yaml", "lang": "en"}, timeout=10)
+        resp = requests.post(f"{api}/sessions", json={"world_name": "village", "lang": "en"}, timeout=10)
         resp.raise_for_status()
         sid = resp.json()["session_id"]
 

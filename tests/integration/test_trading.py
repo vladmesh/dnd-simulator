@@ -23,7 +23,7 @@ def _recv_until(sock: ws_lib.WebSocket, target_type: str, max_msgs: int = 15) ->
 def _make_trade_session(urls: tuple[str, str, str], gold: int = 100) -> tuple[str, str, str]:
     """Create a village session with a player at village_square (same loc as merchant)."""
     api, player_api, ws_base = urls
-    resp = requests.post(f"{api}/sessions", json={"world_name": "village.yaml", "lang": "en"}, timeout=10)
+    resp = requests.post(f"{api}/sessions", json={"world_name": "village", "lang": "en"}, timeout=10)
     resp.raise_for_status()
     sid = resp.json()["session_id"]
 

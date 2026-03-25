@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 1, Task 2: Remove legacy single-file loading code and fallback aliases — done. `_resolve_source` removed, `_load_section` simplified, all fallback aliases purged from parsers/schemas.
+Phase 1, Task 3: Update integration test world references — done. All `.yaml` suffixes removed from 5 integration test files.
 
 ## Next Steps
 
-- Task 3: Update integration test world references from `"arena.yaml"` to `"arena"` etc.
+- All Phase 1 tasks complete — ready to close phase.

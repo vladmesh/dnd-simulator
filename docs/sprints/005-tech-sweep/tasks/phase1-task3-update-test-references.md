@@ -37,4 +37,8 @@ Also update `test_rest_api.py` assertions that check `list_worlds` response IDs.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward find-and-replace across 5 integration test files. All `.yaml` suffixes removed from world_name parameters and list_worlds assertions. No surprises — existing unit tests all pass, integration tests will validate against the converted directory-format worlds when run in docker compose.

@@ -18,7 +18,7 @@ def _create_squad_session(api_url: str, player_api_url: str) -> tuple[str, str]:
     """Create a squad_world session with a player. Returns (session_id, player_id)."""
     resp = requests.post(
         f"{api_url}/sessions",
-        json={"world_name": "squad_world.yaml", "lang": "en"},
+        json={"world_name": "squad_world", "lang": "en"},
         timeout=10,
     )
     resp.raise_for_status()
