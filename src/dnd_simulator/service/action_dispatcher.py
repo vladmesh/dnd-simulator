@@ -27,6 +27,9 @@ from dnd_simulator.rules.action_handlers import (
     handle_dodge,
     handle_equip,
     handle_equip_armor,
+    handle_equip_feet,
+    handle_equip_head,
+    handle_equip_ring,
     handle_equip_shield,
     handle_flee,
     handle_idle,
@@ -35,6 +38,9 @@ from dnd_simulator.rules.action_handlers import (
     handle_second_wind,
     handle_unequip,
     handle_unequip_armor,
+    handle_unequip_feet,
+    handle_unequip_head,
+    handle_unequip_ring,
     handle_unequip_shield,
     handle_use_item,
     handle_wait,
@@ -154,6 +160,12 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.register(ActionType.UNEQUIP_ARMOR, handle_unequip_armor)
     dispatcher.register(ActionType.EQUIP_SHIELD, handle_equip_shield)
     dispatcher.register(ActionType.UNEQUIP_SHIELD, handle_unequip_shield)
+    dispatcher.register(ActionType.EQUIP_HEAD, handle_equip_head)
+    dispatcher.register(ActionType.UNEQUIP_HEAD, handle_unequip_head)
+    dispatcher.register(ActionType.EQUIP_FEET, handle_equip_feet)
+    dispatcher.register(ActionType.UNEQUIP_FEET, handle_unequip_feet)
+    dispatcher.register(ActionType.EQUIP_RING, handle_equip_ring)
+    dispatcher.register(ActionType.UNEQUIP_RING, handle_unequip_ring)
     dispatcher.register(ActionType.SECOND_WIND, handle_second_wind)
 
     # Register providers — base types exclude provider-managed actions

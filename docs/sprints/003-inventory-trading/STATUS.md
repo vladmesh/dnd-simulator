@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 1, Task 1: Generic Equip/Unequip Mechanism — done. SlotConfig + generic handlers, param key bug fixed, providers consolidated.
+Phase 1, Task 2: Accessory Slots with Modifier Effects — done. All phase 1 tasks complete.
 
 ## Next Steps
 
-- Task 2: Accessory slots with modifier effects — AccessoryDef, head/feet/ring, modifier pipeline, YAML content
+- Close Phase 1 (integration tests, E2E)

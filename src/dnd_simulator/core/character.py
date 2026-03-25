@@ -211,6 +211,9 @@ class Creature(Entity):
     equipped_weapon: Item | None = None
     equipped_armor: Item | None = None
     equipped_shield: Item | None = None
+    equipped_head: Item | None = None
+    equipped_feet: Item | None = None
+    equipped_ring: Item | None = None
     resource_pools: list[ResourcePool] = field(default_factory=list)
     wake_at_seconds: int | None = None  # absolute game-time seconds; None = not waiting
     brain: Brain | None = field(default=None, repr=False)

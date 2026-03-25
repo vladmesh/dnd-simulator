@@ -26,8 +26,19 @@ from dnd_simulator.core.character import (
 from dnd_simulator.core.class_features import ClassFeatures, FighterFeatures, FightingStyle, RogueFeatures
 from dnd_simulator.core.combat import BattleMap, Wall
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.items import ArmorCategory, ArmorDef, Item, ItemType, ShieldDef, WeaponCategory, WeaponDef
+from dnd_simulator.core.items import (
+    AccessoryDef,
+    ArmorCategory,
+    ArmorDef,
+    EquipmentSlot,
+    Item,
+    ItemType,
+    ShieldDef,
+    WeaponCategory,
+    WeaponDef,
+)
 from dnd_simulator.core.location import Location, LocationEdge
+from dnd_simulator.core.modifiers import Modifier, ModifierOp, StatType
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.layers.entities.models import Npc, NpcMemory, resolve_schedule
@@ -178,6 +189,26 @@ def _parse_shield_def(idata: dict[str, Any]) -> ShieldDef:
     )
 
 
+def _parse_accessory_def(idata: dict[str, Any]) -> AccessoryDef:
+    """Parse AccessoryDef from YAML accessory item data."""
+    slot = EquipmentSlot(idata["slot"])
+    mods_raw = idata.get("modifiers") or []
+    modifiers = tuple(
+        Modifier(
+            stat=StatType(m["stat"]),
+            op=ModifierOp(m["op"]),
+            value=int(m.get("value", 0)),
+            source=str(m.get("source", "")),
+        )
+        for m in mods_raw
+    )
+    return AccessoryDef(
+        accessory_id=str(idata["accessory_id"]),
+        slot=slot,
+        grant_modifiers=modifiers,
+    )
+
+
 _ARMOR_KEYS = frozenset(
     {"name", "type", "armor_id", "category", "base_ac", "max_dex_bonus", "strength_req", "equipped"}
 )
@@ -201,6 +232,7 @@ def parse_items(items_data: list[dict[str, Any]]) -> list[Item]:
         weapon_def: WeaponDef | None = None
         armor_def: ArmorDef | None = None
         shield_def: ShieldDef | None = None
+        accessory_def: AccessoryDef | None = None
         params: dict[str, object] = {}
 
         if item_type == ItemType.WEAPON:
@@ -215,6 +247,10 @@ def parse_items(items_data: list[dict[str, Any]]) -> list[Item]:
             shield_def = _parse_shield_def(idata)
             if idata.get("equipped"):
                 params["equipped"] = True
+        elif item_type == ItemType.ACCESSORY:
+            accessory_def = _parse_accessory_def(idata)
+            if idata.get("equipped"):
+                params["equipped"] = True
         else:
             params = {k: v for k, v in idata.items() if k not in ("name", "type")}
 
@@ -227,36 +263,59 @@ def parse_items(items_data: list[dict[str, Any]]) -> list[Item]:
                 weapon_def=weapon_def,
                 armor_def=armor_def,
                 shield_def=shield_def,
+                accessory_def=accessory_def,
             )
         )
     return items
 
 
-def parse_equipped_weapon(items: list[Item]) -> Item | None:
-    """Find the weapon marked ``equipped: true`` in items list.
+def _parse_equipped(items: list[Item], item_type: ItemType, slot: EquipmentSlot | None = None) -> Item | None:
+    """Find the first item of given type marked ``equipped: true``.
 
-    If no weapon has the flag, returns None (creature starts unarmed).
+    For accessories, also matches by slot via ``accessory_def.slot``.
     """
     for item in items:
-        if item.item_type == ItemType.WEAPON and item.params.get("equipped"):
-            return item
+        if item.item_type != item_type or not item.params.get("equipped"):
+            continue
+        if (
+            item_type == ItemType.ACCESSORY
+            and slot is not None
+            and (item.accessory_def is None or item.accessory_def.slot != slot)
+        ):
+            continue
+        return item
     return None
+
+
+# Backward compatibility aliases
+def parse_equipped_weapon(items: list[Item]) -> Item | None:
+    return _parse_equipped(items, ItemType.WEAPON)
 
 
 def parse_equipped_armor(items: list[Item]) -> Item | None:
-    """Find the armor marked ``equipped: true`` in items list."""
-    for item in items:
-        if item.item_type == ItemType.ARMOR and item.params.get("equipped"):
-            return item
-    return None
+    return _parse_equipped(items, ItemType.ARMOR)
 
 
 def parse_equipped_shield(items: list[Item]) -> Item | None:
-    """Find the shield marked ``equipped: true`` in items list."""
-    for item in items:
-        if item.item_type == ItemType.SHIELD and item.params.get("equipped"):
-            return item
-    return None
+    return _parse_equipped(items, ItemType.SHIELD)
+
+
+def extract_all_equipped(inventory: list[Item]) -> tuple[dict[str, Item | None], list[Item]]:
+    """Extract all equipped items from inventory, returning (equipped_dict, remaining_inventory).
+
+    equipped_dict keys match Creature field names: equipped_weapon, equipped_armor, etc.
+    """
+    equipped: dict[str, Item | None] = {
+        "equipped_weapon": _parse_equipped(inventory, ItemType.WEAPON),
+        "equipped_armor": _parse_equipped(inventory, ItemType.ARMOR),
+        "equipped_shield": _parse_equipped(inventory, ItemType.SHIELD),
+        "equipped_head": _parse_equipped(inventory, ItemType.ACCESSORY, EquipmentSlot.HEAD),
+        "equipped_feet": _parse_equipped(inventory, ItemType.ACCESSORY, EquipmentSlot.FEET),
+        "equipped_ring": _parse_equipped(inventory, ItemType.ACCESSORY, EquipmentSlot.RING),
+    }
+    equipped_ids = {item.id for item in equipped.values() if item is not None}
+    remaining = [i for i in inventory if i.id not in equipped_ids]
+    return equipped, remaining
 
 
 def parse_class_features(char_class: CharClass, data: dict[str, Any]) -> list[ClassFeatures]:
@@ -473,16 +532,8 @@ def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locati
     memory_data = ndata.get("memory")
     memory = NpcMemory.from_dict(memory_data) if isinstance(memory_data, dict) else NpcMemory()
 
-    inventory = parse_items(ndata.get("items") or [])
-    equipped_weapon = parse_equipped_weapon(inventory)
-    if equipped_weapon:
-        inventory = [i for i in inventory if i.id != equipped_weapon.id]
-    equipped_armor = parse_equipped_armor(inventory)
-    if equipped_armor:
-        inventory = [i for i in inventory if i.id != equipped_armor.id]
-    equipped_shield = parse_equipped_shield(inventory)
-    if equipped_shield:
-        inventory = [i for i in inventory if i.id != equipped_shield.id]
+    all_items = parse_items(ndata.get("items") or [])
+    equipped, inventory = extract_all_equipped(all_items)
 
     npc = Npc(
         id=npc_id,
@@ -503,9 +554,12 @@ def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locati
         ai_type=ai_type,
         memory=memory,
         inventory=inventory,
-        equipped_weapon=equipped_weapon,
-        equipped_armor=equipped_armor,
-        equipped_shield=equipped_shield,
+        equipped_weapon=equipped["equipped_weapon"],
+        equipped_armor=equipped["equipped_armor"],
+        equipped_shield=equipped["equipped_shield"],
+        equipped_head=equipped["equipped_head"],
+        equipped_feet=equipped["equipped_feet"],
+        equipped_ring=equipped["equipped_ring"],
         class_features=parse_class_features(char_class, ndata),
         resource_pools=build_class_resource_pools(char_class),
     )
@@ -530,16 +584,8 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
 
     player_id = str(pdata.get("id", "")) or f"player_{uuid.uuid4().hex[:8]}"
 
-    inventory = parse_items(pdata.get("items") or [])
-    equipped_weapon = parse_equipped_weapon(inventory)
-    if equipped_weapon:
-        inventory = [i for i in inventory if i.id != equipped_weapon.id]
-    equipped_armor = parse_equipped_armor(inventory)
-    if equipped_armor:
-        inventory = [i for i in inventory if i.id != equipped_armor.id]
-    equipped_shield = parse_equipped_shield(inventory)
-    if equipped_shield:
-        inventory = [i for i in inventory if i.id != equipped_shield.id]
+    all_items = parse_items(pdata.get("items") or [])
+    equipped, inventory = extract_all_equipped(all_items)
 
     char_class = CharClass(pdata["class"]) if "class" in pdata else CharClass.FIGHTER
 
@@ -559,9 +605,12 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
         gold=int(pdata.get("gold", 0)),
         attacks=attacks,
         inventory=inventory,
-        equipped_weapon=equipped_weapon,
-        equipped_armor=equipped_armor,
-        equipped_shield=equipped_shield,
+        equipped_weapon=equipped["equipped_weapon"],
+        equipped_armor=equipped["equipped_armor"],
+        equipped_shield=equipped["equipped_shield"],
+        equipped_head=equipped["equipped_head"],
+        equipped_feet=equipped["equipped_feet"],
+        equipped_ring=equipped["equipped_ring"],
         class_features=parse_class_features(char_class, pdata),
         resource_pools=build_class_resource_pools(char_class),
     )

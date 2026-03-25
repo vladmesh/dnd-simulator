@@ -52,6 +52,17 @@ def describe_item(item: Item) -> str:
             extras.append(f"+{wd.modifier}")
         suffix = f" [{', '.join(extras)}]" if extras else ""
         return f"{item.name} (weapon: {dmg}, reach {wd.reach}ft{suffix})"
+    if item.accessory_def is not None:
+        ad = item.accessory_def
+        from dnd_simulator.core.modifiers import ModifierOp
+
+        parts: list[str] = []
+        for m in ad.grant_modifiers:
+            sign = "+" if m.op == ModifierOp.ADD and m.value > 0 else ""
+            parts.append(f"{sign}{m.value} {m.stat.value.upper()}")
+        if parts:
+            return f"{item.name} ({', '.join(parts)})"
+        return item.name
     return item.name
 
 

@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
+from dnd_simulator.core.modifiers import Modifier
+
 if TYPE_CHECKING:
     from dnd_simulator.core.action import ActionType
     from dnd_simulator.core.character import Ability, DamageComponent
@@ -19,6 +21,7 @@ class ItemType(StrEnum):
     WEAPON = "weapon"
     ARMOR = "armor"
     SHIELD = "shield"
+    ACCESSORY = "accessory"
 
 
 class EquipmentSlot(StrEnum):
@@ -27,6 +30,9 @@ class EquipmentSlot(StrEnum):
     WEAPON = "weapon"
     ARMOR = "armor"
     SHIELD = "shield"
+    HEAD = "head"
+    FEET = "feet"
+    RING = "ring"
 
 
 class WeaponCategory(StrEnum):
@@ -90,6 +96,15 @@ class ShieldDef:
 
 
 @dataclass(frozen=True)
+class AccessoryDef:
+    """Accessory definition — head, feet, ring items with stat modifiers."""
+
+    accessory_id: str  # "ring_of_protection", "iron_helmet"
+    slot: EquipmentSlot  # which slot this accessory occupies
+    grant_modifiers: tuple[Modifier, ...] = ()  # stat modifiers while equipped
+
+
+@dataclass(frozen=True)
 class Item:
     """A single inventory item instance.
 
@@ -106,3 +121,4 @@ class Item:
     weapon_def: WeaponDef | None = None
     armor_def: ArmorDef | None = None
     shield_def: ShieldDef | None = None
+    accessory_def: AccessoryDef | None = None

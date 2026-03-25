@@ -45,13 +45,23 @@ Key changes:
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] `effective_ac()` and `effective_speed()` reflect equipped accessory modifiers
-- [ ] Accessories load from YAML with `equipped: true` support
-- [ ] Awareness includes accessory descriptions
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] `effective_ac()` and `effective_speed()` reflect equipped accessory modifiers
+- [x] Accessories load from YAML with `equipped: true` support
+- [x] Awareness includes accessory descriptions
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Full vertical slice implemented: AccessoryDef model → 3 new Creature slots → 6 ActionTypes → SlotConfig entries (reusing task 1 generic mechanism) → modifier pipeline integration → content loader with `extract_all_equipped()` helper → awareness descriptions.
+
+Added accessory slot validation in `_handle_equip_slot`: ring can't go into head slot (same ItemType.ACCESSORY but different EquipmentSlot). Added `SlotConfig.slot` field to support this.
+
+Content loader refactored: replaced 3 duplicated `parse_equipped_*` functions with generic `_parse_equipped()` + `extract_all_equipped()`. NPC and Player loading both use the new helper, eliminating copy-paste.
+
+No YAML content created yet for the main world — that can be added when Phase 2 (UI) needs test data.

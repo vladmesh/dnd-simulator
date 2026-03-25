@@ -307,6 +307,63 @@ _reg(
 
 _reg(
     ActionDef(
+        action_type=ActionType.EQUIP_HEAD,
+        description=N_("Equip headgear from your inventory."),
+        cost_type=CostType.FREE,
+        provider_managed=True,
+        params=(ParamDef("head_id", "string", N_("ID of the headgear to equip"), required=True),),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.UNEQUIP_HEAD,
+        description=N_("Remove your equipped headgear."),
+        cost_type=CostType.FREE,
+        provider_managed=True,
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.EQUIP_FEET,
+        description=N_("Equip footwear from your inventory."),
+        cost_type=CostType.FREE,
+        provider_managed=True,
+        params=(ParamDef("feet_id", "string", N_("ID of the footwear to equip"), required=True),),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.UNEQUIP_FEET,
+        description=N_("Remove your equipped footwear."),
+        cost_type=CostType.FREE,
+        provider_managed=True,
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.EQUIP_RING,
+        description=N_("Equip a ring from your inventory."),
+        cost_type=CostType.FREE,
+        provider_managed=True,
+        params=(ParamDef("ring_id", "string", N_("ID of the ring to equip"), required=True),),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.UNEQUIP_RING,
+        description=N_("Remove your equipped ring."),
+        cost_type=CostType.FREE,
+        provider_managed=True,
+    )
+)
+
+_reg(
+    ActionDef(
         action_type=ActionType.SECOND_WIND,
         description=N_("Heal yourself for 1d10 + fighter level HP. Once per short rest."),
         cost_type=CostType.BONUS_ACTION,

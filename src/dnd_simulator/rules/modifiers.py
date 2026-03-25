@@ -102,6 +102,12 @@ def collect_self_modifiers(creature: Creature) -> list[Modifier]:
         if fighter and fighter.fighting_style == FightingStyle.DEFENSE and creature.equipped_armor:
             mods.append(Modifier(StatType.AC, ModifierOp.ADD, value=1, source="fighting_style_defense"))
 
+    # Accessory modifiers (head, feet, ring)
+    for slot_field in ("equipped_head", "equipped_feet", "equipped_ring"):
+        item = getattr(creature, slot_field, None)
+        if item is not None and item.accessory_def is not None:
+            mods.extend(item.accessory_def.grant_modifiers)
+
     return mods
 
 
