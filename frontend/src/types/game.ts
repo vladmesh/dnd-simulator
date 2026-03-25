@@ -16,6 +16,10 @@ export type EventType =
   | "combat_ended"
   | "weather_changed"
   | "time_advanced"
+  | "squad_move"
+  | "squad_combat"
+  | "squad_materialized"
+  | "squad_dematerialized"
   | "custom"
 
 // --- Turn Budget ---

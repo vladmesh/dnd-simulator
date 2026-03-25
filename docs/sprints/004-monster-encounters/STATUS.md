@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 4, Task 1: Squad Events in Perception Pipeline — done. Squad events now flow through location log → perceived events → WebSocket.
+Phase 4, Task 2: Frontend Squad Event Rendering — done. Squad event types and colors in EventLog.
 
 ## Next Steps
 

@@ -16,6 +16,10 @@ const EVENT_COLORS: Record<string, string> = {
   action_error: "text-red-300 italic",
   weather_changed: "text-sky-400",
   time_advanced: "text-muted-foreground",
+  squad_move: "text-muted-foreground",
+  squad_combat: "text-orange-400",
+  squad_materialized: "text-yellow-400",
+  squad_dematerialized: "text-muted-foreground",
 }
 
 export function EventLog() {

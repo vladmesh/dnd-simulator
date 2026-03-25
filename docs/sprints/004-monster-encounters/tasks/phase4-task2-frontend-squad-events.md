@@ -43,4 +43,8 @@ No unit tests for frontend in this project — verification is visual via E2E (T
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Minimal change — 4 event types added to the union, 4 color mappings added. tsc clean. No changes to Perception/CombatPanel as planned.
