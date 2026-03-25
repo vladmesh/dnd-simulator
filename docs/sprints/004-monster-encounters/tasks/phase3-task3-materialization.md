@@ -60,4 +60,8 @@ When a squad and an active character occupy the same location, the squad "materi
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Extended `update_activation()` with optional `query_fn`/`emit_fn` params (backward compat — None skips materialization). Added `_activate()` helper to Round to create and pass these params. Materialization spawns creatures from MonsterTemplate with squad_id, faction_id, temporary=True, RuleBrain. Creature count scales by strength/max_strength ratio. Dematerialization removes creatures and updates squad strength proportionally via SQUAD_DEMATERIALIZED event handled by EcologyLayer. Combat prevents dematerialization. Catches LayerError when ecology layer doesn't exist (tests without full layer stack).

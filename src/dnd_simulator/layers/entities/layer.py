@@ -74,6 +74,8 @@ class EntitiesLayer(Layer):
         self._encounter_cooldowns: dict[str, int] = {}  # location_id → last spawn time (seconds)
         self._creature_locations: dict[str, str] = {}  # creature_id → last known location_id
         self._spawn_counter = 0
+        # Materialization tracking: squad_id → (creature_ids, original_strength, spawn_count)
+        self._materialized_squads: dict[str, tuple[list[str], int, int]] = {}
         if entities:
             for e in entities:
                 self._entities[e.id] = e
@@ -105,7 +107,12 @@ class EntitiesLayer(Layer):
         """Get all active creatures in the world (for the main game loop)."""
         return [e for e in self._entities.values() if isinstance(e, Creature) and e.active]
 
-    def update_activation(self, time: GameDateTime) -> None:
+    def update_activation(
+        self,
+        time: GameDateTime,
+        query_fn: QueryFn | None = None,
+        emit_fn: EmitFn | None = None,
+    ) -> None:
         """Activate creatures near players, dormify the rest.
 
         Rules:
@@ -115,6 +122,10 @@ class EntitiesLayer(Layer):
         - Creatures in combat are active (don't interrupt fights).
         - Creatures activated by proximity get wake_at cleared (woken early).
         - Everyone else is dormant (active=False).
+
+        When query_fn/emit_fn are provided, also handles squad materialization:
+        squads at active locations are spawned as creatures, squads no longer
+        at active locations are dematerialized with strength updates.
 
         No-op if no players exist (e.g. in tests without PlayerCharacter).
         """
@@ -179,6 +190,10 @@ class EntitiesLayer(Layer):
 
         # Third pass: check for encounter spawns from creatures that were active
         self._check_encounters(now, previously_active)
+
+        # Fourth pass: squad materialization/dematerialization
+        if query_fn is not None:
+            self._update_materialization(player_locations, query_fn, emit_fn)
 
     def _check_encounters(self, now: int, active_ids: set[str]) -> None:
         """Roll encounters for locations where any active creature just arrived.
@@ -257,6 +272,129 @@ class EntitiesLayer(Layer):
                 data={"location_id": location_id, "names": spawned_names},
             )
             self._location_log[location_id].append(event)
+
+    # -- Squad materialization --
+
+    def _update_materialization(
+        self,
+        active_locations: set[str],
+        query_fn: QueryFn,
+        emit_fn: EmitFn | None,
+    ) -> None:
+        """Materialize squads at active locations, dematerialize squads that left."""
+        from dnd_simulator.core.brain import RuleBrain
+
+        # Collect squad IDs currently at active locations
+        from dnd_simulator.core.world import LayerError
+
+        squads_at_active: dict[str, dict[str, Any]] = {}
+        for loc in active_locations:
+            try:
+                answer = query_fn("ecology", Query(QueryType.SQUADS_AT_LOCATION, params={"location_id": loc}))
+            except LayerError:
+                return  # No ecology layer in this world — skip materialization
+            for squad_info in answer.value:
+                squads_at_active[str(squad_info["id"])] = squad_info
+
+        # Materialize new squads
+        for squad_id, info in squads_at_active.items():
+            if squad_id in self._materialized_squads:
+                continue  # already materialized
+            self._materialize_squad(squad_id, info, RuleBrain)
+
+        # Dematerialize squads no longer at active locations
+        for squad_id in list(self._materialized_squads):
+            if squad_id in squads_at_active:
+                continue  # still at active location
+
+            creature_ids, original_strength, spawn_count = self._materialized_squads[squad_id]
+
+            # Don't dematerialize if any creatures are in combat
+            any_in_combat = False
+            for cid in creature_ids:
+                entity = self._entities.get(cid)
+                if isinstance(entity, Creature) and entity.in_combat:
+                    any_in_combat = True
+                    break
+            if any_in_combat:
+                continue
+
+            self._dematerialize_squad(squad_id, creature_ids, original_strength, spawn_count, emit_fn)
+
+    def _materialize_squad(
+        self,
+        squad_id: str,
+        info: dict[str, Any],
+        brain_cls: type,
+    ) -> None:
+        """Spawn creatures from a squad's member templates."""
+        templates: list[str] = list(info["member_templates"])
+        strength: int = int(info["strength"])
+        max_strength: int = int(info["max_strength"])
+        faction_id = str(info["faction_id"])
+        location = str(info["current_location_id"])
+
+        # Scale creature count by strength ratio
+        count = max(1, round(len(templates) * strength / max_strength)) if max_strength > 0 else len(templates)
+        templates_to_spawn = templates[:count]
+
+        creature_ids: list[str] = []
+        for tid in templates_to_spawn:
+            template = self._monster_templates[tid]
+            self._spawn_counter += 1
+            instance_id = f"{tid}_{self._spawn_counter}"
+            creature = template.spawn(location, instance_id)
+            creature.squad_id = squad_id
+            creature.faction_id = faction_id
+            creature.brain = brain_cls()
+            creature.active = True
+            self.add_entity(creature)
+            creature_ids.append(instance_id)
+            logger.info("squad_materialize", squad_id=squad_id, creature_id=instance_id)
+
+        self._materialized_squads[squad_id] = (creature_ids, strength, len(templates_to_spawn))
+
+    def _dematerialize_squad(
+        self,
+        squad_id: str,
+        creature_ids: list[str],
+        original_strength: int,
+        spawn_count: int,
+        emit_fn: EmitFn | None,
+    ) -> None:
+        """Remove materialized creatures and update squad strength."""
+        alive_count = 0
+        for cid in creature_ids:
+            entity = self._entities.get(cid)
+            if isinstance(entity, Creature) and entity.is_alive:
+                alive_count += 1
+
+        # Proportional strength update
+        new_strength = round(original_strength * alive_count / spawn_count) if spawn_count > 0 else original_strength
+
+        # Remove creatures
+        for cid in creature_ids:
+            self.remove_entity(cid)
+
+        del self._materialized_squads[squad_id]
+        logger.info(
+            "squad_dematerialize",
+            squad_id=squad_id,
+            alive=alive_count,
+            spawned=spawn_count,
+            new_strength=new_strength,
+        )
+
+        # Emit event so EcologyLayer updates squad strength
+        if emit_fn is not None:
+            emit_fn(
+                Event(
+                    event_type=EventType.SQUAD_DEMATERIALIZED,
+                    source_layer="entities",
+                    data={"squad_id": squad_id, "new_strength": new_strength},
+                    description=f"Squad {squad_id} dematerialized (strength {new_strength})",
+                )
+            )
 
     # -- Combat (delegated to CombatManager) --
 

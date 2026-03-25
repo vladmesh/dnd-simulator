@@ -83,7 +83,13 @@ class EcologyLayer(Layer):
         return events
 
     def handle_event(self, event: Event, query_fn: QueryFn, emit_fn: EmitFn) -> ActionResult:
-        """Process external events. Expanded in later tasks."""
+        """Process external events."""
+        if event.event_type is EventType.SQUAD_DEMATERIALIZED:
+            squad_id = str(event.data["squad_id"])
+            new_strength = int(event.data["new_strength"])
+            if squad_id in self._squads:
+                self._squads[squad_id].strength = new_strength
+                logger.info("squad_strength_updated", squad_id=squad_id, new_strength=new_strength)
         return ActionResult()
 
     def query(self, query: Query) -> Answer:

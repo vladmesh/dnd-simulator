@@ -112,6 +112,8 @@ class EventType(Enum):
     TIME_ADVANCED = "time_advanced"
     SQUAD_MOVE = "squad_move"
     SQUAD_COMBAT = "squad_combat"
+    SQUAD_MATERIALIZED = "squad_materialized"
+    SQUAD_DEMATERIALIZED = "squad_dematerialized"
     CUSTOM = "custom"
 
 

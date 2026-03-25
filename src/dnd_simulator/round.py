@@ -415,8 +415,8 @@ class Round:
         emit_fn = self._world._make_emit_fn("entities")
         time = self._world.time
 
-        # Activate creatures near players, dormify the rest
-        self._entities.update_activation(time)
+        # Activate creatures near players, dormify the rest, materialize squads
+        self._entities.update_activation(time, query_fn=query_fn, emit_fn=emit_fn)
 
         active_count = len(self._entities.get_active_creatures())
         combat_locations = list(self._entities.get_combat_locations())
@@ -449,12 +449,18 @@ class Round:
         logger.info("round_end", game_time=str(self._world.time), tick_events=len(tick_events))
         return RoundResult(events=tick_events)
 
+    def _activate(self) -> None:
+        """Update activation with materialization support."""
+        qfn = self._world._make_query_fn("entities")
+        efn = self._world._make_emit_fn("entities")
+        self._entities.update_activation(self._world.time, query_fn=qfn, emit_fn=efn)
+
     def run_loop(self, max_rounds: int | None = None) -> None:
         """Run rounds until no active creatures remain or stop() is called."""
         rounds_run = 0
         while not self._stop_flag:
             # Update activation before checking — resolves stale state from previous round
-            self._entities.update_activation(self._world.time)
+            self._activate()
             active = self._entities.get_active_creatures()
             logger.debug(
                 "loop_check",
@@ -498,12 +504,12 @@ class Round:
         delta_seconds = nearest_wake - now
         if delta_seconds <= 0:
             # Timer already expired — just run update_activation
-            self._entities.update_activation(self._world.time)
+            self._activate()
             return True
 
         logger.info("fast_forward", delta_seconds=delta_seconds)
         tick_events = self._world.advance_time(TimeDelta(seconds=delta_seconds))
-        self._entities.update_activation(self._world.time)
+        self._activate()
 
         if self._on_round_end:
             self._on_round_end(RoundResult(events=tick_events))

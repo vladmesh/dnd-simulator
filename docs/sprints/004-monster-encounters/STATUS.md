@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 3, Task 2: Squad Movement + Squad-vs-Squad Combat — done.
+Phase 3, Task 3: Squad Materialization + Dematerialization — done. All Phase 3 tasks complete.
 
 ## Next Steps
 
