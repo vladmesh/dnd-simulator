@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
@@ -19,6 +20,7 @@ from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
+from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.layers.entities.combat_manager import CombatManager
 from dnd_simulator.layers.entities.models import Npc, NpcMemory, activity_flavor
 from dnd_simulator.layers.entities.perception import perceive_event
@@ -46,21 +48,32 @@ _LOGGED_EVENTS = {
     EventType.ENTITY_UNEQUIP,
     EventType.COMBAT_STARTED,
     EventType.COMBAT_ENDED,
+    EventType.ENCOUNTER_SPAWNED,
 }
 
 
 class EntitiesLayer(Layer):
     """All tracked entities: player, NPCs, named creatures."""
 
+    # Cooldown between encounter rolls at the same location (seconds of game time)
+    ENCOUNTER_COOLDOWN_SECONDS = 600  # 10 minutes
+
     def __init__(
         self,
         entities: list[Entity] | None = None,
         battle_map_configs: dict[str, BattleMap] | None = None,
         summarizer: MemorySummarizer | None = None,
+        monster_templates: dict[str, MonsterTemplate] | None = None,
+        encounter_tables: dict[str, list[EncounterEntry]] | None = None,
     ) -> None:
         self._entities: dict[str, Entity] = {}
         self._location_log: dict[str, list[Event]] = defaultdict(list)
         self._summarizer = summarizer
+        self._monster_templates = monster_templates or {}
+        self._encounter_tables = encounter_tables or {}
+        self._encounter_cooldowns: dict[str, int] = {}  # location_id → last spawn time (seconds)
+        self._player_locations: dict[str, str] = {}  # player_id → last known location_id
+        self._spawn_counter = 0
         if entities:
             for e in entities:
                 self._entities[e.id] = e
@@ -160,6 +173,63 @@ class EntitiesLayer(Layer):
             if should_activate and e.wake_at_seconds is not None:
                 logger.info("activation_wake_proximity", entity_id=e.id)
                 e.wake_at_seconds = None
+
+        # Third pass: check for encounter spawns at player locations
+        self._check_encounters(player_locations, now)
+
+    def _check_encounters(self, player_locations: set[str], now: int) -> None:
+        """Roll encounters for locations where players just arrived."""
+        from dnd_simulator.core.player import PlayerCharacter
+
+        for e in list(self._entities.values()):
+            if not isinstance(e, PlayerCharacter):
+                continue
+            prev = self._player_locations.get(e.id)
+            self._player_locations[e.id] = e.location_id
+
+            if e.location_id == prev:
+                continue  # didn't move
+
+            if e.location_id not in self._encounter_tables:
+                continue  # no encounters here
+
+            # Check cooldown
+            last_roll = self._encounter_cooldowns.get(e.location_id, 0)
+            if now - last_roll < self.ENCOUNTER_COOLDOWN_SECONDS:
+                continue
+
+            self._encounter_cooldowns[e.location_id] = now
+            self._roll_encounters(e.location_id)
+
+    def _roll_encounters(self, location_id: str) -> None:
+        """Roll each encounter entry for a location and spawn monsters."""
+        from dnd_simulator.core.brain import RuleBrain
+
+        entries = self._encounter_tables[location_id]
+        spawned_names: list[str] = []
+
+        for entry in entries:
+            if random.random() >= entry.chance:
+                continue
+            template = self._monster_templates[entry.template_id]
+            count = random.randint(entry.count_min, entry.count_max)
+            for _ in range(count):
+                self._spawn_counter += 1
+                instance_id = f"{template.id}_{self._spawn_counter}"
+                creature = template.spawn(location_id, instance_id)
+                creature.brain = RuleBrain()
+                self.add_entity(creature)
+                creature.active = True
+                spawned_names.append(creature.name)
+                logger.info("encounter_spawn", entity_id=instance_id, location=location_id)
+
+        if spawned_names:
+            event = Event(
+                event_type=EventType.ENCOUNTER_SPAWNED,
+                source_layer="entities",
+                data={"location_id": location_id, "names": spawned_names},
+            )
+            self._location_log[location_id].append(event)
 
     # -- Combat (delegated to CombatManager) --
 
@@ -428,6 +498,13 @@ class EntitiesLayer(Layer):
 
         if event.event_type == EventType.ENTITY_MOVE:
             return self._combat.resolve_move(event)
+
+        # Clean up temporary creatures on death
+        if event.event_type == EventType.ENTITY_DIED:
+            entity_id = str(event.data["entity_id"])
+            entity = self._entities.get(entity_id)
+            if entity is not None and entity.temporary:
+                self.remove_entity(entity_id)
 
         if event.event_type in _LOGGED_EVENTS:
             location_id = self._event_location(event)

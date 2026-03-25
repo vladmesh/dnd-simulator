@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from dnd_simulator.core.character import AbilityScores, Attack
+from dnd_simulator.core.character import AbilityScores, Attack, Creature
 
 
 @dataclass(frozen=True)
@@ -19,6 +19,21 @@ class MonsterTemplate:
     ability_scores: AbilityScores
     attacks: tuple[Attack, ...]
     cr: float
+
+    def spawn(self, location_id: str, instance_id: str) -> Creature:
+        """Create a temporary Creature from this template."""
+        return Creature(
+            id=instance_id,
+            name=self.name,
+            location_id=location_id,
+            temporary=True,
+            ability_scores=AbilityScores.from_dict(self.ability_scores.to_dict()),
+            max_hp=self.hp,
+            current_hp=self.hp,
+            ac=self.ac,
+            speed=self.speed,
+            attacks=self.attacks,
+        )
 
 
 @dataclass(frozen=True)

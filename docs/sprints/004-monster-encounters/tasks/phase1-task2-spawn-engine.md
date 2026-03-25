@@ -47,4 +47,8 @@ Build the runtime spawn engine: when a player enters a location with an encounte
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Deviated from task plan: ENTITY_MOVE events are combat-only (grid movement). Peaceful travel uses `handle_wait(travel_to=...)` which sets `location_id` directly with no event. Hooked encounter checks into `update_activation()` instead — tracks `_player_locations` dict and detects when a player's location changes. Spawn logic in `_check_encounters()` → `_roll_encounters()`. Death cleanup added to `handle_event()` for ENTITY_DIED events on temporary entities. Wired `load_monsters()` into GameService.start_game(). Cooldown is 600 seconds (10 minutes game time).

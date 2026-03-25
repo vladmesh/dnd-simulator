@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 1, Task 1: MonsterTemplate + EncounterTable Models & YAML Loading — done.
+Phase 1, Task 2: Spawn Engine + Temporary Creature Lifecycle — done.
 
 ## Next Steps
 
-- Task 2: Spawn engine + temporary creature lifecycle
 - Task 3: Hostile AI — RuleBrain initiates combat

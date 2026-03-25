@@ -102,6 +102,7 @@ class EventType(Enum):
     TURN_SKIPPED = "turn_skipped"
     COMBAT_STARTED = "combat_started"
     COMBAT_ENDED = "combat_ended"
+    ENCOUNTER_SPAWNED = "encounter_spawned"
     WEATHER_CHANGED = "weather_changed"
     TIME_ADVANCED = "time_advanced"
     CUSTOM = "custom"
