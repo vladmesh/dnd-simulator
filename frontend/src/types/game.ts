@@ -88,6 +88,13 @@ export interface ActionInfo {
   cost_options?: CostOption[]
 }
 
+export interface MerchantInfo {
+  id: string
+  name: string
+  gold: number
+  items: ItemInfo[]
+}
+
 export interface PeacefulAwareness {
   hour: number
   day: number
@@ -103,6 +110,7 @@ export interface PeacefulAwareness {
   turn_budget?: TurnBudget | null
   available_actions?: ActionInfo[]
   available_items?: ItemInfo[]
+  merchants?: MerchantInfo[]
 }
 
 export interface CombatAwareness {
@@ -187,6 +195,8 @@ export type ActionName =
   | "bless"
   | "equip"
   | "unequip"
+  | "buy"
+  | "sell"
 
 export interface Action {
   name: ActionName

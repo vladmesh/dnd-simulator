@@ -75,5 +75,8 @@
   "slot_ring": "Ring",
   "click_to_unequip": "Click to unequip",
   "equip": "Equip",
-  "unequip": "Unequip"
+  "unequip": "Unequip",
+  "trade": "Trade",
+  "buy": "Buy",
+  "sell": "Sell"
 }

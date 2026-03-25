@@ -57,4 +57,17 @@ This is primarily a frontend task. Tests:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Backend already had `merchants` flowing through `dataclasses.asdict()` in `_awareness_to_dict()` — no backend changes needed.
+
+Frontend changes:
+- Added `MerchantInfo` interface and `merchants` field to `PeacefulAwareness` in types
+- Added `buy`/`sell` to `ActionName` union
+- Created `TradePanel.tsx` — collapsible panel showing merchant inventory (buy) and player sellable items (sell), with gold display for both sides
+- Wired `TradePanel` into `GameScreen.tsx` peaceful sidebar between Perception and LocationPanel
+- Added i18n strings for en/ru (trade, buy, sell)
+- Buy/sell buttons disable when insufficient gold on either side
+- Panel auto-hides when no merchants are nearby (returns null)

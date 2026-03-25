@@ -9,6 +9,7 @@ import { LocationPanel } from "./LocationPanel"
 import { PlayerStats } from "./PlayerStats"
 import { BattleMap } from "./BattleMap"
 import { CombatPanel } from "./CombatPanel"
+import { TradePanel } from "./TradePanel"
 
 export function GameScreen() {
   const { sessionId } = useParams<{ sessionId: string }>()
@@ -85,6 +86,7 @@ export function GameScreen() {
             <>
               <Perception />
               <div className="border-t border-border" />
+              <TradePanel />
               <LocationPanel />
               <div className="border-t border-border" />
               <PlayerStats />

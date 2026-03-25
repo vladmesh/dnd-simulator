@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 3, Task 2: Buy/sell handlers + dispatch — done. Full pipeline wired: handlers, provider, perception, awareness.
+Phase 3, Task 3: Trade UI — done. TradePanel component with buy/sell, merchant awareness flows end-to-end.
 
 ## Next Steps
 
-- Task 3: Trade UI — Trade button in ActionBar, trade modal with buy/sell
+- Close phase 3
