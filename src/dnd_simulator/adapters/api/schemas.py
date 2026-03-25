@@ -21,7 +21,6 @@ class CreatePlayerRequest(BaseModel):
     ac: int = Field(default=10, ge=0, le=30)
     gold: int = Field(default=0, ge=0)
     start_location: str = ""
-    start_region: str = ""  # legacy alias for start_location
     ability_scores: dict[str, int] | None = None
     attacks: list[dict[str, object]] | None = None
 
@@ -34,7 +33,6 @@ class SpawnCreatureRequest(BaseModel):
     entity_type: str  # "npc" or "monster"
     # Location
     start_location: str
-    region_id: str = ""  # legacy alias
     # Creature stats
     hp: int = Field(ge=1, le=999)
     ac: int = Field(ge=0, le=30)

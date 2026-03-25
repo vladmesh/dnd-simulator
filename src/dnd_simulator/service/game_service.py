@@ -68,10 +68,7 @@ class GameService(
         self._brain_factory = BrainFactory(llm=llm)
 
     def start_game(self, world_name: str = "sword_vale", lang: str = "en") -> GameSession:
-        """Create a new game session with a world loaded from content.
-
-        Accepts either a legacy filename (arena.yaml) or a directory name (sword_vale).
-        """
+        """Create a new game session with a world loaded from content/worlds/<world_name>/."""
         session_id = uuid.uuid4().hex[:8]
 
         world_path = self._content_dir / "worlds" / world_name
@@ -189,9 +186,7 @@ class GameService(
         if not worlds_dir.exists():
             return result
         for entry in sorted(worlds_dir.iterdir()):
-            is_world_dir = entry.is_dir() and (entry / "world.yaml").exists()
-            is_world_file = entry.suffix in (".yaml", ".yml") and entry.is_file()
-            if is_world_dir or is_world_file:
+            if entry.is_dir() and (entry / "world.yaml").exists():
                 meta = load_world_meta(entry, lang=lang)
                 result.append({"id": entry.name, **meta})
         return result

@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 1, Task 1: Convert all single-file worlds to directory format — done. 7 worlds converted, 17 new tests.
+Phase 1, Task 2: Remove legacy single-file loading code and fallback aliases — done. `_resolve_source` removed, `_load_section` simplified, all fallback aliases purged from parsers/schemas.
 
 ## Next Steps
 
-- Task 2: Remove legacy dual-path loading code and fallback aliases from parsers/schemas
 - Task 3: Update integration test world references from `"arena.yaml"` to `"arena"` etc.

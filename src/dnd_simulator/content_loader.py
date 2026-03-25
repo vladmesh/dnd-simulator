@@ -1,8 +1,7 @@
-"""Load authored game content from YAML files.
+"""Load authored game content from YAML world directories.
 
-Supports two formats:
-- Legacy: single YAML file with all sections (regions, nations, npcs, player)
-- Directory: folder with separate files (world.yaml, regions.yaml, nations.yaml, npcs.yaml, player.yaml)
+Each world is a folder under content/worlds/ containing separate files:
+world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml, etc.
 """
 
 from __future__ import annotations
@@ -75,24 +74,9 @@ def _read_yaml(path: Path) -> dict[str, Any]:
         return yaml.safe_load(f) or {}
 
 
-def _resolve_source(path: Path) -> tuple[bool, Path]:
-    """Determine if path is a directory or legacy single file.
-
-    Returns (is_directory, resolved_path).
-    """
-    if path.is_dir():
-        return True, path
-    return False, path
-
-
-def _load_section(path: Path, is_dir: bool, section: str) -> dict[str, Any]:
-    """Load a section from either directory format or legacy single file."""
-    if is_dir:
-        return _read_yaml(path / f"{section}.yaml")
-    data = _read_yaml(path)
-    section_data = data.get(section, {})
-    assert isinstance(section_data, dict)
-    return section_data
+def _load_section(path: Path, section: str) -> dict[str, Any]:
+    """Load a section YAML file from a world directory."""
+    return _read_yaml(path / f"{section}.yaml")
 
 
 # -- Parsing helpers --
@@ -366,9 +350,8 @@ def build_class_resource_pools(char_class: CharClass) -> list[ResourcePool]:
 
 
 def load_world(path: Path, lang: str = "en") -> list[Region]:
-    """Load regions from a world YAML file or directory."""
-    is_dir, path = _resolve_source(path)
-    regions_data = _load_section(path, is_dir, "regions")
+    """Load regions from a world directory."""
+    regions_data = _load_section(path, "regions")
 
     regions: list[Region] = []
     for region_id, rdata in regions_data.items():
@@ -397,21 +380,12 @@ def load_world(path: Path, lang: str = "en") -> list[Region]:
 
 
 def load_locations(path: Path, regions: list[Region], lang: str = "en") -> list[Location]:
-    """Load locations from a world YAML file or directory.
+    """Load locations from a world directory.
 
     Every world must define at least one location explicitly.
     """
-    is_dir, resolved = _resolve_source(path)
-
-    locations_data: dict[str, Any] = {}
-    if is_dir:
-        loc_path = resolved / "locations.yaml"
-        if loc_path.exists():
-            locations_data = _read_yaml(loc_path)
-    else:
-        data = _read_yaml(resolved)
-        locations_data = data.get("locations", {})
-        assert isinstance(locations_data, dict)
+    loc_path = path / "locations.yaml"
+    locations_data: dict[str, Any] = _read_yaml(loc_path) if loc_path.exists() else {}
 
     if not locations_data:
         raise RuntimeError(f"No locations defined in world at {path}. Add a 'locations:' section.")
@@ -444,9 +418,8 @@ def _parse_locations(data: dict[str, Any], lang: str = "en") -> list[Location]:
 
 
 def load_nations(path: Path, lang: str = "en") -> list[Nation]:
-    """Load nations from a world YAML file or directory."""
-    is_dir, path = _resolve_source(path)
-    nations_data = _load_section(path, is_dir, "nations")
+    """Load nations from a world directory."""
+    nations_data = _load_section(path, "nations")
 
     nations: list[Nation] = []
     for nation_id, ndata in nations_data.items():
@@ -475,12 +448,11 @@ def load_nations(path: Path, lang: str = "en") -> list[Nation]:
 
 
 def load_settlements(path: Path, lang: str = "en") -> list[Settlement]:
-    """Load settlements from a world YAML file or directory.
+    """Load settlements from a world directory.
 
-    In directory mode, settlements are nested under regions in regions.yaml.
+    Settlements are nested under regions in regions.yaml.
     """
-    is_dir, path = _resolve_source(path)
-    regions_data = _load_section(path, is_dir, "regions")
+    regions_data = _load_section(path, "regions")
 
     settlements: list[Settlement] = []
     for region_id, rdata in regions_data.items():
@@ -501,9 +473,8 @@ def load_settlements(path: Path, lang: str = "en") -> list[Settlement]:
 
 
 def load_npcs(path: Path, lang: str = "en", known_locations: set[str] | None = None) -> list[Npc]:
-    """Load NPCs from a world YAML file or directory."""
-    is_dir, path = _resolve_source(path)
-    npcs_data = _load_section(path, is_dir, "npcs")
+    """Load NPCs from a world directory."""
+    npcs_data = _load_section(path, "npcs")
 
     npcs: list[Npc] = []
     for npc_id, ndata in npcs_data.items():
@@ -528,8 +499,7 @@ def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locati
     max_hp = int(ndata.get("hp", 4))
     ai_type = str(ndata.get("ai", "rule_based"))
 
-    # Location: start_location is required (or legacy region_id fallback)
-    location_id = str(ndata.get("start_location", "") or ndata.get("region_id", ""))
+    location_id = str(ndata.get("start_location", ""))
     if known_locations is not None and location_id and location_id not in known_locations:
         raise RuntimeError(
             f"NPC '{npc_id}' has start_location '{location_id}' which is not a known location. "
@@ -589,8 +559,7 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
     max_hp = int(pdata.get("hp", 10))
     attacks = parse_attacks(pdata.get("attacks") or [])
 
-    # Support both start_location and legacy start_region
-    location_id = str(pdata.get("start_location", pdata.get("start_region", pdata.get("location_id", ""))))
+    location_id = str(pdata.get("start_location", ""))
 
     player_id = str(pdata.get("id", "")) or f"player_{uuid.uuid4().hex[:8]}"
 
@@ -628,9 +597,8 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
 
 
 def load_battle_maps(path: Path) -> dict[str, BattleMap]:
-    """Load per-region battle map configs (size + walls) from a world YAML file or directory."""
-    is_dir, path = _resolve_source(path)
-    regions_data = _load_section(path, is_dir, "regions")
+    """Load per-region battle map configs (size + walls) from a world directory."""
+    regions_data = _load_section(path, "regions")
 
     result: dict[str, BattleMap] = {}
     for region_id, rdata in regions_data.items():
@@ -650,20 +618,12 @@ def load_battle_maps(path: Path) -> dict[str, BattleMap]:
 
 
 def load_world_meta(path: Path, lang: str = "en") -> dict[str, str]:
-    """Load world metadata (name, description, default_player_faction) from directory format."""
-    is_dir, path = _resolve_source(path)
-    if is_dir:
-        meta = _read_yaml(path / "world.yaml")
-        return {
-            "name": resolve_text(meta.get("name", path.name), lang),
-            "description": resolve_text(meta.get("description", ""), lang),
-            "default_player_faction": str(meta.get("default_player_faction", "")),
-        }
-    data = _read_yaml(path)
+    """Load world metadata (name, description, default_player_faction) from a world directory."""
+    meta = _read_yaml(path / "world.yaml")
     return {
-        "name": resolve_text(data.get("name", path.stem), lang),
-        "description": resolve_text(data.get("description", ""), lang),
-        "default_player_faction": str(data.get("default_player_faction", "")),
+        "name": resolve_text(meta.get("name", path.name), lang),
+        "description": resolve_text(meta.get("description", ""), lang),
+        "default_player_faction": str(meta.get("default_player_faction", "")),
     }
 
 
@@ -673,13 +633,7 @@ def load_factions(path: Path) -> dict[tuple[str, str], FactionRelation]:
     Returns a dict of (faction_a, faction_b) → FactionRelation.
     Keys are canonically sorted (min, max). Missing file → empty dict.
     """
-    is_dir, resolved = _resolve_source(path)
-    if is_dir:
-        factions_data = _read_yaml(resolved / "factions.yaml")
-    else:
-        data = _read_yaml(resolved)
-        factions_data = data.get("factions", {})
-        assert isinstance(factions_data, dict)
+    factions_data = _read_yaml(path / "factions.yaml")
 
     if not factions_data:
         return {}
@@ -740,13 +694,7 @@ def load_monsters(path: Path, lang: str = "en") -> tuple[dict[str, MonsterTempla
     Returns (templates_by_id, encounters_by_location_id).
     Missing monsters.yaml → empty dicts (worlds without monsters are valid).
     """
-    is_dir, resolved = _resolve_source(path)
-    if is_dir:
-        monsters_data = _read_yaml(resolved / "monsters.yaml")
-    else:
-        data = _read_yaml(resolved)
-        monsters_data = data.get("monsters", {})
-        assert isinstance(monsters_data, dict)
+    monsters_data = _read_yaml(path / "monsters.yaml")
 
     if not monsters_data:
         return {}, {}
@@ -785,13 +733,7 @@ def load_squads(path: Path, lang: str = "en") -> dict[str, Squad]:
 
     Returns squads_by_id. Missing squads.yaml -> empty dict.
     """
-    is_dir, resolved = _resolve_source(path)
-    if is_dir:
-        squads_data = _read_yaml(resolved / "squads.yaml")
-    else:
-        data = _read_yaml(resolved)
-        squads_data = data.get("squads", {})
-        assert isinstance(squads_data, dict)
+    squads_data = _read_yaml(path / "squads.yaml")
 
     if not squads_data:
         return {}

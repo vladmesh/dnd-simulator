@@ -174,7 +174,7 @@ def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) 
 
     max_hp = int(data["hp"])
     attacks = parse_attacks(data.get("attacks") or [])
-    location_id = str(data.get("start_location") or data["region_id"])
+    location_id = str(data["start_location"])
 
     return Creature(
         id=str(data["id"]),

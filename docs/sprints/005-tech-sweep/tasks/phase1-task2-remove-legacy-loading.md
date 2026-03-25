@@ -42,4 +42,10 @@ Work through the list above. Each removal is small and independent. Run `make ch
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward removal. All `_resolve_source()` calls and `is_dir` branching eliminated.
+`_load_section` simplified from 3 params to 2. Every loader function now assumes directory format.
+No old tests broke — all 1004 pass. The legacy paths were truly dead after task 1 converted all worlds.
