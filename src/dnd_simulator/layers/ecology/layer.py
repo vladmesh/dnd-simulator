@@ -69,6 +69,7 @@ class EcologyLayer(Layer):
                         source_layer=self.name,
                         data={
                             "squad_id": squad.id,
+                            "squad_name": squad.name,
                             "from": moved[0],
                             "to": moved[1],
                         },
@@ -309,7 +310,9 @@ class EcologyLayer(Layer):
             data={
                 "location_id": location_id,
                 "winner_id": winner.id,
+                "winner_name": winner.name,
                 "loser_id": loser.id,
+                "loser_name": loser.name,
                 "winner_strength": winner.strength,
                 "loser_strength": loser.strength,
             },

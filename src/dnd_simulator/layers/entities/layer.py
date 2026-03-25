@@ -49,6 +49,10 @@ _LOGGED_EVENTS = {
     EventType.COMBAT_STARTED,
     EventType.COMBAT_ENDED,
     EventType.ENCOUNTER_SPAWNED,
+    EventType.SQUAD_MOVE,
+    EventType.SQUAD_COMBAT,
+    EventType.SQUAD_MATERIALIZED,
+    EventType.SQUAD_DEMATERIALIZED,
 }
 
 
@@ -354,6 +358,21 @@ class EntitiesLayer(Layer):
 
         self._materialized_squads[squad_id] = (creature_ids, strength, len(templates_to_spawn))
 
+        # Log materialization event so players at this location see it
+        squad_name = str(info.get("name", squad_id))
+        mat_event = Event(
+            event_type=EventType.SQUAD_MATERIALIZED,
+            source_layer="entities",
+            data={
+                "squad_id": squad_id,
+                "squad_name": squad_name,
+                "location_id": location,
+                "creature_count": len(creature_ids),
+            },
+            description=f"{squad_name} materialized at {location}",
+        )
+        self._location_log[location].append(mat_event)
+
     def _dematerialize_squad(
         self,
         squad_id: str,
@@ -364,10 +383,16 @@ class EntitiesLayer(Layer):
     ) -> None:
         """Remove materialized creatures and update squad strength."""
         alive_count = 0
+        location_id: str | None = None
+        squad_name = squad_id
         for cid in creature_ids:
             entity = self._entities.get(cid)
-            if isinstance(entity, Creature) and entity.is_alive:
-                alive_count += 1
+            if isinstance(entity, Creature):
+                if location_id is None:
+                    location_id = entity.location_id
+                    squad_name = entity.name  # creatures share the template name
+                if entity.is_alive:
+                    alive_count += 1
 
         # Proportional strength update
         new_strength = round(original_strength * alive_count / spawn_count) if spawn_count > 0 else original_strength
@@ -391,7 +416,12 @@ class EntitiesLayer(Layer):
                 Event(
                     event_type=EventType.SQUAD_DEMATERIALIZED,
                     source_layer="entities",
-                    data={"squad_id": squad_id, "new_strength": new_strength},
+                    data={
+                        "squad_id": squad_id,
+                        "squad_name": squad_name,
+                        "location_id": location_id or "",
+                        "new_strength": new_strength,
+                    },
                     description=f"Squad {squad_id} dematerialized (strength {new_strength})",
                 )
             )
@@ -718,9 +748,16 @@ class EntitiesLayer(Layer):
                 self.remove_entity(entity_id)
 
         if event.event_type in _LOGGED_EVENTS:
-            location_id = self._event_location(event)
-            if location_id:
-                self._location_log[location_id].append(event)
+            if event.event_type == EventType.SQUAD_MOVE:
+                # Log at both origin and destination so observers at either location see it
+                for key in ("from", "to"):
+                    loc = event.data.get(key)
+                    if isinstance(loc, str):
+                        self._location_log[loc].append(event)
+            else:
+                location_id = self._event_location(event)
+                if location_id:
+                    self._location_log[location_id].append(event)
 
         return ActionResult()
 
@@ -767,6 +804,17 @@ class EntitiesLayer(Layer):
                 entity = self._entities.get(eid)
                 if entity:
                     return entity.location_id
+        # Squad events: SQUAD_MOVE uses "to" (destination), others use "location_id"
+        if event.event_type == EventType.SQUAD_MOVE:
+            to = event.data.get("to")
+            from_ = event.data.get("from")
+            if isinstance(to, str):
+                return to
+            if isinstance(from_, str):
+                return from_
+        loc = event.data.get("location_id")
+        if isinstance(loc, str):
+            return loc
         return None
 
     def _on_combat_ended(self, location_id: str) -> None:

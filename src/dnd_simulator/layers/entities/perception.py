@@ -47,6 +47,14 @@ def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -
         return _perceive_combat_started(event, observer, get_entity)
     if event.event_type == EventType.COMBAT_ENDED:
         return _("Combat ended.")
+    if event.event_type == EventType.SQUAD_MOVE:
+        return _perceive_squad_move(event, observer)
+    if event.event_type == EventType.SQUAD_COMBAT:
+        return _perceive_squad_combat(event)
+    if event.event_type == EventType.SQUAD_MATERIALIZED:
+        return _perceive_squad_materialized(event)
+    if event.event_type == EventType.SQUAD_DEMATERIALIZED:
+        return _perceive_squad_dematerialized(event)
     if event.event_type == EventType.CUSTOM and event.data.get("inspect_target"):
         return _perceive_inspect(event, observer, get_entity)
     return _("Something happened ({type})").format(type=event.event_type.value)
@@ -334,3 +342,41 @@ def _perceive_combat_started(event: Event, observer: Character, get_entity: GetE
     names = event.data.get("turn_order_names", [])
     order_str = ", ".join(str(n) for n in names) if names else "?"
     return _("Combat started! Initiative order: {order}").format(order=order_str)
+
+
+# -- Squad events --
+
+
+def _perceive_squad_move(event: Event, observer: Character) -> str:
+    name = str(event.data.get("squad_name", _("A group")))
+    to_loc = event.data.get("to", "")
+    from_loc = event.data.get("from", "")
+    at_dest = observer.location_id == to_loc
+    at_origin = observer.location_id == from_loc
+    if at_dest and at_origin:
+        return _("{name} passes through").format(name=name)
+    if at_dest:
+        return _("{name} arrives").format(name=name)
+    if at_origin:
+        return _("{name} departs").format(name=name)
+    return _("{name} is on the move").format(name=name)
+
+
+def _perceive_squad_combat(event: Event) -> str:
+    winner = str(event.data.get("winner_name", _("A group")))
+    loser = str(event.data.get("loser_name", _("another group")))
+    loser_strength = event.data.get("loser_strength", 1)
+    if loser_strength == 0:
+        return _("{winner} destroyed {loser}").format(winner=winner, loser=loser)
+    return _("{winner} defeated {loser}").format(winner=winner, loser=loser)
+
+
+def _perceive_squad_materialized(event: Event) -> str:
+    name = str(event.data.get("squad_name", _("A group")))
+    count = event.data.get("creature_count", 0)
+    return _("{name} appears — {count} creatures materialize").format(name=name, count=count)
+
+
+def _perceive_squad_dematerialized(event: Event) -> str:
+    name = str(event.data.get("squad_name", _("A group")))
+    return _("{name} moves on, disappearing into the distance").format(name=name)

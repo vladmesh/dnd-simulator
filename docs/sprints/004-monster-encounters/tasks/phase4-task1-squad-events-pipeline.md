@@ -67,4 +67,15 @@ Fix all four so squad events appear as `PerceivedEvent` in the WebSocket stream.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Four fixes applied:
+1. Added 4 squad event types to `_LOGGED_EVENTS` in EntitiesLayer
+2. `_event_location()` extended with fallback to `data["to"]` for SQUAD_MOVE and `data["location_id"]` for other squad events
+3. SQUAD_MOVE logged at BOTH origin and destination locations (so observers at either end see the event)
+4. `_materialize_squad()` now writes a `SQUAD_MATERIALIZED` event directly to the location log
+5. `_dematerialize_squad()` event enriched with `squad_name` and `location_id`
+6. EcologyLayer events enriched with `squad_name` and `winner_name`/`loser_name`
+7. Four perception handlers added: `_perceive_squad_move` (context-aware: arrives/departs/passes through), `_perceive_squad_combat`, `_perceive_squad_materialized`, `_perceive_squad_dematerialized`

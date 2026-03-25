@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 4 tasks generated. Ready to start task 1.
+Phase 4, Task 1: Squad Events in Perception Pipeline — done. Squad events now flow through location log → perceived events → WebSocket.
 
 ## Next Steps
 
