@@ -267,7 +267,7 @@ class EntitiesLayer(Layer):
     ) -> PeacefulAwareness | CombatAwareness:
         """Build awareness for a creature — dispatches by combat state."""
         if creature.in_combat:
-            return self.build_combat_awareness(creature)
+            return self.build_combat_awareness(creature, query_fn)
         return self.build_peaceful_awareness(creature, time, query_fn)
 
     def build_peaceful_awareness(self, creature: Creature, time: GameDateTime, query_fn: QueryFn) -> PeacefulAwareness:
@@ -335,8 +335,8 @@ class EntitiesLayer(Layer):
             except Exception:
                 logger.warning("politics_query_failed", region_id=region_id, exc_info=True)
 
-        # Nearby entities (internal — no query needed)
-        nearby = self.build_nearby_entities(creature, time.hour)
+        # Nearby entities (uses query_fn for faction hostility)
+        nearby = self.build_nearby_entities(creature, time.hour, query_fn)
 
         # NPC scheduled location name
         if isinstance(creature, Npc):
@@ -356,8 +356,8 @@ class EntitiesLayer(Layer):
             nearby=nearby,
         )
 
-    def build_combat_awareness(self, creature: Creature) -> CombatAwareness:
-        """Build combat awareness using internal data only."""
+    def build_combat_awareness(self, creature: Creature, query_fn: QueryFn | None = None) -> CombatAwareness:
+        """Build combat awareness using internal data + optional faction queries."""
         from dnd_simulator.core.combat import Position
         from dnd_simulator.rules.movement import direction_label, grid_distance
 
@@ -385,11 +385,13 @@ class EntitiesLayer(Layer):
                 dy = other_pos.y - my_pos.y
                 direction = direction_label(dx, dy)
             e_conditions = frozenset(e.conditions) if isinstance(e, Creature) else frozenset()
+            is_hostile = self._check_faction_hostility(creature, e, query_fn)
             nearby.append(
                 CombatEntity(
                     id=e.id,
                     description=desc,
                     is_wounded=is_wounded,
+                    is_hostile=is_hostile,
                     distance_ft=distance_ft,
                     direction=direction,
                     x=other_pos.x if other_pos else 0,
@@ -427,7 +429,9 @@ class EntitiesLayer(Layer):
             self_conditions=frozenset(creature.conditions),
         )
 
-    def build_nearby_entities(self, creature: Creature, hour: int) -> list[NearbyEntity]:
+    def build_nearby_entities(
+        self, creature: Creature, hour: int, query_fn: QueryFn | None = None
+    ) -> list[NearbyEntity]:
         """Build list of nearby entities for peaceful awareness."""
         result: list[NearbyEntity] = []
         creature_location = creature.location_id
@@ -446,8 +450,32 @@ class EntitiesLayer(Layer):
                 continue
             desc = creature.perceive(e) if isinstance(creature, Character) and isinstance(e, Entity) else e.name
             is_wounded = isinstance(e, Creature) and e.current_hp < e.max_hp // 2
-            result.append(NearbyEntity(id=e.id, description=desc, is_wounded=is_wounded))
+            is_hostile = self._check_faction_hostility(creature, e, query_fn)
+            result.append(NearbyEntity(id=e.id, description=desc, is_wounded=is_wounded, is_hostile=is_hostile))
         return result
+
+    def _check_faction_hostility(self, observer: Entity, other: Entity, query_fn: QueryFn | None) -> bool:
+        """Check if two entities are hostile based on faction relations."""
+        if not observer.faction_id or not other.faction_id:
+            return False
+        if observer.faction_id == other.faction_id:
+            return False
+        if query_fn is None:
+            return False
+        try:
+            answer = query_fn(
+                "politics",
+                Query(question=QueryType.FACTION_RELATION, params={"a": observer.faction_id, "b": other.faction_id}),
+            )
+            return str(answer.value) == "hostile"
+        except Exception:
+            logger.warning(
+                "faction_relation_query_failed",
+                a=observer.faction_id,
+                b=other.faction_id,
+                exc_info=True,
+            )
+            return False
 
     def get_perceived_events(self, creature: Creature) -> list[PerceivedEvent]:
         """Get new events perceived by this creature as structured data.

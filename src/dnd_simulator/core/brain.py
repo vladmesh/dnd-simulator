@@ -97,11 +97,17 @@ class RuleBrain(Brain):
         awareness: PeacefulAwareness,
         events: list[PerceivedEvent],
     ) -> Action:
-        """Peaceful mode: respond with canned line if someone spoke nearby.
+        """Peaceful mode: attack hostile factions on sight, respond to speech.
 
         Returns end_turn instead of idle — in multi-action loop, idle would
         loop forever (it's free). end_turn signals the turn is done.
         """
+        # Faction hostility: attack nearest hostile on sight
+        hostile = next((n for n in awareness.nearby if n.is_hostile), None)
+        if hostile is not None:
+            logger.info("rule_hostile_attack", target=hostile.id)
+            return Action(name=ActionType.ATTACK, params={"target_id": hostile.id})
+
         response = creature.get_canned_response(awareness.hour)
         if response is None:
             return END_TURN
@@ -247,6 +253,8 @@ class RuleBrain(Brain):
                 score += 60.0
             if eid in _feared:
                 score += 25.0
+            if enemy.is_hostile:
+                score += 40.0
             if enemy.is_wounded:
                 score += 50.0
             if dist <= reach:

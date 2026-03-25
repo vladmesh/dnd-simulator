@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dnd_simulator.core.awareness import CombatAwareness, CombatEntity, PeacefulAwareness, PerceivedEvent
+from dnd_simulator.core.awareness import CombatAwareness, CombatEntity, NearbyEntity, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import RuleBrain
 from dnd_simulator.core.character import (
     Ability,
@@ -290,3 +290,163 @@ class TestRuleBrainTags:
         action = brain.choose_action(npc, awareness, [])
         assert action.name == "attack"
         assert action.params["target_id"] == "e1"
+
+
+class TestRuleBrainFactionHostility:
+    """RuleBrain faction-aware behavior: auto-attack hostiles, prefer faction enemies."""
+
+    def test_hostile_faction_triggers_attack_in_peaceful_mode(self) -> None:
+        """Orc guard meets kingdom soldier in peaceful mode → attacks."""
+        orc = Npc(
+            id="orc1",
+            name="Orc Guard",
+            location_id="road",
+            role=NpcRole.GUARD,
+            attacks=(_SWORD,),
+            max_hp=20,
+            current_hp=20,
+            faction_id="orcs",
+        )
+        orc.in_combat = False
+        brain = RuleBrain()
+        awareness = _peaceful_awareness()
+        # Nearby entity from hostile faction
+        awareness = PeacefulAwareness(
+            hour=12,
+            day=1,
+            month=1,
+            year=1,
+            weather={"condition": "clear", "temperature": 15},
+            location_name="road",
+            region_name="Test",
+            settlements=None,
+            territory_owner=None,
+            nation_info=None,
+            nearby=[NearbyEntity(id="soldier1", description="Kingdom Soldier", is_hostile=True)],
+        )
+        action = brain.choose_action(orc, awareness, [])
+        assert action.name == "attack"
+        assert action.params["target_id"] == "soldier1"
+
+    def test_same_faction_no_attack_in_peaceful_mode(self) -> None:
+        """Two kingdom guards meet → no attack."""
+        guard = Npc(
+            id="g1",
+            name="Guard",
+            location_id="road",
+            role=NpcRole.GUARD,
+            attacks=(_SWORD,),
+            max_hp=20,
+            current_hp=20,
+            faction_id="kingdom",
+        )
+        guard.in_combat = False
+        brain = RuleBrain()
+        awareness = PeacefulAwareness(
+            hour=12,
+            day=1,
+            month=1,
+            year=1,
+            weather={"condition": "clear", "temperature": 15},
+            location_name="road",
+            region_name="Test",
+            settlements=None,
+            territory_owner=None,
+            nation_info=None,
+            nearby=[NearbyEntity(id="g2", description="Guard", is_hostile=False)],
+        )
+        action = brain.choose_action(guard, awareness, [])
+        assert action.name == "end_turn"
+
+    def test_neutral_factions_no_attack(self) -> None:
+        """Neutral factions don't trigger combat."""
+        npc = Npc(
+            id="n1",
+            name="Traveler",
+            location_id="road",
+            role=NpcRole.GUARD,
+            attacks=(_SWORD,),
+            max_hp=20,
+            current_hp=20,
+            faction_id="merchants",
+        )
+        npc.in_combat = False
+        brain = RuleBrain()
+        awareness = PeacefulAwareness(
+            hour=12,
+            day=1,
+            month=1,
+            year=1,
+            weather={"condition": "clear", "temperature": 15},
+            location_name="road",
+            region_name="Test",
+            settlements=None,
+            territory_owner=None,
+            nation_info=None,
+            nearby=[NearbyEntity(id="n2", description="Farmer", is_hostile=False)],
+        )
+        action = brain.choose_action(npc, awareness, [])
+        assert action.name == "end_turn"
+
+    def test_hostile_faction_preferred_in_combat_scoring(self) -> None:
+        """In combat, hostile-faction targets score higher than neutral ones."""
+        npc = Npc(
+            id="n1",
+            name="Guard",
+            location_id="arena",
+            attacks=(_SWORD,),
+            max_hp=20,
+            current_hp=20,
+            faction_id="kingdom",
+        )
+        # Two enemies at same distance — one hostile faction, one not
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("neutral", Position(10, 15))  # 5 ft
+        bm.set_position("hostile", Position(15, 10))  # 5 ft
+        neutral_enemy = Npc(
+            id="neutral", name="Neutral", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20
+        )
+        hostile_enemy = Npc(
+            id="hostile", name="Hostile", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20
+        )
+        awareness = _build_combat_awareness(npc, [npc, neutral_enemy, hostile_enemy], bm)
+        # Mark hostile entity via is_hostile on CombatEntity
+        from dataclasses import replace
+
+        patched_nearby = [replace(e, is_hostile=True) if e.id == "hostile" else e for e in awareness.nearby]
+        awareness = replace(awareness, nearby=patched_nearby)
+        brain = RuleBrain()
+        action = brain.choose_action(npc, awareness, [])
+        assert action.name == "attack"
+        assert action.params["target_id"] == "hostile"
+
+    def test_no_faction_creature_is_neutral(self) -> None:
+        """Creature with empty faction_id doesn't trigger hostility."""
+        npc = Npc(
+            id="n1",
+            name="Wanderer",
+            location_id="road",
+            role=NpcRole.GUARD,
+            attacks=(_SWORD,),
+            max_hp=20,
+            current_hp=20,
+            # faction_id defaults to ""
+        )
+        npc.in_combat = False
+        brain = RuleBrain()
+        awareness = PeacefulAwareness(
+            hour=12,
+            day=1,
+            month=1,
+            year=1,
+            weather={"condition": "clear", "temperature": 15},
+            location_name="road",
+            region_name="Test",
+            settlements=None,
+            territory_owner=None,
+            nation_info=None,
+            nearby=[NearbyEntity(id="n2", description="Another Wanderer", is_hostile=False)],
+        )
+        action = brain.choose_action(npc, awareness, [])
+        assert action.name == "end_turn"

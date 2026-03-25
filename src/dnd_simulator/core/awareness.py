@@ -26,6 +26,7 @@ class NearbyEntity:
     id: str
     description: str
     is_wounded: bool = False
+    is_hostile: bool = False
 
 
 @dataclass(frozen=True)
@@ -85,6 +86,7 @@ class CombatEntity:
     id: str
     description: str
     is_wounded: bool = False
+    is_hostile: bool = False
     distance_ft: int = 0
     direction: str = ""
     x: int = 0

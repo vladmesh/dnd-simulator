@@ -44,4 +44,8 @@ Scenarios:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added `is_hostile` field to both `NearbyEntity` and `CombatEntity` (frozen dataclasses in `core/awareness.py`). Hostility computed via `_check_faction_hostility` helper on `EntitiesLayer` — queries `PoliticsLayer.FACTION_RELATION` through `query_fn`. `build_combat_awareness` now accepts optional `query_fn` (was internal-only before). RuleBrain checks hostile nearby entities first in peaceful mode, and adds +40 score for hostile-faction enemies in combat target scoring. No old tests modified — all new behavior is additive (existing tests don't use `is_hostile`).

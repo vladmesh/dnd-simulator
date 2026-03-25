@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 2, Task 1: Generalize Encounter Triggers — done. Any active creature triggers encounters on location change.
+Phase 2, Task 2: Faction-Aware Hostile AI — done. RuleBrain attacks hostiles on sight, scores faction enemies higher in combat.
 
 ## Next Steps
 
