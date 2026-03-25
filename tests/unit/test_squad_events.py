@@ -184,7 +184,7 @@ class TestSquadMaterializationEvent:
             "max_strength": 4,
         }
 
-        layer._materialize_squad("orc_patrol", squad_info, type(None))  # brain_cls unused in this test path
+        layer._activation._materialize_squad("orc_patrol", squad_info, type(None))  # brain_cls unused in this test path
 
         perceived = layer.get_perceived_events(player)
         assert len(perceived) == 1

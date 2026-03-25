@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 2, Task 1: Extract AwarenessBuilder — done. 212 LOC moved to awareness_builder.py, layer.py 1214→1002.
+Phase 2, Task 2: Extract ActivationManager — done. 346 LOC moved, layer.py 1002→656.
 
 ## Next Steps
 

@@ -50,4 +50,8 @@ Methods to extract:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Extracted 7 methods into ActivationManager class (402 LOC). Layer.py: 1002→656. The `_spawn_counter` now lives on ActivationManager (shared entity dict means spawned creatures are visible to layer). Old tests in test_spawn_engine.py patched `layer.random` — updated to `activation_manager.random`. One test in test_squad_events.py called `layer._materialize_squad()` directly — updated to `layer._activation._materialize_squad()`. No behavioral changes.
