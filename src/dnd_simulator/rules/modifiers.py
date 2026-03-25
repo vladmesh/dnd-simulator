@@ -272,16 +272,21 @@ def attack_modifiers(attacker: Creature, target: Creature, *, melee: bool) -> At
         if m.stat == StatType.ATTACK_ROLL and m.op == ModifierOp.ADD and m.value:
             roll_components.append(RollComponent(source=m.source, value=m.value))
 
-    # Damage bonus: Fighting Style Dueling (+2 damage with one-handed melee, no other weapon)
+    # Damage bonus: ability modifier + Fighting Style bonuses
+    # D&D 5e PHB p.196: "You add your ability modifier to the damage"
+    dmg_bonus = ability_mod
+    dmg_components: list[RollComponent] = []
+    if ability_mod:
+        dmg_components.append(RollComponent(source="ability", value=ability_mod))
+
+    # Fighting Style Dueling (+2 damage with one-handed melee, no other weapon)
     # D&D 5e PHB p.72: "wielding a melee weapon in one hand and no other weapons"
     # We have a single weapon slot, so "no other weapons" is always true.
     # TODO: exclude two-handed weapons when is_two_handed is added to WeaponDef
-    dmg_bonus = 0
-    dmg_components: list[RollComponent] = []
     if isinstance(attacker, Character) and melee:
         fighter = attacker.get_feature(FighterFeatures)
         if fighter and fighter.fighting_style == FightingStyle.DUELING and attacker.equipped_weapon:
-            dmg_bonus = 2
+            dmg_bonus += 2
             dmg_components.append(RollComponent(source="dueling", value=2))
 
     # Dice bonuses (Bless +1d4, etc.) — unresolved, rolled later by combat_manager

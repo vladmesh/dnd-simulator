@@ -61,7 +61,6 @@ export function EventLog() {
                 className="absolute left-0 top-0 w-full px-3 py-0.5"
                 style={{ height: `${vRow.size}px`, transform: `translateY(${vRow.start}px)` }}
               >
-                <span className="text-muted-foreground/60">[{entry.event.event_type}]</span>{" "}
                 <span className={colorClass}>{entry.event.description}</span>
               </div>
             )

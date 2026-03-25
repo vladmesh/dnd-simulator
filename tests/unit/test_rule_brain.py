@@ -48,6 +48,7 @@ def _build_combat_awareness(
                 id=e.id,
                 description=e.name,
                 is_wounded=e.current_hp < e.max_hp // 2,
+                is_hostile=True,
                 distance_ft=dist,
                 direction=direction,
                 x=other_pos.x if other_pos else 0,
@@ -414,7 +415,9 @@ class TestRuleBrainFactionHostility:
         # Mark hostile entity via is_hostile on CombatEntity
         from dataclasses import replace
 
-        patched_nearby = [replace(e, is_hostile=True) if e.id == "hostile" else e for e in awareness.nearby]
+        patched_nearby = [
+            replace(e, is_hostile=True) if e.id == "hostile" else replace(e, is_hostile=False) for e in awareness.nearby
+        ]
         awareness = replace(awareness, nearby=patched_nearby)
         brain = RuleBrain()
         action = brain.choose_action(npc, awareness, [])

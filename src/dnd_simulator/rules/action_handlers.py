@@ -51,6 +51,8 @@ def handle_idle(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
 
 def handle_say(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
     """Say: emit speech event."""
+    if "text" not in action.params or not str(action.params["text"]).strip():
+        return ActionResult(success=False, error="Nothing to say (text is empty)")
     text = str(action.params["text"])
     logger.info("say", text=text[:80])
     emit_fn(
@@ -236,7 +238,7 @@ def handle_use_item(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Actio
         )
         return ActionResult()
 
-    raise RuntimeError(f"Unhandled item type: {item.item_type}")
+    return ActionResult(success=False, error=f"Cannot use item of type '{item.item_type}' — try equipping it instead")
 
 
 _BLESS_DURATION_ROUNDS = 3

@@ -55,13 +55,23 @@ class EcologyLayer(Layer):
         """Move squads and resolve squad-vs-squad combat."""
         now = time.to_total_seconds()
         events: list[Event] = []
+        logger.debug("ecology_tick", squad_count=len(self._squads), delta_seconds=delta.seconds)
 
         # Phase 1: Move squads
         for squad in list(self._squads.values()):
             last = self._last_move_time.get(squad.id, 0)
             if now - last < squad.tick_interval:
+                logger.debug("squad_skip", squad_id=squad.id, cooldown_remaining=squad.tick_interval - (now - last))
                 continue
             moved = self._move_squad(squad)
+            logger.info(
+                "squad_tick",
+                squad_id=squad.id,
+                squad_name=squad.name,
+                location=squad.current_location_id,
+                moved=moved is not None,
+                moved_to=moved[1] if moved else None,
+            )
             if moved:
                 events.append(
                     Event(
@@ -80,6 +90,15 @@ class EcologyLayer(Layer):
 
         # Phase 2: Resolve squad-vs-squad combat at shared locations
         events.extend(self._resolve_squad_combat(query_fn))
+
+        if events:
+            logger.info(
+                "ecology_tick_summary",
+                tick_events=len(events),
+                squads={
+                    s.id: {"location": s.current_location_id, "strength": s.strength} for s in self._squads.values()
+                },
+            )
 
         return events
 

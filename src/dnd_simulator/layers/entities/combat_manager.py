@@ -50,9 +50,14 @@ class CombatManager:
 
     # -- Combat lifecycle --
 
-    def start_combat(self, location_id: str) -> CombatState:
-        """Roll initiative, create battle map, and start combat at a location."""
+    def start_combat(self, location_id: str) -> CombatState | None:
+        """Roll initiative, create battle map, and start combat at a location.
+
+        Returns None if fewer than 2 alive creatures are present.
+        """
         creatures = self._active_creatures_at_location(location_id)
+        if len(creatures) < 2:
+            return None
         ordered = roll_initiative(creatures)
 
         # Use pre-configured battle map (with walls etc.) if available, otherwise default
@@ -74,7 +79,15 @@ class CombatManager:
             c.in_combat = True
 
         initiative = [(c.id, c.name) for c in ordered]
-        logger.info("combat_start", location_id=location_id, initiative=initiative)
+        positions = {eid: (pos.x, pos.y) for eid, pos in battle_map.positions.items()}
+        logger.info(
+            "combat_start",
+            location_id=location_id,
+            initiative=initiative,
+            map_size=f"{battle_map.width}x{battle_map.height}",
+            positions=positions,
+            battle_map="\n" + battle_map.render_ascii(),
+        )
 
         # Log combat start with initiative order
         self._location_log[location_id].append(
@@ -126,15 +139,32 @@ class CombatManager:
         )
 
     def _remove_from_combat(self, location_id: str, entity_id: str) -> None:
-        """Remove an entity from combat turn order and map. End combat if ≤1 left."""
+        """Remove an entity from combat turn order and map. End combat if no hostility remains."""
         combat = self._combats.get(location_id)
         if not combat:
             return
         if entity_id in combat.turn_order:
             combat.turn_order.remove(entity_id)
         combat.battle_map.remove(entity_id)
-        if len(combat.turn_order) <= 1:
+        if len(combat.turn_order) <= 1 or not self._has_opposing_factions(combat):
             self._end_combat(location_id)
+
+    def _has_opposing_factions(self, combat: CombatState) -> bool:
+        """Check if alive creatures in combat could still be hostile to each other.
+
+        Returns True (keep fighting) if:
+        - Any creature lacks a faction (unknown hostility — assume hostile)
+        - Two or more different factions are present
+        """
+        alive: list[Creature] = []
+        for eid in combat.turn_order:
+            e = self._entities.get(eid)
+            if isinstance(e, Creature) and e.is_alive:
+                alive.append(e)
+        if any(not c.faction_id for c in alive):
+            return True  # unknown faction — can't prove they're allies
+        factions = {c.faction_id for c in alive}
+        return len(factions) > 1
 
     # -- Action resolution --
 
@@ -187,6 +217,13 @@ class CombatManager:
         new_pos = move_direction(cur_pos, direction, ft, bm, entity_id)
 
         if new_pos == cur_pos:
+            logger.info(
+                "move_blocked",
+                entity_id=entity_id,
+                pos=(cur_pos.x, cur_pos.y),
+                direction=direction,
+                battle_map="\n" + bm.render_ascii(),
+            )
             return ActionResult(success=False, error=_("Cannot move there — blocked."))
 
         bm.set_position(entity_id, new_pos)
@@ -395,11 +432,15 @@ class CombatManager:
     # -- Helpers --
 
     def _active_creatures_at_location(self, location_id: str, exclude_id: str = "") -> list[Creature]:
-        """Get active creatures at a location."""
+        """Get active, alive creatures at a location."""
         return [
             e
             for e in self._entities.values()
-            if isinstance(e, Creature) and e.active and e.location_id == location_id and e.id != exclude_id
+            if isinstance(e, Creature)
+            and e.active
+            and e.is_alive
+            and e.location_id == location_id
+            and e.id != exclude_id
         ]
 
     def _event_location(self, event: Event) -> str | None:

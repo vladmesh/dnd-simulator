@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { useGameStore } from "@/store/gameStore"
 import { wsClient } from "@/transport/wsClient"
@@ -32,6 +32,9 @@ export function ActionBar() {
   const mode = useGameStore((s) => s.mode)
   const awareness = useGameStore((s) => s.awareness)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [sayOpen, setSayOpen] = useState(false)
+  const [sayText, setSayText] = useState("")
+  const sayInputRef = useRef<HTMLInputElement>(null)
 
   const sendAction = (name: string, params?: Record<string, unknown>) => {
     wsClient.send({ type: "action", name, params })
@@ -48,7 +51,14 @@ export function ActionBar() {
     )
   }
 
-  const available = awareness?.available_actions ?? []
+  // buy/sell always handled by TradePanel; use_item/equip/unequip handled by
+  // InventoryPanel in peaceful mode, but must stay in ActionBar during combat
+  // (sidebar switches to CombatPanel, InventoryPanel not visible)
+  const ALWAYS_HIDDEN = new Set(["buy", "sell"])
+  const PEACEFUL_ONLY_HIDDEN = new Set(["use_item", "equip", "unequip"])
+  const available = (awareness?.available_actions ?? []).filter(
+    (a) => !ALWAYS_HIDDEN.has(a.name) && !(mode === "peaceful" && PEACEFUL_ONLY_HIDDEN.has(a.name)),
+  )
   const availableItems = awareness?.available_items ?? []
   const hasAction = (name: string) => available.some((a) => a.name === name)
 
@@ -158,6 +168,63 @@ export function ActionBar() {
               )
             }
             return null
+          }
+
+          // Say — needs text input
+          if (name === "say") {
+            return (
+              <div key={name} className="relative flex items-center gap-1">
+                {sayOpen ? (
+                  <>
+                    <input
+                      ref={sayInputRef}
+                      type="text"
+                      className="h-8 rounded border border-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                      placeholder={t("game:say_placeholder")}
+                      value={sayText}
+                      onChange={(e) => setSayText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && sayText.trim()) {
+                          sendAction("say", { text: sayText.trim() })
+                          setSayText("")
+                          setSayOpen(false)
+                        }
+                        if (e.key === "Escape") {
+                          setSayText("")
+                          setSayOpen(false)
+                        }
+                      }}
+                      disabled={isDisabled()}
+                      autoFocus
+                    />
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={isDisabled() || !sayText.trim()}
+                      onClick={() => {
+                        if (sayText.trim()) {
+                          sendAction("say", { text: sayText.trim() })
+                          setSayText("")
+                          setSayOpen(false)
+                        }
+                      }}
+                    >
+                      ↵
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={isDisabled()}
+                    title={action.description}
+                    onClick={() => setSayOpen(true)}
+                  >
+                    {getActionLabel(t, name)}
+                  </Button>
+                )}
+              </div>
+            )
           }
 
           // Simple button — no special params

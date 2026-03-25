@@ -5,6 +5,8 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+import structlog
+
 from dnd_simulator.content_loader import (
     extract_region_adjacency,
     extract_region_terrains,
@@ -41,6 +43,8 @@ from .commands_time import TimeCommands
 from .session import GameSession
 
 DEFAULT_CONTENT_DIR = Path(__file__).resolve().parents[3] / "content"
+
+logger = structlog.get_logger(domain="service")
 
 
 class GameService(
@@ -134,6 +138,7 @@ class GameService(
             world_name=world_name,
             default_player_faction=meta.get("default_player_faction", ""),
         )
+        session._on_empty = self._on_session_empty
         self._sessions[session_id] = session
         return session
 
@@ -168,6 +173,14 @@ class GameService(
         """Stop and remove a session."""
         self._get_session(session_id)
         del self._sessions[session_id]
+
+    def _on_session_empty(self, session: GameSession) -> None:
+        """Called when all listeners disconnect. Autosave and evict from memory."""
+        sid = session.session_id
+        logger.info("session_empty_evict", session_id=sid)
+        with contextlib.suppress(Exception):
+            self.autosave_session(sid)
+        self._sessions.pop(sid, None)
 
     def list_worlds(self, lang: str = "en") -> list[dict[str, str]]:
         """List available world templates."""

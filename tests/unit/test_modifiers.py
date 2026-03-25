@@ -476,11 +476,11 @@ class TestAttackModifiers:
         result = attack_modifiers(attacker, target, melee=True)
         assert result.disadvantage is True
 
-    def test_damage_bonus_zero_by_default(self) -> None:
-        attacker = _creature(str_score=14)
+    def test_damage_bonus_includes_ability_mod(self) -> None:
+        attacker = _creature(str_score=14)  # +2 mod
         target = _creature()
         result = attack_modifiers(attacker, target, melee=True)
-        assert result.damage_bonus == 0
+        assert result.damage_bonus == 2
 
 
 # ---------------------------------------------------------------------------
@@ -552,37 +552,37 @@ class TestFightingStyleDefense:
 
 
 class TestFightingStyleDueling:
-    def test_dueling_adds_2_damage_bonus(self) -> None:
-        fighter = _fighter(FightingStyle.DUELING, strength=14)
+    def test_dueling_adds_2_on_top_of_ability(self) -> None:
+        fighter = _fighter(FightingStyle.DUELING, strength=14)  # +2 ability
         fighter.equipped_weapon = _sword_item()
         target = _creature()
         result = attack_modifiers(fighter, target, melee=True)
-        assert result.damage_bonus == 2
+        assert result.damage_bonus == 4  # 2 ability + 2 dueling
 
     def test_dueling_no_bonus_without_weapon(self) -> None:
-        fighter = _fighter(FightingStyle.DUELING, strength=14)
-        # No weapon equipped → no dueling bonus
+        fighter = _fighter(FightingStyle.DUELING, strength=14)  # +2 ability
+        # No weapon equipped → no dueling bonus, but ability mod still applies
         target = _creature()
         result = attack_modifiers(fighter, target, melee=True)
-        assert result.damage_bonus == 0
+        assert result.damage_bonus == 2  # ability only
 
     def test_dueling_no_bonus_on_ranged(self) -> None:
-        fighter = _fighter(FightingStyle.DUELING, strength=14)
+        fighter = _fighter(FightingStyle.DUELING, strength=14)  # +2 ability
         fighter.equipped_weapon = _sword_item()
         target = _creature()
-        # melee=False → no dueling bonus
+        # melee=False → no dueling bonus, but ability mod still applies
         result = attack_modifiers(fighter, target, melee=False)
-        assert result.damage_bonus == 0
+        assert result.damage_bonus == 2  # ability only
 
     def test_defense_style_no_damage_bonus(self) -> None:
-        fighter = _fighter(FightingStyle.DEFENSE, strength=14)
+        fighter = _fighter(FightingStyle.DEFENSE, strength=14)  # +2 ability
         fighter.equipped_weapon = _sword_item()
         target = _creature()
         result = attack_modifiers(fighter, target, melee=True)
-        assert result.damage_bonus == 0
+        assert result.damage_bonus == 2  # ability only, no dueling
 
-    def test_plain_creature_no_damage_bonus(self) -> None:
-        attacker = _creature(str_score=14)
+    def test_plain_creature_damage_bonus_is_ability_mod(self) -> None:
+        attacker = _creature(str_score=14)  # +2 ability
         target = _creature()
         result = attack_modifiers(attacker, target, melee=True)
-        assert result.damage_bonus == 0
+        assert result.damage_bonus == 2

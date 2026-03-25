@@ -154,6 +154,7 @@ _reg(
         action_type=ActionType.MOVE,
         description=N_("Move up to your speed."),
         cost_type=CostType.MOVEMENT,
+        combat_mode=CombatMode.COMBAT_ONLY,
         ends_peaceful_turn=True,
         params=(
             ParamDef("toward", "string", N_("ID of entity to move toward")),

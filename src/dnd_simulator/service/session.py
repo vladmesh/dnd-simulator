@@ -4,6 +4,7 @@ import contextlib
 import contextvars
 import dataclasses
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -229,6 +230,7 @@ class GameSession:
     _listeners: list[SessionEventListener] = field(default_factory=list, init=False, repr=False)
     _last_turn_msg: dict[str, Any] | None = field(default=None, init=False, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+    _on_empty: Callable[[GameSession], None] | None = field(default=None, init=False, repr=False)
 
     # ---------------------------------------------------------------------------
     # Player queries
@@ -282,15 +284,20 @@ class GameSession:
     def remove_listener(self, listener: SessionEventListener) -> None:
         self._bind_session_context()
         stop_round = False
+        is_empty = False
         with self._lock:
             with contextlib.suppress(ValueError):
                 self._listeners.remove(listener)
             count = len(self._listeners)
-            if not self._listeners and self._round is not None:
-                stop_round = True
+            if not self._listeners:
+                is_empty = True
+                if self._round is not None:
+                    stop_round = True
         logger.info("remove_listener", listener_count=count, stop_round=stop_round)
         if stop_round:
             self.stop_round()
+        if is_empty and self._on_empty is not None:
+            self._on_empty(self)
 
     def _fire(self, method: str, *args: Any) -> None:
         """Call a method on all listeners, swallowing individual errors."""
@@ -396,7 +403,9 @@ class GameSession:
                 try:
                     game_round.run_loop()
                 except Exception:
-                    logger.exception("round_loop_error")
+                    import traceback
+
+                    logger.error("round_loop_error", traceback=traceback.format_exc())
                 self._fire("on_game_over")
 
             # Copy contextvars (session_id etc.) into the round thread

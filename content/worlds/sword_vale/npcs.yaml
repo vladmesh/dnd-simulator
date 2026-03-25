@@ -32,7 +32,7 @@ marta:
   settlement_id: silverport_city
   faction: kingdom
   role: tavern_keeper
-  ai: llm
+  ai: rule_based
   personality:
     en: >
       Cheerful and gossipy. Knows everyone's business

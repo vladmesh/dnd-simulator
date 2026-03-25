@@ -156,7 +156,7 @@ class RuleBrain(Brain):
             conditions=[c.value for c in awareness.self_conditions],
             budget_actions=budget.actions if budget else 0,
             budget_move=budget.movement_remaining if budget else 0,
-            enemies=len(nearby),
+            enemies=len([e for e in nearby if e.is_hostile]),
         )
 
         # Tag-adjusted thresholds
@@ -193,6 +193,8 @@ class RuleBrain(Brain):
         hated_ids = find_tags(tags, NpcTag.HATES)
         feared_ids = find_tags(tags, NpcTag.FEARS)
         target = self._pick_target(nearby, primary_reach, hated_ids, feared_ids)
+        if target is None:
+            return END_TURN  # no hostile targets — nothing to fight
         target_id = target.id
         dist = target.distance_ft
         logger.debug("rule_target_selected", target=target_id, distance_ft=dist)
@@ -243,14 +245,18 @@ class RuleBrain(Brain):
         reach: int,
         hated_ids: list[str] | None = None,
         feared_ids: list[str] | None = None,
-    ) -> CombatEntity:
-        """Score enemies and pick best target."""
+    ) -> CombatEntity | None:
+        """Score hostile enemies and pick best target. Returns None if no hostile targets."""
+        hostile_nearby = [e for e in nearby if e.is_hostile]
+        if not hostile_nearby:
+            return None
+
         best: CombatEntity | None = None
         best_score = -999.0
         _hated = set(hated_ids or [])
         _feared = set(feared_ids or [])
 
-        for enemy in nearby:
+        for enemy in hostile_nearby:
             dist = enemy.distance_ft
             eid = enemy.id
 
@@ -280,7 +286,7 @@ class RuleBrain(Brain):
                 best_score = score
                 best = enemy
 
-        return best if best is not None else nearby[0]
+        return best if best is not None else hostile_nearby[0]
 
 
 class PlayerBrain(Brain):

@@ -193,13 +193,13 @@ class EntitiesLayer(Layer):
                 e.wake_at_seconds = None
 
         # Third pass: check for encounter spawns from creatures that were active
-        self._check_encounters(now, previously_active)
+        self._check_encounters(now, previously_active, query_fn)
 
         # Fourth pass: squad materialization/dematerialization
         if query_fn is not None:
             self._update_materialization(player_locations, query_fn, emit_fn)
 
-    def _check_encounters(self, now: int, active_ids: set[str]) -> None:
+    def _check_encounters(self, now: int, active_ids: set[str], query_fn: QueryFn | None = None) -> None:
         """Roll encounters for locations where any active creature just arrived.
 
         Uses `active_ids` (snapshot from before activation recalculation) so that
@@ -236,14 +236,18 @@ class EntitiesLayer(Layer):
                 continue
 
             self._encounter_cooldowns[e.location_id] = now
-            self._roll_encounters(e.location_id)
+            self._roll_encounters(e.location_id, query_fn)
 
-    def _roll_encounters(self, location_id: str) -> None:
-        """Roll each encounter entry for a location and spawn monsters."""
+    def _roll_encounters(self, location_id: str, query_fn: QueryFn | None = None) -> None:
+        """Roll each encounter entry for a location and spawn monsters.
+
+        If spawned creatures are hostile to anyone at the location, combat starts immediately.
+        """
         from dnd_simulator.core.brain import RuleBrain
 
         entries = self._encounter_tables[location_id]
         spawned_names: list[str] = []
+        spawned_creatures: list[Creature] = []
 
         logger.info("encounter_rolling", location=location_id, entries=len(entries))
         for entry in entries:
@@ -267,6 +271,7 @@ class EntitiesLayer(Layer):
                 self.add_entity(creature)
                 creature.active = True
                 spawned_names.append(creature.name)
+                spawned_creatures.append(creature)
                 logger.info("encounter_spawn", entity_id=instance_id, location=location_id)
 
         if spawned_names:
@@ -276,6 +281,40 @@ class EntitiesLayer(Layer):
                 data={"location_id": location_id, "names": spawned_names},
             )
             self._location_log[location_id].append(event)
+
+            # Auto-start combat if spawned creatures are hostile to anyone at this location
+            if query_fn is not None and location_id not in self._combat.get_combat_locations():
+                self._maybe_start_combat(location_id, spawned_creatures, query_fn)
+
+    def _maybe_start_combat(self, location_id: str, spawned: list[Creature], query_fn: QueryFn) -> None:
+        """Start combat if any spawned creature is hostile to an existing creature at the location."""
+        existing = [
+            e
+            for e in self._entities.values()
+            if isinstance(e, Creature) and e.location_id == location_id and e.is_alive and e not in spawned
+        ]
+        for sc in spawned:
+            if not sc.faction_id:
+                continue
+            for ex in existing:
+                if not ex.faction_id:
+                    continue
+                try:
+                    answer = query_fn(
+                        "politics",
+                        Query(question=QueryType.FACTION_RELATION, params={"a": sc.faction_id, "b": ex.faction_id}),
+                    )
+                    if str(answer.value) == "hostile":
+                        logger.info(
+                            "encounter_auto_combat",
+                            location=location_id,
+                            spawned_faction=sc.faction_id,
+                            existing_faction=ex.faction_id,
+                        )
+                        self._combat.start_combat(location_id)
+                        return
+                except Exception:
+                    pass
 
     # -- Squad materialization --
 
@@ -305,6 +344,14 @@ class EntitiesLayer(Layer):
             if squad_id in self._materialized_squads:
                 continue  # already materialized
             self._materialize_squad(squad_id, info, RuleBrain)
+            # Auto-start combat if materialized creatures are hostile to someone here
+            location_id = str(info["current_location_id"])
+            creature_ids = self._materialized_squads[squad_id][0]
+            spawned = [
+                e for cid in creature_ids if cid in self._entities and isinstance((e := self._entities[cid]), Creature)
+            ]
+            if spawned and location_id not in self._combat.get_combat_locations():
+                self._maybe_start_combat(location_id, spawned, query_fn)
 
         # Dematerialize squads no longer at active locations
         for squad_id in list(self._materialized_squads):

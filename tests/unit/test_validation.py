@@ -117,9 +117,11 @@ class TestCheckActionMode:
         assert check_action_mode(_creature(), Action(name=ActionType.WAIT), _COMBAT) is not None
         assert check_action_mode(_creature(), Action(name=ActionType.WAIT), _PEACEFUL) is None
 
-    def test_move_anywhere_ok(self) -> None:
+    def test_move_combat_only(self) -> None:
         assert check_action_mode(_creature(), Action(name=ActionType.MOVE), _COMBAT) is None
-        assert check_action_mode(_creature(), Action(name=ActionType.MOVE), _PEACEFUL) is None
+        err = check_action_mode(_creature(), Action(name=ActionType.MOVE), _PEACEFUL)
+        assert err is not None
+        assert err.code == "WRONG_MODE"
 
 
 # ---------------------------------------------------------------------------
