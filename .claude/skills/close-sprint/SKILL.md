@@ -58,7 +58,13 @@ make test-integration
 
 ### 3. If blocked
 
-Print all blockers:
+#### Quick fixes allowed
+
+If a blocker is clearly a small bug fixable in <5 minutes (flaky test, trivial code fix, missing import), fix it inline, re-run the failing check, and continue. Note the fix in the commit message.
+
+#### Serious blockers
+
+If a blocker requires significant work (new phase, architecture change, multiple files):
 
 ```
 Sprint NNN cannot be closed. Blockers:
@@ -70,7 +76,7 @@ Sprint NNN cannot be closed. Blockers:
 Fix these and try again.
 ```
 
-Do NOT modify any files. Do NOT commit. Do NOT push.
+Do NOT commit or push when serious blockers remain.
 
 ### 4. If all green
 

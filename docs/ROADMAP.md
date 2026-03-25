@@ -55,10 +55,8 @@ ActionDispatcher (`service/action_dispatcher.py`) — единый entry point: 
 Полноценная система инвентаря и торговли. Phase 1: generic equip/unequip + accessory slots (head, feet, ring) с модификаторами через modifier pipeline. Phase 2: awareness для инвентаря/экипировки + фронтенд панель (6 слотов + сумка + золото). Phase 3: Merchant-флаг на NPC, buy/sell экшены, Trade UI. Phase 4 (audit refactor): NpcRole enum, вынос контента NPC в YAML, фикс rules→layers зависимости.
 → [план спринта](sprints/003-inventory-trading/sprint.md)
 
-## In Progress
-
-### Sprint 004 — Monster Encounters
-Рандомные энкаунтеры с монстрами в опасных локациях, логова с persistent существами, автолут. MonsterTemplate из YAML, таблицы встреч на локациях, hostile AI, автодроп лута.
+### Sprint 004 — Living World: Squads & Encounters (фазы 1-4)
+Живой мир: абстрактные группы (squads) перемещаются по графу локаций, сталкиваются друг с другом и с active characters. EcologyLayer — tick-based движение сквадов. Faction relations: faction_id на Creature/Squad, матрица отношений на PoliticsLayer. Encounter tables как свойство зоны для любого active character. Hostile AI: faction-aware, враг по faction relations → атака. Abstract combat formula (squad vs squad). Materialization: squad при контакте с active character → конкретные Creature. YAML контент: фракции, 4 сквада, 8 monster templates для Sword Vale.
 → [план спринта](sprints/004-monster-encounters/sprint.md)
 
 ## Planned

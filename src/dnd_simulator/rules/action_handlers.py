@@ -114,8 +114,10 @@ def handle_flee(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
 
 def handle_move(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
     """Move: emit move event. CombatManager resolves via handle_event."""
+    if "direction" not in action.params:
+        return ActionResult(success=False, error="Move requires a direction")
     direction = str(action.params["direction"])
-    ft = int(str(action.params["ft"]))
+    ft = int(str(action.params.get("ft", 5)))
     logger.info("move", direction=direction, ft=ft)
     return emit_fn(
         Event(

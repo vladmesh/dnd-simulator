@@ -1129,10 +1129,9 @@ class EntitiesLayer(Layer):
                 if e.conditions:
                     data["conditions"] = {c.value: r for c, r in e.conditions.items()}
                 if e.inventory:
-                    data["inventory"] = [
-                        {"id": item.id, "name": item.name, "type": item.item_type.value, **item.params}
-                        for item in e.inventory
-                    ]
+                    from dnd_simulator.core.player import _serialize_item
+
+                    data["inventory"] = [_serialize_item(item) for item in e.inventory]
             if isinstance(e, PlayerCharacter):
                 data["entity_type"] = "player"
                 data.update(e.to_full_save_data())

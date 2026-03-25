@@ -119,4 +119,16 @@ EcologyLayer (новый слой между Settlements и Entities): tick-base
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-03-26
+
+Built a living world layer: abstract squads move across the location graph via EcologyLayer ticks, faction relations drive hostility, encounter tables trigger for any active creature (not just the player). Squads materialize into concrete Creature instances when meeting an active character and dematerialize on departure. Abstract squad-vs-squad combat with strength-based formulas. Frontend renders squad movement/combat events in the event log. 4 squads and 8 monster templates for Sword Vale. Sprint pivoted mid-flight from player-centric random encounters to a full living world architecture.
+
+Key metrics: ~60 tests added, 14 task files across 4 phases, 18 bug fixes during E2E playtest (combat auto-start, faction-aware targeting, ability mod to damage, session autosave/evict, param validation). Post-sprint fixes: LLM NPC move resolution (toward→direction), item serialization for autosave restore.
+
+**Deferred:**
+- Loot tables + autodrop
+- Lair monsters
+- Faction reputation, diplomacy, faction transitions
+- Travel through intermediate locations
+- Squad respawn / recruitment from settlements
+- CR-balancing

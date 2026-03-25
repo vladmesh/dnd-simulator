@@ -277,6 +277,12 @@ class Round:
             if action.name == ActionType.END_TURN:
                 break
 
+            # Resolve abstract move (toward/away_from) to concrete direction for any creature
+            if action.name == ActionType.MOVE and ("toward" in action.params or "away_from" in action.params):
+                from dnd_simulator.service.session import resolve_abstract_move
+
+                action = resolve_abstract_move(action, creature, self._entities)
+
             # Dispatcher handles: validation → budget check → execute → budget consume
             result = self._execute_action(creature, action, ctx, emit_fn)
 
