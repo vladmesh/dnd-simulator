@@ -14,7 +14,7 @@
 
 ---
 
-## Phase 1: Content Standardization
+## Phase 1: Content Standardization ✓
 
 Удаляем legacy single-file формат. Конвертируем arena.yaml, village.yaml, sneak_test.yaml в директории. Убираем `_resolve_source()`, fallback-ветки в `parse_npc`/`parse_player`, legacy aliases в schemas.py, fallbacks в commands_creatures.py и entities_layer.py. Переписываем интеграционные тесты на multi-file миры. `make check` зелёный.
 
