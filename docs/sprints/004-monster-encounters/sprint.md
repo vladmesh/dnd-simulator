@@ -69,7 +69,9 @@ Encounter table rolls для любого active character (не только Pl
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Generalize Encounter Triggers](tasks/phase2-task1-generalize-encounters.md)
+2. [Faction-Aware Hostile AI](tasks/phase2-task2-hostile-ai.md)
+3. [Abstract Squad Combat Formula](tasks/phase2-task3-abstract-combat.md)
 
 ## Phase 3: Squad Movement + Materialization
 

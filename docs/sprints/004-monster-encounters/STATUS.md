@@ -1,18 +1,19 @@
 # Sprint 004 Status
 
 **Sprint:** 004-monster-encounters → 004-living-world (replanned)
-**Phase:** 1 — Data Foundation (COMPLETE)
+**Phase:** 2 — Generalize Encounters + Hostile AI
 **Updated:** 2026-03-25
 
 ## Current
 
-Phase 1 complete. MonsterTemplate, EncounterTable, FactionRelation, Squad models all in place. YAML loading for all. 929 unit tests, 33 integration tests passing. E2E clean.
+Phase 2 tasks generated. Ready to start task 1.
 
-Ready for Phase 2 task generation.
+## Next Steps
+
+- Task 1: Generalize encounter triggers — any active creature triggers encounters on location change, not just PlayerCharacter
+- Task 2: Faction-aware hostile AI — RuleBrain queries faction relations, auto-attacks hostiles in peaceful mode
+- Task 3: Abstract squad combat formula — pure function resolving squad vs encounter by strength comparison
 
 ## Completed
 
-- Task 1 (pre-pivot): MonsterTemplate + EncounterTable models & YAML loading ✓
-- Task 2 (pre-pivot): Spawn engine + temporary creature lifecycle ✓
-- Task 3: Factions — faction_id + Faction Relations ✓
-- Task 4: Squad model + squads.yaml ✓
+- Phase 1 (Data Foundation) ✓ — MonsterTemplate, EncounterTable, FactionRelation, Squad models, YAML loading
