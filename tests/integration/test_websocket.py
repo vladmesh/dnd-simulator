@@ -223,6 +223,154 @@ class TestCombatFlow:
             sock.close()
 
 
+# ── Inventory & Equipment ─────────────────────────────────────────────
+
+
+class TestInventoryEquipment:
+    """Phase 2: inventory/equipment/gold visible in turn messages."""
+
+    @pytest.fixture(scope="class")
+    def ws_equipped(self, _urls: tuple[str, str, str]) -> Iterator[tuple[str, str, str]]:
+        """Village session where player starts with a weapon and gold (no combat)."""
+        api, player_api, ws_base = _urls
+        resp = requests.post(f"{api}/sessions", json={"world_name": "village.yaml", "lang": "en"}, timeout=10)
+        resp.raise_for_status()
+        sid = resp.json()["session_id"]
+
+        resp = requests.post(
+            f"{player_api}/sessions/{sid}/character",
+            json={
+                "name": "Inv Tester",
+                "race": "human",
+                "char_class": "fighter",
+                "level": 1,
+                "alignment": "true_neutral",
+                "hp": 30,
+                "ac": 15,
+                "gold": 100,
+                "start_location": "village_square",
+                "ability_scores": {"str": 16, "dex": 14, "con": 14, "int": 10, "wis": 12, "cha": 10},
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        pid = resp.json()["player_id"]
+
+        # Give the player a weapon
+        requests.post(
+            f"{api}/sessions/{sid}/creatures/{pid}/items",
+            json={
+                "name": "Test Sword",
+                "type": "weapon",
+                "weapon_id": "test_sword",
+                "category": "martial",
+                "attack_name": "slash",
+                "damage": [{"dice": "1d8", "type": "slashing"}],
+                "ability": "str",
+            },
+            timeout=10,
+        ).raise_for_status()
+
+        # Give the player a potion
+        requests.post(
+            f"{api}/sessions/{sid}/creatures/{pid}/items",
+            json={"name": "Health Potion", "type": "potion", "heal_dice": "2d4+2"},
+            timeout=10,
+        ).raise_for_status()
+
+        yield ws_base, sid, pid
+        requests.delete(f"{api}/sessions/{sid}", timeout=5)
+
+    def test_turn_has_inventory_and_equipped(self, ws_equipped: tuple[str, str, str]) -> None:
+        """Turn message includes equipped and inventory arrays."""
+        ws_base, sid, pid = ws_equipped
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            msg = ws_recv(sock)
+            assert msg["type"] == "turn"
+            player = msg["player"]
+
+            assert "equipped" in player
+            assert "inventory" in player
+            assert isinstance(player["equipped"], list)
+            assert isinstance(player["inventory"], list)
+        finally:
+            sock.close()
+
+    def test_gold_in_player(self, ws_equipped: tuple[str, str, str]) -> None:
+        """Turn message includes gold amount."""
+        ws_base, sid, pid = ws_equipped
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            msg = ws_recv(sock)
+            assert msg["type"] == "turn"
+            assert msg["player"]["gold"] == 100
+        finally:
+            sock.close()
+
+    def test_inventory_contains_given_items(self, ws_equipped: tuple[str, str, str]) -> None:
+        """Inventory contains items given via API."""
+        ws_base, sid, pid = ws_equipped
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            msg = ws_recv(sock)
+            assert msg["type"] == "turn"
+            inventory = msg["player"]["inventory"]
+            names = [item["name"] for item in inventory]
+            assert "Test Sword" in names
+            assert "Health Potion" in names
+            # Each item has id, name, description
+            for item in inventory:
+                assert "id" in item
+                assert "name" in item
+                assert "description" in item
+        finally:
+            sock.close()
+
+    def test_equip_and_unequip_via_ws(self, ws_equipped: tuple[str, str, str]) -> None:
+        """Equip a weapon via WS, verify it appears in equipped slots."""
+        ws_base, sid, pid = ws_equipped
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            msg = ws_recv(sock)
+            assert msg["type"] == "turn"
+
+            # Find the sword's item_id from inventory
+            inventory = msg["player"]["inventory"]
+            sword = next(i for i in inventory if i["name"] == "Test Sword")
+            sword_id = sword["id"]
+
+            # Equip the sword (param is weapon_id, not item_id)
+            ws_send_action(sock, "equip", weapon_id=sword_id)
+
+            # In peaceful mode, equip ends turn → next turn should show equipped weapon
+            equipped_weapon = False
+            for _ in range(10):
+                msg = ws_recv(sock)
+                if msg["type"] == "turn" and "player" in msg:
+                    equipped = msg["player"]["equipped"]
+                    weapon_slots = [e for e in equipped if e["slot"] == "weapon"]
+                    if weapon_slots and weapon_slots[0]["name"] == "Test Sword":
+                        equipped_weapon = True
+                        break
+            assert equipped_weapon, "Sword never appeared in equipped slots"
+
+            # Now unequip
+            ws_send_action(sock, "unequip")
+            unequipped = False
+            for _ in range(10):
+                msg = ws_recv(sock)
+                if msg["type"] == "turn" and "player" in msg:
+                    equipped = msg["player"]["equipped"]
+                    weapon_slots = [e for e in equipped if e["slot"] == "weapon"]
+                    if not weapon_slots:
+                        unequipped = True
+                        break
+            assert unequipped, "Weapon still in equipped after unequip"
+        finally:
+            sock.close()
+
+
 # ── Error handling ────────────────────────────────────────────────────
 
 

@@ -57,6 +57,8 @@ export interface CombatEntity {
 export interface ItemInfo {
   id: string
   name: string
+  type?: string
+  slot?: string
   description: string
   price?: number | null
 }

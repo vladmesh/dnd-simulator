@@ -20,6 +20,32 @@ function sendAction(name: string, params?: Record<string, unknown>) {
   useGameStore.getState().setWaitingForAction(true)
 }
 
+const UNEQUIP_ACTION: Record<string, string> = {
+  weapon: "unequip",
+  armor: "unequip_armor",
+  shield: "unequip_shield",
+  head: "unequip_head",
+  feet: "unequip_feet",
+  ring: "unequip_ring",
+}
+
+const EQUIP_ACTION: Record<string, { action: string; paramKey: string }> = {
+  weapon: { action: "equip", paramKey: "weapon_id" },
+  armor: { action: "equip_armor", paramKey: "armor_id" },
+  shield: { action: "equip_shield", paramKey: "shield_id" },
+  head: { action: "equip_head", paramKey: "head_id" },
+  feet: { action: "equip_feet", paramKey: "feet_id" },
+  ring: { action: "equip_ring", paramKey: "ring_id" },
+}
+
+function getEquipSlot(item: ItemInfo): string | undefined {
+  if (item.type === "weapon") return "weapon"
+  if (item.type === "armor") return "armor"
+  if (item.type === "shield") return "shield"
+  if (item.type === "accessory" && item.slot) return item.slot
+  return undefined
+}
+
 function EquipmentSlot({ slot, item }: { slot: string; item?: EquippedInfo }) {
   const { t } = useTranslation(["game"])
   const Icon = SLOT_ICONS[slot] ?? Package
@@ -33,7 +59,7 @@ function EquipmentSlot({ slot, item }: { slot: string; item?: EquippedInfo }) {
           className="min-w-0 flex-1 truncate text-left text-xs hover:text-primary disabled:opacity-50"
           title={`${item.description}\n${t("game:click_to_unequip")}`}
           disabled={waitingForAction}
-          onClick={() => sendAction("unequip", { slot })}
+          onClick={() => sendAction(UNEQUIP_ACTION[slot] ?? "unequip")}
         >
           {item.name}
         </button>
@@ -49,13 +75,15 @@ function EquipmentSlot({ slot, item }: { slot: string; item?: EquippedInfo }) {
 function BagItem({ item }: { item: ItemInfo }) {
   const waitingForAction = useGameStore((s) => s.waitingForAction)
 
-  const isEquippable = item.description.toLowerCase().includes("weapon") ||
-    item.description.toLowerCase().includes("armor") ||
-    item.description.toLowerCase().includes("shield") ||
-    // Accessories have stat modifiers in description like "+1 AC"
-    /^[^(]*\([+-]\d/.test(item.description)
+  const equipSlot = getEquipSlot(item)
+  const isConsumable = item.type === "potion"
 
-  const isConsumable = item.description.toLowerCase().includes("heals")
+  const handleEquip = () => {
+    if (!equipSlot) return
+    const cfg = EQUIP_ACTION[equipSlot]
+    if (!cfg) return
+    sendAction(cfg.action, { [cfg.paramKey]: item.id })
+  }
 
   return (
     <div className="flex items-center gap-1 text-xs">
@@ -74,11 +102,11 @@ function BagItem({ item }: { item: ItemInfo }) {
           USE
         </button>
       )}
-      {isEquippable && (
+      {equipSlot && (
         <button
           className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[10px] hover:bg-accent/80 disabled:opacity-50"
           disabled={waitingForAction}
-          onClick={() => sendAction("equip", { item_id: item.id })}
+          onClick={handleEquip}
         >
           EQUIP
         </button>

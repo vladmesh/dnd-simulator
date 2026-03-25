@@ -109,10 +109,18 @@ def _player_to_dict(player: PlayerCharacter) -> dict[str, Any]:
         {"slot": e.slot.value, "item_id": e.item_id, "name": e.name, "description": e.description}
         for e in Round._build_equipped(player)
     ]
-    inventory = [
-        {"id": item.id, "name": item.name, "description": describe_item(item), "price": item.price}
-        for item in player.inventory
-    ]
+    inventory = []
+    for item in player.inventory:
+        entry: dict[str, object] = {
+            "id": item.id,
+            "name": item.name,
+            "type": item.item_type.value,
+            "description": describe_item(item),
+            "price": item.price,
+        }
+        if item.accessory_def is not None:
+            entry["slot"] = item.accessory_def.slot.value
+        inventory.append(entry)
     return {
         "player_id": player.id,
         "name": player.name,

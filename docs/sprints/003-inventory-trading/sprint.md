@@ -38,7 +38,7 @@ Sprint 001 заложил фундамент предметов: WeaponDef, Armo
 1. [Generic Equip/Unequip Mechanism](tasks/phase1-task1-generic-equip.md)
 2. [Accessory Slots with Modifier Effects](tasks/phase1-task2-accessory-slots.md)
 
-## Phase 2: Inventory UI + Gold
+## Phase 2: Inventory UI + Gold ✓
 
 Золото на Creature + цена на Item. Awareness отдаёт полное состояние экипировки и инвентаря. Фронт: панель с 6 слотами + сумка + золото. Equip/unequip кликом из панели.
 
@@ -63,7 +63,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 1 complete. Ready for Phase 2 task generation.
+**Current:** Phase 2 complete. Ready for Phase 3 task generation.
 
 ## Decisions
 
