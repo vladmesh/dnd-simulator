@@ -97,7 +97,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Sprint replanned. Phase 1 ready for task generation.
+**Current:** Phase 2 complete. Phase 3 ready for task generation.
 
 ## Decisions
 
