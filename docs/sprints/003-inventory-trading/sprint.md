@@ -27,7 +27,7 @@ Sprint 001 заложил фундамент предметов: WeaponDef, Armo
 
 ---
 
-## Phase 1: Accessory Slots + Modifiers
+## Phase 1: Accessory Slots + Modifiers ✓
 
 Новые типы предметов (AccessoryDef), 3 новых слота на Creature (head, feet, ring), equip/unequip экшены, интеграция с modifier pipeline. Пара аксессуаров в YAML. Юнит-тесты.
 
@@ -62,7 +62,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 1 tasks generated. Ready to start task 1.
+**Current:** Phase 1 complete. Ready for Phase 2 task generation.
 
 ## Decisions
 
