@@ -21,10 +21,9 @@ from dnd_simulator.rules.modifiers import effective_speed
 
 if TYPE_CHECKING:
     from dnd_simulator.core.action import Action
-    from dnd_simulator.core.character import Creature
+    from dnd_simulator.core.character import Character, Creature
     from dnd_simulator.core.models import EmitFn
     from dnd_simulator.core.world import World
-    from dnd_simulator.layers.entities.models import Npc
     from dnd_simulator.rules.validation import ActionContext
 
 logger = structlog.get_logger(domain="action")
@@ -514,14 +513,14 @@ def handle_unequip_ring(
 # ---------------------------------------------------------------------------
 
 
-def _resolve_merchant(merchant_id: str, ctx: ActionContext) -> Npc | None:
+def _resolve_merchant(merchant_id: str, ctx: ActionContext) -> Character | None:
     """Look up merchant NPC via context entity lookup."""
-    from dnd_simulator.layers.entities.models import Npc as NpcModel
+    from dnd_simulator.core.character import Character as _Character
 
     if ctx.get_entity is None:
         return None
     entity = ctx.get_entity(merchant_id)
-    if isinstance(entity, NpcModel):
+    if isinstance(entity, _Character) and entity.is_merchant:
         return entity
     return None
 

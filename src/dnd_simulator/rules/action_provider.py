@@ -16,12 +16,11 @@ from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.rules.validation import validate_action
 
 if TYPE_CHECKING:
-    from dnd_simulator.core.character import Creature
-    from dnd_simulator.layers.entities.models import Npc
+    from dnd_simulator.core.character import Character, Creature
     from dnd_simulator.rules.validation import ActionContext
 
 # Callable that returns merchant NPCs at a given location ID.
-NearbyMerchantsFn = Callable[[str], "list[Npc]"]
+NearbyMerchantsFn = Callable[[str], "list[Character]"]
 
 
 class ActionProvider(Protocol):

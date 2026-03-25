@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from dnd_simulator.adapters.api.app import app
 from dnd_simulator.adapters.api.deps import set_service
+from dnd_simulator.core.character import NpcRole
 from dnd_simulator.core.items import Item, ItemType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
@@ -57,7 +58,7 @@ def _inject_merchant(service: GameService, session_id: str, gold: int = 500, ite
     merchant = Npc(
         id="test_merchant",
         name="Gretta the Trader",
-        role="merchant",
+        role=NpcRole.MERCHANT,
         location_id=player.location_id,  # type: ignore[attr-defined]
         gold=gold,
     )

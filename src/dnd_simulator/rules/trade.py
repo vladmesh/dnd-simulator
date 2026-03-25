@@ -8,7 +8,6 @@ from __future__ import annotations
 from dnd_simulator.core.character import Character
 from dnd_simulator.core.items import Item
 from dnd_simulator.i18n import _
-from dnd_simulator.layers.entities.models import Npc
 
 
 def _find_item(creature: Character, item_id: str) -> Item | None:
@@ -18,7 +17,7 @@ def _find_item(creature: Character, item_id: str) -> Item | None:
     return None
 
 
-def validate_buy(*, buyer: Character, seller: Npc, item_id: str) -> str | None:
+def validate_buy(*, buyer: Character, seller: Character, item_id: str) -> str | None:
     """Validate a purchase. Returns error message or None if valid."""
     if not seller.is_merchant:
         return _("{name} is not a merchant").format(name=seller.name)
@@ -34,7 +33,7 @@ def validate_buy(*, buyer: Character, seller: Npc, item_id: str) -> str | None:
     return None
 
 
-def validate_sell(*, seller: Character, buyer: Npc, item_id: str) -> str | None:
+def validate_sell(*, seller: Character, buyer: Character, item_id: str) -> str | None:
     """Validate a sale. Returns error message or None if valid."""
     if not buyer.is_merchant:
         return _("{name} is not a merchant").format(name=buyer.name)

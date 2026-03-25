@@ -662,7 +662,7 @@ class EntitiesLayer(Layer):
             base["is_wounded"] = entity.current_hp < entity.max_hp // 2
         if isinstance(entity, Npc):
             npc_activity = entity.scheduled_activity(hour)
-            base["role"] = entity.role
+            base["role"] = entity.role.value
             base["activity"] = npc_activity.value
             base["activity_flavor"] = activity_flavor(entity.role, npc_activity)
             base["location_label"] = entity.current_location(hour)
@@ -702,7 +702,7 @@ class EntitiesLayer(Layer):
             base.update(
                 {
                     "entity_type": "npc",
-                    "role": entity.role,
+                    "role": entity.role.value,
                     "personality": entity.personality,
                     "settlement_id": entity.settlement_id,
                     "ai_type": entity.ai_type,
@@ -719,7 +719,7 @@ class EntitiesLayer(Layer):
             "id": npc.id,
             "name": npc.name,
             "location_id": npc.location_id,
-            "role": npc.role,
+            "role": npc.role.value,
             "personality": npc.personality,
             "hp": npc.current_hp,
             "max_hp": npc.max_hp,
@@ -756,7 +756,7 @@ class EntitiesLayer(Layer):
             elif isinstance(e, Npc):
                 data.update(
                     {
-                        "role": e.role,
+                        "role": e.role.value,
                         "personality": e.personality,
                         "settlement_id": e.settlement_id,
                         "location_override": e.location_override,

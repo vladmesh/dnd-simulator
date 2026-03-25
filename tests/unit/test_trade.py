@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dnd_simulator.core.character import NpcRole
 from dnd_simulator.core.items import Item, ItemType
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.models import Npc
@@ -11,7 +12,7 @@ MARKET = "silverport_city_market"
 
 
 def _merchant(*, gold: int = 100, items: list[Item] | None = None) -> Npc:
-    npc = Npc(id="merchant_1", name="Gretta", role="merchant", location_id=MARKET, gold=gold)
+    npc = Npc(id="merchant_1", name="Gretta", role=NpcRole.MERCHANT, location_id=MARKET, gold=gold)
     if items is not None:
         npc.inventory = items
     return npc
@@ -124,7 +125,7 @@ class TestSellInsufficientMerchantGold:
 class TestNotAMerchant:
     def test_buy_rejects_non_merchant(self) -> None:
         potion = _potion(50)
-        npc = Npc(id="guard_1", name="Rodrik", role="guard", location_id=MARKET)
+        npc = Npc(id="guard_1", name="Rodrik", role=NpcRole.GUARD, location_id=MARKET)
         npc.inventory = [potion]
         player = _player(gold=100)
 
@@ -134,7 +135,7 @@ class TestNotAMerchant:
 
     def test_sell_rejects_non_merchant(self) -> None:
         dagger = _dagger(30)
-        npc = Npc(id="guard_1", name="Rodrik", role="guard", location_id=MARKET)
+        npc = Npc(id="guard_1", name="Rodrik", role=NpcRole.GUARD, location_id=MARKET)
         player = _player(items=[dagger])
 
         error = validate_sell(seller=player, buyer=npc, item_id="dagger_0")
@@ -167,13 +168,55 @@ class TestDifferentLocation:
 
 class TestIsMerchant:
     def test_merchant_role_returns_true(self) -> None:
-        npc = Npc(id="m", name="M", role="merchant", location_id="x")
+        npc = Npc(id="m", name="M", role=NpcRole.MERCHANT, location_id="x")
         assert npc.is_merchant is True
 
     def test_other_role_returns_false(self) -> None:
-        npc = Npc(id="g", name="G", role="guard", location_id="x")
+        npc = Npc(id="g", name="G", role=NpcRole.GUARD, location_id="x")
         assert npc.is_merchant is False
 
-    def test_empty_role_returns_false(self) -> None:
+    def test_default_role_returns_false(self) -> None:
         npc = Npc(id="x", name="X", location_id="x")
         assert npc.is_merchant is False
+
+
+class TestCharacterIsNotMerchant:
+    """Character base class always returns is_merchant=False."""
+
+    def test_character_is_not_merchant(self) -> None:
+        from dnd_simulator.core.character import Character
+
+        char = Character(id="c", name="C", location_id="x")
+        assert char.is_merchant is False
+
+    def test_player_is_not_merchant(self) -> None:
+        pc = PlayerCharacter(id="p", name="P", location_id="x")
+        assert pc.is_merchant is False
+
+
+class TestNpcRoleEnum:
+    """NpcRole enum has correct values and is used throughout."""
+
+    def test_enum_values_match_yaml_strings(self) -> None:
+        assert NpcRole.MERCHANT.value == "merchant"
+        assert NpcRole.BLACKSMITH.value == "blacksmith"
+        assert NpcRole.GUARD.value == "guard"
+        assert NpcRole.TAVERN_KEEPER.value == "tavern_keeper"
+        assert NpcRole.FARMER.value == "farmer"
+
+    def test_enum_parses_from_yaml_string(self) -> None:
+        assert NpcRole("merchant") == NpcRole.MERCHANT
+        assert NpcRole("guard") == NpcRole.GUARD
+
+
+class TestTradeModuleHasNoLayersDependency:
+    """rules/trade.py must not import from layers/."""
+
+    def test_no_layers_import(self) -> None:
+        import inspect
+
+        import dnd_simulator.rules.trade as trade_module
+
+        source = inspect.getsource(trade_module)
+        assert "from dnd_simulator.layers" not in source
+        assert "import dnd_simulator.layers" not in source

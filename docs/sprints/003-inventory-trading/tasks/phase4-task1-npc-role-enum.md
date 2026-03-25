@@ -47,4 +47,17 @@ Concrete changes:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented as planned. Key changes:
+- `NpcRole` enum added to `core/character.py` with COMMONER, BLACKSMITH, TAVERN_KEEPER, GUARD, MERCHANT, FARMER
+- `is_merchant` property added to `Character` base (returns False), overridden in `Npc` using enum
+- `rules/trade.py` now uses `Character` instead of `Npc` — zero layers/ imports in rules/
+- `rules/action_handlers.py:_resolve_merchant` uses `Character` + `is_merchant` check
+- `rules/action_provider.py` also cleaned — `NearbyMerchantsFn` now uses `Character` type
+- All dict keys in models.py (schedules, flavor, dialogue) now use `NpcRole` enum
+- `content_loader.py` parses role strings from YAML via `NpcRole(role_str)`
+- All serialization points use `.value` for wire format
+- 18 tests updated to use enum, 7 new tests added (Character base is_merchant, enum values, no-layers-import check)

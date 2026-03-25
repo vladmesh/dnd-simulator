@@ -60,7 +60,7 @@ from dnd_simulator.rules.actions import action_cost
 from dnd_simulator.rules.validation import ActionContext, validate_action
 
 if TYPE_CHECKING:
-    from dnd_simulator.core.character import Creature
+    from dnd_simulator.core.character import Character, Creature
     from dnd_simulator.core.models import EmitFn
     from dnd_simulator.rules.action_provider import ActionProvider
 
@@ -198,7 +198,7 @@ def _build_nearby_merchants_fn(world: World) -> NearbyMerchantsFn:
             entities_layer = layer
             break
 
-    def get_nearby_merchants(location_id: str) -> list[Npc]:
+    def get_nearby_merchants(location_id: str) -> list[Character]:
         if entities_layer is None:
             return []
         hour = world.time.hour

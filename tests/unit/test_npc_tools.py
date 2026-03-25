@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import cast
 from unittest.mock import MagicMock
 
-from dnd_simulator.core.character import Ability, Attack, DamageComponent, DamageType
+from dnd_simulator.core.character import Ability, Attack, DamageComponent, DamageType, NpcRole
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -66,7 +66,7 @@ class TestBuildNpcTools:
 
 class TestNpcTurnOrchestration:
     def test_no_brain_does_nothing(self) -> None:
-        npc = Npc(id="n1", name="Smith", location_id="r1", role="blacksmith")
+        npc = Npc(id="n1", name="Smith", location_id="r1", role=NpcRole.BLACKSMITH)
         layer = EntitiesLayer([npc])
 
         emit_calls: list[Event] = []
@@ -79,7 +79,7 @@ class TestNpcTurnOrchestration:
         assert emit_calls == []
 
     def test_llm_say_sends_event(self) -> None:
-        npc = Npc(id="n1", name="Smith", location_id="r1", role="blacksmith")
+        npc = Npc(id="n1", name="Smith", location_id="r1", role=NpcRole.BLACKSMITH)
         layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         say_tc = ToolCall(id="tc_1", name="say", arguments={"text": "Привет!"})
@@ -98,7 +98,7 @@ class TestNpcTurnOrchestration:
         assert emit_calls[0].data["text"] == "Привет!"
 
     def test_llm_idle_no_event(self) -> None:
-        npc = Npc(id="n1", name="Smith", location_id="r1", role="blacksmith")
+        npc = Npc(id="n1", name="Smith", location_id="r1", role=NpcRole.BLACKSMITH)
         layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         idle_tc = ToolCall(id="tc_1", name="idle", arguments={})
@@ -115,7 +115,7 @@ class TestNpcTurnOrchestration:
         assert emit_calls == []
 
     def test_llm_attack_sends_event(self) -> None:
-        npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", attacks=(_SWORD,))
+        npc = Npc(id="n1", name="Guard", location_id="r1", role=NpcRole.GUARD, attacks=(_SWORD,))
         layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         atk_tc = ToolCall(id="tc_1", name="attack", arguments={"target_id": "player"})
@@ -135,7 +135,7 @@ class TestNpcTurnOrchestration:
         assert emit_calls[0].data["target_id"] == "player"
 
     def test_llm_text_response_retries(self) -> None:
-        npc = Npc(id="n1", name="Smith", location_id="r1", role="blacksmith")
+        npc = Npc(id="n1", name="Smith", location_id="r1", role=NpcRole.BLACKSMITH)
         layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         idle_tc = ToolCall(id="tc_1", name="idle", arguments={})
@@ -149,7 +149,7 @@ class TestNpcTurnOrchestration:
         assert mock_llm.generate_with_tools.call_count == 2
 
     def test_llm_exhausts_retries_does_nothing(self) -> None:
-        npc = Npc(id="n1", name="Smith", location_id="r1", role="blacksmith")
+        npc = Npc(id="n1", name="Smith", location_id="r1", role=NpcRole.BLACKSMITH)
         layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         mock_llm.generate_with_tools.return_value = LlmResponse(text="I don't know", tool_call=None, raw_message=None)

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from dnd_simulator.core.character import Character
+from dnd_simulator.core.character import Character, NpcRole
 from dnd_simulator.core.tags import NpcTag, has_tag
 from dnd_simulator.i18n import _
 
@@ -71,7 +71,7 @@ class Npc(Character):
     Decision-making is delegated to the brain field (inherited from Creature).
     """
 
-    role: str = ""
+    role: NpcRole = NpcRole.COMMONER
     personality: str = ""
     settlement_id: str = ""
     schedule: list[ScheduleEntry] = field(default_factory=list)
@@ -102,7 +102,7 @@ class Npc(Character):
     @property
     def is_merchant(self) -> bool:
         """Whether this NPC is a merchant (derived from role)."""
-        return self.role == "merchant"
+        return self.role == NpcRole.MERCHANT
 
     @property
     def memory_tags(self) -> list[str]:
@@ -117,7 +117,7 @@ class Npc(Character):
         """Return NPC metadata for LLM prompts."""
         return {
             "name": self.name,
-            "role": self.role,
+            "role": self.role.value,
             "personality": self.personality,
             "memory": self.memory.to_dict(),
         }
@@ -125,26 +125,26 @@ class Npc(Character):
 
 # Default schedules by role — uses relative location labels.
 # At NPC creation, these are resolved to "{settlement_id}_{label}" IDs.
-DEFAULT_SCHEDULE_TEMPLATES: dict[str, list[tuple[int, int, NpcActivity, str]]] = {
-    "blacksmith": [
+DEFAULT_SCHEDULE_TEMPLATES: dict[NpcRole, list[tuple[int, int, NpcActivity, str]]] = {
+    NpcRole.BLACKSMITH: [
         (21, 7, NpcActivity.SLEEPING, "home"),
         (7, 19, NpcActivity.WORKING, "smithy"),
         (19, 21, NpcActivity.IDLE, "tavern"),
     ],
-    "tavern_keeper": [
+    NpcRole.TAVERN_KEEPER: [
         (3, 10, NpcActivity.SLEEPING, "home"),
         (10, 3, NpcActivity.WORKING, "tavern"),
     ],
-    "guard": [
+    NpcRole.GUARD: [
         (22, 6, NpcActivity.SLEEPING, "barracks"),
         (6, 22, NpcActivity.WORKING, "patrol"),
     ],
-    "merchant": [
+    NpcRole.MERCHANT: [
         (22, 7, NpcActivity.SLEEPING, "home"),
         (7, 18, NpcActivity.WORKING, "market"),
         (18, 22, NpcActivity.IDLE, "tavern"),
     ],
-    "farmer": [
+    NpcRole.FARMER: [
         (20, 5, NpcActivity.SLEEPING, "home"),
         (5, 18, NpcActivity.WORKING, "fields"),
         (18, 20, NpcActivity.IDLE, "home"),
@@ -152,7 +152,7 @@ DEFAULT_SCHEDULE_TEMPLATES: dict[str, list[tuple[int, int, NpcActivity, str]]] =
 }
 
 
-def resolve_schedule(role: str, settlement_id: str, known_locations: set[str] | None = None) -> list[ScheduleEntry]:
+def resolve_schedule(role: NpcRole, settlement_id: str, known_locations: set[str] | None = None) -> list[ScheduleEntry]:
     """Build a schedule from a role template, resolving relative location labels.
 
     If *known_locations* is provided, every resolved location_id must exist in the
@@ -172,27 +172,27 @@ def resolve_schedule(role: str, settlement_id: str, known_locations: set[str] | 
 
 # Flavor text: what the NPC looks like they're doing.
 # Keyed by (role, activity). Falls back to activity-only, then generic.
-ACTIVITY_FLAVOR: dict[tuple[str, NpcActivity], str] = {
+ACTIVITY_FLAVOR: dict[tuple[NpcRole, NpcActivity], str] = {
     # Blacksmith
-    ("blacksmith", NpcActivity.WORKING): "hammering at the anvil",
-    ("blacksmith", NpcActivity.IDLE): "sitting with a mug of ale",
-    ("blacksmith", NpcActivity.SLEEPING): "sleeping",
+    (NpcRole.BLACKSMITH, NpcActivity.WORKING): "hammering at the anvil",
+    (NpcRole.BLACKSMITH, NpcActivity.IDLE): "sitting with a mug of ale",
+    (NpcRole.BLACKSMITH, NpcActivity.SLEEPING): "sleeping",
     # Tavern keeper
-    ("tavern_keeper", NpcActivity.WORKING): "wiping down the bar",
-    ("tavern_keeper", NpcActivity.IDLE): "resting behind the counter",
-    ("tavern_keeper", NpcActivity.SLEEPING): "sleeping",
+    (NpcRole.TAVERN_KEEPER, NpcActivity.WORKING): "wiping down the bar",
+    (NpcRole.TAVERN_KEEPER, NpcActivity.IDLE): "resting behind the counter",
+    (NpcRole.TAVERN_KEEPER, NpcActivity.SLEEPING): "sleeping",
     # Guard
-    ("guard", NpcActivity.WORKING): "standing watch",
-    ("guard", NpcActivity.IDLE): "leaning against the wall",
-    ("guard", NpcActivity.SLEEPING): "sleeping in the barracks",
+    (NpcRole.GUARD, NpcActivity.WORKING): "standing watch",
+    (NpcRole.GUARD, NpcActivity.IDLE): "leaning against the wall",
+    (NpcRole.GUARD, NpcActivity.SLEEPING): "sleeping in the barracks",
     # Merchant
-    ("merchant", NpcActivity.WORKING): "hawking wares to passersby",
-    ("merchant", NpcActivity.IDLE): "counting coins at a table",
-    ("merchant", NpcActivity.SLEEPING): "sleeping",
+    (NpcRole.MERCHANT, NpcActivity.WORKING): "hawking wares to passersby",
+    (NpcRole.MERCHANT, NpcActivity.IDLE): "counting coins at a table",
+    (NpcRole.MERCHANT, NpcActivity.SLEEPING): "sleeping",
     # Farmer
-    ("farmer", NpcActivity.WORKING): "tending the fields",
-    ("farmer", NpcActivity.IDLE): "resting on the porch",
-    ("farmer", NpcActivity.SLEEPING): "sleeping",
+    (NpcRole.FARMER, NpcActivity.WORKING): "tending the fields",
+    (NpcRole.FARMER, NpcActivity.IDLE): "resting on the porch",
+    (NpcRole.FARMER, NpcActivity.SLEEPING): "sleeping",
 }
 
 # Generic fallbacks by activity (when role has no specific entry)
@@ -203,7 +203,7 @@ _ACTIVITY_GENERIC: dict[NpcActivity, str] = {
 }
 
 
-def activity_flavor(role: str, activity: NpcActivity) -> str:
+def activity_flavor(role: NpcRole, activity: NpcActivity) -> str:
     """Get a short flavor description of what an NPC is doing."""
     return ACTIVITY_FLAVOR.get((role, activity), _ACTIVITY_GENERIC.get(activity, activity.value))
 
@@ -211,22 +211,22 @@ def activity_flavor(role: str, activity: NpcActivity) -> str:
 # Canned dialogue for RuleBrain NPCs — response when someone talks to them.
 # Priority: mood tag override > (role, activity) > activity-only > generic fallback.
 # Future: add relationship overrides (hates:player → hostile line, trusts:player → friendly).
-CANNED_DIALOGUE: dict[tuple[str, NpcActivity], str] = {
+CANNED_DIALOGUE: dict[tuple[NpcRole, NpcActivity], str] = {
     # Blacksmith
-    ("blacksmith", NpcActivity.WORKING): _("Need something forged?"),
-    ("blacksmith", NpcActivity.IDLE): _("Hm? Oh, I'm off duty."),
+    (NpcRole.BLACKSMITH, NpcActivity.WORKING): _("Need something forged?"),
+    (NpcRole.BLACKSMITH, NpcActivity.IDLE): _("Hm? Oh, I'm off duty."),
     # Tavern keeper
-    ("tavern_keeper", NpcActivity.WORKING): _("What'll it be?"),
-    ("tavern_keeper", NpcActivity.IDLE): _("Kitchen's closed. Come back later."),
+    (NpcRole.TAVERN_KEEPER, NpcActivity.WORKING): _("What'll it be?"),
+    (NpcRole.TAVERN_KEEPER, NpcActivity.IDLE): _("Kitchen's closed. Come back later."),
     # Guard
-    ("guard", NpcActivity.WORKING): _("Move along, citizen."),
-    ("guard", NpcActivity.IDLE): _("Quiet night, eh?"),
+    (NpcRole.GUARD, NpcActivity.WORKING): _("Move along, citizen."),
+    (NpcRole.GUARD, NpcActivity.IDLE): _("Quiet night, eh?"),
     # Merchant
-    ("merchant", NpcActivity.WORKING): _("Looking to buy something?"),
-    ("merchant", NpcActivity.IDLE): _("Shop's closed. Try tomorrow."),
+    (NpcRole.MERCHANT, NpcActivity.WORKING): _("Looking to buy something?"),
+    (NpcRole.MERCHANT, NpcActivity.IDLE): _("Shop's closed. Try tomorrow."),
     # Farmer
-    ("farmer", NpcActivity.WORKING): _("Can't talk, crops won't tend themselves."),
-    ("farmer", NpcActivity.IDLE): _("Fine evening, isn't it?"),
+    (NpcRole.FARMER, NpcActivity.WORKING): _("Can't talk, crops won't tend themselves."),
+    (NpcRole.FARMER, NpcActivity.IDLE): _("Fine evening, isn't it?"),
 }
 
 _DIALOGUE_GENERIC: dict[NpcActivity, str] = {
@@ -244,7 +244,7 @@ MOOD_DIALOGUE: dict[str, str] = {
 }
 
 
-def canned_line(role: str, activity: NpcActivity, tags: list[str]) -> str:
+def canned_line(role: NpcRole, activity: NpcActivity, tags: list[str]) -> str:
     """Pick a canned dialogue line. Mood overrides role+activity."""
     for tag, line in MOOD_DIALOGUE.items():
         if has_tag(tags, tag):

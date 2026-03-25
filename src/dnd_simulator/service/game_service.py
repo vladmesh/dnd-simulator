@@ -239,7 +239,7 @@ class GameService(
                 {
                     "id": npc.id,
                     "name": npc.name,
-                    "role": npc.role,
+                    "role": npc.role.value,
                     "location_id": npc.location_id,
                     "settlement_id": npc.settlement_id,
                     "personality": npc.personality,

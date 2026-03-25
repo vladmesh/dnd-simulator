@@ -21,6 +21,7 @@ from dnd_simulator.core.character import (
     CharClass,
     DamageComponent,
     DamageType,
+    NpcRole,
     Race,
 )
 from dnd_simulator.core.class_features import ClassFeatures, FighterFeatures, FightingStyle, RogueFeatures
@@ -511,7 +512,8 @@ def load_npcs(path: Path, lang: str = "en", known_locations: set[str] | None = N
 
 def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locations: set[str] | None = None) -> Npc:
     """Parse a single NPC from YAML data."""
-    role = str(ndata.get("role", ""))
+    role_str = str(ndata.get("role", ""))
+    role = NpcRole(role_str) if role_str else NpcRole.COMMONER
     settlement_id = str(ndata.get("settlement_id", ""))
 
     # Resolve schedule: role-based template with settlement prefix

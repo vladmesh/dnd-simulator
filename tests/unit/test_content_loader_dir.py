@@ -11,6 +11,7 @@ from dnd_simulator.content_loader import (
     load_world,
     load_world_meta,
 )
+from dnd_simulator.core.character import NpcRole
 
 SWORD_VALE = Path(__file__).resolve().parents[2] / "content" / "worlds" / "sword_vale"
 
@@ -44,7 +45,7 @@ class TestDirectoryFormat:
         npcs = load_npcs(SWORD_VALE)
         assert len(npcs) == 4
         edgar = next(n for n in npcs if n.id == "edgar")
-        assert edgar.role == "blacksmith"
+        assert edgar.role == NpcRole.BLACKSMITH
         assert edgar.ai_type == "rule_based"
         # Brain is assigned by BrainFactory in GameService, not by content_loader
         assert edgar.brain is None

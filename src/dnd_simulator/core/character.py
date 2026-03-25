@@ -58,6 +58,17 @@ class CharClass(Enum):
     WARLOCK = "warlock"
 
 
+class NpcRole(Enum):
+    """NPC roles — determines schedule, dialogue, and merchant status."""
+
+    COMMONER = "commoner"
+    BLACKSMITH = "blacksmith"
+    TAVERN_KEEPER = "tavern_keeper"
+    GUARD = "guard"
+    MERCHANT = "merchant"
+    FARMER = "farmer"
+
+
 class Alignment(Enum):
     """Nine classic alignments."""
 
@@ -262,6 +273,11 @@ class Character(Creature):
             if isinstance(f, feature_type):
                 return f
         return None
+
+    @property
+    def is_merchant(self) -> bool:
+        """Whether this character can trade. Always False for base Character."""
+        return False
 
     def get_npc_data(self) -> dict[str, str]:
         """Return NPC metadata for LLM prompts. Override in Npc."""

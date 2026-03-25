@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dnd_simulator.core.character import Creature, Entity
+from dnd_simulator.core.character import Creature, Entity, NpcRole
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query, QueryType, TimeDelta
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -32,28 +32,28 @@ def _make_npcs() -> list[Npc]:
             id="smith",
             name="Edgar the Smith",
             location_id="silverport",
-            role="blacksmith",
+            role=NpcRole.BLACKSMITH,
             personality="Gruff but fair.",
             settlement_id="silverport_city",
-            schedule=resolve_schedule("blacksmith", "silverport_city"),
+            schedule=resolve_schedule(NpcRole.BLACKSMITH, "silverport_city"),
         ),
         Npc(
             id="guard",
             name="Guard Rodrik",
             location_id="silverport",
-            role="guard",
+            role=NpcRole.GUARD,
             personality="Disciplined.",
             settlement_id="silverport_city",
-            schedule=resolve_schedule("guard", "silverport_city"),
+            schedule=resolve_schedule(NpcRole.GUARD, "silverport_city"),
         ),
         Npc(
             id="farmer",
             name="Old Bran",
             location_id="highfield",
-            role="farmer",
+            role=NpcRole.FARMER,
             personality="Quiet.",
             settlement_id="highfield_town",
-            schedule=resolve_schedule("farmer", "highfield_town"),
+            schedule=resolve_schedule(NpcRole.FARMER, "highfield_town"),
         ),
     ]
 
@@ -322,7 +322,7 @@ class TestCombatSummarization:
             id="guard",
             name="Guard",
             location_id="town_square",
-            role="guard",
+            role=NpcRole.GUARD,
             personality="Brave.",
             settlement_id="town",
             memory=NpcMemory(tags=["loyal_to:player"]),
@@ -333,7 +333,7 @@ class TestCombatSummarization:
             id="bandit",
             name="Bandit",
             location_id="town_square",
-            role="bandit",
+            role=NpcRole.COMMONER,
             personality="Ruthless.",
             settlement_id="town",
             memory=NpcMemory(tags=["hates:player"]),
@@ -384,7 +384,7 @@ class TestCombatSummarization:
     def test_no_summarizer_does_nothing(self) -> None:
         """Without a summarizer, combat end doesn't crash."""
         player = PlayerCharacter(id="player", name="Hero", location_id="loc")
-        npc = Npc(id="npc1", name="NPC", location_id="loc", role="guard", personality=".", settlement_id="s")
+        npc = Npc(id="npc1", name="NPC", location_id="loc", role=NpcRole.GUARD, personality=".", settlement_id="s")
         npc.max_hp = 100
         npc.current_hp = 100
         layer = EntitiesLayer(entities=[player, npc])

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.awareness import ItemInfo, MerchantInfo
+from dnd_simulator.core.character import NpcRole
 from dnd_simulator.core.items import Item, ItemType
 from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.core.player import PlayerCharacter
@@ -23,7 +24,7 @@ TAVERN = "silverport_city_tavern"
 
 
 def _merchant(*, gold: int = 500, items: list[Item] | None = None) -> Npc:
-    npc = Npc(id="merchant_1", name="Gretta", role="merchant", location_id=MARKET, gold=gold)
+    npc = Npc(id="merchant_1", name="Gretta", role=NpcRole.MERCHANT, location_id=MARKET, gold=gold)
     if items is not None:
         npc.inventory = items
     return npc

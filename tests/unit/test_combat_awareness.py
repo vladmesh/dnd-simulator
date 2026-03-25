@@ -13,6 +13,7 @@ from dnd_simulator.core.character import (
     DamageComponent,
     DamageType,
     Entity,
+    NpcRole,
     Race,
 )
 from dnd_simulator.core.conditions import Condition
@@ -349,7 +350,7 @@ class TestCombatModeSwitch:
 class TestNpcCombatTurn:
     def test_combat_turn_uses_combat_tools(self) -> None:
         """When in_combat=True, NPC should use combat prompt and tools."""
-        npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", attacks=(_DAGGER,), in_combat=True)
+        npc = Npc(id="n1", name="Guard", location_id="r1", role=NpcRole.GUARD, attacks=(_DAGGER,), in_combat=True)
         player = Character(id="p1", name="Hero", location_id="r1", race=Race.HUMAN)
         layer = EntitiesLayer([npc, player])
 
@@ -379,7 +380,7 @@ class TestNpcCombatTurn:
         assert "say" not in tool_names
 
     def test_combat_turn_dodge(self) -> None:
-        npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", in_combat=True)
+        npc = Npc(id="n1", name="Guard", location_id="r1", role=NpcRole.GUARD, in_combat=True)
         layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         dodge_tc = ToolCall(id="tc_1", name="dodge", arguments={"description": "Прячусь за щит"})
@@ -402,7 +403,7 @@ class TestNpcCombatTurn:
         assert emit_calls[0].event_type == EventType.ENTITY_DODGE
 
     def test_combat_turn_flee(self) -> None:
-        npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", in_combat=True)
+        npc = Npc(id="n1", name="Guard", location_id="r1", role=NpcRole.GUARD, in_combat=True)
         layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         flee_tc = ToolCall(id="tc_1", name="flee", arguments={"description": "Бегу к двери!"})
@@ -426,7 +427,7 @@ class TestNpcCombatTurn:
 
     def test_peaceful_turn_uses_peaceful_tools(self) -> None:
         """When in_combat=False, NPC should use the regular tools."""
-        npc = Npc(id="n1", name="Guard", location_id="r1", role="guard", in_combat=False)
+        npc = Npc(id="n1", name="Guard", location_id="r1", role=NpcRole.GUARD, in_combat=False)
         layer = EntitiesLayer([npc])
         mock_llm = MagicMock()
         idle_tc = ToolCall(id="tc_1", name="idle", arguments={})
