@@ -67,6 +67,7 @@ class NpcRole(Enum):
     GUARD = "guard"
     MERCHANT = "merchant"
     FARMER = "farmer"
+    GLADIATOR = "gladiator"
 
 
 class Alignment(Enum):

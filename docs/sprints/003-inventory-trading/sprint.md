@@ -61,7 +61,7 @@ Merchant-флаг на NPC, инвентарь торговца, buy/sell экш
 2. [Buy/Sell Action Handlers + Dispatch](tasks/phase3-task2-buy-sell-handlers.md)
 3. [Trade UI](tasks/phase3-task3-trade-ui.md)
 
-## Phase 4: Audit Refactor
+## Phase 4: Audit Refactor ✓
 
 Post-audit cleanup: fix architecture violations introduced by trading (rules/ → layers/ dependency), add NPC role enum, extract hardcoded content to YAML.
 

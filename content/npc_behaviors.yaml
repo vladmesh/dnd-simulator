@@ -21,6 +21,10 @@ schedules:
     - [20, 5, sleeping, home]
     - [5, 18, working, fields]
     - [18, 20, idle, home]
+  gladiator:
+    - [22, 6, sleeping, barracks]
+    - [6, 20, working, arena]
+    - [20, 22, idle, tavern]
 
 activity_flavor:
   blacksmith:
@@ -43,6 +47,10 @@ activity_flavor:
     working: "tending the fields"
     idle: "resting on the porch"
     sleeping: "sleeping"
+  gladiator:
+    working: "training with weapons"
+    idle: "resting between bouts"
+    sleeping: "sleeping in the barracks"
 
 # Generic fallbacks when a role has no specific entry
 activity_flavor_generic:
