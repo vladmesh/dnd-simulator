@@ -57,7 +57,9 @@ ActionDispatcher (`service/action_dispatcher.py`) — единый entry point: 
 
 ## In Progress
 
-(нет)
+### Sprint 004 — Monster Encounters
+Рандомные энкаунтеры с монстрами в опасных локациях, логова с persistent существами, автолут. MonsterTemplate из YAML, таблицы встреч на локациях, hostile AI, автодроп лута.
+→ [план спринта](sprints/004-monster-encounters/sprint.md)
 
 ## Planned
 
