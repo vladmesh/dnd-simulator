@@ -58,6 +58,14 @@ export interface ItemInfo {
   id: string
   name: string
   description: string
+  price?: number | null
+}
+
+export interface EquippedInfo {
+  slot: string
+  item_id: string
+  name: string
+  description: string
 }
 
 export interface ActionParamInfo {
@@ -156,6 +164,8 @@ export interface PlayerStatus {
   gold: number
   location_id: string
   ability_scores: AbilityScores
+  equipped?: EquippedInfo[]
+  inventory?: ItemInfo[]
 }
 
 // --- Actions ---

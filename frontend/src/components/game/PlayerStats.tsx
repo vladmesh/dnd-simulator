@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useGameStore } from "@/store/gameStore"
 import { ChevronDown, ChevronRight, Shield, Coins } from "lucide-react"
+import { InventoryPanel } from "./InventoryPanel"
 
 export function PlayerStats() {
   const { t } = useTranslation(["game", "common"])
@@ -45,6 +46,8 @@ export function PlayerStats() {
           </div>
         </div>
       )}
+      <div className="border-t border-border" />
+      <InventoryPanel />
     </div>
   )
 }

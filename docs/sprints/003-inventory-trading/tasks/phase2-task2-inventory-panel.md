@@ -60,4 +60,8 @@ Note: Frontend tests are verified via Playwright E2E during phase close, not uni
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Created InventoryPanel component with 6 equipment slots (2-column grid) and a scrollable bag section. Equipment slots show item name when equipped (click to unequip) or slot label when empty. Bag items show name, price, and contextual buttons (USE for consumables, EQUIP for equippable items). Integrated below ability scores in PlayerStats via a border separator. Added i18n keys for both EN and RU. TypeScript types updated with EquippedInfo, price on ItemInfo, and equipped/inventory on PlayerStatus.

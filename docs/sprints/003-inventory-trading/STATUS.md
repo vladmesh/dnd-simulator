@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 2, Task 1: Inventory & Equipment Awareness — done. Price on Item, full inventory always visible, equipped items in awareness + WS messages.
+Phase 2, Task 2: Frontend Inventory & Equipment Panel — done. 6 equipment slots, bag with prices, equip/unequip actions.
 
 ## Next Steps
 
-- Task 2: Frontend Inventory & Equipment Panel — 6 equipment slots, bag, equip/unequip UI
+- Phase 2 complete — ready for /close_phase

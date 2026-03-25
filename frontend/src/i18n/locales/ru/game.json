@@ -64,5 +64,16 @@
   "class_monk": "Монах",
   "class_sorcerer": "Чародей",
   "class_warlock": "Колдун",
-  "class_commoner": "Обыватель"
+  "class_commoner": "Обыватель",
+  "inventory": "Инвентарь",
+  "bag": "Сумка",
+  "slot_weapon": "Оружие",
+  "slot_armor": "Броня",
+  "slot_shield": "Щит",
+  "slot_head": "Голова",
+  "slot_feet": "Ноги",
+  "slot_ring": "Кольцо",
+  "click_to_unequip": "Нажмите, чтобы снять",
+  "equip": "Надеть",
+  "unequip": "Снять"
 }

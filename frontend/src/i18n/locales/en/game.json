@@ -64,5 +64,16 @@
   "class_monk": "Monk",
   "class_sorcerer": "Sorcerer",
   "class_warlock": "Warlock",
-  "class_commoner": "Commoner"
+  "class_commoner": "Commoner",
+  "inventory": "Inventory",
+  "bag": "Bag",
+  "slot_weapon": "Weapon",
+  "slot_armor": "Armor",
+  "slot_shield": "Shield",
+  "slot_head": "Head",
+  "slot_feet": "Feet",
+  "slot_ring": "Ring",
+  "click_to_unequip": "Click to unequip",
+  "equip": "Equip",
+  "unequip": "Unequip"
 }
