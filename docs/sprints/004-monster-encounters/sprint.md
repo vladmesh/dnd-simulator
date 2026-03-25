@@ -81,7 +81,9 @@ EcologyLayer (новый слой между Settlements и Entities): tick-base
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [EcologyLayer Skeleton + Squad Ownership](tasks/phase3-task1-ecology-layer.md)
+2. [Squad Movement + Squad-vs-Squad Combat](tasks/phase3-task2-squad-movement.md)
+3. [Squad Materialization + Dematerialization](tasks/phase3-task3-materialization.md)
 
 ## Phase 4: Frontend + E2E
 

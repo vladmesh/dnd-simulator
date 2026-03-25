@@ -1,12 +1,18 @@
 # Sprint 004 Status
 
 **Sprint:** 004-monster-encounters → 004-living-world (replanned)
-**Phase:** 2 — Generalize Encounters + Hostile AI (COMPLETE)
+**Phase:** 3 — Squad Movement + Materialization
 **Updated:** 2026-03-25
 
 ## Current
 
-Phase 2 complete. Encounter triggers generalized to any active creature, faction-aware hostile AI in RuleBrain, abstract squad combat formula added. Ready for Phase 3 task generation.
+Phase 3 tasks generated. Ready to start task 1 (EcologyLayer skeleton + squad migration).
+
+## Next Steps
+
+- Task 1: Create EcologyLayer, move squad storage from EntitiesLayer, register in World
+- Task 2: Tick-based squad movement by behavior + squad-vs-squad abstract combat
+- Task 3: Materialization when squad meets active character, dematerialization on departure
 
 ## Completed
 
