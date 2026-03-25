@@ -35,25 +35,35 @@
 - [ ] **could** `llm-narrator` — Интерпретация абстрактных изменений мира в нарративные описания
 - [ ] **could** `npc-language` — Динамический выбор языка NPC (из настроек или по языку игрока)
 
-## Tech Debt (from audit 2026-03-25)
+## Tech Debt (from audits 2026-03-25)
 
-- [ ] **should** `god-class-entities` — EntitiesLayer 832 строк, 30+ методов. Выделить awareness builder, activation manager, query handler
-- [ ] **should** `god-class-politics` — PoliticsLayer 588 строк. Выделить подсистемы
-- [ ] **should** `test-gaps` — Нет тестов: awareness, items, world, turn_budget, location, brain_factory, commands_*, session, store
+- [ ] **should** `god-class-entities` — EntitiesLayer 1215 строк (было 832), 30+ методов. Выделить awareness builder, activation manager, query handler
+- [ ] **should** `god-class-politics` — PoliticsLayer 609 строк. Выделить подсистемы
+- [ ] **should** `test-gaps-critical` — rules/action_handlers.py (605 строк) — нет unit-тестов, core combat execution
+- [ ] **should** `test-gaps` — Нет тестов: action_provider, awareness, items, world, turn_budget, location, brain_factory, commands_*, session, store
+- [ ] **should** `rules-imports-layers` — rules/trade.py и rules/action_handlers.py импортируют Npc из layers/entities/models. Выделить merchant protocol в core
+- [ ] **should** `round-direct-layer-access` — round.py напрямую импортирует EntitiesLayer, минуя World query validation. Перейти на World.query_layer()
 - [ ] **should** `mixin-type-ignores` — 27x `# type: ignore[attr-defined]` в service command mixins. Добавить Protocol/ABC
 - [ ] **should** `llm-client-type-ignores` — `# type: ignore[arg-type]` в llm/client.py на вызовах OpenAI SDK
 - [ ] **should** `any-in-query-answer` — `Query.params: dict[str, Any]` и `Answer.value: Any` — нужен `object` для strict mypy (каскадные изменения в 24 местах)
-- [ ] **should** `action-handlers-growing` — rules/action_handlers.py 604 строк, растёт с каждым новым экшеном. Разбить по домену (combat, movement, trade)
-- [ ] **could** `long-methods` — query() 125 строк, run_combat_turn 124, resolve_attack 106
+- [ ] **should** `action-handlers-growing` — rules/action_handlers.py 605 строк, растёт с каждым новым экшеном. Разбить по домену (combat, movement, trade)
+- [ ] **should** `content-loader-growing` — content_loader.py 815 строк. Разбить по домену (weapons, NPCs, settlements, encounters)
+- [ ] **could** `long-methods` — query() 125 строк, run_combat_turn 121, resolve_attack 186, start_round 104
+- [ ] **could** `session-serialization-duplication` — on_turn, on_action, on_round_end повторяют awareness/events/player/location сериализацию
+- [ ] **could** `npc-behaviors-yaml-loading` — layers/entities/npc_behaviors.py загружает YAML на уровне модуля с global state mutation. Перенести в content_loader
 - [ ] **could** `action-parsing-in-adapter` — Adapter (routes_ws) парсит Action из JSON, должен service layer
 - [x] `magic-number-trade` — ~~Magic number 0.08 в politics/layer.py:338~~ FIXED 2026-03-24
 - [ ] **could** `player-status-in-adapter` — routes_player._player_status() маппит Ability enum → строки, presentation logic в адаптере
 
-## Security (from audit 2026-03-25)
+## Security (from audits 2026-03-25)
 
-- [ ] **should** `cors-wildcard` — CORS allow_origins=["*"] в app.py
+- [ ] **should** `cors-wildcard` — CORS allow_origins=["*"], allow_methods=["*"], allow_headers=["*"] в app.py
 - [ ] **should** `no-auth` — Нет аутентификации/авторизации, все эндпоинты открыты по session_id
+- [ ] **should** `no-csrf` — Нет CSRF protection на state-changing HTTP; с CORS=* browser-based CSRF тривиален
 - [ ] **could** `ws-max-size` — Нет лимита на размер WebSocket сообщений
+- [ ] **could** `ws-origin-optional` — WS origin validation через env var, по умолчанию выключена; case-sensitive
+- [ ] **could** `frontend-error-endpoint` — POST /api/frontend-error принимает произвольный JSON без валидации
+- [ ] **could** `rest-rate-limiting` — Нет rate limiting на REST эндпоинтах (WS имеет token bucket)
 - [ ] **could** `action-params-validation` — Action params из клиента без schema validation
 - [ ] **could** `llm-prompt-injection` — Player say() текст попадает в NPC memory → system prompt
 

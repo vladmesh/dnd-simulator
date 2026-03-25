@@ -4,21 +4,20 @@
 > **Scope**: full (post Sprint 004 Phase 4)
 
 ## Summary
-- Dead code: 3 issues
-- Code smells: 8 issues
-- Security: 9 issues
-- Architecture violations: 4 issues
-- Convention violations: 5 issues
+- Dead code: 2 issues (FIXED) + 4 backlog stubs
+- Code smells: 8 issues → backlog
+- Security: 9 issues → backlog
+- Architecture violations: 4 issues → backlog
+- Convention violations: 1 issue → backlog (4 false positives corrected)
 - Layer contract: 0 issues
-- Test gaps: 12 issues
+- Test gaps: 12 issues → backlog
 - Vision drift: 0 issues
 
 ## Dead Code
 | File | Issue | Action |
 |------|-------|--------|
-| `rules/movement.py:101` | `move_toward()` — zero callers, superseded by `move_direction()` | remove |
-| `rules/movement.py:111` | `move_away_from()` — zero callers, superseded by `move_direction()` | remove |
-| `rules/movement.py:136` | `_step_toward()` — private helper only used by dead functions above | remove |
+| `rules/movement.py:101` | `move_toward()` — zero callers, superseded by `move_direction()` | **FIXED** — removed |
+| `rules/movement.py:111` | `move_away_from()` — zero callers, superseded by `move_direction()` | **FIXED** — removed |
 
 Prior-audit backlog items (still valid, tracked for future sprints):
 - `rules/conditions.py:32` `auto_fail_str_dex_saves()` — future saving throw system
@@ -70,11 +69,12 @@ Resolved from prior audit:
 ## Convention Violations
 | File:Line | Violation | Rule |
 |-----------|-----------|------|
-| `layers/entities/models.py:105` | `self.role == "merchant"` — hardcoded string comparison | Use enum for NPC roles (enums over hardcoded strings) |
 | `core/models.py:210,217` | `Query.params: dict[str, Any]` and `Answer.value: Any` | Use `object` for strict mypy |
-| `adapters/api/routes_player.py:45,52` | Helper functions typed as `Any` | Use proper types |
-| `adapters/api/routes_master.py:348,353` | Helper functions typed as `Any` | Use proper types |
-| `rules/action_handlers.py:55,60,68,115,191` | `action.params.get("key", default)` pattern — silent fallback on missing params | Use `action.params["key"]` — fail fast |
+
+False positives from initial scan (verified correct on inspection):
+- ~~`models.py:105` `self.role == "merchant"`~~ — actually uses `NpcRole.MERCHANT` enum
+- ~~`routes_player.py` / `routes_master.py` helpers typed as Any~~ — already properly typed
+- ~~`action_handlers.py` `.get("key", default)` pattern~~ — optional params (description, travel_to, hours) with intentional defaults
 
 ## Layer Contract
 | Layer | Issue |

@@ -98,32 +98,6 @@ def calculate_away_direction(origin: Position, target: Position) -> str:
     return _reverse.get((sx, sy), "north")
 
 
-def move_toward(origin: Position, target: Position, speed: int, battle_map: BattleMap, mover_id: str = "") -> Position:
-    """Move from *origin* toward *target*, up to *speed* feet.
-
-    Steps one 5-ft square at a time toward target, spending movement
-    according to D&D 5e diagonal rules, clamped to map bounds.
-    Stops before cells occupied by other entities.
-    """
-    return _step_toward(origin, target, speed, battle_map, mover_id)
-
-
-def move_away_from(
-    origin: Position, target: Position, speed: int, battle_map: BattleMap, mover_id: str = ""
-) -> Position:
-    """Move from *origin* directly away from *target*, up to *speed* feet."""
-    # Mirror target through origin to get an "away" destination
-    dx = origin.x - target.x
-    dy = origin.y - target.y
-    # If on top of each other, pick arbitrary direction
-    if dx == 0 and dy == 0:
-        away_target = Position(origin.x, origin.y + speed)
-    else:
-        # Scale to put away_target far beyond origin
-        away_target = Position(origin.x + dx * 100, origin.y + dy * 100)
-    return _step_toward(origin, away_target, speed, battle_map, mover_id)
-
-
 def move_direction(origin: Position, direction: str, speed: int, battle_map: BattleMap, mover_id: str = "") -> Position:
     """Move from *origin* in a compass direction, up to *speed* feet."""
     vec = _DIRECTIONS.get(direction.lower())

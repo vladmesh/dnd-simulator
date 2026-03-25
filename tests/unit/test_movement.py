@@ -6,9 +6,7 @@ from dnd_simulator.core.combat import BattleMap, Position, Wall
 from dnd_simulator.rules.movement import (
     direction_label,
     grid_distance,
-    move_away_from,
     move_direction,
-    move_toward,
 )
 
 
@@ -72,62 +70,6 @@ class TestDirectionLabel:
         assert direction_label(0, 0) == "here"
 
 
-class TestMoveToward:
-    def test_move_straight(self) -> None:
-        bm = BattleMap(width=100, height=100)
-        origin = Position(0, 0)
-        target = Position(50, 0)
-        result = move_toward(origin, target, speed=30, battle_map=bm)
-        assert result == Position(30, 0)
-
-    def test_move_reaches_target(self) -> None:
-        bm = BattleMap(width=100, height=100)
-        origin = Position(0, 0)
-        target = Position(10, 0)
-        result = move_toward(origin, target, speed=30, battle_map=bm)
-        assert result == target
-
-    def test_move_diagonal_costs_alternating(self) -> None:
-        bm = BattleMap(width=100, height=100)
-        origin = Position(0, 0)
-        target = Position(50, 50)
-        # speed=30: diag costs 5,10,5,10 → after 4 diags spent 30
-        result = move_toward(origin, target, speed=30, battle_map=bm)
-        assert result == Position(20, 20)
-
-    def test_clamp_to_map_bounds(self) -> None:
-        bm = BattleMap(width=30, height=30)
-        origin = Position(20, 20)
-        target = Position(100, 100)
-        result = move_toward(origin, target, speed=30, battle_map=bm)
-        assert result.x <= 30
-        assert result.y <= 30
-
-    def test_zero_speed(self) -> None:
-        bm = BattleMap(width=100, height=100)
-        origin = Position(10, 10)
-        target = Position(50, 50)
-        result = move_toward(origin, target, speed=0, battle_map=bm)
-        assert result == origin
-
-
-class TestMoveAwayFrom:
-    def test_move_away_straight(self) -> None:
-        bm = BattleMap(width=100, height=100)
-        origin = Position(50, 50)
-        threat = Position(50, 60)
-        result = move_away_from(origin, threat, speed=30, battle_map=bm)
-        # Should move south (away from north threat)
-        assert result.y < origin.y
-
-    def test_move_away_from_same_position(self) -> None:
-        bm = BattleMap(width=100, height=100)
-        origin = Position(50, 50)
-        result = move_away_from(origin, origin, speed=30, battle_map=bm)
-        # Should move somewhere (default: north)
-        assert result != origin
-
-
 class TestMoveDirection:
     def test_move_north(self) -> None:
         bm = BattleMap(width=100, height=100)
@@ -158,38 +100,9 @@ class TestMoveDirection:
 class TestMoveWithWalls:
     """Movement stops at walls instead of passing through."""
 
-    def test_move_toward_stops_at_vertical_wall(self) -> None:
-        bm = BattleMap(width=100, height=100, walls=[Wall(30, 0, 30, 50)])
-        origin = Position(10, 10)
-        target = Position(50, 10)
-        result = move_toward(origin, target, speed=30, battle_map=bm)
-        # Should stop at x=25 (one square before the wall at x=30)
-        assert result.x <= 25
-
     def test_move_direction_stops_at_horizontal_wall(self) -> None:
         bm = BattleMap(width=100, height=100, walls=[Wall(0, 40, 60, 40)])
         origin = Position(10, 20)
         result = move_direction(origin, "north", speed=30, battle_map=bm)
         # Should stop at y=35 (one square before wall at y=40)
         assert result.y <= 35
-
-    def test_move_through_gap_in_wall(self) -> None:
-        # Wall from x=0..20 and x=30..60, gap at y=20..30
-        bm = BattleMap(
-            width=100,
-            height=100,
-            walls=[Wall(40, 0, 40, 20), Wall(40, 30, 40, 60)],
-        )
-        origin = Position(30, 25)  # in the gap zone
-        target = Position(50, 25)
-        result = move_toward(origin, target, speed=30, battle_map=bm)
-        # Should pass through the gap
-        assert result.x > 30
-
-    def test_move_away_stops_at_wall(self) -> None:
-        bm = BattleMap(width=100, height=100, walls=[Wall(0, 30, 60, 30)])
-        origin = Position(10, 35)
-        threat = Position(10, 50)
-        result = move_away_from(origin, threat, speed=30, battle_map=bm)
-        # Moving south (away from north threat), should stop at wall y=30
-        assert result.y >= 30
