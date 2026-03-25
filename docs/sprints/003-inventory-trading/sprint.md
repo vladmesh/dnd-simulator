@@ -46,7 +46,8 @@ Sprint 001 заложил фундамент предметов: WeaponDef, Armo
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Inventory & Equipment Awareness](tasks/phase2-task1-inventory-awareness.md)
+2. [Frontend Inventory & Equipment Panel](tasks/phase2-task2-inventory-panel.md)
 
 ## Phase 3: Trading
 

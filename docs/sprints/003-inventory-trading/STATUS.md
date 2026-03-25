@@ -1,13 +1,14 @@
 # Sprint 003 Status
 
 **Sprint:** 003-inventory-trading
-**Phase:** 1 — Accessory Slots + Modifiers (COMPLETE)
+**Phase:** 2 — Inventory UI + Gold
 **Updated:** 2026-03-25
 
 ## Current
 
-Phase 1 complete. Generic equip/unequip mechanism + 3 accessory slots (head, feet, ring) with modifier pipeline integration. 24 integration tests green, E2E regression green. Ready for Phase 2 task generation.
+Phase 2 tasks generated. Ready to start task 1.
 
 ## Next Steps
 
-- Phase 2 task generation (Inventory UI + Gold)
+- Task 1: Inventory & Equipment Awareness — price on Item, equipped items + full inventory in awareness/WS messages
+- Task 2: Frontend Inventory & Equipment Panel — 6 equipment slots, bag, equip/unequip UI
