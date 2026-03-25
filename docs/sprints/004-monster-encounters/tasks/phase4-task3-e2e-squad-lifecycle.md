@@ -55,4 +55,19 @@ This IS the test task. Scenarios to cover:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+E2E done as manual playtest session instead of automated Playwright. Found and fixed 18 bugs across frontend, backend, content. Key findings:
+
+- Multiple crash-to-game-over bugs from missing param validation (say, buy, use_item, move)
+- RuleBrain friendly fire — was attacking allies in combat (missing is_hostile filter)
+- Combat didn't auto-start on encounter spawn or squad materialization
+- Combat didn't end when only allies remained (waited 2 idle rounds)
+- Ability modifier wasn't added to damage rolls
+- Creatures spawned on perimeter walls, got stuck
+- Session leaked memory on disconnect (no autosave/evict)
+- Squad routes didn't intersect — no squad-vs-squad combat was possible
+
+Squad lifecycle verified: movement events visible in log, materialization triggers combat, squad-vs-squad combat resolves with strength updates, destroyed squads removed permanently.
