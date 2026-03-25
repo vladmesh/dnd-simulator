@@ -75,7 +75,7 @@ class EntitiesLayer(Layer):
         self._encounter_tables = encounter_tables or {}
         self._squads = squads or {}
         self._encounter_cooldowns: dict[str, int] = {}  # location_id → last spawn time (seconds)
-        self._player_locations: dict[str, str] = {}  # player_id → last known location_id
+        self._creature_locations: dict[str, str] = {}  # creature_id → last known location_id
         self._spawn_counter = 0
         if entities:
             for e in entities:
@@ -148,6 +148,9 @@ class EntitiesLayer(Layer):
         if not has_players:
             return
 
+        # Snapshot active creature IDs before re-evaluation (for encounter checks)
+        previously_active: set[str] = {e.id for e in self._entities.values() if isinstance(e, Creature) and e.active}
+
         # Second pass: activate/dormify non-player creatures
         hour = time.hour
         for e in self._entities.values():
@@ -177,18 +180,24 @@ class EntitiesLayer(Layer):
                 logger.info("activation_wake_proximity", entity_id=e.id)
                 e.wake_at_seconds = None
 
-        # Third pass: check for encounter spawns at player locations
-        self._check_encounters(player_locations, now)
+        # Third pass: check for encounter spawns from creatures that were active
+        self._check_encounters(now, previously_active)
 
-    def _check_encounters(self, player_locations: set[str], now: int) -> None:
-        """Roll encounters for locations where players just arrived."""
-        from dnd_simulator.core.player import PlayerCharacter
+    def _check_encounters(self, now: int, active_ids: set[str]) -> None:
+        """Roll encounters for locations where any active creature just arrived.
 
+        Uses `active_ids` (snapshot from before activation recalculation) so that
+        creatures moving away from a player anchor still trigger encounters at
+        their new location. Temporary creatures are excluded to prevent chain-triggering.
+        """
         for e in list(self._entities.values()):
-            if not isinstance(e, PlayerCharacter):
+            if not isinstance(e, Creature):
                 continue
-            prev = self._player_locations.get(e.id)
-            self._player_locations[e.id] = e.location_id
+            if e.id not in active_ids or e.temporary:
+                continue
+
+            prev = self._creature_locations.get(e.id)
+            self._creature_locations[e.id] = e.location_id
 
             if e.location_id == prev:
                 continue  # didn't move

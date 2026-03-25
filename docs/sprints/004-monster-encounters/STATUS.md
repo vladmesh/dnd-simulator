@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 2 tasks generated. Ready to start task 1.
+Phase 2, Task 1: Generalize Encounter Triggers — done. Any active creature triggers encounters on location change.
 
 ## Next Steps
 

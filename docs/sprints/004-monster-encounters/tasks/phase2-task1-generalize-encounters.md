@@ -42,4 +42,8 @@ Scenarios to cover (product-level):
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Key implementation detail: encounter checks use a snapshot of active creature IDs taken *before* the activation recalculation pass. This handles the case where a creature was active (near player), moved to a new location, and then became dormant (no longer near player) — the encounter still fires because the creature was active when it moved. `_player_locations` renamed to `_creature_locations`. Temporary creatures excluded via `e.temporary` check to prevent chain-triggering.
