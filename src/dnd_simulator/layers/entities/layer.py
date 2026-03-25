@@ -21,6 +21,7 @@ from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
+from dnd_simulator.core.squad import Squad
 from dnd_simulator.layers.entities.combat_manager import CombatManager
 from dnd_simulator.layers.entities.models import Npc, NpcMemory, activity_flavor
 from dnd_simulator.layers.entities.perception import perceive_event
@@ -65,12 +66,14 @@ class EntitiesLayer(Layer):
         summarizer: MemorySummarizer | None = None,
         monster_templates: dict[str, MonsterTemplate] | None = None,
         encounter_tables: dict[str, list[EncounterEntry]] | None = None,
+        squads: dict[str, Squad] | None = None,
     ) -> None:
         self._entities: dict[str, Entity] = {}
         self._location_log: dict[str, list[Event]] = defaultdict(list)
         self._summarizer = summarizer
         self._monster_templates = monster_templates or {}
         self._encounter_tables = encounter_tables or {}
+        self._squads = squads or {}
         self._encounter_cooldowns: dict[str, int] = {}  # location_id → last spawn time (seconds)
         self._player_locations: dict[str, str] = {}  # player_id → last known location_id
         self._spawn_counter = 0

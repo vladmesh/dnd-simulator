@@ -229,6 +229,7 @@ class Creature(Entity):
     equipped_feet: Item | None = None
     equipped_ring: Item | None = None
     resource_pools: list[ResourcePool] = field(default_factory=list)
+    squad_id: str | None = None  # which squad this creature belongs to (if materialized)
     wake_at_seconds: int | None = None  # absolute game-time seconds; None = not waiting
     brain: Brain | None = field(default=None, repr=False)
 

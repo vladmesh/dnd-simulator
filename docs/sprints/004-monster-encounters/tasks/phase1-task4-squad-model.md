@@ -83,4 +83,8 @@ wolf_pack_1:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Clean implementation. Squad dataclass in `core/squad.py` with SquadType and SquadBehavior enums. `squad_id: str | None = None` added to Creature. Content loader gets `parse_squad()` and `load_squads()`. Squads stored on EntitiesLayer (`_squads` dict) for now — will move to EcologyLayer in Phase 3. Three Sword Vale squads: kingdom patrol, bandit gang, wolf pack. No old tests broken (929 total passing).

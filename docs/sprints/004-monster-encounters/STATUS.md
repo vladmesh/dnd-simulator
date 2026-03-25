@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 1, Task 3: Factions — faction_id + Faction Relations — done.
+Phase 1, Task 4: Squad model + squads.yaml — done.
 
 ## Completed (pre-pivot)
 
@@ -15,4 +15,4 @@ Phase 1, Task 3: Factions — faction_id + Faction Relations — done.
 
 ## Next Steps
 
-- Task 4: Squad model + squads.yaml
+- Phase 1 complete — ready to close.

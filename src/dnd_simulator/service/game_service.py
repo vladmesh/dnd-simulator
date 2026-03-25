@@ -14,6 +14,7 @@ from dnd_simulator.content_loader import (
     load_nations,
     load_npcs,
     load_settlements,
+    load_squads,
     load_world,
     load_world_meta,
 )
@@ -77,6 +78,7 @@ class GameService(
         npcs = load_npcs(world_path, lang=lang, known_locations=set(location_graph.all_ids()))
         monster_templates, encounter_tables = load_monsters(world_path, lang=lang)
         faction_relations = load_factions(world_path)
+        squads = load_squads(world_path, lang=lang)
         region_terrains = extract_region_terrains(regions)
 
         # Players are created via API (create_player), not from templates
@@ -101,6 +103,7 @@ class GameService(
             summarizer=summarizer,
             monster_templates=monster_templates,
             encounter_tables=encounter_tables,
+            squads=squads,
         )
 
         # Assign brains via factory (content_loader only parses data, not brains)

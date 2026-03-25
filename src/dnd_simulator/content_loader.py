@@ -43,6 +43,7 @@ from dnd_simulator.core.modifiers import Modifier, ModifierOp, StatType
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.resource import ResourcePool, RestType
+from dnd_simulator.core.squad import Squad, SquadBehavior, SquadType
 from dnd_simulator.layers.entities.models import Npc, NpcMemory, resolve_schedule
 from dnd_simulator.layers.geography.models import (
     Connection,
@@ -756,6 +757,46 @@ def load_monsters(path: Path, lang: str = "en") -> tuple[dict[str, MonsterTempla
     encounters = parse_encounters(encounters_data, set(templates.keys())) if encounters_data else {}
 
     return templates, encounters
+
+
+def parse_squad(squad_id: str, data: dict[str, Any], lang: str = "en") -> Squad:
+    """Parse a single squad from YAML data."""
+    return Squad(
+        id=squad_id,
+        name=resolve_text(data["name"], lang),
+        faction_id=str(data["faction"]),
+        squad_type=SquadType(data["type"]),
+        behavior=SquadBehavior(data["behavior"]),
+        current_location_id=str(data["start_location"]),
+        route=[str(loc) for loc in data.get("route", [])],
+        territory=[str(loc) for loc in data.get("territory", [])],
+        strength=int(data["strength"]),
+        max_strength=int(data.get("max_strength", data["strength"])),
+        member_templates=[str(m) for m in data.get("members", [])],
+        tick_interval=int(data.get("tick_interval", 3600)),
+    )
+
+
+def load_squads(path: Path, lang: str = "en") -> dict[str, Squad]:
+    """Load squads from a world directory.
+
+    Returns squads_by_id. Missing squads.yaml -> empty dict.
+    """
+    is_dir, resolved = _resolve_source(path)
+    if is_dir:
+        squads_data = _read_yaml(resolved / "squads.yaml")
+    else:
+        data = _read_yaml(resolved)
+        squads_data = data.get("squads", {})
+        assert isinstance(squads_data, dict)
+
+    if not squads_data:
+        return {}
+
+    squads: dict[str, Squad] = {}
+    for sid, sdata in squads_data.items():
+        squads[str(sid)] = parse_squad(str(sid), sdata, lang)
+    return squads
 
 
 def extract_region_adjacency(regions: list[Region]) -> dict[str, list[str]]:
