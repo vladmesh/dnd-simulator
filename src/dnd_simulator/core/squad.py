@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 
@@ -43,3 +43,4 @@ class Squad:
     max_strength: int
     member_templates: list[str]  # MonsterTemplate IDs
     tick_interval: int  # seconds between movement ticks
+    member_crs: list[float] = field(default_factory=list)  # CRs from MonsterTemplates, for abstract combat

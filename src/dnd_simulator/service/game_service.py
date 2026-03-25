@@ -100,7 +100,10 @@ class GameService(
             from dnd_simulator.llm.summarizer import MemorySummarizer
 
             summarizer = MemorySummarizer(self._llm)
-        ecology_layer = EcologyLayer(squads=list(squads.values()))
+        # Resolve member CRs from monster templates for abstract combat
+        for squad in squads.values():
+            squad.member_crs = [monster_templates[tid].cr for tid in squad.member_templates]
+        ecology_layer = EcologyLayer(squads=list(squads.values()), location_graph=location_graph)
         entities_layer = EntitiesLayer(
             entities=entities,
             summarizer=summarizer,

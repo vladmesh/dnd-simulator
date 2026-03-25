@@ -110,6 +110,8 @@ class EventType(Enum):
     ENCOUNTER_SPAWNED = "encounter_spawned"
     WEATHER_CHANGED = "weather_changed"
     TIME_ADVANCED = "time_advanced"
+    SQUAD_MOVE = "squad_move"
+    SQUAD_COMBAT = "squad_combat"
     CUSTOM = "custom"
 
 

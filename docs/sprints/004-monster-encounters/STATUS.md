@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 3, Task 1: EcologyLayer Skeleton + Squad Ownership — done.
+Phase 3, Task 2: Squad Movement + Squad-vs-Squad Combat — done.
 
 ## Next Steps
 

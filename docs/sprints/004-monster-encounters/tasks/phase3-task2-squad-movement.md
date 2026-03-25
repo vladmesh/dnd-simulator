@@ -66,4 +66,8 @@ Option (a) is cleaner. Add `member_crs` field to Squad, populate in content_load
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added `member_crs: list[float]` field to Squad (default empty list, populated in GameService from MonsterTemplate CRs at load time). Added `location_graph` param to EcologyLayer for neighbor lookups during movement. Movement logic: PATROL/TRADE follow route with reversal, ROAM/HUNT/RAID pick random neighbor in territory, GUARD stays put. Per-squad tick_interval controls movement frequency. Squad-vs-squad combat reuses `resolve_abstract_combat()` — both squads fight simultaneously, loser retreats, destroyed squads removed. Added EventType.SQUAD_MOVE and SQUAD_COMBAT. Serialization extended for route_index, route_direction, last_move_time.
