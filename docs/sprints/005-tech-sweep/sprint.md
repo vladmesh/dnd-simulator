@@ -26,11 +26,15 @@
 
 ## Phase 2: God Class Splits
 
-EntitiesLayer (1215 LOC) → выделяем awareness builder, activation manager, query handler в отдельные модули. PoliticsLayer (609 LOC) → выделяем подсистемы. Тесты перекладываются, публичный API слоёв не меняется.
+EntitiesLayer (1215 LOC) → выделяем awareness builder, activation manager, query handler в отдельные модули. Тесты перекладываются, публичный API слоёв не меняется.
+
+**Decision:** PoliticsLayer (609 LOC) оставляем как есть — нет методов >100 LOC, подсистемы уже чётко разделены внутри файла. Разбивать ради разбивки нет смысла.
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Extract AwarenessBuilder from EntitiesLayer](tasks/phase2-task1-extract-awareness-builder.md)
+2. [Extract ActivationManager from EntitiesLayer](tasks/phase2-task2-extract-activation-manager.md)
+3. [Extract QueryHandler from EntitiesLayer](tasks/phase2-task3-extract-query-handler.md)
 
 ## Phase 3: Growing Files Split
 
@@ -64,7 +68,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Decisions
 
-_(заполняется по ходу спринта)_
+- **PoliticsLayer не разбиваем** (2026-03-26): 609 LOC, нет методов >100 строк, подсистемы (economy, wars, stability, diplomacy, leaders) уже чётко разделены как приватные методы. Разбивка ради разбивки — overengineering.
 
 ## Deferred
 
