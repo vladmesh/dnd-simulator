@@ -18,3 +18,7 @@ All phases complete. Ready for sprint closure.
 - Compatibility is declared explicitly via `requires_geography` in metadata.yaml — no runtime ID scanning
 - Old create_world/update_world/content_saver flow replaced by assemble + fork
 - WorldBuilder wizard is an alternative mode alongside existing WorldPicker ("quick start" vs "custom world")
+
+## Audit Triage
+
+Triaged on 2026-03-26. Quick-fix: 0 applied. Sprint-relevant: 0. Backlog: 0 new (existing backlog items unchanged).
