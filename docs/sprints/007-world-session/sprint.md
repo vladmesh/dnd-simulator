@@ -129,7 +129,25 @@ WorldInspector + Fork — мастерская функциональность,
 2. [World Fork + Delete Endpoints](tasks/phase5-task2-world-fork-delete.md)
 3. [Layer Scaffold Endpoint](tasks/phase5-task3-layer-scaffold.md)
 
-## Phase 6: Frontend — DM/Player Restructure
+## Phase 6: Structured Layer Forms
+
+Заменяем textarea-YAML-редактор на формы с полями. Мастер работает с полями (name, terrain, location dropdown) — формы парсят YAML при загрузке и сериализуют обратно при сохранении. Существующий API (get_layer_files / update_layer_file) не меняется.
+
+**Контекст:** Phase 4 дала YAML-editor (textarea + save). Это работает, но требует знания YAML-структуры каждого слоя. Формы снимают эту нагрузку — мастер видит поля, выбирает из dropdown'ов, получает валидацию до сохранения.
+
+**Scope:**
+
+1. **Backend: layer reference data endpoint** — `GET /api/master/worlds/{world_id}/layer-refs` возвращает `{ regions: [{id, name}], locations: [{id, name, region_id}], settlements: [{id, name}], nations: [{id, name}], factions: [id...] }`. Нужно для dropdown'ов в формах (NPC.location_id → список локаций). Читает данные из resolved layer paths, не требует сессии.
+2. **Frontend: form schema definitions** — TypeScript-описания полей для каждого типа сущности (Region, Location, Nation, Settlement, Squad, MonsterTemplate, NPC). Типы полей: text, number, select (enum), ref-select (cross-layer ID), list (connections). Хардкод в коде — D&D-структура стабильна.
+3. **Frontend: EntityListEditor component** — generic компонент: парсит YAML → список записей, рендерит список карточек с кнопками add/edit/delete. При клике открывает форму. При сохранении сериализует обратно в YAML и вызывает updateLayerFile.
+4. **Frontend: EntityForm component** — generic форма по schema definition. Рендерит поля: Input для text/number, Select для enum (TerrainType, Race, Class, SettlementType), Select с данными из layer-refs для ID-ссылок, вложенный список для connections/edges. Валидация: required поля, формат ID.
+5. **Frontend: интеграция в LayerEditor** — если слой custom, вместо textarea показываем EntityListEditor. Кнопка "Raw YAML" для переключения на textarea (fallback). Library слои — read-only список без edit кнопок.
+
+**Не в scope:** визуальный редактор карты, drag-and-drop, canvas. Ecology monsters.yaml имеет нестандартную структуру (templates + encounters) — отдельная форма или оставляем YAML.
+
+**Верифицируем:** мастер может создать NPC через форму (выбрав location из dropdown), сохранить, создать сессию — NPC появляется в игре. Все 5 типов слоёв имеют формы. Raw YAML fallback работает.
+
+## Phase 7: Frontend — DM/Player Restructure
 
 Главная страница разделена на Player и DM входы. Player: выбор complete мира → сессия → персонаж. `/master` перестроен: вкладки Worlds (список с fork/edit/delete, экран редактирования мира как stepper по слоям) и Sessions (текущий функционал). Scaffold UI для создания слоя с нуля.
 

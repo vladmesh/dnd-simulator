@@ -1,19 +1,16 @@
 # Sprint 007 Status
 
 **Sprint:** 007-world-session
-**Phase:** 5 — Partial Worlds + World Management API (PLANNED)
+**Phase:** 5 — Partial Worlds + World Management API (COMPLETE)
 **Updated:** 2026-03-26
 
 ## Current
 
-Phase 5, Task 3: Layer scaffold — done. All 5 layer types scaffoldable, empty worlds startable.
+Phase 5 complete. Phase 6 (Structured Layer Forms) ready for task generation.
 
 ## Next Steps
 
-- ~~Task 1: done~~
-- ~~Task 2: done~~
-- ~~Task 3: done~~
-- All phase 5 tasks complete.
+- Phase 6: Structured Layer Forms — needs /plan_phase
 
 ## Audit Triage
 
