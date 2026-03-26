@@ -66,4 +66,25 @@ Unit tests in `tests/unit/test_content_parsers_creatures.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All three parser files rewritten to use Pydantic content models:
+
+- **items.py**: `_parse_weapon_def`, `_parse_armor_def`, `_parse_shield_def`, `_parse_accessory_def` replaced by
+  `_to_weapon_def`, `_to_armor_def`, `_to_shield_def`, `_to_accessory_def` that take validated `ItemContent`.
+  `parse_items` now does `ItemContent.model_validate(idata)` → `_to_item(model, i)`. `extract_all_equipped` unchanged.
+- **creatures.py**: `parse_npc` does `NpcContent.model_validate` → `_to_npc`. `parse_player` does `PlayerContent.model_validate`
+  → `_to_player`. Added `lang` parameter to `parse_player` (was missing — name was never resolved). `parse_class_features`
+  and `build_class_resource_pools` stay procedural as planned. `parse_attacks` and `parse_ability_scores` kept as
+  backward-compatible wrappers using Pydantic models internally.
+- **monsters.py**: `parse_monster_template` does `MonsterTemplateContent.model_validate` → `_to_monster_template`.
+  `parse_squad` does `SquadContent.model_validate` → `_to_squad`. `parse_encounters` validates each entry via
+  `EncounterEntryContent.model_validate`.
+- **schemas.py changes**: Added `LocalizedText` coercing validator (accepts plain string or dict). Added `modifiers`
+  field to `ItemContent` (was missing — accessory modifiers weren't being parsed). Added `id`, `current_hp`, `speed`
+  to `PlayerContent`.
+- **Adapter fix**: `routes_player.py` and `routes_master.py` now use `model_dump(exclude_none=True)` — API schema
+  sends `None` for optional fields, Pydantic content models correctly reject explicit `None` for fields with defaults.
+  This is the clean fix: transport layer strips None, domain layer validates strictly.

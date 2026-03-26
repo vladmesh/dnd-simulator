@@ -1,9 +1,13 @@
-"""Item and equipment parsing from YAML content."""
+"""Item and equipment parsing from YAML content.
+
+Each parse function: raw YAML dict → Pydantic model_validate → convert to runtime dataclass.
+"""
 
 from __future__ import annotations
 
 from typing import Any
 
+from dnd_simulator.content_loader.schemas import ItemContent
 from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.character import (
     Ability,
@@ -24,78 +28,63 @@ from dnd_simulator.core.items import (
 )
 from dnd_simulator.core.modifiers import Modifier, ModifierOp, StatType
 
-_WEAPON_KEYS = frozenset(
-    {
-        "name",
-        "type",
-        "weapon_id",
-        "attack_name",
-        "category",
-        "damage",
-        "reach",
-        "ability",
-        "modifier",
-        "is_magic",
-        "is_finesse",
-        "grant_conditions",
-        "grant_actions",
-    }
-)
+# ---------------------------------------------------------------------------
+# Conversion: ItemContent → runtime Item
+# ---------------------------------------------------------------------------
 
 
-def _parse_weapon_def(idata: dict[str, Any]) -> WeaponDef:
-    """Parse WeaponDef from YAML weapon item data."""
-    damage = tuple(DamageComponent(dice=str(d["dice"]), type=DamageType(d["type"])) for d in idata["damage"])
-    ability_raw = idata.get("ability")
-    ability = Ability(ability_raw) if ability_raw else None
-    grant_conditions = tuple(Condition(c) for c in idata.get("grant_conditions", []))
-    grant_actions = tuple(ActionType(a) for a in idata.get("grant_actions", []))
+def _to_weapon_def(model: ItemContent) -> WeaponDef:
+    """Build WeaponDef from validated ItemContent."""
+    damage = tuple(DamageComponent(dice=d.dice, type=DamageType(d.type)) for d in (model.damage or []))
+    ability = Ability(model.ability) if model.ability else None
+    grant_conditions = tuple(Condition(c) for c in (model.grant_conditions or []))
+    grant_actions = tuple(ActionType(a) for a in (model.grant_actions or []))
     return WeaponDef(
-        weapon_id=str(idata["weapon_id"]),
-        attack_name=str(idata["attack_name"]),
-        category=WeaponCategory(idata["category"]),
+        weapon_id=model.weapon_id or "",
+        attack_name=model.attack_name or "",
+        category=WeaponCategory(model.category) if model.category else WeaponCategory.SIMPLE,
         damage=damage,
-        reach=int(idata.get("reach", 5)),
+        reach=model.reach or 5,
         ability=ability,
-        modifier=int(idata.get("modifier", 0)),
-        is_magic=bool(idata.get("is_magic", False)),
-        is_finesse=bool(idata.get("is_finesse", False)),
+        modifier=model.modifier or 0,
+        is_magic=model.is_magic or False,
+        is_finesse=model.is_finesse or False,
         grant_conditions=grant_conditions,
         grant_actions=grant_actions,
     )
 
 
-def _parse_armor_def(idata: dict[str, Any]) -> ArmorDef:
-    """Parse ArmorDef from YAML armor item data."""
-    category = ArmorCategory(idata["category"])
+def _to_armor_def(model: ItemContent) -> ArmorDef:
+    """Build ArmorDef from validated ItemContent."""
+    category = ArmorCategory(model.category) if model.category else ArmorCategory.LIGHT
     max_dex: int
     if category == ArmorCategory.LIGHT:
         max_dex = 99
     elif category == ArmorCategory.MEDIUM:
-        max_dex = int(idata.get("max_dex_bonus", 2))
+        max_dex = model.max_dex_bonus if model.max_dex_bonus is not None else 2
     else:
-        max_dex = int(idata.get("max_dex_bonus", 0))
+        max_dex = model.max_dex_bonus if model.max_dex_bonus is not None else 0
     return ArmorDef(
-        armor_id=str(idata["armor_id"]),
+        armor_id=model.armor_id or "",
         category=category,
-        base_ac=int(idata["base_ac"]),
+        base_ac=model.base_ac or 0,
         max_dex_bonus=max_dex,
-        strength_req=int(idata.get("strength_req", 0)),
+        strength_req=model.strength_req or 0,
     )
 
 
-def _parse_shield_def(idata: dict[str, Any]) -> ShieldDef:
-    """Parse ShieldDef from YAML shield item data."""
+def _to_shield_def(model: ItemContent) -> ShieldDef:
+    """Build ShieldDef from validated ItemContent."""
     return ShieldDef(
-        shield_id=str(idata.get("shield_id", "shield")),
-        ac_bonus=int(idata.get("ac_bonus", 2)),
+        shield_id=model.shield_id or "shield",
+        ac_bonus=model.ac_bonus if model.ac_bonus is not None else 2,
     )
 
 
-def _parse_accessory_def(idata: dict[str, Any]) -> AccessoryDef:
-    """Parse AccessoryDef from YAML accessory item data."""
-    slot = EquipmentSlot(idata["slot"])
-    mods_raw = idata.get("modifiers") or []
+def _to_accessory_def(model: ItemContent) -> AccessoryDef:
+    """Build AccessoryDef from validated ItemContent."""
+    slot = EquipmentSlot(model.slot) if model.slot else EquipmentSlot.RING
+    mods_raw = model.modifiers if hasattr(model, "modifiers") and model.modifiers else []
     modifiers = tuple(
         Modifier(
             stat=StatType(m["stat"]),
@@ -106,73 +95,73 @@ def _parse_accessory_def(idata: dict[str, Any]) -> AccessoryDef:
         for m in mods_raw
     )
     return AccessoryDef(
-        accessory_id=str(idata["accessory_id"]),
+        accessory_id=model.accessory_id or "",
         slot=slot,
         grant_modifiers=modifiers,
     )
 
 
-_ARMOR_KEYS = frozenset(
-    {"name", "type", "armor_id", "category", "base_ac", "max_dex_bonus", "strength_req", "equipped"}
-)
-_SHIELD_KEYS = frozenset({"name", "type", "shield_id", "ac_bonus", "equipped"})
+def _to_item(model: ItemContent, index: int) -> Item:
+    """Convert a validated ItemContent to a runtime Item."""
+    item_id = f"{model.name.lower().replace(' ', '_')}_{index}"
+
+    weapon_def: WeaponDef | None = None
+    armor_def: ArmorDef | None = None
+    shield_def: ShieldDef | None = None
+    accessory_def: AccessoryDef | None = None
+    params: dict[str, object] = {}
+
+    if model.type == ItemType.WEAPON:
+        weapon_def = _to_weapon_def(model)
+        if model.equipped:
+            params["equipped"] = True
+    elif model.type == ItemType.ARMOR:
+        armor_def = _to_armor_def(model)
+        if model.equipped:
+            params["equipped"] = True
+    elif model.type == ItemType.SHIELD:
+        shield_def = _to_shield_def(model)
+        if model.equipped:
+            params["equipped"] = True
+    elif model.type == ItemType.ACCESSORY:
+        accessory_def = _to_accessory_def(model)
+        if model.equipped:
+            params["equipped"] = True
+    else:
+        # Potion and other types: collect non-standard fields into params
+        dumped = model.model_dump(exclude_none=True, exclude={"name", "type", "equipped"})
+        params = {k: v for k, v in dumped.items() if v is not None}
+        if model.equipped:
+            params["equipped"] = True
+
+    return Item(
+        id=item_id,
+        name=model.name,
+        item_type=model.type,
+        params=params,
+        weapon_def=weapon_def,
+        armor_def=armor_def,
+        shield_def=shield_def,
+        accessory_def=accessory_def,
+        price=model.price,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 
 def parse_items(items_data: list[dict[str, Any]]) -> list[Item]:
     """Parse item definitions from YAML.
 
-    Each item dict must have ``name`` and ``type``.
-    For potions: remaining keys become ``params`` (e.g. ``heal_dice``).
-    For weapons/armor/shields: typed defs are built from structured fields.
+    Each item dict → ItemContent.model_validate → _to_item → runtime Item.
     IDs are auto-generated as ``<snake_name>_<index>``.
     """
     items: list[Item] = []
     for i, idata in enumerate(items_data):
-        name = str(idata["name"])
-        item_type = ItemType(idata["type"])
-        item_id = f"{name.lower().replace(' ', '_')}_{i}"
-
-        weapon_def: WeaponDef | None = None
-        armor_def: ArmorDef | None = None
-        shield_def: ShieldDef | None = None
-        accessory_def: AccessoryDef | None = None
-        params: dict[str, object] = {}
-
-        if item_type == ItemType.WEAPON:
-            weapon_def = _parse_weapon_def(idata)
-            if idata.get("equipped"):
-                params["equipped"] = True
-        elif item_type == ItemType.ARMOR:
-            armor_def = _parse_armor_def(idata)
-            if idata.get("equipped"):
-                params["equipped"] = True
-        elif item_type == ItemType.SHIELD:
-            shield_def = _parse_shield_def(idata)
-            if idata.get("equipped"):
-                params["equipped"] = True
-        elif item_type == ItemType.ACCESSORY:
-            accessory_def = _parse_accessory_def(idata)
-            if idata.get("equipped"):
-                params["equipped"] = True
-        else:
-            params = {k: v for k, v in idata.items() if k not in ("name", "type")}
-
-        price_raw = idata.get("price")
-        price = int(price_raw) if price_raw is not None else None
-
-        items.append(
-            Item(
-                id=item_id,
-                name=name,
-                item_type=item_type,
-                params=params,
-                weapon_def=weapon_def,
-                armor_def=armor_def,
-                shield_def=shield_def,
-                accessory_def=accessory_def,
-                price=price,
-            )
-        )
+        model = ItemContent.model_validate(idata)
+        items.append(_to_item(model, i))
     return items
 
 

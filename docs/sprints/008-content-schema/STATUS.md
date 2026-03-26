@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 1, Task 2: Rewrite World Structure Parsers — done. 24 new tests, 1 old test updated.
+Phase 1, Task 3: Rewrite Creature, Monster, and Item Parsers — done. 22 new tests, all 1341 passing.
 
 ## Next Steps
 
-- Task 2: Rewrite world structure parsers (geography, politics, settlements)
-- Task 3: Rewrite creature, monster, and item parsers
+- Phase 1 complete — all 3 tasks done. Ready for `/close_phase`.

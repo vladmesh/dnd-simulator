@@ -1,29 +1,93 @@
-"""Monster and squad parsing from YAML content."""
+"""Monster and squad parsing from YAML content.
+
+Each parse function: raw YAML dict → Pydantic model_validate → convert to runtime dataclass.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
-from dnd_simulator.content_loader.creatures import parse_ability_scores, parse_attacks
+from dnd_simulator.content_loader.creatures import _to_attacks
+from dnd_simulator.content_loader.schemas import (
+    EncounterEntryContent,
+    MonsterTemplateContent,
+    SquadContent,
+)
 from dnd_simulator.content_loader.utils import _read_yaml, resolve_text
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
-from dnd_simulator.core.squad import Squad, SquadBehavior, SquadType
+from dnd_simulator.core.squad import Squad
+
+# ---------------------------------------------------------------------------
+# Conversion: content model → runtime dataclass
+# ---------------------------------------------------------------------------
+
+
+def _to_monster_template(template_id: str, model: MonsterTemplateContent, lang: str) -> MonsterTemplate:
+    """Convert validated MonsterTemplateContent to runtime MonsterTemplate."""
+    from dnd_simulator.core.character import AbilityScores
+
+    attacks = _to_attacks(model.attacks)
+    ability_scores = AbilityScores.from_dict(
+        {
+            "str": model.ability_scores.str_,
+            "dex": model.ability_scores.dex,
+            "con": model.ability_scores.con,
+            "int": model.ability_scores.int_,
+            "wis": model.ability_scores.wis,
+            "cha": model.ability_scores.cha,
+        }
+    )
+    return MonsterTemplate(
+        id=template_id,
+        name=resolve_text(model.name, lang),
+        hp=model.hp,
+        ac=model.ac,
+        speed=model.speed,
+        ability_scores=ability_scores,
+        attacks=attacks,
+        cr=model.cr,
+        faction_id=model.faction,
+    )
+
+
+def _to_encounter_entry(model: EncounterEntryContent) -> EncounterEntry:
+    """Convert validated EncounterEntryContent to runtime EncounterEntry."""
+    return EncounterEntry(
+        template_id=model.template,
+        chance=model.chance,
+        count_min=model.count[0],
+        count_max=model.count[1],
+    )
+
+
+def _to_squad(squad_id: str, model: SquadContent, lang: str) -> Squad:
+    """Convert validated SquadContent to runtime Squad."""
+    return Squad(
+        id=squad_id,
+        name=resolve_text(model.name, lang),
+        faction_id=model.faction,
+        squad_type=model.type,
+        behavior=model.behavior,
+        current_location_id=model.start_location,
+        route=list(model.route),
+        territory=list(model.territory),
+        strength=model.strength,
+        max_strength=model.max_strength if model.max_strength is not None else model.strength,
+        member_templates=list(model.members),
+        tick_interval=model.tick_interval,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 
 def parse_monster_template(template_id: str, data: dict[str, Any], lang: str = "en") -> MonsterTemplate:
     """Parse a single monster template from YAML data."""
-    return MonsterTemplate(
-        id=template_id,
-        name=resolve_text(data["name"], lang),
-        hp=int(data["hp"]),
-        ac=int(data["ac"]),
-        speed=int(data["speed"]),
-        ability_scores=parse_ability_scores(data),
-        attacks=parse_attacks(data.get("attacks", [])),
-        cr=float(data["cr"]),
-        faction_id=str(data.get("faction", "")),
-    )
+    model = MonsterTemplateContent.model_validate(data)
+    return _to_monster_template(template_id, model, lang)
 
 
 def parse_encounters(data: dict[str, Any], known_templates: set[str]) -> dict[str, list[EncounterEntry]]:
@@ -35,18 +99,12 @@ def parse_encounters(data: dict[str, Any], known_templates: set[str]) -> dict[st
     for location_id, entries in data.items():
         parsed: list[EncounterEntry] = []
         for entry in entries:
-            template_id = str(entry["template"])
-            if template_id not in known_templates:
-                raise RuntimeError(f"Encounter at '{location_id}' references unknown monster template '{template_id}'")
-            count = entry["count"]
-            parsed.append(
-                EncounterEntry(
-                    template_id=template_id,
-                    chance=float(entry["chance"]),
-                    count_min=int(count[0]),
-                    count_max=int(count[1]),
+            model = EncounterEntryContent.model_validate(entry)
+            if model.template not in known_templates:
+                raise RuntimeError(
+                    f"Encounter at '{location_id}' references unknown monster template '{model.template}'"
                 )
-            )
+            parsed.append(_to_encounter_entry(model))
         result[location_id] = parsed
     return result
 
@@ -75,20 +133,8 @@ def load_monsters(path: Path, lang: str = "en") -> tuple[dict[str, MonsterTempla
 
 def parse_squad(squad_id: str, data: dict[str, Any], lang: str = "en") -> Squad:
     """Parse a single squad from YAML data."""
-    return Squad(
-        id=squad_id,
-        name=resolve_text(data["name"], lang),
-        faction_id=str(data["faction"]),
-        squad_type=SquadType(data["type"]),
-        behavior=SquadBehavior(data["behavior"]),
-        current_location_id=str(data["start_location"]),
-        route=[str(loc) for loc in data.get("route", [])],
-        territory=[str(loc) for loc in data.get("territory", [])],
-        strength=int(data["strength"]),
-        max_strength=int(data.get("max_strength", data["strength"])),
-        member_templates=[str(m) for m in data.get("members", [])],
-        tick_interval=int(data.get("tick_interval", 3600)),
-    )
+    model = SquadContent.model_validate(data)
+    return _to_squad(squad_id, model, lang)
 
 
 def load_squads(path: Path, lang: str = "en") -> dict[str, Squad]:

@@ -40,7 +40,17 @@ from dnd_simulator.layers.settlements.models import SettlementType
 # Localizable text type
 # ---------------------------------------------------------------------------
 
-LocalizedText = dict[str, str]  # {"en": "...", "ru": "..."}
+
+def _coerce_localized_text(v: Any) -> dict[str, str]:
+    """Accept plain string or dict; always return dict."""
+    if isinstance(v, dict):
+        return v
+    if isinstance(v, str):
+        return {"en": v}
+    raise ValueError(f"Invalid localized text: {v}")
+
+
+LocalizedText = Annotated[dict[str, str], BeforeValidator(_coerce_localized_text)]
 
 
 # ---------------------------------------------------------------------------
@@ -178,6 +188,7 @@ class ItemContent(BaseModel):
     # Accessory fields
     accessory_id: str | None = None
     slot: str | None = None
+    modifiers: list[dict[str, Any]] | None = None
     # Potion fields
     heal_dice: str | None = None
 
@@ -345,6 +356,7 @@ class PlayerContent(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
+    id: str = ""
     name: LocalizedText
     race: Race = Race.HUMAN
     char_class: CharClass = Field(CharClass.FIGHTER, alias="class")
@@ -354,8 +366,10 @@ class PlayerContent(BaseModel):
     start_location: str = ""
     faction: str = ""
     hp: int = 10
+    current_hp: int | None = None
     ac: int = 10
     gold: int = 0
+    speed: int = 30
     attacks: list[AttackContent] = []
     items: list[ItemContent] = []
     ability_scores: CoercedAbilityScores = AbilityScoresContent()

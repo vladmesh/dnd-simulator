@@ -1,4 +1,7 @@
-"""Creature parsing — NPCs and player characters from YAML content."""
+"""Creature parsing — NPCs and player characters from YAML content.
+
+Each parse function: raw YAML dict → Pydantic model_validate → convert to runtime dataclass.
+"""
 
 from __future__ import annotations
 
@@ -9,48 +12,54 @@ from dnd_simulator.content_loader.items import (
     extract_all_equipped,
     parse_items,
 )
+from dnd_simulator.content_loader.schemas import (
+    AttackContent,
+    NpcContent,
+    PlayerContent,
+)
 from dnd_simulator.content_loader.utils import _load_section, resolve_text
 from dnd_simulator.core.character import (
-    Ability,
     AbilityScores,
-    Alignment,
     Attack,
     CharClass,
     DamageComponent,
     DamageType,
-    NpcRole,
-    Race,
 )
 from dnd_simulator.core.class_features import ClassFeatures, FighterFeatures, FightingStyle, RogueFeatures
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.layers.entities.models import Npc, NpcMemory, resolve_schedule
 
+# ---------------------------------------------------------------------------
+# Shared converters
+# ---------------------------------------------------------------------------
 
-def parse_attacks(attacks_data: list[dict[str, Any]]) -> tuple[Attack, ...]:
-    """Parse attack definitions from YAML."""
-    attacks: list[Attack] = []
-    for adata in attacks_data:
-        damage = tuple(
-            DamageComponent(dice=str(d["dice"]), type=DamageType(d["type"])) for d in adata.get("damage", [])
+
+def _to_attacks(attack_models: list[AttackContent]) -> tuple[Attack, ...]:
+    """Convert AttackContent list to runtime Attack tuple."""
+    return tuple(
+        Attack(
+            name=a.name,
+            ability=a.ability,
+            damage=tuple(DamageComponent(dice=d.dice, type=DamageType(d.type)) for d in a.damage),
+            reach=a.reach,
         )
-        attacks.append(
-            Attack(
-                name=str(adata["name"]),
-                ability=Ability(adata.get("ability", "str")),
-                damage=damage,
-                reach=int(adata.get("reach", 5)),
-            )
-        )
-    return tuple(attacks)
+        for a in attack_models
+    )
 
 
-def parse_ability_scores(data: dict[str, Any], key: str = "ability_scores") -> AbilityScores:
-    """Parse ability scores from YAML data."""
-    scores = data.get(key)
-    if scores:
-        return AbilityScores.from_dict(scores)
-    return AbilityScores()
+def _to_ability_scores(model: NpcContent | PlayerContent) -> AbilityScores:
+    """Convert Pydantic AbilityScoresContent to runtime AbilityScores."""
+    return AbilityScores.from_dict(
+        {
+            "str": model.ability_scores.str_,
+            "dex": model.ability_scores.dex,
+            "con": model.ability_scores.con,
+            "int": model.ability_scores.int_,
+            "wis": model.ability_scores.wis,
+            "cha": model.ability_scores.cha,
+        }
+    )
 
 
 def parse_class_features(char_class: CharClass, data: dict[str, Any]) -> list[ClassFeatures]:
@@ -90,6 +99,73 @@ def build_class_resource_pools(char_class: CharClass) -> list[ResourcePool]:
     return pools
 
 
+# ---------------------------------------------------------------------------
+# NPC parsing
+# ---------------------------------------------------------------------------
+
+
+def _to_npc(npc_id: str, model: NpcContent, lang: str, known_locations: set[str] | None = None) -> Npc:
+    """Convert validated NpcContent to runtime Npc."""
+    schedule = resolve_schedule(model.role, model.settlement_id, known_locations=known_locations)
+    attacks = _to_attacks(model.attacks)
+
+    if known_locations is not None and model.start_location and model.start_location not in known_locations:
+        raise RuntimeError(
+            f"NPC '{npc_id}' has start_location '{model.start_location}' which is not a known location. "
+            f"Known: {sorted(known_locations)}"
+        )
+
+    memory = NpcMemory.from_dict(model.memory.model_dump()) if model.memory else NpcMemory()
+
+    all_items = parse_items([item.model_dump() for item in model.items])
+    equipped, inventory = extract_all_equipped(all_items)
+
+    # class_features and resource_pools still use raw dict — they contain logic
+    raw_data: dict[str, Any] = {}
+    if model.class_features:
+        raw_data["class_features"] = model.class_features
+
+    return Npc(
+        id=npc_id,
+        name=resolve_text(model.name, lang),
+        location_id=model.start_location,
+        faction_id=model.faction,
+        race=model.race,
+        char_class=model.char_class,
+        role=model.role,
+        personality=resolve_text(model.personality, lang) if model.personality else "",
+        settlement_id=model.settlement_id,
+        schedule=schedule,
+        speed=model.speed,
+        attacks=attacks,
+        max_hp=model.hp,
+        current_hp=model.hp,
+        ac=model.ac,
+        ability_scores=_to_ability_scores(model),
+        ai_type=model.ai,
+        memory=memory,
+        gold=model.gold,
+        inventory=inventory,
+        equipped_weapon=equipped["equipped_weapon"],
+        equipped_armor=equipped["equipped_armor"],
+        equipped_shield=equipped["equipped_shield"],
+        equipped_head=equipped["equipped_head"],
+        equipped_feet=equipped["equipped_feet"],
+        equipped_ring=equipped["equipped_ring"],
+        class_features=parse_class_features(model.char_class, raw_data),
+        resource_pools=build_class_resource_pools(model.char_class),
+    )
+
+
+def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locations: set[str] | None = None) -> Npc:
+    """Parse a single NPC from YAML data.
+
+    YAML dict → NpcContent.model_validate → _to_npc → runtime Npc.
+    """
+    model = NpcContent.model_validate(ndata)
+    return _to_npc(npc_id, model, lang, known_locations)
+
+
 def load_npcs(path: Path, lang: str = "en", known_locations: set[str] | None = None) -> list[Npc]:
     """Load NPCs from a world directory."""
     npcs_data = _load_section(path, "npcs")
@@ -101,106 +177,39 @@ def load_npcs(path: Path, lang: str = "en", known_locations: set[str] | None = N
     return npcs
 
 
-def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locations: set[str] | None = None) -> Npc:
-    """Parse a single NPC from YAML data."""
-    role_str = str(ndata.get("role", ""))
-    role = NpcRole(role_str) if role_str else NpcRole.COMMONER
-    settlement_id = str(ndata.get("settlement_id", ""))
-
-    # Resolve schedule: role-based template with settlement prefix
-    schedule = resolve_schedule(role, settlement_id, known_locations=known_locations)
-
-    race = Race(ndata["race"]) if "race" in ndata else Race.HUMAN
-    char_class = CharClass(ndata["class"]) if "class" in ndata else CharClass.COMMONER
-
-    attacks = parse_attacks(ndata.get("attacks") or [])
-    max_hp = int(ndata.get("hp", 4))
-    ai_type = str(ndata.get("ai", "rule_based"))
-
-    location_id = str(ndata.get("start_location", ""))
-    if known_locations is not None and location_id and location_id not in known_locations:
-        raise RuntimeError(
-            f"NPC '{npc_id}' has start_location '{location_id}' which is not a known location. "
-            f"Known: {sorted(known_locations)}"
-        )
-
-    # Parse initial memory from YAML (optional)
-    memory_data = ndata.get("memory")
-    memory = NpcMemory.from_dict(memory_data) if isinstance(memory_data, dict) else NpcMemory()
-
-    all_items = parse_items(ndata.get("items") or [])
-    equipped, inventory = extract_all_equipped(all_items)
-
-    npc = Npc(
-        id=npc_id,
-        name=resolve_text(ndata["name"], lang),
-        location_id=location_id,
-        faction_id=str(ndata.get("faction", "")),
-        race=race,
-        char_class=char_class,
-        role=role,
-        personality=resolve_text(ndata.get("personality", ""), lang),
-        settlement_id=settlement_id,
-        schedule=schedule,
-        speed=int(ndata.get("speed", 30)),
-        attacks=attacks,
-        max_hp=max_hp,
-        current_hp=max_hp,
-        ac=int(ndata.get("ac", 10)),
-        ability_scores=parse_ability_scores(ndata),
-        ai_type=ai_type,
-        memory=memory,
-        gold=int(ndata.get("gold", 0)),
-        inventory=inventory,
-        equipped_weapon=equipped["equipped_weapon"],
-        equipped_armor=equipped["equipped_armor"],
-        equipped_shield=equipped["equipped_shield"],
-        equipped_head=equipped["equipped_head"],
-        equipped_feet=equipped["equipped_feet"],
-        equipped_ring=equipped["equipped_ring"],
-        class_features=parse_class_features(char_class, ndata),
-        resource_pools=build_class_resource_pools(char_class),
-    )
-    # Brain is assigned by BrainFactory in GameService, not here.
-    return npc
+# ---------------------------------------------------------------------------
+# Player parsing
+# ---------------------------------------------------------------------------
 
 
-def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
-    """Parse player character from YAML data dict.
-
-    If ``pdata`` does not contain an ``id`` field a unique one is generated
-    (``player_<hex8>``).  Callers may supply an explicit ``id`` to preserve
-    identity across save/load cycles.
-    """
+def _to_player(model: PlayerContent, lang: str) -> PlayerCharacter:
+    """Convert validated PlayerContent to runtime PlayerCharacter."""
     import uuid
 
-    max_hp = int(pdata.get("hp", 10))
-    attacks = parse_attacks(pdata.get("attacks") or [])
-
-    location_id = str(pdata.get("start_location", ""))
-
-    player_id = str(pdata.get("id", "")) or f"player_{uuid.uuid4().hex[:8]}"
-
-    all_items = parse_items(pdata.get("items") or [])
+    attacks = _to_attacks(model.attacks)
+    all_items = parse_items([item.model_dump() for item in model.items])
     equipped, inventory = extract_all_equipped(all_items)
 
-    char_class = CharClass(pdata["class"]) if "class" in pdata else CharClass.FIGHTER
+    player_id = model.id or f"player_{uuid.uuid4().hex[:8]}"
+
+    # class_features and resource_pools still use raw dict
+    raw_data: dict[str, Any] = {}
 
     return PlayerCharacter(
         id=player_id,
-        name=str(pdata.get("name", "Adventurer")),
-        location_id=location_id,
-        faction_id=str(pdata.get("faction", "")),
-        race=Race(pdata["race"]) if "race" in pdata else Race.HUMAN,
-        char_class=char_class,
-        level=int(pdata.get("level", 1)),
-        alignment=Alignment(pdata["alignment"]) if "alignment" in pdata else Alignment.TRUE_NEUTRAL,
-        appearance=str(pdata.get("appearance", "")),
-        ability_scores=parse_ability_scores(pdata),
-        max_hp=max_hp,
-        current_hp=int(pdata.get("current_hp", max_hp)),
-        ac=int(pdata.get("ac", 10)),
-        gold=int(pdata.get("gold", 0)),
+        name=resolve_text(model.name, lang),
+        location_id=model.start_location,
+        faction_id=model.faction,
+        race=model.race,
+        char_class=model.char_class,
+        level=model.level,
+        alignment=model.alignment,
+        appearance=resolve_text(model.appearance, lang) if model.appearance else "",
+        ability_scores=_to_ability_scores(model),
+        max_hp=model.hp,
+        current_hp=model.current_hp if model.current_hp is not None else model.hp,
+        ac=model.ac,
+        gold=model.gold,
         attacks=attacks,
         inventory=inventory,
         equipped_weapon=equipped["equipped_weapon"],
@@ -209,6 +218,47 @@ def parse_player(pdata: dict[str, Any]) -> PlayerCharacter:
         equipped_head=equipped["equipped_head"],
         equipped_feet=equipped["equipped_feet"],
         equipped_ring=equipped["equipped_ring"],
-        class_features=parse_class_features(char_class, pdata),
-        resource_pools=build_class_resource_pools(char_class),
+        class_features=parse_class_features(model.char_class, raw_data),
+        resource_pools=build_class_resource_pools(model.char_class),
     )
+
+
+def parse_player(pdata: dict[str, Any], lang: str = "en") -> PlayerCharacter:
+    """Parse player character from YAML data dict.
+
+    YAML dict → PlayerContent.model_validate → _to_player → runtime PlayerCharacter.
+    If ``pdata`` does not contain an ``id`` field a unique one is generated.
+    """
+    model = PlayerContent.model_validate(pdata)
+    return _to_player(model, lang)
+
+
+# ---------------------------------------------------------------------------
+# Backward-compatible re-exports (used by other modules)
+# ---------------------------------------------------------------------------
+
+
+def parse_attacks(attacks_data: list[dict[str, Any]]) -> tuple[Attack, ...]:
+    """Parse attack definitions from YAML — validates via AttackContent."""
+    models = [AttackContent.model_validate(a) for a in attacks_data]
+    return _to_attacks(models)
+
+
+def parse_ability_scores(data: dict[str, Any], key: str = "ability_scores") -> AbilityScores:
+    """Parse ability scores from YAML data — validates via AbilityScoresContent."""
+    from dnd_simulator.content_loader.schemas import AbilityScoresContent
+
+    scores = data.get(key)
+    if scores:
+        model = AbilityScoresContent.model_validate(scores)
+        return AbilityScores.from_dict(
+            {
+                "str": model.str_,
+                "dex": model.dex,
+                "con": model.con,
+                "int": model.int_,
+                "wis": model.wis,
+                "cha": model.cha,
+            }
+        )
+    return AbilityScores()

@@ -361,7 +361,7 @@ def spawn_creature(session_id: str, body: SpawnCreatureRequest) -> CreatureRespo
     """Spawn a creature (NPC or monster) into a live session."""
     service = get_service()
     try:
-        service.spawn_creature(session_id, body.model_dump())
+        service.spawn_creature(session_id, body.model_dump(exclude_none=True))
         info = service.get_creature_info(session_id, body.id)
     except (ValueError, KeyError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e

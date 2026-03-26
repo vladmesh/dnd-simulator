@@ -20,7 +20,7 @@ router = APIRouter(prefix="/api/player", tags=["player"])
 def create_character(session_id: str, body: CreatePlayerRequest) -> PlayerStatusResponse:
     """Create a player character in a session."""
     service = get_service()
-    data = body.model_dump()
+    data = body.model_dump(exclude_none=True)
     data["class"] = data.pop("char_class")
     try:
         player = service.create_player(session_id, data)
