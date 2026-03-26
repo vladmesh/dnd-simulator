@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import structlog
 
-from dnd_simulator.core.character import Creature, DamageType, Entity
+from dnd_simulator.core.character import Attack, Creature, DamageType, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import ActionResult, Event, EventType
-from dnd_simulator.core.modifiers import RollComponent
+from dnd_simulator.core.modifiers import AttackModifiers, RollComponent
 from dnd_simulator.i18n import _
-from dnd_simulator.rules.combat import ExtraDamage, resolve_attack, roll_initiative
+from dnd_simulator.rules.combat import AttackResult, ExtraDamage, resolve_attack, roll_initiative
 from dnd_simulator.rules.modifiers import attack_modifiers
 from dnd_simulator.rules.movement import grid_distance, move_direction
 from dnd_simulator.rules.sneak_attack import is_sneak_attack_eligible, sneak_attack_dice
@@ -253,7 +253,6 @@ class CombatManager:
         attacker_id = str(event.data.get("attacker_id", ""))
         target_id = str(event.data.get("target_id", ""))
 
-        # Look up entities — validator checks these before dispatch, but defend at layer boundary
         attacker = self._entities.get(attacker_id)
         if not isinstance(attacker, Creature):
             return ActionResult(success=False, error=_("Attacker '{id}' not found.").format(id=attacker_id))
@@ -262,75 +261,16 @@ class CombatManager:
         if not isinstance(target, Creature):
             return ActionResult(success=False, error=_("Target '{id}' not found.").format(id=target_id))
 
-        # --- Enter combat for all creatures at the location ---
         if attacker.location_id not in self._combats:
             self.start_combat(attacker.location_id)
         self._attack_this_round[attacker.location_id] = True
 
-        # Use equipped weapon → creature.attacks[0] → unarmed fallback
         attack = get_weapon_attack(attacker)
+        atk_mods = attack_modifiers(attacker, target, melee=attack.reach <= 10)
 
-        # --- Resolution via modifier pipeline ---
-        is_melee = attack.reach <= 10
-        atk_mods = attack_modifiers(attacker, target, melee=is_melee)
-
-        # Roll dice bonuses (Bless +1d4, etc.)
-        rolled_dice: list[RollComponent] = []
-        dice_total = 0
-        if atk_mods.dice_bonuses:
-            from dnd_simulator.rules.dice import roll as roll_dice
-
-            for rc in atk_mods.roll_components:
-                if rc.dice:
-                    rolled_value = roll_dice(rc.dice)
-                    rolled_dice.append(RollComponent(source=rc.source, value=rolled_value, dice=rc.dice))
-                    dice_total += rolled_value
-            logger.debug(
-                "dice_bonuses",
-                attacker=attacker.name,
-                bonus=dice_total,
-                dice=atk_mods.dice_bonuses,
-                weapon=attack.name,
-            )
-
+        rolled_dice, dice_total = self._roll_attack_dice(attacker, attack, atk_mods)
         modifier = atk_mods.modifier + dice_total
-        advantage = atk_mods.advantage
-        disadvantage = atk_mods.disadvantage
-
-        # --- Sneak Attack (Rogue) ---
-        extra_damage: tuple[ExtraDamage, ...] = ()
-        sa_dice = sneak_attack_dice(attacker)
-        if sa_dice > 0 and attacker.id not in self._sneak_attack_used:
-            # Check ally within 5ft of target on the battle map
-            ally_adjacent = False
-            combat = self._combats.get(attacker.location_id)
-            if combat:
-                target_pos = combat.battle_map.get_position(target_id)
-                if target_pos:
-                    for eid, pos in combat.battle_map.positions.items():
-                        if eid in (attacker_id, target_id):
-                            continue
-                        e = self._entities.get(eid)
-                        if isinstance(e, Creature) and e.is_alive and grid_distance(target_pos, pos) <= 5:
-                            ally_adjacent = True
-                            break
-
-            if is_sneak_attack_eligible(
-                attacker,
-                attack,
-                has_advantage=advantage,
-                has_disadvantage=disadvantage,
-                ally_adjacent_to_target=ally_adjacent,
-            ):
-                sa_expr = f"{sa_dice}d6"
-                extra_damage = (ExtraDamage(dice=sa_expr, type=DamageType.PIERCING, source="sneak_attack"),)
-                self._sneak_attack_used.add(attacker.id)
-                logger.info(
-                    "sneak_attack",
-                    attacker=attacker.name,
-                    dice=sa_expr,
-                    reason="advantage" if advantage else "ally_adjacent",
-                )
+        extra_damage = self._check_sneak_attack(attacker, attack, target_id, atk_mods.advantage, atk_mods.disadvantage)
 
         logger.info(
             "attack_roll",
@@ -340,8 +280,8 @@ class CombatManager:
             modifier=modifier,
             base_mod=atk_mods.modifier,
             dice_bonus=dice_total,
-            advantage=advantage,
-            disadvantage=disadvantage,
+            advantage=atk_mods.advantage,
+            disadvantage=atk_mods.disadvantage,
             force_crit=atk_mods.force_crit,
             target_ac=atk_mods.target_ac,
         )
@@ -352,8 +292,8 @@ class CombatManager:
             attack=attack,
             damage_bonus=atk_mods.damage_bonus,
             extra_damage=extra_damage,
-            advantage=advantage,
-            disadvantage=disadvantage,
+            advantage=atk_mods.advantage,
+            disadvantage=atk_mods.disadvantage,
             force_crit=atk_mods.force_crit,
         )
 
@@ -367,15 +307,104 @@ class CombatManager:
             damage=result.total_damage if result.hit else 0,
         )
 
-        # Build structured event — generic component lists, no feature-specific fields
-        # Roll components: flat bonuses (already resolved) + dice bonuses (just rolled)
+        log_data = self._build_attack_event(attacker_id, target_id, attack, result, atk_mods, rolled_dice)
+
+        if result.hit:
+            actual_damage = target.take_damage(result.total_damage)
+            log_data["damage"] = actual_damage
+            log_data["damage_components"] = self._build_damage_components(result, atk_mods)
+
+        self._location_log[attacker.location_id].append(
+            Event(event_type=EventType.ENTITY_ATTACK, source_layer="entities", data=log_data)
+        )
+
+        return self._handle_death(target, target_id, result)
+
+    def _roll_attack_dice(
+        self,
+        attacker: Creature,
+        attack: Attack,
+        atk_mods: AttackModifiers,
+    ) -> tuple[list[RollComponent], int]:
+        """Roll dice bonuses (Bless +1d4, etc.). Returns (rolled_components, total)."""
+        rolled_dice: list[RollComponent] = []
+        dice_total = 0
+        if atk_mods.dice_bonuses:
+            from dnd_simulator.rules.dice import roll as roll_dice_fn
+
+            for rc in atk_mods.roll_components:
+                if rc.dice:
+                    rolled_value = roll_dice_fn(rc.dice)
+                    rolled_dice.append(RollComponent(source=rc.source, value=rolled_value, dice=rc.dice))
+                    dice_total += rolled_value
+            logger.debug(
+                "dice_bonuses",
+                attacker=attacker.name,
+                bonus=dice_total,
+                dice=atk_mods.dice_bonuses,
+                weapon=attack.name,
+            )
+        return rolled_dice, dice_total
+
+    def _check_sneak_attack(
+        self,
+        attacker: Creature,
+        attack: Attack,
+        target_id: str,
+        advantage: bool,
+        disadvantage: bool,
+    ) -> tuple[ExtraDamage, ...]:
+        """Check sneak attack eligibility including ally adjacency on battle map."""
+        sa_dice = sneak_attack_dice(attacker)
+        if sa_dice == 0 or attacker.id in self._sneak_attack_used:
+            return ()
+
+        ally_adjacent = False
+        combat = self._combats.get(attacker.location_id)
+        if combat:
+            target_pos = combat.battle_map.get_position(target_id)
+            if target_pos:
+                for eid, pos in combat.battle_map.positions.items():
+                    if eid in (attacker.id, target_id):
+                        continue
+                    e = self._entities.get(eid)
+                    if isinstance(e, Creature) and e.is_alive and grid_distance(target_pos, pos) <= 5:
+                        ally_adjacent = True
+                        break
+
+        if is_sneak_attack_eligible(
+            attacker,
+            attack,
+            has_advantage=advantage,
+            has_disadvantage=disadvantage,
+            ally_adjacent_to_target=ally_adjacent,
+        ):
+            sa_expr = f"{sa_dice}d6"
+            self._sneak_attack_used.add(attacker.id)
+            logger.info(
+                "sneak_attack",
+                attacker=attacker.name,
+                dice=sa_expr,
+                reason="advantage" if advantage else "ally_adjacent",
+            )
+            return (ExtraDamage(dice=sa_expr, type=DamageType.PIERCING, source="sneak_attack"),)
+        return ()
+
+    def _build_attack_event(
+        self,
+        attacker_id: str,
+        target_id: str,
+        attack: Attack,
+        result: AttackResult,
+        atk_mods: AttackModifiers,
+        rolled_dice: list[RollComponent],
+    ) -> dict[str, object]:
+        """Build structured attack event data from resolution result."""
         all_roll_components = [
-            {"source": rc.source, "value": rc.value, "dice": rc.dice}
-            for rc in atk_mods.roll_components
-            if not rc.dice  # flat components only
+            {"source": rc.source, "value": rc.value, "dice": rc.dice} for rc in atk_mods.roll_components if not rc.dice
         ] + [{"source": rc.source, "value": rc.value, "dice": rc.dice} for rc in rolled_dice]
 
-        log_data: dict[str, object] = {
+        return {
             "attacker_id": attacker_id,
             "target_id": target_id,
             "weapon": attack.name,
@@ -386,35 +415,29 @@ class CombatManager:
                 "natural": result.attack_check.roll,
                 "components": all_roll_components,
                 "total": result.attack_check.total,
-                "advantage": advantage,
-                "disadvantage": disadvantage,
+                "advantage": atk_mods.advantage,
+                "disadvantage": atk_mods.disadvantage,
             },
         }
 
+    @staticmethod
+    def _build_damage_components(
+        result: AttackResult,
+        atk_mods: AttackModifiers,
+    ) -> list[dict[str, object]]:
+        """Build damage component list for event data."""
+        components: list[dict[str, object]] = [
+            {"source": dr.source, "dice": dr.dice, "amount": dr.amount, "type": dr.type.value} for dr in result.damage
+        ]
+        for dbc in atk_mods.damage_components:
+            components.append(
+                {"source": dbc.source, "dice": "", "amount": dbc.value, "type": result.damage[0].type.value}
+            )
+        return components
+
+    def _handle_death(self, target: Creature, target_id: str, result: AttackResult) -> ActionResult:
+        """Handle target death and combat end if the attack killed the target."""
         result_events: list[Event] = []
-
-        if result.hit:
-            actual_damage = target.take_damage(result.total_damage)
-            log_data["damage"] = actual_damage
-            # Damage components: weapon dice + extra sources + flat bonuses
-            damage_components: list[dict[str, object]] = [
-                {"source": dr.source, "dice": dr.dice, "amount": dr.amount, "type": dr.type.value}
-                for dr in result.damage
-            ]
-            for dbc in atk_mods.damage_components:
-                damage_components.append(
-                    {"source": dbc.source, "dice": "", "amount": dbc.value, "type": result.damage[0].type.value}
-                )
-            log_data["damage_components"] = damage_components
-
-        # Log the attack BEFORE death/combat-end so event order is natural
-        attack_log_event = Event(
-            event_type=EventType.ENTITY_ATTACK,
-            source_layer="entities",
-            data=log_data,
-        )
-        self._location_log[attacker.location_id].append(attack_log_event)
-
         if result.hit and not target.is_alive:
             target.in_combat = False
             death_event = Event(
@@ -424,9 +447,7 @@ class CombatManager:
             )
             result_events.append(death_event)
             self._location_log[target.location_id].append(death_event)
-            # _remove_from_combat may trigger _end_combat → COMBAT_ENDED last
             self._remove_from_combat(target.location_id, target_id)
-
         return ActionResult(success=True, events=result_events)
 
     # -- Helpers --

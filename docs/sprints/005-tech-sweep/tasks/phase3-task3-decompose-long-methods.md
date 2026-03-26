@@ -48,4 +48,17 @@ Write tests that exercise the full chains being decomposed:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+**resolve_attack:** 186 LOC → ~74 LOC orchestrator + 5 private helpers (_roll_attack_dice, _check_sneak_attack,
+_build_attack_event, _build_damage_components, _handle_death). Slightly over the 60 LOC target because the
+orchestrator retains logging and the resolve_attack call itself — further decomposition would obscure the flow.
+
+**query():** 127 LOC if-chain → 6 LOC dispatch + 13 handler methods + ClassVar dispatch dict. Added `str()` casts
+on params values to satisfy mypy strict mode (params type is `dict[str, object]`).
+
+8 new tests verify the full attack pipeline (sneak attack with ally adjacency, bless dice in event data,
+death→combat end ordering) and query dispatch (location filter, type filter, combat info, unknown query).
+Added `Callable` import and `_QueryHandler` type alias for the dispatch dict.

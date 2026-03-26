@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, ClassVar
 
 from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.models import Answer, Query, QueryType
@@ -13,6 +14,8 @@ from dnd_simulator.rules.modifiers import effective_ac
 if TYPE_CHECKING:
     from dnd_simulator.core.models import Event
     from dnd_simulator.layers.entities.combat_manager import CombatManager
+
+_QueryHandler = Callable[["QueryHandler", dict[str, object]], Answer]
 
 
 class QueryHandler:
@@ -32,129 +35,138 @@ class QueryHandler:
 
     def query(self, query: Query) -> Answer:
         """Answer queries about entities."""
-        q = query.question
-        params = query.params
+        handler = self._dispatch.get(query.question)
+        if handler is None:
+            raise ValueError(f"Unknown entities query: {query.question}")
+        return handler(self, query.params)
 
-        if q is QueryType.PLAYERS:
-            from dnd_simulator.core.player import PlayerCharacter
+    # -- Query handlers --
 
-            return Answer(value=[e for e in self._entities.values() if isinstance(e, PlayerCharacter)])
+    def _query_players(self, params: dict[str, object]) -> Answer:
+        from dnd_simulator.core.player import PlayerCharacter
 
-        if q is QueryType.PLAYER:
-            from dnd_simulator.core.player import PlayerCharacter
+        return Answer(value=[e for e in self._entities.values() if isinstance(e, PlayerCharacter)])
 
-            pid = params.get("id")
-            if pid:
-                e = self._entities.get(str(pid))
-                return Answer(value=e if isinstance(e, PlayerCharacter) else None)
-            # Legacy: first player found
-            for e in self._entities.values():
-                if isinstance(e, PlayerCharacter):
-                    return Answer(value=e)
-            return Answer(value=None)
+    def _query_player(self, params: dict[str, object]) -> Answer:
+        from dnd_simulator.core.player import PlayerCharacter
 
-        if q is QueryType.ENTITIES_AT_LOCATION:
-            location_id = params["location_id"]
-            hour = int(params.get("hour", 12))
-            result = []
-            for e in self._entities.values():
-                if not e.active:
-                    continue
-                if isinstance(e, Npc):
-                    if e.current_location(hour) == location_id:
-                        result.append(self._entity_summary(e, hour))
-                elif e.location_id == location_id:
-                    result.append(self._entity_summary(e))
-            return Answer(value=result)
+        pid = params.get("id")
+        if pid:
+            e = self._entities.get(str(pid))
+            return Answer(value=e if isinstance(e, PlayerCharacter) else None)
+        for e in self._entities.values():
+            if isinstance(e, PlayerCharacter):
+                return Answer(value=e)
+        return Answer(value=None)
 
-        if q is QueryType.ENTITY_INFO:
-            e = self._entities[params["entity_id"]]
-            return Answer(value=self._entity_detail(e))
+    def _query_entities_at_location(self, params: dict[str, object]) -> Answer:
+        location_id = str(params["location_id"])
+        hour = int(str(params.get("hour", 12)))
+        result = []
+        for e in self._entities.values():
+            if not e.active:
+                continue
+            if isinstance(e, Npc):
+                if e.current_location(hour) == location_id:
+                    result.append(self._entity_summary(e, hour))
+            elif e.location_id == location_id:
+                result.append(self._entity_summary(e))
+        return Answer(value=result)
 
-        if q is QueryType.ALL_ENTITIES:
-            result = []
-            for e in self._entities.values():
-                if e.active:
-                    result.append(self._entity_detail(e))
-            return Answer(value=result)
+    def _query_entity_info(self, params: dict[str, object]) -> Answer:
+        e = self._entities[str(params["entity_id"])]
+        return Answer(value=self._entity_detail(e))
 
-        if q is QueryType.ALL_CREATURES:
-            from dnd_simulator.core.player import PlayerCharacter
+    def _query_all_entities(self, params: dict[str, object]) -> Answer:
+        return Answer(value=[self._entity_detail(e) for e in self._entities.values() if e.active])
 
-            # Filterable creature list for master panel
-            filter_type = params.get("entity_type")  # "player", "npc", or None for all
-            filter_location = params.get("location_id")
-            filter_active = params.get("active")  # True/False/None
-            result = []
-            for e in self._entities.values():
-                if not isinstance(e, Creature):
-                    continue
-                if filter_active is not None and e.active != filter_active:
-                    continue
-                if filter_location and e.location_id != filter_location:
-                    continue
-                if filter_type == "player" and not isinstance(e, PlayerCharacter):
-                    continue
-                if filter_type == "npc" and not isinstance(e, Npc):
-                    continue
-                if filter_type == "monster" and (isinstance(e, (PlayerCharacter, Npc))):
-                    continue
-                result.append(self._entity_detail(e))
-            return Answer(value=result)
+    def _query_all_creatures(self, params: dict[str, object]) -> Answer:
+        from dnd_simulator.core.player import PlayerCharacter
 
-        if q is QueryType.ALL_NPCS:
-            result = []
-            for e in self._entities.values():
-                if e.active and isinstance(e, Npc):
-                    result.append(self._npc_detail(e))
-            return Answer(value=result)
+        filter_type = params.get("entity_type")
+        filter_location = params.get("location_id")
+        filter_active = params.get("active")
+        result = []
+        for e in self._entities.values():
+            if not isinstance(e, Creature):
+                continue
+            if filter_active is not None and e.active != filter_active:
+                continue
+            if filter_location and e.location_id != filter_location:
+                continue
+            if filter_type == "player" and not isinstance(e, PlayerCharacter):
+                continue
+            if filter_type == "npc" and not isinstance(e, Npc):
+                continue
+            if filter_type == "monster" and (isinstance(e, (PlayerCharacter, Npc))):
+                continue
+            result.append(self._entity_detail(e))
+        return Answer(value=result)
 
-        if q is QueryType.NPC_INFO:
-            npc = self._entities.get(params["npc_id"])
-            if npc is None or not isinstance(npc, Npc):
-                raise ValueError(f"NPC '{params['npc_id']}' not found")
-            return Answer(value=self._npc_detail(npc))
+    def _query_all_npcs(self, params: dict[str, object]) -> Answer:
+        return Answer(value=[self._npc_detail(e) for e in self._entities.values() if e.active and isinstance(e, Npc)])
 
-        if q is QueryType.PERCEIVED_LOG:
-            e = self._entities[params["entity_id"]]
-            if isinstance(e, Character):
-                return Answer(value=self.get_perceived_log(e))
-            return Answer(value=[])
+    def _query_npc_info(self, params: dict[str, object]) -> Answer:
+        npc_id = str(params["npc_id"])
+        npc = self._entities.get(npc_id)
+        if npc is None or not isinstance(npc, Npc):
+            raise ValueError(f"NPC '{npc_id}' not found")
+        return Answer(value=self._npc_detail(npc))
 
-        if q is QueryType.NEW_PERCEIVED_EVENTS:
-            e = self._entities[params["entity_id"]]
-            if isinstance(e, Character):
-                return Answer(value=self.get_new_perceived_events(e))
-            return Answer(value=[])
+    def _query_perceived_log(self, params: dict[str, object]) -> Answer:
+        e = self._entities[str(params["entity_id"])]
+        if isinstance(e, Character):
+            return Answer(value=self.get_perceived_log(e))
+        return Answer(value=[])
 
-        if q is QueryType.NEW_RAW_EVENTS:
-            e = self._entities[params["entity_id"]]
-            if isinstance(e, Character):
-                return Answer(value=self.get_new_raw_events(e))
-            return Answer(value=[])
+    def _query_new_perceived_events(self, params: dict[str, object]) -> Answer:
+        e = self._entities[str(params["entity_id"])]
+        if isinstance(e, Character):
+            return Answer(value=self.get_new_perceived_events(e))
+        return Answer(value=[])
 
-        if q is QueryType.COMBAT_INFO:
-            location_id = params["location_id"]
-            combat = self._combat.get_combat(location_id)
-            if combat:
-                return Answer(
-                    value={
-                        "round_number": combat.round_number,
-                        "turn_order": combat.turn_order,
-                        "positions": dict(combat.battle_map.positions),
-                        "wall_descriptions": combat.battle_map.describe_walls(),
-                    }
-                )
-            return Answer(value=None)
+    def _query_new_raw_events(self, params: dict[str, object]) -> Answer:
+        e = self._entities[str(params["entity_id"])]
+        if isinstance(e, Character):
+            return Answer(value=self.get_new_raw_events(e))
+        return Answer(value=[])
 
-        if q is QueryType.PERCEIVE_ENTITY:
-            observer = self._entities.get(params["observer_id"])
-            target = self._entities.get(params["target_id"])
-            if observer and target and isinstance(observer, Character) and isinstance(target, Entity):
-                return Answer(value=observer.perceive(target))
-            return Answer(value=str(params["target_id"]))
+    def _query_combat_info(self, params: dict[str, object]) -> Answer:
+        location_id = str(params["location_id"])
+        combat = self._combat.get_combat(location_id)
+        if combat:
+            return Answer(
+                value={
+                    "round_number": combat.round_number,
+                    "turn_order": combat.turn_order,
+                    "positions": dict(combat.battle_map.positions),
+                    "wall_descriptions": combat.battle_map.describe_walls(),
+                }
+            )
+        return Answer(value=None)
 
-        raise ValueError(f"Unknown entities query: {q}")
+    def _query_perceive_entity(self, params: dict[str, object]) -> Answer:
+        observer = self._entities.get(str(params["observer_id"]))
+        target = self._entities.get(str(params["target_id"]))
+        if observer and target and isinstance(observer, Character) and isinstance(target, Entity):
+            return Answer(value=observer.perceive(target))
+        return Answer(value=str(params["target_id"]))
+
+    _dispatch: ClassVar[dict[QueryType, _QueryHandler]] = {
+        QueryType.PLAYERS: _query_players,
+        QueryType.PLAYER: _query_player,
+        QueryType.ENTITIES_AT_LOCATION: _query_entities_at_location,
+        QueryType.ENTITY_INFO: _query_entity_info,
+        QueryType.ALL_ENTITIES: _query_all_entities,
+        QueryType.ALL_CREATURES: _query_all_creatures,
+        QueryType.ALL_NPCS: _query_all_npcs,
+        QueryType.NPC_INFO: _query_npc_info,
+        QueryType.PERCEIVED_LOG: _query_perceived_log,
+        QueryType.NEW_PERCEIVED_EVENTS: _query_new_perceived_events,
+        QueryType.NEW_RAW_EVENTS: _query_new_raw_events,
+        QueryType.COMBAT_INFO: _query_combat_info,
+        QueryType.PERCEIVE_ENTITY: _query_perceive_entity,
+    }
 
     # -- Perception log --
 
