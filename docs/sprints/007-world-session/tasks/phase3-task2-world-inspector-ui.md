@@ -45,4 +45,12 @@ The flow: user picks a world → expands layer details → sees which layers are
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Created WorldInspector component that fetches manifest and renders layer list with source badges and fork buttons.
+Integrated into WorldPicker via expand/collapse toggle (ChevronRight/ChevronDown pattern).
+No frontend tests — no test framework (vitest/jest) is installed.
+Fork button calls forkLayer then re-fetches manifest to update UI.
+Added i18n keys for both en/ru: layer labels, source badges, fork button, error messages.

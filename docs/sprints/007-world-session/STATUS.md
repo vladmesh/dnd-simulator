@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 3, Task 1: World Manifest API + TS types + client methods — done. Endpoint, Pydantic models, TS types, and client methods added.
+Phase 3, Task 2: World Inspector UI — done. WorldInspector component with expand/collapse, fork buttons, i18n.
 
 ## Next Steps
 
