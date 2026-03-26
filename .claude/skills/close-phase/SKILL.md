@@ -65,7 +65,7 @@ sleep 2
 
 # Start backend with debug + file logging
 mkdir -p /tmp/dnd-e2e-logs
-DEBUG=1 LOG_DIR=/tmp/dnd-e2e-logs make serve &
+LOG_LEVEL=DEBUG LOG_DIR=/tmp/dnd-e2e-logs make serve &
 
 # Start frontend
 make frontend &

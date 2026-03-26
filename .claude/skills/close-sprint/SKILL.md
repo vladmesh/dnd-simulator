@@ -82,7 +82,7 @@ Do NOT commit or push when serious blockers remain.
 
 #### 4a. Update docs
 
-Run the `/update-docs` protocol inline (read git log since last run, update affected docs, update e2e-playbook if new mechanics landed).
+Run `/update-docs full` — full deep review, not incremental. A sprint accumulates changes across many phases; incremental mode would only see commits since the last mid-sprint run and miss earlier changes.
 
 #### 4b. Fill in sprint results
 
@@ -115,10 +115,12 @@ Update `sprint.md` Results section:
 #### 4d. Commit and push
 
 ```bash
-git add docs/ .claude/skills/update-docs/state.json
+git add docs/ CLAUDE.md ARCHITECTURE.md README.md src/dnd_simulator/**/__init__.py
 git commit -m "sprint NNN: close — <goal summary>"
 git push
 ```
+
+**Note:** Do NOT stage `.claude/skills/update-docs/state.json` here — it is committed by the `/update-docs` skill itself in step 4a. The close-sprint commit should not touch it.
 
 This is the only skill that pushes. The sprint is done.
 
