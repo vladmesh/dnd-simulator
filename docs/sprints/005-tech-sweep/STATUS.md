@@ -1,9 +1,15 @@
 # Sprint 005 Status
 
 **Sprint:** 005-tech-sweep
-**Phase:** 4 — Architecture Violations + Type Safety (COMPLETE)
+**Phase:** 5 — Test Gaps
 **Updated:** 2026-03-26
 
 ## Current
 
-Phase 4 complete. Protocol bases for service mixins (24 type: ignore eliminated), Round private EntitiesLayer access replaced with World.query, Answer.value Any→object with type narrowing at 14 consumer sites. Ready for Phase 5 task generation.
+Phase 5 tasks generated. Scope narrowed after coverage review: combat handlers, trade handlers, items handlers, weapons.py, turn_budget already well-covered — focusing on real gaps only.
+
+## Next Steps
+
+- Task 1: AwarenessBuilder — query resilience, NPC schedule locations, combat detail coverage, edge cases
+- Task 2: World — layer isolation enforcement (6 LayerError scenarios), event propagation, tick gating, save/load
+- Task 3: ActionProvider + BrainFactory — all 6 providers in isolation, BrainFactory 5 branches

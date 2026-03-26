@@ -60,11 +60,13 @@ Fix round.py private layer access. Service mixin type safety (24 type: ignore). 
 
 ## Phase 5: Test Gaps
 
-Unit-тесты для action_handlers (split modules из Phase 3), action_provider, awareness, items, world, turn_budget, brain_factory. Приоритет: combat execution path.
+Unit-тесты для недопокрытых модулей на combat execution path. Скоуп сужен после ревью: action_handlers combat/items/trade, weapons.py, turn_budget уже хорошо покрыты — пишем тесты только для реальных дыр.
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [AwarenessBuilder unit tests](tasks/phase5-task1-awareness-builder-tests.md)
+2. [World layer isolation & event propagation unit tests](tasks/phase5-task2-world-isolation-tests.md)
+3. [ActionProvider + BrainFactory unit tests](tasks/phase5-task3-action-provider-brain-factory-tests.md)
 
 ---
 
