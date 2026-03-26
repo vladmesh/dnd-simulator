@@ -36,7 +36,7 @@ EntitiesLayer (1215 LOC) → выделяем awareness builder, activation mana
 2. [Extract ActivationManager from EntitiesLayer](tasks/phase2-task2-extract-activation-manager.md)
 3. [Extract QueryHandler from EntitiesLayer](tasks/phase2-task3-extract-query-handler.md)
 
-## Phase 3: Growing Files Split
+## Phase 3: Growing Files Split ✓
 
 action_handlers.py (607 LOC) → combat, movement, trade handlers. content_loader.py (757 LOC) → по домену. Длинные методы (query 127 LOC, resolve_attack 186 LOC) — разбить.
 
