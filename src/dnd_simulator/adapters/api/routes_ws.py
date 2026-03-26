@@ -23,6 +23,7 @@ from typing import Any
 
 import structlog
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from starlette.websockets import WebSocketDisconnect as _StarletteDisconnect
 
 from dnd_simulator.adapters.api.deps import get_service
 from dnd_simulator.core.action import Action, ActionType
@@ -55,8 +56,8 @@ class WsEventListener:
         try:
             future = asyncio.run_coroutine_threadsafe(self._ws.send_json(msg), self._loop)
             future.result(timeout=30)
-        except Exception:
-            logger.debug("ws_send_failed", exc_info=True)
+        except (TimeoutError, _StarletteDisconnect, ConnectionError):
+            logger.debug("ws_send_failed")
 
     def on_turn(self, msg: dict[str, Any]) -> None:
         self._send(msg)
@@ -146,7 +147,11 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
                 continue
             rl_budget -= 1.0
 
-            msg = json.loads(raw)
+            try:
+                msg = json.loads(raw)
+            except json.JSONDecodeError:
+                await ws.send_json({"type": "error", "message": _("Invalid JSON")})
+                continue
             msg_type = msg.get("type")
 
             if msg_type == "action":

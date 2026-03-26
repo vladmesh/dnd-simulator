@@ -299,7 +299,7 @@ class GameSession:
         if is_empty and self._on_empty is not None:
             self._on_empty(self)
 
-    def _fire(self, method: str, *args: Any) -> None:
+    def _fire(self, method: str, *args: object) -> None:
         """Call a method on all listeners, swallowing individual errors."""
         with self._lock:
             listeners = list(self._listeners)
