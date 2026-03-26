@@ -67,6 +67,16 @@ God-класс EntitiesLayer расщеплён на AwarenessBuilder/Activation
 Мир собирается из переиспользуемых шаблонов слоёв. Library (`content/library/`) хранит 5 шаблонов на слой (geography, politics, settlements, ecology, entities) с metadata.yaml. Мир — manifest.yaml со ссылками на library или custom. Content loader резолвит манифест. API: каталог шаблонов с фильтрацией совместимости, сборка мира из шаблонов, fork слоя в custom. Frontend: WorldBuilder wizard (6 шагов), альтернатива quick-start. Старый формат (без манифеста) убран, content_saver удалён.
 → [план спринта](sprints/006-layer-composition/sprint.md)
 
+### Sprint 007 — World Builder + Session Robustness (фазы 1-5)
+Save/load completeness (resource pools, combat state, spawned creatures, brain reassignment). Give Item UI. Fork UI + World Inspector на /master. Layer editor (YAML read/write API + textarea). Partial worlds: incomplete manifests, scaffold endpoint, fork world with layer truncation, delete world. Фазы 6-7 (structured forms, DM restructure) deferred — superseded by sprint 008.
+→ [план спринта](sprints/007-world-session/sprint.md)
+
+## In Progress
+
+### Sprint 008 — Content Schema & Catalogs
+Pydantic content models как единый source of truth. Переписать парсеры на model_validate. Каталоги monsters + items (вынос из слоёв, ref-resolution). Entity CRUD API + JSON Schema endpoints. Frontend schema-driven forms + DM restructure.
+→ [план спринта](sprints/008-content-schema/sprint.md)
+
 ## Planned
 
 ### Level 2 — Расходуемые ресурсы
