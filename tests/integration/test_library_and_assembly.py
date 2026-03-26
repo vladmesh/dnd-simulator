@@ -148,6 +148,127 @@ class TestWorldAssembly:
         requests.delete(f"{api_url}/sessions/{session_id}", timeout=5)
 
 
+class TestWizardFlow:
+    """Tests that mirror the exact API call sequence the WorldBuilder wizard makes."""
+
+    def test_full_wizard_sequence(self, api_url: str, player_api_url: str) -> None:
+        """Step through all 5 layers, assemble world, create session, create player."""
+        # Step 1: Geography (unfiltered)
+        resp = requests.get(f"{api_url}/library/geography", timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+        geo_templates = resp.json()
+        assert len(geo_templates) > 0
+        selected_geo = geo_templates[0]["slug"]
+
+        # Step 2: Politics (filtered by geography)
+        resp = requests.get(f"{api_url}/library/politics", params={"geography": selected_geo}, timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+        pol_templates = resp.json()
+        assert len(pol_templates) > 0
+        selected_pol = pol_templates[0]["slug"]
+
+        # Step 3: Settlements (filtered by geography)
+        resp = requests.get(f"{api_url}/library/settlements", params={"geography": selected_geo}, timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+        set_templates = resp.json()
+        assert len(set_templates) > 0
+        selected_set = set_templates[0]["slug"]
+
+        # Step 4: Ecology (filtered by geography)
+        resp = requests.get(f"{api_url}/library/ecology", params={"geography": selected_geo}, timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+        eco_templates = resp.json()
+        assert len(eco_templates) > 0
+        selected_eco = eco_templates[0]["slug"]
+
+        # Step 5: Entities (filtered by geography)
+        resp = requests.get(f"{api_url}/library/entities", params={"geography": selected_geo}, timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+        ent_templates = resp.json()
+        assert len(ent_templates) > 0
+        selected_ent = ent_templates[0]["slug"]
+
+        # Step 6: Assemble
+        resp = requests.post(
+            f"{api_url}/worlds/assemble",
+            json={
+                "id": "wizard_flow_world",
+                "name": "Wizard Flow World",
+                "description": "Built by the wizard flow test",
+                "layer_selections": {
+                    "geography": selected_geo,
+                    "politics": selected_pol,
+                    "settlements": selected_set,
+                    "ecology": selected_eco,
+                    "entities": selected_ent,
+                },
+            },
+            timeout=10,
+        )
+        assert resp.status_code == HTTPStatus.CREATED
+
+        # Step 7: Create session from assembled world
+        resp = requests.post(
+            f"{api_url}/sessions",
+            json={"world_name": "wizard_flow_world", "lang": "en"},
+            timeout=10,
+        )
+        assert resp.status_code == HTTPStatus.OK
+        session_id = resp.json()["session_id"]
+
+        # Step 8: Create player character in the new session
+        resp = requests.post(
+            f"{player_api_url}/sessions/{session_id}/character",
+            json={
+                "name": "Wizard Hero",
+                "race": "human",
+                "char_class": "fighter",
+                "level": 1,
+                "alignment": "true_neutral",
+                "hp": 20,
+                "ac": 12,
+                "gold": 10,
+                "ability_scores": {"str": 14, "dex": 12, "con": 14, "int": 10, "wis": 10, "cha": 10},
+            },
+            timeout=10,
+        )
+        assert resp.status_code == HTTPStatus.OK
+        player_data = resp.json()
+        assert player_data["name"] == "Wizard Hero"
+        assert player_data["player_id"]
+
+        # Verify session shows in listing with correct world
+        resp = requests.get(f"{api_url}/sessions", timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+        sessions = resp.json()
+        wizard_session = next(s for s in sessions if s["session_id"] == session_id)
+        assert wizard_session["world_name"] == "wizard_flow_world"
+
+        # Cleanup
+        requests.delete(f"{api_url}/sessions/{session_id}", timeout=5)
+
+    def test_compatibility_cascade_filters_all_upper_layers(self, api_url: str) -> None:
+        """All upper layers (politics, settlements, ecology, entities) filter by selected geography."""
+        for layer_type in ("politics", "settlements", "ecology", "entities"):
+            # Compatible geography returns templates
+            resp = requests.get(
+                f"{api_url}/library/{layer_type}",
+                params={"geography": "test_geo"},
+                timeout=5,
+            )
+            assert resp.status_code == HTTPStatus.OK
+            assert len(resp.json()) > 0, f"{layer_type} should have compatible templates for test_geo"
+
+            # Nonexistent geography returns empty
+            resp = requests.get(
+                f"{api_url}/library/{layer_type}",
+                params={"geography": "nonexistent_geo"},
+                timeout=5,
+            )
+            assert resp.status_code == HTTPStatus.OK
+            assert len(resp.json()) == 0, f"{layer_type} should have no templates for nonexistent_geo"
+
+
 class TestForkLayer:
     def test_fork_entities_layer(self, api_url: str) -> None:
         # Create a fresh world to fork from

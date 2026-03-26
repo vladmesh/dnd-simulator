@@ -49,5 +49,27 @@
   "alignment_chaotic_neutral": "Chaotic Neutral",
   "alignment_lawful_evil": "Lawful Evil",
   "alignment_neutral_evil": "Neutral Evil",
-  "alignment_chaotic_evil": "Chaotic Evil"
+  "alignment_chaotic_evil": "Chaotic Evil",
+
+  "build_custom_world": "Build Custom World",
+  "back_to_worlds": "Back to world list",
+  "wizard_title": "Build Your World",
+  "wizard_step_geography": "Geography",
+  "wizard_step_politics": "Politics",
+  "wizard_step_settlements": "Settlements",
+  "wizard_step_ecology": "Ecology",
+  "wizard_step_entities": "Entities",
+  "wizard_step_details": "Details",
+  "wizard_select_template": "Select a template for this layer:",
+  "wizard_no_templates": "No compatible templates available.",
+  "wizard_loading": "Loading templates...",
+  "wizard_field_id": "World ID (slug)",
+  "wizard_field_id_hint": "Lowercase letters, numbers, underscores only",
+  "wizard_field_name": "World Name",
+  "wizard_field_description": "Description",
+  "wizard_create": "Create World & Start",
+  "wizard_creating": "Creating...",
+  "wizard_create_error": "Failed to create world",
+  "wizard_back": "Back",
+  "wizard_step_label": "Step {{current}} of {{total}}"
 }

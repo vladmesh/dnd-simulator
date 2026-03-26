@@ -1,5 +1,6 @@
 import type {
   AdvanceTimeRequest,
+  AssembleWorldRequest,
   CreatePlayerRequest,
   CreateSessionRequest,
   CreateWorldRequest,
@@ -14,6 +15,7 @@ import type {
   SetBrainRequest,
   SetLangRequest,
   SpawnCreatureRequest,
+  TemplateListItem,
   WorldListItem,
   WorldStateResponse,
 } from "@/types/api"
@@ -75,6 +77,15 @@ function del<T>(path: string) {
 // --- Master API ---
 
 const master = {
+  // Library
+  getLibraryTemplates: (layerType: string, geography?: string) => {
+    const query = geography ? `?geography=${encodeURIComponent(geography)}` : ""
+    return get<TemplateListItem[]>(`/api/master/library/${layerType}${query}`)
+  },
+
+  assembleWorld: (data: AssembleWorldRequest) =>
+    post<WorldListItem>("/api/master/worlds/assemble", data),
+
   // Worlds
   getWorlds: (lang?: string) =>
     get<WorldListItem[]>(lang ? `/api/master/worlds?lang=${lang}` : "/api/master/worlds"),

@@ -41,6 +41,7 @@ export interface PatchCreatureRequest {
   current_hp?: number | null
   ac?: number | null
   location_id?: string | null
+  conditions?: string[] | null
   gold?: number | null
   personality?: string | null
 }
@@ -70,6 +71,14 @@ export interface CreateWorldRequest {
   locations?: Record<string, unknown>
   nations?: Record<string, unknown>
   npcs?: Record<string, unknown>
+}
+
+export interface AssembleWorldRequest {
+  id: string
+  name: string
+  description?: string
+  layer_selections: Record<string, string>
+  default_player_faction?: string
 }
 
 export interface AdvanceTimeRequest {
@@ -139,6 +148,16 @@ export interface CreatureResponse {
   ai_type?: string
   settlement_id?: string
   memory?: Record<string, unknown> | null
+}
+
+export interface TemplateListItem {
+  slug: string
+  name: string
+  layer_type: string
+  version: string
+  description: string
+  tags: string[]
+  requires_geography: string[]
 }
 
 export interface MessageResponse {

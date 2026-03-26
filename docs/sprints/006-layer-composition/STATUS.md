@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 4 tasks generated. Ready to start task 1.
+Phase 4, Task 1: World Builder Wizard Component — done. Wizard component, API client methods, TS types, i18n strings (en+ru) all implemented. Frontend builds clean.
 
 ## Next Steps
 

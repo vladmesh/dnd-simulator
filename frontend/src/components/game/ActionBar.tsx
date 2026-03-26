@@ -5,7 +5,7 @@ import { wsClient } from "@/transport/wsClient"
 import { BudgetDisplay } from "./BudgetDisplay"
 import { Button } from "@/components/ui/button"
 import { Loader2, ChevronDown } from "lucide-react"
-import type { CombatAwareness, Awareness, ActionInfo } from "@/types/game"
+import type { CombatAwareness, ActionInfo } from "@/types/game"
 
 // Visual variants for specific actions
 const ACTION_VARIANT: Record<string, "destructive" | "secondary" | "outline"> = {

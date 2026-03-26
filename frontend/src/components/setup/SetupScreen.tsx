@@ -2,12 +2,14 @@ import { useState } from "react"
 import { useNavigate } from "react-router"
 import { useTranslation } from "react-i18next"
 import { WorldPicker } from "./WorldPicker"
+import { WorldBuilder } from "./WorldBuilder"
 import { CharacterForm } from "./CharacterForm"
 import { SessionConnect } from "./SessionConnect"
 import { LanguageToggle } from "./LanguageToggle"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 
-type Step = "pick-world" | "create-character"
+type Step = "pick-world" | "build-world" | "create-character"
 
 export function SetupScreen() {
   const navigate = useNavigate()
@@ -40,6 +42,16 @@ export function SetupScreen() {
           />
 
           <div className="mt-8">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setStep("build-world")}
+            >
+              {t("setup:build_custom_world")}
+            </Button>
+          </div>
+
+          <div className="mt-8">
             <Card>
               <CardHeader>
                 <CardTitle>{t("setup:join_existing")}</CardTitle>
@@ -50,6 +62,16 @@ export function SetupScreen() {
             </Card>
           </div>
         </>
+      )}
+
+      {step === "build-world" && (
+        <WorldBuilder
+          onWorldAssembled={(sid) => {
+            setSessionId(sid)
+            setStep("create-character")
+          }}
+          onBack={() => setStep("pick-world")}
+        />
       )}
 
       {step === "create-character" && sessionId && (

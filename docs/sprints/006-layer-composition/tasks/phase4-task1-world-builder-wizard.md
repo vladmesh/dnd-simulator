@@ -75,4 +75,8 @@ Add keys to `setup.json` (en + ru) for the wizard: step labels, button text, fie
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implementation straightforward, no surprises. Also fixed two pre-existing TS build errors: unused `Awareness` import in ActionBar.tsx and missing `conditions` field in `PatchCreatureRequest` type. Added 2 new integration tests (wizard flow sequence + compatibility cascade for all upper layers). Frontend builds clean — the WorldBuilder wizard handles the full 6-step flow (5 layers + details), with compatibility filtering on steps 2-5. The `DetailsForm` sanitizes world ID input to match the backend's `^[a-z0-9_]+$` pattern.
