@@ -58,7 +58,7 @@ Fix round.py private layer access. Service mixin type safety (24 type: ignore). 
 2. [Eliminate Round's private EntitiesLayer access](tasks/phase4-task2-round-private-access.md)
 3. [Answer.value Any → object](tasks/phase4-task3-answer-value-object.md)
 
-## Phase 5: Test Gaps
+## Phase 5: Test Gaps ✓
 
 Unit-тесты для недопокрытых модулей на combat execution path. Скоуп сужен после ревью: action_handlers combat/items/trade, weapons.py, turn_budget уже хорошо покрыты — пишем тесты только для реальных дыр.
 

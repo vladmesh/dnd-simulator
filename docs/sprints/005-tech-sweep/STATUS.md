@@ -1,15 +1,9 @@
 # Sprint 005 Status
 
 **Sprint:** 005-tech-sweep
-**Phase:** 5 — Test Gaps
+**Phase:** 5 — Test Gaps (COMPLETE)
 **Updated:** 2026-03-26
 
 ## Current
 
-Phase 5, Task 3: ActionProvider + BrainFactory unit tests — done. 18 + 5 = 23 new tests.
-
-## Next Steps
-
-- Task 1: AwarenessBuilder — query resilience, NPC schedule locations, combat detail coverage, edge cases
-- Task 2: World — layer isolation enforcement (6 LayerError scenarios), event propagation, tick gating, save/load
-- Task 3: ActionProvider + BrainFactory — all 6 providers in isolation, BrainFactory 5 branches
+Phase 5 complete. 23 new unit tests across AwarenessBuilder, World layer isolation, ActionProvider, and BrainFactory. All phases complete. Ready for sprint closure.
