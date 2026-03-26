@@ -1,11 +1,15 @@
 # Sprint 008 Status
 
 **Sprint:** 008-content-schema
-**Phase:** 1 — Pydantic Content Models + Parser Rewrite (COMPLETE)
+**Phase:** 2 — Catalogs — Monsters + Items
 **Updated:** 2026-03-27
 
 ## Current
 
-Phase 1 complete. Pydantic content models defined for all entity types, all parsers rewritten to use `model_validate`, round-trip tests added. 1341 tests passing, integration tests green (63), E2E regression green.
+Phase 2 tasks generated. Ready to start task 1.
 
-Ready for Phase 2 task generation.
+## Next Steps
+
+- Task 1: Catalog loader + monster catalog — generic catalog infrastructure, extract sword_vale monsters to `content/catalogs/monsters/`, world templates reference catalog via `base:`
+- Task 2: Item catalog + NPC equipment references — item catalog files, NPC items use `ref:` instead of inline, migrate sword_vale
+- Task 3: Assembly integration — wire catalogs into `start_game()`, integration tests for full pipeline

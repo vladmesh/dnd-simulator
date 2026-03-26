@@ -36,7 +36,9 @@ Pydantic-модели для всех типов сущностей (Region, Loc
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Catalog Loader + Monster Catalog](tasks/phase2-task1-catalog-loader-monsters.md)
+2. [Item Catalog + NPC Equipment References](tasks/phase2-task2-item-catalog.md)
+3. [Assembly Integration — Wire Catalogs into Game Start](tasks/phase2-task3-assembly-integration.md)
 
 ## Phase 3: Entity CRUD API + JSON Schema
 
