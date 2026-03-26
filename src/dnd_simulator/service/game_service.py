@@ -70,6 +70,7 @@ class GameService(
     def start_game(self, world_name: str = "sword_vale", lang: str = "en") -> GameSession:
         """Create a new game session with a world loaded from content/worlds/<world_name>/."""
         session_id = uuid.uuid4().hex[:8]
+        structlog.contextvars.bind_contextvars(session_id=session_id)
 
         world_path = self._content_dir / "worlds" / world_name
         meta = load_world_meta(world_path, lang=lang)
@@ -366,6 +367,7 @@ class GameService(
             self._try_restore_session(session_id)
         if session_id not in self._sessions:
             raise ValueError(f"Session '{session_id}' not found")
+        structlog.contextvars.bind_contextvars(session_id=session_id)
         return self._sessions[session_id]
 
     def _try_restore_session(self, session_id: str) -> None:

@@ -313,6 +313,12 @@ class CombatManager:
             actual_damage = target.take_damage(result.total_damage)
             log_data["damage"] = actual_damage
             log_data["damage_components"] = self._build_damage_components(result, atk_mods)
+            # Mark sneak attack as used only on hit (D&D 5e PHB p.96)
+            if extra_damage and attacker_id not in self._sneak_attack_used:
+                for ed in extra_damage:
+                    if ed.source == "sneak_attack":
+                        self._sneak_attack_used.add(attacker_id)
+                        break
 
         self._location_log[attacker.location_id].append(
             Event(event_type=EventType.ENTITY_ATTACK, source_layer="entities", data=log_data)
@@ -380,7 +386,8 @@ class CombatManager:
             ally_adjacent_to_target=ally_adjacent,
         ):
             sa_expr = f"{sa_dice}d6"
-            self._sneak_attack_used.add(attacker.id)
+            # Don't mark as used here — only on hit (D&D 5e: "deal extra damage
+            # to one creature you hit"). Marked in resolve_attack after hit check.
             logger.info(
                 "sneak_attack",
                 attacker=attacker.name,

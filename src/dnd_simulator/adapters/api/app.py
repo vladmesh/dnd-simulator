@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import re
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -48,9 +49,10 @@ class I18nMiddleware(BaseHTTPMiddleware):
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     load_dotenv()
 
-    debug = os.getenv("DEBUG", "") == "1"
+    log_level_name = os.environ.get("LOG_LEVEL", "WARNING")
+    log_level = getattr(logging, log_level_name.upper())
     log_dir_raw = os.getenv("LOG_DIR")
-    configure_logging(debug=debug, log_dir=Path(log_dir_raw) if log_dir_raw else None)
+    configure_logging(log_level=log_level, log_dir=Path(log_dir_raw) if log_dir_raw else None)
 
     store = JsonFileStore(DEFAULT_SAVES_DIR)
 
