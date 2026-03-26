@@ -122,11 +122,7 @@ class GameService(
         )
 
         # Assign brains via factory (content_loader only parses data, not brains)
-        from dnd_simulator.layers.entities.models import Npc
-
-        for entity in entities:
-            if isinstance(entity, Npc):
-                entity.brain = self._brain_factory.create(entity.ai_type)
+        self._assign_brains(entities_layer)
 
         world = World(
             layers=[geography, politics, settlements_layer, ecology_layer, entities_layer],
@@ -349,6 +345,21 @@ class GameService(
                 return layer
         raise RuntimeError("SettlementsLayer not found")
 
+    def _assign_brains(self, entities_layer: EntitiesLayer) -> None:
+        """Assign brains to all creatures via BrainFactory based on ai_type.
+
+        Called after world creation and after every load to ensure brains
+        match the (possibly restored) ai_type field.
+        """
+        from dnd_simulator.core.character import Creature
+        from dnd_simulator.layers.entities.models import Npc
+
+        for entity in entities_layer._entities.values():
+            if isinstance(entity, Npc):
+                entity.brain = self._brain_factory.create(entity.ai_type)
+            elif isinstance(entity, Creature) and entity.brain is None:
+                entity.brain = self._brain_factory.create("rule_based")
+
     # -- Player --
 
     def create_player(self, session_id: str, player_data: dict[str, Any]) -> PlayerCharacter:
@@ -439,6 +450,9 @@ class GameService(
             world_data = data["world"]
             assert isinstance(world_data, dict)
             session.world.load(world_data)
+
+            # Reassign brains based on restored ai_type (may differ from template)
+            self._assign_brains(self._get_entities_layer(session))
 
             # Backward compat: old saves have separate "player" block
             player_data = data.get("player", {})

@@ -47,4 +47,12 @@ Unit tests (mocked BrainFactory):
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Extracted `_assign_brains(entities_layer)` in `GameService`, added to `GameServiceProtocol`.
+- For NPCs: always reassigns brain from `ai_type` (handles brain switch case).
+- For generic Creatures: assigns brain only if `brain is None` (handles spawned creatures).
+- Called in 3 places: `start_game`, `_try_restore_session`, `load_game`.
+- Slightly restructured `load_game` to call `_assign_brains` after both old/new format load paths, before backward-compat player block.

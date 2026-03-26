@@ -49,6 +49,13 @@ class SaveCommands(GameServiceProtocol):
         # Support both old format (flat world data) and new format (world + player)
         if "world" in data:
             session.world.load(data["world"])
+        else:
+            session.world.load(data)
+
+        # Reassign brains based on restored ai_type (may differ from pre-load state)
+        self._assign_brains(self._get_entities_layer(session))
+
+        if "world" in data:
             # Backward compat: old saves have separate "player" block
             player_data = data.get("player", {})
             assert isinstance(player_data, dict)
@@ -56,8 +63,6 @@ class SaveCommands(GameServiceProtocol):
                 player = session.get_player()
                 if player:
                     player.load_save_data(player_data)
-        else:
-            session.world.load(data)
 
     def delete_save(self, session_id: str, name: str) -> None:
         """Delete a save file."""
