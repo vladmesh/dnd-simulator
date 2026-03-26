@@ -19,13 +19,14 @@
 
 ## Phase 1: Library Structure + Manifest + Content Migration
 
-Определяем формат шаблона слоя (metadata.yaml + данные), формат манифеста мира, структуру `content/library/`. Конвертируем sword_vale: вытаскиваем его слои в библиотеку, мир превращается в манифест + кастомные entities. Тестовые миры (arena, village, sneak_test) — all-custom (манифест где каждый слой = custom, данные inline). `content_loader` пока не трогаем — только формат и данные на диске.
+Определяем формат шаблона слоя (metadata.yaml + данные), формат манифеста мира, структуру `content/library/`. Конвертируем sword_vale: все 5 слоёв в библиотеку, мир → манифест со ссылками. Старые тестовые миры (arena, village, sneak_test) удаляем. Создаём новый тестовый мир test_vale — all-custom, минимальный но полноценный (2 региона, сквад, патруль, НПС). Settlements выносим из regions.yaml в отдельный settlements.yaml. `content_loader` пока не трогаем — только формат и данные на диске.
 
 **Верифицируем:** структура на диске соответствует новому формату, старых плоских миров не осталось.
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Library Structure + Sword Vale Extraction](tasks/phase1-task1-library-structure.md)
+2. [Manifest Format + World Migration + Cleanup](tasks/phase1-task2-manifest-migration.md)
 
 ## Phase 2: Content Loader Reads from Manifest
 
