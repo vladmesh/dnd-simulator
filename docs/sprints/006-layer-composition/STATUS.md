@@ -6,12 +6,11 @@
 
 ## Current
 
-Phase 4, Task 1: World Builder Wizard Component — done. Wizard component, API client methods, TS types, i18n strings (en+ru) all implemented. Frontend builds clean.
+Phase 4, Tasks 1+2 done. WorldBuilder wizard component with API client, TS types, i18n (en+ru), SetupScreen wiring, and integration tests all complete. Frontend builds clean. All backend tests pass (1172/1172).
 
 ## Next Steps
 
-- Task 1: World Builder Wizard Component — API client methods, TS types, multi-step wizard for layer selection
-- Task 2: Wire into SetupScreen + E2E — integrate wizard into setup flow, i18n, integration tests
+- All tasks in Phase 4 are done. Ready to close phase.
 
 ## Decisions
 

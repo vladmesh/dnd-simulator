@@ -56,4 +56,8 @@ Since there's no Playwright setup, E2E is manual but the integration tests cover
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All deliverables were completed in task 1 since the SetupScreen wiring, i18n strings, and full-lifecycle integration test naturally fell into the same unit of work. SetupScreen has the `build-world` step, WorldBuilder wired with `onWorldAssembled` and `onBack` callbacks, `build_custom_world` button on the pick-world screen. The `test_full_wizard_sequence` integration test covers the complete assembled-world lifecycle (assemble -> session -> player -> verify listing).
