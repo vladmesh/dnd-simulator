@@ -28,7 +28,7 @@ Pydantic-модели для всех типов сущностей (Region, Loc
 2. [Rewrite World Structure Parsers](tasks/phase1-task2-rewrite-world-parsers.md)
 3. [Rewrite Creature, Monster, and Item Parsers](tasks/phase1-task3-rewrite-creature-parsers.md)
 
-## Phase 2: Catalogs — Monsters + Items
+## Phase 2: Catalogs — Monsters + Items ✓
 
 Новая структура `content/catalogs/{monsters,items}/`. Каталог — коллекция standalone YAML-файлов, по одному на сущность. Catalog loader индексирует по ID. Мировой ecology слой ссылается на каталог (`base: goblin` + optional `overrides`). NPC equipment — ссылки на item catalog (`ref: longsword`). Миграция sword_vale контента.
 
