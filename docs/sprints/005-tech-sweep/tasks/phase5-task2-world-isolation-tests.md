@@ -63,4 +63,18 @@ New file `tests/unit/test_world.py`. Create a minimal `StubLayer` implementing t
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Created `tests/unit/test_world.py` with 17 tests across 7 test classes. All GREEN immediately — testing existing behavior. StubLayer implements the full Layer ABC with tracking for tick calls, handled events, and load_state calls.
+
+Test classes:
+- **TestLayerIsolationQueryDirection** (6 tests): all 6 LayerError scenarios from `_make_query_fn`
+- **TestLayerIsolationEmitValidation** (2 tests): matching/mismatched source_layer
+- **TestEventPropagation** (2 tests): events reach all non-source layers
+- **TestAdvanceTimeTickGating** (4 tests): interval=0, not elapsed, elapsed, re-tick prevention
+- **TestSaveLoadRoundTrip** (1 test): full round-trip including last_tick_time restoration
+- **TestQueryLayerPublicAPI** (2 tests): delegation and ValueError for missing layer
+
+Pre-existing flaky test `test_sneak_attack_adds_extra_damage_with_ally_adjacent` fails intermittently due to dice randomness — unrelated to this task.

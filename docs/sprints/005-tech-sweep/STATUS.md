@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 5, Task 1: AwarenessBuilder unit tests — done. 16 new tests, 23 total.
+Phase 5, Task 2: World layer isolation & event propagation tests — done. 17 new tests.
 
 ## Next Steps
 
