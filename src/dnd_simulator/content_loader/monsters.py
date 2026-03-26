@@ -90,6 +90,35 @@ def parse_monster_template(template_id: str, data: dict[str, Any], lang: str = "
     return _to_monster_template(template_id, model, lang)
 
 
+def resolve_monster_template(
+    template_id: str,
+    data: dict[str, Any],
+    catalog: dict[str, MonsterTemplateContent],
+    lang: str = "en",
+) -> MonsterTemplate:
+    """Resolve a monster template entry that may reference a catalog via 'base'.
+
+    If *data* contains a 'base' key, load the catalog entry and merge any
+    override fields on top. Otherwise parse as a full inline template.
+    Raises RuntimeError if the base ID is not found in the catalog.
+    """
+    base_id = data.get("base")
+    if base_id is None:
+        # Inline template — parse as before
+        return parse_monster_template(template_id, data, lang)
+
+    if base_id not in catalog:
+        raise RuntimeError(f"Monster template '{template_id}' references unknown catalog entry '{base_id}'")
+
+    # Start from catalog entry, apply overrides
+    base_dict = catalog[base_id].model_dump(by_alias=True)
+    overrides = {k: v for k, v in data.items() if k != "base"}
+    base_dict.update(overrides)
+
+    model = MonsterTemplateContent.model_validate(base_dict)
+    return _to_monster_template(template_id, model, lang)
+
+
 def parse_encounters(data: dict[str, Any], known_templates: set[str]) -> dict[str, list[EncounterEntry]]:
     """Parse encounter tables from YAML data.
 
@@ -109,9 +138,14 @@ def parse_encounters(data: dict[str, Any], known_templates: set[str]) -> dict[st
     return result
 
 
-def load_monsters(path: Path, lang: str = "en") -> tuple[dict[str, MonsterTemplate], dict[str, list[EncounterEntry]]]:
+def load_monsters(
+    path: Path,
+    lang: str = "en",
+    catalog: dict[str, MonsterTemplateContent] | None = None,
+) -> tuple[dict[str, MonsterTemplate], dict[str, list[EncounterEntry]]]:
     """Load monster templates and encounter tables from a world directory.
 
+    If *catalog* is provided, templates with a ``base`` key resolve against it.
     Returns (templates_by_id, encounters_by_location_id).
     Missing monsters.yaml → empty dicts (worlds without monsters are valid).
     """
@@ -122,8 +156,9 @@ def load_monsters(path: Path, lang: str = "en") -> tuple[dict[str, MonsterTempla
 
     templates_data = monsters_data.get("templates", {})
     templates: dict[str, MonsterTemplate] = {}
+    effective_catalog = catalog or {}
     for tid, tdata in templates_data.items():
-        templates[str(tid)] = parse_monster_template(str(tid), tdata, lang)
+        templates[str(tid)] = resolve_monster_template(str(tid), tdata, effective_catalog, lang)
 
     encounters_data = monsters_data.get("encounters", {})
     encounters = parse_encounters(encounters_data, set(templates.keys())) if encounters_data else {}

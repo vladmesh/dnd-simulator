@@ -21,6 +21,9 @@ def _make_client(tmp_path: object, *, isolated_content: bool = False) -> tuple[T
         content_dir = tmp / "content"
         content_dir.mkdir()
         (content_dir / "library").symlink_to(DEFAULT_CONTENT_DIR / "library")
+        catalogs_src = DEFAULT_CONTENT_DIR / "catalogs"
+        if catalogs_src.exists():
+            (content_dir / "catalogs").symlink_to(catalogs_src)
         (content_dir / "worlds").mkdir()
         # Copy existing worlds so we can fork without mutating real content
         import shutil

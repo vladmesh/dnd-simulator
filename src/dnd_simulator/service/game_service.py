@@ -11,6 +11,7 @@ from dnd_simulator.content_loader import (
     LayerType,
     extract_region_adjacency,
     extract_region_terrains,
+    load_catalog,
     load_factions,
     load_locations,
     load_monsters,
@@ -94,7 +95,11 @@ class GameService(
         locations = load_locations(layer_paths["geography"], regions, lang=lang)
         location_graph = LocationGraph(locations)
         npcs = load_npcs(layer_paths["entities"], lang=lang, known_locations=set(location_graph.all_ids()))
-        monster_templates, encounter_tables = load_monsters(layer_paths["ecology"], lang=lang)
+        from dnd_simulator.content_loader.schemas import MonsterTemplateContent
+
+        catalog_dir = self._content_dir / "catalogs" / "monsters"
+        monster_catalog = load_catalog(catalog_dir, MonsterTemplateContent) if catalog_dir.exists() else {}
+        monster_templates, encounter_tables = load_monsters(layer_paths["ecology"], lang=lang, catalog=monster_catalog)
         faction_relations = load_factions(layer_paths["politics"])
         squads = load_squads(layer_paths["ecology"], lang=lang)
         region_terrains = extract_region_terrains(regions)

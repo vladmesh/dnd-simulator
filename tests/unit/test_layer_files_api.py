@@ -18,6 +18,9 @@ def _with_library(tmp_path: Path) -> Path:
     content_dir.mkdir()
     (content_dir / "worlds").mkdir()
     (content_dir / "library").symlink_to(CONTENT_DIR / "library")
+    catalogs_src = CONTENT_DIR / "catalogs"
+    if catalogs_src.exists():
+        (content_dir / "catalogs").symlink_to(catalogs_src)
     return content_dir
 
 

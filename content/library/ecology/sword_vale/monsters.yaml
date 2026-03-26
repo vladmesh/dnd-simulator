@@ -1,51 +1,12 @@
 templates:
   goblin:
-    name: {en: Goblin, ru: Гоблин}
-    faction: goblin_tribe
-    hp: 7
-    ac: 15
-    speed: 30
-    ability_scores: {str: 8, dex: 14, con: 10, int: 10, wis: 8, cha: 8}
-    attacks:
-      - name: scimitar
-        ability: dex
-        damage:
-          - dice: "1d6"
-            type: slashing
-        reach: 5
-    cr: 0.25
+    base: goblin
 
   wolf:
-    name: {en: Wolf, ru: Волк}
-    faction: wildlife
-    hp: 11
-    ac: 13
-    speed: 40
-    ability_scores: {str: 12, dex: 15, con: 12, int: 3, wis: 12, cha: 6}
-    attacks:
-      - name: bite
-        ability: dex
-        damage:
-          - dice: "2d4"
-            type: piercing
-        reach: 5
-    cr: 0.25
+    base: wolf
 
   bandit:
-    name: {en: Bandit, ru: Бандит}
-    faction: bandits
-    hp: 11
-    ac: 12
-    speed: 30
-    ability_scores: {str: 11, dex: 12, con: 12, int: 10, wis: 10, cha: 10}
-    attacks:
-      - name: shortsword
-        ability: dex
-        damage:
-          - dice: "1d6"
-            type: piercing
-        reach: 5
-    cr: 0.125
+    base: bandit
 
 encounters:
   silverport_greenwood_road:

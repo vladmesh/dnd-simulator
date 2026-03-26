@@ -1,0 +1,14 @@
+name: {en: Wolf, ru: Волк}
+faction: wildlife
+hp: 11
+ac: 13
+speed: 40
+ability_scores: {str: 12, dex: 15, con: 12, int: 3, wis: 12, cha: 6}
+attacks:
+  - name: bite
+    ability: dex
+    damage:
+      - dice: "2d4"
+        type: piercing
+    reach: 5
+cr: 0.25

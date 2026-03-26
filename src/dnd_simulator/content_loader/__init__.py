@@ -1,5 +1,6 @@
 """Content loader package — re-exports all public (and tested private) functions."""
 
+from dnd_simulator.content_loader.catalogs import load_catalog
 from dnd_simulator.content_loader.creatures import (
     build_class_resource_pools,
     load_npcs,
@@ -33,6 +34,7 @@ from dnd_simulator.content_loader.monsters import (
     parse_encounters,
     parse_monster_template,
     parse_squad,
+    resolve_monster_template,
 )
 from dnd_simulator.content_loader.utils import _load_section, resolve_text
 from dnd_simulator.content_loader.world import (
@@ -58,6 +60,7 @@ __all__ = [
     "list_compatible_templates",
     "list_templates",
     "load_battle_maps",
+    "load_catalog",
     "load_factions",
     "load_locations",
     "load_monsters",
@@ -80,5 +83,6 @@ __all__ = [
     "parse_player",
     "parse_squad",
     "resolve_manifest",
+    "resolve_monster_template",
     "resolve_text",
 ]

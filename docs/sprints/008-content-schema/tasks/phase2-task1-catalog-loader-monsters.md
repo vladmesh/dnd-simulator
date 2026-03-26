@@ -89,4 +89,12 @@ After tests are red:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented generic `load_catalog()` with PEP 695 type params in `content_loader/catalogs.py`. Added `resolve_monster_template()` to `monsters.py` — handles `base:` references with field overrides via `model_dump(by_alias=True)` + dict merge. Updated `load_monsters()` to accept optional `catalog` param.
+
+Wired catalog loading into `game_service.py` — loads from `content/catalogs/monsters/` if the directory exists, passes to `load_monsters()`. Test fixture helpers that create isolated content dirs now symlink `catalogs/` alongside `library/`.
+
+Old tests in `test_content_parsers_creatures.py` updated to pass the catalog — intentional contract change since sword_vale now uses `base:` references.

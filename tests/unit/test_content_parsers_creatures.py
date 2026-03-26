@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from dnd_simulator.content_loader.catalogs import load_catalog
 from dnd_simulator.content_loader.schemas import (
     ItemContent,
     MonsterTemplateContent,
@@ -29,6 +30,7 @@ from dnd_simulator.core.squad import SquadBehavior, SquadType
 
 ENTITIES_PATH = Path("content/library/entities/sword_vale")
 ECOLOGY_PATH = Path("content/library/ecology/sword_vale")
+MONSTER_CATALOG_PATH = Path("content/catalogs/monsters")
 
 
 # ---------------------------------------------------------------------------
@@ -171,7 +173,8 @@ class TestMonsterTemplatesRoundTrip:
     def test_load_monsters_returns_templates(self) -> None:
         from dnd_simulator.content_loader.monsters import load_monsters
 
-        templates, _encounters = load_monsters(ECOLOGY_PATH, lang="en")
+        catalog = load_catalog(MONSTER_CATALOG_PATH, MonsterTemplateContent)
+        templates, _encounters = load_monsters(ECOLOGY_PATH, lang="en", catalog=catalog)
         assert len(templates) > 0
         assert "goblin" in templates
         assert "wolf" in templates
@@ -180,7 +183,8 @@ class TestMonsterTemplatesRoundTrip:
     def test_monster_template_fields(self) -> None:
         from dnd_simulator.content_loader.monsters import load_monsters
 
-        templates, _ = load_monsters(ECOLOGY_PATH, lang="en")
+        catalog = load_catalog(MONSTER_CATALOG_PATH, MonsterTemplateContent)
+        templates, _ = load_monsters(ECOLOGY_PATH, lang="en", catalog=catalog)
         goblin = templates["goblin"]
         assert goblin.name  # non-empty
         assert goblin.hp == 7
@@ -212,7 +216,8 @@ class TestMonsterTemplatesRoundTrip:
     def test_encounters_loaded(self) -> None:
         from dnd_simulator.content_loader.monsters import load_monsters
 
-        _, encounters = load_monsters(ECOLOGY_PATH, lang="en")
+        catalog = load_catalog(MONSTER_CATALOG_PATH, MonsterTemplateContent)
+        _, encounters = load_monsters(ECOLOGY_PATH, lang="en", catalog=catalog)
         assert len(encounters) > 0
         # silverport_greenwood_road has goblin + wolf encounters
         assert "silverport_greenwood_road" in encounters
