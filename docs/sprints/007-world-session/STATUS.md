@@ -6,12 +6,12 @@
 
 ## Current
 
-Phase 5, Task 1: Partial manifest + complete flag + create empty world — done.
+Phase 5, Task 2: World fork + delete — done.
 
 ## Next Steps
 
 - ~~Task 1: done~~
-- Task 2: World fork + delete — fork world with optional layer truncation, delete with safety checks, `LAYER_ORDER` constant
+- ~~Task 2: done~~
 - Task 3: Layer scaffold — create minimal valid custom layers from scratch, full pipeline test
 
 ## Audit Triage

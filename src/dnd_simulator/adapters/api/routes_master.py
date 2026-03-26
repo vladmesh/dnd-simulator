@@ -9,6 +9,7 @@ from dnd_simulator.adapters.api.schemas import (
     CreateSessionRequest,
     CreateWorldRequest,
     CreatureResponse,
+    ForkWorldRequest,
     GiveItemRequest,
     LayerFileResponse,
     LayerFilesResponse,
@@ -113,6 +114,43 @@ def assemble_world(req: AssembleWorldRequest) -> WorldListItem:
     except RuntimeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return WorldListItem(id=result["id"], name=result["name"], description=req.description, complete=True)
+
+
+@router.post("/worlds/{world_id}/fork", response_model=WorldListItem, status_code=201)
+def fork_world(world_id: str, req: ForkWorldRequest) -> WorldListItem:
+    """Fork a world, optionally truncating layers from a given type upward."""
+    service = get_service()
+    try:
+        result = service.fork_world(
+            source_world_id=world_id,
+            new_world_id=req.new_id,
+            from_layer=req.from_layer,
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except FileExistsError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return WorldListItem(
+        id=str(result["id"]),
+        name=str(result["name"]),
+        description="",
+        complete=bool(result["complete"]),
+    )
+
+
+@router.delete("/worlds/{world_id}", response_model=MessageResponse)
+def delete_world(world_id: str) -> MessageResponse:
+    """Delete a world (blocked for base worlds and worlds with active sessions)."""
+    service = get_service()
+    try:
+        service.delete_world(world_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return MessageResponse(message=_("World '{}' deleted").format(world_id))
 
 
 @router.get("/worlds/{world_id}")

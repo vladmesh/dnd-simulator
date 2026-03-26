@@ -94,6 +94,13 @@ class PatchSettlementRequest(BaseModel):
     defenses: float | None = Field(default=None, ge=0.0, le=100.0)
 
 
+class ForkWorldRequest(BaseModel):
+    """Fork a world, optionally truncating layers."""
+
+    new_id: str = Field(..., pattern=r"^[a-z0-9_]+$", min_length=1, max_length=64)
+    from_layer: str | None = None
+
+
 class CreateWorldRequest(BaseModel):
     """Create an empty world (no layers defined)."""
 

@@ -48,4 +48,16 @@ Unit tests in `tests/unit/test_world_fork_delete.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All acceptance criteria met. Key decisions:
+
+- `LAYER_ORDER` constant defined in assembly.py — geography through entities.
+- `fork_world()` copies manifest and custom layer dirs; library refs preserved as-is.
+- `from_layer` truncation is inclusive-upward: `from_layer=settlements` removes settlements, ecology, entities.
+- `delete_world()` in assembly.py is a pure `shutil.rmtree`; safety checks (base world, active sessions) live in `GameService.delete_world()`.
+- `_BASE_WORLDS` is a frozenset on `GameService` with `sword_vale` and `test_vale`.
+- Delete endpoint returns 403 for base worlds, 409 for active sessions.
+- Fork endpoint at `POST /worlds/{world_id}/fork` (not `/worlds/fork`) to keep it RESTful.

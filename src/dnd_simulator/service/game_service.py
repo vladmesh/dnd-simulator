@@ -349,6 +349,46 @@ class GameService(
         )
         return {"id": world_id, "name": name}
 
+    _BASE_WORLDS: frozenset[str] = frozenset({"sword_vale", "test_vale"})
+
+    def fork_world(
+        self,
+        source_world_id: str,
+        new_world_id: str,
+        from_layer: str | None = None,
+    ) -> dict[str, object]:
+        """Fork a world, optionally truncating layers from a given type upward.
+
+        Returns world info dict with id, name, complete.
+        """
+        from dnd_simulator.content_loader.assembly import fork_world
+
+        layer_type = LayerType(from_layer) if from_layer else None
+        fork_world(
+            content_dir=self._content_dir,
+            source_world_id=source_world_id,
+            new_world_id=new_world_id,
+            from_layer=layer_type,
+        )
+        new_world_path = self._content_dir / "worlds" / new_world_id
+        meta = load_world_meta_from_manifest(new_world_path)
+        resolved = resolve_manifest(new_world_path, self._content_dir)
+        complete = len(resolved) == len(LayerType)
+        return {"id": new_world_id, "name": meta["name"], "complete": complete}
+
+    def delete_world(self, world_id: str) -> None:
+        """Delete a world. Blocked for base worlds and worlds with active sessions."""
+        from dnd_simulator.content_loader.assembly import delete_world
+
+        if world_id in self._BASE_WORLDS:
+            raise ValueError(f"Cannot delete base world '{world_id}'")
+
+        for session in self._sessions.values():
+            if session.world_name == world_id:
+                raise RuntimeError(f"Cannot delete world '{world_id}' — active session exists")
+
+        delete_world(self._content_dir, world_id)
+
     def get_world_manifest(self, world_id: str, lang: str = "en") -> dict[str, object]:
         """Read manifest.yaml and return structured layer info for the world inspector."""
         from dnd_simulator.content_loader.manifest import LayerSource

@@ -10,6 +10,14 @@ import yaml
 from dnd_simulator.content_loader.manifest import LayerSource, LayerType
 from dnd_simulator.content_loader.utils import _read_yaml
 
+LAYER_ORDER: list[LayerType] = [
+    LayerType.GEOGRAPHY,
+    LayerType.POLITICS,
+    LayerType.SETTLEMENTS,
+    LayerType.ECOLOGY,
+    LayerType.ENTITIES,
+]
+
 
 def assemble_world(
     content_dir: Path,
@@ -132,3 +140,70 @@ def fork_layer(content_dir: Path, world_id: str, layer_type: LayerType) -> Path:
         yaml.dump(manifest, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
     return dest_dir
+
+
+def fork_world(
+    content_dir: Path,
+    source_world_id: str,
+    new_world_id: str,
+    from_layer: LayerType | None = None,
+) -> Path:
+    """Fork a world — copy its manifest with a new ID.
+
+    Library references are preserved (no files copied). Custom layers are copied.
+    If ``from_layer`` is specified, that layer and all layers above it in LAYER_ORDER
+    are removed from the copy's manifest.
+
+    Raises ``FileNotFoundError`` if the source world doesn't exist.
+    Raises ``FileExistsError`` if the new world ID already exists.
+    """
+    source_path = content_dir / "worlds" / source_world_id
+    if not source_path.is_dir():
+        raise FileNotFoundError(f"World '{source_world_id}' not found at {source_path}")
+
+    new_path = content_dir / "worlds" / new_world_id
+    if new_path.exists():
+        raise FileExistsError(f"World '{new_world_id}' already exists at {new_path}")
+
+    source_manifest = _read_yaml(source_path / "manifest.yaml")
+    source_layers: dict[str, object] = dict(source_manifest["layers"])
+
+    # Truncate if requested
+    if from_layer is not None:
+        cut_index = LAYER_ORDER.index(from_layer)
+        for lt in LAYER_ORDER[cut_index:]:
+            source_layers.pop(lt.value, None)
+
+    new_path.mkdir(parents=True)
+
+    # Copy custom layer directories
+    for lt_name, layer_config in source_layers.items():
+        assert isinstance(layer_config, dict)
+        if LayerSource(layer_config["source"]) == LayerSource.CUSTOM:
+            src_dir = source_path / lt_name
+            if src_dir.is_dir():
+                shutil.copytree(src_dir, new_path / lt_name)
+
+    new_manifest = {
+        "name": source_manifest["name"],
+        "description": source_manifest.get("description", ""),
+        "default_player_faction": source_manifest.get("default_player_faction", ""),
+        "layers": source_layers,
+    }
+
+    with (new_path / "manifest.yaml").open("w") as f:
+        yaml.dump(new_manifest, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+    return new_path
+
+
+def delete_world(content_dir: Path, world_id: str) -> None:
+    """Remove a world directory entirely.
+
+    Raises ``FileNotFoundError`` if the world doesn't exist.
+    Caller is responsible for safety checks (active sessions, base worlds).
+    """
+    world_path = content_dir / "worlds" / world_id
+    if not world_path.is_dir():
+        raise FileNotFoundError(f"World '{world_id}' not found at {world_path}")
+    shutil.rmtree(world_path)
