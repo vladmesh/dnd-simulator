@@ -1,0 +1,68 @@
+crossroads_tavern:
+  name:
+    en: "The Dusty Flagon"
+    ru: "Пыльная Кружка"
+  region: crossroads
+  settlement: crossroads_town
+  description:
+    en: "A modest tavern at the crossroads, serving travelers and locals."
+    ru: "Скромная таверна на перекрёстке, обслуживающая путников и местных."
+  neighbors:
+    - target: crossroads_market
+      distance: 150
+
+crossroads_market:
+  name:
+    en: "Crossroads Market"
+    ru: "Рынок Перекрёстка"
+  region: crossroads
+  settlement: crossroads_town
+  description:
+    en: "A small market square where farmers sell their wares."
+    ru: "Небольшая рыночная площадь, где фермеры продают свой товар."
+  neighbors:
+    - target: crossroads_tavern
+      distance: 150
+    - target: crossroads_guard_post
+      distance: 100
+
+crossroads_guard_post:
+  name:
+    en: "Guard Post"
+    ru: "Караульный пост"
+  region: crossroads
+  settlement: crossroads_town
+  description:
+    en: "A stone watchtower overlooking the crossroads."
+    ru: "Каменная сторожевая башня с видом на перекрёсток."
+  neighbors:
+    - target: crossroads_market
+      distance: 100
+    - target: forest_road
+      distance: 500
+
+forest_road:
+  name:
+    en: "Forest Road"
+    ru: "Лесная дорога"
+  region: crossroads
+  description:
+    en: "A dirt road leading east into the dark forest."
+    ru: "Грунтовая дорога, ведущая на восток в тёмный лес."
+  neighbors:
+    - target: crossroads_guard_post
+      distance: 500
+    - target: forest_clearing
+      distance: 3000
+
+forest_clearing:
+  name:
+    en: "Forest Clearing"
+    ru: "Лесная поляна"
+  region: darkwood
+  description:
+    en: "A mossy clearing deep in the Darkwood. Sunlight barely reaches the ground."
+    ru: "Мшистая поляна в глубине Тёмнолесья. Солнечный свет едва пробивается."
+  neighbors:
+    - target: forest_road
+      distance: 3000

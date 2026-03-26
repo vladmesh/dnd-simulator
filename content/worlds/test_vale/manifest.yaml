@@ -1,0 +1,19 @@
+name:
+  en: Test Vale
+  ru: Тестовая Долина
+description:
+  en: Small test world for integration testing
+  ru: Маленький тестовый мир для интеграционных тестов
+default_player_faction: militia
+
+layers:
+  geography:
+    source: custom
+  politics:
+    source: custom
+  settlements:
+    source: custom
+  ecology:
+    source: custom
+  entities:
+    source: custom

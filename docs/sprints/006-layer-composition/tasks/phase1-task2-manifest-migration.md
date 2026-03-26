@@ -124,4 +124,19 @@ content/worlds/test_vale/
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Created manifest.yaml for sword_vale (all-library refs) and test_vale (all-custom). Deleted
+arena, village, sneak_test worlds and their test file (test_content_standardization.py, 17 tests).
+
+Key deviation from plan: sword_vale's data files (regions.yaml, npcs.yaml, etc.) are NOT deleted yet.
+The content_loader still reads them via world.yaml, and test_content_loader_dir.py depends on them.
+Removing them requires Phase 2 (content_loader refactor). The manifest.yaml is added alongside
+world.yaml — the "no world.yaml-only worlds" test checks that manifest.yaml is present wherever
+world.yaml exists, not that world.yaml is gone.
+
+test_vale has: 2 regions (crossroads/darkwood), 5 locations, 1 nation (Free Militia),
+1 settlement (Crossroads Town), 1 monster template (bandit), 1 patrol squad, 4 NPCs.
+16 new structure tests validate manifests, library refs, test_vale integrity, and old world cleanup.

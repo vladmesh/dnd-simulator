@@ -1,0 +1,76 @@
+barkeep:
+  name:
+    en: Nora the Barkeep
+    ru: Нора Трактирщица
+  start_location: crossroads_tavern
+  settlement_id: crossroads_town
+  faction: militia
+  role: tavern_keeper
+  ai: rule_based
+  personality:
+    en: >
+      Friendly and talkative. Knows all the local gossip.
+    ru: >
+      Дружелюбная и разговорчивая. Знает все местные сплетни.
+
+guard:
+  name:
+    en: Patrol Leader Bors
+    ru: Старший патрульный Борс
+  start_location: crossroads_guard_post
+  settlement_id: crossroads_town
+  faction: militia
+  role: guard
+  hp: 22
+  ac: 16
+  ai: rule_based
+  personality:
+    en: >
+      Stern and dutiful. Watches the forest road for bandits.
+    ru: >
+      Суровый и ответственный. Следит за лесной дорогой в поисках бандитов.
+  attacks:
+    - name: longsword
+      ability: str
+      damage:
+        - dice: "1d8"
+          type: slashing
+
+merchant:
+  name:
+    en: Pip the Merchant
+    ru: Пип Торговец
+  start_location: crossroads_market
+  settlement_id: crossroads_town
+  faction: militia
+  role: merchant
+  hp: 8
+  ac: 10
+  gold: 200
+  ai: rule_based
+  personality:
+    en: >
+      A cheerful halfling merchant selling basic supplies.
+    ru: >
+      Весёлый полурослик-торговец, продающий базовые припасы.
+  items:
+    - name: Health Potion
+      type: potion
+      heal_dice: "2d4+2"
+      price: 50
+
+hermit:
+  name:
+    en: Old Willow
+    ru: Старая Ива
+  start_location: forest_clearing
+  faction: militia
+  role: commoner
+  ai: rule_based
+  personality:
+    en: >
+      A mysterious hermit living alone in the forest clearing.
+      Speaks in riddles and knows secrets about the Darkwood.
+    ru: >
+      Таинственный отшельник, живущий один на лесной поляне.
+      Говорит загадками и знает секреты Тёмнолесья.

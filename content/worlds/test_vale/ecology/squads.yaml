@@ -1,0 +1,10 @@
+militia_patrol:
+  name: {en: Militia Patrol, ru: Патруль милиции}
+  faction: militia
+  type: patrol
+  behavior: patrol
+  start_location: crossroads_guard_post
+  route: [crossroads_guard_post, forest_road, crossroads_guard_post]
+  strength: 3
+  members: [bandit, bandit]
+  tick_interval: 3600

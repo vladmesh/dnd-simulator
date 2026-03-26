@@ -1,0 +1,9 @@
+crossroads_town:
+  name:
+    en: Crossroads Town
+    ru: Город-Перекрёсток
+  region: crossroads
+  type: town
+  population: 500
+  prosperity: 50
+  defenses: 25

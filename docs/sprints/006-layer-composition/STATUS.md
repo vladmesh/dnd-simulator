@@ -6,11 +6,11 @@
 
 ## Current
 
-Phase 1, Task 1: Library Structure + Sword Vale Extraction — done. 5 layer templates in library, 10 settlements extracted.
+Phase 1, Task 2: Manifest Format + World Migration + Cleanup — done. Manifests added, test_vale created, 3 old worlds deleted.
 
 ## Next Steps
 
-- Task 2: Define manifest format, convert sword_vale to manifest, create test_vale (all-custom), delete old worlds
+All Phase 1 tasks done.
 
 ## Decisions
 

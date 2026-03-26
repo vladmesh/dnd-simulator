@@ -1,0 +1,14 @@
+free_militia:
+  name:
+    en: Free Militia
+    ru: Свободная Милиция
+  regions: [crossroads]
+  wealth: 30
+  military: 40
+  stability: 70
+  leader:
+    name:
+      en: Captain Vara
+      ru: Капитан Вара
+    age: 35
+    trait: militarist
