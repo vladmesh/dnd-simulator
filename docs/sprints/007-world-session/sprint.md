@@ -77,7 +77,9 @@ Give Item кнопка в creature panel (бэкенд endpoint существу
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [World Manifest API + TS Types + Client Methods](tasks/phase3-task1-manifest-api-plumbing.md)
+2. [World Inspector UI on Setup Screen](tasks/phase3-task2-world-inspector-ui.md)
+3. [E2E — Fork Workflow via World Inspector](tasks/phase3-task3-e2e-fork-workflow.md)
 
 ## Phase 4: Layer Editor
 
