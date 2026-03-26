@@ -69,17 +69,30 @@ Give Item кнопка в creature panel (бэкенд endpoint существу
 2. [Give Item Dialog UI](tasks/phase2-task2-give-item-dialog.md)
 3. [E2E — Master Spawns Creature, Gives Item, Verifies Equipment](tasks/phase2-task3-e2e-master-workflow.md)
 
-## Phase 3: Fork UI + World Inspector
+## Phase 3: Fork UI + World Inspector ✓
 
-На setup screen — возможность посмотреть структуру мира (какие слои library, какие custom). Кнопка Fork на каждом слое. API endpoint `POST /worlds/{id}/fork/{layer_type}` уже есть — нужен фронт. После форка — визуальная индикация "custom". `GET /worlds/{id}` endpoint есть, API client method есть (`getWorld`) но нигде не используется.
-
-**Верифицируем:** можно открыть мир, увидеть структуру слоёв, форкнуть слой, увидеть что он стал custom.
+API plumbing (manifest endpoint, TS types, client methods) + WorldInspector component с fork кнопками. Компонент работает, но размещён на player-facing WorldPicker — неправильно. Перенос в MasterScreen → phase 3.5.
 
 **Tasks:**
 
 1. [World Manifest API + TS Types + Client Methods](tasks/phase3-task1-manifest-api-plumbing.md)
 2. [World Inspector UI on Setup Screen](tasks/phase3-task2-world-inspector-ui.md)
 3. [E2E — Fork Workflow via World Inspector](tasks/phase3-task3-e2e-fork-workflow.md)
+
+## Phase 3.5: Move Fork UI to Master Screen
+
+WorldInspector + Fork — мастерская функциональность, не игроцкая. Игрок на setup screen выбирает мир и играет. Мастер на `/master` управляет мирами и сессиями — туда и идёт инспектор слоёв.
+
+1. Убрать "Layers" кнопку и WorldInspector из WorldPicker
+2. Добавить WorldInspector в MasterScreen (под world selector)
+3. E2E — fork workflow через `/master`
+
+**Верифицируем:** WorldPicker чистый (только карточки + New Session), WorldInspector с fork доступен на /master, fork workflow работает.
+
+**Tasks:**
+
+1. [Move WorldInspector from WorldPicker to MasterScreen](tasks/phase3.5-task1-move-inspector-to-master.md)
+2. [E2E — Fork Workflow via Master Screen](tasks/phase3.5-task2-e2e-master-fork.md)
 
 ## Phase 4: Layer Editor
 
