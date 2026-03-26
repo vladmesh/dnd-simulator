@@ -150,6 +150,22 @@
 - В той же creature edit форме → "Give Item" → выбрать Potion → name: "Heal Potion", heal_dice: "2d4+2" → Submit
 - **Ожидание:** toast "Item given", зелье видно в inventory секции
 
+### 6.10 Layer Editor — fork, edit YAML, verify in session
+- `/master` → выбрать мир (Sword Vale) → Fork entities layer → нажать Edit
+- Выбрать npcs.yaml, изменить имя NPC (Edgar the Smith → Edgar the Modified)
+- Нажать Save → создать новую сессию → в god-mode проверить имя NPC
+- **Ожидание:** NPC имеет изменённое имя в сессии
+
+### 6.11 Layer Editor — invalid YAML error
+- Открыть editor на custom layer → ввести невалидный YAML (например `[[[`) → Save
+- **Ожидание:** ошибка с деталями YAML-парсинга, после Reload контент не изменён
+
+### 6.12 Layer Editor — library layer read-only
+- `/master` → выбрать мир с library layers
+- Library layers показывают кнопку "View" (не "Edit")
+- Нажать View → editor открывается в read-only (нет кнопки Save или Save неактивна)
+- **Ожидание:** нельзя сохранить изменения в library layer
+
 ---
 
 ## 7. Conditions

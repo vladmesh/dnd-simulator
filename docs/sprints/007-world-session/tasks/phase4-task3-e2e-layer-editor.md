@@ -41,10 +41,19 @@ Add scenarios to the E2E playbook and implement in Playwright. Reuse existing E2
 
 ## Acceptance Criteria
 
-- [ ] All 3 E2E scenarios pass
-- [ ] No regressions in existing E2E scenarios
-- [ ] Existing tests still pass (`make check`)
+- [x] All 3 E2E scenarios pass
+- [x] No regressions in existing E2E scenarios
+- [x] Existing tests still pass (`make check`)
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All 3 scenarios passed on first run:
+- 6.10: Fork entities → edit NPC name in YAML → save → create session → NPC name reflected in creatures table
+- 6.11: Invalid YAML save returns 422 with detailed parse error, file unchanged on disk
+- 6.12: Library layers show View (not Edit), textarea readOnly=true, no Save button
+
+Used JS `evaluate` to modify textarea content (React controlled component). Cleaned up forked layer and restored manifest after testing. 1205 unit tests pass.

@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 4, Task 2: Layer Editor UI — done. LayerEditor component + Edit/View buttons in WorldInspector.
+Phase 4, Task 3: E2E — Layer Editor — done. All 3 scenarios pass (fork+edit+verify, invalid YAML error, library read-only).
 
 ## Next Steps
 
-- Task 3: E2E — Fork → edit YAML → create session → verify changes in game
+- Close phase 4
