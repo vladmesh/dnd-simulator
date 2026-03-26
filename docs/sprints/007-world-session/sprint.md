@@ -79,7 +79,7 @@ API plumbing (manifest endpoint, TS types, client methods) + WorldInspector comp
 2. [World Inspector UI on Setup Screen](tasks/phase3-task2-world-inspector-ui.md)
 3. [E2E — Fork Workflow via World Inspector](tasks/phase3-task3-e2e-fork-workflow.md)
 
-## Phase 3.5: Move Fork UI to Master Screen
+## Phase 3.5: Move Fork UI to Master Screen ✓
 
 WorldInspector + Fork — мастерская функциональность, не игроцкая. Игрок на setup screen выбирает мир и играет. Мастер на `/master` управляет мирами и сессиями — туда и идёт инспектор слоёв.
 
