@@ -6,8 +6,9 @@ Stateless calculations that can be used by any layer or the Master:
 - combat: attack resolution (resolve_attack → AttackResult), initiative rolls (roll_initiative)
 - actions: action cost rules (action_cost → ActionCost), per-creature budget defaults
 - validation: precondition checks (alive, active, budget, target, reach) → ValidationError or None
-- action_handlers: per-action-type execution (attack, move, dodge, flee, use_item, bless, etc.)
+- handlers/: per-action-type execution split by domain (combat, movement, equipment, items, trade)
 - action_provider: dynamic available-action sources (base, inventory, weapon) per creature+context
+- abstract_combat: squad-vs-squad abstract combat formulas
 - conditions: condition effects (is_incapacitated, effective_speed, attack_advantage, tick_conditions)
 - modifiers: centralized derived stat pipeline (collect modifiers, compute effective AC/speed/attack, resolve advantage)
 - weapons: get_weapon_attack — builds Attack from equipped weapon or fallback

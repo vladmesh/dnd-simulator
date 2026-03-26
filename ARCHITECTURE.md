@@ -14,7 +14,8 @@ Layers are ordered from most abstract (physical world) to most concrete (individ
 Layer 0: Geography    — terrain, coordinates, weather, day/night cycle
 Layer 1: Politics     — factions, borders, laws, diplomacy
 Layer 2: Settlements  — towns, economy, population, local events
-Layer 3: Entities     — all tracked creatures (player, NPCs, named monsters)
+Layer 3: Ecology      — squad movement, abstract world simulation
+Layer 4: Entities     — all tracked creatures (player, NPCs, named monsters)
 ```
 
 New layers can be inserted between existing ones as the simulation grows in detail (e.g., a Cosmology layer above Geography for gods and planar mechanics).
@@ -32,35 +33,49 @@ Every layer implements the same interface:
 
 ```
 src/dnd_simulator/
-├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/Action, LocationGraph, Condition, Item/WeaponDef/ArmorDef, Modifier, ClassFeatures, ResourcePool, ActionDef
+├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/Action, LocationGraph, Condition, Item/WeaponDef/ArmorDef, Modifier, ClassFeatures, ResourcePool, ActionDef, Squad
 ├── layers/        — concrete layer implementations
 │   ├── geography/ — physical world simulation
 │   ├── politics/  — factions and diplomacy
 │   ├── settlements/ — towns and local economy
+│   ├── ecology/   — squad movement, abstract world simulation (EcologyLayer)
 │   └── entities/  — all tracked creatures (player, NPCs, named monsters)
+│       ├── layer.py              — EntitiesLayer (main)
+│       ├── combat_manager.py     — CombatManager (attack resolution, initiative)
+│       ├── awareness_builder.py  — AwarenessBuilder (creature awareness construction)
+│       ├── activation_manager.py — ActivationManager (proximity-based activation)
+│       ├── query_handler.py      — QueryHandler (layer query dispatch)
+│       └── perception.py         — event perception and visibility filtering
 ├── master/        — DM orchestrator (LLM-powered)
-├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation, conditions, weapons, modifiers, proficiency, sneak attack, resources, action providers/handlers, physics, economics
+├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation, conditions, weapons, modifiers, proficiency, sneak attack, resources, action providers, abstract combat, physics, economics
+│   └── handlers/  — per-action-type execution (combat, movement, equipment, items, trade)
 ├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, MemorySummarizer
 ├── i18n.py        — gettext internationalization, per-session language via contextvars
 ├── adapters/      — transport layer
 │   └── api/       — FastAPI REST + WebSocket adapter (master + player routes, WS game loop, i18n middleware)
 │                    also serves legacy debug UI (static/) and React SPA build
-├── content_loader.py — loads content from YAML (single file or directory format); locations must be explicit
+├── content_loader/ — loads content from YAML directory format; locations must be explicit
+│   ├── world.py      — world meta, regions, nations, settlements, locations, battle maps, factions
+│   ├── creatures.py  — player, NPCs, ability scores, class features
+│   ├── monsters.py   — monster templates, squads, encounters
+│   ├── items.py      — equipment parsing (weapons, armor, shields)
+│   └── utils.py      — YAML section loading, text resolution
 ├── content_saver.py  — saves world templates back to YAML
 ├── service/       — GameService + command modules
 │   ├── game_service.py — session management, command routing, creature hot controls
 │   ├── session.py      — GameSession: world ref, player lookup via entities layer, autosave
 │   ├── action_dispatcher.py — validate → route → execute (single entry point for all actions)
 │   ├── brain_factory.py     — creates Brain instances from ai_type strings
+│   ├── base.py              — ServiceMixin Protocol base for command modules
 │   ├── commands_combat.py, commands_creatures.py, commands_politics.py, ...
 │   └── commands_save.py, commands_time.py, commands_world.py
 └── round.py       — Round orchestrator: multi-action turn loop with budget enforcement
 
 content/           — authored game data (YAML)
-└── worlds/        — world templates (single .yaml file or directory with split files)
-    ├── arena.yaml          — single-file format (combat arena)
-    ├── village.yaml        — single-file format (village scenario)
-    └── sword_vale/         — directory format (world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml)
+└── worlds/        — world templates (directory format: world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml)
+    ├── arena/              — combat arena
+    ├── village/            — village scenario
+    └── sword_vale/         — multi-region world
 
 frontend/          — React + TypeScript SPA (Vite + shadcn/ui + Zustand)
 ├── src/components/setup/   — world picker, character creation, session connect
@@ -112,7 +127,7 @@ WebSocket flow (React frontend):
     Player actions: WS message → PlayerBrain queue → Round processes → broadcast result
 ```
 
-`GameSession` (in `service/session.py`) owns the `Round` lifecycle — starting and stopping the round thread, bridging events to transport listeners via `SessionEventListener` protocol. The `Round` class separates combat and peaceful turns. Combat locations use initiative order (d20 + DEX mod, rolled once at combat start); peaceful creatures use default order. Each creature's turn is a multi-action loop: a `TurnBudget` is created from creature stats, then the brain is called repeatedly until it returns `end_turn` or the budget is exhausted. `ActionDispatcher` (`service/action_dispatcher.py`) is the single entry point: it validates preconditions via `rules/validation.py` (alive, budget, target validity, weapon reach), routes to the appropriate handler in `rules/action_handlers.py`, and consumes budget on success. `ActionProvider` (`rules/action_provider.py`) determines available actions per creature based on state, inventory, and weapon. Brains receive structured awareness (`PeacefulAwareness` or `CombatAwareness` from `core/awareness.py`) with the current budget attached, so they can make informed decisions. Three brain types: `RuleBrain` (utility scoring), `LlmBrain` (LLM calls), `PlayerBrain` (queue + on_turn callback for interactive I/O). `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
+`GameSession` (in `service/session.py`) owns the `Round` lifecycle — starting and stopping the round thread, bridging events to transport listeners via `SessionEventListener` protocol. The `Round` class separates combat and peaceful turns. Combat locations use initiative order (d20 + DEX mod, rolled once at combat start); peaceful creatures use default order. Each creature's turn is a multi-action loop: a `TurnBudget` is created from creature stats, then the brain is called repeatedly until it returns `end_turn` or the budget is exhausted. `ActionDispatcher` (`service/action_dispatcher.py`) is the single entry point: it validates preconditions via `rules/validation.py` (alive, budget, target validity, weapon reach), routes to the appropriate handler in `rules/handlers/`, and consumes budget on success. `ActionProvider` (`rules/action_provider.py`) determines available actions per creature based on state, inventory, and weapon. Brains receive structured awareness (`PeacefulAwareness` or `CombatAwareness` from `core/awareness.py`) with the current budget attached, so they can make informed decisions. Three brain types: `RuleBrain` (utility scoring), `LlmBrain` (LLM calls), `PlayerBrain` (queue + on_turn callback for interactive I/O). `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
 
 `World.handle_event()` sends an event to all layers in order. Each layer returns an `ActionResult` — if any layer returns `success=False`, propagation stops and the failure is returned to the caller. This lets layers validate and reject actions (e.g., EntitiesLayer rejects attacks on dead targets).
 
@@ -124,6 +139,7 @@ Game time is tracked with second precision via `GameDateTime` (year/month/day/ho
 
 Each layer declares a `tick_interval` in seconds. World tracks `_last_tick_time` per layer and only calls `tick()` when enough time has elapsed:
 - Geography: `tick_interval = 0` (every advance_time call)
+- Ecology: `tick_interval = 3600` (1 hour) — per-squad cooldowns for movement
 - Entities: `tick_interval = 0` but `tick()` is a no-op — Round orchestrator drives all creature turns
 - Settlements, Politics: `tick_interval = 2 592 000` (30 days)
 
@@ -212,7 +228,7 @@ Structured logging via `structlog` (`logging_config.py`, `logging_file_dispatch.
 - **Rules are pure functions.** No state, no side effects, easy to test.
 - **Brain is a strategy.** `Creature.brain` decouples decision-making from entity type. `RuleBrain` (utility scoring + canned dialogue) needs no LLM; `LlmBrain` wraps an `LlmClient`; `PlayerBrain` uses queue + callback for interactive input. Brains are swappable at runtime (LOD).
 - **LLM is injected, not hardcoded.** `LlmBrain` receives an `LlmClient`; rule-based NPCs use no LLM at all.
-- **Content is data, not code.** Worlds and NPCs live in YAML files. Two formats: legacy single file, or directory (world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml). ContentLoader handles both.
+- **Content is data, not code.** Worlds and NPCs live in YAML files in directory format (world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml). ContentLoader parses them into runtime objects.
 - **Transport is a thin adapter.** The game works the same whether accessed via terminal, HTTP, or Telegram. REST API (FastAPI) is the primary adapter for frontend.
 - **Two editing modes.** Between sessions: master edits YAML templates on disk. During sessions: hot controls (creature spawn/delete, HP, brain, nation/settlement patches) modify objects in memory. Saves persist state to disk.
 - **Per-session i18n.** Language is set per session via `contextvars`. The global `_()` function reads the current context, so NPC LLM prompts and translated strings respect session language.

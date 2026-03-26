@@ -42,7 +42,8 @@ Layered LLM-powered text RPG simulator built on a **layer stack** pattern. Each 
 1. **Geography** (`layers/geography/`) — terrain, coordinates, weather, day/night cycle. Ticks every call.
 2. **Politics** (`layers/politics/`) — nations, diplomacy, warfare, economy. Ticks every 30 in-game days.
 3. **Settlements** (`layers/settlements/`) — towns, population, prosperity, harvests. Ticks every 30 in-game days.
-4. **Entities** (`layers/entities/`) — all tracked creatures: player, NPCs, named monsters. Tick is a no-op; the Round orchestrator drives all creature turns.
+4. **Ecology** (`layers/ecology/`) — squad movement, abstract world simulation. Ticks every hour.
+5. **Entities** (`layers/entities/`) — all tracked creatures: player, NPCs, named monsters. Tick is a no-op; the Round orchestrator drives all creature turns.
 
 ### Module Dependency Flow
 
@@ -56,7 +57,7 @@ service/           — GameService, ActionDispatcher, BrainFactory, command modu
   ↓
 adapters/          — FastAPI REST + WebSocket API
 
-rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, resources, action providers (no deps)
+rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, resources, action providers, handlers/ package (no deps)
 llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
 storage/           — SaveStore interface, JsonFileStore
 content_loader/    — loads worlds, nations, settlements, NPCs, player from YAML
