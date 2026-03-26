@@ -457,6 +457,59 @@ class CombatManager:
             self._remove_from_combat(target.location_id, target_id)
         return ActionResult(success=True, events=result_events)
 
+    # -- Serialization --
+
+    def get_combats_state(self) -> dict[str, object]:
+        """Serialize all active combats."""
+        result: dict[str, object] = {}
+        for loc_id, combat in self._combats.items():
+            bm = combat.battle_map
+            positions = {eid: {"x": pos.x, "y": pos.y} for eid, pos in bm.positions.items()}
+            walls = [{"x1": w.x1, "y1": w.y1, "x2": w.x2, "y2": w.y2} for w in bm._inner_walls]
+            result[loc_id] = {
+                "location_id": combat.location_id,
+                "turn_order": list(combat.turn_order),
+                "round_number": combat.round_number,
+                "rounds_without_attack": combat.rounds_without_attack,
+                "battle_map": {
+                    "width": bm.width,
+                    "height": bm.height,
+                    "positions": positions,
+                    "walls": walls,
+                },
+            }
+        return result
+
+    def load_combats_state(self, data: dict[str, object]) -> None:
+        """Restore active combats from saved data."""
+        from dnd_simulator.core.combat import BattleMap, Position, Wall
+
+        for loc_id, cdata in data.items():
+            assert isinstance(cdata, dict)
+            bm_data = cdata["battle_map"]
+            assert isinstance(bm_data, dict)
+
+            walls = [
+                Wall(x1=int(w["x1"]), y1=int(w["y1"]), x2=int(w["x2"]), y2=int(w["y2"]))
+                for w in bm_data.get("walls", [])
+            ]
+            bm = BattleMap(width=int(bm_data["width"]), height=int(bm_data["height"]), walls=walls)
+
+            positions_raw = bm_data.get("positions", {})
+            assert isinstance(positions_raw, dict)
+            for eid, pos_data in positions_raw.items():
+                assert isinstance(pos_data, dict)
+                bm.set_position(str(eid), Position(x=int(pos_data["x"]), y=int(pos_data["y"])))
+
+            combat = CombatState(
+                location_id=str(cdata["location_id"]),
+                turn_order=list(cdata["turn_order"]),
+                round_number=int(cdata["round_number"]),
+                rounds_without_attack=int(cdata.get("rounds_without_attack", 0)),
+                battle_map=bm,
+            )
+            self._combats[str(loc_id)] = combat
+
     # -- Helpers --
 
     def _active_creatures_at_location(self, location_id: str, exclude_id: str = "") -> list[Creature]:

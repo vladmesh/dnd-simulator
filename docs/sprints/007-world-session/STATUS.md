@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 1, Task 1: Serialize Resource Pools & NPC ai_type — done.
+Phase 1, Task 2: Serialize Combat State — done.
 
 ## Next Steps
 
-- Task 2: Serialize combat state — mid-combat save/load (CombatState, BattleMap, positions, walls)
 - Task 3: Full world round-trip integration tests (end-to-end validation through World.save/load)

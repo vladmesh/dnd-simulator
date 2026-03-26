@@ -41,4 +41,8 @@ Restore in `EntitiesLayer.load_state()`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Delegated serialization to `CombatManager.get_combats_state()` / `load_combats_state()` as planned. Serializes turn_order, round_number, rounds_without_attack, and full BattleMap (width, height, inner walls, positions). On load, BattleMap is reconstructed from saved data with explicit positions (no place_randomly). The `_inner_walls` attribute stores original walls before perimeter is added in `__post_init__`, so we serialize those and let the constructor re-add perimeter walls.

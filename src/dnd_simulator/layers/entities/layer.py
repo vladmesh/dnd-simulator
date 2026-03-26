@@ -409,7 +409,11 @@ class EntitiesLayer(Layer):
             elif isinstance(e, Creature):
                 data["current_hp"] = e.current_hp
             entities[eid] = data
-        return {"entities": entities}
+        combats = self._combat.get_combats_state()
+        result: dict[str, object] = {"entities": entities}
+        if combats:
+            result["combats"] = combats
+        return result
 
     def load_state(self, state: dict[str, object]) -> None:
         """Restore mutable entity state from saved data."""
@@ -482,3 +486,7 @@ class EntitiesLayer(Layer):
                         entity.memory = NpcMemory(current_conversation=legacy) if legacy else NpcMemory()
                 elif isinstance(entity, Creature):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
+
+        combats_data = state.get("combats")
+        if isinstance(combats_data, dict):
+            self._combat.load_combats_state(combats_data)
