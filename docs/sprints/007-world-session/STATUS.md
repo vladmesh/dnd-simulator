@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 2, Task 1: Give Item API Plumbing — done. Backend returns inventory + equipment in creature detail; TS types and client method added.
+Phase 2, Task 2: Give Item Dialog UI — done. GiveItemDialog component + inventory display in CreatureForm.
 
 ## Next Steps
 
-- Task 2: Give Item dialog UI — item type form, inventory display in creature panel
 - Task 3: E2E — master spawns creature, gives item, verifies equipment

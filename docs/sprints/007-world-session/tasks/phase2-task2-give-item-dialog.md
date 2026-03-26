@@ -49,4 +49,12 @@ No frontend test runner — this task is verified by:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Created `GiveItemDialog.tsx` — dialog with weapon/potion type tabs, dynamic fields per type. Weapon fields: ID, attack name, category, damage dice/type, reach, magic/finesse checkboxes. Potion fields: heal dice.
+
+Updated `CreatureForm.tsx` — in edit mode, added inventory section below conditions showing equipped weapon (as Badge) and inventory items. "Give Item" button opens the dialog. After giving an item, re-fetches creature detail to update the displayed inventory live without closing the form.
+
+Added i18n keys for en and ru (20 new keys each).

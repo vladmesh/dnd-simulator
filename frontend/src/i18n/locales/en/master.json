@@ -93,5 +93,25 @@
   "confirm_load_save": "Load save {{name}}? Current state will be replaced.",
   "saved": "Saved.",
   "loaded": "Loaded.",
-  "save_deleted": "Save deleted."
+  "save_deleted": "Save deleted.",
+
+  "give_item": "Give Item",
+  "item_given": "Item given.",
+  "item_type": "Item Type",
+  "item_type_weapon": "Weapon",
+  "item_type_potion": "Potion",
+  "inventory": "Inventory",
+  "equipped_weapon": "Equipped weapon",
+  "no_items": "No items.",
+  "weapon_id": "Weapon ID",
+  "weapon_attack_name": "Attack Name",
+  "weapon_category": "Category",
+  "weapon_simple": "Simple",
+  "weapon_martial": "Martial",
+  "weapon_damage": "Damage Dice",
+  "weapon_damage_type": "Damage Type",
+  "weapon_reach": "Reach (ft)",
+  "weapon_magic": "Magic",
+  "weapon_finesse": "Finesse",
+  "potion_heal_dice": "Heal Dice"
 }

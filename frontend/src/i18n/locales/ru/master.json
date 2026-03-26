@@ -93,5 +93,25 @@
   "confirm_load_save": "Загрузить {{name}}? Текущее состояние будет заменено.",
   "saved": "Сохранено.",
   "loaded": "Загружено.",
-  "save_deleted": "Сохранение удалено."
+  "save_deleted": "Сохранение удалено.",
+
+  "give_item": "Выдать предмет",
+  "item_given": "Предмет выдан.",
+  "item_type": "Тип предмета",
+  "item_type_weapon": "Оружие",
+  "item_type_potion": "Зелье",
+  "inventory": "Инвентарь",
+  "equipped_weapon": "Экипировано",
+  "no_items": "Нет предметов.",
+  "weapon_id": "ID оружия",
+  "weapon_attack_name": "Название атаки",
+  "weapon_category": "Категория",
+  "weapon_simple": "Простое",
+  "weapon_martial": "Воинское",
+  "weapon_damage": "Кубики урона",
+  "weapon_damage_type": "Тип урона",
+  "weapon_reach": "Досягаемость (фут)",
+  "weapon_magic": "Магическое",
+  "weapon_finesse": "Фехтовальное",
+  "potion_heal_dice": "Кубики лечения"
 }

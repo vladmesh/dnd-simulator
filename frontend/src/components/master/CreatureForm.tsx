@@ -13,7 +13,9 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2 } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Loader2, Package } from "lucide-react"
+import { GiveItemDialog } from "./GiveItemDialog"
 
 interface Props {
   sessionId: string
@@ -50,6 +52,8 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showGiveItem, setShowGiveItem] = useState(false)
+  const [liveCreature, setLiveCreature] = useState(creature)
 
   const set = (field: string, value: string | number) =>
     setForm((f) => ({ ...f, [field]: value }))
@@ -220,6 +224,40 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
           )}
         </div>
 
+        {isEdit && (
+          <div className="col-span-2 border-t border-border pt-3 mt-1">
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-sm font-medium">{t("master:inventory")}</Label>
+              <Button size="xs" variant="outline" onClick={() => setShowGiveItem(true)}>
+                <Package className="mr-1 size-3" />
+                {t("master:give_item")}
+              </Button>
+            </div>
+
+            {liveCreature?.equipped_weapon && (
+              <div className="mb-2 text-sm">
+                <span className="text-muted-foreground">{t("master:equipped_weapon")}:</span>{" "}
+                <Badge variant="secondary">
+                  {liveCreature.equipped_weapon.attack_name} ({liveCreature.equipped_weapon.damage})
+                </Badge>
+              </div>
+            )}
+
+            {liveCreature?.inventory && liveCreature.inventory.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {liveCreature.inventory.map((item) => (
+                  <Badge key={item.id} variant="outline">
+                    {item.name}
+                    <span className="ml-1 text-muted-foreground text-xs">{item.item_type}</span>
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">{t("master:no_items")}</p>
+            )}
+          </div>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>{t("common:cancel")}</Button>
           <Button onClick={submit} disabled={saving || (!isEdit && !form.id)}>
@@ -228,6 +266,18 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {showGiveItem && creature && (
+        <GiveItemDialog
+          sessionId={sessionId}
+          entityId={creature.id}
+          onClose={() => setShowGiveItem(false)}
+          onGiven={() => {
+            setShowGiveItem(false)
+            api.master.getCreature(sessionId, creature.id).then(setLiveCreature)
+          }}
+        />
+      )}
     </Dialog>
   )
 }
