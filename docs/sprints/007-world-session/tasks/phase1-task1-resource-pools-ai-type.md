@@ -37,4 +37,8 @@ In `tests/unit/test_npc_layer.py` (or a new `test_entities_serialization.py`):
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward addition. `get_state()` serializes resource pools as list of dicts and `ai_type` on NPCs. `load_state()` patches `current_uses` on matching pool IDs (pools themselves come from content loader, only mutable state is restored) and restores `ai_type` from saved data.

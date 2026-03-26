@@ -382,6 +382,16 @@ class EntitiesLayer(Layer):
                     from dnd_simulator.core.player import _serialize_item
 
                     data["inventory"] = [_serialize_item(item) for item in e.inventory]
+                if e.resource_pools:
+                    data["resource_pools"] = [
+                        {
+                            "id": pool.id,
+                            "max_uses": pool.max_uses,
+                            "current_uses": pool.current_uses,
+                            "reset_on": pool.reset_on.value,
+                        }
+                        for pool in e.resource_pools
+                    ]
             if isinstance(e, PlayerCharacter):
                 data["entity_type"] = "player"
                 data.update(e.to_full_save_data())
@@ -393,6 +403,7 @@ class EntitiesLayer(Layer):
                         "settlement_id": e.settlement_id,
                         "location_override": e.location_override,
                         "memory": e.memory.to_dict(),
+                        "ai_type": e.ai_type,
                     }
                 )
             elif isinstance(e, Creature):
@@ -448,10 +459,19 @@ class EntitiesLayer(Layer):
                             )
                             for d in inv_raw
                         ]
+                    pools_raw = edata.get("resource_pools")
+                    if isinstance(pools_raw, list):
+                        saved_pools = {str(d["id"]): d for d in pools_raw}
+                        for pool in entity.resource_pools:
+                            if pool.id in saved_pools:
+                                pool.current_uses = int(saved_pools[pool.id]["current_uses"])
                 if isinstance(entity, PlayerCharacter):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
                     entity.gold = int(edata.get("gold", entity.gold))
                 elif isinstance(entity, Npc):
+                    ai_type = edata.get("ai_type")
+                    if isinstance(ai_type, str):
+                        entity.ai_type = ai_type
                     override = edata.get("location_override")
                     entity.location_override = str(override) if override else None
                     memory_data = edata.get("memory")
