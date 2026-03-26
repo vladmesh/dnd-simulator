@@ -81,6 +81,12 @@ class GameService(
 
         world_path = self._content_dir / "worlds" / world_name
         layer_paths = resolve_manifest(world_path, self._content_dir)
+        missing = {lt.value for lt in LayerType} - set(layer_paths)
+        if missing:
+            raise RuntimeError(
+                f"World '{world_name}' is incomplete — missing layers: {', '.join(sorted(missing))}. "
+                "All 5 layers must be defined before starting a session."
+            )
         meta = load_world_meta_from_manifest(world_path, lang=lang)
         regions = load_world(layer_paths["geography"], lang=lang)
         nations = load_nations(layer_paths["politics"], lang=lang)
@@ -184,16 +190,18 @@ class GameService(
             self.autosave_session(sid)
         self._sessions.pop(sid, None)
 
-    def list_worlds(self, lang: str = "en") -> list[dict[str, str]]:
-        """List available world templates."""
+    def list_worlds(self, lang: str = "en") -> list[dict[str, object]]:
+        """List available world templates with completeness flag."""
         worlds_dir = self._content_dir / "worlds"
-        result: list[dict[str, str]] = []
+        result: list[dict[str, object]] = []
         if not worlds_dir.exists():
             return result
         for entry in sorted(worlds_dir.iterdir()):
             if entry.is_dir() and (entry / "manifest.yaml").exists():
                 meta = load_world_meta_from_manifest(entry, lang=lang)
-                result.append({"id": entry.name, **meta})
+                resolved = resolve_manifest(entry, self._content_dir)
+                complete = len(resolved) == len(LayerType)
+                result.append({"id": entry.name, **meta, "complete": complete})
         return result
 
     def list_library_templates(self, layer_type: LayerType) -> list[TemplateInfo]:
@@ -319,6 +327,28 @@ class GameService(
         )
         return {"id": world_id, "name": name}
 
+    def create_empty_world(
+        self,
+        world_id: str,
+        name: str,
+        description: str,
+        default_player_faction: str,
+    ) -> dict[str, str]:
+        """Create a new empty world (no layers defined).
+
+        Returns ``{"id": ..., "name": ...}``.
+        """
+        from dnd_simulator.content_loader.assembly import create_empty_world
+
+        create_empty_world(
+            content_dir=self._content_dir,
+            world_id=world_id,
+            name=name,
+            description=description,
+            default_player_faction=default_player_faction,
+        )
+        return {"id": world_id, "name": name}
+
     def get_world_manifest(self, world_id: str, lang: str = "en") -> dict[str, object]:
         """Read manifest.yaml and return structured layer info for the world inspector."""
         from dnd_simulator.content_loader.manifest import LayerSource
@@ -330,19 +360,23 @@ class GameService(
 
         manifest = _read_yaml(world_path / "manifest.yaml")
         name = resolve_text(manifest["name"], lang)
+        layers_data = manifest["layers"]
         layers: list[dict[str, str | None]] = []
         for layer_type in LayerType:
             lt = layer_type.value
-            layer_config = manifest["layers"][lt]
-            source = LayerSource(layer_config["source"])
-            layers.append(
-                {
-                    "layer_type": lt,
-                    "source": source.value,
-                    "template": str(layer_config["template"]) if source == LayerSource.LIBRARY else None,
-                    "version": str(layer_config["version"]) if source == LayerSource.LIBRARY else None,
-                }
-            )
+            layer_config = layers_data.get(lt)
+            if layer_config is None:
+                layers.append({"layer_type": lt, "source": None, "template": None, "version": None})
+            else:
+                source = LayerSource(layer_config["source"])
+                layers.append(
+                    {
+                        "layer_type": lt,
+                        "source": source.value,
+                        "template": str(layer_config["template"]) if source == LayerSource.LIBRARY else None,
+                        "version": str(layer_config["version"]) if source == LayerSource.LIBRARY else None,
+                    }
+                )
         return {"world_id": world_id, "name": name, "layers": layers}
 
     def fork_layer(self, world_id: str, layer_type: LayerType) -> Path:

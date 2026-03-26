@@ -39,9 +39,7 @@ def resolve_manifest(world_path: Path, content_dir: Path) -> dict[str, Path]:
     layers_data = manifest["layers"]
 
     result: dict[str, Path] = {}
-    for layer_type in LayerType:
-        lt = layer_type.value
-        layer_config = layers_data[lt]
+    for lt, layer_config in layers_data.items():
         source = LayerSource(layer_config["source"])
 
         if source == LayerSource.LIBRARY:

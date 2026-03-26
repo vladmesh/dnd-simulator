@@ -69,6 +69,37 @@ def assemble_world(
     return world_path
 
 
+def create_empty_world(
+    content_dir: Path,
+    world_id: str,
+    name: str,
+    description: str,
+    default_player_faction: str,
+) -> Path:
+    """Create a new world directory with an empty manifest (no layers defined).
+
+    Returns the path to the created world directory.
+    Raises ``FileExistsError`` if the world directory already exists.
+    """
+    world_path = content_dir / "worlds" / world_id
+    if world_path.exists():
+        raise FileExistsError(f"World '{world_id}' already exists at {world_path}")
+
+    world_path.mkdir(parents=True)
+
+    manifest = {
+        "name": name,
+        "description": description,
+        "default_player_faction": default_player_faction,
+        "layers": {},
+    }
+
+    with (world_path / "manifest.yaml").open("w") as f:
+        yaml.dump(manifest, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+    return world_path
+
+
 def fork_layer(content_dir: Path, world_id: str, layer_type: LayerType) -> Path:
     """Copy a library template into a world's custom directory and update the manifest.
 

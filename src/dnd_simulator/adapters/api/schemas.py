@@ -94,6 +94,15 @@ class PatchSettlementRequest(BaseModel):
     defenses: float | None = Field(default=None, ge=0.0, le=100.0)
 
 
+class CreateWorldRequest(BaseModel):
+    """Create an empty world (no layers defined)."""
+
+    id: str = Field(..., pattern=r"^[a-z0-9_]+$", min_length=1, max_length=64)
+    name: str
+    description: str = ""
+    default_player_faction: str = ""
+
+
 class AssembleWorldRequest(BaseModel):
     """Assemble a new world from library templates."""
 
@@ -126,6 +135,7 @@ class WorldListItem(BaseModel):
     id: str
     name: str
     description: str
+    complete: bool
 
 
 class PlayerStatusResponse(BaseModel):
@@ -192,7 +202,7 @@ class TemplateListItem(BaseModel):
 
 class LayerInfo(BaseModel):
     layer_type: str
-    source: str
+    source: str | None
     template: str | None
     version: str | None
 

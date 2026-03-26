@@ -28,7 +28,11 @@ class TestManifestResolutionLibrary:
     def test_library_paths_point_into_library_dir(self) -> None:
         result = resolve_manifest(WORLDS_DIR / "sword_vale", CONTENT_DIR)
         for layer_type, path in result.items():
-            expected = LIBRARY_DIR / layer_type / "sword_vale"
+            if layer_type == "settlements":
+                # sword_vale settlements are custom (in-world directory)
+                expected = WORLDS_DIR / "sword_vale" / layer_type
+            else:
+                expected = LIBRARY_DIR / layer_type / "sword_vale"
             assert path == expected, f"{layer_type}: expected {expected}, got {path}"
 
     def test_all_resolved_paths_exist(self) -> None:

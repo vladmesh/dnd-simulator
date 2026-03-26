@@ -6,11 +6,11 @@
 
 ## Current
 
-Phase 5 tasks generated. Ready to start task 1.
+Phase 5, Task 1: Partial manifest + complete flag + create empty world — done.
 
 ## Next Steps
 
-- Task 1: Partial manifest support — `resolve_manifest()` handles missing layers, `complete` flag in list_worlds, `create_empty_world` endpoint
+- ~~Task 1: done~~
 - Task 2: World fork + delete — fork world with optional layer truncation, delete with safety checks, `LAYER_ORDER` constant
 - Task 3: Layer scaffold — create minimal valid custom layers from scratch, full pipeline test
 

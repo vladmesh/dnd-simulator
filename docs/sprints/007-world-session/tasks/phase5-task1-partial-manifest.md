@@ -54,4 +54,17 @@ Unit tests in `tests/unit/test_partial_manifest.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All 8 acceptance criteria met. Key changes:
+
+- `resolve_manifest()` now iterates `manifest["layers"]` keys instead of `LayerType` enum — missing layers are simply not in the result dict.
+- `create_empty_world()` added to assembly.py — writes manifest with `layers: {}`.
+- `list_worlds()` returns `complete: bool` based on whether all 5 layer types resolve.
+- `start_game()` checks completeness before loading content, raises `RuntimeError` with missing layer names.
+- `get_world_manifest()` returns all 5 layer types — undefined ones get `source: None`.
+- `POST /api/master/worlds` endpoint added for creating empty worlds.
+- Old test `test_old_create_world_endpoint_gone` updated to `test_create_empty_world_endpoint_exists` — the endpoint now exists intentionally.
+- `test_library_paths_point_into_library_dir` updated — sword_vale settlements are custom (not library), so the assertion was wrong.

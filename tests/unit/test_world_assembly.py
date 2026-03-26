@@ -297,11 +297,10 @@ class TestAssemblyApi:
         resp = client.post("/api/master/worlds/fork_409/fork/entities")
         assert resp.status_code == HTTPStatus.CONFLICT
 
-    def test_old_create_world_endpoint_gone(self, tmp_path: Path) -> None:
+    def test_create_empty_world_endpoint_exists(self, tmp_path: Path) -> None:
         client = self._make_client(tmp_path)
         resp = client.post("/api/master/worlds", json={"id": "x", "name": "X"})
-        # Should be 405 (Method Not Allowed) or 404, not 201/200
-        assert resp.status_code in (HTTPStatus.METHOD_NOT_ALLOWED, HTTPStatus.NOT_FOUND)
+        assert resp.status_code == HTTPStatus.CREATED
 
     def test_old_update_world_endpoint_gone(self, tmp_path: Path) -> None:
         client = self._make_client(tmp_path)

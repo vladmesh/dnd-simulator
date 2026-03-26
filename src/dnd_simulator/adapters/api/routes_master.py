@@ -7,6 +7,7 @@ from dnd_simulator.adapters.api.schemas import (
     AdvanceTimeRequest,
     AssembleWorldRequest,
     CreateSessionRequest,
+    CreateWorldRequest,
     CreatureResponse,
     GiveItemRequest,
     LayerFileResponse,
@@ -68,7 +69,31 @@ def list_worlds(lang: str = "en") -> list[WorldListItem]:
     """List available world templates."""
     service = get_service()
     worlds = service.list_worlds(lang=lang)
-    return [WorldListItem(**w) for w in worlds]
+    return [
+        WorldListItem(
+            id=str(w["id"]),
+            name=str(w["name"]),
+            description=str(w["description"]),
+            complete=bool(w["complete"]),
+        )
+        for w in worlds
+    ]
+
+
+@router.post("/worlds", response_model=WorldListItem, status_code=201)
+def create_world(req: CreateWorldRequest) -> WorldListItem:
+    """Create a new empty world (no layers defined)."""
+    service = get_service()
+    try:
+        result = service.create_empty_world(
+            world_id=req.id,
+            name=req.name,
+            description=req.description,
+            default_player_faction=req.default_player_faction,
+        )
+    except FileExistsError as exc:
+        raise HTTPException(status_code=409, detail=_("World '{}' already exists").format(req.id)) from exc
+    return WorldListItem(id=result["id"], name=result["name"], description=req.description, complete=False)
 
 
 @router.post("/worlds/assemble", response_model=WorldListItem, status_code=201)
@@ -87,7 +112,7 @@ def assemble_world(req: AssembleWorldRequest) -> WorldListItem:
         raise HTTPException(status_code=409, detail=_("World '{}' already exists").format(req.id)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return WorldListItem(id=result["id"], name=result["name"], description=req.description)
+    return WorldListItem(id=result["id"], name=result["name"], description=req.description, complete=True)
 
 
 @router.get("/worlds/{world_id}")
