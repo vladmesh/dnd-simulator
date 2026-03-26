@@ -5,6 +5,7 @@ import type {
   CreateSessionRequest,
   CreateWorldRequest,
   CreatureResponse,
+  GiveItemRequest,
   MessageResponse,
   PatchCreatureRequest,
   PatchNationRequest,
@@ -160,6 +161,12 @@ const master = {
   setBrain: (sessionId: string, entityId: string, data: SetBrainRequest) =>
     put<MessageResponse>(
       `/api/master/sessions/${sessionId}/creatures/${entityId}/brain`,
+      data,
+    ),
+
+  giveItem: (sessionId: string, entityId: string, data: GiveItemRequest) =>
+    post<{ item_id: string; name: string }>(
+      `/api/master/sessions/${sessionId}/creatures/${entityId}/items`,
       data,
     ),
 

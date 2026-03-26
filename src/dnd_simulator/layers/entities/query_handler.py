@@ -12,6 +12,7 @@ from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.rules.modifiers import effective_ac
 
 if TYPE_CHECKING:
+    from dnd_simulator.core.items import Item
     from dnd_simulator.core.models import Event
     from dnd_simulator.layers.entities.combat_manager import CombatManager
 
@@ -221,6 +222,18 @@ class QueryHandler:
             base["location_label"] = entity.current_location(hour)
         return base
 
+    @staticmethod
+    def _serialize_equipped_weapon(weapon: Item | None) -> dict[str, object] | None:
+        if weapon is None or weapon.weapon_def is None:
+            return None
+        wd = weapon.weapon_def
+        damage_str = ", ".join(f"{d.dice} {d.type.value}" for d in wd.damage)
+        return {
+            "weapon_id": wd.weapon_id,
+            "attack_name": wd.attack_name,
+            "damage": damage_str,
+        }
+
     def _entity_detail(self, entity: Entity) -> dict[str, object]:
         """Full detail for a single entity."""
         from dnd_simulator.core.player import PlayerCharacter
@@ -238,6 +251,11 @@ class QueryHandler:
                     "max_hp": entity.max_hp,
                     "ac": effective_ac(entity),
                     "conditions": sorted(c.value for c in entity.conditions),
+                    "inventory": [
+                        {"id": item.id, "name": item.name, "item_type": item.item_type.value}
+                        for item in entity.inventory
+                    ],
+                    "equipped_weapon": self._serialize_equipped_weapon(entity.equipped_weapon),
                 }
             )
         if isinstance(entity, Character):

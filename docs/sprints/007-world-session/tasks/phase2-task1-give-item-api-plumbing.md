@@ -37,4 +37,12 @@ Wire up the give_item endpoint to the frontend. Three concrete changes:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Backend `_entity_detail()` now returns `inventory` (list of `{id, name, item_type}`) and `equipped_weapon` (`{weapon_id, attack_name, damage}` or null) for all Creature instances. This affects both `ENTITY_INFO` and `ALL_CREATURES` queries.
+
+Frontend: added `GiveItemRequest`, `InventoryItem`, `EquippedWeapon` types and extended `CreatureResponse`. Added `api.master.giveItem()` client method.
+
+No old tests modified — all 1191 pass.

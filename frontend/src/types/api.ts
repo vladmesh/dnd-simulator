@@ -89,6 +89,24 @@ export interface SetLangRequest {
   lang: string
 }
 
+export interface GiveItemRequest {
+  name: string
+  type: string // "potion", "weapon", "armor", "shield"
+  price?: number | null
+  // Potion fields
+  heal_dice?: string | null
+  // Weapon fields
+  weapon_id?: string | null
+  category?: string | null
+  attack_name?: string | null
+  damage?: Array<{ dice: string; type: string }> | null
+  ability?: string | null
+  reach?: number | null
+  is_magic?: boolean | null
+  is_finesse?: boolean | null
+  grant_actions?: string[] | null
+}
+
 // --- Response models ---
 
 export interface SessionResponse {
@@ -129,6 +147,18 @@ export interface WorldStateResponse {
   entities: Array<Record<string, unknown>>
 }
 
+export interface InventoryItem {
+  id: string
+  name: string
+  item_type: string
+}
+
+export interface EquippedWeapon {
+  weapon_id: string
+  attack_name: string
+  damage: string
+}
+
 export interface CreatureResponse {
   id: string
   name: string
@@ -148,6 +178,8 @@ export interface CreatureResponse {
   ai_type?: string
   settlement_id?: string
   memory?: Record<string, unknown> | null
+  inventory?: InventoryItem[]
+  equipped_weapon?: EquippedWeapon | null
 }
 
 export interface TemplateListItem {

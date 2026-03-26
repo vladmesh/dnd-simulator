@@ -14,6 +14,7 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.combat import BattleMap
+from dnd_simulator.core.items import Item, ItemType, WeaponCategory, WeaponDef
 from dnd_simulator.core.models import Event, EventType, Query, QueryType
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -173,3 +174,91 @@ class TestPerceivedLog:
         # Observer should see the public event but not the private one
         assert len(perceived) == 1
         assert "Hello everyone" in perceived[0]
+
+
+class TestCreatureInventoryInDetail:
+    """ENTITY_INFO and ALL_CREATURES return inventory and equipment."""
+
+    _WEAPON_DEF = WeaponDef(
+        weapon_id="longsword",
+        attack_name="Longsword Strike",
+        category=WeaponCategory.MARTIAL,
+        damage=(DamageComponent("1d8", DamageType.SLASHING),),
+    )
+    _WEAPON_ITEM = Item(
+        id="longsword_0",
+        name="Longsword",
+        item_type=ItemType.WEAPON,
+        weapon_def=_WEAPON_DEF,
+    )
+    _POTION_ITEM = Item(
+        id="heal_pot_0",
+        name="Healing Potion",
+        item_type=ItemType.POTION,
+        params={"heal_dice": "2d4+2"},
+    )
+
+    def test_entity_info_includes_inventory_and_equipped_weapon(self) -> None:
+        player = PlayerCharacter(
+            id="p1",
+            name="Bron",
+            location_id="tavern",
+            ability_scores=_scores(STR=16),
+            attacks=(_SWORD,),
+            race=Race.DWARF,
+            char_class=CharClass.FIGHTER,
+            level=3,
+            inventory=[self._POTION_ITEM],
+            equipped_weapon=self._WEAPON_ITEM,
+        )
+        layer = EntitiesLayer([player])
+
+        result = layer.query(Query(question=QueryType.ENTITY_INFO, params={"entity_id": "p1"}))
+        detail = result.value
+        assert isinstance(detail, dict)
+
+        # Inventory
+        inv = detail["inventory"]
+        assert isinstance(inv, list)
+        assert len(inv) == 1
+        assert inv[0]["id"] == "heal_pot_0"
+        assert inv[0]["name"] == "Healing Potion"
+        assert inv[0]["item_type"] == "potion"
+
+        # Equipped weapon
+        weapon = detail["equipped_weapon"]
+        assert isinstance(weapon, dict)
+        assert weapon["weapon_id"] == "longsword"
+        assert weapon["attack_name"] == "Longsword Strike"
+        assert weapon["damage"] == "1d8 slashing"
+
+    def test_entity_info_no_equipment_returns_empty_and_null(self) -> None:
+        char = Character(
+            id="c1",
+            name="Naked",
+            location_id="road",
+            ability_scores=_scores(STR=10),
+        )
+        layer = EntitiesLayer([char])
+
+        result = layer.query(Query(question=QueryType.ENTITY_INFO, params={"entity_id": "c1"}))
+        detail = result.value
+        assert detail["inventory"] == []
+        assert detail["equipped_weapon"] is None
+
+    def test_all_creatures_includes_inventory(self) -> None:
+        char = Character(
+            id="c1",
+            name="Armed",
+            location_id="camp",
+            ability_scores=_scores(STR=14),
+            inventory=[self._POTION_ITEM],
+            equipped_weapon=self._WEAPON_ITEM,
+        )
+        layer = EntitiesLayer([char])
+
+        result = layer.query(Query(question=QueryType.ALL_CREATURES, params={}))
+        creatures = result.value
+        assert len(creatures) == 1
+        assert "inventory" in creatures[0]
+        assert "equipped_weapon" in creatures[0]
