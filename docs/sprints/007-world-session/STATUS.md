@@ -6,13 +6,14 @@
 
 ## Current
 
-Phase 5, Task 2: World fork + delete — done.
+Phase 5, Task 3: Layer scaffold — done. All 5 layer types scaffoldable, empty worlds startable.
 
 ## Next Steps
 
 - ~~Task 1: done~~
 - ~~Task 2: done~~
-- Task 3: Layer scaffold — create minimal valid custom layers from scratch, full pipeline test
+- ~~Task 3: done~~
+- All phase 5 tasks complete.
 
 ## Audit Triage
 

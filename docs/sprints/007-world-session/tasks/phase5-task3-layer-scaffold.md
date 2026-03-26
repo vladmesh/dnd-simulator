@@ -50,4 +50,8 @@ Unit tests in `tests/unit/test_layer_scaffold.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented scaffold_layer in assembly.py with LAYER_SCAFFOLDS dict mapping each LayerType to its minimal YAML files. Fixed load_locations to return [] on empty input instead of raising RuntimeError — required for scaffolded worlds to be startable. The ecology scaffold uses explicit `templates: {}` / `encounters: {}` keys since load_monsters expects that structure (not just an empty file). All other loaders already handled empty gracefully via `_read_yaml`'s `or {}` pattern.

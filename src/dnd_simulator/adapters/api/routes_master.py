@@ -221,6 +221,19 @@ def update_layer_file(
     return MessageResponse(message=_("File '{}' updated").format(filename))
 
 
+@router.post("/worlds/{world_id}/layers/{layer_type}/scaffold", response_model=MessageResponse, status_code=201)
+def scaffold_layer(world_id: str, layer_type: LayerType) -> MessageResponse:
+    """Create a minimal valid custom layer from scratch."""
+    service = get_service()
+    try:
+        service.scaffold_layer(world_id, layer_type)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return MessageResponse(message=_("Layer '{}' scaffolded in world '{}'").format(layer_type.value, world_id))
+
+
 @router.post("/worlds/{world_id}/fork/{layer_type}", response_model=MessageResponse)
 def fork_world_layer(world_id: str, layer_type: LayerType) -> MessageResponse:
     """Fork a library template layer into the world's custom directory."""

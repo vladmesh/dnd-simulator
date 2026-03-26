@@ -197,6 +197,62 @@ def fork_world(
     return new_path
 
 
+LAYER_SCAFFOLDS: dict[LayerType, dict[str, str]] = {
+    LayerType.GEOGRAPHY: {
+        "regions.yaml": "",
+        "locations.yaml": "",
+    },
+    LayerType.POLITICS: {
+        "nations.yaml": "",
+        "factions.yaml": "",
+    },
+    LayerType.SETTLEMENTS: {
+        "settlements.yaml": "",
+    },
+    LayerType.ECOLOGY: {
+        "squads.yaml": "",
+        "monsters.yaml": "templates: {}\nencounters: {}\n",
+    },
+    LayerType.ENTITIES: {
+        "npcs.yaml": "",
+    },
+}
+
+
+def scaffold_layer(content_dir: Path, world_id: str, layer_type: LayerType) -> Path:
+    """Create a minimal valid custom layer for a world that's missing this layer type.
+
+    Writes scaffold YAML files and updates the manifest to ``source: custom``.
+
+    Raises ``FileNotFoundError`` if the world doesn't exist.
+    Raises ``ValueError`` if the layer is already defined in the manifest.
+    """
+    world_path = content_dir / "worlds" / world_id
+    if not world_path.is_dir():
+        raise FileNotFoundError(f"World '{world_id}' not found at {world_path}")
+
+    manifest_path = world_path / "manifest.yaml"
+    manifest = _read_yaml(manifest_path)
+
+    if layer_type.value in manifest["layers"]:
+        raise ValueError(f"Layer '{layer_type.value}' is already defined in world '{world_id}'")
+
+    # Create layer directory with scaffold files
+    layer_dir = world_path / layer_type.value
+    layer_dir.mkdir(parents=True)
+
+    for filename, content in LAYER_SCAFFOLDS[layer_type].items():
+        (layer_dir / filename).write_text(content, encoding="utf-8")
+
+    # Update manifest
+    manifest["layers"][layer_type.value] = {"source": LayerSource.CUSTOM.value}
+
+    with manifest_path.open("w") as f:
+        yaml.dump(manifest, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+
+    return layer_dir
+
+
 def delete_world(content_dir: Path, world_id: str) -> None:
     """Remove a world directory entirely.
 

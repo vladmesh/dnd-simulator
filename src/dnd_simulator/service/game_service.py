@@ -419,6 +419,12 @@ class GameService(
                 )
         return {"world_id": world_id, "name": name, "layers": layers}
 
+    def scaffold_layer(self, world_id: str, layer_type: LayerType) -> Path:
+        """Create a minimal valid custom layer from scratch."""
+        from dnd_simulator.content_loader.assembly import scaffold_layer
+
+        return scaffold_layer(self._content_dir, world_id, layer_type)
+
     def fork_layer(self, world_id: str, layer_type: LayerType) -> Path:
         """Fork a library template into a world's custom directory."""
         from dnd_simulator.content_loader.assembly import fork_layer

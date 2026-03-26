@@ -57,7 +57,7 @@ def load_locations(path: Path, regions: list[Region], lang: str = "en") -> list[
     locations_data: dict[str, Any] = _read_yaml(loc_path) if loc_path.exists() else {}
 
     if not locations_data:
-        raise RuntimeError(f"No locations defined in world at {path}. Add a 'locations:' section.")
+        return []
 
     return _parse_locations(locations_data, lang)
 
