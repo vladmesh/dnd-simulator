@@ -22,7 +22,9 @@ Sprint 006 заложил фундамент world builder: библиотека
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Serialize Resource Pools & NPC ai_type](tasks/phase1-task1-resource-pools-ai-type.md)
+2. [Serialize Combat State (Mid-Combat Save/Load)](tasks/phase1-task2-combat-state-serialization.md)
+3. [Full Layer Round-Trip Integration Tests](tasks/phase1-task3-full-roundtrip-tests.md)
 
 ## Phase 2: Master Controls + Give Item UI
 
