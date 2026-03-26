@@ -34,4 +34,8 @@ The 3 `type: ignore[arg-type]` in `llm/client.py` are OpenRouter SDK stub mismat
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Created `service/base.py` with `GameServiceProtocol` (a `typing.Protocol`) declaring all shared attributes: `_store`, `_sessions`, `_brain_factory`, `_get_session()`, `_get_entities_layer()`, `_get_politics_layer()`, `_get_settlements_layer()`. Each mixin now inherits from it. Removed the `NotImplementedError` stubs from `CreatureCommands` and `PoliticsCommands` since the Protocol declares those methods. Removed all 24 `type: ignore[attr-defined]` comments and 3 now-unused imports that ruff flagged.

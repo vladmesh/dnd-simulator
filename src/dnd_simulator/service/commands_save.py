@@ -3,25 +3,26 @@ from __future__ import annotations
 import contextlib
 from typing import Any
 
+from dnd_simulator.service.base import GameServiceProtocol
 from dnd_simulator.service.session import GameSession
 
 
-class SaveCommands:
+class SaveCommands(GameServiceProtocol):
     """Mixin: save/load game commands."""
 
     def save_game(self, session_id: str, name: str | None = None) -> str:
         """Save game state. Returns the save name."""
-        session: GameSession = self._get_session(session_id)  # type: ignore[attr-defined]
+        session: GameSession = self._get_session(session_id)
         save_name = name or f"save_{session_id}"
         data: dict[str, Any] = {
             "world": session.world.save(),
         }
-        self._store.save(save_name, data, world=session.world_name)  # type: ignore[attr-defined]
+        self._store.save(save_name, data, world=session.world_name)
         return save_name
 
     def autosave_session(self, session_id: str) -> None:
         """Autosave a session with metadata needed for restore."""
-        session: GameSession = self._get_session(session_id)  # type: ignore[attr-defined]
+        session: GameSession = self._get_session(session_id)
         data: dict[str, Any] = {
             "meta": {
                 "session_id": session_id,
@@ -31,19 +32,19 @@ class SaveCommands:
             },
             "world": session.world.save(),
         }
-        self._store.save(f"session_{session_id}", data, world=session.world_name)  # type: ignore[attr-defined]
+        self._store.save(f"session_{session_id}", data, world=session.world_name)
 
     def autosave_all_sessions(self) -> None:
         """Autosave all active sessions."""
-        sessions: dict[str, GameSession] = self._sessions  # type: ignore[attr-defined]
+        sessions: dict[str, GameSession] = self._sessions
         for sid in list(sessions):
             with contextlib.suppress(Exception):
                 self.autosave_session(sid)
 
     def load_game(self, session_id: str, name: str) -> None:
         """Load game state into session."""
-        session: GameSession = self._get_session(session_id)  # type: ignore[attr-defined]
-        data = self._store.load(name, world=session.world_name)  # type: ignore[attr-defined]
+        session: GameSession = self._get_session(session_id)
+        data = self._store.load(name, world=session.world_name)
 
         # Support both old format (flat world data) and new format (world + player)
         if "world" in data:
@@ -60,11 +61,11 @@ class SaveCommands:
 
     def delete_save(self, session_id: str, name: str) -> None:
         """Delete a save file."""
-        session: GameSession = self._get_session(session_id)  # type: ignore[attr-defined]
-        self._store.delete(name, world=session.world_name)  # type: ignore[attr-defined]
+        session: GameSession = self._get_session(session_id)
+        self._store.delete(name, world=session.world_name)
 
     def list_saves(self, session_id: str) -> list[str]:
         """List available saves for the session's world."""
-        session: GameSession = self._get_session(session_id)  # type: ignore[attr-defined]
-        result: list[str] = self._store.list_saves(world=session.world_name)  # type: ignore[attr-defined]
+        session: GameSession = self._get_session(session_id)
+        result: list[str] = self._store.list_saves(world=session.world_name)
         return result

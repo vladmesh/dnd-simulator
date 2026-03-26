@@ -6,12 +6,9 @@
 
 ## Current
 
-Phase 4 tasks generated. Descoped rules→layers imports (already clean). Three tasks: mixin protocol, round.py private access, Answer.value type safety.
-
-Ready to start task 1.
+Phase 4, Task 1: Service mixin Protocol base — done. 24 type: ignore[attr-defined] eliminated via GameServiceProtocol.
 
 ## Next Steps
 
-- Task 1: Service mixin Protocol base — eliminate 24 type: ignore[attr-defined]
 - Task 2: Round.py private access — add public methods to EntitiesLayer for merchant/wake queries
 - Task 3: Answer.value Any → object — force explicit type narrowing at consumer sites

@@ -1,26 +1,16 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from dnd_simulator.service.session import GameSession
-
-if TYPE_CHECKING:
-    from dnd_simulator.layers.politics.layer import PoliticsLayer
-    from dnd_simulator.layers.settlements.layer import SettlementsLayer
+from dnd_simulator.service.base import GameServiceProtocol
 
 
-class PoliticsCommands:
+class PoliticsCommands(GameServiceProtocol):
     """Mixin: politics and settlements hot controls."""
-
-    def _get_politics_layer(self, session: GameSession) -> PoliticsLayer:
-        raise NotImplementedError
-
-    def _get_settlements_layer(self, session: GameSession) -> SettlementsLayer:
-        raise NotImplementedError
 
     def patch_nation(self, session_id: str, nation_id: str, updates: dict[str, Any]) -> None:
         """Update mutable nation fields in a live session."""
-        session = self._get_session(session_id)  # type: ignore[attr-defined]
+        session = self._get_session(session_id)
         layer = self._get_politics_layer(session)
         nation = layer.get_nation(nation_id)
 
@@ -33,7 +23,7 @@ class PoliticsCommands:
 
     def patch_settlement(self, session_id: str, settlement_id: str, updates: dict[str, Any]) -> None:
         """Update mutable settlement fields in a live session."""
-        session = self._get_session(session_id)  # type: ignore[attr-defined]
+        session = self._get_session(session_id)
         layer = self._get_settlements_layer(session)
         settlement = layer.get_settlement(settlement_id)
 

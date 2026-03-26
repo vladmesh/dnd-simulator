@@ -4,18 +4,14 @@ from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import Query, QueryType
-from dnd_simulator.service.session import GameSession
+from dnd_simulator.service.base import GameServiceProtocol
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Entity
-    from dnd_simulator.layers.entities.layer import EntitiesLayer
 
 
-class CreatureCommands:
+class CreatureCommands(GameServiceProtocol):
     """Mixin: creature management commands (master hot controls)."""
-
-    def _get_entities_layer(self, session: GameSession) -> EntitiesLayer:
-        raise NotImplementedError
 
     # -- List / Get --
 
@@ -27,7 +23,7 @@ class CreatureCommands:
         active: bool | None = None,
     ) -> list[dict[str, object]]:
         """List all creatures in a session with optional filters."""
-        session = self._get_session(session_id)  # type: ignore[attr-defined]
+        session = self._get_session(session_id)
         params: dict[str, object] = {}
         if entity_type:
             params["entity_type"] = entity_type
@@ -41,7 +37,7 @@ class CreatureCommands:
 
     def get_creature_info(self, session_id: str, entity_id: str) -> dict[str, object]:
         """Get single entity detail."""
-        session = self._get_session(session_id)  # type: ignore[attr-defined]
+        session = self._get_session(session_id)
         answer = session.world.query_layer(
             "entities", Query(question=QueryType.ENTITY_INFO, params={"entity_id": entity_id})
         )
@@ -57,7 +53,7 @@ class CreatureCommands:
         - "npc" → Npc (with role, personality, schedule, memory)
         - "monster" → Creature (bare creature with attacks)
         """
-        session = self._get_session(session_id)  # type: ignore[attr-defined]
+        session = self._get_session(session_id)
         known_locations = set(session.world.location_graph.all_ids())
         entity = _parse_spawn(data, known_locations=known_locations)
         # Assign brain via factory
@@ -65,9 +61,9 @@ class CreatureCommands:
         from dnd_simulator.layers.entities.models import Npc
 
         if isinstance(entity, Npc):
-            entity.brain = self._brain_factory.create(entity.ai_type)  # type: ignore[attr-defined]
+            entity.brain = self._brain_factory.create(entity.ai_type)
         elif isinstance(entity, Creature):
-            entity.brain = self._brain_factory.create(str(data.get("ai", "rule_based")))  # type: ignore[attr-defined]
+            entity.brain = self._brain_factory.create(str(data.get("ai", "rule_based")))
         self._get_entities_layer(session).add_entity(entity)
         return entity
 
@@ -78,7 +74,7 @@ class CreatureCommands:
         from dnd_simulator.core.character import Character, Creature
         from dnd_simulator.layers.entities.models import Npc
 
-        session = self._get_session(session_id)  # type: ignore[attr-defined]
+        session = self._get_session(session_id)
         entity = self._get_entities_layer(session).get_entity(entity_id)
         if entity is None:
             raise ValueError(f"Creature '{entity_id}' not found")
@@ -111,7 +107,7 @@ class CreatureCommands:
 
     def remove_creature(self, session_id: str, entity_id: str) -> None:
         """Remove a creature from a live session."""
-        session = self._get_session(session_id)  # type: ignore[attr-defined]
+        session = self._get_session(session_id)
         layer = self._get_entities_layer(session)
         entity = layer.get_entity(entity_id)
         if entity is None:
@@ -125,7 +121,7 @@ class CreatureCommands:
         from dnd_simulator.content_loader import parse_equipped_weapon, parse_items
         from dnd_simulator.core.character import Creature
 
-        session = self._get_session(session_id)  # type: ignore[attr-defined]
+        session = self._get_session(session_id)
         entity = self._get_entities_layer(session).get_entity(entity_id)
         if entity is None or not isinstance(entity, Creature):
             raise ValueError(f"Creature '{entity_id}' not found")
@@ -150,11 +146,11 @@ class CreatureCommands:
         from dnd_simulator.core.character import Creature
         from dnd_simulator.layers.entities.models import Npc
 
-        session = self._get_session(session_id)  # type: ignore[attr-defined]
+        session = self._get_session(session_id)
         entity = self._get_entities_layer(session).get_entity(entity_id)
         if entity is None or not isinstance(entity, Creature):
             raise ValueError(f"Creature '{entity_id}' not found")
-        entity.brain = self._brain_factory.create(brain_type, strict=True)  # type: ignore[attr-defined]
+        entity.brain = self._brain_factory.create(brain_type, strict=True)
         if isinstance(entity, Npc):
             entity.ai_type = brain_type
 
