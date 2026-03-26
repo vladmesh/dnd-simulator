@@ -48,7 +48,9 @@ Entity-level CRUD для мировых слоёв и каталогов (list/g
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Content CRUD Layer](tasks/phase3-task1-content-crud-layer.md)
+2. [Entity CRUD API Endpoints](tasks/phase3-task2-entity-crud-api.md)
+3. [JSON Schema + Layer-Refs Endpoints](tasks/phase3-task3-json-schema-refs.md)
 
 ## Phase 4: Frontend — Schema-Driven Forms + DM Restructure
 
