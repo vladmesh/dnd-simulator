@@ -35,4 +35,8 @@ Add Playwright test file `e2e/test_fork_workflow.py` (or extend existing setup E
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All 6 scenarios pass clean via Playwright against the live stack. Fork creates a custom geography directory and updates manifest.yaml — verified persistence across page reload. No bugs found. Forked content cleaned up after test to restore sword_vale to original state.

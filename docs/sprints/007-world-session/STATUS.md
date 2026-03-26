@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 3, Task 2: World Inspector UI — done. WorldInspector component with expand/collapse, fork buttons, i18n.
+Phase 3, Task 3: E2E — Fork Workflow via World Inspector — done. All 6 scenarios pass.
 
 ## Next Steps
 
-- Task 2: World Inspector UI — expandable layer list on WorldPicker with fork buttons
-- Task 3: E2E — fork workflow through browser
+- Phase 3 complete — all tasks done. Ready for `/close_phase`.
