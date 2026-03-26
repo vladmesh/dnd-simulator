@@ -46,7 +46,7 @@ action_handlers.py (607 LOC) → combat, movement, trade handlers. content_loade
 2. [Split content_loader.py into domain modules](tasks/phase3-task2-split-content-loader.md)
 3. [Decompose resolve_attack and query dispatcher](tasks/phase3-task3-decompose-long-methods.md)
 
-## Phase 4: Architecture Violations + Type Safety
+## Phase 4: Architecture Violations + Type Safety ✓
 
 Fix round.py private layer access. Service mixin type safety (24 type: ignore). Answer.value Any→object for cross-layer type safety.
 

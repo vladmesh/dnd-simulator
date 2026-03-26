@@ -1,13 +1,9 @@
 # Sprint 005 Status
 
 **Sprint:** 005-tech-sweep
-**Phase:** 4 — Architecture Violations + Type Safety
+**Phase:** 4 — Architecture Violations + Type Safety (COMPLETE)
 **Updated:** 2026-03-26
 
 ## Current
 
-Phase 4, Task 3: Answer.value Any → object — done. 14 consumer sites fixed with isinstance/assert.
-
-## Next Steps
-
-All phase 4 tasks complete. Ready for /close_phase.
+Phase 4 complete. Protocol bases for service mixins (24 type: ignore eliminated), Round private EntitiesLayer access replaced with World.query, Answer.value Any→object with type narrowing at 14 consumer sites. Ready for Phase 5 task generation.
