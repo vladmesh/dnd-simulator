@@ -53,7 +53,9 @@ Phase 1 закрыла основные дыры, но интеграционн�
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Recreate Spawned Entities from Save Data](tasks/phase1.5-task1-recreate-spawned-entities.md)
+2. [Reassign Brains After Load](tasks/phase1.5-task2-brain-reassignment-after-load.md)
+3. [Integration Tests — Spawned Creature & Brain Switch Round-Trip](tasks/phase1.5-task3-integration-tests.md)
 
 ## Phase 2: Master Controls + Give Item UI
 
