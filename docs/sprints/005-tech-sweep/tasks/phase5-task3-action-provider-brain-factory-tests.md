@@ -71,4 +71,12 @@ Each provider tested in isolation with a real `ActionContext` and real `validate
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Created 2 new test files with 23 tests total (18 ActionProvider + 5 BrainFactory). All GREEN immediately.
+
+**Deviations from plan:**
+- `test_creature_with_only_weapon_items_gets_nothing` → renamed to `test_creature_with_only_weapon_items_still_gets_use_item`. The task assumed USE_ITEM validation would reject weapon items, but InventoryActionProvider only checks `creature.inventory` is non-empty — the probe passes for any item. This is the actual behavior and is correct (handler-level validation catches invalid use).
+- WeaponDef/ArmorDef/ShieldDef constructors require `weapon_id`/`armor_id`/`shield_id` and enum categories — adjusted fixtures accordingly.

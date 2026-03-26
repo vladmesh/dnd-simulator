@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 5, Task 2: World layer isolation & event propagation tests — done. 17 new tests.
+Phase 5, Task 3: ActionProvider + BrainFactory unit tests — done. 18 + 5 = 23 new tests.
 
 ## Next Steps
 
