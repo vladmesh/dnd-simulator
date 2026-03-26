@@ -5,8 +5,8 @@ from fastapi import APIRouter, HTTPException
 from dnd_simulator.adapters.api.deps import get_service
 from dnd_simulator.adapters.api.schemas import (
     AdvanceTimeRequest,
+    AssembleWorldRequest,
     CreateSessionRequest,
-    CreateWorldRequest,
     CreatureResponse,
     GiveItemRequest,
     MessageResponse,
@@ -66,14 +66,22 @@ def list_worlds(lang: str = "en") -> list[WorldListItem]:
     return [WorldListItem(**w) for w in worlds]
 
 
-@router.post("/worlds", response_model=WorldListItem, status_code=201)
-def create_world(req: CreateWorldRequest) -> WorldListItem:
-    """Create a new world template from structured data."""
+@router.post("/worlds/assemble", response_model=WorldListItem, status_code=201)
+def assemble_world(req: AssembleWorldRequest) -> WorldListItem:
+    """Assemble a new world from library templates."""
     service = get_service()
     try:
-        result = service.create_world(req.model_dump())
+        result = service.assemble_world(
+            world_id=req.id,
+            name=req.name,
+            description=req.description,
+            layer_selections=req.layer_selections,
+            default_player_faction=req.default_player_faction,
+        )
     except FileExistsError as exc:
         raise HTTPException(status_code=409, detail=_("World '{}' already exists").format(req.id)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return WorldListItem(id=result["id"], name=result["name"], description=req.description)
 
 
@@ -87,15 +95,17 @@ def get_world_template(world_id: str) -> dict[str, object]:
         raise HTTPException(status_code=404, detail=_("World '{}' not found").format(world_id)) from exc
 
 
-@router.put("/worlds/{world_id}", response_model=WorldListItem)
-def update_world(world_id: str, req: CreateWorldRequest) -> WorldListItem:
-    """Update an existing world template (full replace)."""
+@router.post("/worlds/{world_id}/fork/{layer_type}", response_model=MessageResponse)
+def fork_world_layer(world_id: str, layer_type: LayerType) -> MessageResponse:
+    """Fork a library template layer into the world's custom directory."""
     service = get_service()
     try:
-        result = service.update_world(world_id, req.model_dump())
+        service.fork_layer(world_id, layer_type)
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=_("World '{}' not found").format(world_id)) from exc
-    return WorldListItem(id=result["id"], name=result["name"], description=req.description)
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return MessageResponse(message=_("Layer '{}' forked to custom in world '{}'").format(layer_type.value, world_id))
 
 
 # -- Sessions --

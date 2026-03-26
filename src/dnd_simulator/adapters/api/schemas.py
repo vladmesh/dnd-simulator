@@ -94,16 +94,14 @@ class PatchSettlementRequest(BaseModel):
     defenses: float | None = Field(default=None, ge=0.0, le=100.0)
 
 
-class CreateWorldRequest(BaseModel):
-    """Full world definition for the world builder."""
+class AssembleWorldRequest(BaseModel):
+    """Assemble a new world from library templates."""
 
     id: str = Field(..., pattern=r"^[a-z0-9_]+$", min_length=1, max_length=64)
     name: str
     description: str = ""
-    regions: dict[str, object] = Field(default_factory=dict)
-    locations: dict[str, object] = Field(default_factory=dict)
-    nations: dict[str, object] = Field(default_factory=dict)
-    npcs: dict[str, object] = Field(default_factory=dict)
+    layer_selections: dict[str, str]
+    default_player_faction: str = ""
 
 
 class AdvanceTimeRequest(BaseModel):

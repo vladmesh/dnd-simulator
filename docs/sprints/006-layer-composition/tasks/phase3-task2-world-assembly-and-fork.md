@@ -64,4 +64,8 @@ This replaces the old `create_world` / `content_saver` flow which wrote flat YAM
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Created `content_loader/assembly.py` with `assemble_world()` and `fork_layer()`. Replaced old `create_world`/`update_world` on GameService with `assemble_world`/`fork_layer`. Removed `POST /api/master/worlds` and `PUT /api/master/worlds/{id}` endpoints, added `POST /api/master/worlds/assemble` and `POST /api/master/worlds/{world_id}/fork/{layer_type}`. Deleted `content_saver.py`. Replaced `CreateWorldRequest` schema with `AssembleWorldRequest`. API tests use `_with_library()` helper that symlinks the real library into a tmp dir to avoid polluting the real content directory. 17 new tests.

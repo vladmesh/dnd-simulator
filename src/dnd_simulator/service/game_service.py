@@ -298,30 +298,36 @@ class GameService(
             ],
         }
 
-    def create_world(self, data: dict[str, Any]) -> dict[str, str]:
-        """Create a new world template from structured data.
+    def assemble_world(
+        self,
+        world_id: str,
+        name: str,
+        description: str,
+        layer_selections: dict[str, str],
+        default_player_faction: str,
+    ) -> dict[str, str]:
+        """Assemble a new world from library templates.
 
-        Saves YAML files to content/worlds/{id}/ and returns world metadata.
+        Creates a world directory with a manifest pointing to library templates.
+        Returns ``{"id": ..., "name": ...}``.
         """
-        from dnd_simulator.content_saver import save_world
+        from dnd_simulator.content_loader.assembly import assemble_world
 
-        save_world(self._content_dir, str(data["id"]), data)
-        return {"id": str(data["id"]), "name": str(data.get("name", data["id"]))}
+        assemble_world(
+            content_dir=self._content_dir,
+            world_id=world_id,
+            name=name,
+            description=description,
+            layer_selections=layer_selections,
+            default_player_faction=default_player_faction,
+        )
+        return {"id": world_id, "name": name}
 
-    def update_world(self, world_id: str, data: dict[str, Any]) -> dict[str, str]:
-        """Update an existing world template on disk (full replace).
+    def fork_layer(self, world_id: str, layer_type: LayerType) -> Path:
+        """Fork a library template into a world's custom directory."""
+        from dnd_simulator.content_loader.assembly import fork_layer
 
-        Overwrites all YAML files in content/worlds/{world_id}/.
-        """
-        from dnd_simulator.content_saver import save_world
-
-        world_path = self._content_dir / "worlds" / world_id
-        if not world_path.exists():
-            raise FileNotFoundError(f"World '{world_id}' not found")
-
-        data["id"] = world_id
-        save_world(self._content_dir, world_id, data, overwrite=True)
-        return {"id": world_id, "name": str(data.get("name", world_id))}
+        return fork_layer(self._content_dir, world_id, layer_type)
 
     # -- Layer accessors --
 

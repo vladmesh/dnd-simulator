@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 3, Task 1: Library Catalog Service + API — done. Catalog module, compatibility filtering, REST endpoint all working.
+Phase 3, Task 2: World Assembly + Fork API — done. Assembly, fork, old endpoint removal all working.
 
 ## Next Steps
 
