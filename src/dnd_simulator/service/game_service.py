@@ -351,6 +351,79 @@ class GameService(
 
         return fork_layer(self._content_dir, world_id, layer_type)
 
+    # -- Layer files (read/write YAML) --
+
+    def _resolve_layer_path(self, world_id: str, layer_type: LayerType) -> tuple[Path, str]:
+        """Resolve the directory for a layer and return (path, source)."""
+        from dnd_simulator.content_loader.manifest import LayerSource
+        from dnd_simulator.content_loader.utils import _read_yaml
+
+        world_path = self._content_dir / "worlds" / world_id
+        if not world_path.is_dir():
+            raise FileNotFoundError(f"World '{world_id}' not found")
+
+        manifest = _read_yaml(world_path / "manifest.yaml")
+        layer_config = manifest["layers"][layer_type.value]
+        source = LayerSource(layer_config["source"])
+
+        layer_paths = resolve_manifest(world_path, self._content_dir)
+        return layer_paths[layer_type.value], source.value
+
+    @staticmethod
+    def _validate_filename(filename: str) -> None:
+        """Validate filename is a safe, bare .yaml name."""
+        if (
+            "/" in filename
+            or "\\" in filename
+            or ".." in filename
+            or filename.startswith(".")
+            or not filename.endswith(".yaml")
+        ):
+            raise ValueError(f"Invalid filename: {filename!r}")
+
+    def get_layer_files(self, world_id: str, layer_type: LayerType) -> dict[str, str]:
+        """List all data YAML files in a layer directory with their contents.
+
+        Excludes metadata.yaml (library bookkeeping). Works for both library and custom layers.
+        """
+        layer_path, _source = self._resolve_layer_path(world_id, layer_type)
+
+        result: dict[str, str] = {}
+        for f in sorted(layer_path.iterdir()):
+            if f.is_file() and f.suffix == ".yaml" and f.name != "metadata.yaml":
+                result[f.name] = f.read_text(encoding="utf-8")
+        return result
+
+    def get_layer_file(self, world_id: str, layer_type: LayerType, filename: str) -> str:
+        """Read a single YAML file from a layer directory."""
+        self._validate_filename(filename)
+        layer_path, _source = self._resolve_layer_path(world_id, layer_type)
+
+        file_path = layer_path / filename
+        if not file_path.is_file():
+            raise FileNotFoundError(f"File '{filename}' not found in {layer_type.value} layer")
+        return file_path.read_text(encoding="utf-8")
+
+    def update_layer_file(self, world_id: str, layer_type: LayerType, filename: str, content: str) -> None:
+        """Write content to a YAML file in a custom layer.
+
+        Rejects writes to library layers, invalid filenames, and invalid YAML.
+        """
+        import yaml
+
+        self._validate_filename(filename)
+        layer_path, source = self._resolve_layer_path(world_id, layer_type)
+
+        if source == "library":
+            raise ValueError(f"Cannot write to library layer '{layer_type.value}' — fork it first")
+
+        try:
+            yaml.safe_load(content)
+        except yaml.YAMLError as exc:
+            raise ValueError(f"Invalid YAML: {exc}") from exc
+
+        (layer_path / filename).write_text(content, encoding="utf-8")
+
     # -- Layer accessors --
 
     def _get_entities_layer(self, session: GameSession) -> EntitiesLayer:

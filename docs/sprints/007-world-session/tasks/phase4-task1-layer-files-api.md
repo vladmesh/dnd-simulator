@@ -52,4 +52,12 @@ Schemas: `LayerFilesResponse(files: dict[str, str])`, `LayerFileResponse(filenam
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Service methods added directly to GameService (alongside existing world/manifest/fork methods — same abstraction level, no need for a separate mixin). Three methods: `get_layer_files`, `get_layer_file`, `update_layer_file` plus helpers `_resolve_layer_path` and `_validate_filename`.
+
+API routes added to routes_master.py: GET files list, GET single file, PUT single file. Invalid YAML returns 422, path traversal returns 400, library write returns 400.
+
+10 unit tests cover: read custom/library, write custom, reject library write, reject invalid YAML, reject path traversal (both read and write), file not found, world not found.

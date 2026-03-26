@@ -9,6 +9,8 @@ from dnd_simulator.adapters.api.schemas import (
     CreateSessionRequest,
     CreatureResponse,
     GiveItemRequest,
+    LayerFileResponse,
+    LayerFilesResponse,
     LayerInfo,
     MessageResponse,
     PatchCreatureRequest,
@@ -19,6 +21,7 @@ from dnd_simulator.adapters.api.schemas import (
     SetLangRequest,
     SpawnCreatureRequest,
     TemplateListItem,
+    UpdateLayerFileRequest,
     WorldListItem,
     WorldManifestResponse,
     WorldStateResponse,
@@ -112,6 +115,47 @@ def get_world_manifest(world_id: str, lang: str = "en") -> WorldManifestResponse
         name=str(data["name"]),
         layers=[LayerInfo(**ly) for ly in layers_raw],
     )
+
+
+@router.get("/worlds/{world_id}/layers/{layer_type}/files", response_model=LayerFilesResponse)
+def get_layer_files(world_id: str, layer_type: LayerType) -> LayerFilesResponse:
+    """List all data YAML files in a layer with their contents."""
+    service = get_service()
+    try:
+        files = service.get_layer_files(world_id, layer_type)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return LayerFilesResponse(files=files)
+
+
+@router.get("/worlds/{world_id}/layers/{layer_type}/files/{filename}", response_model=LayerFileResponse)
+def get_layer_file(world_id: str, layer_type: LayerType, filename: str) -> LayerFileResponse:
+    """Read a single YAML file from a layer."""
+    service = get_service()
+    try:
+        content = service.get_layer_file(world_id, layer_type, filename)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return LayerFileResponse(filename=filename, content=content)
+
+
+@router.put("/worlds/{world_id}/layers/{layer_type}/files/{filename}", response_model=MessageResponse)
+def update_layer_file(
+    world_id: str, layer_type: LayerType, filename: str, body: UpdateLayerFileRequest
+) -> MessageResponse:
+    """Write content to a YAML file in a custom layer."""
+    service = get_service()
+    try:
+        service.update_layer_file(world_id, layer_type, filename, body.content)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        detail = str(exc)
+        status = 422 if "YAML" in detail else 400
+        raise HTTPException(status_code=status, detail=detail) from exc
+    return MessageResponse(message=_("File '{}' updated").format(filename))
 
 
 @router.post("/worlds/{world_id}/fork/{layer_type}", response_model=MessageResponse)

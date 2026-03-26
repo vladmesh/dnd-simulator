@@ -203,5 +203,18 @@ class WorldManifestResponse(BaseModel):
     layers: list[LayerInfo]
 
 
+class LayerFilesResponse(BaseModel):
+    files: dict[str, str]
+
+
+class LayerFileResponse(BaseModel):
+    filename: str
+    content: str
+
+
+class UpdateLayerFileRequest(BaseModel):
+    content: str
+
+
 class MessageResponse(BaseModel):
     message: str
