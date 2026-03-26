@@ -89,4 +89,15 @@ After tests are red:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Followed the monster catalog pattern. Key decisions:
+
+- Items use `ref:` (not `base:`) to distinguish from monster template references — items are list elements in NPC YAML, not keyed entries.
+- `resolve_item_ref()` in `items.py` mirrors `resolve_monster_template()` pattern: load catalog entry, merge overrides, remove ref key.
+- `ItemContent.name` and `type` now have defaults (`""` and `WEAPON`) so ref-only items validate without requiring all fields.
+- Used `exclude_unset=True` in `model_dump()` calls in `creatures.py` to prevent default values from overriding catalog data during ref resolution.
+- Wired item catalog into `game_service.py` at `start_game` and `list_world_npcs`.
+- Updated `test_content_loader_dir.py` to load item catalog — intentional contract change since sword_vale now uses `ref:` items.

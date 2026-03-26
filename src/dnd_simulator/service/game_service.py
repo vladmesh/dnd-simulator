@@ -94,8 +94,16 @@ class GameService(
         settlements = load_settlements(layer_paths["settlements"], lang=lang)
         locations = load_locations(layer_paths["geography"], regions, lang=lang)
         location_graph = LocationGraph(locations)
-        npcs = load_npcs(layer_paths["entities"], lang=lang, known_locations=set(location_graph.all_ids()))
-        from dnd_simulator.content_loader.schemas import MonsterTemplateContent
+        from dnd_simulator.content_loader.schemas import ItemContent, MonsterTemplateContent
+
+        item_catalog_dir = self._content_dir / "catalogs" / "items"
+        item_catalog = load_catalog(item_catalog_dir, ItemContent) if item_catalog_dir.exists() else {}
+        npcs = load_npcs(
+            layer_paths["entities"],
+            lang=lang,
+            known_locations=set(location_graph.all_ids()),
+            item_catalog=item_catalog,
+        )
 
         catalog_dir = self._content_dir / "catalogs" / "monsters"
         monster_catalog = load_catalog(catalog_dir, MonsterTemplateContent) if catalog_dir.exists() else {}
@@ -231,7 +239,15 @@ class GameService(
         nations = load_nations(layer_paths["politics"])
         settlements = load_settlements(layer_paths["settlements"])
         locations = load_locations(layer_paths["geography"], regions)
-        npcs_list = load_npcs(layer_paths["entities"], known_locations={loc.id for loc in locations})
+        from dnd_simulator.content_loader.schemas import ItemContent
+
+        item_catalog_dir = self._content_dir / "catalogs" / "items"
+        item_catalog = load_catalog(item_catalog_dir, ItemContent) if item_catalog_dir.exists() else {}
+        npcs_list = load_npcs(
+            layer_paths["entities"],
+            known_locations={loc.id for loc in locations},
+            item_catalog=item_catalog,
+        )
         battle_maps = load_battle_maps(layer_paths["geography"])
 
         return {

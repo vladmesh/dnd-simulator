@@ -14,6 +14,7 @@ from dnd_simulator.content_loader.items import (
 )
 from dnd_simulator.content_loader.schemas import (
     AttackContent,
+    ItemContent,
     NpcContent,
     PlayerContent,
 )
@@ -104,7 +105,13 @@ def build_class_resource_pools(char_class: CharClass) -> list[ResourcePool]:
 # ---------------------------------------------------------------------------
 
 
-def _to_npc(npc_id: str, model: NpcContent, lang: str, known_locations: set[str] | None = None) -> Npc:
+def _to_npc(
+    npc_id: str,
+    model: NpcContent,
+    lang: str,
+    known_locations: set[str] | None = None,
+    item_catalog: dict[str, ItemContent] | None = None,
+) -> Npc:
     """Convert validated NpcContent to runtime Npc."""
     schedule = resolve_schedule(model.role, model.settlement_id, known_locations=known_locations)
     attacks = _to_attacks(model.attacks)
@@ -117,7 +124,10 @@ def _to_npc(npc_id: str, model: NpcContent, lang: str, known_locations: set[str]
 
     memory = NpcMemory.from_dict(model.memory.model_dump()) if model.memory else NpcMemory()
 
-    all_items = parse_items([item.model_dump() for item in model.items])
+    all_items = parse_items(
+        [item.model_dump(exclude_none=True, exclude_unset=True) for item in model.items],
+        item_catalog=item_catalog,
+    )
     equipped, inventory = extract_all_equipped(all_items)
 
     # class_features and resource_pools still use raw dict — they contain logic
@@ -157,22 +167,35 @@ def _to_npc(npc_id: str, model: NpcContent, lang: str, known_locations: set[str]
     )
 
 
-def parse_npc(npc_id: str, ndata: dict[str, Any], lang: str = "en", known_locations: set[str] | None = None) -> Npc:
+def parse_npc(
+    npc_id: str,
+    ndata: dict[str, Any],
+    lang: str = "en",
+    known_locations: set[str] | None = None,
+    item_catalog: dict[str, ItemContent] | None = None,
+) -> Npc:
     """Parse a single NPC from YAML data.
 
     YAML dict → NpcContent.model_validate → _to_npc → runtime Npc.
     """
     model = NpcContent.model_validate(ndata)
-    return _to_npc(npc_id, model, lang, known_locations)
+    return _to_npc(npc_id, model, lang, known_locations, item_catalog=item_catalog)
 
 
-def load_npcs(path: Path, lang: str = "en", known_locations: set[str] | None = None) -> list[Npc]:
+def load_npcs(
+    path: Path,
+    lang: str = "en",
+    known_locations: set[str] | None = None,
+    item_catalog: dict[str, ItemContent] | None = None,
+) -> list[Npc]:
     """Load NPCs from a world directory."""
     npcs_data = _load_section(path, "npcs")
 
     npcs: list[Npc] = []
     for npc_id, ndata in npcs_data.items():
-        npcs.append(parse_npc(str(npc_id), ndata, lang=lang, known_locations=known_locations))
+        npcs.append(
+            parse_npc(str(npc_id), ndata, lang=lang, known_locations=known_locations, item_catalog=item_catalog)
+        )
 
     return npcs
 
@@ -182,12 +205,19 @@ def load_npcs(path: Path, lang: str = "en", known_locations: set[str] | None = N
 # ---------------------------------------------------------------------------
 
 
-def _to_player(model: PlayerContent, lang: str) -> PlayerCharacter:
+def _to_player(
+    model: PlayerContent,
+    lang: str,
+    item_catalog: dict[str, ItemContent] | None = None,
+) -> PlayerCharacter:
     """Convert validated PlayerContent to runtime PlayerCharacter."""
     import uuid
 
     attacks = _to_attacks(model.attacks)
-    all_items = parse_items([item.model_dump() for item in model.items])
+    all_items = parse_items(
+        [item.model_dump(exclude_none=True, exclude_unset=True) for item in model.items],
+        item_catalog=item_catalog,
+    )
     equipped, inventory = extract_all_equipped(all_items)
 
     player_id = model.id or f"player_{uuid.uuid4().hex[:8]}"
@@ -223,14 +253,18 @@ def _to_player(model: PlayerContent, lang: str) -> PlayerCharacter:
     )
 
 
-def parse_player(pdata: dict[str, Any], lang: str = "en") -> PlayerCharacter:
+def parse_player(
+    pdata: dict[str, Any],
+    lang: str = "en",
+    item_catalog: dict[str, ItemContent] | None = None,
+) -> PlayerCharacter:
     """Parse player character from YAML data dict.
 
     YAML dict → PlayerContent.model_validate → _to_player → runtime PlayerCharacter.
     If ``pdata`` does not contain an ``id`` field a unique one is generated.
     """
     model = PlayerContent.model_validate(pdata)
-    return _to_player(model, lang)
+    return _to_player(model, lang, item_catalog=item_catalog)
 
 
 # ---------------------------------------------------------------------------

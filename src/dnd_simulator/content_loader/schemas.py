@@ -159,10 +159,13 @@ class ItemContent(BaseModel):
     """A single item from YAML — flat structure matching YAML layout.
 
     Items in YAML are flat dicts with type-specific fields mixed in.
+    When ``ref`` is present, the item is resolved from a catalog entry;
+    ``name`` and ``type`` become optional (provided by the catalog).
     """
 
-    name: str
-    type: ItemType
+    ref: str | None = None
+    name: str = ""
+    type: ItemType = ItemType.WEAPON
     equipped: bool = False
     price: int | None = None
     # Weapon fields

@@ -152,15 +152,49 @@ def _to_item(model: ItemContent, index: int) -> Item:
 # ---------------------------------------------------------------------------
 
 
-def parse_items(items_data: list[dict[str, Any]]) -> list[Item]:
+def resolve_item_ref(
+    idata: dict[str, Any],
+    catalog: dict[str, ItemContent],
+) -> dict[str, Any]:
+    """Resolve an item dict that may contain a ``ref`` key against *catalog*.
+
+    If ``ref`` is present, load the catalog entry and merge any override fields
+    (equipped, price, etc.) on top. The ``ref`` key itself is removed from the
+    result so downstream validation sees a plain item dict.
+
+    Raises RuntimeError if the ref ID is not found in the catalog.
+    """
+    ref_id = idata.get("ref")
+    if ref_id is None:
+        return idata
+
+    if ref_id not in catalog:
+        raise RuntimeError(f"Item references unknown catalog entry '{ref_id}'")
+
+    base_dict = catalog[ref_id].model_dump(exclude_none=True)
+    overrides = {k: v for k, v in idata.items() if k != "ref"}
+    base_dict.update(overrides)
+    return base_dict
+
+
+def parse_items(
+    items_data: list[dict[str, Any]],
+    *,
+    item_catalog: dict[str, ItemContent] | None = None,
+) -> list[Item]:
     """Parse item definitions from YAML.
 
-    Each item dict → ItemContent.model_validate → _to_item → runtime Item.
+    Each item dict → (optional ref resolution) → ItemContent.model_validate → _to_item → runtime Item.
     IDs are auto-generated as ``<snake_name>_<index>``.
+
+    If *item_catalog* is provided, items with a ``ref`` key are resolved
+    against it before validation.
     """
+    effective_catalog = item_catalog or {}
     items: list[Item] = []
     for i, idata in enumerate(items_data):
-        model = ItemContent.model_validate(idata)
+        resolved = resolve_item_ref(idata, effective_catalog)
+        model = ItemContent.model_validate(resolved)
         items.append(_to_item(model, i))
     return items
 

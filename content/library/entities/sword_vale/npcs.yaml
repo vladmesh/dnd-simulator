@@ -68,20 +68,9 @@ gretta:
       Хитрая, но честная торговка. Знает цену каждой
       монете и каждому товару. Приветлива с постоянными покупателями.
   items:
-    - name: Health Potion
-      type: potion
-      heal_dice: "2d4+2"
+    - ref: health_potion
       price: 50
-    - name: Dagger
-      type: weapon
-      weapon_id: dagger
-      category: simple
-      attack_name: dagger strike
-      damage:
-        - dice: "1d4"
-          type: piercing
-      ability: dex
-      is_finesse: true
+    - ref: dagger
       price: 200
 
 rodrik:

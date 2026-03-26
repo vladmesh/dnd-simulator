@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 2, Task 1: Catalog Loader + Monster Catalog — done. Generic `load_catalog()`, monster `base:` references, sword_vale migrated, game_service wired.
+Phase 2, Task 2: Item Catalog + NPC Equipment References — done. Item catalog with ref resolution, sword_vale migrated, game_service wired.
 
 ## Next Steps
 
-- Task 2: Item catalog + NPC equipment references — item catalog files, NPC items use `ref:` instead of inline, migrate sword_vale
 - Task 3: Assembly integration — integration tests for full pipeline
