@@ -24,7 +24,9 @@ Pydantic-модели для всех типов сущностей (Region, Loc
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Pydantic Content Model Definitions](tasks/phase1-task1-content-models.md)
+2. [Rewrite World Structure Parsers](tasks/phase1-task2-rewrite-world-parsers.md)
+3. [Rewrite Creature, Monster, and Item Parsers](tasks/phase1-task3-rewrite-creature-parsers.md)
 
 ## Phase 2: Catalogs — Monsters + Items
 
