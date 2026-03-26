@@ -1,21 +1,91 @@
-"""World structure loading — regions, locations, nations, settlements, factions, battle maps."""
+"""World structure loading — regions, locations, nations, settlements, factions, battle maps.
+
+Each load_* function: reads YAML → validates via Pydantic content model → converts to runtime dataclass.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
+from dnd_simulator.content_loader.schemas import (
+    LocationContent,
+    NationContent,
+    RegionContent,
+    SettlementContent,
+)
 from dnd_simulator.content_loader.utils import _load_section, _read_yaml, resolve_text
 from dnd_simulator.core.combat import BattleMap, Wall
 from dnd_simulator.core.location import Location, LocationEdge
-from dnd_simulator.layers.geography.models import (
-    Connection,
-    Direction,
-    Region,
-    TerrainType,
-)
-from dnd_simulator.layers.politics.models import FactionRelation, Leader, LeaderTrait, Nation
-from dnd_simulator.layers.settlements.models import Settlement, SettlementType
+from dnd_simulator.layers.geography.models import Connection, Region
+from dnd_simulator.layers.politics.models import FactionRelation, Leader, Nation
+from dnd_simulator.layers.settlements.models import Settlement
+
+# ---------------------------------------------------------------------------
+# Conversion: content model → runtime dataclass
+# ---------------------------------------------------------------------------
+
+
+def _to_region(region_id: str, model: RegionContent, lang: str) -> Region:
+    connections = [Connection(target_id=c.target, direction=c.direction) for c in model.connections]
+    return Region(
+        id=region_id,
+        name=resolve_text(model.name, lang),
+        latitude=model.latitude,
+        longitude=model.longitude,
+        elevation=model.elevation,
+        terrain=model.terrain,
+        water_proximity=model.water_proximity,
+        connections=connections,
+    )
+
+
+def _to_location(loc_id: str, model: LocationContent, lang: str) -> Location:
+    edges = tuple(LocationEdge(target_id=n.target, distance_m=n.distance) for n in model.neighbors)
+    return Location(
+        id=loc_id,
+        name=resolve_text(model.name, lang),
+        region_id=model.region,
+        settlement_id=model.settlement,
+        edges=edges,
+        description=resolve_text(model.description, lang) if model.description else "",
+    )
+
+
+def _to_nation(nation_id: str, model: NationContent, lang: str) -> Nation:
+    leader = None
+    if model.leader:
+        leader = Leader(
+            name=resolve_text(model.leader.name, lang),
+            age=model.leader.age,
+            trait=model.leader.trait,
+        )
+    return Nation(
+        id=nation_id,
+        name=resolve_text(model.name, lang),
+        regions=list(model.regions),
+        wealth=model.wealth,
+        military=model.military,
+        stability=model.stability,
+        leader=leader,
+    )
+
+
+def _to_settlement(settlement_id: str, model: SettlementContent, lang: str) -> Settlement:
+    return Settlement(
+        id=settlement_id,
+        name=resolve_text(model.name, lang),
+        region_id=model.region,
+        type=model.type,
+        population=model.population,
+        prosperity=model.prosperity,
+        defenses=model.defenses,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Public loaders
+# ---------------------------------------------------------------------------
 
 
 def load_world(path: Path, lang: str = "en") -> list[Region]:
@@ -24,26 +94,8 @@ def load_world(path: Path, lang: str = "en") -> list[Region]:
 
     regions: list[Region] = []
     for region_id, rdata in regions_data.items():
-        connections = [
-            Connection(
-                target_id=str(c["target"]),
-                direction=Direction(c["direction"]),
-            )
-            for c in rdata.get("connections", [])
-        ]
-
-        regions.append(
-            Region(
-                id=str(region_id),
-                name=resolve_text(rdata["name"], lang),
-                latitude=float(rdata["latitude"]),
-                longitude=float(rdata["longitude"]),
-                elevation=float(rdata["elevation"]),
-                terrain=TerrainType(rdata["terrain"]),
-                water_proximity=float(rdata.get("water_proximity", 0.0)),
-                connections=connections,
-            )
-        )
+        model = RegionContent.model_validate(rdata)
+        regions.append(_to_region(str(region_id), model, lang))
 
     return regions
 
@@ -66,23 +118,8 @@ def _parse_locations(data: dict[str, Any], lang: str = "en") -> list[Location]:
     """Parse locations from YAML data."""
     locations: list[Location] = []
     for loc_id, ldata in data.items():
-        edges = tuple(
-            LocationEdge(
-                target_id=str(n["target"]),
-                distance_m=int(n["distance"]),
-            )
-            for n in ldata.get("neighbors", [])
-        )
-        locations.append(
-            Location(
-                id=str(loc_id),
-                name=resolve_text(ldata["name"], lang),
-                region_id=str(ldata["region"]),
-                settlement_id=str(ldata.get("settlement", "")),
-                edges=edges,
-                description=resolve_text(ldata.get("description", ""), lang),
-            )
-        )
+        model = LocationContent.model_validate(ldata)
+        locations.append(_to_location(str(loc_id), model, lang))
     return locations
 
 
@@ -92,26 +129,8 @@ def load_nations(path: Path, lang: str = "en") -> list[Nation]:
 
     nations: list[Nation] = []
     for nation_id, ndata in nations_data.items():
-        leader = None
-        leader_data = ndata.get("leader")
-        if leader_data:
-            leader = Leader(
-                name=resolve_text(leader_data["name"], lang),
-                age=int(leader_data["age"]),
-                trait=LeaderTrait(leader_data["trait"]),
-            )
-
-        nations.append(
-            Nation(
-                id=str(nation_id),
-                name=resolve_text(ndata["name"], lang),
-                regions=[str(r) for r in ndata.get("regions", [])],
-                wealth=float(ndata.get("wealth", 50.0)),
-                military=float(ndata.get("military", 50.0)),
-                stability=float(ndata.get("stability", 70.0)),
-                leader=leader,
-            )
-        )
+        model = NationContent.model_validate(ndata)
+        nations.append(_to_nation(str(nation_id), model, lang))
 
     return nations
 
@@ -125,17 +144,8 @@ def load_settlements(path: Path, lang: str = "en") -> list[Settlement]:
 
     settlements: list[Settlement] = []
     for settlement_id, sdata in settlements_data.items():
-        settlements.append(
-            Settlement(
-                id=str(settlement_id),
-                name=resolve_text(sdata["name"], lang),
-                region_id=str(sdata["region"]),
-                type=SettlementType(sdata["type"]),
-                population=int(sdata.get("population", 100)),
-                prosperity=float(sdata.get("prosperity", 50.0)),
-                defenses=float(sdata.get("defenses", 30.0)),
-            )
-        )
+        model = SettlementContent.model_validate(sdata)
+        settlements.append(_to_settlement(str(settlement_id), model, lang))
 
     return settlements
 

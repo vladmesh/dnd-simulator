@@ -59,4 +59,15 @@ Unit tests in `tests/unit/test_content_parsers_world.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Rewrote `load_world`, `_parse_locations`, `load_nations`, `load_settlements` to use Pydantic
+`model_validate()` on each YAML entry, then convert to runtime dataclasses via thin `_to_*` functions.
+`load_battle_maps` and `load_factions` left as-is — battle maps are nested in regions (already validated
+by RegionContent), and factions have a simple key-based structure that doesn't benefit from a model.
+
+One existing test updated: `test_manifest_resolver.py::test_missing_region_field_raises` — now expects
+`ValidationError` instead of `KeyError`. This is intentional: the task goal is to replace raw dict
+extraction with Pydantic validation, which produces `ValidationError` for missing required fields.

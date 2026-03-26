@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 1, Task 1: Pydantic Content Model Definitions — done. ~20 models in schemas.py, 55 new tests.
+Phase 1, Task 2: Rewrite World Structure Parsers — done. 24 new tests, 1 old test updated.
 
 ## Next Steps
 

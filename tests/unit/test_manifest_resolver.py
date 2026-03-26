@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from pydantic import ValidationError
 
 from dnd_simulator.content_loader.manifest import load_world_meta_from_manifest, resolve_manifest
 from dnd_simulator.content_loader.world import load_settlements
@@ -143,5 +144,5 @@ class TestStandaloneSettlementsLoading:
         with open(tmp_path / "settlements.yaml", "w") as f:
             yaml.dump(bad_data, f)
 
-        with pytest.raises(KeyError):
+        with pytest.raises(ValidationError):
             load_settlements(tmp_path)
