@@ -363,7 +363,7 @@ def spawn_creature(session_id: str, body: SpawnCreatureRequest) -> CreatureRespo
     try:
         service.spawn_creature(session_id, body.model_dump(exclude_none=True))
         info = service.get_creature_info(session_id, body.id)
-    except (ValueError, KeyError) as e:
+    except (ValueError, KeyError, RuntimeError) as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return CreatureResponse.model_validate(info)
 

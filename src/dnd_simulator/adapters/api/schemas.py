@@ -40,9 +40,9 @@ class SpawnCreatureRequest(BaseModel):
     attacks: list[dict[str, object]] | None = None
     ability_scores: dict[str, int] | None = None
     # NPC-specific (ignored for monsters)
-    role: str = ""
-    personality: str = ""
-    settlement_id: str = ""
+    role: str | None = None
+    personality: str | None = None
+    settlement_id: str | None = None
     ai: str = "rule_based"
 
 

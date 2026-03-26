@@ -1,13 +1,11 @@
 # Sprint 008 Status
 
 **Sprint:** 008-content-schema
-**Phase:** 1 — Pydantic Content Models + Parser Rewrite
-**Updated:** 2026-03-26
+**Phase:** 1 — Pydantic Content Models + Parser Rewrite (COMPLETE)
+**Updated:** 2026-03-27
 
 ## Current
 
-Phase 1, Task 3: Rewrite Creature, Monster, and Item Parsers — done. 22 new tests, all 1341 passing.
+Phase 1 complete. Pydantic content models defined for all entity types, all parsers rewritten to use `model_validate`, round-trip tests added. 1341 tests passing, integration tests green (63), E2E regression green.
 
-## Next Steps
-
-- Phase 1 complete — all 3 tasks done. Ready for `/close_phase`.
+Ready for Phase 2 task generation.

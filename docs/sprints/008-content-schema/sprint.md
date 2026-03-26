@@ -16,7 +16,7 @@ Pydantic-модели контента решают обе проблемы: д�
 
 ---
 
-## Phase 1: Pydantic Content Models + Parser Rewrite
+## Phase 1: Pydantic Content Models + Parser Rewrite ✓
 
 Pydantic-модели для всех типов сущностей (Region, Location, Nation, Settlement, NPC, MonsterTemplate, Squad, Item, Attack, AbilityScores). Переписываем парсеры в content_loader — `model_validate` вместо ручного `ndata.get(...)`. Обратная сериализация (model → YAML-compatible dict). Все существующие тесты проходят — внешнее поведение не меняется.
 
