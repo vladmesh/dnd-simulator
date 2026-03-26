@@ -57,7 +57,7 @@ Phase 1 закрыла основные дыры, но интеграционн�
 2. [Reassign Brains After Load](tasks/phase1.5-task2-brain-reassignment-after-load.md)
 3. [Integration Tests — Spawned Creature & Brain Switch Round-Trip](tasks/phase1.5-task3-integration-tests.md)
 
-## Phase 2: Master Controls + Give Item UI
+## Phase 2: Master Controls + Give Item UI ✓
 
 Give Item кнопка в creature panel (бэкенд endpoint существует, нет UI). API client method + React компонент. Ревью остальных master controls на предмет gaps между бэкендом и фронтом. E2E: master spawns creature, gives item, verifies equipment.
 
