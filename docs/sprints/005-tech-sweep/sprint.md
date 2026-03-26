@@ -38,11 +38,13 @@ EntitiesLayer (1215 LOC) → выделяем awareness builder, activation mana
 
 ## Phase 3: Growing Files Split
 
-action_handlers.py (605 LOC) → combat, movement, trade handlers. content_loader.py (815 LOC) → по домену. Длинные методы (query 125 LOC, resolve_attack 186 LOC) — разбить.
+action_handlers.py (607 LOC) → combat, movement, trade handlers. content_loader.py (757 LOC) → по домену. Длинные методы (query 127 LOC, resolve_attack 186 LOC) — разбить.
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Split action_handlers.py into domain modules](tasks/phase3-task1-split-action-handlers.md)
+2. [Split content_loader.py into domain modules](tasks/phase3-task2-split-content-loader.md)
+3. [Decompose resolve_attack and query dispatcher](tasks/phase3-task3-decompose-long-methods.md)
 
 ## Phase 4: Architecture Violations + Type Safety
 
