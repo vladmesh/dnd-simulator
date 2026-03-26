@@ -209,6 +209,19 @@ export interface MessageResponse {
   message: string
 }
 
+export interface LayerFilesResponse {
+  files: Record<string, string>
+}
+
+export interface LayerFileResponse {
+  filename: string
+  content: string
+}
+
+export interface UpdateLayerFileRequest {
+  content: string
+}
+
 export interface SessionListItem {
   session_id: string
   player_name: string

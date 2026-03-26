@@ -59,4 +59,8 @@ Behavioral contract to verify manually:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented as planned. LayerEditor is a standalone component in `master/LayerEditor.tsx` with file tabs, monospace textarea, save with error display. WorldInspector now shows "Edit" on custom layers and "View" (read-only) on library layers — clicking toggles an inline editor below the layer row. API client methods added for all 3 layer file endpoints. i18n keys added for both en/ru.

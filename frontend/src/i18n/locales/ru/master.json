@@ -125,5 +125,10 @@
   "layer_politics": "Политика",
   "layer_settlements": "Поселения",
   "layer_ecology": "Экология",
-  "layer_entities": "Существа"
+  "layer_entities": "Существа",
+
+  "editor_edit": "Редактировать",
+  "editor_view": "Просмотр",
+  "editor_save": "Сохранить",
+  "editor_load_error": "Не удалось загрузить файлы слоя"
 }

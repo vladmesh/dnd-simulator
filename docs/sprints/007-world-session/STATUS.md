@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 4, Task 1: Layer Files Read/Write API — done. 3 endpoints, 10 tests.
+Phase 4, Task 2: Layer Editor UI — done. LayerEditor component + Edit/View buttons in WorldInspector.
 
 ## Next Steps
 
-- Task 2: Layer Editor UI — Edit button + YAML textarea in WorldInspector
 - Task 3: E2E — Fork → edit YAML → create session → verify changes in game

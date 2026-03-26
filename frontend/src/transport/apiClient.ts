@@ -6,6 +6,8 @@ import type {
   CreateWorldRequest,
   CreatureResponse,
   GiveItemRequest,
+  LayerFileResponse,
+  LayerFilesResponse,
   MessageResponse,
   PatchCreatureRequest,
   PatchNationRequest,
@@ -17,6 +19,7 @@ import type {
   SetLangRequest,
   SpawnCreatureRequest,
   TemplateListItem,
+  UpdateLayerFileRequest,
   WorldListItem,
   WorldManifestResponse,
   WorldStateResponse,
@@ -102,6 +105,20 @@ const master = {
 
   forkLayer: (worldId: string, layerType: string) =>
     post<MessageResponse>(`/api/master/worlds/${worldId}/fork/${layerType}`),
+
+  getLayerFiles: (worldId: string, layerType: string) =>
+    get<LayerFilesResponse>(`/api/master/worlds/${worldId}/layers/${layerType}/files`),
+
+  getLayerFile: (worldId: string, layerType: string, filename: string) =>
+    get<LayerFileResponse>(
+      `/api/master/worlds/${worldId}/layers/${layerType}/files/${encodeURIComponent(filename)}`,
+    ),
+
+  updateLayerFile: (worldId: string, layerType: string, filename: string, data: UpdateLayerFileRequest) =>
+    put<MessageResponse>(
+      `/api/master/worlds/${worldId}/layers/${layerType}/files/${encodeURIComponent(filename)}`,
+      data,
+    ),
 
   createWorld: (data: CreateWorldRequest) =>
     post<WorldListItem>("/api/master/worlds", data),

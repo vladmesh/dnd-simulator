@@ -125,5 +125,10 @@
   "layer_politics": "Politics",
   "layer_settlements": "Settlements",
   "layer_ecology": "Ecology",
-  "layer_entities": "Entities"
+  "layer_entities": "Entities",
+
+  "editor_edit": "Edit",
+  "editor_view": "View",
+  "editor_save": "Save",
+  "editor_load_error": "Failed to load layer files"
 }
