@@ -39,7 +39,7 @@
 1. [Manifest Resolver + Standalone Settlements Loader](tasks/phase2-task1-manifest-resolver.md)
 2. [Wire Manifest into GameService + Remove Old Format](tasks/phase2-task2-wire-manifest-into-gameservice.md)
 
-## Phase 3: World Assembly Backend
+## Phase 3: World Assembly Backend ✓
 
 API для работы с библиотекой: список шаблонов по типу слоя, фильтрация по совместимости (given geography X → compatible politics). API для создания мира: выбрал шаблоны → создался манифест + пустая директория для custom. Fork шаблона: копия из библиотеки в custom директорию мира.
 

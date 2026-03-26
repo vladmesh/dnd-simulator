@@ -1,17 +1,18 @@
 # Sprint 006 Status
 
 **Sprint:** 006-layer-composition
-**Phase:** 3 — World Assembly Backend
+**Phase:** 3 — World Assembly Backend (COMPLETE)
 **Updated:** 2026-03-26
 
 ## Current
 
-Phase 3, Task 2: World Assembly + Fork API — done. Assembly, fork, old endpoint removal all working.
+Phase 3 complete. Library catalog API, world assembly API, and fork API all working. 15 new integration tests covering all new endpoints (catalog listing, compatibility filtering, assemble, fork, error cases). E2E verified: assembled world loads in both API and frontend UI.
+
+Ready for Phase 4 task generation.
 
 ## Next Steps
 
-- Task 1: Library Catalog Service + API — scan library templates, compatibility filtering, REST endpoints
-- Task 2: World Assembly + Fork API — assemble world from templates, fork template to custom, remove old content_saver
+- Phase 4: World Assembly Frontend — step-by-step UI for composing worlds from library templates
 
 ## Decisions
 

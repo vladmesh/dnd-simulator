@@ -1,0 +1,4 @@
+# Worlds created by integration tests (assemble/fork API tests)
+# These are created by Docker containers and may have root ownership
+assembled_test/
+fork_test_world/

@@ -1,0 +1,4 @@
+test_square:
+  name: Test Square
+  region: test_region
+  description: A simple square for testing.

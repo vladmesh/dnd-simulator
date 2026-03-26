@@ -1,0 +1,6 @@
+name: "Test Entities"
+layer_type: entities
+version: "1.0"
+description: "Minimal entities for integration tests"
+tags: [test]
+requires_geography: [test_geo]

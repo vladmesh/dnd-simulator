@@ -1,0 +1,5 @@
+name: "Test Geography"
+layer_type: geography
+version: "1.0"
+description: "Minimal geography for integration tests"
+tags: [test]

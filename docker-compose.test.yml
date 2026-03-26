@@ -5,7 +5,7 @@ services:
       DND_DICE_SEED: "42"
       DND_CONTENT_DIR: /app/test-content
     volumes:
-      - ./tests/integration/content:/app/test-content:ro
+      - ./tests/integration/content:/app/test-content
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 2s

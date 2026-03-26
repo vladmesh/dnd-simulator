@@ -1,0 +1,6 @@
+name: "Test Settlements"
+layer_type: settlements
+version: "1.0"
+description: "Minimal settlements for integration tests"
+tags: [test]
+requires_geography: [test_geo]

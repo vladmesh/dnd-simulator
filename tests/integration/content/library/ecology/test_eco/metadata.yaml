@@ -1,0 +1,6 @@
+name: "Test Ecology"
+layer_type: ecology
+version: "1.0"
+description: "Minimal ecology for integration tests"
+tags: [test]
+requires_geography: [test_geo]

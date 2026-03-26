@@ -1,0 +1,6 @@
+name: "Test Politics"
+layer_type: politics
+version: "1.0"
+description: "Minimal politics for integration tests"
+tags: [test]
+requires_geography: [test_geo]

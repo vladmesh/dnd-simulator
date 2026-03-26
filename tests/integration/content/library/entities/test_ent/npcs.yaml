@@ -1,0 +1,16 @@
+test_npc:
+  name: Test Guard
+  start_location: test_square
+  role: guard
+  race: human
+  class: fighter
+  hp: 20
+  ac: 14
+  ability_scores:
+    str: 14
+    dex: 12
+    con: 14
+    int: 10
+    wis: 12
+    cha: 10
+  personality: "A test NPC guard."
