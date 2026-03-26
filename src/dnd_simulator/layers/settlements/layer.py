@@ -78,7 +78,8 @@ class SettlementsLayer(Layer):
             weather_answer = query_fn(
                 "geography", Query(question=QueryType.WEATHER, params={"region_id": settlement.region_id})
             )
-            weather = str(weather_answer.value.get("condition", "clear")) if weather_answer.value else "clear"
+            weather_val = weather_answer.value
+            weather = str(weather_val.get("condition", "clear")) if isinstance(weather_val, dict) else "clear"
 
             harvest_mod = calculate_harvest_modifier(weather, settlement.type.value)
             settlement.prosperity = clamp(settlement.prosperity + harvest_mod)
@@ -87,15 +88,17 @@ class SettlementsLayer(Layer):
             owner_answer = query_fn(
                 "politics", Query(question=QueryType.REGION_OWNER, params={"region_id": settlement.region_id})
             )
-            if owner_answer.value:
+            owner_val = owner_answer.value
+            if owner_val:
                 nation_answer = query_fn(
-                    "politics", Query(question=QueryType.NATION_INFO, params={"nation_id": owner_answer.value})
+                    "politics", Query(question=QueryType.NATION_INFO, params={"nation_id": str(owner_val)})
                 )
-                if nation_answer.value:
+                nation_val = nation_answer.value
+                if isinstance(nation_val, dict):
                     drift = prosperity_drift(
                         settlement.prosperity,
-                        float(nation_answer.value.get("wealth", 50)),
-                        float(nation_answer.value.get("stability", 50)),
+                        float(nation_val.get("wealth", 50)),
+                        float(nation_val.get("stability", 50)),
                     )
                     settlement.prosperity = clamp(settlement.prosperity + drift)
 

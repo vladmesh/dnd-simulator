@@ -35,4 +35,8 @@ Scope: ~33 producer sites (layers returning `Answer`) need no changes (everythin
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Changed `Answer.value: Any` to `Answer.value: object` in `core/models.py`. Fixed 14 mypy errors across 5 files: `commands_creatures.py` (assert isinstance for list/dict), `routes_master.py` (assert isinstance for all query results), `settlements/layer.py` (isinstance checks for weather dict and nation dict), `awareness_builder.py` (isinstance for settlements list), `activation_manager.py` (assert isinstance for squad list). Zero new `type: ignore` comments. `session.py` consumer sites already had isinstance checks and needed no changes.

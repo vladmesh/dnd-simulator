@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 4, Task 2: Round.py private access — done. Two public methods added to EntitiesLayer, zero private dict access in round.py.
+Phase 4, Task 3: Answer.value Any → object — done. 14 consumer sites fixed with isinstance/assert.
 
 ## Next Steps
 
-- Task 2: Round.py private access — add public methods to EntitiesLayer for merchant/wake queries
-- Task 3: Answer.value Any → object — force explicit type narrowing at consumer sites
+All phase 4 tasks complete. Ready for /close_phase.

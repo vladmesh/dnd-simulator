@@ -93,8 +93,8 @@ class AwarenessBuilder:
                 settlements_answer = query_fn(
                     "settlements", Query(question=QueryType.REGION_SETTLEMENTS, params={"region_id": region_id})
                 )
-                if settlements_answer.value:
-                    settlements = list(settlements_answer.value)
+                if isinstance(settlements_answer.value, list):
+                    settlements = settlements_answer.value
             except Exception:
                 logger.warning("settlements_query_failed", region_id=region_id, exc_info=True)
 

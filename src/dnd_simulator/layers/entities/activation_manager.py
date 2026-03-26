@@ -264,6 +264,7 @@ class ActivationManager:
                 answer = query_fn("ecology", Query(QueryType.SQUADS_AT_LOCATION, params={"location_id": loc}))
             except LayerError:
                 return  # No ecology layer in this world — skip materialization
+            assert isinstance(answer.value, list)
             for squad_info in answer.value:
                 squads_at_active[str(squad_info["id"])] = squad_info
 

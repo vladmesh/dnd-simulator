@@ -224,7 +224,7 @@ class Query:
 class Answer:
     """Response from a layer to a query."""
 
-    value: Any
+    value: object
     description: str = ""
 
 

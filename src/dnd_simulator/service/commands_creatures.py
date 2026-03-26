@@ -32,8 +32,8 @@ class CreatureCommands(GameServiceProtocol):
         if active is not None:
             params["active"] = active
         answer = session.world.query_layer("entities", Query(question=QueryType.ALL_CREATURES, params=params))
-        result: list[dict[str, object]] = answer.value
-        return result
+        assert isinstance(answer.value, list)
+        return answer.value
 
     def get_creature_info(self, session_id: str, entity_id: str) -> dict[str, object]:
         """Get single entity detail."""
@@ -41,8 +41,8 @@ class CreatureCommands(GameServiceProtocol):
         answer = session.world.query_layer(
             "entities", Query(question=QueryType.ENTITY_INFO, params={"entity_id": entity_id})
         )
-        result: dict[str, object] = answer.value
-        return result
+        assert isinstance(answer.value, dict)
+        return answer.value
 
     # -- Spawn --
 
