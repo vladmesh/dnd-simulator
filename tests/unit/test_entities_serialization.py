@@ -107,6 +107,40 @@ class TestNpcAiTypeRoundTrip:
         assert isinstance(restored, Npc)
         assert restored.ai_type == "llm"
 
+    def test_npc_current_hp_survives_save_load(self) -> None:
+        """NPC with damaged HP preserves it after save/load."""
+        npc = Npc(
+            id="guard",
+            name="Guard",
+            location_id="gate",
+            role=NpcRole.GUARD,
+            personality="Stern.",
+            settlement_id="town",
+            max_hp=20,
+            current_hp=20,
+        )
+        npc.current_hp = 7  # damaged
+
+        layer = EntitiesLayer(entities=[npc])
+        state = layer.get_state()
+
+        fresh_npc = Npc(
+            id="guard",
+            name="Guard",
+            location_id="gate",
+            role=NpcRole.GUARD,
+            personality="Stern.",
+            settlement_id="town",
+            max_hp=20,
+            current_hp=20,
+        )
+        fresh_layer = EntitiesLayer(entities=[fresh_npc])
+        fresh_layer.load_state(state)
+
+        restored = fresh_layer.get_entity("guard")
+        assert isinstance(restored, Npc)
+        assert restored.current_hp == 7
+
 
 def _make_creature(id: str, location_id: str = "arena") -> Creature:
     return Creature(id=id, name=id.title(), location_id=location_id)

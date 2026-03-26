@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 1, Task 2: Serialize Combat State — done.
+Phase 1 complete. Phase 1.5 (save/load gaps) ready for task planning.
 
 ## Next Steps
 
-- Task 3: Full world round-trip integration tests (end-to-end validation through World.save/load)
+- Phase 1.5: Save/Load Gaps — needs `/plan_phase` to generate tasks

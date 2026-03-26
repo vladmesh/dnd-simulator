@@ -26,6 +26,35 @@ Sprint 006 заложил фундамент world builder: библиотека
 2. [Serialize Combat State (Mid-Combat Save/Load)](tasks/phase1-task2-combat-state-serialization.md)
 3. [Full Layer Round-Trip Integration Tests](tasks/phase1-task3-full-roundtrip-tests.md)
 
+## Phase 1.5: Save/Load Gaps (найдено при интеграционном тестировании)
+
+Phase 1 закрыла основные дыры, но интеграционные тесты на живом стеке выявили проблемы, которые не ловятся unit-тестами. Цель: RED-GREEN — написать тесты которые сейчас падают, починить код, сделать зелёными.
+
+### Найденные проблемы
+
+**1. Spawned creatures теряются при load**
+- `load_state()` обновляет только entity, которые уже есть в `self._entities` (загруженные из YAML контентом).
+- Если creature был заспавнен через `POST /creatures` (master API), он сохраняется в save-файл, но при load его нет в свежем слое — данные молча игнорируются.
+- Тест: spawn goblin → save → delete goblin → load → goblin должен вернуться. Сейчас: 404.
+- Причина: `load_state()` не умеет создавать entity из saved data (кроме PlayerCharacter, для которого есть `parse_player`).
+
+**2. Brain switch не тестируется в интеграции (нет LLM в test env)**
+- `PUT /creatures/{id}/brain` с `type=llm` вызывает `BrainFactory.create("llm", strict=True)`, что требует `OPENROUTER_API_KEY`.
+- В docker compose для тестов LLM отсутствует → 400 при попытке переключить.
+- Нужно: либо `strict=False` при brain switch (fallback на RuleBrain если LLM недоступен), либо mock/stub LLM brain для тестов, либо тестировать только rule_based→rule_based round-trip (бессмысленно).
+- Решение: `BrainFactory.create` должен принимать `strict=False` по умолчанию для set_brain, а `strict=True` только при первоначальном создании из YAML. Тогда в save хранится `ai_type="llm"`, при load создаётся RuleBrain с warning если LLM недоступен, а при следующем brain switch уже с LLM — будет работать.
+
+**3. Spawned creatures не получают brain при load**
+- Даже если починить проблему #1, у восстановленного creature не будет brain (brain не сериализуется — это transient field).
+- Нужно: при восстановлении creature из saved data, вызывать `BrainFactory.create(ai_type)` для назначения brain.
+- Проблема: `EntitiesLayer` не знает про `BrainFactory` (это зависимость service уровня). Нужно либо инжектить factory в слой, либо восстанавливать brain в service при load.
+
+**Верифицируем:** все xfail-тесты в `test_save_roundtrip.py` стали зелёными, новый тест на spawned creature round-trip зелёный.
+
+**Tasks:**
+
+_(генерируются отдельно перед началом фазы)_
+
 ## Phase 2: Master Controls + Give Item UI
 
 Give Item кнопка в creature panel (бэкенд endpoint существует, нет UI). API client method + React компонент. Ревью остальных master controls на предмет gaps между бэкендом и фронтом. E2E: master spawns creature, gives item, verifies equipment.

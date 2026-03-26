@@ -33,4 +33,18 @@ These are pure test files — no production code changes. Build helpers to const
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Задача-ревизия нашла реальные баги:
+
+1. **NPC current_hp не сериализовался** — `get_state()` и `load_state()` пропускали `current_hp` для NPC. Починено: добавлено в обе стороны.
+2. **Resource pools не восстанавливались для entity без пулов** — `load_state()` только патчил `current_uses` на существующих пулах. Если entity пришёл с пустыми пулами (напр. PlayerCharacter), сохранённые пулы терялись. Починено: недостающие пулы создаются из saved data.
+
+Найдены, но НЕ починены (вынесены в Phase 1.5):
+3. **Spawned creatures теряются при load** — `load_state()` только обновляет entity, которые уже есть в `self._entities`. Динамически заспавненные через master API не переживают save/load.
+4. **Brain switch → save/load** — `PUT /creatures/{id}/brain` с `type=llm` требует OPENROUTER_API_KEY через `strict=True` в BrainFactory. В тестовом окружении (docker compose без LLM) невозможно переключить на `llm` и проверить round-trip.
+
+Unit-тесты: 1 новый (NPC HP round-trip), все зелёные.
+Интеграционные тесты: 1 зелёный (state round-trip), 1 помечен xfail (brain switch — требует LLM config).

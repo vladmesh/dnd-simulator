@@ -398,6 +398,7 @@ class EntitiesLayer(Layer):
             elif isinstance(e, Npc):
                 data.update(
                     {
+                        "current_hp": e.current_hp,
                         "role": e.role.value,
                         "personality": e.personality,
                         "settlement_id": e.settlement_id,
@@ -465,14 +466,28 @@ class EntitiesLayer(Layer):
                         ]
                     pools_raw = edata.get("resource_pools")
                     if isinstance(pools_raw, list):
+                        from dnd_simulator.core.resource import ResourcePool, RestType
+
                         saved_pools = {str(d["id"]): d for d in pools_raw}
+                        existing_ids = {pool.id for pool in entity.resource_pools}
                         for pool in entity.resource_pools:
                             if pool.id in saved_pools:
                                 pool.current_uses = int(saved_pools[pool.id]["current_uses"])
+                        for pid, pdata in saved_pools.items():
+                            if pid not in existing_ids:
+                                entity.resource_pools.append(
+                                    ResourcePool(
+                                        id=str(pdata["id"]),
+                                        max_uses=int(pdata["max_uses"]),
+                                        current_uses=int(pdata["current_uses"]),
+                                        reset_on=RestType(str(pdata["reset_on"])),
+                                    )
+                                )
                 if isinstance(entity, PlayerCharacter):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
                     entity.gold = int(edata.get("gold", entity.gold))
                 elif isinstance(entity, Npc):
+                    entity.current_hp = int(edata.get("current_hp", entity.current_hp))
                     ai_type = edata.get("ai_type")
                     if isinstance(ai_type, str):
                         entity.ai_type = ai_type
