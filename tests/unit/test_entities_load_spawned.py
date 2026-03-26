@@ -71,6 +71,7 @@ class TestSpawnedNpcRoundTrip:
         assert restored.personality == "Aggressive and cunning."
         assert restored.settlement_id == "goblin_camp"
         assert restored.ai_type == "rule_based"
+        assert restored.max_hp == 30
         assert restored.current_hp == 22
         assert restored.memory.tags == ["hostile", "leader"]
         assert restored.memory.recent == "Fought adventurers."

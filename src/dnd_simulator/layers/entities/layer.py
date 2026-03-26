@@ -425,6 +425,12 @@ class EntitiesLayer(Layer):
                         "location_override": e.location_override,
                         "memory": e.memory.to_dict(),
                         "ai_type": e.ai_type,
+                        # Aliases for parse_npc compatibility (used to reconstruct spawned NPCs)
+                        "hp": e.max_hp,
+                        "ai": e.ai_type,
+                        "start_location": e.location_id,
+                        "race": e.race.value,
+                        "class": e.char_class.value,
                     }
                 )
             elif isinstance(e, Creature):

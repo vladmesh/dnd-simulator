@@ -26,7 +26,7 @@ Sprint 006 заложил фундамент world builder: библиотека
 2. [Serialize Combat State (Mid-Combat Save/Load)](tasks/phase1-task2-combat-state-serialization.md)
 3. [Full Layer Round-Trip Integration Tests](tasks/phase1-task3-full-roundtrip-tests.md)
 
-## Phase 1.5: Save/Load Gaps (найдено при интеграционном тестировании)
+## Phase 1.5: Save/Load Gaps (найдено при интеграционном тестировании) ✓
 
 Phase 1 закрыла основные дыры, но интеграционные тесты на живом стеке выявили проблемы, которые не ловятся unit-тестами. Цель: RED-GREEN — написать тесты которые сейчас падают, починить код, сделать зелёными.
 
