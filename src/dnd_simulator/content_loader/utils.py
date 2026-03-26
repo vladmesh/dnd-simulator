@@ -28,6 +28,12 @@ def _read_yaml(path: Path) -> dict[str, Any]:
         return yaml.safe_load(f) or {}
 
 
+def _write_yaml(path: Path, data: dict[str, object]) -> None:
+    """Write a dict to a YAML file with unicode support and preserved key order."""
+    with path.open("w") as f:
+        yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
+
+
 def _load_section(path: Path, section: str) -> dict[str, Any]:
     """Load a section YAML file from a world directory."""
     return _read_yaml(path / f"{section}.yaml")

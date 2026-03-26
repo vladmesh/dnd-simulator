@@ -79,4 +79,13 @@ Central piece: `EntityRegistry` — maps an `EntityType` enum to `(layer_type, y
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implementation was straightforward. Key decisions:
+
+- Used `model_dump(mode="json", by_alias=True)` for serialization — `mode="python"` produces enum objects that `yaml.safe_dump` can't handle, while `mode="json"` gives plain strings.
+- `RegistryEntry` has a `subsection` field for the monsters.yaml `templates` key — keeps the CRUD generic without special-casing.
+- `_write_yaml` added to utils.py as specified. Uses `sort_keys=False` to preserve YAML key order.
+- No changes to existing code beyond adding `_write_yaml` to utils.py. All existing tests pass unchanged.
