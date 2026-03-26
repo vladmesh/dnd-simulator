@@ -1,16 +1,12 @@
 # Sprint 007 Status
 
 **Sprint:** 007-world-session
-**Phase:** 5 — Partial Worlds + World Management API (COMPLETE)
+**Status:** COMPLETE (closed early)
 **Updated:** 2026-03-26
 
-## Current
+## Summary
 
-Phase 5 complete. Phase 6 (Structured Layer Forms) ready for task generation.
-
-## Next Steps
-
-- Phase 6: Structured Layer Forms — needs /plan_phase
+Phases 1–5 done. Phases 6–7 deferred — superseded by sprint 008 (Pydantic content models + catalogs).
 
 ## Audit Triage
 

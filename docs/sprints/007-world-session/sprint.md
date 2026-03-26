@@ -168,16 +168,19 @@ WorldInspector + Fork — мастерская функциональность,
 
 ## Status
 
-**Current:** Phase 4 complete. Phase 5 ready for task generation.
+**COMPLETE** — closed early after phase 5. Phases 6–7 deferred to backlog.
 
 ## Decisions
 
-_(заполняется по ходу спринта)_
+- Phase 6 (structured forms) and phase 7 (DM/player restructure) were planned but superseded by a larger architectural decision: move to Pydantic content models + catalog system (sprint 008). Raw YAML editing stays as-is until the schema-driven approach is ready.
 
 ## Deferred
 
-_(заполняется по ходу спринта)_
+- **Phase 6: Structured Layer Forms** → superseded by sprint 008 (Pydantic schemas + JSON Schema forms)
+- **Phase 7: DM/Player Restructure** → backlog, depends on sprint 008 completing first
 
 ## Results
 
-_(заполняется в конце спринта)_
+- Phases 1–5 complete (save/load, give item UI, fork UI, layer editor, partial worlds + scaffold)
+- World builder pipeline functional: create empty world → scaffold layers → fork → edit YAML → start session
+- Sprint closed early: structured forms require deeper rework (Pydantic content models, catalog system) that became sprint 008

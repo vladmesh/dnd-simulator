@@ -35,6 +35,10 @@
 - [ ] **could** `llm-narrator` — Интерпретация абстрактных изменений мира в нарративные описания
 - [ ] **could** `npc-language` — Динамический выбор языка NPC (из настроек или по языку игрока)
 
+## UX / World Builder
+
+- [ ] **should** `dm-player-restructure` — Разделить главную на Player/DM входы. /master: вкладки Worlds/Sessions, stepper по слоям, scaffold UI. Deferred from sprint 007 phase 7.
+
 ## Tech Debt (from audits 2026-03-25)
 
 - [x] `god-class-entities` — ~~EntitiesLayer 1215 строк~~ FIXED Sprint 005: extracted awareness_builder, activation_manager, query_handler, combat_manager, perception
