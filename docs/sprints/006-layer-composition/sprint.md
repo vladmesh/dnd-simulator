@@ -50,7 +50,7 @@ API для работы с библиотекой: список шаблонов
 1. [Library Catalog Service + API](tasks/phase3-task1-library-catalog.md)
 2. [World Assembly + Fork API](tasks/phase3-task2-world-assembly-and-fork.md)
 
-## Phase 4: World Assembly Frontend
+## Phase 4: World Assembly Frontend ✓
 
 Пошаговый UI: выбери географию → выбери политику (фильтр по совместимости) → ... → назови мир → готово. Заменяет или дополняет текущий WorldPicker ("quick start" vs "custom world").
 

@@ -1,16 +1,14 @@
 # Sprint 006 Status
 
 **Sprint:** 006-layer-composition
-**Phase:** 4 — World Assembly Frontend
+**Phase:** 4 — World Assembly Frontend (COMPLETE)
 **Updated:** 2026-03-26
 
 ## Current
 
-Phase 4, Tasks 1+2 done. WorldBuilder wizard component with API client, TS types, i18n (en+ru), SetupScreen wiring, and integration tests all complete. Frontend builds clean. All backend tests pass (1172/1172).
+Phase 4 complete. WorldBuilder wizard component with 6-step flow (5 layer selections + details), API client methods, TypeScript types, i18n (en+ru), and SetupScreen integration. 2 new integration tests, E2E verified via Playwright — full flow works: build world -> create character -> play.
 
-## Next Steps
-
-- All tasks in Phase 4 are done. Ready to close phase.
+All phases complete. Ready for sprint closure.
 
 ## Decisions
 
