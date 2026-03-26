@@ -2,17 +2,31 @@
 
 Сценарии для регрессионного тестирования через Playwright. Каждый сценарий — что делаем, что ожидаем. Обновляется при добавлении новых фич.
 
-**Последнее обновление:** 2026-03-25
+**Последнее обновление:** 2026-03-26
 
 ---
 
 ## 1. Session Setup
 
-### 1.1 Create character and enter game
-- Открыть `/`, выбрать мир (arena.yaml), создать персонажа (fighter, human, STR 16)
+### 1.1 Quick start — pick existing world
+- Открыть `/`, выбрать мир (Sword Vale), создать персонажа (fighter, human, STR 16)
 - **Ожидание:** редирект на `/play/:sessionId`, WebSocket подключён, первый turn в логе
 
-### 1.2 Language toggle
+### 1.2 World Builder wizard
+- Открыть `/`, нажать "Build Custom World"
+- Пройти 5 шагов: Geography → Politics → Settlements → Ecology → Entities (выбрать шаблон на каждом)
+- На шаге Details ввести ID, название, описание → "Create World & Start"
+- **Ожидание:** мир создан, сессия создана, переход на CharacterForm, после создания персонажа — в игру
+
+### 1.3 World Builder — back navigation
+- В wizard нажать Back на шаге 2+
+- **Ожидание:** возврат к предыдущему шагу; Back на шаге 1 → возврат к списку миров
+
+### 1.4 Assembled world in quick start
+- После создания мира через wizard, вернуться на `/`
+- **Ожидание:** новый мир виден в списке quick-start миров
+
+### 1.5 Language toggle
 - На SetupScreen переключить язык EN→RU
 - **Ожидание:** лейблы меняются на русские
 
@@ -21,7 +35,7 @@
 ## 2. Peaceful Mode
 
 ### 2.1 Perception — nearby entities
-- В мирном режиме (village.yaml) увидеть список NPC в Perception Panel
+- В мирном режиме (Sword Vale) увидеть список NPC в Perception Panel
 - **Ожидание:** имена NPC видны, кнопки Talk/Attack/Inspect
 
 ### 2.2 Talk to NPC (rule-based)
@@ -41,7 +55,7 @@
 ## 3. Combat
 
 ### 3.1 Initiate combat
-- Атаковать NPC в arena → бой начинается
+- Атаковать NPC → бой начинается
 - **Ожидание:** combat_started в логе, sidebar переключается на CombatPanel, round number виден
 
 ### 3.2 Attack and damage
@@ -161,7 +175,7 @@
 ## 9. Trading
 
 ### 9.1 Open trade with merchant
-- В village перейти к торговцу, нажать Trade
+- Перейти к торговцу, нажать Trade
 - **Ожидание:** TradePanel открывается, видны товары торговца с ценами
 
 ### 9.2 Buy item

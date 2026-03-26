@@ -59,8 +59,10 @@ src/dnd_simulator/
 │   ├── creatures.py  — player, NPCs, ability scores, class features
 │   ├── monsters.py   — monster templates, squads, encounters
 │   ├── items.py      — equipment parsing (weapons, armor, shields)
+│   ├── manifest.py   — manifest.yaml resolution (LayerType, LayerSource, resolve layer paths)
+│   ├── library.py    — library catalog (TemplateInfo, list/filter templates by compatibility)
+│   ├── assembly.py   — world assembly (create manifest from library selections) and fork (copy to custom)
 │   └── utils.py      — YAML section loading, text resolution
-├── content_saver.py  — saves world templates back to YAML
 ├── service/       — GameService + command modules
 │   ├── game_service.py — session management, command routing, creature hot controls
 │   ├── session.py      — GameSession: world ref, player lookup via entities layer, autosave
@@ -72,13 +74,18 @@ src/dnd_simulator/
 └── round.py       — Round orchestrator: multi-action turn loop with budget enforcement
 
 content/           — authored game data (YAML)
-└── worlds/        — world templates (directory format: world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml)
-    ├── arena/              — combat arena
-    ├── village/            — village scenario
-    └── sword_vale/         — multi-region world
+├── library/       — reusable layer templates (1 template = 1 layer type)
+│   ├── geography/{slug}/  — metadata.yaml + regions.yaml, locations.yaml
+│   ├── politics/{slug}/   — metadata.yaml + nations.yaml, factions.yaml
+│   ├── settlements/{slug}/ — metadata.yaml + settlements.yaml
+│   ├── ecology/{slug}/    — metadata.yaml + squads.yaml, monsters.yaml
+│   └── entities/{slug}/   — metadata.yaml + npcs.yaml
+└── worlds/        — assembled worlds (manifest.yaml + optional custom layer dirs)
+    ├── sword_vale/         — multi-region world (all layers from library)
+    └── test_vale/          — minimal test world (all custom layers)
 
 frontend/          — React + TypeScript SPA (Vite + shadcn/ui + Zustand)
-├── src/components/setup/   — world picker, character creation, session connect
+├── src/components/setup/   — world picker, WorldBuilder wizard, character creation, session connect
 ├── src/components/game/    — EventLog, BattleMap, ActionBar, CombatPanel, PlayerStats, Perception
 ├── src/components/master/  — WorldOverview, CreatureList, TimeControl, SavesPanel
 ├── src/store/              — Zustand store (slices: connection, player, turn, log)
@@ -228,7 +235,7 @@ Structured logging via `structlog` (`logging_config.py`, `logging_file_dispatch.
 - **Rules are pure functions.** No state, no side effects, easy to test.
 - **Brain is a strategy.** `Creature.brain` decouples decision-making from entity type. `RuleBrain` (utility scoring + canned dialogue) needs no LLM; `LlmBrain` wraps an `LlmClient`; `PlayerBrain` uses queue + callback for interactive input. Brains are swappable at runtime (LOD).
 - **LLM is injected, not hardcoded.** `LlmBrain` receives an `LlmClient`; rule-based NPCs use no LLM at all.
-- **Content is data, not code.** Worlds and NPCs live in YAML files in directory format (world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml). ContentLoader parses them into runtime objects.
+- **Content is data, not code.** Worlds are composed from reusable library templates (1 template = 1 layer). Each world has a `manifest.yaml` referencing library templates or custom layers. ContentLoader resolves manifests and parses YAML into runtime objects. Fork (copy to custom) enables per-world customization.
 - **Transport is a thin adapter.** The game works the same whether accessed via terminal, HTTP, or Telegram. REST API (FastAPI) is the primary adapter for frontend.
 - **Two editing modes.** Between sessions: master edits YAML templates on disk. During sessions: hot controls (creature spawn/delete, HP, brain, nation/settlement patches) modify objects in memory. Saves persist state to disk.
 - **Per-session i18n.** Language is set per session via `contextvars`. The global `_()` function reads the current context, so NPC LLM prompts and translated strings respect session language.

@@ -63,6 +63,10 @@ ActionDispatcher (`service/action_dispatcher.py`) — единый entry point: 
 God-класс EntitiesLayer расщеплён на AwarenessBuilder/ActivationManager/QueryHandler/CombatManager/Perception. action_handlers.py → rules/handlers/ package, content_loader.py → content_loader/ package. Убран legacy single-file content format. Service mixins получили Protocol base. Round больше не обращается к приватным методам EntitiesLayer. Answer.value Any → object. Unit-тесты для критических путей: AwarenessBuilder, World layer isolation, ActionProvider/BrainFactory. 81 файлов, +5751/−2964 строк.
 → [план спринта](sprints/005-tech-sweep/sprint.md)
 
+### Sprint 006 — Layer Composition (фазы 1-4)
+Мир собирается из переиспользуемых шаблонов слоёв. Library (`content/library/`) хранит 5 шаблонов на слой (geography, politics, settlements, ecology, entities) с metadata.yaml. Мир — manifest.yaml со ссылками на library или custom. Content loader резолвит манифест. API: каталог шаблонов с фильтрацией совместимости, сборка мира из шаблонов, fork слоя в custom. Frontend: WorldBuilder wizard (6 шагов), альтернатива quick-start. Старый формат (без манифеста) убран, content_saver удалён.
+→ [план спринта](sprints/006-layer-composition/sprint.md)
+
 ## Planned
 
 ### Level 2 — Расходуемые ресурсы
@@ -77,8 +81,8 @@ Spell slots, ki, rage. Дополнительные типы брони и ор�
 Триггерные пробуждения NPC по событиям мира. Периодические тики для ключевых NPC. Batch LLM-вызовы для групповых реакций. Graceful degradation без LLM.
 → [брейншторм](brainstorms/npc-lifecycle.md), [брейншторм](brainstorms/game-loop-and-master.md)
 
-### World Builder
-UI-визард для создания миров (7 шагов). Часть продукта для конечных пользователей.
+### World Builder (advanced)
+Расширенный world builder: редактор слоёв (YAML editor в UI), превью мира перед стартом, маркетплейс шаблонов. Базовый wizard (выбор из библиотеки) реализован в Sprint 006.
 → [план](plans/world-builder.md)
 
 ### Мультиплеер

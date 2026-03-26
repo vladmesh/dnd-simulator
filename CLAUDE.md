@@ -60,8 +60,8 @@ adapters/          — FastAPI REST + WebSocket API
 rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, resources, action providers, handlers/ package (no deps)
 llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
 storage/           — SaveStore interface, JsonFileStore
-content_loader/    — loads worlds, nations, settlements, NPCs, player from YAML
-content/           — YAML world definitions (data, not code)
+content_loader/    — loads worlds, nations, settlements, NPCs, player from YAML; manifest resolver, library catalog, world assembly
+content/           — YAML world definitions (data, not code); library/ (reusable layer templates), worlds/ (manifest + optional custom layers)
 frontend/          — React + TypeScript SPA (Vite, shadcn/ui, Zustand)
 ```
 
@@ -71,7 +71,7 @@ frontend/          — React + TypeScript SPA (Vite, shadcn/ui, Zustand)
 - **Rules are pure functions** in `rules/` — no state, no I/O.
 - **Brain is a strategy** — `Creature.brain` field holds a `Brain` (RuleBrain or LlmBrain), decoupling AI from entity type.
 - **LLM is injected** — `LlmBrain` wraps an `LlmClient`; rule-based NPCs use `RuleBrain` with zero LLM calls.
-- **Content is data** — worlds, NPCs, quests defined in YAML under `content/`. Directory format (world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml).
+- **Content is data** — worlds, NPCs, quests defined in YAML under `content/`. Library templates in `content/library/{layer_type}/{slug}/` with `metadata.yaml`. Worlds in `content/worlds/{id}/manifest.yaml` referencing library templates or custom layers. Fork (copy to custom) for editing.
 - **Transport is thin** — adapters only translate I/O, all logic lives in `GameService`.
 - **Two editing modes** — between sessions: edit YAML files on disk; during session: hot controls in memory (creature spawn/delete, HP, brain, time).
 
