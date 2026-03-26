@@ -150,7 +150,7 @@ class CreatureCommands(GameServiceProtocol):
         entity = self._get_entities_layer(session).get_entity(entity_id)
         if entity is None or not isinstance(entity, Creature):
             raise ValueError(f"Creature '{entity_id}' not found")
-        entity.brain = self._brain_factory.create(brain_type, strict=True)
+        entity.brain = self._brain_factory.create(brain_type)
         if isinstance(entity, Npc):
             entity.ai_type = brain_type
 

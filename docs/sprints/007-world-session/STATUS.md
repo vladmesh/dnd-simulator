@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 1.5, Task 2: Reassign Brains After Load — done. Extracted `_assign_brains` helper, called after every world.load().
+Phase 1.5, Task 3: Integration Tests — done. All 3 tasks complete, phase ready to close.
 
 ## Next Steps
 
-- Task 3: Integration tests — remove xfail, add spawned creature round-trip tests
+- Close phase 1.5 via `/close_phase`

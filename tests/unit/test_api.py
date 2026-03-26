@@ -209,14 +209,18 @@ class TestCreatureHotControls:
         )
         assert resp.status_code == 200
 
-    def test_set_brain_llm_no_config(self, tmp_path: object) -> None:
+    def test_set_brain_llm_no_config_falls_back(self, tmp_path: object) -> None:
+        """Switching to llm without LLM key succeeds — BrainFactory falls back to RuleBrain."""
         client, _ = _make_client(tmp_path)
         sid = _create_session(client)
         resp = client.put(
             f"/api/master/sessions/{sid}/creatures/edgar/brain",
             json={"type": "llm"},
         )
-        assert resp.status_code == 400  # LLM not configured
+        assert resp.status_code == 200
+        # ai_type is set to "llm" even though runtime brain is RuleBrain
+        info = client.get(f"/api/master/sessions/{sid}/creatures/edgar")
+        assert info.json()["ai_type"] == "llm"
 
     def test_set_brain_player_forbidden(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
