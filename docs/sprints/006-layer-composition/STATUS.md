@@ -1,16 +1,14 @@
 # Sprint 006 Status
 
 **Sprint:** 006-layer-composition
-**Phase:** 2 — Content Loader Reads from Manifest
+**Phase:** 2 — Content Loader Reads from Manifest (COMPLETE)
 **Updated:** 2026-03-26
 
 ## Current
 
-Phase 2, Task 2: Wire Manifest into GameService + Remove Old Format — done. Old flat files deleted, dead code removed, 16 integration tests added.
+Phase 2 complete. Manifest resolver, standalone settlements loader, GameService wiring, old format removal, integration test migration all done. E2E passed — both sword_vale (library) and test_vale (custom) load and play correctly.
 
-## Next Steps
-
-All Phase 2 tasks done.
+Ready for Phase 3 task generation.
 
 ## Decisions
 

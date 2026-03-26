@@ -28,7 +28,7 @@
 1. [Library Structure + Sword Vale Extraction](tasks/phase1-task1-library-structure.md)
 2. [Manifest Format + World Migration + Cleanup](tasks/phase1-task2-manifest-migration.md)
 
-## Phase 2: Content Loader Reads from Manifest
+## Phase 2: Content Loader Reads from Manifest ✓
 
 Рефакторим content_loader: читает manifest.yaml → резолвит каждый слой из library/ или custom из директории мира. `start_game()` работает как раньше, но загружает через новый путь. Все существующие тесты зелёные. Старый формат (без манифеста) — убираем, не поддерживаем.
 

@@ -6,8 +6,3 @@ testland:
   terrain: plains
   water_proximity: 0.1
   connections: []
-  settlements:
-  - id: test_town
-    name: Test Town
-    type: village
-    population: 50

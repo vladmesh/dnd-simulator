@@ -1,0 +1,14 @@
+name: Sneak Attack Test
+description: Minimal arena for testing sneak attack mechanics.
+
+layers:
+  geography:
+    source: custom
+  politics:
+    source: custom
+  settlements:
+    source: custom
+  ecology:
+    source: custom
+  entities:
+    source: custom

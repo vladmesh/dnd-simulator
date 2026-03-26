@@ -1,0 +1,15 @@
+name: Blood Arena
+description: >
+  A gladiatorial arena with walls. Four fighters, no allies. Last one standing wins.
+
+layers:
+  geography:
+    source: custom
+  politics:
+    source: custom
+  settlements:
+    source: custom
+  ecology:
+    source: custom
+  entities:
+    source: custom

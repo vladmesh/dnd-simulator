@@ -6,7 +6,6 @@ test_arena:
   terrain: plains
   water_proximity: 0.0
   connections: []
-  settlements: []
   battle_map:
     width: 40
     height: 40

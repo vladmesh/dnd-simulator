@@ -1,0 +1,15 @@
+name: Quiet Village
+description: >
+  A small village for testing RuleBrain canned dialogue. All NPCs are rule-based — no LLM needed.
+
+layers:
+  geography:
+    source: custom
+  politics:
+    source: custom
+  settlements:
+    source: custom
+  ecology:
+    source: custom
+  entities:
+    source: custom

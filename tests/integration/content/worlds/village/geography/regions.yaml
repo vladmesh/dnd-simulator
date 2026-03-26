@@ -6,8 +6,3 @@ village:
   terrain: plains
   water_proximity: 0.3
   connections: []
-  settlements:
-  - id: millbrook
-    name: Мельничный Ручей
-    type: village
-    population: 120

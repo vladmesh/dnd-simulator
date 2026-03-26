@@ -1,0 +1,5 @@
+test_town:
+  name: Test Town
+  type: village
+  population: 50
+  region: testland
