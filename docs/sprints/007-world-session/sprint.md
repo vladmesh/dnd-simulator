@@ -65,7 +65,9 @@ Give Item кнопка в creature panel (бэкенд endpoint существу
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Give Item API Plumbing — Backend Response + TS Types + Client Method](tasks/phase2-task1-give-item-api-plumbing.md)
+2. [Give Item Dialog UI](tasks/phase2-task2-give-item-dialog.md)
+3. [E2E — Master Spawns Creature, Gives Item, Verifies Equipment](tasks/phase2-task3-e2e-master-workflow.md)
 
 ## Phase 3: Fork UI + World Inspector
 
