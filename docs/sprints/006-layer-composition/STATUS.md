@@ -1,18 +1,17 @@
 # Sprint 006 Status
 
 **Sprint:** 006-layer-composition
-**Phase:** 3 — World Assembly Backend (COMPLETE)
+**Phase:** 4 — World Assembly Frontend
 **Updated:** 2026-03-26
 
 ## Current
 
-Phase 3 complete. Library catalog API, world assembly API, and fork API all working. 15 new integration tests covering all new endpoints (catalog listing, compatibility filtering, assemble, fork, error cases). E2E verified: assembled world loads in both API and frontend UI.
-
-Ready for Phase 4 task generation.
+Phase 4 tasks generated. Ready to start task 1.
 
 ## Next Steps
 
-- Phase 4: World Assembly Frontend — step-by-step UI for composing worlds from library templates
+- Task 1: World Builder Wizard Component — API client methods, TS types, multi-step wizard for layer selection
+- Task 2: Wire into SetupScreen + E2E — integrate wizard into setup flow, i18n, integration tests
 
 ## Decisions
 
@@ -21,3 +20,4 @@ Ready for Phase 4 task generation.
 - Delete arena, village, sneak_test — replace with test_vale (2 regions, all mechanics covered)
 - Compatibility is declared explicitly via `requires_geography` in metadata.yaml — no runtime ID scanning
 - Old create_world/update_world/content_saver flow replaced by assemble + fork
+- WorldBuilder wizard is an alternative mode alongside existing WorldPicker ("quick start" vs "custom world")

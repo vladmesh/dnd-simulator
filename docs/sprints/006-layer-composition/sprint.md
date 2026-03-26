@@ -58,7 +58,8 @@ API для работы с библиотекой: список шаблонов
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [World Builder Wizard Component](tasks/phase4-task1-world-builder-wizard.md)
+2. [Wire WorldBuilder into SetupScreen + E2E Verification](tasks/phase4-task2-wire-into-setup.md)
 
 ---
 
