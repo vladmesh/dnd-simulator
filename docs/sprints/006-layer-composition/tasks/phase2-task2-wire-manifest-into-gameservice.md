@@ -49,4 +49,14 @@ Refactor `GameService.start_game()`, `get_world_template()`, and `list_worlds()`
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Most of the GameService wiring was already done in Task 1 (pulled forward to avoid broken tests). This task focused on:
+- Writing integration tests for `start_game` with both sword_vale (library) and test_vale (custom)
+- Writing tests for `list_worlds` and no-manifest error handling
+- Deleting sword_vale's old flat files (regions.yaml, nations.yaml, etc.)
+- Removing dead `load_world_meta` function (replaced by `load_world_meta_from_manifest`)
+
+16 new tests covering the full manifest-based loading pipeline.

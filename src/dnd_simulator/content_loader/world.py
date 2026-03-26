@@ -161,16 +161,6 @@ def load_battle_maps(path: Path) -> dict[str, BattleMap]:
     return result
 
 
-def load_world_meta(path: Path, lang: str = "en") -> dict[str, str]:
-    """Load world metadata (name, description, default_player_faction) from a world directory."""
-    meta = _read_yaml(path / "world.yaml")
-    return {
-        "name": resolve_text(meta.get("name", path.name), lang),
-        "description": resolve_text(meta.get("description", ""), lang),
-        "default_player_faction": str(meta.get("default_player_faction", "")),
-    }
-
-
 def load_factions(path: Path) -> dict[tuple[str, str], FactionRelation]:
     """Load faction relations from factions.yaml.
 

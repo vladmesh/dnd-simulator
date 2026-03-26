@@ -6,11 +6,11 @@
 
 ## Current
 
-Phase 2, Task 1: Manifest Resolver + Standalone Settlements Loader — done. Manifest resolver, standalone settlements loader, and GameService wiring all complete.
+Phase 2, Task 2: Wire Manifest into GameService + Remove Old Format — done. Old flat files deleted, dead code removed, 16 integration tests added.
 
 ## Next Steps
 
-- Task 2: Wire Manifest into GameService + Remove Old Format — delete sword_vale flat files, clean up dead code (load_world_meta, world.yaml), update remaining tests
+All Phase 2 tasks done.
 
 ## Decisions
 

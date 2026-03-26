@@ -39,7 +39,6 @@ from dnd_simulator.content_loader.world import (
     load_nations,
     load_settlements,
     load_world,
-    load_world_meta,
 )
 
 __all__ = [
@@ -59,7 +58,6 @@ __all__ = [
     "load_settlements",
     "load_squads",
     "load_world",
-    "load_world_meta",
     "load_world_meta_from_manifest",
     "parse_ability_scores",
     "parse_attacks",
