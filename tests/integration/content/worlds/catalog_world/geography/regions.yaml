@@ -1,0 +1,8 @@
+testland:
+  name: Test Land
+  latitude: 45.0
+  longitude: 0.0
+  elevation: 100
+  terrain: plains
+  water_proximity: 0.0
+  connections: []

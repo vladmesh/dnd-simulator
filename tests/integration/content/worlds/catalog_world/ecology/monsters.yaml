@@ -1,0 +1,13 @@
+templates:
+  goblin:
+    base: goblin
+
+  tough_goblin:
+    base: goblin
+    hp: 20
+
+encounters:
+  forest_road:
+    - template: goblin
+      chance: 0.3
+      count: [1, 2]

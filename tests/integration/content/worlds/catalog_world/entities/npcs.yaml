@@ -1,0 +1,14 @@
+shopkeeper:
+  name: Shopkeeper
+  start_location: town_square
+  role: merchant
+  ai: rule_based
+  hp: 10
+  ac: 10
+  gold: 100
+  personality: A simple shopkeeper.
+  items:
+    - ref: dagger
+      price: 200
+    - ref: health_potion
+      price: 50

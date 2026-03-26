@@ -1,0 +1,13 @@
+goblin_pack:
+  name: Goblin Raiding Party
+  faction: goblin_tribe
+  type: patrol
+  behavior: patrol
+  start_location: forest_road
+  route:
+    - forest_road
+  strength: 3
+  members:
+    - goblin
+    - goblin
+  tick_interval: 3600

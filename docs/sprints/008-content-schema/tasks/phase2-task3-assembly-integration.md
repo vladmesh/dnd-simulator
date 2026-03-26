@@ -50,14 +50,28 @@ After tests are red:
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] `start_game()` loads catalogs and passes them through
-- [ ] sword_vale world starts correctly with catalog-based monsters and items
-- [ ] Worlds without catalog references still work
-- [ ] Missing catalog directories don't crash
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] `start_game()` loads catalogs and passes them through
+- [x] sword_vale world starts correctly with catalog-based monsters and items
+- [x] Worlds without catalog references still work
+- [x] Missing catalog directories don't crash
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+The catalog wiring into `start_game()` was already completed in tasks 1-2. This task's
+real value was integration tests: a `catalog_world` test world with catalog refs for
+both monsters (`base: goblin`) and NPC items (`ref: dagger`, `ref: health_potion`),
+plus test catalogs in `tests/integration/content/catalogs/`.
+
+5 integration tests added:
+- Session starts with catalog refs
+- NPC items resolve from item catalog (name, type verified via API)
+- Time advance works with catalog-resolved squad member CRs
+- Inline-only world (arena) still works alongside catalogs
+- Save/load round-trip preserves catalog-resolved data

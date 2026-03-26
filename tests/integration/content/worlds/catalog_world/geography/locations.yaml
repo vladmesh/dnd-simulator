@@ -1,0 +1,11 @@
+town_square:
+  name: Town Square
+  region: testland
+  description: A bustling town square.
+
+forest_road:
+  name: Forest Road
+  region: testland
+  description: A winding road through the forest.
+  connections:
+    - town_square

@@ -1,0 +1,16 @@
+name: Catalog Test World
+description: >
+  Minimal world for testing catalog reference resolution.
+  Monsters use 'base' refs, NPC items use 'ref' refs.
+
+layers:
+  geography:
+    source: custom
+  politics:
+    source: custom
+  settlements:
+    source: custom
+  ecology:
+    source: custom
+  entities:
+    source: custom

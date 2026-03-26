@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 2, Task 2: Item Catalog + NPC Equipment References — done. Item catalog with ref resolution, sword_vale migrated, game_service wired.
+Phase 2, Task 3: Assembly Integration — done. Integration tests for full catalog pipeline (catalog_world test content + 5 tests).
 
 ## Next Steps
 
-- Task 3: Assembly integration — integration tests for full pipeline
+- Close phase 2

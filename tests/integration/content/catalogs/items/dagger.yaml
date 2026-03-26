@@ -1,0 +1,10 @@
+name: Dagger
+type: weapon
+weapon_id: dagger
+category: simple
+attack_name: dagger strike
+damage:
+  - dice: "1d4"
+    type: piercing
+ability: dex
+is_finesse: true
