@@ -130,24 +130,15 @@ class Round:
 
     def _build_merchants(self, creature: Creature) -> list[MerchantInfo]:
         """Build merchant info for creatures at the same location."""
-        from dnd_simulator.layers.entities.models import Npc
-
         hour = self._world.time.hour
         result: list[MerchantInfo] = []
-        for e in self._entities._entities.values():
-            if (
-                isinstance(e, Npc)
-                and e.is_merchant
-                and e.current_location(hour) == creature.location_id
-                and e.active
-                and e.is_alive
-            ):
-                items = [
-                    ItemInfo(id=item.id, name=item.name, description=describe_item(item), price=item.price)
-                    for item in e.inventory
-                    if item.price is not None
-                ]
-                result.append(MerchantInfo(id=e.id, name=e.name, gold=e.gold, items=items))
+        for npc in self._entities.get_merchants_at(creature.location_id, hour):
+            items = [
+                ItemInfo(id=item.id, name=item.name, description=describe_item(item), price=item.price)
+                for item in npc.inventory
+                if item.price is not None
+            ]
+            result.append(MerchantInfo(id=npc.id, name=npc.name, gold=npc.gold, items=items))
         return result
 
     def _execute_action(
@@ -494,14 +485,7 @@ class Round:
         Returns True if time was advanced (loop should continue), False if
         there's nobody to wake up (loop should exit).
         """
-        nearest_wake: int | None = None
-        for e in self._entities._entities.values():
-            if (
-                isinstance(e, Creature)
-                and e.wake_at_seconds is not None
-                and (nearest_wake is None or e.wake_at_seconds < nearest_wake)
-            ):
-                nearest_wake = e.wake_at_seconds
+        nearest_wake = self._entities.get_nearest_wake_time()
 
         if nearest_wake is None:
             return False

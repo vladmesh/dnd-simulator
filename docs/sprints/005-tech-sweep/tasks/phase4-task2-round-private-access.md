@@ -38,4 +38,8 @@ Scope: only the 2 private-dict accesses. The ~15 public method calls (`get_comba
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added `get_merchants_at(location_id, hour)` and `get_nearest_wake_time()` to EntitiesLayer. Updated `round.py:_build_merchants()` and `round.py:_fast_forward()` to use them instead of accessing `._entities` private dict. Zero `._entities._entities` references remain in round.py. Found a pre-existing flaky test (`test_sneak_attack_adds_extra_damage_with_ally_adjacent`) — dice-dependent, not related to this change.

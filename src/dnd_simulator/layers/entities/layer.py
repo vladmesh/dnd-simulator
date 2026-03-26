@@ -125,6 +125,27 @@ class EntitiesLayer(Layer):
         """Get all active creatures in the world (for the main game loop)."""
         return [e for e in self._entities.values() if isinstance(e, Creature) and e.active]
 
+    def get_merchants_at(self, location_id: str, hour: int) -> list[Npc]:
+        """Return active, alive merchants at a given location."""
+        return [
+            e
+            for e in self._entities.values()
+            if isinstance(e, Npc)
+            and e.is_merchant
+            and e.current_location(hour) == location_id
+            and e.active
+            and e.is_alive
+        ]
+
+    def get_nearest_wake_time(self) -> int | None:
+        """Return the minimum wake_at_seconds across all creatures, or None."""
+        wake_times = [
+            e.wake_at_seconds
+            for e in self._entities.values()
+            if isinstance(e, Creature) and e.wake_at_seconds is not None
+        ]
+        return min(wake_times) if wake_times else None
+
     def update_activation(
         self,
         time: GameDateTime,

@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 4, Task 1: Service mixin Protocol base — done. 24 type: ignore[attr-defined] eliminated via GameServiceProtocol.
+Phase 4, Task 2: Round.py private access — done. Two public methods added to EntitiesLayer, zero private dict access in round.py.
 
 ## Next Steps
 
