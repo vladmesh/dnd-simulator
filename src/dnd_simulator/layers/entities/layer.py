@@ -374,6 +374,25 @@ class EntitiesLayer(Layer):
                 "active": e.active,
             }
             if isinstance(e, Creature):
+                # Structural fields needed to reconstruct spawned creatures from save data
+                data.update(
+                    {
+                        "max_hp": e.max_hp,
+                        "ac": e.ac,
+                        "speed": e.speed,
+                        "ability_scores": e.ability_scores.to_dict(),
+                    }
+                )
+                if e.attacks:
+                    data["attacks"] = [
+                        {
+                            "name": a.name,
+                            "ability": a.ability.value,
+                            "damage": [{"dice": d.dice, "type": d.type.value} for d in a.damage],
+                            "reach": a.reach,
+                        }
+                        for a in e.attacks
+                    ]
                 if e.wake_at_seconds is not None:
                     data["wake_at_seconds"] = e.wake_at_seconds
                 if e.conditions:
@@ -396,6 +415,7 @@ class EntitiesLayer(Layer):
                 data["entity_type"] = "player"
                 data.update(e.to_full_save_data())
             elif isinstance(e, Npc):
+                data["entity_type"] = "npc"
                 data.update(
                     {
                         "current_hp": e.current_hp,
@@ -408,6 +428,7 @@ class EntitiesLayer(Layer):
                     }
                 )
             elif isinstance(e, Creature):
+                data["entity_type"] = "creature"
                 data["current_hp"] = e.current_hp
             entities[eid] = data
         combats = self._combat.get_combats_state()
@@ -428,12 +449,38 @@ class EntitiesLayer(Layer):
             assert isinstance(edata, dict)
             entity = self._entities.get(str(eid))
 
-            # Recreate player if missing (e.g. world template has no player.yaml)
-            if entity is None and edata.get("entity_type") == "player":
-                player = parse_player(edata)
-                player.current_hp = int(edata.get("current_hp", player.max_hp))
-                self.add_entity(player)
-                continue
+            # Recreate missing entities from save data (spawned at runtime or player)
+            if entity is None:
+                entity_type = edata.get("entity_type")
+                if entity_type == "player":
+                    player = parse_player(edata)
+                    player.current_hp = int(edata.get("current_hp", player.max_hp))
+                    self.add_entity(player)
+                    continue
+                if entity_type == "npc":
+                    from dnd_simulator.content_loader import parse_npc
+
+                    entity = parse_npc(str(eid), edata)
+                    self.add_entity(entity)
+                    # Fall through to mutable state restoration below
+                elif entity_type == "creature":
+                    from dnd_simulator.content_loader import parse_ability_scores, parse_attacks
+
+                    entity = Creature(
+                        id=str(eid),
+                        name=str(edata["name"]),
+                        location_id=str(edata["location_id"]),
+                        max_hp=int(edata["max_hp"]),
+                        current_hp=int(edata["current_hp"]) if "current_hp" in edata else int(edata["max_hp"]),
+                        ac=int(edata["ac"]),
+                        speed=int(edata["speed"]),
+                        ability_scores=parse_ability_scores(edata),
+                        attacks=parse_attacks(edata.get("attacks") or []),
+                    )
+                    self.add_entity(entity)
+                    # Fall through to mutable state restoration below
+                else:
+                    continue
 
             if entity:
                 entity.active = bool(edata.get("active", True))

@@ -42,4 +42,10 @@ Unit tests in `tests/unit/test_entities_layer.py` (or new file `test_entities_lo
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `get_state()` now serializes `entity_type` ("npc" / "creature") and structural fields (max_hp, ac, speed, ability_scores, attacks) for all Creatures.
+- `load_state()` recreates missing NPCs via `parse_npc()` and missing Creatures directly from saved fields, then falls through to mutable state restoration.
+- Mypy required explicit branching for `current_hp` on Creature reconstruction (`.get()` returns `object | None`).
