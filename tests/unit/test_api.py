@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -10,9 +11,26 @@ from dnd_simulator.service import GameService
 from dnd_simulator.storage.store import JsonFileStore
 
 
-def _make_client(tmp_path: object) -> tuple[TestClient, GameService]:
-    store = JsonFileStore(Path(str(tmp_path)) / "saves")
-    service = GameService(store=store)
+def _make_client(tmp_path: object, *, isolated_content: bool = False) -> tuple[TestClient, GameService]:
+    tmp = Path(str(tmp_path))
+    store = JsonFileStore(tmp / "saves")
+    if isolated_content:
+        # Create an isolated content dir with symlinked library and worlds
+        from dnd_simulator.service.game_service import DEFAULT_CONTENT_DIR
+
+        content_dir = tmp / "content"
+        content_dir.mkdir()
+        (content_dir / "library").symlink_to(DEFAULT_CONTENT_DIR / "library")
+        (content_dir / "worlds").mkdir()
+        # Copy existing worlds so we can fork without mutating real content
+        import shutil
+
+        for world in (DEFAULT_CONTENT_DIR / "worlds").iterdir():
+            if world.is_dir():
+                shutil.copytree(world, content_dir / "worlds" / world.name)
+        service = GameService(store=store, content_dir=content_dir)
+    else:
+        service = GameService(store=store)
     set_service(service)
     return TestClient(app), service
 
@@ -368,6 +386,95 @@ class TestLanguage:
         sid = _create_session(client)
         session = service.get_session(sid)
         assert session.lang == "en"
+
+
+class TestWorldManifest:
+    def test_manifest_returns_layer_sources(self, tmp_path: object) -> None:
+        """Manifest endpoint returns correct source/template/version for all layers."""
+        client, _ = _make_client(tmp_path, isolated_content=True)
+        # Assemble a fresh world so all layers are library-sourced
+        resp = client.post(
+            "/api/master/worlds/assemble",
+            json={
+                "id": "test_manifest",
+                "name": "Test Manifest",
+                "layer_selections": {
+                    "geography": "sword_vale",
+                    "politics": "sword_vale",
+                    "settlements": "sword_vale",
+                    "ecology": "sword_vale",
+                    "entities": "sword_vale",
+                },
+                "default_player_faction": "kingdom",
+            },
+        )
+        assert resp.status_code == HTTPStatus.CREATED
+
+        resp = client.get("/api/master/worlds/test_manifest/manifest")
+        assert resp.status_code == HTTPStatus.OK
+        data = resp.json()
+        assert data["world_id"] == "test_manifest"
+        assert data["name"] == "Test Manifest"
+        layers = data["layers"]
+        assert len(layers) == 5
+        # All layers are library-sourced
+        for layer in layers:
+            assert layer["source"] == "library"
+            assert layer["template"] == "sword_vale"
+            assert layer["version"] == "1.0"
+        # Canonical order
+        layer_types = [ly["layer_type"] for ly in layers]
+        assert layer_types == ["geography", "politics", "settlements", "ecology", "entities"]
+
+    def test_manifest_mixed_library_custom(self, tmp_path: object) -> None:
+        """After forking one layer, manifest shows mixed sources."""
+        client, _ = _make_client(tmp_path, isolated_content=True)
+        # Assemble a fresh world so all layers start as library
+        resp = client.post(
+            "/api/master/worlds/assemble",
+            json={
+                "id": "test_fork_mix",
+                "name": "Test Fork Mix",
+                "layer_selections": {
+                    "geography": "sword_vale",
+                    "politics": "sword_vale",
+                    "settlements": "sword_vale",
+                    "ecology": "sword_vale",
+                    "entities": "sword_vale",
+                },
+                "default_player_faction": "kingdom",
+            },
+        )
+        assert resp.status_code == HTTPStatus.CREATED
+
+        # Fork geography layer
+        resp = client.post("/api/master/worlds/test_fork_mix/fork/geography")
+        assert resp.status_code == HTTPStatus.OK
+
+        resp = client.get("/api/master/worlds/test_fork_mix/manifest")
+        assert resp.status_code == HTTPStatus.OK
+        layers = resp.json()["layers"]
+        geo = next(ly for ly in layers if ly["layer_type"] == "geography")
+        assert geo["source"] == "custom"
+        assert geo["template"] is None
+        assert geo["version"] is None
+        # Other layers still library
+        for layer in layers:
+            if layer["layer_type"] != "geography":
+                assert layer["source"] == "library"
+
+    def test_manifest_404_for_nonexistent_world(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/worlds/nonexistent/manifest")
+        assert resp.status_code == HTTPStatus.NOT_FOUND
+
+    def test_manifest_all_five_layer_types_present(self, tmp_path: object) -> None:
+        """All 5 layer types are always present in response, in canonical order."""
+        client, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/worlds/sword_vale/manifest")
+        assert resp.status_code == HTTPStatus.OK
+        layer_types = {ly["layer_type"] for ly in resp.json()["layers"]}
+        assert layer_types == {"geography", "politics", "settlements", "ecology", "entities"}
 
 
 class TestSaves:

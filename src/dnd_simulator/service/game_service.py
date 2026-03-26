@@ -319,6 +319,32 @@ class GameService(
         )
         return {"id": world_id, "name": name}
 
+    def get_world_manifest(self, world_id: str, lang: str = "en") -> dict[str, object]:
+        """Read manifest.yaml and return structured layer info for the world inspector."""
+        from dnd_simulator.content_loader.manifest import LayerSource
+        from dnd_simulator.content_loader.utils import _read_yaml, resolve_text
+
+        world_path = self._content_dir / "worlds" / world_id
+        if not world_path.exists():
+            raise FileNotFoundError(f"World '{world_id}' not found")
+
+        manifest = _read_yaml(world_path / "manifest.yaml")
+        name = resolve_text(manifest["name"], lang)
+        layers: list[dict[str, str | None]] = []
+        for layer_type in LayerType:
+            lt = layer_type.value
+            layer_config = manifest["layers"][lt]
+            source = LayerSource(layer_config["source"])
+            layers.append(
+                {
+                    "layer_type": lt,
+                    "source": source.value,
+                    "template": str(layer_config["template"]) if source == LayerSource.LIBRARY else None,
+                    "version": str(layer_config["version"]) if source == LayerSource.LIBRARY else None,
+                }
+            )
+        return {"world_id": world_id, "name": name, "layers": layers}
+
     def fork_layer(self, world_id: str, layer_type: LayerType) -> Path:
         """Fork a library template into a world's custom directory."""
         from dnd_simulator.content_loader.assembly import fork_layer

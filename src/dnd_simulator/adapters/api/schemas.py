@@ -190,5 +190,18 @@ class TemplateListItem(BaseModel):
     requires_geography: list[str]
 
 
+class LayerInfo(BaseModel):
+    layer_type: str
+    source: str
+    template: str | None
+    version: str | None
+
+
+class WorldManifestResponse(BaseModel):
+    world_id: str
+    name: str
+    layers: list[LayerInfo]
+
+
 class MessageResponse(BaseModel):
     message: str

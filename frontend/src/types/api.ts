@@ -192,6 +192,19 @@ export interface TemplateListItem {
   requires_geography: string[]
 }
 
+export interface LayerInfo {
+  layer_type: string
+  source: "library" | "custom"
+  template: string | null
+  version: string | null
+}
+
+export interface WorldManifestResponse {
+  world_id: string
+  name: string
+  layers: LayerInfo[]
+}
+
 export interface MessageResponse {
   message: string
 }

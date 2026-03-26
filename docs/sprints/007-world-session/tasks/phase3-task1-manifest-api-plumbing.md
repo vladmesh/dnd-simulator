@@ -69,4 +69,12 @@ Response shape:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented GET /api/master/worlds/{world_id}/manifest endpoint with LayerInfo/WorldManifestResponse Pydantic models.
+Service method reads manifest.yaml and returns structured layer info (source, template, version per layer type).
+Tests use isolated content dirs with assembled worlds to avoid mutating real content.
+Also added TS types (LayerInfo, WorldManifestResponse) and client methods (getWorldManifest, forkLayer) to the frontend.
+Found and restored dirty state in content/worlds/sword_vale/ where geography had been previously forked.

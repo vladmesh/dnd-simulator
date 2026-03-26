@@ -9,6 +9,7 @@ from dnd_simulator.adapters.api.schemas import (
     CreateSessionRequest,
     CreatureResponse,
     GiveItemRequest,
+    LayerInfo,
     MessageResponse,
     PatchCreatureRequest,
     PatchNationRequest,
@@ -19,6 +20,7 @@ from dnd_simulator.adapters.api.schemas import (
     SpawnCreatureRequest,
     TemplateListItem,
     WorldListItem,
+    WorldManifestResponse,
     WorldStateResponse,
 )
 from dnd_simulator.content_loader.manifest import LayerType
@@ -93,6 +95,23 @@ def get_world_template(world_id: str) -> dict[str, object]:
         return service.get_world_template(world_id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=_("World '{}' not found").format(world_id)) from exc
+
+
+@router.get("/worlds/{world_id}/manifest", response_model=WorldManifestResponse)
+def get_world_manifest(world_id: str, lang: str = "en") -> WorldManifestResponse:
+    """Get world manifest — layer sources, templates, versions."""
+    service = get_service()
+    try:
+        data = service.get_world_manifest(world_id, lang=lang)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=_("World '{}' not found").format(world_id)) from exc
+    layers_raw = data["layers"]
+    assert isinstance(layers_raw, list)
+    return WorldManifestResponse(
+        world_id=str(data["world_id"]),
+        name=str(data["name"]),
+        layers=[LayerInfo(**ly) for ly in layers_raw],
+    )
 
 
 @router.post("/worlds/{world_id}/fork/{layer_type}", response_model=MessageResponse)

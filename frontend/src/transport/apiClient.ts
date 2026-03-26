@@ -18,6 +18,7 @@ import type {
   SpawnCreatureRequest,
   TemplateListItem,
   WorldListItem,
+  WorldManifestResponse,
   WorldStateResponse,
 } from "@/types/api"
 
@@ -93,6 +94,14 @@ const master = {
 
   getWorld: (worldId: string) =>
     get<Record<string, unknown>>(`/api/master/worlds/${worldId}`),
+
+  getWorldManifest: (worldId: string, lang?: string) => {
+    const query = lang ? `?lang=${encodeURIComponent(lang)}` : ""
+    return get<WorldManifestResponse>(`/api/master/worlds/${worldId}/manifest${query}`)
+  },
+
+  forkLayer: (worldId: string, layerType: string) =>
+    post<MessageResponse>(`/api/master/worlds/${worldId}/fork/${layerType}`),
 
   createWorld: (data: CreateWorldRequest) =>
     post<WorldListItem>("/api/master/worlds", data),
