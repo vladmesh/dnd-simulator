@@ -15,7 +15,7 @@ from dnd_simulator.core.items import Item, ItemType, WeaponCategory, WeaponDef
 from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
-from dnd_simulator.rules.action_handlers import (
+from dnd_simulator.rules.handlers import (
     handle_attack,
     handle_bless,
     handle_dash,
@@ -1037,7 +1037,7 @@ def _sword_item(name: str = "Sword", item_id: str = "sword_0") -> Item:
 
 class TestEquipHandler:
     def test_equip_weapon_from_inventory(self) -> None:
-        from dnd_simulator.rules.action_handlers import handle_equip
+        from dnd_simulator.rules.handlers import handle_equip
 
         sword = _sword_item()
         c = _creature()
@@ -1054,7 +1054,7 @@ class TestEquipHandler:
         assert events[0].event_type == EventType.ENTITY_EQUIP
 
     def test_equip_swaps_weapon(self) -> None:
-        from dnd_simulator.rules.action_handlers import handle_equip
+        from dnd_simulator.rules.handlers import handle_equip
 
         old_sword = _sword_item("Old Sword", "old_0")
         new_sword = _sword_item("New Sword", "new_0")
@@ -1070,7 +1070,7 @@ class TestEquipHandler:
         assert new_sword not in c.inventory
 
     def test_equip_nonexistent_item_fails(self) -> None:
-        from dnd_simulator.rules.action_handlers import handle_equip
+        from dnd_simulator.rules.handlers import handle_equip
 
         c = _creature()
         action = Action(name=ActionType.EQUIP, params={"weapon_id": "missing"})
@@ -1078,7 +1078,7 @@ class TestEquipHandler:
         assert not result.success
 
     def test_equip_non_weapon_fails(self) -> None:
-        from dnd_simulator.rules.action_handlers import handle_equip
+        from dnd_simulator.rules.handlers import handle_equip
 
         potion = Item(id="pot_0", name="Potion", item_type=ItemType.POTION, params={"heal_dice": "2d4+2"})
         c = _creature()
@@ -1090,7 +1090,7 @@ class TestEquipHandler:
 
 class TestUnequipHandler:
     def test_unequip_weapon(self) -> None:
-        from dnd_simulator.rules.action_handlers import handle_unequip
+        from dnd_simulator.rules.handlers import handle_unequip
 
         sword = _sword_item()
         c = _creature()
@@ -1106,7 +1106,7 @@ class TestUnequipHandler:
         assert events[0].event_type == EventType.ENTITY_UNEQUIP
 
     def test_unequip_when_unarmed_fails(self) -> None:
-        from dnd_simulator.rules.action_handlers import handle_unequip
+        from dnd_simulator.rules.handlers import handle_unequip
 
         c = _creature()
         action = Action(name=ActionType.UNEQUIP)

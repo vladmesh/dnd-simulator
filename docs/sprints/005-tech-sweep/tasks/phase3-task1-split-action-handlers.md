@@ -45,4 +45,10 @@ No new behavioral tests needed — this is a pure structural refactor. The verif
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward split — no behavioral changes. 607 LOC monolith → 5 domain modules + `__init__.py` with re-exports.
+All 6 import sites updated (action_dispatcher, action_provider, 4 test files). Auto-formatter
+fixed import ordering after the rename. All 1025 tests pass unchanged.

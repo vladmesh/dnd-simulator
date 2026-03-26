@@ -60,7 +60,7 @@ class EquipmentActionProvider:
     """Slot-driven equipment provider — handles all equipment slots generically."""
 
     def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
-        from dnd_simulator.rules.action_handlers import SLOT_CONFIGS
+        from dnd_simulator.rules.handlers import SLOT_CONFIGS
 
         result: list[ActionType] = []
         for cfg in SLOT_CONFIGS.values():

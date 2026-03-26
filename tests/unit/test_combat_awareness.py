@@ -26,7 +26,7 @@ from dnd_simulator.llm.brain import LlmBrain
 from dnd_simulator.llm.client import LlmResponse, ToolCall
 from dnd_simulator.llm.prompts import build_npc_combat_prompt
 from dnd_simulator.llm.tools import build_npc_combat_tools
-from dnd_simulator.rules.action_handlers import handle_attack, handle_dodge, handle_flee
+from dnd_simulator.rules.handlers import handle_attack, handle_dodge, handle_flee
 from dnd_simulator.rules.validation import ActionContext
 
 _STUB_WORLD = cast(World, MagicMock(spec=World))

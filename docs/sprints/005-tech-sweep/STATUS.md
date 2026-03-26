@@ -6,10 +6,9 @@
 
 ## Current
 
-Phase 3 tasks generated. Ready to start task 1.
+Phase 3, Task 1: Split action_handlers.py into rules/handlers/ package — done. 607 LOC → 5 domain modules.
 
 ## Next Steps
 
-- Task 1: Split action_handlers.py (607 LOC) into rules/handlers/ package — 5 domain modules
 - Task 2: Split content_loader.py (757 LOC) into content_loader/ package — 5 domain modules
 - Task 3: Decompose resolve_attack (186 LOC) and query dispatcher (127 LOC) into smaller methods

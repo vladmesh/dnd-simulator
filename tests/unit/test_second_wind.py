@@ -13,9 +13,9 @@ from dnd_simulator.core.class_features import FighterFeatures, FightingStyle
 from dnd_simulator.core.models import ActionResult, Event
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.core.turn_budget import TurnBudget
-from dnd_simulator.rules.action_handlers import handle_second_wind
 from dnd_simulator.rules.action_provider import ClassFeatureActionProvider
 from dnd_simulator.rules.actions import action_cost
+from dnd_simulator.rules.handlers import handle_second_wind
 from dnd_simulator.rules.resources import has_resource
 from dnd_simulator.rules.validation import ActionContext
 
