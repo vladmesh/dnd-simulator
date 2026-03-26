@@ -142,6 +142,14 @@
 - Saves tab → Save (name: "test") → Load → подтвердить
 - **Ожидание:** Save появляется в списке, после Load состояние восстанавливается
 
+### 6.8 Give item — weapon
+- Spawn creature → клик на имя → в edit форме секция Inventory видна → "Give Item" → выбрать Weapon → заполнить (name: "Test Sword", damage: 1d8, type: slashing) → Submit
+- **Ожидание:** toast "Item given", оружие видно в inventory секции (equipped weapon badge), инвентарь обновляется без закрытия формы
+
+### 6.9 Give item — potion
+- В той же creature edit форме → "Give Item" → выбрать Potion → name: "Heal Potion", heal_dice: "2d4+2" → Submit
+- **Ожидание:** toast "Item given", зелье видно в inventory секции
+
 ---
 
 ## 7. Conditions

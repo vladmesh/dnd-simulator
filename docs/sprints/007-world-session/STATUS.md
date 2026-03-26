@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 2, Task 2: Give Item Dialog UI — done. GiveItemDialog component + inventory display in CreatureForm.
+Phase 2, Task 3: E2E master workflow — done. All scenarios pass. Fixed missing inventory fields in Pydantic schema.
 
 ## Next Steps
 
-- Task 3: E2E — master spawns creature, gives item, verifies equipment
+- All Phase 2 tasks complete. Ready to close phase.

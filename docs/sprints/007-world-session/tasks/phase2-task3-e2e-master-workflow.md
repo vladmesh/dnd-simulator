@@ -40,4 +40,10 @@ This IS the test — E2E is the verification layer for this phase.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Full E2E passed via Playwright MCP: spawn → give weapon → give potion → verify inventory → delete.
+
+Found and fixed a bug: `CreatureResponse` Pydantic schema in `schemas.py` was missing `inventory` and `equipped_weapon` fields, causing the REST API to strip them from responses even though the query handler returned them. Added both fields to the schema.
