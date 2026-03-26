@@ -117,26 +117,25 @@ def load_nations(path: Path, lang: str = "en") -> list[Nation]:
 
 
 def load_settlements(path: Path, lang: str = "en") -> list[Settlement]:
-    """Load settlements from a world directory.
+    """Load settlements from a layer directory.
 
-    Settlements are nested under regions in regions.yaml.
+    Reads standalone settlements.yaml where each entry has its own ``region`` field.
     """
-    regions_data = _load_section(path, "regions")
+    settlements_data = _load_section(path, "settlements")
 
     settlements: list[Settlement] = []
-    for region_id, rdata in regions_data.items():
-        for sdata in rdata.get("settlements", []):
-            settlements.append(
-                Settlement(
-                    id=str(sdata["id"]),
-                    name=resolve_text(sdata["name"], lang),
-                    region_id=str(region_id),
-                    type=SettlementType(sdata["type"]),
-                    population=int(sdata.get("population", 100)),
-                    prosperity=float(sdata.get("prosperity", 50.0)),
-                    defenses=float(sdata.get("defenses", 30.0)),
-                )
+    for settlement_id, sdata in settlements_data.items():
+        settlements.append(
+            Settlement(
+                id=str(settlement_id),
+                name=resolve_text(sdata["name"], lang),
+                region_id=str(sdata["region"]),
+                type=SettlementType(sdata["type"]),
+                population=int(sdata.get("population", 100)),
+                prosperity=float(sdata.get("prosperity", 50.0)),
+                defenses=float(sdata.get("defenses", 30.0)),
             )
+        )
 
     return settlements
 

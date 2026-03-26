@@ -53,4 +53,14 @@ The resolver should validate that referenced paths exist and fail fast on missin
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Scope expanded beyond the original plan: also wired manifest resolution into `GameService.start_game()`, `get_world_template()`, and `list_worlds()`. This was necessary because changing `load_settlements` to read standalone format broke `start_game` (which still passed the flat world path). Rather than leave tests broken between tasks, pulled the GameService wiring into Task 1.
+
+Changes to existing tests:
+- `test_content_loader_dir.py`: Updated to use `resolve_manifest()` + per-layer paths instead of flat world path. Intentional — the flat format is no longer supported by the loaders.
+- `test_legacy_removal.py::test_ignores_stray_yaml_files`: Updated fake world to use `manifest.yaml` instead of `world.yaml`. Intentional — `list_worlds` now detects by `manifest.yaml`.
+
+`load_world_meta` (from `world.yaml`) is no longer used by GameService but still exists in `content_loader/world.py` for backward compat. Task 2 can clean it up.

@@ -6,12 +6,11 @@
 
 ## Current
 
-Phase 2 tasks generated. Ready to start task 1.
+Phase 2, Task 1: Manifest Resolver + Standalone Settlements Loader — done. Manifest resolver, standalone settlements loader, and GameService wiring all complete.
 
 ## Next Steps
 
-- Task 1: Manifest resolver + standalone settlements loader — new `resolve_manifest()` function and `load_settlements` refactor for standalone format
-- Task 2: Wire manifest into GameService + remove old format — refactor start_game/get_world_template/list_worlds, delete sword_vale flat files
+- Task 2: Wire Manifest into GameService + Remove Old Format — delete sword_vale flat files, clean up dead code (load_world_meta, world.yaml), update remaining tests
 
 ## Decisions
 

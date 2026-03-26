@@ -18,7 +18,8 @@ from dnd_simulator.content_loader import (
     load_settlements,
     load_squads,
     load_world,
-    load_world_meta,
+    load_world_meta_from_manifest,
+    resolve_manifest,
 )
 from dnd_simulator.core.character import Entity
 from dnd_simulator.core.location import LocationGraph
@@ -73,16 +74,17 @@ class GameService(
         structlog.contextvars.bind_contextvars(session_id=session_id)
 
         world_path = self._content_dir / "worlds" / world_name
-        meta = load_world_meta(world_path, lang=lang)
-        regions = load_world(world_path, lang=lang)
-        nations = load_nations(world_path, lang=lang)
-        settlements = load_settlements(world_path, lang=lang)
-        locations = load_locations(world_path, regions, lang=lang)
+        layer_paths = resolve_manifest(world_path, self._content_dir)
+        meta = load_world_meta_from_manifest(world_path, lang=lang)
+        regions = load_world(layer_paths["geography"], lang=lang)
+        nations = load_nations(layer_paths["politics"], lang=lang)
+        settlements = load_settlements(layer_paths["settlements"], lang=lang)
+        locations = load_locations(layer_paths["geography"], regions, lang=lang)
         location_graph = LocationGraph(locations)
-        npcs = load_npcs(world_path, lang=lang, known_locations=set(location_graph.all_ids()))
-        monster_templates, encounter_tables = load_monsters(world_path, lang=lang)
-        faction_relations = load_factions(world_path)
-        squads = load_squads(world_path, lang=lang)
+        npcs = load_npcs(layer_paths["entities"], lang=lang, known_locations=set(location_graph.all_ids()))
+        monster_templates, encounter_tables = load_monsters(layer_paths["ecology"], lang=lang)
+        faction_relations = load_factions(layer_paths["politics"])
+        squads = load_squads(layer_paths["ecology"], lang=lang)
         region_terrains = extract_region_terrains(regions)
 
         # Players are created via API (create_player), not from templates
@@ -187,8 +189,8 @@ class GameService(
         if not worlds_dir.exists():
             return result
         for entry in sorted(worlds_dir.iterdir()):
-            if entry.is_dir() and (entry / "world.yaml").exists():
-                meta = load_world_meta(entry, lang=lang)
+            if entry.is_dir() and (entry / "manifest.yaml").exists():
+                meta = load_world_meta_from_manifest(entry, lang=lang)
                 result.append({"id": entry.name, **meta})
         return result
 
@@ -200,13 +202,14 @@ class GameService(
         if not world_path.exists():
             raise FileNotFoundError(f"World '{world_id}' not found")
 
-        meta = load_world_meta(world_path)
-        regions = load_world(world_path)
-        nations = load_nations(world_path)
-        settlements = load_settlements(world_path)
-        locations = load_locations(world_path, regions)
-        npcs_list = load_npcs(world_path, known_locations={loc.id for loc in locations})
-        battle_maps = load_battle_maps(world_path)
+        layer_paths = resolve_manifest(world_path, self._content_dir)
+        meta = load_world_meta_from_manifest(world_path)
+        regions = load_world(layer_paths["geography"])
+        nations = load_nations(layer_paths["politics"])
+        settlements = load_settlements(layer_paths["settlements"])
+        locations = load_locations(layer_paths["geography"], regions)
+        npcs_list = load_npcs(layer_paths["entities"], known_locations={loc.id for loc in locations})
+        battle_maps = load_battle_maps(layer_paths["geography"])
 
         return {
             "id": world_id,

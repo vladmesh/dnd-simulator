@@ -16,6 +16,12 @@ from dnd_simulator.content_loader.items import (
     parse_equipped_weapon,
     parse_items,
 )
+from dnd_simulator.content_loader.manifest import (
+    LayerSource,
+    LayerType,
+    load_world_meta_from_manifest,
+    resolve_manifest,
+)
 from dnd_simulator.content_loader.monsters import (
     load_monsters,
     load_squads,
@@ -37,6 +43,8 @@ from dnd_simulator.content_loader.world import (
 )
 
 __all__ = [
+    "LayerSource",
+    "LayerType",
     "_load_section",
     "build_class_resource_pools",
     "extract_all_equipped",
@@ -52,6 +60,7 @@ __all__ = [
     "load_squads",
     "load_world",
     "load_world_meta",
+    "load_world_meta_from_manifest",
     "parse_ability_scores",
     "parse_attacks",
     "parse_class_features",
@@ -64,5 +73,6 @@ __all__ = [
     "parse_npc",
     "parse_player",
     "parse_squad",
+    "resolve_manifest",
     "resolve_text",
 ]

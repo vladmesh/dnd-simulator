@@ -143,7 +143,7 @@ class TestSchemaNoLegacy:
 
 
 class TestListWorldsDirectoryOnly:
-    """list_worlds should only pick up directories with world.yaml, not stray .yaml files."""
+    """list_worlds should only pick up directories with manifest.yaml, not stray files."""
 
     def test_ignores_stray_yaml_files(self, tmp_path: Path) -> None:
         from dnd_simulator.service.game_service import GameService
@@ -152,11 +152,10 @@ class TestListWorldsDirectoryOnly:
         worlds_dir = tmp_path / "content" / "worlds"
         worlds_dir.mkdir(parents=True)
 
-        # Create a proper directory world
+        # Create a proper directory world with manifest.yaml
         good_world = worlds_dir / "test_world"
         good_world.mkdir()
-        (good_world / "world.yaml").write_text("name: Test World\ndescription: A test\n")
-        (good_world / "regions.yaml").write_text("{}\n")
+        (good_world / "manifest.yaml").write_text("name: Test World\ndescription: A test\nlayers: {}\n")
 
         # Create a stray .yaml file (should be ignored)
         (worlds_dir / "stray.yaml").write_text("name: Stray\n")
