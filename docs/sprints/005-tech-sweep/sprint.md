@@ -84,4 +84,13 @@ _(заполняется по ходу спринта)_
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-03-26
+
+Tech debt cleared ahead of feature-heavy sprints (quests, spells, key NPCs). EntitiesLayer god class (1215 LOC) split into 5 focused modules. action_handlers.py and content_loader.py split into domain packages. Legacy single-file content format removed. Service mixins type-safe via Protocol. Round decoupled from EntitiesLayer internals. Answer.value strict-typed. 23 new unit tests covering critical paths. 81 files changed, +5751/−2964 lines. 10 of 17 tech debt backlog items resolved.
+
+**Deferred:**
+- PoliticsLayer split (609 LOC, no methods >100 LOC — low priority)
+- llm/client.py type: ignore (SDK limitation)
+- session serialization duplication
+- npc_behaviors YAML global state
+- commands_*, session, store test coverage

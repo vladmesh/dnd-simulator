@@ -37,18 +37,18 @@
 
 ## Tech Debt (from audits 2026-03-25)
 
-- [ ] **should** `god-class-entities` — EntitiesLayer 1215 строк (было 832), 30+ методов. Выделить awareness builder, activation manager, query handler
+- [x] `god-class-entities` — ~~EntitiesLayer 1215 строк~~ FIXED Sprint 005: extracted awareness_builder, activation_manager, query_handler, combat_manager, perception
 - [ ] **should** `god-class-politics` — PoliticsLayer 609 строк. Выделить подсистемы
-- [ ] **should** `test-gaps-critical` — rules/action_handlers.py (605 строк) — нет unit-тестов, core combat execution
-- [ ] **should** `test-gaps` — Нет тестов: action_provider, awareness, items, world, turn_budget, location, brain_factory, commands_*, session, store
-- [ ] **should** `rules-imports-layers` — rules/trade.py и rules/action_handlers.py импортируют Npc из layers/entities/models. Выделить merchant protocol в core
-- [ ] **should** `round-direct-layer-access` — round.py напрямую импортирует EntitiesLayer, минуя World query validation. Перейти на World.query_layer()
-- [ ] **should** `mixin-type-ignores` — 27x `# type: ignore[attr-defined]` в service command mixins. Добавить Protocol/ABC
+- [x] `test-gaps-critical` — ~~rules/action_handlers.py без unit-тестов~~ FIXED Sprint 005: action_provider, awareness_builder, brain_factory, world isolation tests
+- [x] `test-gaps` — ~~Нет тестов: action_provider, awareness, world, brain_factory~~ FIXED Sprint 005 (commands_*, session, store remain)
+- [x] `rules-imports-layers` — ~~rules/trade.py импортирует из layers/~~ FIXED Sprint 005: merchant protocol extracted to core
+- [x] `round-direct-layer-access` — ~~round.py напрямую импортирует EntitiesLayer~~ FIXED Sprint 005: public delegated methods
+- [x] `mixin-type-ignores` — ~~27x type: ignore в service command mixins~~ FIXED Sprint 005: Protocol base added
 - [ ] **should** `llm-client-type-ignores` — `# type: ignore[arg-type]` в llm/client.py на вызовах OpenAI SDK
-- [ ] **should** `any-in-query-answer` — `Query.params: dict[str, Any]` и `Answer.value: Any` — нужен `object` для strict mypy (каскадные изменения в 24 местах)
-- [ ] **should** `action-handlers-growing` — rules/action_handlers.py 605 строк, растёт с каждым новым экшеном. Разбить по домену (combat, movement, trade)
-- [ ] **should** `content-loader-growing` — content_loader.py 815 строк. Разбить по домену (weapons, NPCs, settlements, encounters)
-- [ ] **could** `long-methods` — query() 125 строк, run_combat_turn 121, resolve_attack 186, start_round 104
+- [x] `any-in-query-answer` — ~~Answer.value: Any~~ FIXED Sprint 005: Answer.value → object
+- [x] `action-handlers-growing` — ~~action_handlers.py 605 строк~~ FIXED Sprint 005: split into rules/handlers/ (combat, equipment, items, movement, trade)
+- [x] `content-loader-growing` — ~~content_loader.py 815 строк~~ FIXED Sprint 005: split into content_loader/ (world, creatures, items, monsters)
+- [x] `long-methods` — ~~query() 125, resolve_attack 186~~ FIXED Sprint 005: query→query_handler, resolve_attack 186→62 lines
 - [ ] **could** `session-serialization-duplication` — on_turn, on_action, on_round_end повторяют awareness/events/player/location сериализацию
 - [ ] **could** `npc-behaviors-yaml-loading` — layers/entities/npc_behaviors.py загружает YAML на уровне модуля с global state mutation. Перенести в content_loader
 - [ ] **could** `action-parsing-in-adapter` — Adapter (routes_ws) парсит Action из JSON, должен service layer

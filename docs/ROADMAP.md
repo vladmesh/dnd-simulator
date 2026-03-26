@@ -59,6 +59,10 @@ ActionDispatcher (`service/action_dispatcher.py`) — единый entry point: 
 Живой мир: абстрактные группы (squads) перемещаются по графу локаций, сталкиваются друг с другом и с active characters. EcologyLayer — tick-based движение сквадов. Faction relations: faction_id на Creature/Squad, матрица отношений на PoliticsLayer. Encounter tables как свойство зоны для любого active character. Hostile AI: faction-aware, враг по faction relations → атака. Abstract combat formula (squad vs squad). Materialization: squad при контакте с active character → конкретные Creature. YAML контент: фракции, 4 сквада, 8 monster templates для Sword Vale.
 → [план спринта](sprints/004-monster-encounters/sprint.md)
 
+### Sprint 005 — Tech Sweep (фазы 1-5)
+God-класс EntitiesLayer расщеплён на AwarenessBuilder/ActivationManager/QueryHandler/CombatManager/Perception. action_handlers.py → rules/handlers/ package, content_loader.py → content_loader/ package. Убран legacy single-file content format. Service mixins получили Protocol base. Round больше не обращается к приватным методам EntitiesLayer. Answer.value Any → object. Unit-тесты для критических путей: AwarenessBuilder, World layer isolation, ActionProvider/BrainFactory. 81 файлов, +5751/−2964 строк.
+→ [план спринта](sprints/005-tech-sweep/sprint.md)
+
 ## Planned
 
 ### Level 2 — Расходуемые ресурсы

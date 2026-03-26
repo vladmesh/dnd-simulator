@@ -59,7 +59,7 @@ adapters/          — FastAPI REST + WebSocket API
 rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, resources, action providers (no deps)
 llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
 storage/           — SaveStore interface, JsonFileStore
-content_loader.py  — loads worlds, nations, settlements, NPCs, player from YAML
+content_loader/    — loads worlds, nations, settlements, NPCs, player from YAML
 content/           — YAML world definitions (data, not code)
 frontend/          — React + TypeScript SPA (Vite, shadcn/ui, Zustand)
 ```
@@ -70,7 +70,7 @@ frontend/          — React + TypeScript SPA (Vite, shadcn/ui, Zustand)
 - **Rules are pure functions** in `rules/` — no state, no I/O.
 - **Brain is a strategy** — `Creature.brain` field holds a `Brain` (RuleBrain or LlmBrain), decoupling AI from entity type.
 - **LLM is injected** — `LlmBrain` wraps an `LlmClient`; rule-based NPCs use `RuleBrain` with zero LLM calls.
-- **Content is data** — worlds, NPCs, quests defined in YAML under `content/`. Two formats: legacy single-file and directory (world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml).
+- **Content is data** — worlds, NPCs, quests defined in YAML under `content/`. Directory format (world.yaml, regions.yaml, nations.yaml, npcs.yaml, locations.yaml).
 - **Transport is thin** — adapters only translate I/O, all logic lives in `GameService`.
 - **Two editing modes** — between sessions: edit YAML files on disk; during session: hot controls in memory (creature spawn/delete, HP, brain, time).
 
@@ -84,7 +84,7 @@ frontend/          — React + TypeScript SPA (Vite, shadcn/ui, Zustand)
 
 ### Multi-Action Turns
 
-Each creature's turn is a multi-action loop orchestrated by `Round` (in `round.py`). A `TurnBudget` (actions, bonus_actions, movement_remaining, reaction) is created from creature stats at the start of each turn. The brain is called repeatedly: choose action → `ActionDispatcher` validates (budget, target, reach via `rules/validation.py`) → executes handler (`rules/action_handlers.py`) → rebuilds awareness → repeat, until the brain returns `end_turn` or budget is exhausted. `ActionProvider` (`rules/action_provider.py`) determines which actions are currently available to a creature. `PlayerBrain` uses a queue + callback pattern for interactive I/O.
+Each creature's turn is a multi-action loop orchestrated by `Round` (in `round.py`). A `TurnBudget` (actions, bonus_actions, movement_remaining, reaction) is created from creature stats at the start of each turn. The brain is called repeatedly: choose action → `ActionDispatcher` validates (budget, target, reach via `rules/validation.py`) → executes handler (`rules/handlers/`) → rebuilds awareness → repeat, until the brain returns `end_turn` or budget is exhausted. `ActionProvider` (`rules/action_provider.py`) determines which actions are currently available to a creature. `PlayerBrain` uses a queue + callback pattern for interactive I/O.
 
 ### Conditions & Items
 
