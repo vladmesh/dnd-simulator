@@ -6,10 +6,9 @@
 
 ## Current
 
-Phase 1 tasks generated. Ready to start task 1.
+Phase 1, Task 1: Pydantic Content Model Definitions — done. ~20 models in schemas.py, 55 new tests.
 
 ## Next Steps
 
-- Task 1: Pydantic content model definitions (~20 models in schemas.py)
 - Task 2: Rewrite world structure parsers (geography, politics, settlements)
 - Task 3: Rewrite creature, monster, and item parsers

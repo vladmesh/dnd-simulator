@@ -79,4 +79,23 @@ Unit tests in `tests/unit/test_content_schemas.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Created `content_loader/schemas.py` with ~20 Pydantic BaseModel classes covering all content entity types:
+- Shared: DamageComponentContent, AttackContent, AbilityScoresContent, NpcMemoryContent, ItemContent
+- Geography: ConnectionContent, NeighborContent, RegionContent, LocationContent
+- Politics: LeaderContent, NationContent
+- Settlements: SettlementContent
+- Ecology: MonsterTemplateContent, EncounterEntryContent, SquadContent
+- Entities: NpcContent, PlayerContent
+- Item sub-models: WeaponDefContent, ArmorDefContent, ShieldDefContent, AccessoryDefContent
+
+Key decisions:
+- AbilityScoresContent uses aliases for `str` and `int` (Python reserved words) with `populate_by_name=True`.
+  A `CoercedAbilityScores` annotated type ensures raw dicts always coerce to AbilityScoresContent for round-trip stability.
+- ItemContent is a flat model matching YAML layout (type-specific fields mixed in), not a discriminated union — matches how items are structured in YAML.
+- SquadContent.max_strength defaults to strength via model_post_init.
+- Added pydantic mypy plugin to pyproject.toml to handle alias resolution in strict mode.
+- All existing enums (Race, CharClass, TerrainType, etc.) used directly as field types — Pydantic includes them in JSON Schema automatically.

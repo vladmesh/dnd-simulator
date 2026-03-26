@@ -1,0 +1,361 @@
+"""Pydantic content models — single source of truth for YAML content structure.
+
+These models represent the YAML schema (not runtime state). They drive:
+- Parsing (model_validate on raw YAML dicts)
+- Validation (enum constraints, type checking)
+- JSON Schema generation (for frontend forms)
+- Serialization (model_dump for writing back to YAML)
+
+Field names match YAML keys. Where Python name differs (e.g. ``class`` is reserved),
+use ``alias`` + ``populate_by_name=True``.
+"""
+
+from __future__ import annotations
+
+from typing import Annotated, Any
+
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+
+from dnd_simulator.core.character import (
+    Ability,
+    Alignment,
+    CharClass,
+    DamageType,
+    NpcRole,
+    Race,
+)
+from dnd_simulator.core.items import (
+    ArmorCategory,
+    EquipmentSlot,
+    ItemType,
+    WeaponCategory,
+)
+from dnd_simulator.core.models import TerrainType
+from dnd_simulator.core.squad import SquadBehavior, SquadType
+from dnd_simulator.layers.geography.models import Direction
+from dnd_simulator.layers.politics.models import LeaderTrait
+from dnd_simulator.layers.settlements.models import SettlementType
+
+# ---------------------------------------------------------------------------
+# Localizable text type
+# ---------------------------------------------------------------------------
+
+LocalizedText = dict[str, str]  # {"en": "...", "ru": "..."}
+
+
+# ---------------------------------------------------------------------------
+# Shared / nested models
+# ---------------------------------------------------------------------------
+
+
+class DamageComponentContent(BaseModel):
+    """One damage term: dice expression + type."""
+
+    dice: str
+    type: DamageType
+
+
+class AttackContent(BaseModel):
+    """A single attack definition from YAML."""
+
+    name: str
+    ability: Ability = Ability.STR
+    damage: list[DamageComponentContent] = []
+    reach: int = 5
+    is_finesse: bool = False
+
+
+class AbilityScoresContent(BaseModel):
+    """Six ability scores with D&D defaults."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    str_: int = Field(10, alias="str")
+    dex: int = 10
+    con: int = 10
+    int_: int = Field(10, alias="int")
+    wis: int = 10
+    cha: int = 10
+
+
+class NpcMemoryContent(BaseModel):
+    """Structured NPC memory from YAML."""
+
+    tags: list[str] = []
+    recent: str = ""
+    inner_state: str = ""
+    current_conversation: str = ""
+
+
+def _coerce_ability_scores(v: Any) -> AbilityScoresContent:
+    """Accept raw dict or AbilityScoresContent; always return AbilityScoresContent."""
+    if isinstance(v, AbilityScoresContent):
+        return v
+    if isinstance(v, dict):
+        return AbilityScoresContent.model_validate(v)
+    raise ValueError(f"Invalid ability_scores: {v}")
+
+
+CoercedAbilityScores = Annotated[AbilityScoresContent, BeforeValidator(_coerce_ability_scores)]
+
+
+# ---------------------------------------------------------------------------
+# Item models
+# ---------------------------------------------------------------------------
+
+
+class WeaponDefContent(BaseModel):
+    """Weapon definition fields within an item."""
+
+    weapon_id: str
+    attack_name: str = ""
+    category: WeaponCategory = WeaponCategory.SIMPLE
+    damage: list[DamageComponentContent] = []
+    reach: int = 5
+    ability: Ability | None = None
+    modifier: int = 0
+    is_magic: bool = False
+    is_finesse: bool = False
+    grant_conditions: list[str] = []
+    grant_actions: list[str] = []
+
+
+class ArmorDefContent(BaseModel):
+    """Armor definition fields within an item."""
+
+    armor_id: str
+    category: ArmorCategory
+    base_ac: int
+    max_dex_bonus: int | None = None
+    strength_req: int = 0
+
+
+class ShieldDefContent(BaseModel):
+    """Shield definition fields within an item."""
+
+    shield_id: str = "shield"
+    ac_bonus: int = 2
+
+
+class AccessoryDefContent(BaseModel):
+    """Accessory definition fields within an item."""
+
+    accessory_id: str
+    slot: EquipmentSlot
+    modifiers: list[dict[str, Any]] = []
+
+
+class ItemContent(BaseModel):
+    """A single item from YAML — flat structure matching YAML layout.
+
+    Items in YAML are flat dicts with type-specific fields mixed in.
+    """
+
+    name: str
+    type: ItemType
+    equipped: bool = False
+    price: int | None = None
+    # Weapon fields
+    weapon_id: str | None = None
+    attack_name: str | None = None
+    category: str | None = None
+    damage: list[DamageComponentContent] | None = None
+    reach: int | None = None
+    ability: str | None = None
+    modifier: int | None = None
+    is_magic: bool | None = None
+    is_finesse: bool | None = None
+    grant_conditions: list[str] | None = None
+    grant_actions: list[str] | None = None
+    # Armor fields
+    armor_id: str | None = None
+    base_ac: int | None = None
+    max_dex_bonus: int | None = None
+    strength_req: int | None = None
+    # Shield fields
+    shield_id: str | None = None
+    ac_bonus: int | None = None
+    # Accessory fields
+    accessory_id: str | None = None
+    slot: str | None = None
+    # Potion fields
+    heal_dice: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Geography models
+# ---------------------------------------------------------------------------
+
+
+class ConnectionContent(BaseModel):
+    """A link between two regions."""
+
+    target: str
+    direction: Direction
+
+
+class NeighborContent(BaseModel):
+    """A link between two locations with distance."""
+
+    target: str
+    distance: int
+
+
+class RegionContent(BaseModel):
+    """A geographic region from YAML."""
+
+    name: LocalizedText
+    latitude: float
+    longitude: float
+    elevation: float
+    terrain: TerrainType
+    water_proximity: float = 0.0
+    connections: list[ConnectionContent] = []
+    battle_map: dict[str, Any] | None = None
+
+
+class LocationContent(BaseModel):
+    """A location (point of interest) from YAML."""
+
+    name: LocalizedText
+    region: str
+    settlement: str = ""
+    description: LocalizedText = {}
+    neighbors: list[NeighborContent] = []
+
+
+# ---------------------------------------------------------------------------
+# Politics models
+# ---------------------------------------------------------------------------
+
+
+class LeaderContent(BaseModel):
+    """A nation's leader from YAML."""
+
+    name: LocalizedText
+    age: int
+    trait: LeaderTrait
+
+
+class NationContent(BaseModel):
+    """A nation from YAML."""
+
+    name: LocalizedText
+    regions: list[str] = []
+    wealth: float = 50.0
+    military: float = 50.0
+    stability: float = 70.0
+    leader: LeaderContent | None = None
+
+
+# ---------------------------------------------------------------------------
+# Settlements models
+# ---------------------------------------------------------------------------
+
+
+class SettlementContent(BaseModel):
+    """A settlement from YAML."""
+
+    name: LocalizedText
+    region: str
+    type: SettlementType
+    population: int = 100
+    prosperity: float = 50.0
+    defenses: float = 30.0
+
+
+# ---------------------------------------------------------------------------
+# Ecology models
+# ---------------------------------------------------------------------------
+
+
+class MonsterTemplateContent(BaseModel):
+    """A monster template from YAML."""
+
+    name: LocalizedText
+    hp: int
+    ac: int
+    speed: int
+    cr: float
+    ability_scores: AbilityScoresContent = AbilityScoresContent()
+    attacks: list[AttackContent] = []
+    faction: str = ""
+
+
+class EncounterEntryContent(BaseModel):
+    """One encounter spawn rule from YAML."""
+
+    template: str
+    chance: float
+    count: list[int]
+
+
+class SquadContent(BaseModel):
+    """A squad definition from YAML."""
+
+    name: LocalizedText
+    faction: str
+    type: SquadType
+    behavior: SquadBehavior
+    start_location: str
+    strength: int
+    route: list[str] = []
+    territory: list[str] = []
+    max_strength: int | None = None
+    members: list[str] = []
+    tick_interval: int = 3600
+
+    def model_post_init(self, __context: Any) -> None:
+        if self.max_strength is None:
+            object.__setattr__(self, "max_strength", self.strength)
+
+
+# ---------------------------------------------------------------------------
+# Entity models
+# ---------------------------------------------------------------------------
+
+
+class NpcContent(BaseModel):
+    """An NPC definition from YAML."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: LocalizedText
+    race: Race = Race.HUMAN
+    char_class: CharClass = Field(CharClass.COMMONER, alias="class")
+    role: NpcRole = NpcRole.COMMONER
+    start_location: str = ""
+    settlement_id: str = ""
+    faction: str = ""
+    personality: LocalizedText = {}
+    hp: int = 4
+    ac: int = 10
+    speed: int = 30
+    gold: int = 0
+    ai: str = "rule_based"
+    attacks: list[AttackContent] = []
+    items: list[ItemContent] = []
+    ability_scores: CoercedAbilityScores = AbilityScoresContent()
+    class_features: dict[str, Any] = {}
+    memory: NpcMemoryContent | None = None
+
+
+class PlayerContent(BaseModel):
+    """A player character definition from YAML."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: LocalizedText
+    race: Race = Race.HUMAN
+    char_class: CharClass = Field(CharClass.FIGHTER, alias="class")
+    level: int = 1
+    alignment: Alignment = Alignment.TRUE_NEUTRAL
+    appearance: LocalizedText = {}
+    start_location: str = ""
+    faction: str = ""
+    hp: int = 10
+    ac: int = 10
+    gold: int = 0
+    attacks: list[AttackContent] = []
+    items: list[ItemContent] = []
+    ability_scores: CoercedAbilityScores = AbilityScoresContent()
