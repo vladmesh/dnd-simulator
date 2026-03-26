@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 5 tasks generated. Scope narrowed after coverage review: combat handlers, trade handlers, items handlers, weapons.py, turn_budget already well-covered — focusing on real gaps only.
+Phase 5, Task 1: AwarenessBuilder unit tests — done. 16 new tests, 23 total.
 
 ## Next Steps
 

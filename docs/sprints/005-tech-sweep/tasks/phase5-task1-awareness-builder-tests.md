@@ -55,4 +55,16 @@ All tests go into `tests/unit/test_awareness_builder.py`. Use the existing test 
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added 16 new tests covering all gaps identified in the task. All tests GREEN immediately (coverage tests for existing code). No code changes to production code — tests only.
+
+New test classes:
+- **TestPeacefulAwarenessQueryResilience** (4 tests): geography exception, weather exception, empty settlements, politics exception
+- **TestNpcScheduleLocation** (1 test): NPCs at different schedule locations see only colocated entities
+- **TestCombatAwarenessEntityFiltering** (3 tests): dead/inactive/off-location exclusion
+- **TestCombatAwarenessDetail** (3 tests): conditions on nearby, wounded threshold, half-HP boundary
+- **TestCombatAwarenessBattleMapWalls** (2 tests): walls present, no combat defaults
+- **TestFactionHostilityEdgeCases** (3 tests): no factions, null query_fn, politics exception

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness
 from dnd_simulator.core.character import (
     Ability,
     AbilityScores,
@@ -11,9 +12,11 @@ from dnd_simulator.core.character import (
     DamageType,
     Entity,
 )
-from dnd_simulator.core.combat import BattleMap, CombatState, Position
+from dnd_simulator.core.combat import BattleMap, CombatState, Position, Wall
+from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import Answer, GameDateTime, Query, QueryType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
+from dnd_simulator.layers.entities.models import Npc, NpcActivity, ScheduleEntry
 
 _TIME = GameDateTime(year=1490, month=6, day=15, hour=14)
 
@@ -244,6 +247,398 @@ class TestFactionHostilityDelegatesToPoliticsQuery:
 
         def query_fn(target: str, query: Query) -> Answer:
             raise AssertionError("Should not query for entities without factions")
+
+        result = layer._awareness.check_faction_hostility(observer, other, query_fn)
+        assert result is False
+
+
+class TestPeacefulAwarenessQueryResilience:
+    """Peaceful awareness degrades gracefully when layer queries fail."""
+
+    def test_geography_region_query_raises_uses_fallback_defaults(self) -> None:
+        player = Character(id="p1", name="Hero", location_id="dark_cave")
+        layer = EntitiesLayer([player])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            if target == "geography" and query.question == QueryType.LOCATION_REGION:
+                raise RuntimeError("geography layer down")
+            raise AssertionError(f"Unexpected query: {target} {query.question}")
+
+        awareness = layer.build_awareness(player, _TIME, query_fn)
+        assert isinstance(awareness, PeacefulAwareness)
+        # Falls back to location_id as region_name
+        assert awareness.region_name == "dark_cave"
+        # Falls back to default weather
+        assert awareness.weather["condition"] == "clear"
+        assert awareness.weather["temperature"] == 15
+
+    def test_weather_query_fails_region_name_still_resolved(self) -> None:
+        player = Character(id="p1", name="Hero", location_id="village")
+        layer = EntitiesLayer([player])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            if target == "geography" and query.question == QueryType.LOCATION_REGION:
+                return Answer(value="northern_region")
+            if target == "geography" and query.question == QueryType.REGION_INFO:
+                return Answer(value={"name": "Northern Region", "terrain": "forest"})
+            if target == "geography" and query.question == QueryType.WEATHER:
+                raise RuntimeError("weather service down")
+            return Answer(value=None)
+
+        awareness = layer.build_awareness(player, _TIME, query_fn)
+        assert isinstance(awareness, PeacefulAwareness)
+        assert awareness.region_name == "Northern Region"
+        assert awareness.weather["condition"] == "clear"
+        assert awareness.weather["temperature"] == 15
+
+    def test_settlements_query_returns_empty_list_not_none(self) -> None:
+        player = Character(id="p1", name="Hero", location_id="wilderness")
+        layer = EntitiesLayer([player])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            if target == "geography" and query.question == QueryType.LOCATION_REGION:
+                return Answer(value="empty_region")
+            if target == "geography" and query.question == QueryType.REGION_INFO:
+                return Answer(value={"name": "Empty Region"})
+            if target == "geography" and query.question == QueryType.WEATHER:
+                return Answer(value={"condition": "sunny", "temperature": 25})
+            if target == "settlements" and query.question == QueryType.REGION_SETTLEMENTS:
+                return Answer(value=[])
+            return Answer(value=None)
+
+        awareness = layer.build_awareness(player, _TIME, query_fn)
+        assert isinstance(awareness, PeacefulAwareness)
+        assert awareness.settlements == []
+
+    def test_politics_query_fails_territory_owner_is_none(self) -> None:
+        player = Character(id="p1", name="Hero", location_id="village")
+        layer = EntitiesLayer([player])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            if target == "geography" and query.question == QueryType.LOCATION_REGION:
+                return Answer(value="contested_region")
+            if target == "geography" and query.question == QueryType.REGION_INFO:
+                return Answer(value={"name": "Contested Region"})
+            if target == "geography" and query.question == QueryType.WEATHER:
+                return Answer(value={"condition": "stormy", "temperature": 5})
+            if target == "settlements":
+                return Answer(value=[])
+            if target == "politics":
+                raise RuntimeError("politics layer down")
+            return Answer(value=None)
+
+        awareness = layer.build_awareness(player, _TIME, query_fn)
+        assert isinstance(awareness, PeacefulAwareness)
+        assert awareness.territory_owner is None
+        assert awareness.nation_info is None
+
+
+class TestNpcScheduleLocation:
+    """NPC schedule determines where they appear as nearby."""
+
+    def test_npcs_at_different_schedule_locations_see_only_colocated(self) -> None:
+        npc_tavern = Npc(
+            id="bartender",
+            name="Bartender",
+            location_id="town_center",
+            schedule=[
+                ScheduleEntry(start_hour=8, end_hour=22, activity=NpcActivity.WORKING, location_id="tavern"),
+            ],
+        )
+        npc_smithy = Npc(
+            id="smith",
+            name="Smith",
+            location_id="town_center",
+            schedule=[
+                ScheduleEntry(start_hour=6, end_hour=18, activity=NpcActivity.WORKING, location_id="smithy"),
+            ],
+        )
+        player = Character(id="p1", name="Hero", location_id="tavern")
+
+        layer = EntitiesLayer([npc_tavern, npc_smithy, player])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            return Answer(value=None)
+
+        # At hour 12: bartender at tavern, smith at smithy, player at tavern
+        nearby_player = layer.build_nearby_entities(player, hour=12, query_fn=query_fn)
+        nearby_ids = [n.id for n in nearby_player]
+        assert "bartender" in nearby_ids
+        assert "smith" not in nearby_ids
+
+        nearby_bartender = layer.build_nearby_entities(npc_tavern, hour=12, query_fn=query_fn)
+        nearby_bartender_ids = [n.id for n in nearby_bartender]
+        assert "p1" in nearby_bartender_ids
+        assert "smith" not in nearby_bartender_ids
+
+        nearby_smith = layer.build_nearby_entities(npc_smithy, hour=12, query_fn=query_fn)
+        assert len(nearby_smith) == 0
+
+
+class TestCombatAwarenessEntityFiltering:
+    """Combat awareness filters dead, inactive, and off-location creatures."""
+
+    def test_dead_creature_excluded_from_nearby(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="arena",
+            in_combat=True,
+            max_hp=30,
+            current_hp=25,
+            attacks=(_SWORD,),
+        )
+        dead_goblin = Character(
+            id="dead1",
+            name="Dead Goblin",
+            location_id="arena",
+            max_hp=10,
+            current_hp=0,
+            in_combat=True,
+            active=True,
+        )
+
+        layer = EntitiesLayer([player, dead_goblin])
+        battle_map = BattleMap(width=60, height=60)
+        battle_map.set_position("p1", Position(10, 10))
+        battle_map.set_position("dead1", Position(15, 10))
+        combat = CombatState(location_id="arena", turn_order=["p1", "dead1"], battle_map=battle_map)
+        layer._combat._combats["arena"] = combat
+
+        awareness = layer.build_combat_awareness(player)
+        assert len(awareness.nearby) == 0
+
+    def test_inactive_creature_excluded_from_nearby(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="arena",
+            in_combat=True,
+            max_hp=30,
+            current_hp=25,
+            attacks=(_SWORD,),
+        )
+        dormant = Character(
+            id="dormant1",
+            name="Sleeping Guard",
+            location_id="arena",
+            active=False,
+        )
+
+        layer = EntitiesLayer([player, dormant])
+        battle_map = BattleMap(width=60, height=60)
+        battle_map.set_position("p1", Position(10, 10))
+        combat = CombatState(location_id="arena", turn_order=["p1"], battle_map=battle_map)
+        layer._combat._combats["arena"] = combat
+
+        awareness = layer.build_combat_awareness(player)
+        assert len(awareness.nearby) == 0
+
+    def test_creature_at_different_location_excluded(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="arena",
+            in_combat=True,
+            max_hp=30,
+            current_hp=25,
+            attacks=(_SWORD,),
+        )
+        far_enemy = Character(
+            id="far1",
+            name="Distant Orc",
+            location_id="forest",
+            in_combat=True,
+            active=True,
+        )
+
+        layer = EntitiesLayer([player, far_enemy])
+        battle_map = BattleMap(width=60, height=60)
+        battle_map.set_position("p1", Position(10, 10))
+        combat = CombatState(location_id="arena", turn_order=["p1"], battle_map=battle_map)
+        layer._combat._combats["arena"] = combat
+
+        awareness = layer.build_combat_awareness(player)
+        assert len(awareness.nearby) == 0
+
+
+class TestCombatAwarenessDetail:
+    """Combat awareness includes conditions and wound state on nearby enemies."""
+
+    def test_nearby_enemy_conditions_included(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="arena",
+            in_combat=True,
+            max_hp=30,
+            current_hp=30,
+            attacks=(_SWORD,),
+        )
+        poisoned_enemy = Character(
+            id="e1",
+            name="Goblin",
+            location_id="arena",
+            in_combat=True,
+            max_hp=20,
+            current_hp=15,
+            conditions={Condition.POISONED: 3, Condition.PRONE: None},
+        )
+
+        layer = EntitiesLayer([player, poisoned_enemy])
+        battle_map = BattleMap(width=60, height=60)
+        battle_map.set_position("p1", Position(10, 10))
+        battle_map.set_position("e1", Position(15, 10))
+        combat = CombatState(location_id="arena", turn_order=["p1", "e1"], battle_map=battle_map)
+        layer._combat._combats["arena"] = combat
+
+        awareness = layer.build_combat_awareness(player)
+        assert len(awareness.nearby) == 1
+        assert Condition.POISONED in awareness.nearby[0].conditions
+        assert Condition.PRONE in awareness.nearby[0].conditions
+
+    def test_is_wounded_when_hp_below_half(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="arena",
+            in_combat=True,
+            max_hp=30,
+            current_hp=30,
+            attacks=(_SWORD,),
+        )
+        wounded = Character(
+            id="e1",
+            name="Goblin",
+            location_id="arena",
+            in_combat=True,
+            max_hp=20,
+            current_hp=9,  # 9 < 20 // 2 = 10
+        )
+
+        layer = EntitiesLayer([player, wounded])
+        battle_map = BattleMap(width=60, height=60)
+        battle_map.set_position("p1", Position(10, 10))
+        battle_map.set_position("e1", Position(15, 10))
+        combat = CombatState(location_id="arena", turn_order=["p1", "e1"], battle_map=battle_map)
+        layer._combat._combats["arena"] = combat
+
+        awareness = layer.build_combat_awareness(player)
+        assert awareness.nearby[0].is_wounded is True
+
+    def test_not_wounded_at_exactly_half_hp(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="arena",
+            in_combat=True,
+            max_hp=30,
+            current_hp=30,
+            attacks=(_SWORD,),
+        )
+        half_hp = Character(
+            id="e1",
+            name="Goblin",
+            location_id="arena",
+            in_combat=True,
+            max_hp=20,
+            current_hp=10,  # 10 == 20 // 2, not wounded
+        )
+
+        layer = EntitiesLayer([player, half_hp])
+        battle_map = BattleMap(width=60, height=60)
+        battle_map.set_position("p1", Position(10, 10))
+        battle_map.set_position("e1", Position(15, 10))
+        combat = CombatState(location_id="arena", turn_order=["p1", "e1"], battle_map=battle_map)
+        layer._combat._combats["arena"] = combat
+
+        awareness = layer.build_combat_awareness(player)
+        assert awareness.nearby[0].is_wounded is False
+
+
+class TestCombatAwarenessBattleMapWalls:
+    """Combat awareness includes wall descriptions and handles missing combat."""
+
+    def test_walls_on_battle_map_included(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="arena",
+            in_combat=True,
+            max_hp=30,
+            current_hp=30,
+            attacks=(_SWORD,),
+        )
+
+        layer = EntitiesLayer([player])
+        battle_map = BattleMap(
+            width=60,
+            height=60,
+            walls=[Wall(x1=30, y1=0, x2=30, y2=30)],
+        )
+        battle_map.set_position("p1", Position(10, 10))
+        combat = CombatState(location_id="arena", turn_order=["p1"], battle_map=battle_map)
+        layer._combat._combats["arena"] = combat
+
+        awareness = layer.build_combat_awareness(player)
+        assert len(awareness.walls) > 0
+
+    def test_no_combat_for_location_returns_defaults(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="arena",
+            in_combat=True,
+            max_hp=30,
+            current_hp=30,
+            attacks=(_SWORD,),
+        )
+
+        layer = EntitiesLayer([player])
+
+        awareness = layer.build_combat_awareness(player)
+        assert isinstance(awareness, CombatAwareness)
+        assert awareness.round_number == 1
+        assert awareness.nearby == []
+        assert awareness.walls == []
+        assert awareness.battle_map_ascii == ""
+
+
+class TestFactionHostilityEdgeCases:
+    """Edge cases for faction hostility checks."""
+
+    def test_both_no_faction_returns_false_no_query(self) -> None:
+        observer = Character(id="a", name="Wanderer", location_id="road")
+        other = Character(id="b", name="Traveler", location_id="road")
+
+        layer = EntitiesLayer([observer, other])
+        calls: list[str] = []
+
+        def query_fn(target: str, query: Query) -> Answer:
+            calls.append(target)
+            return Answer(value=None)
+
+        result = layer._awareness.check_faction_hostility(observer, other, query_fn)
+        assert result is False
+        assert len(calls) == 0
+
+    def test_query_fn_none_returns_false(self) -> None:
+        observer = Character(id="a", name="Elf", location_id="road", faction_id="elves")
+        other = Character(id="b", name="Orc", location_id="road", faction_id="horde")
+
+        layer = EntitiesLayer([observer, other])
+
+        result = layer._awareness.check_faction_hostility(observer, other, None)
+        assert result is False
+
+    def test_politics_query_raises_returns_false(self) -> None:
+        observer = Character(id="a", name="Elf", location_id="road", faction_id="elves")
+        other = Character(id="b", name="Orc", location_id="road", faction_id="horde")
+
+        layer = EntitiesLayer([observer, other])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            raise RuntimeError("politics layer crashed")
 
         result = layer._awareness.check_faction_hostility(observer, other, query_fn)
         assert result is False
