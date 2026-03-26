@@ -204,7 +204,7 @@ Centralized derived stat computation replacing ad-hoc logic scattered across com
 
 ## Logging
 
-Structured logging via `structlog` (`logging_config.py`, `logging_file_dispatch.py`). Three modes: default (WARNING, JSON to stderr), `DEBUG=1` (DEBUG level, pretty console or JSON), `DEBUG=1 LOG_DIR=./logs` (additionally writes denormalized JSONL files per domain tag). See [docs/LOGGING.md](docs/LOGGING.md).
+Structured logging via `structlog` (`logging_config.py`, `logging_file_dispatch.py`). `LOG_LEVEL` env var controls verbosity (default: WARNING). When `LOG_LEVEL=DEBUG` and stderr is a TTY, uses pretty console renderer; otherwise JSON. `LOG_DIR` enables denormalized JSONL file dispatch per domain tag. See [docs/LOGGING.md](docs/LOGGING.md).
 
 ## Key Principles
 

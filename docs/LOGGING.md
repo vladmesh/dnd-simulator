@@ -9,10 +9,10 @@ Structured logging via `structlog` with contextvar-based context propagation, do
 make serve
 
 # Debug mode: DEBUG level, pretty console output
-DEBUG=1 make serve
+LOG_LEVEL=DEBUG make serve
 
 # Debug + file dispatch: writes denormalized JSONL files
-DEBUG=1 LOG_DIR=./logs make serve
+LOG_LEVEL=DEBUG LOG_DIR=./logs make serve
 ```
 
 ## Configuration
@@ -21,8 +21,8 @@ DEBUG=1 LOG_DIR=./logs make serve
 
 | Env var   | Effect                                                        |
 |-----------|---------------------------------------------------------------|
-| `DEBUG=1` | DEBUG level, pretty console renderer (TTY) or JSON (pipe)     |
-| `LOG_DIR` | Enable file dispatch — denormalized JSONL per session/domain  |
+| `LOG_LEVEL` | Verbosity: DEBUG, INFO, WARNING (default), ERROR, CRITICAL. Pretty console when DEBUG + TTY. |
+| `LOG_DIR`   | Enable file dispatch — denormalized JSONL per session/domain  |
 
 Processor chain: `merge_contextvars → add_log_level → timestamp → [file_dispatch] → renderer`
 
