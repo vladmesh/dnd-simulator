@@ -1,0 +1,32 @@
+kingdom_patrol_1:
+  name: {en: Kingdom Patrol, ru: Королевский патруль}
+  faction: kingdom
+  type: patrol
+  behavior: patrol
+  start_location: silverport_highfield_road
+  route: [silverport_highfield_road, highfield_town_gate, highfield_iron_road]
+  strength: 5
+  members: [bandit, bandit, bandit]
+  tick_interval: 3600
+
+bandit_gang_1:
+  name: {en: Bandit Gang, ru: Банда разбойников}
+  faction: bandits
+  type: bandit
+  behavior: raid
+  start_location: highfield_bogmire_road
+  territory: [highfield_bogmire_road, highfield_iron_road, highfield_town_gate]
+  strength: 4
+  members: [bandit, bandit]
+  tick_interval: 3600
+
+wolf_pack_1:
+  name: {en: Wolf Pack, ru: Стая волков}
+  faction: wildlife
+  type: monster_pack
+  behavior: roam
+  start_location: greenwood_village_edge
+  territory: [greenwood_village_edge, greenwood_highfield_road, highfield_town_gate]
+  strength: 3
+  members: [wolf, wolf, wolf]
+  tick_interval: 1800

@@ -1,0 +1,5 @@
+name: "Sword Vale Entities"
+layer_type: entities
+version: "1.0"
+description: "Named NPCs in Silverport: smith, tavern keeper, merchant, guard captain"
+tags: [medieval, fantasy, silverport]

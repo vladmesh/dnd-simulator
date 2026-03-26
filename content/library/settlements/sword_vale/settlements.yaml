@@ -1,0 +1,90 @@
+silverport_city:
+  name:
+    en: Silverport City
+    ru: Город Серебропорт
+  type: city
+  population: 5000
+  prosperity: 70
+  defenses: 60
+  region: silverport
+fishing_hamlet:
+  name:
+    en: Fishing Hamlet
+    ru: Рыбацкий Хутор
+  type: village
+  population: 200
+  prosperity: 50
+  defenses: 10
+  region: silverport
+highfield_town:
+  name:
+    en: Highfield Town
+    ru: Город Высокополье
+  type: town
+  population: 1500
+  prosperity: 60
+  defenses: 30
+  region: highfield
+wheat_village:
+  name:
+    en: Wheat Village
+    ru: Пшеничная Деревня
+  type: village
+  population: 400
+  prosperity: 55
+  defenses: 5
+  region: highfield
+greenwood_village:
+  name:
+    en: Greenwood Village
+    ru: Деревня Зеленолесья
+  type: village
+  population: 300
+  prosperity: 45
+  defenses: 15
+  region: greenwood
+iron_keep:
+  name:
+    en: Iron Keep
+    ru: Железная Крепость
+  type: town
+  population: 800
+  prosperity: 50
+  defenses: 70
+  region: iron_peaks
+miners_rest:
+  name:
+    en: Miner's Rest
+    ru: Привал Шахтёров
+  type: village
+  population: 200
+  prosperity: 40
+  defenses: 10
+  region: iron_peaks
+frostholm_outpost:
+  name:
+    en: Frostholm Outpost
+    ru: Застава Морозграда
+  type: village
+  population: 150
+  prosperity: 30
+  defenses: 40
+  region: frostholm
+bogtown:
+  name:
+    en: Bogtown
+    ru: Болотоград
+  type: village
+  population: 250
+  prosperity: 35
+  defenses: 15
+  region: bogmire
+dustmere_oasis:
+  name:
+    en: Dustmere Oasis
+    ru: Оазис Пыльнотопья
+  type: town
+  population: 600
+  prosperity: 45
+  defenses: 35
+  region: dustmere

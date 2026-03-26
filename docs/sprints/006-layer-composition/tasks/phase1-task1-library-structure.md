@@ -88,4 +88,14 @@ Tests validate the on-disk structure — no loader changes yet, so we test the Y
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward data migration. Used Python+PyYAML script to extract settlements from regions.yaml
+(10 settlements across 7 regions). All other files copied as-is. Original sword_vale files remain
+in place — Task 2 will convert them to manifest and delete.
+
+17 new tests validate: template completeness (5 layer types, metadata fields, data files),
+settlements extraction correctness (region back-references, no settlements key in regions),
+data preservation (hardcoded counts match original). All 1115 tests pass.

@@ -1,0 +1,5 @@
+name: "Sword Vale Ecology"
+layer_type: ecology
+version: "1.0"
+description: "Goblins, wolves, bandits and patrol squads across Sword Vale roads"
+tags: [medieval, fantasy, low-level]

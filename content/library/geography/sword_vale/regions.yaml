@@ -1,0 +1,98 @@
+silverport:
+  name:
+    en: Silverport
+    ru: Серебропорт
+  latitude: 45.0
+  longitude: -2.0
+  elevation: 5
+  terrain: coast
+  water_proximity: 0.9
+  connections:
+  - target: highfield
+    direction: e
+  - target: greenwood
+    direction: se
+highfield:
+  name:
+    en: Highfield Plains
+    ru: Высокопольские Равнины
+  latitude: 45.5
+  longitude: 0.0
+  elevation: 150
+  terrain: plains
+  water_proximity: 0.1
+  connections:
+  - target: silverport
+    direction: w
+  - target: greenwood
+    direction: sw
+  - target: iron_peaks
+    direction: n
+  - target: bogmire
+    direction: e
+greenwood:
+  name:
+    en: Greenwood Forest
+    ru: Зеленолесье
+  latitude: 44.0
+  longitude: -1.0
+  elevation: 100
+  terrain: forest
+  water_proximity: 0.2
+  connections:
+  - target: silverport
+    direction: nw
+  - target: highfield
+    direction: ne
+iron_peaks:
+  name:
+    en: Iron Peaks
+    ru: Железные Пики
+  latitude: 48.0
+  longitude: 0.5
+  elevation: 2800
+  terrain: mountains
+  water_proximity: 0.0
+  connections:
+  - target: highfield
+    direction: s
+  - target: frostholm
+    direction: n
+frostholm:
+  name:
+    en: Frostholm
+    ru: Морозград
+  latitude: 55.0
+  longitude: 1.0
+  elevation: 800
+  terrain: tundra
+  water_proximity: 0.05
+  connections:
+  - target: iron_peaks
+    direction: s
+bogmire:
+  name:
+    en: Bogmire Marsh
+    ru: Болотная Топь
+  latitude: 44.5
+  longitude: 2.5
+  elevation: 20
+  terrain: swamp
+  water_proximity: 0.7
+  connections:
+  - target: highfield
+    direction: w
+  - target: dustmere
+    direction: s
+dustmere:
+  name:
+    en: Dustmere Wastes
+    ru: Пыльнотопская Пустошь
+  latitude: 40.0
+  longitude: 3.0
+  elevation: 400
+  terrain: desert
+  water_proximity: 0.0
+  connections:
+  - target: bogmire
+    direction: n

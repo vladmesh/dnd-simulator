@@ -1,0 +1,5 @@
+name: "Sword Vale Geography"
+layer_type: geography
+version: "1.0"
+description: "7 coastal/inland regions around the port of Silverport"
+tags: [medieval, fantasy, coastal]

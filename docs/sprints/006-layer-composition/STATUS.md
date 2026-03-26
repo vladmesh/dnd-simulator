@@ -6,11 +6,10 @@
 
 ## Current
 
-Phase 1 tasks generated. Ready to start task 1.
+Phase 1, Task 1: Library Structure + Sword Vale Extraction — done. 5 layer templates in library, 10 settlements extracted.
 
 ## Next Steps
 
-- Task 1: Create library structure, extract sword_vale's 5 layers as templates, split settlements from regions.yaml
 - Task 2: Define manifest format, convert sword_vale to manifest, create test_vale (all-custom), delete old worlds
 
 ## Decisions

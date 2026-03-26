@@ -1,0 +1,46 @@
+silverhold:
+  name:
+    en: Kingdom of Silverhold
+    ru: Королевство Серебрянка
+  regions: [silverport, highfield]
+  wealth: 65
+  military: 35
+  stability: 75
+  leader:
+    name:
+      en: King Aldric
+      ru: Король Олдрик
+    age: 52
+    trait: merchant
+
+ironmark:
+  name:
+    en: Ironmark Confederacy
+    ru: Железная Конфедерация
+  regions: [iron_peaks, frostholm]
+  wealth: 30
+  military: 70
+  stability: 60
+  leader:
+    name:
+      en: Warlord Brenna
+      ru: Воевода Бренна
+    age: 38
+    trait: militarist
+
+dustmere_sultanate:
+  name:
+    en: Dustmere Sultanate
+    ru: Пыльнотопский Султанат
+  regions: [bogmire, dustmere]
+  wealth: 45
+  military: 40
+  stability: 80
+  leader:
+    name:
+      en: Sultan Caspian
+      ru: Султан Каспиан
+    age: 45
+    trait: diplomat
+
+# greenwood is independent — no nation controls it
