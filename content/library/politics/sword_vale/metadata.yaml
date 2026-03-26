@@ -3,3 +3,4 @@ layer_type: politics
 version: "1.0"
 description: "3 nations and 5 factions vying for control of the Sword Vale"
 tags: [medieval, fantasy, kingdom]
+requires_geography: [sword_vale]

@@ -48,4 +48,8 @@ The catalog reads `metadata.yaml` from each template directory. Compatibility is
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Clean implementation, no surprises. Created `content_loader/library.py` with `TemplateInfo` dataclass, `list_templates()`, and `list_compatible_templates()`. Added `requires_geography` to all non-geography metadata.yaml files in the library (politics, settlements, ecology, entities — all point to `[sword_vale]`). Geography templates have no requirements as the base layer. API endpoint uses `LayerType` enum as path parameter, so invalid layer types get 422 automatically from FastAPI. 13 new tests.

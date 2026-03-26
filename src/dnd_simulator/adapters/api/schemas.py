@@ -179,5 +179,15 @@ class CreatureResponse(BaseModel):
     memory: dict[str, object] | None = None
 
 
+class TemplateListItem(BaseModel):
+    slug: str
+    name: str
+    layer_type: str
+    version: str
+    description: str
+    tags: list[str]
+    requires_geography: list[str]
+
+
 class MessageResponse(BaseModel):
     message: str

@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 3 tasks generated. Ready to start task 1.
+Phase 3, Task 1: Library Catalog Service + API — done. Catalog module, compatibility filtering, REST endpoint all working.
 
 ## Next Steps
 

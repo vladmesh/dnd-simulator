@@ -17,15 +17,42 @@ from dnd_simulator.adapters.api.schemas import (
     SetBrainRequest,
     SetLangRequest,
     SpawnCreatureRequest,
+    TemplateListItem,
     WorldListItem,
     WorldStateResponse,
 )
+from dnd_simulator.content_loader.manifest import LayerType
 from dnd_simulator.core.models import Query, QueryType
 from dnd_simulator.i18n import _
 from dnd_simulator.service.game_service import GameService
 from dnd_simulator.service.session import GameSession
 
 router = APIRouter(prefix="/api/master", tags=["master"])
+
+
+# -- Library (template catalog) --
+
+
+@router.get("/library/{layer_type}", response_model=list[TemplateListItem])
+def list_library_templates(layer_type: LayerType, geography: str | None = None) -> list[TemplateListItem]:
+    """List available templates from the library for a given layer type."""
+    service = get_service()
+    if geography:
+        templates = service.list_compatible_library_templates(layer_type, selected={"geography": geography})
+    else:
+        templates = service.list_library_templates(layer_type)
+    return [
+        TemplateListItem(
+            slug=t.slug,
+            name=t.name,
+            layer_type=t.layer_type.value,
+            version=t.version,
+            description=t.description,
+            tags=list(t.tags),
+            requires_geography=list(t.requires_geography),
+        )
+        for t in templates
+    ]
 
 
 # -- Worlds (templates) --

@@ -16,6 +16,11 @@ from dnd_simulator.content_loader.items import (
     parse_equipped_weapon,
     parse_items,
 )
+from dnd_simulator.content_loader.library import (
+    TemplateInfo,
+    list_compatible_templates,
+    list_templates,
+)
 from dnd_simulator.content_loader.manifest import (
     LayerSource,
     LayerType,
@@ -44,11 +49,14 @@ from dnd_simulator.content_loader.world import (
 __all__ = [
     "LayerSource",
     "LayerType",
+    "TemplateInfo",
     "_load_section",
     "build_class_resource_pools",
     "extract_all_equipped",
     "extract_region_adjacency",
     "extract_region_terrains",
+    "list_compatible_templates",
+    "list_templates",
     "load_battle_maps",
     "load_factions",
     "load_locations",

@@ -8,6 +8,7 @@ from typing import Any
 import structlog
 
 from dnd_simulator.content_loader import (
+    LayerType,
     extract_region_adjacency,
     extract_region_terrains,
     load_factions,
@@ -20,6 +21,11 @@ from dnd_simulator.content_loader import (
     load_world,
     load_world_meta_from_manifest,
     resolve_manifest,
+)
+from dnd_simulator.content_loader.library import (
+    TemplateInfo,
+    list_compatible_templates,
+    list_templates,
 )
 from dnd_simulator.core.character import Entity
 from dnd_simulator.core.location import LocationGraph
@@ -193,6 +199,14 @@ class GameService(
                 meta = load_world_meta_from_manifest(entry, lang=lang)
                 result.append({"id": entry.name, **meta})
         return result
+
+    def list_library_templates(self, layer_type: LayerType) -> list[TemplateInfo]:
+        """List all library templates for a given layer type."""
+        return list_templates(self._content_dir, layer_type)
+
+    def list_compatible_library_templates(self, layer_type: LayerType, selected: dict[str, str]) -> list[TemplateInfo]:
+        """List library templates compatible with already-selected layers."""
+        return list_compatible_templates(self._content_dir, layer_type, selected)
 
     def get_world_template(self, world_id: str) -> dict[str, Any]:
         """Read a world template from disk (YAML data, not a live session)."""
