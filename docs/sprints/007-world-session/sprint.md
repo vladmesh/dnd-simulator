@@ -102,7 +102,9 @@ WorldInspector + Fork — мастерская функциональность,
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Layer Files Read/Write API](tasks/phase4-task1-layer-files-api.md)
+2. [Layer Editor UI](tasks/phase4-task2-layer-editor-ui.md)
+3. [E2E — Fork, Edit YAML, Create Session, Verify Changes](tasks/phase4-task3-e2e-layer-editor.md)
 
 ---
 
