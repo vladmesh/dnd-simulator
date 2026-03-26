@@ -17,7 +17,7 @@
 
 ---
 
-## Phase 1: Library Structure + Manifest + Content Migration
+## Phase 1: Library Structure + Manifest + Content Migration ✓
 
 Определяем формат шаблона слоя (metadata.yaml + данные), формат манифеста мира, структуру `content/library/`. Конвертируем sword_vale: все 5 слоёв в библиотеку, мир → манифест со ссылками. Старые тестовые миры (arena, village, sneak_test) удаляем. Создаём новый тестовый мир test_vale — all-custom, минимальный но полноценный (2 региона, сквад, патруль, НПС). Settlements выносим из regions.yaml в отдельный settlements.yaml. `content_loader` пока не трогаем — только формат и данные на диске.
 
@@ -65,16 +65,23 @@ API для работы с библиотекой: список шаблонов
 
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** COMPLETE
 
 ## Decisions
 
-_(заполняется по ходу спринта)_
+- All 5 layers (including entities) go to library — users fork complete worlds and tweak NPCs
+- Settlements extracted from regions.yaml into standalone settlements.yaml (1 template = 1 layer)
+- Delete arena, village, sneak_test — replace with test_vale (2 regions, all mechanics covered)
+- Compatibility is declared explicitly via `requires_geography` in metadata.yaml — no runtime ID scanning
+- Old create_world/update_world/content_saver flow replaced by assemble + fork
+- WorldBuilder wizard is an alternative mode alongside existing WorldPicker ("quick start" vs "custom world")
 
 ## Deferred
 
-_(заполняется по ходу спринта)_
+Nothing deferred — all planned scope delivered.
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-03-26
+
+World composition system: library templates (`content/library/`), manifest-based worlds (`content/worlds/`), assembly API, fork API, WorldBuilder frontend wizard. 4 phases, 8 tasks. Backend: 3 new modules (manifest.py, library.py, assembly.py), 5 new API endpoints, 76 new unit tests, 17 integration tests. Frontend: WorldBuilder component (6-step wizard), 2 new API client methods, TypeScript types, i18n (en+ru). Old flat world format and content_saver removed. Audit clean — 0 new issues.

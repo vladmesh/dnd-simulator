@@ -2,10 +2,14 @@
 
 Tests run against a live backend in docker compose with test content
 that includes a library/ directory with test_geo/test_pol/test_set/test_eco/test_ent templates.
+
+World IDs use UUID suffixes to avoid collisions with leftover data from previous runs
+(the test content directory is a docker volume mount that persists).
 """
 
 from __future__ import annotations
 
+import uuid
 from http import HTTPStatus
 
 import requests
@@ -17,6 +21,11 @@ ALL_LAYER_SELECTIONS = {
     "ecology": "test_eco",
     "entities": "test_ent",
 }
+
+
+def _uid(prefix: str) -> str:
+    """Generate a unique world ID with prefix to avoid collisions across test runs."""
+    return f"{prefix}_{uuid.uuid4().hex[:8]}"
 
 
 class TestLibraryCatalog:
@@ -72,10 +81,11 @@ class TestLibraryCatalog:
 
 class TestWorldAssembly:
     def test_assemble_world(self, api_url: str) -> None:
+        world_id = _uid("asm")
         resp = requests.post(
             f"{api_url}/worlds/assemble",
             json={
-                "id": "assembled_test",
+                "id": world_id,
                 "name": "Assembled Test World",
                 "description": "A world assembled from library templates",
                 "layer_selections": ALL_LAYER_SELECTIONS,
@@ -84,23 +94,26 @@ class TestWorldAssembly:
         )
         assert resp.status_code == HTTPStatus.CREATED
         data = resp.json()
-        assert data["id"] == "assembled_test"
+        assert data["id"] == world_id
         assert data["name"] == "Assembled Test World"
 
         # Verify it appears in world listing
         list_resp = requests.get(f"{api_url}/worlds", timeout=5)
         world_ids = [w["id"] for w in list_resp.json()]
-        assert "assembled_test" in world_ids
+        assert world_id in world_ids
 
     def test_assemble_duplicate_409(self, api_url: str) -> None:
-        # assembled_test was created in the previous test; creating again should 409
+        world_id = _uid("dup")
+        # Create first
+        requests.post(
+            f"{api_url}/worlds/assemble",
+            json={"id": world_id, "name": "First", "layer_selections": ALL_LAYER_SELECTIONS},
+            timeout=10,
+        )
+        # Creating again should 409
         resp = requests.post(
             f"{api_url}/worlds/assemble",
-            json={
-                "id": "assembled_test",
-                "name": "Duplicate",
-                "layer_selections": ALL_LAYER_SELECTIONS,
-            },
+            json={"id": world_id, "name": "Duplicate", "layer_selections": ALL_LAYER_SELECTIONS},
             timeout=10,
         )
         assert resp.status_code == HTTPStatus.CONFLICT
@@ -109,7 +122,7 @@ class TestWorldAssembly:
         resp = requests.post(
             f"{api_url}/worlds/assemble",
             json={
-                "id": "bad_world",
+                "id": _uid("bad"),
                 "name": "Bad",
                 "layer_selections": {"geography": "test_geo"},  # missing 4 layers
             },
@@ -121,7 +134,7 @@ class TestWorldAssembly:
         resp = requests.post(
             f"{api_url}/worlds/assemble",
             json={
-                "id": "bad_world_2",
+                "id": _uid("bad2"),
                 "name": "Bad",
                 "layer_selections": {
                     "geography": "nonexistent",
@@ -136,9 +149,15 @@ class TestWorldAssembly:
         assert resp.status_code == HTTPStatus.BAD_REQUEST
 
     def test_assembled_world_starts_session(self, api_url: str) -> None:
+        world_id = _uid("sess")
+        requests.post(
+            f"{api_url}/worlds/assemble",
+            json={"id": world_id, "name": "Session Test", "layer_selections": ALL_LAYER_SELECTIONS},
+            timeout=10,
+        )
         resp = requests.post(
             f"{api_url}/sessions",
-            json={"world_name": "assembled_test", "lang": "en"},
+            json={"world_name": world_id, "lang": "en"},
             timeout=10,
         )
         assert resp.status_code == HTTPStatus.OK
@@ -189,10 +208,11 @@ class TestWizardFlow:
         selected_ent = ent_templates[0]["slug"]
 
         # Step 6: Assemble
+        world_id = _uid("wizard")
         resp = requests.post(
             f"{api_url}/worlds/assemble",
             json={
-                "id": "wizard_flow_world",
+                "id": world_id,
                 "name": "Wizard Flow World",
                 "description": "Built by the wizard flow test",
                 "layer_selections": {
@@ -210,7 +230,7 @@ class TestWizardFlow:
         # Step 7: Create session from assembled world
         resp = requests.post(
             f"{api_url}/sessions",
-            json={"world_name": "wizard_flow_world", "lang": "en"},
+            json={"world_name": world_id, "lang": "en"},
             timeout=10,
         )
         assert resp.status_code == HTTPStatus.OK
@@ -242,7 +262,7 @@ class TestWizardFlow:
         assert resp.status_code == HTTPStatus.OK
         sessions = resp.json()
         wizard_session = next(s for s in sessions if s["session_id"] == session_id)
-        assert wizard_session["world_name"] == "wizard_flow_world"
+        assert wizard_session["world_name"] == world_id
 
         # Cleanup
         requests.delete(f"{api_url}/sessions/{session_id}", timeout=5)
@@ -271,27 +291,22 @@ class TestWizardFlow:
 
 class TestForkLayer:
     def test_fork_entities_layer(self, api_url: str) -> None:
-        # Create a fresh world to fork from
+        world_id = _uid("fork")
         requests.post(
             f"{api_url}/worlds/assemble",
-            json={
-                "id": "fork_test_world",
-                "name": "Fork Test",
-                "layer_selections": ALL_LAYER_SELECTIONS,
-            },
+            json={"id": world_id, "name": "Fork Test", "layer_selections": ALL_LAYER_SELECTIONS},
             timeout=10,
         )
 
         resp = requests.post(
-            f"{api_url}/worlds/fork_test_world/fork/entities",
+            f"{api_url}/worlds/{world_id}/fork/entities",
             timeout=10,
         )
         assert resp.status_code == HTTPStatus.OK
 
-    def test_fork_already_custom_409(self, api_url: str) -> None:
-        # fork_test_world entities is already custom from the previous test
+        # Forking again should 409 (already custom)
         resp = requests.post(
-            f"{api_url}/worlds/fork_test_world/fork/entities",
+            f"{api_url}/worlds/{world_id}/fork/entities",
             timeout=10,
         )
         assert resp.status_code == HTTPStatus.CONFLICT
@@ -304,10 +319,17 @@ class TestForkLayer:
         assert resp.status_code == HTTPStatus.NOT_FOUND
 
     def test_forked_world_starts_session(self, api_url: str) -> None:
-        # fork_test_world has entities forked to custom, rest library
+        world_id = _uid("forkrun")
+        requests.post(
+            f"{api_url}/worlds/assemble",
+            json={"id": world_id, "name": "Fork Run Test", "layer_selections": ALL_LAYER_SELECTIONS},
+            timeout=10,
+        )
+        requests.post(f"{api_url}/worlds/{world_id}/fork/entities", timeout=10)
+
         resp = requests.post(
             f"{api_url}/sessions",
-            json={"world_name": "fork_test_world", "lang": "en"},
+            json={"world_name": world_id, "lang": "en"},
             timeout=10,
         )
         assert resp.status_code == HTTPStatus.OK

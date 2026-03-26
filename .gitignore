@@ -1,6 +1,9 @@
 # Game saves
 saves/
 
+# Worlds created during E2E testing (not part of content)
+content/worlds/e2e_*/
+
 # Debug logs
 logs/
 

@@ -1,5 +1,15 @@
 # Worlds created by integration tests (assemble/fork API tests)
 # These are created by Docker containers and may have root ownership
+# Tests use UUID-suffixed IDs, so match by prefix patterns
+asm_*/
+bad_*/
+bad2_*/
+dup_*/
+sess_*/
+wizard_*/
+fork_*/
+forkrun_*/
+# Legacy fixed-name test artifacts (from older test runs)
 assembled_test/
 fork_test_world/
 wizard_flow_world/
