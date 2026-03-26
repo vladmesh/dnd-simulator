@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 3 complete. WorldInspector works but is on the wrong screen (player-facing WorldPicker instead of master-facing MasterScreen). Phase 3.5 will relocate it.
+Phase 3.5, Task 1: Move WorldInspector from WorldPicker to MasterScreen — done.
 
 ## Next Steps
 
-- Phase 3.5: Move WorldInspector from WorldPicker to MasterScreen, clean up player setup screen, re-run E2E on /master.
+- Task 2: E2E — Fork Workflow via Master Screen

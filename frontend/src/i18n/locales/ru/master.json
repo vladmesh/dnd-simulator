@@ -113,5 +113,17 @@
   "weapon_reach": "Досягаемость (фут)",
   "weapon_magic": "Магическое",
   "weapon_finesse": "Фехтовальное",
-  "potion_heal_dice": "Кубики лечения"
+  "potion_heal_dice": "Кубики лечения",
+
+  "view_layers": "Слои",
+  "layers_load_error": "Не удалось загрузить информацию о слоях",
+  "fork_error": "Не удалось форкнуть слой",
+  "fork_btn": "Форк",
+  "source_library": "Библиотека",
+  "source_custom": "Свой",
+  "layer_geography": "География",
+  "layer_politics": "Политика",
+  "layer_settlements": "Поселения",
+  "layer_ecology": "Экология",
+  "layer_entities": "Существа"
 }

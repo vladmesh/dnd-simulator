@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function WorldInspector({ worldId }: Props) {
-  const { t, i18n } = useTranslation(["setup"])
+  const { t, i18n } = useTranslation(["master"])
   const [layers, setLayers] = useState<LayerInfo[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [forkingLayer, setForkingLayer] = useState<string | null>(null)
@@ -22,7 +22,7 @@ export function WorldInspector({ worldId }: Props) {
     api.master
       .getWorldManifest(worldId, i18n.language)
       .then((data) => setLayers(data.layers))
-      .catch(() => setError(t("setup:layers_load_error")))
+      .catch(() => setError(t("master:layers_load_error")))
       .finally(() => setLoading(false))
   }, [worldId, i18n.language, t])
 
@@ -34,7 +34,7 @@ export function WorldInspector({ worldId }: Props) {
       .then(() =>
         api.master.getWorldManifest(worldId, i18n.language).then((data) => setLayers(data.layers)),
       )
-      .catch(() => setError(t("setup:fork_error")))
+      .catch(() => setError(t("master:fork_error")))
       .finally(() => setForkingLayer(null))
   }
 
@@ -52,7 +52,7 @@ export function WorldInspector({ worldId }: Props) {
 
   if (!layers) return null
 
-  const layerLabel = (lt: string) => t(`setup:layer_${lt}`, lt)
+  const layerLabel = (lt: string) => t(`master:layer_${lt}`, lt)
 
   return (
     <div className="space-y-1.5">
@@ -65,7 +65,7 @@ export function WorldInspector({ worldId }: Props) {
           <div className="flex items-center gap-2">
             {layer.source === "library" ? (
               <>
-                <Badge variant="outline">{t("setup:source_library")}: {layer.template}</Badge>
+                <Badge variant="outline">{t("master:source_library")}: {layer.template}</Badge>
                 <Button
                   size="xs"
                   variant="ghost"
@@ -75,11 +75,11 @@ export function WorldInspector({ worldId }: Props) {
                   {forkingLayer === layer.layer_type && (
                     <Loader2 className="mr-1 size-3 animate-spin" />
                   )}
-                  {t("setup:fork_btn")}
+                  {t("master:fork_btn")}
                 </Button>
               </>
             ) : (
-              <Badge variant="secondary">{t("setup:source_custom")}</Badge>
+              <Badge variant="secondary">{t("master:source_custom")}</Badge>
             )}
           </div>
         </div>

@@ -57,4 +57,8 @@ Update `WorldInspector.tsx` to use `master` namespace instead of `setup`.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward relocation — no surprises. Removed WorldInspector, expandedWorld state, ChevronDown/ChevronRight from WorldPicker. Added WorldInspector import and render in MasterScreen below the world selector row. Moved 11 i18n keys (view_layers, layers_load_error, fork_error, fork_btn, source_library, source_custom, layer_*) from setup.json to master.json in both en and ru locales. Updated WorldInspector.tsx to use `master` namespace instead of `setup`.

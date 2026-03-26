@@ -4,8 +4,7 @@ import { api } from "@/transport/apiClient"
 import type { WorldListItem } from "@/types/api"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react"
-import { WorldInspector } from "./WorldInspector"
+import { Loader2 } from "lucide-react"
 
 interface Props {
   onWorldSelected: (worldId: string) => void
@@ -17,7 +16,6 @@ export function WorldPicker({ onWorldSelected }: Props) {
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [expandedWorld, setExpandedWorld] = useState<string | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -56,42 +54,25 @@ export function WorldPicker({ onWorldSelected }: Props) {
             <CardTitle>{world.name}</CardTitle>
             <CardDescription>{world.description || world.id}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                disabled={creating !== null}
-                onClick={() => {
-                  setCreating(world.id)
-                  setError(null)
-                  api.master
-                    .createSession({ world_name: world.id, lang: i18n.language })
-                    .then((res) => onWorldSelected(res.session_id))
-                    .catch(() => {
-                      setError(t("setup:create_session_error"))
-                      setCreating(null)
-                    })
-                }}
-              >
-                {creating === world.id && <Loader2 className="mr-1 size-3 animate-spin" />}
-                {t("setup:new_session")}
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() =>
-                  setExpandedWorld(expandedWorld === world.id ? null : world.id)
-                }
-              >
-                {expandedWorld === world.id ? (
-                  <ChevronDown className="mr-1 size-3" />
-                ) : (
-                  <ChevronRight className="mr-1 size-3" />
-                )}
-                {t("setup:view_layers")}
-              </Button>
-            </div>
-            {expandedWorld === world.id && <WorldInspector worldId={world.id} />}
+          <CardContent>
+            <Button
+              size="sm"
+              disabled={creating !== null}
+              onClick={() => {
+                setCreating(world.id)
+                setError(null)
+                api.master
+                  .createSession({ world_name: world.id, lang: i18n.language })
+                  .then((res) => onWorldSelected(res.session_id))
+                  .catch(() => {
+                    setError(t("setup:create_session_error"))
+                    setCreating(null)
+                  })
+              }}
+            >
+              {creating === world.id && <Loader2 className="mr-1 size-3 animate-spin" />}
+              {t("setup:new_session")}
+            </Button>
           </CardContent>
         </Card>
       ))}

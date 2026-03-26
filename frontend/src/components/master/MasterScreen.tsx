@@ -10,6 +10,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/u
 import { LanguageToggle } from "@/components/setup/LanguageToggle"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Loader2, Trash2, Settings } from "lucide-react"
+import { WorldInspector } from "@/components/setup/WorldInspector"
 
 export function MasterScreen() {
   const { t, i18n } = useTranslation(["master", "common"])
@@ -87,6 +88,8 @@ export function MasterScreen() {
           {t("master:new_session")}
         </Button>
       </div>
+
+      {selectedWorld && <WorldInspector worldId={selectedWorld} />}
 
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2">

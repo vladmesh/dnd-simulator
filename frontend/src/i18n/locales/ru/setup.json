@@ -71,17 +71,5 @@
   "wizard_creating": "Создание...",
   "wizard_create_error": "Не удалось создать мир",
   "wizard_back": "Назад",
-  "wizard_step_label": "Шаг {{current}} из {{total}}",
-
-  "view_layers": "Слои",
-  "layers_load_error": "Не удалось загрузить информацию о слоях",
-  "fork_error": "Не удалось форкнуть слой",
-  "fork_btn": "Форк",
-  "source_library": "Библиотека",
-  "source_custom": "Свой",
-  "layer_geography": "География",
-  "layer_politics": "Политика",
-  "layer_settlements": "Поселения",
-  "layer_ecology": "Экология",
-  "layer_entities": "Существа"
+  "wizard_step_label": "Шаг {{current}} из {{total}}"
 }

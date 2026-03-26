@@ -113,5 +113,17 @@
   "weapon_reach": "Reach (ft)",
   "weapon_magic": "Magic",
   "weapon_finesse": "Finesse",
-  "potion_heal_dice": "Heal Dice"
+  "potion_heal_dice": "Heal Dice",
+
+  "view_layers": "Layers",
+  "layers_load_error": "Failed to load layer info",
+  "fork_error": "Failed to fork layer",
+  "fork_btn": "Fork",
+  "source_library": "Library",
+  "source_custom": "Custom",
+  "layer_geography": "Geography",
+  "layer_politics": "Politics",
+  "layer_settlements": "Settlements",
+  "layer_ecology": "Ecology",
+  "layer_entities": "Entities"
 }
