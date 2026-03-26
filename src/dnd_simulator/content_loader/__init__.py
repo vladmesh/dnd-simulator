@@ -1,0 +1,68 @@
+"""Content loader package — re-exports all public (and tested private) functions."""
+
+from dnd_simulator.content_loader.creatures import (
+    build_class_resource_pools,
+    load_npcs,
+    parse_ability_scores,
+    parse_attacks,
+    parse_class_features,
+    parse_npc,
+    parse_player,
+)
+from dnd_simulator.content_loader.items import (
+    extract_all_equipped,
+    parse_equipped_armor,
+    parse_equipped_shield,
+    parse_equipped_weapon,
+    parse_items,
+)
+from dnd_simulator.content_loader.monsters import (
+    load_monsters,
+    load_squads,
+    parse_encounters,
+    parse_monster_template,
+    parse_squad,
+)
+from dnd_simulator.content_loader.utils import _load_section, resolve_text
+from dnd_simulator.content_loader.world import (
+    extract_region_adjacency,
+    extract_region_terrains,
+    load_battle_maps,
+    load_factions,
+    load_locations,
+    load_nations,
+    load_settlements,
+    load_world,
+    load_world_meta,
+)
+
+__all__ = [
+    "_load_section",
+    "build_class_resource_pools",
+    "extract_all_equipped",
+    "extract_region_adjacency",
+    "extract_region_terrains",
+    "load_battle_maps",
+    "load_factions",
+    "load_locations",
+    "load_monsters",
+    "load_nations",
+    "load_npcs",
+    "load_settlements",
+    "load_squads",
+    "load_world",
+    "load_world_meta",
+    "parse_ability_scores",
+    "parse_attacks",
+    "parse_class_features",
+    "parse_encounters",
+    "parse_equipped_armor",
+    "parse_equipped_shield",
+    "parse_equipped_weapon",
+    "parse_items",
+    "parse_monster_template",
+    "parse_npc",
+    "parse_player",
+    "parse_squad",
+    "resolve_text",
+]

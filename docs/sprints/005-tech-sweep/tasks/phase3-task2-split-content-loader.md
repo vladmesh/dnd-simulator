@@ -45,4 +45,10 @@ Pure structural refactor — no new behavioral tests. Verification:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward split — no behavioral changes. 757 LOC monolith → 5 domain modules + `__init__.py` with re-exports.
+Since all consumers import `from dnd_simulator.content_loader import X`, and the package `__init__.py` re-exports
+everything, zero consumer imports needed updating. All 1025 tests pass unchanged.

@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 3, Task 1: Split action_handlers.py into rules/handlers/ package — done. 607 LOC → 5 domain modules.
+Phase 3, Task 2: Split content_loader.py into content_loader/ package — done. 757 LOC → 5 domain modules.
 
 ## Next Steps
 
