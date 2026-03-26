@@ -94,7 +94,7 @@ WorldInspector + Fork — мастерская функциональность,
 1. [Move WorldInspector from WorldPicker to MasterScreen](tasks/phase3.5-task1-move-inspector-to-master.md)
 2. [E2E — Fork Workflow via Master Screen](tasks/phase3.5-task2-e2e-master-fork.md)
 
-## Phase 4: Layer Editor
+## Phase 4: Layer Editor ✓
 
 Новый API: чтение и запись YAML-файлов форкнутых (custom) слоёв. Frontend: code editor для YAML (только custom слои, library — read-only). Валидация YAML на бэкенде перед сохранением. E2E: fork → edit YAML → create session → verify changes applied in game.
 

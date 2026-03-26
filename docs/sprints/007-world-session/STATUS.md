@@ -1,13 +1,11 @@
 # Sprint 007 Status
 
 **Sprint:** 007-world-session
-**Phase:** 4 — Layer Editor
+**Phase:** 4 — Layer Editor (COMPLETE)
 **Updated:** 2026-03-26
 
 ## Current
 
-Phase 4, Task 3: E2E — Layer Editor — done. All 3 scenarios pass (fork+edit+verify, invalid YAML error, library read-only).
+Phase 4 complete. Layer file read/write API (3 endpoints), layer editor UI with file tabs and YAML editing, integration tests (7 new, 63 total), E2E validated (fork+edit+verify, invalid YAML, library read-only, regression combat).
 
-## Next Steps
-
-- Close phase 4
+All phases complete. Ready for sprint closure.

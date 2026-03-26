@@ -337,3 +337,134 @@ class TestForkLayer:
 
         # Cleanup
         requests.delete(f"{api_url}/sessions/{session_id}", timeout=5)
+
+
+def _first_filename(files_dict: dict[str, str]) -> str:
+    """Get the first filename from a files dict response."""
+    return next(iter(files_dict))
+
+
+class TestLayerFiles:
+    def test_read_library_layer_files(self, api_url: str) -> None:
+        world_id = _uid("lf_read")
+        requests.post(
+            f"{api_url}/worlds/assemble",
+            json={"id": world_id, "name": "LayerFiles Read", "layer_selections": ALL_LAYER_SELECTIONS},
+            timeout=10,
+        )
+
+        resp = requests.get(f"{api_url}/worlds/{world_id}/layers/geography/files", timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+        files = resp.json()["files"]
+        assert len(files) > 0
+        # files is dict[str, str] — filename → content
+        filename = _first_filename(files)
+        assert filename.endswith(".yaml") or filename.endswith(".yml")
+        assert len(files[filename]) > 0
+
+    def test_read_single_file(self, api_url: str) -> None:
+        world_id = _uid("lf_single")
+        requests.post(
+            f"{api_url}/worlds/assemble",
+            json={"id": world_id, "name": "LayerFiles Single", "layer_selections": ALL_LAYER_SELECTIONS},
+            timeout=10,
+        )
+
+        list_resp = requests.get(f"{api_url}/worlds/{world_id}/layers/geography/files", timeout=5)
+        filename = _first_filename(list_resp.json()["files"])
+
+        resp = requests.get(f"{api_url}/worlds/{world_id}/layers/geography/files/{filename}", timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+        data = resp.json()
+        assert data["filename"] == filename
+        assert len(data["content"]) > 0
+
+    def test_read_nonexistent_file_404(self, api_url: str) -> None:
+        world_id = _uid("lf_404")
+        requests.post(
+            f"{api_url}/worlds/assemble",
+            json={"id": world_id, "name": "LayerFiles 404", "layer_selections": ALL_LAYER_SELECTIONS},
+            timeout=10,
+        )
+
+        resp = requests.get(f"{api_url}/worlds/{world_id}/layers/geography/files/nonexistent.yaml", timeout=5)
+        assert resp.status_code == HTTPStatus.NOT_FOUND
+
+    def test_write_custom_layer_file(self, api_url: str) -> None:
+        world_id = _uid("lf_write")
+        requests.post(
+            f"{api_url}/worlds/assemble",
+            json={"id": world_id, "name": "LayerFiles Write", "layer_selections": ALL_LAYER_SELECTIONS},
+            timeout=10,
+        )
+
+        requests.post(f"{api_url}/worlds/{world_id}/fork/entities", timeout=10)
+
+        list_resp = requests.get(f"{api_url}/worlds/{world_id}/layers/entities/files", timeout=5)
+        filename = _first_filename(list_resp.json()["files"])
+
+        orig = requests.get(f"{api_url}/worlds/{world_id}/layers/entities/files/{filename}", timeout=5)
+        original_content = orig.json()["content"]
+
+        modified = original_content + "\n# integration test comment\n"
+        resp = requests.put(
+            f"{api_url}/worlds/{world_id}/layers/entities/files/{filename}",
+            json={"content": modified},
+            timeout=5,
+        )
+        assert resp.status_code == HTTPStatus.OK
+
+        verify = requests.get(f"{api_url}/worlds/{world_id}/layers/entities/files/{filename}", timeout=5)
+        assert verify.json()["content"] == modified
+
+    def test_write_library_layer_rejected(self, api_url: str) -> None:
+        world_id = _uid("lf_lib_wr")
+        requests.post(
+            f"{api_url}/worlds/assemble",
+            json={"id": world_id, "name": "LayerFiles LibWrite", "layer_selections": ALL_LAYER_SELECTIONS},
+            timeout=10,
+        )
+
+        list_resp = requests.get(f"{api_url}/worlds/{world_id}/layers/geography/files", timeout=5)
+        filename = _first_filename(list_resp.json()["files"])
+
+        resp = requests.put(
+            f"{api_url}/worlds/{world_id}/layers/geography/files/{filename}",
+            json={"content": "test: true\n"},
+            timeout=5,
+        )
+        assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+    def test_write_invalid_yaml_422(self, api_url: str) -> None:
+        world_id = _uid("lf_badyml")
+        requests.post(
+            f"{api_url}/worlds/assemble",
+            json={"id": world_id, "name": "LayerFiles BadYAML", "layer_selections": ALL_LAYER_SELECTIONS},
+            timeout=10,
+        )
+
+        requests.post(f"{api_url}/worlds/{world_id}/fork/entities", timeout=10)
+
+        list_resp = requests.get(f"{api_url}/worlds/{world_id}/layers/entities/files", timeout=5)
+        filename = _first_filename(list_resp.json()["files"])
+
+        resp = requests.put(
+            f"{api_url}/worlds/{world_id}/layers/entities/files/{filename}",
+            json={"content": "invalid: yaml: [unterminated"},
+            timeout=5,
+        )
+        assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+    def test_path_traversal_rejected(self, api_url: str) -> None:
+        world_id = _uid("lf_trav")
+        requests.post(
+            f"{api_url}/worlds/assemble",
+            json={"id": world_id, "name": "LayerFiles Traversal", "layer_selections": ALL_LAYER_SELECTIONS},
+            timeout=10,
+        )
+
+        resp = requests.get(
+            f"{api_url}/worlds/{world_id}/layers/geography/files/../../../etc/passwd",
+            timeout=5,
+        )
+        assert resp.status_code in (HTTPStatus.BAD_REQUEST, HTTPStatus.NOT_FOUND)
