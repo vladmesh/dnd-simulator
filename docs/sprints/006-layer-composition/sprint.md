@@ -36,7 +36,8 @@
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Manifest Resolver + Standalone Settlements Loader](tasks/phase2-task1-manifest-resolver.md)
+2. [Wire Manifest into GameService + Remove Old Format](tasks/phase2-task2-wire-manifest-into-gameservice.md)
 
 ## Phase 3: World Assembly Backend
 

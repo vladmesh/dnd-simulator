@@ -1,16 +1,17 @@
 # Sprint 006 Status
 
 **Sprint:** 006-layer-composition
-**Phase:** 1 — Library Structure + Manifest + Content Migration
+**Phase:** 2 — Content Loader Reads from Manifest
 **Updated:** 2026-03-26
 
 ## Current
 
-Phase 1, Task 2: Manifest Format + World Migration + Cleanup — done. Manifests added, test_vale created, 3 old worlds deleted.
+Phase 2 tasks generated. Ready to start task 1.
 
 ## Next Steps
 
-All Phase 1 tasks done.
+- Task 1: Manifest resolver + standalone settlements loader — new `resolve_manifest()` function and `load_settlements` refactor for standalone format
+- Task 2: Wire manifest into GameService + remove old format — refactor start_game/get_world_template/list_worlds, delete sword_vale flat files
 
 ## Decisions
 
