@@ -48,11 +48,15 @@ action_handlers.py (607 LOC) → combat, movement, trade handlers. content_loade
 
 ## Phase 4: Architecture Violations + Type Safety
 
-Fix rules→layers imports (merchant protocol в core). round.py → World.query_layer(). Mixin Protocols (27 type: ignore). Any→object в Query/Answer (24 каскадных изменения).
+Fix round.py private layer access. Service mixin type safety (24 type: ignore). Answer.value Any→object for cross-layer type safety.
+
+**Descoped:** rules→layers imports — already clean (merchant is_merchant lives on Character in core, rules never import layers).
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Service mixin Protocol base](tasks/phase4-task1-mixin-protocol.md)
+2. [Eliminate Round's private EntitiesLayer access](tasks/phase4-task2-round-private-access.md)
+3. [Answer.value Any → object](tasks/phase4-task3-answer-value-object.md)
 
 ## Phase 5: Test Gaps
 

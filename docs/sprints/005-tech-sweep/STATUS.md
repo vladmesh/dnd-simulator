@@ -1,11 +1,17 @@
 # Sprint 005 Status
 
 **Sprint:** 005-tech-sweep
-**Phase:** 3 — Growing Files Split (COMPLETE)
+**Phase:** 4 — Architecture Violations + Type Safety
 **Updated:** 2026-03-26
 
 ## Current
 
-Phase 3 complete. action_handlers.py split into rules/handlers/ package (combat, movement, trade, interaction, turn). content_loader.py split into content_loader/ package (world, geography, entities, politics, settlements). resolve_attack decomposed 186→74 LOC, query dispatcher 127→6 LOC. All integration tests and E2E green.
+Phase 4 tasks generated. Descoped rules→layers imports (already clean). Three tasks: mixin protocol, round.py private access, Answer.value type safety.
 
-Ready for Phase 4 task generation.
+Ready to start task 1.
+
+## Next Steps
+
+- Task 1: Service mixin Protocol base — eliminate 24 type: ignore[attr-defined]
+- Task 2: Round.py private access — add public methods to EntitiesLayer for merchant/wake queries
+- Task 3: Answer.value Any → object — force explicit type narrowing at consumer sites
