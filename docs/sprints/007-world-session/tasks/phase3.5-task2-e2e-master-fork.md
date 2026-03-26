@@ -29,4 +29,8 @@ Run scenarios via Playwright MCP against live stack. Write report to `docs/e2e-r
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All 5 scenarios passed on first run. The only hiccup was the combobox dropdown overlay intercepting clicks on the Fork button — closed with Escape, then Fork worked. Forked geography was reverted after testing to keep the repo clean.

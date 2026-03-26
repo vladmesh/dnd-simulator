@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 3.5, Task 1: Move WorldInspector from WorldPicker to MasterScreen — done.
+Phase 3.5, Task 2: E2E — Fork Workflow via Master Screen — done. All 5 scenarios pass.
 
 ## Next Steps
 
-- Task 2: E2E — Fork Workflow via Master Screen
+- All tasks in phase 3.5 complete — ready to close phase.
