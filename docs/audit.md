@@ -1,103 +1,78 @@
 # Code Audit
 
-> **Date**: 2026-03-25
-> **Scope**: full (post Sprint 004 Phase 4)
+> **Date**: 2026-03-26
+> **Scope**: full (post Sprint 006 Phase 4)
 
 ## Summary
-- Dead code: 2 issues (FIXED) + 4 backlog stubs
-- Code smells: 8 issues → backlog
-- Security: 9 issues → backlog
-- Architecture violations: 4 issues → backlog
-- Convention violations: 1 issue → backlog (4 false positives corrected)
+- Dead code: 0 new issues (4 backlog stubs from prior audit still valid)
+- Code smells: 0 new issues (8 prior items in backlog still valid)
+- Security: 0 new issues (9 prior items in backlog still valid)
+- Architecture violations: 0 new issues (prior items tracked)
+- Convention violations: 0 new issues
 - Layer contract: 0 issues
-- Test gaps: 12 issues → backlog
+- Test gaps: 0 new (12 prior gaps still in backlog)
 - Vision drift: 0 issues
 
-## Dead Code
-| File | Issue | Action |
-|------|-------|--------|
-| `rules/movement.py:101` | `move_toward()` — zero callers, superseded by `move_direction()` | **FIXED** — removed |
-| `rules/movement.py:111` | `move_away_from()` — zero callers, superseded by `move_direction()` | **FIXED** — removed |
+Sprint 006 introduced library templates, manifest-based loading, world assembly API, and a frontend WorldBuilder wizard. All new code is clean: proper module boundaries, no new `Any` types, no architecture violations, full test coverage for backend (unit + integration). Frontend has no test runner but was E2E verified via Playwright.
 
-Prior-audit backlog items (still valid, tracked for future sprints):
+## Dead Code
+
+No new dead code. Prior backlog stubs still valid:
 - `rules/conditions.py:32` `auto_fail_str_dex_saves()` — future saving throw system
 - `core/brain.py:59` `move_away_from_target()` — future movement AI
 - `core/turn_budget.py:54` `refund()` — future reaction system
 - `round.py:302` `check_reactions()` — stubbed reaction system
 
 TODOs (legitimate, keeping):
-- `round.py:390` — reaction awareness list
+- `round.py:387` — reaction awareness list
 - `rules/modifiers.py:285` — two-handed weapon exclusion
 
 ## Code Smells
-| File | Issue | Suggestion |
-|------|-------|------------|
-| `layers/entities/layer.py` (1215 lines) | God class — awareness, activation, combat, queries, perception, merchant lookups, squad handling | Extract awareness builder, activation manager, query dispatcher |
-| `content_loader.py` (815 lines) | Kitchen-sink loader for all content types | Split by domain: weapons, NPCs, settlements, encounters |
-| `layers/politics/layer.py` (609 lines) | Diplomacy, leaders, economy, warfare, trade in one class | Extract subsystem handlers |
-| `rules/action_handlers.py` (605 lines) | All action handlers in one module | Split by domain (combat, movement, trade, interaction) |
-| `round.py:125-248` | `run_combat_turn` ~121 lines | Extract budget init, awareness building, condition ticking |
-| `layers/entities/combat_manager.py` `resolve_attack` | 186 lines — attack roll, sneak attack, damage, logging, events | Extract sneak attack calc, damage calc to helpers |
-| `layers/entities/layer.py` `query` method | 125 lines, 13+ `if q is QueryType.X:` branches | Use dispatch dict pattern |
-| `service/session.py` `start_round` | 104 lines with nested callback definitions; serialization code duplicated across `on_turn`, `on_action`, `on_round_end` | Extract `_build_turn_message()` helper |
+
+No new smells. `routes_master.py` grew to 400 lines with library/assembly endpoints (was ~330). Still flat structure, no deep nesting — not actionable yet but approaching the threshold for splitting into separate route modules.
+
+Prior backlog items (8) unchanged — `layers/entities/layer.py`, `layers/politics/layer.py`, `round.py`, etc.
 
 ## Security
-| File:Line | Issue | Severity |
-|-----------|-------|----------|
-| `adapters/api/app.py:75-80` | CORS `allow_origins=["*"]`, `allow_methods=["*"]`, `allow_headers=["*"]` — any origin can access all API endpoints | high |
-| (global) | No authentication/authorization — all REST/WS endpoints open to anyone with session_id; any client can delete sessions, spawn/modify creatures, save/load | high |
-| `adapters/api/routes_ws.py:138` | No max WebSocket message size — client can send arbitrarily large JSON to exhaust memory | high |
-| `adapters/api/app.py:94-98` | `POST /api/frontend-error` accepts arbitrary JSON, no validation/size limits/auth — log injection vector | medium |
-| `adapters/api/routes_ws.py:87-93` | WS origin validation optional (`WS_ALLOWED_ORIGINS` env var, defaults to empty = allow all); case-sensitive comparison | medium |
-| (global) | No CSRF protection on state-changing HTTP methods; combined with CORS=* makes browser-based CSRF viable | medium |
-| (global) | No rate limiting on REST endpoints (WS has token bucket at 5 req/sec) | low |
-| `adapters/api/routes_ws.py:151-155` | Action `params` passed as raw dict from client with no schema validation | low |
-| `llm/prompts.py` | Player `say()` text flows into NPC memory → system prompt; system/user separation maintained but prior player utterances in system prompt | low |
+
+No new security issues. Sprint 006 adds library browsing and world assembly — both read-only or create-only operations, no new attack surface.
+
+Prior 9 issues unchanged (CORS wildcard, no auth, no WS message limits, etc.).
 
 ## Architecture Violations
-| File:Line | Violation | Should Be | Severity |
-|-----------|-----------|-----------|----------|
-| `rules/trade.py:11` | `from dnd_simulator.layers.entities.models import Npc` — rules/ imports from layers/ | rules/ must depend only on core/; extract merchant protocol to core | high |
-| `rules/action_handlers.py:519` | Runtime `from dnd_simulator.layers.entities.models import Npc` in `_resolve_merchant()` | Same — rules/ must not depend on layers/ even at runtime | high |
-| `round.py:29` | `from dnd_simulator.layers.entities.layer import EntitiesLayer` — Round directly accesses layer bypassing World query validation | Round should use `World.query_layer()` instead of direct layer method calls | medium |
-| `layers/entities/npc_behaviors.py:15-50` | Module-level YAML loading with global state mutation (`_load()` mutates globals) | Load data in content_loader.py and inject into layer | low |
 
-Resolved from prior audit:
-- `layers/entities/models.py` hardcoded game content — still present but tracked for YAML extraction
-- `adapters/api/routes_ws.py` adapter constructing domain Action — still present, low severity
+No new violations. Prior items:
+- `round.py:29` imports `EntitiesLayer` directly (medium, tracked)
+- `routes_master.py:25` imports `Query`/`QueryType` from core (low, adapter uses them for god-mode query)
+- `routes_ws.py:28` imports `Action`/`ActionType` from core (low, WS constructs actions from client JSON)
+- `routes_player.py:10-11` imports `Ability`/`PlayerCharacter` from core (low)
+
+New `content_loader/` modules (assembly.py, library.py, manifest.py) have clean imports — only from within `content_loader/` package plus stdlib.
 
 ## Convention Violations
-| File:Line | Violation | Rule |
-|-----------|-----------|------|
-| `core/models.py:210,217` | `Query.params: dict[str, Any]` and `Answer.value: Any` | Use `object` for strict mypy |
 
-False positives from initial scan (verified correct on inspection):
-- ~~`models.py:105` `self.role == "merchant"`~~ — actually uses `NpcRole.MERCHANT` enum
-- ~~`routes_player.py` / `routes_master.py` helpers typed as Any~~ — already properly typed
-- ~~`action_handlers.py` `.get("key", default)` pattern~~ — optional params (description, travel_to, hours) with intentional defaults
+No new violations. `Any` usage in `core/models.py:6` tracked from prior audit.
 
 ## Layer Contract
-| Layer | Issue |
-|-------|-------|
-| (all clean) | All 5 layers (Geography, Politics, Settlements, Entities, Ecology) implement full Layer ABC. No violations. |
+
+All 5 layers implement the Layer ABC fully. No changes to layer implementations in sprint 006.
 
 ## Test Gaps
-| Source File | Expected Test | Status |
-|-------------|---------------|--------|
-| `rules/action_handlers.py` (605 lines) | `test_action_handlers.py` | **missing — CRITICAL** (core combat execution) |
-| `rules/action_provider.py` | `test_action_provider.py` | missing (action availability logic) |
-| `core/awareness.py` | `test_awareness.py` | missing |
-| `core/items.py` | `test_items.py` | missing |
-| `core/world.py` | `test_world.py` | missing |
-| `core/turn_budget.py` | `test_turn_budget.py` | missing |
-| `core/location.py` | `test_location.py` | missing |
-| `service/brain_factory.py` | `test_brain_factory.py` | missing |
-| `service/commands_*.py` | `test_commands_*.py` | missing (4 files) |
-| `service/session.py` | `test_session.py` | missing |
-| `storage/store.py` | `test_store.py` | missing |
-| `llm/*.py` | unit tests | missing (LLM-dependent, may be intentional) |
+
+No new gaps. All sprint 006 backend modules have corresponding tests:
+- `test_library_catalog.py` — 13 tests for library.py
+- `test_library_structure.py` — 17 tests for metadata files
+- `test_manifest_resolver.py` — 13 tests for manifest.py
+- `test_manifest_game_service.py` — 16 tests for service integration
+- `test_world_assembly.py` — 17 tests for assembly.py
+- `test_library_and_assembly.py` (integration) — 17 tests for API endpoints
+
+Prior 12 test gap items unchanged.
 
 ## Vision Drift
-| Change | Invariant Violated | Impact |
-|--------|-------------------|--------|
-| (none) | — | Sprint 004 squad events, materialization, perception pipeline, frontend rendering — all follow established patterns. Classic mode works without LLM (materialized squads get RuleBrain). Single global round maintained. Layers independent (EcologyLayer respects hierarchy). Brain swappable. Content is data. All 6 invariants hold. |
+
+No drift. Sprint 006 reinforces core vision principles:
+- **Content is data**: worlds are now composable from YAML library templates
+- **Classic mode works without LLM**: library/assembly flow is entirely rule-based
+- **Layers are independent**: each layer template is a standalone unit; worlds compose 5 independent templates
+- **Master controls through endpoints**: assembly/fork operations go through GameService
