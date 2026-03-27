@@ -37,11 +37,12 @@
 
 ## UX / World Builder
 
-- [ ] **should** `dm-player-restructure` — Разделить главную на Player/DM входы. /master: вкладки Worlds/Sessions, stepper по слоям, scaffold UI. Deferred from sprint 007 phase 7.
+- [x] `dm-player-restructure` — ~~Разделить главную на Player/DM входы~~ FIXED Sprint 008 phase 4-5: master restructure, stepper, world management
 
 ## Tech Debt (from audits 2026-03-25)
 
 - [x] `god-class-entities` — ~~EntitiesLayer 1215 строк~~ FIXED Sprint 005: extracted awareness_builder, activation_manager, query_handler, combat_manager, perception
+- [ ] **should** `god-class-game-service` — GameService 836 строк, 43 метода. Продолжить выделение commands_*.py модулей
 - [ ] **should** `god-class-politics` — PoliticsLayer 609 строк. Выделить подсистемы
 - [x] `test-gaps-critical` — ~~rules/action_handlers.py без unit-тестов~~ FIXED Sprint 005: action_provider, awareness_builder, brain_factory, world isolation tests
 - [x] `test-gaps` — ~~Нет тестов: action_provider, awareness, world, brain_factory~~ FIXED Sprint 005 (commands_*, session, store remain)
@@ -59,6 +60,9 @@
 - [ ] **could** `npc-behaviors-yaml-loading` — layers/entities/npc_behaviors.py загружает YAML на уровне модуля с global state mutation. Перенести в content_loader
 - [ ] **could** `action-parsing-in-adapter` — Adapter (routes_ws) парсит Action из JSON, должен service layer
 - [x] `magic-number-trade` — ~~Magic number 0.08 в politics/layer.py:338~~ FIXED 2026-03-24
+- [ ] **should** `thick-adapter-world-state` — routes_master.py:290-330 оркестрирует 7+ layer queries напрямую + assert-based validation (500 при плохих данных). Вынести в GameService.get_world_state()
+- [ ] **should** `routes-master-growing` — routes_master.py 554 строк, 32 роута. Разделить content-editing и session-control роуты
+- [ ] **should** `test-gap-content-loader` — content_loader/schema_gen, refs, utils без выделенных unit-тестов (частично покрыты интеграционными)
 - [ ] **could** `player-status-in-adapter` — routes_player._player_status() маппит Ability enum → строки, presentation logic в адаптере
 
 ## Security (from audits 2026-03-25)
