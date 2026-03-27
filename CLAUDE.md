@@ -60,7 +60,7 @@ adapters/          — FastAPI REST + WebSocket API
 rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, resources, action providers, handlers/ package (no deps)
 llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
 storage/           — SaveStore interface, JsonFileStore
-content_loader/    — loads worlds, nations, settlements, NPCs, player from YAML; manifest resolver, library catalog, world assembly
+content_loader/    — loads worlds, nations, settlements, NPCs, player from YAML; Pydantic content schemas, JSON Schema generation, entity CRUD, manifest resolver, library catalog, world assembly, catalog loader (monsters/items)
 content/           — YAML world definitions (data, not code); library/ (reusable layer templates), worlds/ (manifest + optional custom layers)
 frontend/          — React + TypeScript SPA (Vite, shadcn/ui, Zustand)
 ```

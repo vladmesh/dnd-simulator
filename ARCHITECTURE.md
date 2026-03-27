@@ -55,10 +55,15 @@ src/dnd_simulator/
 │   └── api/       — FastAPI REST + WebSocket adapter (master + player routes, WS game loop, i18n middleware)
 │                    also serves legacy debug UI (static/) and React SPA build
 ├── content_loader/ — loads content from YAML directory format; locations must be explicit
+│   ├── schemas.py    — Pydantic content models (RegionContent, NpcContent, etc.) — source of truth for validation
+│   ├── schema_gen.py — JSON Schema generation from Pydantic models, enum injection, layer-refs resolution
+│   ├── crud.py       — EntityRegistry: generic CRUD for world entities and catalog items (list/get/create/update/delete YAML)
+│   ├── refs.py       — cross-layer reference resolution (locations → regions, NPCs → settlements)
+│   ├── catalogs.py   — catalog loader: index standalone YAML files from content/catalogs/{monsters,items}/
 │   ├── world.py      — world meta, regions, nations, settlements, locations, battle maps, factions
 │   ├── creatures.py  — player, NPCs, ability scores, class features
-│   ├── monsters.py   — monster templates, squads, encounters
-│   ├── items.py      — equipment parsing (weapons, armor, shields)
+│   ├── monsters.py   — monster templates, squads, encounters (supports catalog refs)
+│   ├── items.py      — equipment parsing (weapons, armor, shields, supports catalog refs)
 │   ├── manifest.py   — manifest.yaml resolution (LayerType, LayerSource, resolve layer paths)
 │   ├── library.py    — library catalog (TemplateInfo, list/filter templates by compatibility)
 │   ├── assembly.py   — world assembly (create manifest from library selections) and fork (copy to custom)
@@ -85,9 +90,12 @@ content/           — authored game data (YAML)
     └── test_vale/          — minimal test world (all custom layers)
 
 frontend/          — React + TypeScript SPA (Vite + shadcn/ui + Zustand)
-├── src/components/setup/   — world picker, WorldBuilder wizard, character creation, session connect
+├── src/components/         — LandingPage (Player/DM split), ErrorBoundary
+├── src/components/setup/   — world picker, character creation, session connect (player flow)
 ├── src/components/game/    — EventLog, BattleMap, ActionBar, CombatPanel, PlayerStats, Perception
-├── src/components/master/  — WorldOverview, CreatureList, TimeControl, SavesPanel
+├── src/components/master/  — MasterScreen (Worlds/Sessions tabs), WorldEditor (layer stepper),
+│                             EntityListEditor (schema-driven CRUD), SchemaForm, CatalogBrowser,
+│                             SessionView (WorldOverview, CreatureList, TimeControl, SavesPanel)
 ├── src/store/              — Zustand store (slices: connection, player, turn, log)
 ├── src/transport/          — apiClient (REST), wsClient (WebSocket)
 └── src/i18n/               — i18next with EN/RU locale files

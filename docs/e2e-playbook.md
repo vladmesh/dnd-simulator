@@ -2,32 +2,22 @@
 
 Сценарии для регрессионного тестирования через Playwright. Каждый сценарий — что делаем, что ожидаем. Обновляется при добавлении новых фич.
 
-**Последнее обновление:** 2026-03-26
+**Последнее обновление:** 2026-03-27
 
 ---
 
 ## 1. Session Setup
 
-### 1.1 Quick start — pick existing world
-- Открыть `/`, выбрать мир (Sword Vale), создать персонажа (fighter, human, STR 16)
+### 1.1 Landing page — Player/DM split
+- Открыть `/`
+- **Ожидание:** две карточки: "Play" (→ /play) и "Dungeon Master" (→ /master)
+
+### 1.2 Quick start — pick existing world
+- Нажать "Play" → выбрать мир (Sword Vale) → "New Session" → создать персонажа (fighter, human, STR 16)
 - **Ожидание:** редирект на `/play/:sessionId`, WebSocket подключён, первый turn в логе
 
-### 1.2 World Builder wizard
-- Открыть `/`, нажать "Build Custom World"
-- Пройти 5 шагов: Geography → Politics → Settlements → Ecology → Entities (выбрать шаблон на каждом)
-- На шаге Details ввести ID, название, описание → "Create World & Start"
-- **Ожидание:** мир создан, сессия создана, переход на CharacterForm, после создания персонажа — в игру
-
-### 1.3 World Builder — back navigation
-- В wizard нажать Back на шаге 2+
-- **Ожидание:** возврат к предыдущему шагу; Back на шаге 1 → возврат к списку миров
-
-### 1.4 Assembled world in quick start
-- После создания мира через wizard, вернуться на `/`
-- **Ожидание:** новый мир виден в списке quick-start миров
-
-### 1.5 Language toggle
-- На SetupScreen переключить язык EN→RU
+### 1.3 Language toggle
+- На любом экране переключить язык EN→RU
 - **Ожидание:** лейблы меняются на русские
 
 ---
@@ -114,57 +104,57 @@
 
 ## 6. Master Panel
 
-### 6.1 Create and manage session
-- `/master` → выбрать мир → New Session
+### 6.1 Master — Worlds tab
+- `/master` → вкладка Worlds
+- **Ожидание:** список миров: editable (Fork + Delete) и library (Fork only)
+
+### 6.2 Fork world
+- Нажать Fork на library world → ввести ID → Submit
+- **Ожидание:** новый мир появляется с Fork + Delete кнопками, toast "World forked"
+
+### 6.3 Delete world
+- Нажать Delete на forked world → подтвердить
+- **Ожидание:** мир удалён из списка
+
+### 6.4 World editor stepper
+- Клик на editable world → stepper открывается
+- **Ожидание:** 5 вкладок (Geography, Politics, Settlements, Ecology, Entities), таблицы сущностей с Add/Edit/Delete, Back/Next/Close навигация
+
+### 6.5 Create and manage session
+- Вкладка Sessions → выбрать мир → New Session
 - **Ожидание:** сессия появляется в списке
 
-### 6.2 Spawn creature
-- В SessionView → Creatures → Spawn → заполнить форму (goblin, arena_floor)
+### 6.6 Spawn creature
+- В SessionView → Creatures → Spawn → заполнить форму (goblin, silverport_city_market)
 - **Ожидание:** существо появляется в таблице
 
-### 6.3 Edit creature HP
+### 6.7 Edit creature HP
 - Клик на существо → изменить HP → Save
 - **Ожидание:** HP обновляется в таблице
 
-### 6.4 Toggle brain type
+### 6.8 Toggle brain type
 - Нажать иконку Brain на существе
 - **Ожидание:** тип переключается rule_based ↔ llm
 
-### 6.5 Delete creature
+### 6.9 Delete creature
 - Нажать Delete → подтвердить
 - **Ожидание:** существо исчезает из таблицы
 
-### 6.6 Advance time
+### 6.10 Advance time
 - Time tab → ввести 24 часа → Advance
 - **Ожидание:** время сдвигается на сутки
 
-### 6.7 Save and load
+### 6.11 Save and load
 - Saves tab → Save (name: "test") → Load → подтвердить
 - **Ожидание:** Save появляется в списке, после Load состояние восстанавливается
 
-### 6.8 Give item — weapon
+### 6.12 Give item — weapon
 - Spawn creature → клик на имя → в edit форме секция Inventory видна → "Give Item" → выбрать Weapon → заполнить (name: "Test Sword", damage: 1d8, type: slashing) → Submit
 - **Ожидание:** toast "Item given", оружие видно в inventory секции (equipped weapon badge), инвентарь обновляется без закрытия формы
 
-### 6.9 Give item — potion
+### 6.13 Give item — potion
 - В той же creature edit форме → "Give Item" → выбрать Potion → name: "Heal Potion", heal_dice: "2d4+2" → Submit
 - **Ожидание:** toast "Item given", зелье видно в inventory секции
-
-### 6.10 Layer Editor — fork, edit YAML, verify in session
-- `/master` → выбрать мир (Sword Vale) → Fork entities layer → нажать Edit
-- Выбрать npcs.yaml, изменить имя NPC (Edgar the Smith → Edgar the Modified)
-- Нажать Save → создать новую сессию → в god-mode проверить имя NPC
-- **Ожидание:** NPC имеет изменённое имя в сессии
-
-### 6.11 Layer Editor — invalid YAML error
-- Открыть editor на custom layer → ввести невалидный YAML (например `[[[`) → Save
-- **Ожидание:** ошибка с деталями YAML-парсинга, после Reload контент не изменён
-
-### 6.12 Layer Editor — library layer read-only
-- `/master` → выбрать мир с library layers
-- Library layers показывают кнопку "View" (не "Edit")
-- Нажать View → editor открывается в read-only (нет кнопки Save или Save неактивна)
-- **Ожидание:** нельзя сохранить изменения в library layer
 
 ---
 

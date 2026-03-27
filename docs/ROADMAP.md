@@ -71,11 +71,13 @@ God-класс EntitiesLayer расщеплён на AwarenessBuilder/Activation
 Save/load completeness (resource pools, combat state, spawned creatures, brain reassignment). Give Item UI. Fork UI + World Inspector на /master. Layer editor (YAML read/write API + textarea). Partial worlds: incomplete manifests, scaffold endpoint, fork world with layer truncation, delete world. Фазы 6-7 (structured forms, DM restructure) deferred — superseded by sprint 008.
 → [план спринта](sprints/007-world-session/sprint.md)
 
+### Sprint 008 — Content Schema & Catalogs (фазы 1-5)
+Pydantic content models как единый source of truth для структуры контента. Phase 1: Pydantic-модели + перепись парсеров на model_validate. Phase 2: каталоги monsters + items — вынос из слоёв, ref-resolution между мирами и каталогами. Phase 3: entity CRUD API + JSON Schema endpoints + cross-layer refs. Phase 4: frontend schema-driven forms (SchemaForm, EntityListEditor, CatalogBrowser), DM restructure (Worlds/Sessions tabs, landing page Player/DM). Phase 5: DM world management (fork world, delete world, player flow simplified — no world builder).
+→ [план спринта](sprints/008-content-schema/sprint.md)
+
 ## In Progress
 
-### Sprint 008 — Content Schema & Catalogs
-Pydantic content models как единый source of truth. Переписать парсеры на model_validate. Каталоги monsters + items (вынос из слоёв, ref-resolution). Entity CRUD API + JSON Schema endpoints. Frontend schema-driven forms + DM restructure.
-→ [план спринта](sprints/008-content-schema/sprint.md)
+_(нет активного спринта)_
 
 ## Planned
 
