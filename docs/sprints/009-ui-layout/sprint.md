@@ -66,7 +66,7 @@ Sprint 008 довёл DM-сторону до рабочего состояния
 1. [Dashboard Grid Layout](tasks/phase1-task1-dashboard-grid.md)
 2. [Log Expand Overlay](tasks/phase1-task2-log-expand-overlay.md)
 
-## Phase 2: Log Formatting
+## Phase 2: Log Formatting ✓
 
 Форматирование событий в логе: цветовое кодирование, иконки по типу события, заголовки ходов/раундов в бою, агрегация последовательных перемещений. Работает и в compact, и в expanded режиме лога.
 

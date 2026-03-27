@@ -103,7 +103,7 @@ function isMoveLike(eventType: EventType): boolean {
 }
 
 function getDistanceFt(event: PerceivedEvent): number {
-  const d = event.data?.distance_ft
+  const d = event.data?.distance_ft ?? event.data?.ft
   return typeof d === "number" ? d : 0
 }
 

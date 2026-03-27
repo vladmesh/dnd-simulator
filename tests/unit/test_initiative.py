@@ -268,8 +268,8 @@ class TestEntitiesLayerCombat:
 class TestFleeRemovesFromCombat:
     def test_flee_removes_from_turn_order(self) -> None:
         c1 = Character(id="c1", name="Fighter", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
-        c2 = Character(id="c2", name="Rogue", location_id="r1", max_hp=15, current_hp=15, attacks=(_SWORD,))
-        c3 = Character(id="c3", name="Mage", location_id="r1", max_hp=8, current_hp=8)
+        c2 = Character(id="c2", name="Rogue", location_id="r1", max_hp=50, current_hp=50, attacks=(_SWORD,))
+        c3 = Character(id="c3", name="Mage", location_id="r1", max_hp=50, current_hp=50)
         layer = EntitiesLayer([c1, c2, c3])
 
         # Start combat
