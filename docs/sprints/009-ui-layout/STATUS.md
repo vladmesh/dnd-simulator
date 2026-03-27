@@ -1,11 +1,9 @@
 # Sprint 009 Status
 
 **Sprint:** 009 — Peaceful Dashboard Layout
-**Phase:** 5 — Combat Layout + Click-to-Move (COMPLETE)
+**Status:** COMPLETE
 **Updated:** 2026-03-27
 
-## Current
+## Summary
 
-Phase 5 complete. Combat layout restructured: CombatPanel in left column, interactive CSS Grid BattleMap in right column (replaces LocationPanel during combat). Click-to-move with BFS pathfinding, reachable cell highlighting, movement budget tracking.
-
-All phases complete. Ready for sprint closure.
+Игровой экран переработан в dashboard: три колонки панелей всегда видны, компактный лог, action bar с budget display и drawers. NPC inspect modal. Боевой layout: CombatPanel + интерактивная CSS Grid BattleMap с click-to-move. Backend: move_to action с BFS pathfinding.

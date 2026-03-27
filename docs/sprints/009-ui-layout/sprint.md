@@ -187,4 +187,8 @@ Action bar с core-кнопками, категориями, визуальны�
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-03-27
+
+Dashboard layout полностью заменил старый двухколоночный экран. 5 фаз: grid layout + compact log, log formatting (цвета/иконки/агрегация), action bar redesign (drawers, budget display, potions), NPC inspect modal (description + actions), combat layout + interactive BattleMap (CSS Grid, click-to-move с BFS pathfinding). Backend: новый `move_to` action с `find_path`/`walk_path` в `rules/movement.py`, fix peaceful action failure notification. 11 task files, все frontend unit tests green, 24 E2E scenarios passed.
+
+**Deferred:** drag-and-drop панели, фильтрация лога табами, мобильная адаптация
