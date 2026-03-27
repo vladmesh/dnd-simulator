@@ -48,16 +48,8 @@ class BattleMap:
     _blocked_edges: set[frozenset[Position]] | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
-        """Add perimeter walls so the arena boundary blocks movement properly."""
-        w, h = self.width, self.height
+        """Cache inner walls for serialization; bounds enforced by find_path / _step_toward."""
         self._inner_walls: list[Wall] = list(self.walls)
-        perimeter = [
-            Wall(0, 0, 0, h),  # west
-            Wall(w, 0, w, h),  # east
-            Wall(0, 0, w, 0),  # south
-            Wall(0, h, w, h),  # north
-        ]
-        self.walls = self._inner_walls + perimeter
 
     def set_position(self, entity_id: str, pos: Position) -> None:
         """Place or move an entity on the map, clamping to bounds."""
