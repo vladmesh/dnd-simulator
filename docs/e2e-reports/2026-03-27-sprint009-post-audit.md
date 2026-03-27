@@ -80,10 +80,29 @@ None.
 
 ### Minor
 
-None.
+1. **Combat log mixes languages (RU/EN).** With UI set to RU, combat log shows: `"You attack человек (fists) [d20(9)+5=14 vs AC 10], 4 damage (1 bludgeoning + +3 ability)"`, `"человек equips Dagger"`. Verbs ("attack", "equips"), damage types ("bludgeoning"), and item names ("Dagger", "Health Potion") stay in English. Some messages are fully Russian ("Бой окончен"). Backend log event strings don't go through `gettext` consistently.
+
+2. **NPC inspect modal shows raw faction ID.** Modal displays `"Фракция: kingdom"` instead of localized name ("Королевство Серебрянка"). The faction field passes the raw ID from awareness data without resolving it to a display name.
+
+3. **Click on occupied cell gives zero feedback.** Clicking the enemy's cell on BattleMap does nothing — no error, no visual indication. Player might think click-to-move is broken. Should show "cell occupied" or flash the cell red.
+
+4. **"Target too far" error easy to miss.** When attacking from 10ft (reach 5ft), the error appears only in the compact log strip. No visual feedback on the Attack button or the action bar. With many log entries scrolling, this is easy to overlook.
+
+5. **HP edit doesn't update max_hp.** Setting HP to 25 via master edit on a creature with max_hp=10 shows `25/10` in the table. DM who sets HP probably expects max_hp to update too. At minimum, the edit dialog should have separate current/max fields.
+
+6. **Brain toggle toast is misleading without LLM.** Toast says "Сменить мозг" (success tone) but brain stays `rule_based` because no LLM key is configured. No error or warning toast. DM gets false confirmation.
+
+7. **Consumable drawer button label unclear.** Action bar shows button "1" with potion icon. Means "1 potion available" but without tooltip, a new user won't understand the number. Consider "🧪 1" or a hover label.
+
+8. **Log expand overlay empty after session start.** The compact log strip shows events (say/response), but expanding the overlay immediately shows "Ожидание событий..." — events before expand aren't backfilled into the overlay.
+
+9. **WebSocket warning on every session join.** Console logs 1 warning per `/play/:id` load at `wsClient.ts:30` — likely a reconnection attempt before first connect. Harmless but noisy for debugging.
+
+10. **Sections 4, 5, 7, 8, 9 not tested.** These sections (class features, equipment, conditions, inventory, trading) were skipped as unchanged from sprint 008. Sprint 009 layout changes could theoretically affect rendering of these panels. Equipment slots were visually confirmed (6 slots visible), but equip/unequip/trade flows not exercised.
 
 ## Log Analysis
 
 - No errors or exceptions in backend logs
 - No browser console errors (0 errors across all scenarios)
-- Only log entry of note: expected "target too far" action_failed when trying to attack from 10ft (correctly blocked, info level)
+- 1 console warning per session join (WebSocket reconnect at wsClient.ts:30)
+- Only backend log entry of note: expected "target too far" action_failed when trying to attack from 10ft (correctly blocked, info level)
