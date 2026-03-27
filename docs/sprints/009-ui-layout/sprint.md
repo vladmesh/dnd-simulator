@@ -118,6 +118,51 @@ Action bar с core-кнопками, категориями, визуальны�
 1. [NPC Description Field + Structured Inspect Data](tasks/phase4-task1-npc-inspect-backend.md)
 2. [NPC Inspect Modal with Actions](tasks/phase4-task2-npc-inspect-modal.md)
 
+## Phase 5: Combat Layout + Click-to-Move
+
+Боевой layout: BattleMap переезжает из левой колонки в правую (заменяет LocationPanel в бою), CombatPanel поднимается на всю левую колонку. ASCII карта заменяется на интерактивную CSS Grid. Клик по клетке = `move_to(x, y)` на бэкенде.
+
+**Текущий combat layout (проблемы):**
+```
+┌──────────────────┬──────────────┬────────────────────┐
+│ ASCII BattleMap  │  Character   │  Location           │
+│ (тесно, не       │  + Inventory │  + Paths            │
+│  интерактивно)   │              │  (БЕСПОЛЕЗЕН В БОЮ) │
+│──────────────────│              │                     │
+│ CombatPanel      │              │                     │
+│ (сжат вниз)      │              │                     │
+└──────────────────┴──────────────┴────────────────────┘
+```
+
+**Новый combat layout:**
+```
+┌──────────────────┬──────────────┬────────────────────┐
+│  CombatPanel     │  Character   │  BattleMap          │
+│  ├ Self stats    │  + Inventory │  (CSS Grid,         │
+│  ├ Enemies       │              │   кликабельная,     │
+│  └ Round info    │              │   подсветка range)  │
+│                  │              │                     │
+│  (вся колонка)   │              │  (вся колонка)      │
+└──────────────────┴──────────────┴────────────────────┘
+```
+
+**Что делаем:**
+- Правая колонка: в бою показывает BattleMap вместо LocationPanel
+- Левая колонка: CombatPanel занимает всю высоту (без ASCII map сверху)
+- BattleMap рендерится как CSS Grid: `div` per cell, стены = `border` на рёбрах, сущности = иконки/буквы
+- Click-to-move: клик по клетке → `move_to(x, y)` action → бэкенд pathfinding (A*/BFS в `rules/movement.py`) → тратит movement budget пошагово
+- Подсветка доступных клеток (movement range) на hover/перед кликом
+- `move` action с `direction` остаётся для LLM и RuleBrain, `move_to` — только для PlayerBrain
+- Убираем dropdown "К target / От target" из action bar, движение теперь через карту
+
+**Верифицируем:** В бою правая колонка = кликабельная карта. Клик по клетке = перемещение (если хватает budget). Стены блокируют путь. Занятые клетки блокируют. Подсветка range. После перемещения budget обновляется. LLM/RuleBrain не затронуты.
+
+**Tasks:**
+
+1. [Combat Layout Restructure](tasks/phase5-task1-combat-layout.md)
+2. [Interactive BattleMap — CSS Grid](tasks/phase5-task2-interactive-battlemap.md)
+3. [Click-to-Move](tasks/phase5-task3-click-to-move.md)
+
 ---
 
 ## Status
@@ -129,12 +174,13 @@ Action bar с core-кнопками, категориями, визуальны�
 - **2026-03-27:** Отказ от табов в пользу dashboard layout. Все панели на экране одновременно. Лог — узкая полоса, не центральный элемент.
 - **2026-03-27:** Trade panel уходит с dashboard. Торговля — через inspect карточку мерчанта (фаза 4).
 - **2026-03-27:** Зелья выносятся на action bar как отдельные кнопки (фаза 3).
-- **2026-03-27:** Боевой layout — отдельный спринт. Этот спринт фокусируется на мирном режиме. Action bar и inspect card переиспользуются.
 - **2026-03-27:** Drag-and-drop панели — deferred. Фиксированный layout достаточен.
+- **2026-03-27:** Боевой layout и click-to-move добавлены как фаза 5 в текущий спринт (изначально планировался отдельный спринт, но scope небольшой).
+- **2026-03-27:** BattleMap рендерится как CSS Grid (не Canvas/SVG). Масштаб ~100-200 клеток, DOM-подход оптимален.
+- **2026-03-27:** Новый action `move_to(x, y)` на бэкенде с pathfinding. `move` с direction остаётся для LLM/RuleBrain.
 
 ## Deferred
 
-- Боевой layout (map + combat panel + enemies) — следующий спринт, переиспользует action bar и inspect card
 - Drag-and-drop / resizable панели — не нужен на текущем этапе
 - Фильтрация лога табами (Все/Бой/Диалоги) — когда будет больше типов событий
 - Мобильная адаптация — отдельная история
