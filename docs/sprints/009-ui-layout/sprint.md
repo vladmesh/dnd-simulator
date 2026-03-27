@@ -115,7 +115,8 @@ Action bar с core-кнопками, категориями, визуальны�
 
 **Tasks:**
 
-_(генерируются /plan_phase)_
+1. [NPC Description Field + Structured Inspect Data](tasks/phase4-task1-npc-inspect-backend.md)
+2. [NPC Inspect Modal with Actions](tasks/phase4-task2-npc-inspect-modal.md)
 
 ---
 
