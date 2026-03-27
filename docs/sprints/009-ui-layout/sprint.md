@@ -90,15 +90,16 @@ Action bar с core-кнопками, категориями, визуальны�
 **Что делаем:**
 - Core-кнопки всегда видны: Attack, Dash, Disengage, Dodge, End Turn
 - Категории (drawers): классовые умения (Second Wind, Cunning Action), инвентарь (equip/unequip) — popup над панелью
-- Зелья: отображаются как отдельные кнопки (`🧪 Heal Potion`) рядом с core-действиями. Клик = use_item сразу.
+- Зелья и consumables: drawer-кнопка на action bar (`🧪 3`), popup со списком. Клик по предмету = use_item сразу. Не отдельные кнопки — не масштабируется при много предметах.
 - Визуальное разделение: action (обычные), bonus action (другой стиль), потраченные — серые
 - Budget display интегрирован
 
-**Верифицируем:** Core-кнопки видны. Зелья — отдельные кнопки (1 клик = использование). Категории открывают popup. Потраченные типы действий серые. Работает для Fighter и Rogue.
+**Верифицируем:** Core-кнопки видны. Consumables/class features/inventory в drawer-popup (2 клика = использование). Потраченные типы действий серые. Работает для Fighter и Rogue.
 
 **Tasks:**
 
-_(генерируются /plan_phase)_
+1. [Action Bar Core Layout + Cost Styling](tasks/phase3-task1-action-bar-core-layout.md)
+2. [Consumable, Class Feature, and Inventory Drawers](tasks/phase3-task2-action-drawers.md)
 
 ## Phase 4: NPC Inspect Card
 
