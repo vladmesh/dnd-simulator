@@ -21,7 +21,7 @@ test-unit:
 	uv run pytest tests/unit/ -q
 
 test-integration:
-	docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from integration-tests
+	UID=$$(id -u) GID=$$(id -g) docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from integration-tests
 
 check: lint typecheck test
 

@@ -8,7 +8,7 @@ RUN uv sync --no-dev --frozen --no-install-project
 COPY src/ src/
 RUN uv sync --no-dev --frozen
 COPY content/ content/
-RUN mkdir saves
+RUN mkdir -m 777 saves && chmod -R 777 .venv
 
 EXPOSE 8001
 CMD ["uv", "run", "uvicorn", "dnd_simulator.adapters.api.app:app", "--host", "0.0.0.0", "--port", "8001"]

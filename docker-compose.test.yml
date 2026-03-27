@@ -1,9 +1,11 @@
 services:
   backend:
     build: .
+    user: "${UID:-1000}:${GID:-1000}"
     environment:
       DND_DICE_SEED: "42"
       DND_CONTENT_DIR: /app/test-content
+      UV_CACHE_DIR: /tmp/uv-cache
     volumes:
       - ./tests/integration/content:/app/test-content
     healthcheck:
