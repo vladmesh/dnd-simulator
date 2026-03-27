@@ -95,6 +95,7 @@ export interface CostOption {
 export interface ActionInfo {
   name: string
   description: string
+  cost_type?: string
   params: ActionParamInfo[]
   cost_options?: CostOption[]
 }

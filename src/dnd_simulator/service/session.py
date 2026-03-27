@@ -74,6 +74,7 @@ def _awareness_to_dict(
         action_info: dict[str, Any] = {
             "name": str(a),
             "description": _(ad.description),
+            "cost_type": ad.cost_type.value,
             "params": [{"name": p.name, "type": p.param_type, "required": p.required} for p in ad.params],
         }
         # Include cost options if creature has overrides for this action

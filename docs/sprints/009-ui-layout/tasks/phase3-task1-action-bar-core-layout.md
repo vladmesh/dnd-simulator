@@ -70,4 +70,15 @@ Existing interaction patterns (target dropdown for attack, directional dropdown 
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Backend: added `"cost_type": ad.cost_type.value` to every action_info dict in `_awareness_to_dict`. One-line change.
+
+Frontend:
+- Added `cost_type?: string` to `ActionInfo` type
+- Created `lib/actionCategories.ts` with `categorizeActions()` — pure function grouping actions into core/consumables/classFeatures/inventory/other/endTurn
+- Restructured `ActionBar.tsx`: renders groups in order (core → other → consumables → classFeatures → inventory → endTurn last), adds `data-cost-type` and `data-depleted` attributes to all action buttons, bonus_action buttons get amber ring styling, depleted cost types get `data-depleted` attribute for CSS targeting
+- All existing interaction patterns (target dropdown, directional dropdown, item dropdown, say input, wait) preserved unchanged
+- Drawer slots for consumables/classFeatures/inventory are placeholders — task 2 will convert them
