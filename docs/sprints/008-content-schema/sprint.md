@@ -40,7 +40,7 @@ Pydantic-модели для всех типов сущностей (Region, Loc
 2. [Item Catalog + NPC Equipment References](tasks/phase2-task2-item-catalog.md)
 3. [Assembly Integration — Wire Catalogs into Game Start](tasks/phase2-task3-assembly-integration.md)
 
-## Phase 3: Entity CRUD API + JSON Schema
+## Phase 3: Entity CRUD API + JSON Schema ✓
 
 Entity-level CRUD для мировых слоёв и каталогов (list/get/create/update/delete). JSON Schema endpoint — генерится из Pydantic-моделей автоматически. Layer-refs endpoint для cross-layer dropdown данных. Enum-значения в схеме автоматически.
 
