@@ -28,7 +28,11 @@ Sprint 009 оставил 9 minor findings в e2e-отчёте — мелкие 
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Combat log i18n](tasks/phase1-task1-combat-log-i18n.md)
+2. [BattleMap click-to-inspect + faction display](tasks/phase1-task2-battlemap-inspect.md)
+3. [Master panel + drawer UX polish](tasks/phase1-task3-master-panel-ux.md)
+
+**Note:** Item 7 (log overlay backfill) fixed in commit 91d7200 before sprint started. Verified as part of task 3.
 
 ## Phase 2: ActionBar Decomposition
 
