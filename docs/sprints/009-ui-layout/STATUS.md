@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 2 tasks generated. Ready to start task 1.
+Phase 2, Task 1: processLogEntries Transform — done. Pure transform with icons, colors, move aggregation, turn headers. 14 tests.
 
 ## Next Steps
 
-- Task 1: processLogEntries() — pure transform function with icons, move aggregation, turn headers
 - Task 2: Render DisplayEntry in EventLog — UI update with icons, separators, expandable aggregated moves

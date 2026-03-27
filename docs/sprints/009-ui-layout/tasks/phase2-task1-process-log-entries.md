@@ -45,4 +45,8 @@ After tests are red:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Created `frontend/src/lib/logProcessing.ts` with pure transform function. `DisplayEntry` is a discriminated union (event | turn_header | aggregated_move). Move aggregation buffers consecutive move/dash from same actor, flushes as single entry or regular event depending on count. Turn headers track combat state via combat_started/combat_ended toggle — null actor_id events don't reset the actor tracker. Added 7 missing EventType values to frontend types to sync with backend. EVENT_COLORS moved from EventLog.tsx (will be removed from there in task 2).
