@@ -80,7 +80,8 @@ Sprint 008 довёл DM-сторону до рабочего состояния
 
 **Tasks:**
 
-_(генерируются /plan_phase)_
+1. [processLogEntries Transform](tasks/phase2-task1-process-log-entries.md)
+2. [Render DisplayEntry in EventLog](tasks/phase2-task2-render-display-entries.md)
 
 ## Phase 3: Action Bar Redesign + Potions
 

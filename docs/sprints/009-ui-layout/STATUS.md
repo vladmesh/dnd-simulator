@@ -1,15 +1,14 @@
 # Sprint 009 Status
 
 **Sprint:** 009 — Peaceful Dashboard Layout
-**Phase:** 1 — Dashboard Layout + Compact Log (COMPLETE)
+**Phase:** 2 — Log Formatting
 **Updated:** 2026-03-27
 
 ## Current
 
-Phase 1 complete. Dashboard layout replaces 2-column layout: header → compact log strip → 3-col panel grid (Nearby, Character, Location) → action bar. Log overlay expands full history on click/chevron. Combat mode swaps left column to BattleMap + CombatPanel. All E2E scenarios pass.
-
-Ready for Phase 2 task generation.
+Phase 2 tasks generated. Ready to start task 1.
 
 ## Next Steps
 
-- Generate Phase 2 tasks via /plan_phase
+- Task 1: processLogEntries() — pure transform function with icons, move aggregation, turn headers
+- Task 2: Render DisplayEntry in EventLog — UI update with icons, separators, expandable aggregated moves
