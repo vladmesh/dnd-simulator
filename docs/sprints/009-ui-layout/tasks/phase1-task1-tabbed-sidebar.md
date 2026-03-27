@@ -50,4 +50,8 @@ This is a pure frontend task — tests are Playwright E2E:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Created `SidebarTabs` component that manages tab state independently for peaceful and combat modes. Peaceful mode: Nearby (Perception + TradePanel) / Location / Character tabs. Combat mode: Map (BattleMap + CombatPanel) / Nearby / Character tabs. `useEffect` on `isCombat` resets to default tab on mode change. GameScreen simplified — no longer imports individual sidebar panels, just renders `<SidebarTabs />`. All existing i18n keys reused (no new translations needed). 9 component tests cover tab switching, defaults, and auto-switch on mode change.

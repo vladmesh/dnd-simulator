@@ -4,18 +4,12 @@ import { useGameStore } from "@/store/gameStore"
 import { Header } from "./Header"
 import { EventLog } from "./EventLog"
 import { ActionBar } from "./ActionBar"
-import { Perception } from "./Perception"
-import { LocationPanel } from "./LocationPanel"
-import { PlayerStats } from "./PlayerStats"
-import { BattleMap } from "./BattleMap"
-import { CombatPanel } from "./CombatPanel"
-import { TradePanel } from "./TradePanel"
+import { SidebarTabs } from "./SidebarTabs"
 
 export function GameScreen() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const lastError = useGameStore((s) => s.lastError)
   const gameOver = useGameStore((s) => s.gameOver)
-  const mode = useGameStore((s) => s.mode)
   const wsStatus = useGameStore((s) => s.wsStatus)
   const playerName = useGameStore((s) => s.player?.name)
   const connectedRef = useRef(false)
@@ -48,8 +42,6 @@ export function GameScreen() {
     return () => { document.title = "D&D Simulator" }
   }, [playerName])
 
-  const isCombat = mode === "combat"
-
   return (
     <div className="dark flex h-screen flex-col bg-background text-foreground">
       {/* Header */}
@@ -74,24 +66,9 @@ export function GameScreen() {
           <EventLog />
         </div>
 
-        {/* Sidebar — switches between peaceful and combat */}
-        <div className="hidden w-72 flex-col gap-4 overflow-y-auto p-3 md:flex">
-          {isCombat ? (
-            <>
-              <BattleMap />
-              <div className="border-t border-border" />
-              <CombatPanel />
-            </>
-          ) : (
-            <>
-              <Perception />
-              <div className="border-t border-border" />
-              <TradePanel />
-              <LocationPanel />
-              <div className="border-t border-border" />
-              <PlayerStats />
-            </>
-          )}
+        {/* Sidebar — tabbed panels */}
+        <div className="hidden w-72 flex-col md:flex">
+          <SidebarTabs />
         </div>
       </div>
 

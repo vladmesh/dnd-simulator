@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 1 tasks generated. Ready to start task 1.
+Phase 1, Task 1: Tabbed Sidebar — done. SidebarTabs component with mode-aware tabs and auto-switch.
 
 ## Next Steps
 
-- Task 1: Tabbed Sidebar — replace combat/peaceful switch with tab bar
 - Task 2: Log Formatting — turn headers, colors, movement aggregation
