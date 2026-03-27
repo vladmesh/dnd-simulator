@@ -44,4 +44,8 @@ After tests are red:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Rewrote EventLog.tsx to consume `DisplayEntry[]` from `processLogEntries()`. Created `ICON_MAP` (string → LucideIcon component) for all 27 event types. `DisplayEntryRow` renders three variants: regular event (icon + colored text), turn header (horizontal rule with actor name), aggregated move (expandable with chevron toggle). Both CompactLog and FullLog use the same `DisplayEntryRow`. Virtualizer `estimateSize` is dynamic based on entry kind and expanded state. Removed old `EVENT_COLORS` from EventLog — now imported from `logProcessing.ts`.

@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 2, Task 1: processLogEntries Transform — done. Pure transform with icons, colors, move aggregation, turn headers. 14 tests.
+Phase 2, Task 2: Render DisplayEntry in EventLog — done. Icons, turn headers, expandable aggregated moves. 6 component tests.
 
 ## Next Steps
 
-- Task 2: Render DisplayEntry in EventLog — UI update with icons, separators, expandable aggregated moves
+- All Phase 2 tasks complete. Ready for /close_phase.
