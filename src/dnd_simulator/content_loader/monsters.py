@@ -48,6 +48,7 @@ def _to_monster_template(template_id: str, model: MonsterTemplateContent, lang: 
         attacks=attacks,
         cr=model.cr,
         faction_id=model.faction,
+        description=resolve_text(model.description, lang) if model.description else "",
     )
 
 

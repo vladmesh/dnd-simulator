@@ -7,6 +7,9 @@ barkeep:
   faction: militia
   role: tavern_keeper
   ai: rule_based
+  description:
+    en: A stout woman with kind eyes, always busy behind the tavern counter.
+    ru: Крепкая женщина с добрыми глазами, вечно хлопочущая за стойкой таверны.
   personality:
     en: >
       Friendly and talkative. Knows all the local gossip.
@@ -24,6 +27,9 @@ guard:
   hp: 22
   ac: 16
   ai: rule_based
+  description:
+    en: A weathered soldier in worn armor, scanning the tree line for trouble.
+    ru: Обветренный солдат в потёртых доспехах, высматривающий неприятности у кромки леса.
   personality:
     en: >
       Stern and dutiful. Watches the forest road for bandits.
@@ -48,6 +54,9 @@ merchant:
   ac: 10
   gold: 200
   ai: rule_based
+  description:
+    en: A cheerful halfling with a big smile, standing behind a cart of supplies.
+    ru: Весёлый полурослик с широкой улыбкой, стоящий за тележкой с припасами.
   personality:
     en: >
       A cheerful halfling merchant selling basic supplies.
@@ -67,6 +76,9 @@ hermit:
   faction: militia
   role: commoner
   ai: rule_based
+  description:
+    en: A hunched figure in tattered robes, eyes gleaming with hidden knowledge.
+    ru: Сгорбленная фигура в рваных одеждах, глаза блестят потаённым знанием.
   personality:
     en: >
       A mysterious hermit living alone in the forest clearing.

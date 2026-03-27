@@ -54,6 +54,13 @@ export interface NearbyEntity {
   id: string
   description: string
   is_wounded?: boolean
+  is_hostile?: boolean
+  name?: string
+  race?: string
+  role?: string
+  faction_id?: string
+  npc_description?: string
+  is_merchant?: boolean
 }
 
 export interface CombatEntity {

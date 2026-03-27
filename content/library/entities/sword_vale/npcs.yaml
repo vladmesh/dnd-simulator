@@ -8,6 +8,9 @@ edgar:
   role: blacksmith
   hp: 18
   ac: 12
+  description:
+    en: A burly man with soot-stained arms and a leather apron, standing by a glowing forge.
+    ru: Крепкий мужчина с руками в саже и кожаным фартуком, стоящий у раскалённого горна.
   personality:
     en: >
       Gruff but fair. Takes pride in his craft.
@@ -33,6 +36,9 @@ marta:
   faction: kingdom
   role: tavern_keeper
   ai: rule_based
+  description:
+    en: A plump, cheerful woman wiping down mugs behind the bar counter.
+    ru: Полная, весёлая женщина, протирающая кружки за барной стойкой.
   personality:
     en: >
       Cheerful and gossipy. Knows everyone's business
@@ -60,6 +66,9 @@ gretta:
   hp: 10
   ac: 10
   gold: 500
+  description:
+    en: A sharp-eyed woman in fine travelling clothes, her stall piled high with goods.
+    ru: Зоркая женщина в добротной дорожной одежде, её прилавок завален товарами.
   personality:
     en: >
       A shrewd but honest trader. Knows the value of every
@@ -83,6 +92,9 @@ rodrik:
   role: guard
   hp: 32
   ac: 16
+  description:
+    en: A stern man in polished chainmail, a longsword at his hip and a watchful gaze.
+    ru: Суровый мужчина в начищенной кольчуге, с длинным мечом на поясе и настороженным взглядом.
   personality:
     en: >
       Disciplined, loyal to King Aldric. Suspicious of

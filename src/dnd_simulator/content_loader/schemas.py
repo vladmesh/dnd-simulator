@@ -294,6 +294,7 @@ class MonsterTemplateContent(BaseModel):
     ability_scores: AbilityScoresContent = AbilityScoresContent()
     attacks: list[AttackContent] = []
     faction: str = ""
+    description: LocalizedText = {}
 
 
 class MonsterTemplateEntryContent(BaseModel):
@@ -360,6 +361,7 @@ class NpcContent(BaseModel):
     settlement_id: str = ""
     faction: str = ""
     personality: LocalizedText = {}
+    description: LocalizedText = {}
     hp: int = 4
     ac: int = 10
     speed: int = 30

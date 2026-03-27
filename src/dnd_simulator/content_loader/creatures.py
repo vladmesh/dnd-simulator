@@ -144,6 +144,7 @@ def _to_npc(
         char_class=model.char_class,
         role=model.role,
         personality=resolve_text(model.personality, lang) if model.personality else "",
+        description=resolve_text(model.description, lang) if model.description else "",
         settlement_id=model.settlement_id,
         schedule=schedule,
         speed=model.speed,

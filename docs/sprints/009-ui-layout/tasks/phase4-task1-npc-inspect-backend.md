@@ -51,4 +51,8 @@ Changes:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward implementation. Added `description: LocalizedText` to `NpcContent` and `MonsterTemplateContent` schemas, `description: str` to `Npc` and `MonsterTemplate` runtime models, wired through content loaders. Enriched `NearbyEntity` with 6 new fields (`name`, `race`, `role`, `faction_id`, `npc_description`, `is_merchant`) — all populated in `AwarenessBuilder.build_nearby_entities()` as the single choke point for future perception gating. Updated frontend TS type. Added descriptions to all 8 NPCs across sword_vale and test_vale YAML. No old tests broken — the new `NearbyEntity` fields all have defaults.

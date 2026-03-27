@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 4 tasks generated. Ready to start task 1.
+Phase 4, Task 1: NPC Description Field + Structured Inspect Data — done. Added description to NPC/monster models, enriched NearbyEntity with structured fields for inspect modal.
 
 ## Next Steps
 
-- Task 1: NPC Description Field + Structured Inspect Data — add description to NPC/monster models, enrich NearbyEntity with structured fields, return inspect data for modal
 - Task 2: NPC Inspect Modal with Actions — modal dialog with NPC info, action buttons (Attack, Talk, Trade for merchants)

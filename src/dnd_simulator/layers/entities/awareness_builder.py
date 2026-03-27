@@ -228,7 +228,33 @@ class AwarenessBuilder:
             desc = creature.perceive(e) if isinstance(creature, Character) and isinstance(e, Entity) else e.name
             is_wounded = isinstance(e, Creature) and e.current_hp < e.max_hp // 2
             is_hostile = self.check_faction_hostility(creature, e, query_fn)
-            result.append(NearbyEntity(id=e.id, description=desc, is_wounded=is_wounded, is_hostile=is_hostile))
+            # Structured fields for inspect card — all populated from AwarenessBuilder
+            name = e.name
+            race = ""
+            role = ""
+            faction_id = e.faction_id
+            npc_description = ""
+            is_merchant = False
+            if isinstance(e, Character):
+                race = e.race.value
+            if isinstance(e, Npc):
+                role = e.role.value
+                npc_description = e.description
+                is_merchant = e.is_merchant
+            result.append(
+                NearbyEntity(
+                    id=e.id,
+                    description=desc,
+                    is_wounded=is_wounded,
+                    is_hostile=is_hostile,
+                    name=name,
+                    race=race,
+                    role=role,
+                    faction_id=faction_id,
+                    npc_description=npc_description,
+                    is_merchant=is_merchant,
+                )
+            )
         if result:
             logger.info(
                 "awareness_nearby",

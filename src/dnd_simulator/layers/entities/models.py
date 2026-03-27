@@ -73,6 +73,7 @@ class Npc(Character):
 
     role: NpcRole = NpcRole.COMMONER
     personality: str = ""
+    description: str = ""
     settlement_id: str = ""
     schedule: list[ScheduleEntry] = field(default_factory=list)
     location_override: str | None = None

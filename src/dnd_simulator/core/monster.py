@@ -20,6 +20,7 @@ class MonsterTemplate:
     attacks: tuple[Attack, ...]
     cr: float
     faction_id: str = ""
+    description: str = ""
 
     def spawn(self, location_id: str, instance_id: str) -> Creature:
         """Create a temporary Creature from this template."""

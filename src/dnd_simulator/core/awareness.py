@@ -27,6 +27,12 @@ class NearbyEntity:
     description: str
     is_wounded: bool = False
     is_hostile: bool = False
+    name: str = ""
+    race: str = ""
+    role: str = ""
+    faction_id: str = ""
+    npc_description: str = ""
+    is_merchant: bool = False
 
 
 @dataclass(frozen=True)
