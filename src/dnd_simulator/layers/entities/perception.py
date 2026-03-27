@@ -10,6 +10,30 @@ from dnd_simulator.i18n import _
 
 GetEntityFn = Callable[[str], Entity | None]
 
+# ---------------------------------------------------------------------------
+# Translatable dynamic values — listed here so pygettext3 can extract them.
+# At runtime, _() is called on the raw string from event data.
+# ---------------------------------------------------------------------------
+# fmt: off
+_TRANSLATABLE_STRINGS = [
+    # Damage types (DamageType enum values)
+    _("slashing"), _("piercing"), _("bludgeoning"),
+    _("fire"), _("cold"), _("lightning"), _("thunder"), _("acid"), _("poison"),
+    _("radiant"), _("necrotic"), _("force"), _("psychic"),
+    # Damage source labels (from combat_manager._build_damage_components)
+    _("weapon"), _("ability"), _("sneak_attack"), _("dueling"),
+    # Roll labels
+    _("AC"),
+    # Common item/weapon names (from YAML catalogs)
+    _("Health Potion"),
+    _("Dagger"), _("Longsword"), _("Shortsword"), _("Greataxe"), _("Handaxe"),
+    _("Shortbow"), _("Longbow"), _("Light Crossbow"),
+    _("Mace"), _("Quarterstaff"), _("Javelin"), _("Spear"),
+    # Fallback labels
+    _("an item"), _("a weapon"),
+]
+# fmt: on
+
 
 def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     """Describe an event from the observer's point of view.
@@ -109,7 +133,8 @@ def _format_roll(atk_roll: dict[str, object], ac: object) -> str:
     else:
         parts.append(str(modifier_total))
     parts.append(f"={atk_roll['total']}")
-    parts.append(f" vs AC {ac}")
+    ac_label = _("AC")
+    parts.append(f" vs {ac_label} {ac}")
     return " [" + "".join(parts) + "]"
 
 
@@ -121,11 +146,11 @@ def _format_damage(damage: object, damage_components: list[dict[str, object]], c
     detail_parts: list[str] = []
     for dc in damage_components:
         if dc["dice"] and dc["source"] != "weapon":
-            detail_parts.append(f"{dc['dice']} {dc['source']}")
+            detail_parts.append(f"{dc['dice']} {_(str(dc['source']))}")
         elif dc["dice"]:
-            detail_parts.append(f"{dc['dice']} {dc['type']}")
+            detail_parts.append(f"{dc['dice']} {_(str(dc['type']))}")
         elif dc["amount"]:
-            detail_parts.append(f"+{dc['amount']} {dc['source']}")
+            detail_parts.append(f"+{dc['amount']} {_(str(dc['source']))}")
     detail = " (" + " + ".join(detail_parts) + ")" if detail_parts else ""
 
     if critical:
@@ -146,7 +171,7 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
     attacker = _describe(observer, attacker_id, get_entity)
     target = _describe(observer, target_id, get_entity)
 
-    weapon_str = f" ({weapon})" if weapon else ""
+    weapon_str = f" ({_(str(weapon))})" if weapon else ""
     roll_str = _format_roll(atk_roll, d["ac"])
 
     if not hit:
@@ -248,7 +273,7 @@ def _perceive_dash(event: Event, observer: Character, get_entity: GetEntityFn) -
 
 def _perceive_use_item(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     entity_id = str(event.data.get("entity_id", ""))
-    item_name = str(event.data.get("item_name", _("an item")))
+    item_name = _(str(event.data.get("item_name", "an item")))
     healed = event.data.get("healed", 0)
 
     if entity_id == observer.id:
@@ -299,7 +324,7 @@ def _perceive_bless(event: Event, observer: Character, get_entity: GetEntityFn) 
 
 def _perceive_equip(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     entity_id = str(event.data.get("entity_id", ""))
-    weapon_name = str(event.data.get("weapon_name", _("a weapon")))
+    weapon_name = _(str(event.data.get("weapon_name", "a weapon")))
     if entity_id == observer.id:
         return _("You equip {weapon}").format(weapon=weapon_name)
     desc = _describe(observer, entity_id, get_entity)
@@ -308,7 +333,7 @@ def _perceive_equip(event: Event, observer: Character, get_entity: GetEntityFn) 
 
 def _perceive_unequip(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     entity_id = str(event.data.get("entity_id", ""))
-    weapon_name = str(event.data.get("weapon_name", _("a weapon")))
+    weapon_name = _(str(event.data.get("weapon_name", "a weapon")))
     if entity_id == observer.id:
         return _("You put away {weapon}").format(weapon=weapon_name)
     desc = _describe(observer, entity_id, get_entity)
@@ -318,7 +343,7 @@ def _perceive_unequip(event: Event, observer: Character, get_entity: GetEntityFn
 def _perceive_buy(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     buyer_id = str(event.data.get("buyer_id", ""))
     merchant_id = str(event.data.get("merchant_id", ""))
-    item_name = str(event.data.get("item_name", _("an item")))
+    item_name = _(str(event.data.get("item_name", "an item")))
     price = event.data.get("price", 0)
 
     merchant = _describe(observer, merchant_id, get_entity)
@@ -335,7 +360,7 @@ def _perceive_buy(event: Event, observer: Character, get_entity: GetEntityFn) ->
 def _perceive_sell(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     seller_id = str(event.data.get("seller_id", ""))
     merchant_id = str(event.data.get("merchant_id", ""))
-    item_name = str(event.data.get("item_name", _("an item")))
+    item_name = _(str(event.data.get("item_name", "an item")))
     price = event.data.get("price", 0)
 
     merchant = _describe(observer, merchant_id, get_entity)

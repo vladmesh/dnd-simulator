@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import pytest
+
+import dnd_simulator.layers.entities.perception as perception_mod
 from dnd_simulator.core.character import Ability, Attack, Character, DamageComponent, DamageType, Entity, Race
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -305,3 +308,115 @@ class TestRegionLog:
         assert "Готовься!" in log[0]
         assert "Combat started" in log[1]
         assert any("attacks you" in line for line in log)
+
+
+# ---------------------------------------------------------------------------
+# i18n coverage: verify that dynamic values go through _()
+# ---------------------------------------------------------------------------
+
+
+def _mark_translator(original: object):
+    """Return a translator that prefixes every string with [T]."""
+
+    def marker(s: str) -> str:
+        return f"[T]{s}"
+
+    return marker
+
+
+class TestCombatLogI18n:
+    """Verify that damage types, source labels, weapon/item names, and 'AC'
+    are passed through the gettext _() function in perception output."""
+
+    def _attack_event(self, **overrides: object) -> Event:
+        base: dict[str, object] = {
+            "attacker_id": "player",
+            "target_id": "npc",
+            "weapon": "Longsword",
+            "hit": True,
+            "critical": False,
+            "ac": 13,
+            "attack_roll": {
+                "natural": 14,
+                "components": [{"source": "ability", "value": 3, "dice": ""}],
+                "total": 17,
+                "advantage": False,
+                "disadvantage": False,
+            },
+            "damage": 8,
+            "damage_components": [
+                {"source": "weapon", "dice": "1d8", "amount": 5, "type": "slashing"},
+                {"source": "ability", "dice": "", "amount": 3, "type": "slashing"},
+            ],
+        }
+        base.update(overrides)
+        return Event(event_type=EventType.ENTITY_ATTACK, source_layer="entities", data=base)
+
+    def test_damage_type_translated(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Damage type 'slashing' in damage detail must go through _()."""
+        monkeypatch.setattr(perception_mod, "_", _mark_translator(perception_mod._))
+        observer = Character(id="player", name="Hero", location_id="r1")
+        target = Character(id="npc", name="Goblin", location_id="r1", race=Race.HUMAN)
+        result = perceive_event(self._attack_event(), observer, _get_entity_fn(observer, target))
+        assert "[T]slashing" in result
+
+    def test_damage_source_label_translated(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Non-weapon source labels like 'sneak_attack' must go through _()."""
+        monkeypatch.setattr(perception_mod, "_", _mark_translator(perception_mod._))
+        observer = Character(id="player", name="Hero", location_id="r1")
+        target = Character(id="npc", name="Goblin", location_id="r1", race=Race.HUMAN)
+        event = self._attack_event(
+            damage=12,
+            damage_components=[
+                {"source": "weapon", "dice": "1d8", "amount": 5, "type": "slashing"},
+                {"source": "sneak_attack", "dice": "1d6", "amount": 4, "type": "slashing"},
+                {"source": "ability", "dice": "", "amount": 3, "type": "slashing"},
+            ],
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer, target))
+        # sneak_attack source label must be translated
+        assert "[T]sneak_attack" in result
+        # ability source label must be translated
+        assert "[T]ability" in result
+
+    def test_ac_label_translated(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The 'AC' label in roll description must go through _()."""
+        monkeypatch.setattr(perception_mod, "_", _mark_translator(perception_mod._))
+        observer = Character(id="player", name="Hero", location_id="r1")
+        target = Character(id="npc", name="Goblin", location_id="r1", race=Race.HUMAN)
+        result = perceive_event(self._attack_event(), observer, _get_entity_fn(observer, target))
+        assert "[T]AC" in result
+
+    def test_weapon_name_translated(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Weapon name in attack description must go through _()."""
+        monkeypatch.setattr(perception_mod, "_", _mark_translator(perception_mod._))
+        observer = Character(id="player", name="Hero", location_id="r1")
+        target = Character(id="npc", name="Goblin", location_id="r1", race=Race.HUMAN)
+        result = perceive_event(self._attack_event(), observer, _get_entity_fn(observer, target))
+        assert "[T]Longsword" in result
+
+    def test_item_name_translated_on_use(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Item name in use_item description must go through _()."""
+        monkeypatch.setattr(perception_mod, "_", _mark_translator(perception_mod._))
+        observer = Character(id="npc", name="Goblin", location_id="r1")
+        user = Character(id="player", name="Hero", location_id="r1", race=Race.ELF)
+        event = Event(
+            event_type=EventType.ENTITY_USE_ITEM,
+            source_layer="entities",
+            data={"entity_id": "player", "item_name": "Health Potion", "healed": 8},
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer, user))
+        assert "[T]Health Potion" in result
+
+    def test_weapon_name_translated_on_equip(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Weapon name in equip description must go through _()."""
+        monkeypatch.setattr(perception_mod, "_", _mark_translator(perception_mod._))
+        observer = Character(id="npc", name="Goblin", location_id="r1")
+        equipper = Character(id="player", name="Hero", location_id="r1", race=Race.ELF)
+        event = Event(
+            event_type=EventType.ENTITY_EQUIP,
+            source_layer="entities",
+            data={"entity_id": "player", "weapon_name": "Dagger"},
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer, equipper))
+        assert "[T]Dagger" in result

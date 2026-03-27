@@ -639,3 +639,106 @@ msgstr "Слегка ранен."
 
 msgid "They look healthy."
 msgstr "Выглядит здоровым."
+
+#: Combat log i18n — damage types
+msgid "slashing"
+msgstr "рубящий"
+
+msgid "piercing"
+msgstr "колющий"
+
+msgid "bludgeoning"
+msgstr "дробящий"
+
+msgid "fire"
+msgstr "огненный"
+
+msgid "cold"
+msgstr "холод"
+
+msgid "lightning"
+msgstr "молния"
+
+msgid "thunder"
+msgstr "звуковой"
+
+msgid "acid"
+msgstr "кислотный"
+
+msgid "poison"
+msgstr "яд"
+
+msgid "radiant"
+msgstr "светлый"
+
+msgid "necrotic"
+msgstr "некротический"
+
+msgid "force"
+msgstr "силовой"
+
+msgid "psychic"
+msgstr "психический"
+
+#: Combat log i18n — damage source labels
+msgid "weapon"
+msgstr "оружие"
+
+msgid "ability"
+msgstr "модификатор"
+
+msgid "sneak_attack"
+msgstr "скрытая атака"
+
+msgid "dueling"
+msgstr "дуэлянт"
+
+#: Combat log i18n — roll labels
+msgid "AC"
+msgstr "КЗ"
+
+#: Combat log i18n — common items and weapons
+msgid "Health Potion"
+msgstr "Зелье лечения"
+
+msgid "Dagger"
+msgstr "Кинжал"
+
+msgid "Longsword"
+msgstr "Длинный меч"
+
+msgid "Shortsword"
+msgstr "Короткий меч"
+
+msgid "Greataxe"
+msgstr "Секира"
+
+msgid "Handaxe"
+msgstr "Ручной топор"
+
+msgid "Shortbow"
+msgstr "Короткий лук"
+
+msgid "Longbow"
+msgstr "Длинный лук"
+
+msgid "Light Crossbow"
+msgstr "Лёгкий арбалет"
+
+msgid "Mace"
+msgstr "Булава"
+
+msgid "Quarterstaff"
+msgstr "Боевой посох"
+
+msgid "Javelin"
+msgstr "Дротик"
+
+msgid "Spear"
+msgstr "Копьё"
+
+msgid "an item"
+msgstr "предмет"
+
+msgid "a weapon"
+msgstr "оружие"

@@ -44,4 +44,12 @@ In `tests/unit/test_perception.py` (or extend existing):
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All dynamic values in combat log messages now go through `_()`: damage types (DamageType enum values), damage source labels (weapon/ability/sneak_attack/dueling), weapon names, item names, and the "AC" label.
+
+Since `pygettext3` can't parse `_(str(x))` calls, added `_TRANSLATABLE_STRINGS` catalog at top of perception.py listing all known values as string literals for extraction.
+
+Russian translations added for all 13 damage types, 4 source labels, 13 common weapons, and the AC label. `.mo` compiled via pure Python (no `msgfmt` on this system).
