@@ -49,7 +49,7 @@ Sprint 008 довёл DM-сторону до рабочего состояния
 
 ---
 
-## Phase 1: Dashboard Layout + Compact Log
+## Phase 1: Dashboard Layout + Compact Log ✓
 
 Переход от двухколоночного layout (log | sidebar) к dashboard. Лог — узкая полоса сверху. Три панели в ряд под ним. Табы из task 1 заменяются на dashboard grid.
 
