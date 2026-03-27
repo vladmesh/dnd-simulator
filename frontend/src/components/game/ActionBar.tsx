@@ -1,12 +1,12 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { useGameStore } from "@/store/gameStore"
 import { wsClient } from "@/transport/wsClient"
 import { BudgetDisplay } from "./BudgetDisplay"
 import { Button } from "@/components/ui/button"
-import { Loader2, ChevronDown } from "lucide-react"
+import { Loader2, ChevronDown, FlaskConical, Sparkles, Backpack } from "lucide-react"
 import { categorizeActions } from "@/lib/actionCategories"
-import type { CombatAwareness, ActionInfo, TurnBudget } from "@/types/game"
+import type { CombatAwareness, ActionInfo, TurnBudget, ItemInfo } from "@/types/game"
 
 /** Check if an action has a specific param by name. */
 function hasParam(action: ActionInfo, paramName: string): boolean {
@@ -56,12 +56,26 @@ export function ActionBar() {
   const [sayOpen, setSayOpen] = useState(false)
   const [sayText, setSayText] = useState("")
   const sayInputRef = useRef<HTMLInputElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  const sendAction = (name: string, params?: Record<string, unknown>) => {
+  const sendAction = useCallback((name: string, params?: Record<string, unknown>) => {
     wsClient.send({ type: "action", name, params })
     useGameStore.getState().setWaitingForAction(true)
     setOpenDropdown(null)
-  }
+  }, [])
+
+  // Close any open drawer/dropdown on Escape
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpenDropdown(null)
+      }
+    }
+    el.addEventListener("keydown", handleKeyDown)
+    return () => el.removeEventListener("keydown", handleKeyDown)
+  }, [])
 
   if (!isMyTurn) {
     return (
@@ -87,6 +101,11 @@ export function ActionBar() {
   const isDisabled = () => waitingForAction
 
   const groups = categorizeActions(available)
+
+  // Filter consumable items (potions etc.) from available_items
+  const consumableItems = availableItems.filter(
+    (item) => item.type === "potion" || item.type === "scroll" || item.type === "bomb",
+  )
 
   /** Render a single action — handles all parameter variants. */
   const renderAction = (action: ActionInfo) => {
@@ -136,68 +155,6 @@ export function ActionBar() {
           costClass={costClass}
         />
       )
-    }
-
-    // Has item_id param → item dropdown
-    if (hasParam(action, "item_id") && availableItems.length > 0) {
-      return (
-        <ItemDropdown
-          key={name}
-          description={action.description}
-          items={availableItems}
-          disabled={isDisabled()}
-          openDropdown={openDropdown}
-          setOpenDropdown={setOpenDropdown}
-          sendAction={sendAction}
-          t={t}
-          costType={costType}
-          depleted={depleted}
-          costClass={costClass}
-        />
-      )
-    }
-
-    // Has weapon_id param → weapon dropdown
-    if (hasParam(action, "weapon_id")) {
-      const weapons = availableItems.filter((i) => i.description.toLowerCase().includes("weapon"))
-      if (weapons.length > 0) {
-        return (
-          <div key={name} className="relative">
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={isDisabled()}
-              title={action.description}
-              className={costClass}
-              {...dataAttrs}
-              onClick={() => {
-                if (weapons.length === 1) {
-                  sendAction("equip", { weapon_id: weapons[0].id })
-                } else {
-                  setOpenDropdown(openDropdown === "equip" ? null : "equip")
-                }
-              }}
-            >
-              {getActionLabel(t, "equip")}
-              {weapons.length > 1 && <ChevronDown className="ml-1 size-3" />}
-            </Button>
-            {openDropdown === "equip" && weapons.length > 1 && (
-              <div className="absolute bottom-full left-0 z-10 mb-1 min-w-[180px] rounded border border-border bg-popover p-1 shadow-md">
-                {weapons.map((w) => (
-                  <button
-                    key={w.id}
-                    className="w-full rounded px-2 py-1 text-left text-xs hover:bg-accent"
-                    onClick={() => sendAction("equip", { weapon_id: w.id })}
-                  >
-                    {w.description || w.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )
-      }
-      return null
     }
 
     // Say — needs text input
@@ -282,8 +239,15 @@ export function ActionBar() {
     )
   }
 
+  const showConsumableDrawer = groups.consumables.length > 0 && consumableItems.length > 0
+  const showClassFeatureDrawer = groups.classFeatures.length > 0
+  const showInventoryDrawer = isCombat && groups.inventory.length > 0
+  const hasDrawers = showConsumableDrawer || showClassFeatureDrawer || showInventoryDrawer
+
   return (
-    <div className="border-t border-border px-4 py-2">
+    <div ref={containerRef} className="border-t border-border px-4 py-2" tabIndex={-1}
+      onKeyDown={(e) => { if (e.key === "Escape") setOpenDropdown(null) }}
+    >
       {budget && (
         <div className="mb-2">
           <BudgetDisplay budget={budget} />
@@ -297,14 +261,100 @@ export function ActionBar() {
         {/* Other actions (say, wait, idle, move) */}
         {groups.other.map(renderAction)}
 
-        {/* Consumables — task 2 will add drawer, for now render as buttons */}
-        {groups.consumables.map(renderAction)}
+        {/* Drawer section — separated by a thin divider when present */}
+        {hasDrawers && <div className="mx-1 h-6 w-px bg-border" />}
 
-        {/* Class features — task 2 will add drawer */}
-        {groups.classFeatures.map(renderAction)}
+        {showConsumableDrawer && (
+          <ActionDrawer
+            drawerKey="consumables"
+            icon={<FlaskConical className="size-3.5" />}
+            count={consumableItems.length}
+            isOpen={openDropdown === "drawer:consumables"}
+            onToggle={() => setOpenDropdown(openDropdown === "drawer:consumables" ? null : "drawer:consumables")}
+            disabled={isDisabled()}
+          >
+            {consumableItems.map((item) => (
+              <button
+                key={item.id}
+                className="flex w-full flex-col gap-0.5 rounded px-3 py-1.5 text-left text-xs hover:bg-accent"
+                onClick={() => sendAction("use_item", { item_id: item.id })}
+              >
+                <span className="font-medium">{item.name}</span>
+                {item.description && (
+                  <span className="text-muted-foreground">{item.description}</span>
+                )}
+              </button>
+            ))}
+          </ActionDrawer>
+        )}
 
-        {/* Inventory — task 2 will add drawer */}
-        {groups.inventory.map(renderAction)}
+        {showClassFeatureDrawer && (
+          <ActionDrawer
+            drawerKey="class-features"
+            icon={<Sparkles className="size-3.5" />}
+            count={groups.classFeatures.length}
+            isOpen={openDropdown === "drawer:class-features"}
+            onToggle={() => setOpenDropdown(openDropdown === "drawer:class-features" ? null : "drawer:class-features")}
+            disabled={isDisabled()}
+          >
+            {groups.classFeatures.map((action) => (
+              <button
+                key={action.name}
+                className="flex w-full flex-col gap-0.5 rounded px-3 py-1.5 text-left text-xs hover:bg-accent"
+                onClick={() => sendAction(action.name)}
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  {getActionLabel(t, action.name)}
+                  {action.cost_type && (
+                    <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">
+                      {action.cost_type}
+                    </span>
+                  )}
+                </span>
+                <span className="text-muted-foreground">{action.description}</span>
+              </button>
+            ))}
+          </ActionDrawer>
+        )}
+
+        {showInventoryDrawer && (
+          <ActionDrawer
+            drawerKey="inventory"
+            icon={<Backpack className="size-3.5" />}
+            count={groups.inventory.length}
+            isOpen={openDropdown === "drawer:inventory"}
+            onToggle={() => setOpenDropdown(openDropdown === "drawer:inventory" ? null : "drawer:inventory")}
+            disabled={isDisabled()}
+          >
+            {groups.inventory.map((action) => {
+              // For equip actions with weapon_id param, show weapon options
+              if (hasParam(action, "weapon_id")) {
+                const weapons = availableItems.filter((i) => i.type === "weapon" || i.description.toLowerCase().includes("weapon"))
+                return weapons.map((w) => (
+                  <button
+                    key={`${action.name}:${w.id}`}
+                    className="flex w-full flex-col gap-0.5 rounded px-3 py-1.5 text-left text-xs hover:bg-accent"
+                    onClick={() => sendAction(action.name, { weapon_id: w.id })}
+                  >
+                    <span className="font-medium">{getActionLabel(t, action.name)}: {w.name}</span>
+                    {w.description && <span className="text-muted-foreground">{w.description}</span>}
+                  </button>
+                ))
+              }
+              // Simple equip/unequip actions (armor, shield, etc.)
+              return (
+                <button
+                  key={action.name}
+                  className="flex w-full flex-col gap-0.5 rounded px-3 py-1.5 text-left text-xs hover:bg-accent"
+                  onClick={() => sendAction(action.name)}
+                >
+                  <span className="font-medium">{getActionLabel(t, action.name)}</span>
+                  <span className="text-muted-foreground">{action.description}</span>
+                </button>
+              )
+            })}
+          </ActionDrawer>
+        )}
 
         {/* End turn always last */}
         {groups.endTurn ? (
@@ -321,6 +371,44 @@ export function ActionBar() {
           </Button>
         )}
       </div>
+    </div>
+  )
+}
+
+// --- ActionDrawer generic component ---
+
+interface ActionDrawerProps {
+  drawerKey: string
+  icon: React.ReactNode
+  count: number
+  isOpen: boolean
+  onToggle: () => void
+  disabled: boolean
+  children: React.ReactNode
+}
+
+function ActionDrawer({ drawerKey, icon, count, isOpen, onToggle, disabled, children }: ActionDrawerProps) {
+  return (
+    <div className="relative">
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={disabled}
+        data-drawer={drawerKey}
+        onClick={onToggle}
+        className="gap-1"
+      >
+        {icon}
+        <span className="text-xs">{count}</span>
+      </Button>
+      {isOpen && (
+        <div
+          data-drawer-popup={drawerKey}
+          className="absolute bottom-full left-0 z-10 mb-1 min-w-[200px] max-w-[280px] rounded border border-border bg-popover p-1 shadow-md"
+        >
+          {children}
+        </div>
+      )}
     </div>
   )
 }
@@ -435,53 +523,6 @@ function DirectionalDropdown({ name, description, enemies, disabled, openDropdow
                 {t(awayKey, { target: e.id })}
               </button>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-interface ItemDropdownProps extends Omit<DropdownProps, "description"> {
-  items: { id: string; name: string; description: string }[]
-  description: string
-}
-
-function ItemDropdown({ items, description, disabled, openDropdown, setOpenDropdown, sendAction, t, costType, depleted, costClass }: ItemDropdownProps) {
-  const dataAttrs: Record<string, string> = {}
-  if (costType) dataAttrs["data-cost-type"] = costType
-  if (depleted) dataAttrs["data-depleted"] = ""
-
-  return (
-    <div className="relative">
-      <Button
-        size="sm"
-        variant="secondary"
-        disabled={disabled}
-        title={description}
-        className={costClass}
-        {...dataAttrs}
-        onClick={() => {
-          if (items.length === 1) {
-            sendAction("use_item", { item_id: items[0].id })
-          } else {
-            setOpenDropdown(openDropdown === "use_item" ? null : "use_item")
-          }
-        }}
-      >
-        {getActionLabel(t, "use_item")}
-        {items.length > 1 && <ChevronDown className="ml-1 size-3" />}
-      </Button>
-      {openDropdown === "use_item" && items.length > 1 && (
-        <div className="absolute bottom-full left-0 z-10 mb-1 min-w-[180px] rounded border border-border bg-popover p-1 shadow-md">
-          {items.map((item) => (
-            <button
-              key={item.id}
-              className="w-full rounded px-2 py-1 text-left text-xs hover:bg-accent"
-              onClick={() => sendAction("use_item", { item_id: item.id })}
-            >
-              {item.description || item.name}
-            </button>
           ))}
         </div>
       )}

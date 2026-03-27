@@ -68,4 +68,18 @@ Add popup drawers to the action bar for grouped actions: consumables (potions, s
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented three drawers (consumables, class features, inventory) as popup panels on the action bar.
+
+Key decisions:
+- Generic `ActionDrawer` component handles toggle button + popup pattern, reused by all three drawers
+- Drawer state uses `openDropdown` with `drawer:` prefix — opening any drawer/dropdown closes all others automatically
+- Consumable drawer filters `available_items` by type (potion/scroll/bomb), not by action — items drive content, action just triggers use_item
+- Class features drawer shows cost_type badge per action (e.g. "bonus_action")
+- Inventory drawer only renders in combat mode (peaceful mode uses InventoryPanel)
+- Removed old `ItemDropdown` component — its functionality moved to consumable drawer
+- Escape handler on container div closes any open drawer/dropdown
+- Old `bonus_action` styling test updated: second_wind now lives in class features drawer, not as a direct button. Cost type is shown as a badge inside the drawer popup instead.
