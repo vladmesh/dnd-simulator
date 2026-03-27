@@ -3,13 +3,12 @@ import { useTranslation } from "react-i18next"
 import { api } from "@/transport/apiClient"
 import type { LayerInfo } from "@/types/api"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Loader2 } from "lucide-react"
 import { EntityListEditor } from "./EntityListEditor"
 import { CatalogPicker } from "./CatalogPicker"
 
 // ---------------------------------------------------------------------------
-// Layer → entity types mapping (same as WorldInspector)
+// Layer → entity types mapping
 // ---------------------------------------------------------------------------
 
 const LAYER_ENTITY_TYPES: Record<string, string[]> = {
@@ -22,15 +21,15 @@ const LAYER_ENTITY_TYPES: Record<string, string[]> = {
 
 interface Props {
   worldId: string
+  readOnly: boolean
   onClose: () => void
 }
 
-export function WorldEditor({ worldId, onClose }: Props) {
+export function WorldEditor({ worldId, readOnly, onClose }: Props) {
   const { t, i18n } = useTranslation(["master"])
   const [layers, setLayers] = useState<LayerInfo[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [step, setStep] = useState(0)
-  const [forkingLayer, setForkingLayer] = useState<string | null>(null)
   const [showCatalogPicker, setShowCatalogPicker] = useState(false)
 
   useEffect(() => {
@@ -41,17 +40,6 @@ export function WorldEditor({ worldId, onClose }: Props) {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [worldId, i18n.language])
-
-  const handleFork = (layerType: string) => {
-    setForkingLayer(layerType)
-    api.master
-      .forkLayer(worldId, layerType)
-      .then(() =>
-        api.master.getWorldManifest(worldId, i18n.language).then((data) => setLayers(data.layers)),
-      )
-      .catch(() => {})
-      .finally(() => setForkingLayer(null))
-  }
 
   const handleCatalogPick = async (monsterId: string) => {
     await api.master.createEntity(worldId, "monster_template", monsterId, { base: monsterId })
@@ -70,7 +58,6 @@ export function WorldEditor({ worldId, onClose }: Props) {
 
   const currentLayer = layers[step]
   const entityTypes = LAYER_ENTITY_TYPES[currentLayer.layer_type]
-  const isLibrary = currentLayer.source === "library"
   const layerLabel = (lt: string) => t(`master:layer_${lt}`, lt)
 
   return (
@@ -92,27 +79,9 @@ export function WorldEditor({ worldId, onClose }: Props) {
         ))}
       </div>
 
-      {/* Layer info bar */}
+      {/* Layer heading */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold">{layerLabel(currentLayer.layer_type)}</h3>
-          <Badge variant={isLibrary ? "outline" : "secondary"}>
-            {isLibrary ? `${t("master:source_library")}: ${currentLayer.template}` : t("master:source_custom")}
-          </Badge>
-        </div>
-        {isLibrary && (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={forkingLayer !== null}
-            onClick={() => handleFork(currentLayer.layer_type)}
-          >
-            {forkingLayer === currentLayer.layer_type && (
-              <Loader2 className="mr-1 size-3 animate-spin" />
-            )}
-            {t("master:fork_btn")}
-          </Button>
-        )}
+        <h3 className="text-sm font-semibold">{layerLabel(currentLayer.layer_type)}</h3>
       </div>
 
       {/* Entity editors for current step */}
@@ -124,7 +93,7 @@ export function WorldEditor({ worldId, onClose }: Props) {
               <EntityListEditor
                 worldId={worldId}
                 entityType={entityType}
-                readOnly={isLibrary}
+                readOnly={readOnly}
               />
             </div>
           ))}
@@ -132,7 +101,7 @@ export function WorldEditor({ worldId, onClose }: Props) {
       )}
 
       {/* Catalog picker for ecology */}
-      {currentLayer.layer_type === "ecology" && !isLibrary && (
+      {currentLayer.layer_type === "ecology" && !readOnly && (
         <div>
           {showCatalogPicker ? (
             <div className="rounded border border-border p-2">

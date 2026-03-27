@@ -52,4 +52,15 @@ Clean separation: players pick worlds, masters create/edit them.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward removal + prop addition:
+
+1. **SetupScreen** — removed `build-world` step entirely. Step type is now `"pick-world" | "create-character"`. WorldBuilder import gone.
+2. **WorldEditor** — added `readOnly: boolean` prop. Removed fork-layer button, `handleFork`, `forkingLayer` state, source badges (Badge component). `readOnly` is passed through to all `EntityListEditor` instances and controls catalog picker visibility. Layer heading is now just the layer name, no badge.
+3. **MasterScreen** — passes `readOnly={false}` to WorldEditor. Task 2 will add backend `editable` flag to control this.
+4. **WorldBuilder.tsx** — deleted (including internal `LayerPicker` and `DetailsForm` functions).
+5. **i18n** — removed 21 wizard/builder keys from both en and ru setup.json.
+6. **WorldInspector** — left as-is. It's dead code (exported but never imported anywhere). Has its own fork button for session-level inspection. Can be cleaned up separately.

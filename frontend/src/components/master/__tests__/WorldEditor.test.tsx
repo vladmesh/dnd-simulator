@@ -12,7 +12,6 @@ vi.mock("@/transport/apiClient", () => ({
   api: {
     master: {
       getWorldManifest: vi.fn(),
-      forkLayer: vi.fn(),
       createEntity: vi.fn(),
       listEntities: vi.fn(),
       getSchema: vi.fn(),
@@ -27,24 +26,28 @@ const layers = [
   { layer_type: "geography", source: "custom", template: null },
   { layer_type: "politics", source: "custom", template: null },
   { layer_type: "settlements", source: "custom", template: null },
-  { layer_type: "ecology", source: "library", template: "default_ecology" },
+  { layer_type: "ecology", source: "custom", template: null },
   { layer_type: "entities", source: "custom", template: null },
 ]
 
-function setup() {
+function setup(overrides: { readOnly?: boolean } = {}) {
   mockApi.getWorldManifest.mockResolvedValue({ layers })
   mockApi.listEntities.mockResolvedValue([])
   mockApi.getSchema.mockResolvedValue({ type: "object", properties: {} })
   mockApi.getRefs.mockResolvedValue([])
 
-  return render(<WorldEditor worldId="sword_vale" onClose={() => {}} />)
+  return render(
+    <WorldEditor
+      worldId="sword_vale"
+      readOnly={overrides.readOnly ?? false}
+      onClose={() => {}}
+    />,
+  )
 }
 
 /** Wait for stepper buttons to appear (layers loaded) */
 async function waitForStepper() {
-  // Stepper buttons are plain <button> elements in a flex container
   await waitFor(() => {
-    // All 5 layer names appear as stepper buttons
     const buttons = screen.getAllByRole("button")
     const stepperLabels = buttons.map((b) => b.textContent).filter(Boolean)
     expect(stepperLabels).toEqual(expect.arrayContaining(["geography", "politics", "settlements", "ecology", "entities"]))
@@ -64,14 +67,12 @@ describe("WorldEditor stepper", () => {
     setup()
     await waitForStepper()
 
-    // Should start at geography — entity list loads region, location
     expect(mockApi.listEntities).toHaveBeenCalledWith("sword_vale", "region")
     expect(mockApi.listEntities).toHaveBeenCalledWith("sword_vale", "location")
 
     const nextBtn = screen.getByRole("button", { name: /next/i })
     await user.click(nextBtn)
 
-    // Now on politics — listEntities called for nation
     await waitFor(() => {
       expect(mockApi.listEntities).toHaveBeenCalledWith("sword_vale", "nation")
     })
@@ -79,45 +80,43 @@ describe("WorldEditor stepper", () => {
     const backBtn = screen.getByRole("button", { name: /back/i })
     await user.click(backBtn)
 
-    // Back on geography — listEntities called again for region
     await waitFor(() => {
-      // region was called at start and again now
       const regionCalls = mockApi.listEntities.mock.calls.filter(([, t]) => t === "region")
       expect(regionCalls.length).toBeGreaterThanOrEqual(2)
     })
   })
 
-  it("shows fork button for library layers", async () => {
+  it("never shows a fork button", async () => {
     const user = userEvent.setup()
-    setup()
+    // Even with library layers, no fork button should appear
+    const libraryLayers = layers.map((l) =>
+      l.layer_type === "ecology" ? { ...l, source: "library", template: "default_ecology" } : l,
+    )
+    mockApi.getWorldManifest.mockResolvedValue({ layers: libraryLayers })
+    mockApi.listEntities.mockResolvedValue([])
+    mockApi.getSchema.mockResolvedValue({ type: "object", properties: {} })
+    mockApi.getRefs.mockResolvedValue([])
+
+    render(<WorldEditor worldId="sword_vale" readOnly={false} onClose={() => {}} />)
     await waitForStepper()
 
-    // Navigate to ecology (step 4, index 3)
+    // Navigate to ecology (library layer)
     const nextBtn = screen.getByRole("button", { name: /next/i })
     await user.click(nextBtn) // politics
     await user.click(nextBtn) // settlements
     await user.click(nextBtn) // ecology
 
+    // No fork button anywhere
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /fork/i })).toBeInTheDocument()
+      expect(screen.queryByRole("button", { name: /fork/i })).not.toBeInTheDocument()
     })
   })
 
-  it("renders CatalogPicker button on ecology step when custom", async () => {
-    // Override ecology to be custom so catalog picker shows
-    const customLayers = layers.map((l) =>
-      l.layer_type === "ecology" ? { ...l, source: "custom", template: null } : l,
-    )
-    mockApi.getWorldManifest.mockResolvedValue({ layers: customLayers })
-    mockApi.listEntities.mockResolvedValue([])
-    mockApi.getSchema.mockResolvedValue({ type: "object", properties: {} })
-    mockApi.getRefs.mockResolvedValue([])
-
+  it("renders CatalogPicker button on ecology step when editable", async () => {
     const user = userEvent.setup()
-    render(<WorldEditor worldId="sword_vale" onClose={() => {}} />)
+    setup()
     await waitForStepper()
 
-    // Navigate to ecology
     const nextBtn = screen.getByRole("button", { name: /next/i })
     await user.click(nextBtn) // politics
     await user.click(nextBtn) // settlements
@@ -126,5 +125,41 @@ describe("WorldEditor stepper", () => {
     await waitFor(() => {
       expect(screen.getByText(/pick from catalog/i)).toBeInTheDocument()
     })
+  })
+})
+
+describe("WorldEditor readOnly", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it("hides catalog picker on ecology step when readOnly", async () => {
+    const user = userEvent.setup()
+    setup({ readOnly: true })
+    await waitForStepper()
+
+    const nextBtn = screen.getByRole("button", { name: /next/i })
+    await user.click(nextBtn) // politics
+    await user.click(nextBtn) // settlements
+    await user.click(nextBtn) // ecology
+
+    await waitFor(() => {
+      expect(screen.queryByText(/pick from catalog/i)).not.toBeInTheDocument()
+    })
+  })
+
+  it("does not show source badges", async () => {
+    // Library layer present but no badge shown
+    const libraryLayers = layers.map((l) =>
+      l.layer_type === "ecology" ? { ...l, source: "library", template: "default_ecology" } : l,
+    )
+    mockApi.getWorldManifest.mockResolvedValue({ layers: libraryLayers })
+    mockApi.listEntities.mockResolvedValue([])
+    mockApi.getSchema.mockResolvedValue({ type: "object", properties: {} })
+    mockApi.getRefs.mockResolvedValue([])
+
+    render(<WorldEditor worldId="sword_vale" readOnly={true} onClose={() => {}} />)
+    await waitForStepper()
+
+    expect(screen.queryByText(/library/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/custom/i)).not.toBeInTheDocument()
   })
 })

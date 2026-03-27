@@ -49,27 +49,5 @@
   "alignment_chaotic_neutral": "Хаотично-нейтральный",
   "alignment_lawful_evil": "Законно-злой",
   "alignment_neutral_evil": "Нейтрально-злой",
-  "alignment_chaotic_evil": "Хаотично-злой",
-
-  "build_custom_world": "Собрать свой мир",
-  "back_to_worlds": "К списку миров",
-  "wizard_title": "Соберите свой мир",
-  "wizard_step_geography": "География",
-  "wizard_step_politics": "Политика",
-  "wizard_step_settlements": "Поселения",
-  "wizard_step_ecology": "Экология",
-  "wizard_step_entities": "Существа",
-  "wizard_step_details": "Детали",
-  "wizard_select_template": "Выберите шаблон для этого слоя:",
-  "wizard_no_templates": "Нет совместимых шаблонов.",
-  "wizard_loading": "Загрузка шаблонов...",
-  "wizard_field_id": "ID мира (slug)",
-  "wizard_field_id_hint": "Только строчные латинские буквы, цифры, подчёркивания",
-  "wizard_field_name": "Название мира",
-  "wizard_field_description": "Описание",
-  "wizard_create": "Создать мир и начать",
-  "wizard_creating": "Создание...",
-  "wizard_create_error": "Не удалось создать мир",
-  "wizard_back": "Назад",
-  "wizard_step_label": "Шаг {{current}} из {{total}}"
+  "alignment_chaotic_evil": "Хаотично-злой"
 }
