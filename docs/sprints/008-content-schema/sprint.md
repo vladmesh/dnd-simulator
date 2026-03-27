@@ -60,7 +60,9 @@ Generic form renderer из JSON Schema. EntityListEditor заменяет YAML t
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Schema-Driven Form Renderer](tasks/phase4-task1-schema-form-renderer.md)
+2. [Entity CRUD UI + Catalog Browser](tasks/phase4-task2-entity-crud-ui.md)
+3. [Master Restructure + Main Page](tasks/phase4-task3-master-restructure.md)
 
 ---
 
