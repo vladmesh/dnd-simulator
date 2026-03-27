@@ -1,16 +1,16 @@
 # Code Audit
 
-> **Date**: 2026-03-26
-> **Scope**: full (post Sprint 007 Phase 4)
+> **Date**: 2026-03-27
+> **Scope**: full (post Sprint 008)
 
 ## Summary
 - Dead code: 0 issues
-- Code smells: 3 issues (large files)
-- Security: 4 issues (1 medium, 3 low)
-- Architecture violations: 0 issues
-- Convention violations: 1 issue
+- Code smells: 4 issues (large files)
+- Security: 2 issues (1 medium, 1 low)
+- Architecture violations: 1 issue
+- Convention violations: 0 issues
 - Layer contract: 0 issues
-- Test gaps: 2 issues
+- Test gaps: 1 issue
 - Vision drift: 0 issues
 
 ## Dead Code
@@ -21,68 +21,46 @@ No issues. Ruff F401 clean. Two TODOs remain relevant:
 
 ## Code Smells
 
-| File | Lines | Suggestion |
-|------|-------|------------|
-| `layers/politics/layer.py` | 609 | Consider extracting diplomacy/warfare tick into sub-modules |
-| `service/game_service.py` | 570 | Many command modules already extracted; monitor growth |
-| `layers/entities/layer.py` | 560 | Already decomposed (combat_manager, activation_manager, etc.); monitor |
-
-All three have been over 400 lines since sprint 006. No new entrants. `combat_manager.py` (535), `round.py` (507), `routes_master.py` (463), `session.py` (456) are borderline — monitor but no action needed yet.
+| File | Lines | Issue | Suggestion |
+|------|-------|-------|------------|
+| `service/game_service.py` | 836 | Largest file, 43 methods | Extract command groups into separate modules (already partially done with `commands_*.py`) |
+| `layers/politics/layer.py` | 609 | Large layer | Acceptable — politics has many tick sub-operations |
+| `layers/entities/layer.py` | 560 | Large layer | Already factored out combat_manager, activation_manager, etc. |
+| `adapters/api/routes_master.py` | 554 | Large route file, 32 routes | Consider splitting content-editing routes from session-control routes |
 
 ## Security
 
 | File:Line | Issue | Severity |
 |-----------|-------|----------|
-| `adapters/api/routes_ws.py:150` | `json.loads(raw)` without try/except — malformed JSON from client raises unhandled `JSONDecodeError`, caught only by generic `except Exception` | medium |
-| `adapters/api/app.py:79` | `allow_origins=["*"]` — acceptable for local dev, must lock down before any non-local deployment | low |
-| `adapters/api/routes_ws.py:139` | No max message size on `ws.receive_text()` — a client can send arbitrarily large payloads | low |
-| `adapters/api/routes_ws.py:81` | Session ID in URL without auth — another client can connect to any session by guessing the ID | low |
+| `adapters/api/app.py:80` | `allow_origins=["*"]` — CORS wide open | low (local dev only, must lock down before deployment) |
+| `adapters/api/routes_master.py:290-330` | `get_session_state` does 7+ direct `world.query_layer()` calls with assert-based validation — a malformed layer response crashes the endpoint with AssertionError (500) instead of a clean error | medium |
 
-**Good:** WS rate limiting (token bucket, 5/sec, burst 20) is in place. WS origin check is configurable via `WS_ALLOWED_ORIGINS`. Input bounds on Pydantic schemas (hp, ac, population, wealth, hours) all have `Field(ge=, le=)` constraints. No hardcoded secrets. No subprocess calls. No innerHTML in frontend (React app).
+Rate limiting on WebSocket: present (`routes_ws.py:131`). No new security issues from sprint 008.
 
 ## Architecture Violations
 
-No violations found:
-- All cross-layer imports are intra-package (same layer) — clean
-- `core/` imports nothing from upper layers — clean
-- `rules/` imports nothing from layers/service/adapters — clean
-- Adapters import core types (`Action`, `ActionType`, `Ability`, `PlayerCharacter`, `Query`, `QueryType`) only for deserialization/response construction — acceptable thin-adapter pattern
-- `LlmClient()` instantiated only in `adapters/api/app.py` — injection point, clean
-- `rules/dice.py` imports `os` for `DND_DICE_SEED` env var at module load — one-time seed, acceptable
+| File:Line | Violation | Should Be | Severity |
+|-----------|-----------|-----------|----------|
+| `adapters/api/routes_master.py:290-330` | Thick adapter: `get_session_state` orchestrates 7+ layer queries directly, using `Query`/`QueryType` from core | Extract to `GameService.get_world_state()` — adapter should call one service method | medium |
 
-`rules/action_provider.py` has `BaseActionProvider` and `TradeActionProvider` with `self._` fields. These are parameterized strategy objects (injected at construction, no mutation), not mutable state — acceptable.
+Note: `routes_player.py` imports `Ability` and `PlayerCharacter` from core for response serialization — borderline but acceptable since it's type-driven formatting, not business logic.
 
 ## Convention Violations
 
-| File:Line | Violation | Rule |
-|-----------|-----------|------|
-| `service/session.py:302` | `*args: Any` in `_fire()` | Use `object` instead of `Any` per CLAUDE.md |
-
-**`Any` usage elsewhere:** 25 files import `Any`. Most are in LLM/JSON/content-loader contexts where the data is genuinely untyped (LLM responses, YAML dicts, JSON state blobs). These are acceptable — `object` would require excessive casting for no safety gain in these boundary modules.
-
-**Mutable `@dataclass`:** 20 classes use `@dataclass` without `frozen=True`. All are legitimately mutable: `Entity/Creature/Character/PlayerCharacter` (HP, position, state changes), `CombatState/BattleMap` (combat progression), `ResourcePool` (uses tracking), `Round/TurnBudget` (turn state), `GameSession` (runtime state), `Settlement/Nation` (world simulation ticks), `Npc/NpcMemory` (behavior state), `Squad` (ecology movement). No violations.
+No new issues. `Any` usage in `content_loader/schemas.py` is Pydantic validator signatures (`v: Any`) — standard pattern, not a convention violation. `rules/dice.py` imports `os` for `DND_DICE_SEED` env var — acceptable for test seeding.
 
 ## Layer Contract
 
-All 5 layers implement the full `Layer` ABC: `name`, `tick_interval`, `tick`, `handle_event`, `query`, `get_state`, `load_state`. No stub implementations found.
+No issues. All layers implement the full Layer ABC.
 
 ## Test Gaps
 
-| Source File | Expected Test | Status |
-|-------------|---------------|--------|
-| `rules/actions.py` (90 lines) | `tests/unit/test_actions.py` | missing |
-| `rules/weapons.py` (48 lines) | `tests/unit/test_weapons.py` | missing — weapon attack logic is partly covered by `test_combat.py` and `test_proficiency.py` but no dedicated test |
+| Area | Issue | Mitigation |
+|------|-------|------------|
+| `content_loader/` modules: `schema_gen`, `refs`, `utils`, `monsters`, `creatures`, `items` | No dedicated unit tests | Partially covered by integration tests (`test_catalog_assembly.py`, `test_content_api.py`, `test_library_and_assembly.py`) and parser tests (`test_content_parsers_creatures.py`). `schema_gen` and `refs` are the least covered — these were added in sprint 008 phase 3. |
 
-**WS test coverage** (`tests/unit/test_ws.py`): 6 tests covering invalid session, no player, turn/end_turn, action+end_turn, unknown message type, query rejection. Missing scenarios:
-- Malformed JSON from client (would exercise the `json.loads` issue in Security section)
-- Disconnect during active game loop
+WebSocket coverage is solid: 12 unit tests + 12 integration tests covering connect, disconnect, invalid messages, actions, combat, trading, equip/unequip.
 
 ## Vision Drift
 
-No drift detected. Sprint 007 work (save/load completeness, master controls, world inspector, fork UI, layer editor) is fully consistent with vision invariants:
-- Classic mode without LLM: not affected — new features are content/UI tooling
-- Single global round: not affected
-- Layer independence: layer editor works via manifest.yaml + library templates, no coupling added
-- Master controls through endpoints: all new controls go through service layer
-- Brain swappable: brain reassignment after load was explicitly fixed (phase 1.5)
-- Content is data: layer editor operates on YAML files, reinforcing this principle
+No drift. Sprint 008 changes (content schema, CRUD, catalogs, DM world management) align with vision: content stays as data (YAML), master controls go through service layer, no LLM assumptions added.
