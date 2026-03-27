@@ -223,6 +223,131 @@ class TestCombatFlow:
             sock.close()
 
 
+# ── Click-to-Move (move_to) ───────────────────────────────────────────
+
+
+class TestMoveTo:
+    """Phase 5: move_to action — BFS pathfinding on the battle map grid."""
+
+    @pytest.fixture(scope="class")
+    def ws_move_arena(self, _urls: tuple[str, str, str]) -> Iterator[tuple[str, str, str]]:
+        """Fresh arena session for move_to tests."""
+        api, player_api, ws_base = _urls
+        resp = requests.post(f"{api}/sessions", json={"world_name": "arena", "lang": "en"}, timeout=10)
+        resp.raise_for_status()
+        sid = resp.json()["session_id"]
+
+        resp = requests.post(
+            f"{player_api}/sessions/{sid}/character",
+            json={
+                "name": "Move Tester",
+                "race": "human",
+                "char_class": "fighter",
+                "level": 1,
+                "alignment": "true_neutral",
+                "hp": 30,
+                "ac": 15,
+                "start_location": "arena_floor",
+                "ability_scores": {"str": 16, "dex": 14, "con": 14, "int": 10, "wis": 12, "cha": 10},
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        pid = resp.json()["player_id"]
+
+        yield ws_base, sid, pid
+        requests.delete(f"{api}/sessions/{sid}", timeout=5)
+
+    def test_move_to_in_combat(self, ws_move_arena: tuple[str, str, str]) -> None:
+        """Enter combat, then move_to an adjacent cell — should succeed and update position."""
+        ws_base, sid, pid = ws_move_arena
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            # Get initial peaceful turn
+            msg = ws_recv(sock)
+            assert msg["type"] == "turn"
+
+            # Attack to start combat
+            ws_send_action(sock, "attack", target_id="razor")
+
+            # Wait for a combat turn (ours)
+            combat_turn = None
+            for _ in range(20):
+                msg = ws_recv(sock)
+                if msg["type"] == "turn" and msg.get("mode") == "combat":
+                    combat_turn = msg
+                    break
+            assert combat_turn is not None, "Never got a combat turn"
+
+            # Read our current position from awareness
+            awareness = combat_turn["awareness"]
+            cur_x = awareness["self_x"]
+            cur_y = awareness["self_y"]
+
+            # Pick a target cell 1 step away (5ft grid)
+            target_x = cur_x + 5
+            target_y = cur_y
+
+            ws_send_action(sock, "move_to", x=target_x, y=target_y)
+
+            # Should get action_result for move_to (no "error" key = success)
+            got_result = False
+            for _ in range(10):
+                msg = ws_recv(sock)
+                if msg["type"] == "action_result" and msg["action"] == "move_to":
+                    assert "error" not in msg, f"move_to failed: {msg.get('error')}"
+                    got_result = True
+                    break
+            assert got_result, f"Never received move_to action_result, last msg: {msg}"
+        finally:
+            sock.close()
+
+    def test_move_to_outside_combat_fails(self, _urls: tuple[str, str, str]) -> None:
+        """move_to should fail outside combat — it's a combat-only action."""
+        api, player_api, ws_base = _urls
+        resp = requests.post(f"{api}/sessions", json={"world_name": "village", "lang": "en"}, timeout=10)
+        resp.raise_for_status()
+        sid = resp.json()["session_id"]
+
+        try:
+            resp = requests.post(
+                f"{player_api}/sessions/{sid}/character",
+                json={
+                    "name": "Peace Mover",
+                    "race": "human",
+                    "char_class": "fighter",
+                    "level": 1,
+                    "alignment": "true_neutral",
+                    "hp": 20,
+                    "ac": 12,
+                    "start_location": "village_square",
+                    "ability_scores": {"str": 12, "dex": 12, "con": 12, "int": 10, "wis": 10, "cha": 10},
+                },
+                timeout=10,
+            )
+            resp.raise_for_status()
+            pid = resp.json()["player_id"]
+
+            sock = ws_connect(ws_base, sid, pid)
+            try:
+                msg = ws_recv(sock)
+                assert msg["type"] == "turn"
+                assert msg["mode"] == "peaceful"
+
+                ws_send_action(sock, "move_to", x=5, y=5)
+
+                # In peaceful mode, a combat-only action fails —
+                # the turn breaks, round ends, and we get round_result then new turn
+                msg = ws_recv(sock)
+                assert msg["type"] in ("round_result", "turn"), (
+                    f"Expected round_result or turn after failed move_to, got: {msg['type']}"
+                )
+            finally:
+                sock.close()
+        finally:
+            requests.delete(f"{api}/sessions/{sid}", timeout=5)
+
+
 # ── Inventory & Equipment ─────────────────────────────────────────────
 
 

@@ -118,7 +118,7 @@ Action bar с core-кнопками, категориями, визуальны�
 1. [NPC Description Field + Structured Inspect Data](tasks/phase4-task1-npc-inspect-backend.md)
 2. [NPC Inspect Modal with Actions](tasks/phase4-task2-npc-inspect-modal.md)
 
-## Phase 5: Combat Layout + Click-to-Move
+## Phase 5: Combat Layout + Click-to-Move ✓
 
 Боевой layout: BattleMap переезжает из левой колонки в правую (заменяет LocationPanel в бою), CombatPanel поднимается на всю левую колонку. ASCII карта заменяется на интерактивную CSS Grid. Клик по клетке = `move_to(x, y)` на бэкенде.
 
