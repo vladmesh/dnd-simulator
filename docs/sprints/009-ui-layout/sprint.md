@@ -22,7 +22,8 @@ Sprint 008 довёл DM-сторону до рабочего состояния
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Tabbed Sidebar](tasks/phase1-task1-tabbed-sidebar.md)
+2. [Log Formatting — Turn Headers, Colors, Movement Aggregation](tasks/phase1-task2-log-formatting.md)
 
 ## Phase 2: Action Bar Redesign
 

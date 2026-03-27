@@ -1,13 +1,14 @@
 # Sprint 009 Status
 
 **Sprint:** 009-ui-layout
-**Phase:** Planning (COMPLETE)
+**Phase:** 1 — Fixed Viewport + Log Formatting
 **Updated:** 2026-03-27
 
 ## Current
 
-Sprint planned. 3 phases. Ready for Phase 1 task generation.
+Phase 1 tasks generated. Ready to start task 1.
 
 ## Next Steps
 
-Phase 1 task generation.
+- Task 1: Tabbed Sidebar — replace combat/peaceful switch with tab bar
+- Task 2: Log Formatting — turn headers, colors, movement aggregation
