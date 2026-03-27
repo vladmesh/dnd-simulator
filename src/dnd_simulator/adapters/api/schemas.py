@@ -143,6 +143,7 @@ class WorldListItem(BaseModel):
     name: str
     description: str
     complete: bool
+    editable: bool
 
 
 class PlayerStatusResponse(BaseModel):

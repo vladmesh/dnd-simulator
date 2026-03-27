@@ -6,11 +6,13 @@ import { api } from "@/transport/apiClient"
 import type { SessionListItem, WorldListItem } from "@/types/api"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { LanguageToggle } from "@/components/setup/LanguageToggle"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Loader2, Trash2, Settings } from "lucide-react"
+import { Loader2, Trash2, Settings, GitFork } from "lucide-react"
 import { WorldEditor } from "./WorldEditor"
 
 export function MasterScreen() {
@@ -22,6 +24,9 @@ export function MasterScreen() {
   const [selectedWorld, setSelectedWorld] = useState<string>("")
   const [deleting, setDeleting] = useState<string | null>(null)
   const [editingWorld, setEditingWorld] = useState<string | null>(null)
+  const [forkingWorld, setForkingWorld] = useState<string | null>(null)
+  const [forkId, setForkId] = useState("")
+  const [forkSubmitting, setForkSubmitting] = useState(false)
 
   const refresh = useCallback(() => {
     setLoading(true)
@@ -60,6 +65,38 @@ export function MasterScreen() {
       .finally(() => setDeleting(null))
   }
 
+  const handleFork = (worldId: string) => {
+    setForkingWorld(worldId)
+    setForkId("")
+  }
+
+  const submitFork = () => {
+    if (!forkingWorld || !forkId.trim()) return
+    setForkSubmitting(true)
+    api.master
+      .forkWorld(forkingWorld, { new_id: forkId.trim() })
+      .then(() => {
+        toast.success(t("master:world_forked"))
+        setForkingWorld(null)
+        setForkId("")
+        refresh()
+      })
+      .catch(() => toast.error(t("master:fork_world_error")))
+      .finally(() => setForkSubmitting(false))
+  }
+
+  const deleteWorld = (worldId: string) => {
+    if (!confirm(t("master:confirm_delete_world", { id: worldId }))) return
+    setDeleting(worldId)
+    api.master
+      .deleteWorld(worldId)
+      .then(() => { refresh(); toast.success(t("master:world_deleted")) })
+      .catch(() => toast.error(t("common:error")))
+      .finally(() => setDeleting(null))
+  }
+
+  const editingWorldData = editingWorld ? worlds.find((w) => w.id === editingWorld) : null
+
   return (
     <div className="dark mx-auto min-h-screen max-w-4xl bg-background px-4 py-8 text-foreground">
       <div className="mb-8 flex items-center justify-between">
@@ -81,7 +118,11 @@ export function MasterScreen() {
         {/* ── Worlds Tab ── */}
         <TabsContent value="worlds">
           {editingWorld ? (
-            <WorldEditor worldId={editingWorld} readOnly={false} onClose={() => setEditingWorld(null)} />
+            <WorldEditor
+              worldId={editingWorld}
+              readOnly={!editingWorldData?.editable}
+              onClose={() => setEditingWorld(null)}
+            />
           ) : loading ? (
             <div className="grid gap-4 pt-4 sm:grid-cols-2">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -102,6 +143,7 @@ export function MasterScreen() {
               {worlds.map((w) => (
                 <Card
                   key={w.id}
+                  data-testid={`world-card-${w.id}`}
                   className="cursor-pointer transition-colors hover:bg-muted/50"
                   onClick={() => setEditingWorld(w.id)}
                 >
@@ -109,8 +151,66 @@ export function MasterScreen() {
                     <CardTitle className="text-base">{w.name}</CardTitle>
                     <CardDescription>{w.description || w.id}</CardDescription>
                   </CardHeader>
+                  <CardContent className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => { e.stopPropagation(); handleFork(w.id) }}
+                    >
+                      <GitFork className="mr-1 size-3" />
+                      {t("master:fork_world_btn")}
+                    </Button>
+                    {w.editable && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={deleting === w.id}
+                        onClick={(e) => { e.stopPropagation(); deleteWorld(w.id) }}
+                      >
+                        {deleting === w.id ? (
+                          <Loader2 className="size-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="mr-1 size-3" />
+                        )}
+                        {t("master:delete_world_btn")}
+                      </Button>
+                    )}
+                  </CardContent>
                 </Card>
               ))}
+
+              {/* Fork dialog */}
+              {forkingWorld && (
+                <Card data-testid="fork-dialog" className="col-span-full border-primary">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">
+                      {t("master:fork_world_title", { name: forkingWorld })}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <Label htmlFor="fork-id">{t("master:field_id")}</Label>
+                      <Input
+                        id="fork-id"
+                        value={forkId}
+                        onChange={(e) => setForkId(e.target.value)}
+                        pattern="^[a-z0-9_]+$"
+                        placeholder="my_world"
+                      />
+                    </div>
+                    <Button
+                      onClick={submitFork}
+                      disabled={forkSubmitting || !forkId.trim()}
+                    >
+                      {forkSubmitting && <Loader2 className="mr-1 size-3 animate-spin" />}
+                      {t("master:fork_world_btn")}
+                    </Button>
+                    <Button variant="outline" onClick={() => setForkingWorld(null)}>
+                      {t("common:cancel")}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           )}
         </TabsContent>

@@ -120,6 +120,11 @@ export interface WorldListItem {
   id: string
   name: string
   description: string
+  editable: boolean
+}
+
+export interface ForkWorldRequest {
+  new_id: string
 }
 
 export interface PlayerStatusResponse {

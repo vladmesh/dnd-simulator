@@ -137,5 +137,13 @@
   "editor_load_error": "Не удалось загрузить файлы слоя",
 
   "next": "Далее",
-  "close_editor": "Закрыть"
+  "close_editor": "Закрыть",
+
+  "fork_world_btn": "Форк",
+  "fork_world_title": "Форк мира: {{name}}",
+  "fork_world_error": "Не удалось форкнуть мир",
+  "world_forked": "Мир форкнут.",
+  "delete_world_btn": "Удалить",
+  "confirm_delete_world": "Удалить мир {{id}}? Это действие необратимо.",
+  "world_deleted": "Мир удалён."
 }

@@ -70,6 +70,32 @@ class TestWorldsEndpoint:
         assert len(worlds) >= 1
         assert any(w["id"] == "sword_vale" for w in worlds)
 
+    def test_list_worlds_has_editable_field(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/worlds")
+        assert resp.status_code == HTTPStatus.OK
+        worlds = resp.json()
+        # Every world has an editable field
+        for w in worlds:
+            assert "editable" in w, f"World {w['id']} missing 'editable' field"
+        # Base world sword_vale is NOT editable
+        sword_vale = next(w for w in worlds if w["id"] == "sword_vale")
+        assert sword_vale["editable"] is False
+
+    def test_forked_world_is_editable(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path, isolated_content=True)
+        # Fork sword_vale
+        resp = client.post(
+            "/api/master/worlds/sword_vale/fork",
+            json={"new_id": "my_world"},
+        )
+        assert resp.status_code == HTTPStatus.CREATED
+        # List worlds — forked world should be editable
+        resp = client.get("/api/master/worlds")
+        worlds = resp.json()
+        my_world = next(w for w in worlds if w["id"] == "my_world")
+        assert my_world["editable"] is True
+
 
 class TestMasterSessions:
     def test_create_session(self, tmp_path: object) -> None:

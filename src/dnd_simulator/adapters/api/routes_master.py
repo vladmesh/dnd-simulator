@@ -70,12 +70,14 @@ def list_worlds(lang: str = "en") -> list[WorldListItem]:
     """List available world templates."""
     service = get_service()
     worlds = service.list_worlds(lang=lang)
+    base_worlds = service.base_worlds
     return [
         WorldListItem(
             id=str(w["id"]),
             name=str(w["name"]),
             description=str(w["description"]),
             complete=bool(w["complete"]),
+            editable=str(w["id"]) not in base_worlds,
         )
         for w in worlds
     ]
@@ -94,7 +96,13 @@ def create_world(req: CreateWorldRequest) -> WorldListItem:
         )
     except FileExistsError as exc:
         raise HTTPException(status_code=409, detail=_("World '{}' already exists").format(req.id)) from exc
-    return WorldListItem(id=result["id"], name=result["name"], description=req.description, complete=False)
+    return WorldListItem(
+        id=result["id"],
+        name=result["name"],
+        description=req.description,
+        complete=False,
+        editable=True,
+    )
 
 
 @router.post("/worlds/assemble", response_model=WorldListItem, status_code=201)
@@ -113,7 +121,13 @@ def assemble_world(req: AssembleWorldRequest) -> WorldListItem:
         raise HTTPException(status_code=409, detail=_("World '{}' already exists").format(req.id)) from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return WorldListItem(id=result["id"], name=result["name"], description=req.description, complete=True)
+    return WorldListItem(
+        id=result["id"],
+        name=result["name"],
+        description=req.description,
+        complete=True,
+        editable=True,
+    )
 
 
 @router.post("/worlds/{world_id}/fork", response_model=WorldListItem, status_code=201)
@@ -135,6 +149,7 @@ def fork_world(world_id: str, req: ForkWorldRequest) -> WorldListItem:
         name=str(result["name"]),
         description="",
         complete=bool(result["complete"]),
+        editable=True,
     )
 
 

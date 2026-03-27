@@ -137,5 +137,13 @@
   "editor_load_error": "Failed to load layer files",
 
   "next": "Next",
-  "close_editor": "Close"
+  "close_editor": "Close",
+
+  "fork_world_btn": "Fork",
+  "fork_world_title": "Fork world: {{name}}",
+  "fork_world_error": "Failed to fork world",
+  "world_forked": "World forked.",
+  "delete_world_btn": "Delete",
+  "confirm_delete_world": "Delete world {{id}}? This cannot be undone.",
+  "world_deleted": "World deleted."
 }

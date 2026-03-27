@@ -375,6 +375,10 @@ class GameService(
 
     _BASE_WORLDS: frozenset[str] = frozenset({"sword_vale", "test_vale"})
 
+    @property
+    def base_worlds(self) -> frozenset[str]:
+        return self._BASE_WORLDS
+
     def fork_world(
         self,
         source_world_id: str,

@@ -6,6 +6,7 @@ import type {
   CreateSessionRequest,
   CreateWorldRequest,
   CreatureResponse,
+  ForkWorldRequest,
   EntityEntry,
   GiveItemRequest,
   JsonSchema,
@@ -130,6 +131,12 @@ const master = {
 
   updateWorld: (worldId: string, data: CreateWorldRequest) =>
     put<WorldListItem>(`/api/master/worlds/${worldId}`, data),
+
+  forkWorld: (worldId: string, data: ForkWorldRequest) =>
+    post<WorldListItem>(`/api/master/worlds/${worldId}/fork`, data),
+
+  deleteWorld: (worldId: string) =>
+    del<MessageResponse>(`/api/master/worlds/${worldId}`),
 
   // Sessions
   getSessions: () => get<SessionListItem[]>("/api/master/sessions"),

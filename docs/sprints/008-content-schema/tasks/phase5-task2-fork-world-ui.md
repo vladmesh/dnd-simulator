@@ -55,4 +55,8 @@ Master can fork an existing world (full copy with new name), rename it, edit it,
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented fork/delete world UI on master screen. Backend: added `editable: bool` field to `WorldListItem` schema, determined by checking `_BASE_WORLDS` frozenset via new `base_worlds` property on `GameService`. Frontend: added `forkWorld`/`deleteWorld` API client methods, `ForkWorldRequest` type, `editable` field to `WorldListItem`. MasterScreen now shows fork button on every world card (opens inline dialog with ID input), delete button only on editable worlds, and passes `readOnly=!editable` to WorldEditor. 2 pre-existing test failures from dirty content files are unrelated.
