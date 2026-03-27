@@ -83,7 +83,7 @@ Sprint 008 довёл DM-сторону до рабочего состояния
 1. [processLogEntries Transform](tasks/phase2-task1-process-log-entries.md)
 2. [Render DisplayEntry in EventLog](tasks/phase2-task2-render-display-entries.md)
 
-## Phase 3: Action Bar Redesign + Potions
+## Phase 3: Action Bar Redesign + Potions ✓
 
 Action bar с core-кнопками, категориями, визуальным разделением по типу действия. Зелья и consumables вынесены прямо на панель.
 
