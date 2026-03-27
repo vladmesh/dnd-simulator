@@ -173,12 +173,15 @@ _reg(
     ActionDef(
         action_type=ActionType.MOVE_TO,
         description=N_("Move to a specific position on the battle map."),
-        cost_type=CostType.FREE,  # handler manages movement budget directly
+        cost_type=CostType.FREE,  # handler manages movement budget directly (like dash)
         combat_mode=CombatMode.COMBAT_ONLY,
-        provider_managed=True,
         params=(
             ParamDef("x", "integer", N_("Target X coordinate in feet"), required=True),
             ParamDef("y", "integer", N_("Target Y coordinate in feet"), required=True),
+        ),
+        llm_hint=(
+            "Move to exact grid coordinates (x, y) in feet. Use when you know the exact position. "
+            "Pathfinding is automatic — finds the shortest path around walls and occupied cells."
         ),
     )
 )
