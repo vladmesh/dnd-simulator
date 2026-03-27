@@ -63,7 +63,8 @@ Sprint 008 довёл DM-сторону до рабочего состояния
 
 **Tasks:**
 
-_(генерируются /plan_phase)_
+1. [Dashboard Grid Layout](tasks/phase1-task1-dashboard-grid.md)
+2. [Log Expand Overlay](tasks/phase1-task2-log-expand-overlay.md)
 
 ## Phase 2: Log Formatting
 

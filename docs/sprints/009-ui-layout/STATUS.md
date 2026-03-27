@@ -6,11 +6,9 @@
 
 ## Current
 
-Sprint replanned. Phase 1 needs task generation.
-
-Previous task 1 (SidebarTabs) is done but will be replaced by dashboard layout in new phase 1.
+Phase 1 tasks generated. Ready to start task 1.
 
 ## Next Steps
 
-- Generate phase 1 tasks via /plan_phase
-- Phase 1: Dashboard layout (3-column panels) + compact log with expand overlay
+- Task 1: Dashboard grid layout — replace 2-col (log|sidebar) with header → compact log → 3-col panels → action bar
+- Task 2: Log expand overlay — expand/collapse compact log into full virtualized overlay
