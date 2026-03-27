@@ -151,11 +151,20 @@ describe("GameScreen — combat mode", () => {
     expect(screen.getByTestId("combat-panel")).toBeInTheDocument()
   })
 
-  it("keeps character and location panels in combat", () => {
+  it("hides LocationPanel and shows BattleMap in right column during combat", () => {
     renderGameScreen()
     expect(screen.getByTestId("player-stats")).toBeInTheDocument()
-    // Location panel still visible in combat
-    expect(screen.getByTestId("location-panel")).toBeInTheDocument()
+    // LocationPanel replaced by BattleMap in right column
+    expect(screen.queryByTestId("location-panel")).not.toBeInTheDocument()
+    expect(screen.getByTestId("battle-map")).toBeInTheDocument()
+  })
+
+  it("left column has only CombatPanel (no BattleMap) during combat", () => {
+    renderGameScreen()
+    const combatPanel = screen.getByTestId("combat-panel")
+    const battleMap = screen.getByTestId("battle-map")
+    // CombatPanel and BattleMap should be in different columns (not siblings)
+    expect(combatPanel.parentElement).not.toBe(battleMap.parentElement)
   })
 })
 

@@ -44,4 +44,8 @@ This is a ~10-line change in one file.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward layout swap in GameScreen.tsx. Left column in combat now renders only CombatPanel (no BattleMap above it). Right column conditionally renders BattleMap in combat or LocationPanel in peaceful. Updated existing combat test that expected LocationPanel to stay visible; added a new test verifying BattleMap and CombatPanel are in separate columns. No old tests broken — one was updated to reflect the intentional contract change (LocationPanel hidden during combat).
