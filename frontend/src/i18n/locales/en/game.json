@@ -78,5 +78,6 @@
   "unequip": "Unequip",
   "trade": "Trade",
   "buy": "Buy",
-  "sell": "Sell"
+  "sell": "Sell",
+  "event_log": "Event Log"
 }

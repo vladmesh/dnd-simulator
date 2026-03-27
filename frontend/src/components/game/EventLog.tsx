@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { useVirtualizer } from "@tanstack/react-virtual"
+import { ChevronDown } from "lucide-react"
 import { useGameStore } from "@/store/gameStore"
 
 export const EVENT_COLORS: Record<string, string> = {
@@ -26,20 +27,21 @@ const COMPACT_VISIBLE_COUNT = 5
 
 interface EventLogProps {
   compact?: boolean
+  onExpand?: () => void
 }
 
-export function EventLog({ compact }: EventLogProps) {
+export function EventLog({ compact, onExpand }: EventLogProps) {
   const { t } = useTranslation(["common"])
   const log = useGameStore((s) => s.log)
 
   if (compact) {
-    return <CompactLog />
+    return <CompactLog onExpand={onExpand} />
   }
 
   return <FullLog log={log} emptyMessage={t("common:waiting_for_events")} />
 }
 
-function CompactLog() {
+function CompactLog({ onExpand }: { onExpand?: () => void }) {
   const log = useGameStore((s) => s.log)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -55,19 +57,30 @@ function CompactLog() {
   const visible = log.slice(-COMPACT_VISIBLE_COUNT)
 
   return (
-    <div
-      ref={scrollRef}
-      className="max-h-24 overflow-y-auto border-b border-border font-mono text-xs"
-      data-testid="compact-log"
-    >
-      {visible.map((entry) => {
-        const colorClass = EVENT_COLORS[entry.event.event_type] ?? "text-foreground"
-        return (
-          <div key={entry.id} className="px-3 py-0.5">
-            <span className={colorClass}>{entry.event.description}</span>
-          </div>
-        )
-      })}
+    <div className="flex items-stretch border-b border-border">
+      <div
+        ref={scrollRef}
+        className="max-h-24 flex-1 overflow-y-auto font-mono text-xs"
+        data-testid="compact-log"
+      >
+        {visible.map((entry) => {
+          const colorClass = EVENT_COLORS[entry.event.event_type] ?? "text-foreground"
+          return (
+            <div key={entry.id} className="px-3 py-0.5">
+              <span className={colorClass}>{entry.event.description}</span>
+            </div>
+          )
+        })}
+      </div>
+      {onExpand && (
+        <button
+          data-testid="log-expand-btn"
+          className="px-2 text-muted-foreground transition-colors hover:text-foreground"
+          onClick={onExpand}
+        >
+          <ChevronDown className="size-4" />
+        </button>
+      )}
     </div>
   )
 }

@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 1, Task 1: Dashboard Grid Layout — done. 3-col dashboard replaces tabbed sidebar.
+Phase 1, Task 2: Log Expand Overlay — done. All phase 1 tasks complete.
 
 ## Next Steps
 
-- Task 2: Log expand overlay — expand/collapse compact log into full virtualized overlay
+- Close phase 1 via /close_phase

@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, fireEvent } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { MemoryRouter, Route, Routes } from "react-router"
 import "@/i18n"
@@ -155,5 +156,43 @@ describe("GameScreen — combat mode", () => {
     expect(screen.getByTestId("player-stats")).toBeInTheDocument()
     // Location panel still visible in combat
     expect(screen.getByTestId("location-panel")).toBeInTheDocument()
+  })
+})
+
+describe("GameScreen — log expand overlay", () => {
+  beforeEach(() => {
+    useGameStore.setState({ log: makeLogEntries(10) })
+  })
+
+  it("compact log has an expand button", () => {
+    renderGameScreen()
+    expect(screen.getByTestId("log-expand-btn")).toBeInTheDocument()
+  })
+
+  it("clicking expand shows overlay with full log", async () => {
+    const user = userEvent.setup()
+    renderGameScreen()
+    await user.click(screen.getByTestId("log-expand-btn"))
+    expect(screen.getByTestId("log-overlay")).toBeInTheDocument()
+  })
+
+  it("close button dismisses overlay", async () => {
+    const user = userEvent.setup()
+    renderGameScreen()
+    await user.click(screen.getByTestId("log-expand-btn"))
+    expect(screen.getByTestId("log-overlay")).toBeInTheDocument()
+
+    await user.click(screen.getByTestId("log-overlay-close"))
+    expect(screen.queryByTestId("log-overlay")).not.toBeInTheDocument()
+  })
+
+  it("Escape key dismisses overlay", async () => {
+    const user = userEvent.setup()
+    renderGameScreen()
+    await user.click(screen.getByTestId("log-expand-btn"))
+    expect(screen.getByTestId("log-overlay")).toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: "Escape" })
+    expect(screen.queryByTestId("log-overlay")).not.toBeInTheDocument()
   })
 })

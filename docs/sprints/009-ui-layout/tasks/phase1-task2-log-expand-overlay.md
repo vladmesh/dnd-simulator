@@ -36,14 +36,18 @@ Vitest component tests:
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Compact log has visible expand button
-- [ ] Overlay shows full virtualized log
-- [ ] Overlay closes via button, Escape, and backdrop click
-- [ ] Overlay does not affect ActionBar or Header visibility
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Compact log has visible expand button
+- [x] Overlay shows full virtualized log
+- [x] Overlay closes via button, Escape, and backdrop click
+- [x] Overlay does not affect ActionBar or Header visibility
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Created `LogOverlay.tsx` — absolutely positioned over the panel grid area (inside a `relative` wrapper). Uses the non-compact `EventLog` with full virtualization. ChevronDown expand button added to compact log strip. Overlay has backdrop blur, Escape/close-button/backdrop-click dismiss. i18n keys added for "Event Log" / "Журнал событий". 4 new tests cover expand button presence, overlay open, close via button, close via Escape.

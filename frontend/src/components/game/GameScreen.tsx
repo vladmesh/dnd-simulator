@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useParams, useNavigate } from "react-router"
 import { useGameStore } from "@/store/gameStore"
 import { Header } from "./Header"
@@ -10,6 +10,7 @@ import { LocationPanel } from "./LocationPanel"
 import { TradePanel } from "./TradePanel"
 import { BattleMap } from "./BattleMap"
 import { CombatPanel } from "./CombatPanel"
+import { LogOverlay } from "./LogOverlay"
 
 export function GameScreen() {
   const { sessionId } = useParams<{ sessionId: string }>()
@@ -19,8 +20,12 @@ export function GameScreen() {
   const playerName = useGameStore((s) => s.player?.name)
   const mode = useGameStore((s) => s.mode)
   const isCombat = mode === "combat"
+  const [logExpanded, setLogExpanded] = useState(false)
   const connectedRef = useRef(false)
   const navigate = useNavigate()
+
+  const openLog = useCallback(() => setLogExpanded(true), [])
+  const closeLog = useCallback(() => setLogExpanded(false), [])
 
   useEffect(() => {
     if (!sessionId) return
@@ -67,36 +72,41 @@ export function GameScreen() {
       )}
 
       {/* Compact log strip */}
-      <EventLog compact />
+      <EventLog compact onExpand={openLog} />
 
-      {/* Dashboard panels — 3 columns */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 gap-px border-b border-border bg-border lg:grid-cols-3">
-        {/* Left column: Nearby (peaceful) or BattleMap + Combat (combat) */}
-        <div className="overflow-y-auto bg-background p-3">
-          {isCombat ? (
-            <>
-              <BattleMap />
-              <div className="my-3 border-t border-border" />
-              <CombatPanel />
-            </>
-          ) : (
-            <>
-              <Perception />
-              <div className="my-3 border-t border-border" />
-              <TradePanel />
-            </>
-          )}
+      {/* Dashboard panels — 3 columns, with overlay container */}
+      <div className="relative min-h-0 flex-1">
+        <div className="grid h-full grid-cols-1 gap-px border-b border-border bg-border lg:grid-cols-3">
+          {/* Left column: Nearby (peaceful) or BattleMap + Combat (combat) */}
+          <div className="overflow-y-auto bg-background p-3">
+            {isCombat ? (
+              <>
+                <BattleMap />
+                <div className="my-3 border-t border-border" />
+                <CombatPanel />
+              </>
+            ) : (
+              <>
+                <Perception />
+                <div className="my-3 border-t border-border" />
+                <TradePanel />
+              </>
+            )}
+          </div>
+
+          {/* Center column: Character + Equipment */}
+          <div className="overflow-y-auto bg-background p-3">
+            <PlayerStats />
+          </div>
+
+          {/* Right column: Location */}
+          <div className="overflow-y-auto bg-background p-3">
+            <LocationPanel />
+          </div>
         </div>
 
-        {/* Center column: Character + Equipment */}
-        <div className="overflow-y-auto bg-background p-3">
-          <PlayerStats />
-        </div>
-
-        {/* Right column: Location */}
-        <div className="overflow-y-auto bg-background p-3">
-          <LocationPanel />
-        </div>
+        {/* Log overlay — covers panel grid */}
+        {logExpanded && <LogOverlay onClose={closeLog} />}
       </div>
 
       {/* Action bar */}
