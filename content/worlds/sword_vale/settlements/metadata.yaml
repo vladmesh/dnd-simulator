@@ -1,0 +1,6 @@
+name: "Sword Vale Settlements"
+layer_type: settlements
+version: "1.0"
+description: "10 settlements from cities to hamlets across 7 regions"
+tags: [medieval, fantasy, coastal]
+requires_geography: [sword_vale]

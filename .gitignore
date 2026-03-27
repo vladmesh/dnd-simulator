@@ -4,6 +4,9 @@ saves/
 # Worlds created during E2E testing (not part of content)
 content/worlds/e2e_*/
 
+# Temp worlds created by integration tests (docker-compose volume mount)
+tests/integration/content/worlds/lf_*/
+
 # Debug logs
 logs/
 

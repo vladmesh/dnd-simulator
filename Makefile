@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test test-unit test-integration check setup-hooks messages compile-messages serve stop frontend
+.PHONY: install lint format typecheck test test-unit test-integration check setup-hooks messages compile-messages serve stop frontend up
 
 install:
 	uv sync
@@ -41,4 +41,8 @@ compile-messages:
 	python3 -c "import subprocess; subprocess.run(['msgfmt', '-o', 'src/dnd_simulator/locale/ru/LC_MESSAGES/dnd_simulator.mo', 'src/dnd_simulator/locale/ru/LC_MESSAGES/dnd_simulator.po'])" 2>/dev/null || echo "msgfmt not available, use scripts/compile_po.py"
 
 frontend:
+	cd frontend && npm run dev
+
+up: stop
+	uv run uvicorn dnd_simulator.adapters.api.app:app --host 0.0.0.0 --port 8001 --reload --reload-exclude 'saves/*' &
 	cd frontend && npm run dev

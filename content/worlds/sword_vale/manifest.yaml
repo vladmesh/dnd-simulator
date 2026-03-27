@@ -2,36 +2,33 @@ name:
   en: Sword Vale
   ru: Долина Мечей
 description:
-  en: >
-    A small region around the port of Silverport.
-    Temperate coast gives way to fertile plains, dense forests,
-    treacherous swamps, scorching desert, towering mountains,
-    and frozen tundra beyond.
-  ru: >
-    Небольшой край вокруг порта Серебропорт.
-    Умеренное побережье сменяется плодородными равнинами,
-    густыми лесами, коварными болотами, палящей пустыней,
-    высокими горами и замёрзшей тундрой за ними.
-default_player_faction: kingdom
+  en: 'A small region around the port of Silverport. Temperate coast gives way to
+    fertile plains, dense forests, treacherous swamps, scorching desert, towering
+    mountains, and frozen tundra beyond.
 
+    '
+  ru: 'Небольшой край вокруг порта Серебропорт. Умеренное побережье сменяется плодородными
+    равнинами, густыми лесами, коварными болотами, палящей пустыней, высокими горами
+    и замёрзшей тундрой за ними.
+
+    '
+default_player_faction: kingdom
 layers:
   geography:
     source: library
     template: sword_vale
-    version: "1.0"
+    version: '1.0'
   politics:
     source: library
     template: sword_vale
-    version: "1.0"
+    version: '1.0'
   settlements:
-    source: library
-    template: sword_vale
-    version: "1.0"
+    source: custom
   ecology:
     source: library
     template: sword_vale
-    version: "1.0"
+    version: '1.0'
   entities:
     source: library
     template: sword_vale
-    version: "1.0"
+    version: '1.0'
