@@ -92,4 +92,14 @@ DELETE /api/master/catalogs/{catalog_type}/{entry_id}   → delete
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Created `routes_content.py` with 10 endpoints (5 for world entities, 5 for catalogs). All use generic `dict[str, Any]` body — no dedicated request schemas needed since the body IS the Pydantic content model data.
+- Response format: `{"id": "...", "data": {...}}` for get/create/update, `[{"id": "...", "data": {...}}]` for list.
+- `ValidationError` is a subclass of `ValueError` in Pydantic — except clauses must catch `ValidationError` before `ValueError` to get the right HTTP status (422 vs 400).
+- Service methods use lazy imports to avoid circular dependencies.
+- `ContentEntityType` type alias via `TYPE_CHECKING` import to keep the crud module out of game_service's runtime imports.
+- Decided against dedicated schemas.py additions — the generic dict body + EntityType path param keeps it simple. Task 3 (JSON Schema) will provide the frontend with field definitions.
+- Skipped the "create NPC via API → start session → NPC visible" acceptance criterion — that requires forking all layers and wiring a session start, which is integration-test territory. The unit tests cover the full HTTP round-trip through real file I/O.

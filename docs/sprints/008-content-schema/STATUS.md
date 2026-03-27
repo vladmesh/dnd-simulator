@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 3, Task 1: Content CRUD Layer — done. EntityRegistry + generic CRUD for 9 entity types (7 layer + 2 catalog).
+Phase 3, Task 2: Entity CRUD API Endpoints — done. 10 REST endpoints for world entities + catalogs.
 
 ## Next Steps
 
-- Task 2: Entity CRUD API endpoints — REST routes, service methods, new router
 - Task 3: JSON Schema + Layer-Refs — schema endpoint, cross-layer refs for dropdowns

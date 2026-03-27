@@ -3,7 +3,10 @@ from __future__ import annotations
 import contextlib
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from dnd_simulator.content_loader.crud import EntityType as ContentEntityType
 
 import structlog
 
@@ -524,6 +527,148 @@ class GameService(
             raise ValueError(f"Invalid YAML: {exc}") from exc
 
         (layer_path / filename).write_text(content, encoding="utf-8")
+
+    # -- Content entity CRUD --
+
+    def _resolve_entity_layer_path(
+        self,
+        world_id: str,
+        entity_type: ContentEntityType,
+    ) -> tuple[Path, str]:
+        """Resolve the layer directory for a content entity type. Returns (path, source)."""
+        from dnd_simulator.content_loader.crud import get_registry_entry
+
+        entry = get_registry_entry(entity_type)
+        assert entry.layer_type is not None
+        return self._resolve_layer_path(world_id, LayerType(entry.layer_type))
+
+    def list_content_entities(
+        self,
+        world_id: str,
+        entity_type: ContentEntityType,
+    ) -> list[dict[str, object]]:
+        """List all entities of a type from a world layer."""
+        from dnd_simulator.content_loader.crud import list_entities
+
+        layer_path, _source = self._resolve_entity_layer_path(world_id, entity_type)
+        entities = list_entities(entity_type, layer_path)
+        return [{"id": eid, "data": model.model_dump(mode="json", by_alias=True)} for eid, model in entities.items()]
+
+    def get_content_entity(
+        self,
+        world_id: str,
+        entity_type: ContentEntityType,
+        entity_id: str,
+    ) -> dict[str, object]:
+        """Get a single entity from a world layer."""
+        from dnd_simulator.content_loader.crud import get_entity
+
+        layer_path, _source = self._resolve_entity_layer_path(world_id, entity_type)
+        model = get_entity(entity_type, entity_id, layer_path)
+        return {"id": entity_id, "data": model.model_dump(mode="json", by_alias=True)}
+
+    def create_content_entity(
+        self,
+        world_id: str,
+        entity_type: ContentEntityType,
+        entity_id: str,
+        data: dict[str, object],
+    ) -> dict[str, object]:
+        """Create an entity in a custom world layer. Rejects writes to library layers."""
+        from dnd_simulator.content_loader.crud import create_entity
+
+        layer_path, source = self._resolve_entity_layer_path(world_id, entity_type)
+        if source == "library":
+            raise ValueError("Cannot write to library layer — fork it first")
+        model = create_entity(entity_type, entity_id, data, layer_path)
+        return {"id": entity_id, "data": model.model_dump(mode="json", by_alias=True)}
+
+    def update_content_entity(
+        self,
+        world_id: str,
+        entity_type: ContentEntityType,
+        entity_id: str,
+        data: dict[str, object],
+    ) -> dict[str, object]:
+        """Update an entity in a custom world layer. Rejects writes to library layers."""
+        from dnd_simulator.content_loader.crud import update_entity
+
+        layer_path, source = self._resolve_entity_layer_path(world_id, entity_type)
+        if source == "library":
+            raise ValueError("Cannot write to library layer — fork it first")
+        model = update_entity(entity_type, entity_id, data, layer_path)
+        return {"id": entity_id, "data": model.model_dump(mode="json", by_alias=True)}
+
+    def delete_content_entity(
+        self,
+        world_id: str,
+        entity_type: ContentEntityType,
+        entity_id: str,
+    ) -> None:
+        """Delete an entity from a custom world layer. Rejects writes to library layers."""
+        from dnd_simulator.content_loader.crud import delete_entity
+
+        layer_path, source = self._resolve_entity_layer_path(world_id, entity_type)
+        if source == "library":
+            raise ValueError("Cannot write to library layer — fork it first")
+        delete_entity(entity_type, entity_id, layer_path)
+
+    # -- Catalog CRUD --
+
+    def list_catalog_entries(
+        self,
+        entity_type: ContentEntityType,
+    ) -> list[dict[str, object]]:
+        """List all catalog entries of a type."""
+        from dnd_simulator.content_loader.crud import list_catalog_entries
+
+        entries = list_catalog_entries(entity_type, self._content_dir)
+        return [{"id": eid, "data": model.model_dump(mode="json", by_alias=True)} for eid, model in entries.items()]
+
+    def get_catalog_entry(
+        self,
+        entity_type: ContentEntityType,
+        entry_id: str,
+    ) -> dict[str, object]:
+        """Get a single catalog entry."""
+        from dnd_simulator.content_loader.crud import get_catalog_entry
+
+        model = get_catalog_entry(entity_type, entry_id, self._content_dir)
+        return {"id": entry_id, "data": model.model_dump(mode="json", by_alias=True)}
+
+    def create_catalog_entry(
+        self,
+        entity_type: ContentEntityType,
+        entry_id: str,
+        data: dict[str, object],
+    ) -> dict[str, object]:
+        """Create a catalog entry."""
+        from dnd_simulator.content_loader.crud import create_catalog_entry
+
+        model = create_catalog_entry(entity_type, entry_id, data, self._content_dir)
+        return {"id": entry_id, "data": model.model_dump(mode="json", by_alias=True)}
+
+    def update_catalog_entry(
+        self,
+        entity_type: ContentEntityType,
+        entry_id: str,
+        data: dict[str, object],
+    ) -> dict[str, object]:
+        """Update a catalog entry."""
+        from dnd_simulator.content_loader.crud import update_catalog_entry
+
+        model = update_catalog_entry(entity_type, entry_id, data, self._content_dir)
+        return {"id": entry_id, "data": model.model_dump(mode="json", by_alias=True)}
+
+    def delete_catalog_entry(
+        self,
+        entity_type: ContentEntityType,
+        entry_id: str,
+    ) -> None:
+        """Delete a catalog entry."""
+        from dnd_simulator.content_loader.crud import delete_catalog_entry
+
+        delete_catalog_entry(entity_type, entry_id, self._content_dir)
 
     # -- Layer accessors --
 

@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from dnd_simulator.adapters.api.deps import get_service, set_service
+from dnd_simulator.adapters.api.routes_content import content_router
 from dnd_simulator.adapters.api.routes_master import router as master_router
 from dnd_simulator.adapters.api.routes_player import router as player_router
 from dnd_simulator.adapters.api.routes_ws import router as ws_router
@@ -81,6 +82,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(master_router)
+app.include_router(content_router)
 app.include_router(player_router)
 app.include_router(ws_router)
 
