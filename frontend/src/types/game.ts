@@ -67,8 +67,11 @@ export interface CombatEntity {
   id: string
   description: string
   is_wounded?: boolean
+  is_hostile?: boolean
   distance_ft?: number
   direction?: string
+  x?: number
+  y?: number
   conditions?: string[]
 }
 
@@ -140,10 +143,15 @@ export interface CombatAwareness {
   self_speed: number
   self_weapon: string
   self_weapon_damage: string
+  self_x?: number
+  self_y?: number
   nearby: CombatEntity[]
   round_number: number
   walls?: string[]
   battle_map_ascii?: string
+  battle_map_width?: number
+  battle_map_height?: number
+  battle_map_walls?: Array<{ x1: number; y1: number; x2: number; y2: number }>
   turn_budget?: TurnBudget | null
   self_conditions?: string[]
   available_actions?: ActionInfo[]

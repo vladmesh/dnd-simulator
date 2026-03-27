@@ -149,6 +149,9 @@ class CombatAwareness:
     round_number: int = 1
     walls: list[str] = field(default_factory=list)
     battle_map_ascii: str = ""
+    battle_map_width: int = 0
+    battle_map_height: int = 0
+    battle_map_walls: list[dict[str, int]] = field(default_factory=list)
     turn_budget: TurnBudget | None = None
     self_conditions: frozenset[Condition] = field(default_factory=frozenset)
     available_actions: list[ActionType] = field(default_factory=list)

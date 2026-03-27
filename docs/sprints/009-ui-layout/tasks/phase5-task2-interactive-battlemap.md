@@ -79,4 +79,12 @@ Each wall edge is `{x1, y1, x2, y2}` — a pair of adjacent cell coordinates (in
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+**Backend:** Added `battle_map_width`, `battle_map_height`, `battle_map_walls` to `CombatAwareness` dataclass. Populated in `awareness_builder.py` from `combat.battle_map` — width/height directly, walls as list of `{x1, y1, x2, y2}` dicts from `_inner_walls`. `battle_map_ascii` preserved for LLM prompts.
+
+**Frontend:** Updated TS types (`CombatEntity` gained `x`/`y`, `CombatAwareness` gained grid fields). Rewrote `BattleMap.tsx` from ASCII `<pre>` to CSS Grid. Wall segments converted to per-cell border classes using the same blocked-edge algorithm as the Python backend. Grid renders top-down (north at top), player as `@` in green, enemies numbered in red, empty cells as `·`. Walls render as yellow-600 borders between cells.
+
+No old tests broken. 5 new backend tests for structured grid data.

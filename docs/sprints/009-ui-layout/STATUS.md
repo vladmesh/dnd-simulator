@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 5, Task 1: Combat layout restructure — done. BattleMap moved to right column, CombatPanel gets full left column.
+Phase 5, Task 2: Interactive BattleMap — done. CSS Grid replaces ASCII, structured wall/position data from backend.
 
 ## Next Steps
 

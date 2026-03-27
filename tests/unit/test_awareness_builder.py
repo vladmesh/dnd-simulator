@@ -604,6 +604,129 @@ class TestCombatAwarenessBattleMapWalls:
         assert awareness.battle_map_ascii == ""
 
 
+class TestCombatAwarenessStructuredGrid:
+    """Combat awareness includes structured grid data for frontend rendering."""
+
+    def test_grid_dimensions_from_battle_map(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="arena",
+            in_combat=True,
+            max_hp=30,
+            current_hp=30,
+            attacks=(_SWORD,),
+        )
+
+        layer = EntitiesLayer([player])
+        battle_map = BattleMap(width=40, height=30)
+        battle_map.set_position("p1", Position(10, 10))
+        combat = CombatState(location_id="arena", turn_order=["p1"], battle_map=battle_map)
+        layer._combat._combats["arena"] = combat
+
+        awareness = layer.build_combat_awareness(player)
+        assert awareness.battle_map_width == 40
+        assert awareness.battle_map_height == 30
+
+    def test_inner_walls_in_structured_data(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="arena",
+            in_combat=True,
+            max_hp=30,
+            current_hp=30,
+            attacks=(_SWORD,),
+        )
+
+        layer = EntitiesLayer([player])
+        battle_map = BattleMap(
+            width=60,
+            height=60,
+            walls=[Wall(x1=30, y1=0, x2=30, y2=30)],
+        )
+        battle_map.set_position("p1", Position(10, 10))
+        combat = CombatState(location_id="arena", turn_order=["p1"], battle_map=battle_map)
+        layer._combat._combats["arena"] = combat
+
+        awareness = layer.build_combat_awareness(player)
+        assert len(awareness.battle_map_walls) == 1
+        wall = awareness.battle_map_walls[0]
+        assert wall == {"x1": 30, "y1": 0, "x2": 30, "y2": 30}
+
+    def test_multiple_inner_walls(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="arena",
+            in_combat=True,
+            max_hp=30,
+            current_hp=30,
+            attacks=(_SWORD,),
+        )
+
+        layer = EntitiesLayer([player])
+        inner_walls = [
+            Wall(x1=20, y1=0, x2=20, y2=20),
+            Wall(x1=0, y1=30, x2=40, y2=30),
+        ]
+        battle_map = BattleMap(width=60, height=60, walls=inner_walls)
+        battle_map.set_position("p1", Position(10, 10))
+        combat = CombatState(location_id="arena", turn_order=["p1"], battle_map=battle_map)
+        layer._combat._combats["arena"] = combat
+
+        awareness = layer.build_combat_awareness(player)
+        assert len(awareness.battle_map_walls) == 2
+
+    def test_no_combat_returns_zero_grid_defaults(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="arena",
+            in_combat=True,
+            max_hp=30,
+            current_hp=30,
+            attacks=(_SWORD,),
+        )
+
+        layer = EntitiesLayer([player])
+
+        awareness = layer.build_combat_awareness(player)
+        assert awareness.battle_map_width == 0
+        assert awareness.battle_map_height == 0
+        assert awareness.battle_map_walls == []
+
+    def test_nearby_entities_have_grid_coordinates(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="arena",
+            in_combat=True,
+            max_hp=30,
+            current_hp=30,
+            attacks=(_SWORD,),
+        )
+        enemy = Character(
+            id="e1",
+            name="Goblin",
+            location_id="arena",
+            in_combat=True,
+            max_hp=10,
+            current_hp=10,
+        )
+
+        layer = EntitiesLayer([player, enemy])
+        battle_map = BattleMap(width=60, height=60)
+        battle_map.set_position("p1", Position(10, 15))
+        battle_map.set_position("e1", Position(25, 35))
+        combat = CombatState(location_id="arena", turn_order=["p1", "e1"], battle_map=battle_map)
+        layer._combat._combats["arena"] = combat
+
+        awareness = layer.build_combat_awareness(player)
+        assert awareness.nearby[0].x == 25
+        assert awareness.nearby[0].y == 35
+
+
 class TestFactionHostilityEdgeCases:
     """Edge cases for faction hostility checks."""
 

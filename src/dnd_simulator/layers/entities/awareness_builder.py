@@ -186,9 +186,17 @@ class AwarenessBuilder:
 
         wall_descriptions: list[str] = []
         battle_map_ascii = ""
+        battle_map_width = 0
+        battle_map_height = 0
+        battle_map_walls: list[dict[str, int]] = []
         if combat:
             wall_descriptions = combat.battle_map.describe_walls()
             battle_map_ascii = combat.battle_map.render_ascii(creature.id)
+            battle_map_width = combat.battle_map.width
+            battle_map_height = combat.battle_map.height
+            battle_map_walls = [
+                {"x1": w.x1, "y1": w.y1, "x2": w.x2, "y2": w.y2} for w in combat.battle_map._inner_walls
+            ]
 
         return CombatAwareness(
             self_hp=creature.current_hp,
@@ -203,6 +211,9 @@ class AwarenessBuilder:
             round_number=round_number,
             walls=wall_descriptions,
             battle_map_ascii=battle_map_ascii,
+            battle_map_width=battle_map_width,
+            battle_map_height=battle_map_height,
+            battle_map_walls=battle_map_walls,
             self_conditions=frozenset(creature.conditions),
         )
 
