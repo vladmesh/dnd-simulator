@@ -1,14 +1,16 @@
 """Content CRUD API integration tests.
 
 Tests run against a live backend in docker compose.
-Arena world has all custom layers — suitable for entity CRUD.
+CRUD tests fork arena into a throwaway world to avoid mutating shared fixtures.
 assembled_test has all library layers — tests write rejection.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from http import HTTPStatus
 
+import pytest
 import requests
 
 # ---------------------------------------------------------------------------
@@ -82,22 +84,35 @@ class TestRefs:
 
 
 # ---------------------------------------------------------------------------
-# Entity CRUD on arena (custom layers — writable)
+# Entity CRUD — fork arena into a throwaway world so we don't mutate fixtures
 # ---------------------------------------------------------------------------
 
 
-class TestEntityCrud:
-    """Full CRUD cycle on arena's entities layer (custom, so writable)."""
+@pytest.fixture()
+def crud_world(api_url: str) -> Iterator[str]:
+    """Fork arena into a disposable world for CRUD tests, delete on teardown."""
+    resp = requests.post(
+        f"{api_url}/worlds/arena/fork",
+        json={"new_id": "crud_integ_test"},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    yield "crud_integ_test"
+    requests.delete(f"{api_url}/worlds/crud_integ_test", timeout=5)
 
-    def test_list_npcs(self, api_url: str) -> None:
-        resp = requests.get(f"{api_url}/worlds/arena/entities/npc", timeout=5)
+
+class TestEntityCrud:
+    """Full CRUD cycle on a forked world's entities layer."""
+
+    def test_list_npcs(self, api_url: str, crud_world: str) -> None:
+        resp = requests.get(f"{api_url}/worlds/{crud_world}/entities/npc", timeout=5)
         assert resp.status_code == HTTPStatus.OK
         items = resp.json()
         ids = [item["id"] for item in items]
-        assert "razor" in ids  # known arena NPC
+        assert "razor" in ids  # inherited from arena
 
-    def test_create_read_update_delete(self, api_url: str) -> None:
-        base_url = f"{api_url}/worlds/arena/entities/npc/integ_test_npc"
+    def test_create_read_update_delete(self, api_url: str, crud_world: str) -> None:
+        base_url = f"{api_url}/worlds/{crud_world}/entities/npc/integ_test_npc"
 
         # Create
         npc_data = {
@@ -138,13 +153,13 @@ class TestEntityCrud:
         resp = requests.get(base_url, timeout=5)
         assert resp.status_code == HTTPStatus.NOT_FOUND
 
-    def test_get_nonexistent_entity_404(self, api_url: str) -> None:
-        resp = requests.get(f"{api_url}/worlds/arena/entities/npc/ghost_npc", timeout=5)
+    def test_get_nonexistent_entity_404(self, api_url: str, crud_world: str) -> None:
+        resp = requests.get(f"{api_url}/worlds/{crud_world}/entities/npc/ghost_npc", timeout=5)
         assert resp.status_code == HTTPStatus.NOT_FOUND
 
-    def test_validation_error_422(self, api_url: str) -> None:
+    def test_validation_error_422(self, api_url: str, crud_world: str) -> None:
         resp = requests.post(
-            f"{api_url}/worlds/arena/entities/npc/bad_npc",
+            f"{api_url}/worlds/{crud_world}/entities/npc/bad_npc",
             json={"name": "Bad", "race": "not_a_race"},
             timeout=5,
         )
@@ -204,29 +219,33 @@ class TestCatalogCrud:
             "cr": 2.0,
         }
 
-        # Create
-        resp = requests.post(base_url, json=monster_data, timeout=5)
-        assert resp.status_code == HTTPStatus.CREATED
-        assert resp.json()["id"] == "integ_test_beast"
+        try:
+            # Create
+            resp = requests.post(base_url, json=monster_data, timeout=5)
+            assert resp.status_code == HTTPStatus.CREATED
+            assert resp.json()["id"] == "integ_test_beast"
 
-        # Read
-        resp = requests.get(base_url, timeout=5)
-        assert resp.status_code == HTTPStatus.OK
-        assert resp.json()["data"]["hp"] == 25
+            # Read
+            resp = requests.get(base_url, timeout=5)
+            assert resp.status_code == HTTPStatus.OK
+            assert resp.json()["data"]["hp"] == 25
 
-        # Update
-        monster_data["hp"] = 50
-        resp = requests.put(base_url, json=monster_data, timeout=5)
-        assert resp.status_code == HTTPStatus.OK
-        assert resp.json()["data"]["hp"] == 50
+            # Update
+            monster_data["hp"] = 50
+            resp = requests.put(base_url, json=monster_data, timeout=5)
+            assert resp.status_code == HTTPStatus.OK
+            assert resp.json()["data"]["hp"] == 50
 
-        # Delete
-        resp = requests.delete(base_url, timeout=5)
-        assert resp.status_code == HTTPStatus.OK
+            # Delete
+            resp = requests.delete(base_url, timeout=5)
+            assert resp.status_code == HTTPStatus.OK
 
-        # Confirm gone
-        resp = requests.get(base_url, timeout=5)
-        assert resp.status_code == HTTPStatus.NOT_FOUND
+            # Confirm gone
+            resp = requests.get(base_url, timeout=5)
+            assert resp.status_code == HTTPStatus.NOT_FOUND
+        finally:
+            # Ensure cleanup even if assertions fail mid-test
+            requests.delete(base_url, timeout=5)
 
     def test_get_nonexistent_catalog_404(self, api_url: str) -> None:
         resp = requests.get(f"{api_url}/catalogs/monster_catalog/no_such_beast", timeout=5)
