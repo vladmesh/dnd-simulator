@@ -236,8 +236,23 @@ class TestProximityActivation:
         game_round = Round(world, entities_layer)
         game_round.run_round()
 
-        # Dead creature's active state is not touched
+        # Dead creature is dormant (not reactivated by proximity)
         assert corpse.is_alive is False
+        assert corpse.active is False
+
+    def test_dead_player_ends_loop(self) -> None:
+        """When all players are dead, the round loop exits (game over)."""
+        player = PlayerCharacter(id="player", name="Hero", location_id="r1", current_hp=0, brain=_EndTurnBrain())
+        npc = Creature(id="guard", name="Guard", location_id="r1", brain=_EndTurnBrain())
+        world = _make_world([player, npc])
+        entities_layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+
+        game_round = Round(world, entities_layer)
+        game_round.run_loop(max_rounds=5)
+
+        # Loop exited because dead player is dormant → no anchors → no active creatures
+        assert player.active is False
+        assert npc.active is False
 
     def test_no_player_no_change(self) -> None:
         """Without a PlayerCharacter, activation is unchanged (tests still work)."""

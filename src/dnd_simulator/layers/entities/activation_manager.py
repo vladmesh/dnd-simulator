@@ -83,6 +83,8 @@ class ActivationManager:
                 continue
             has_players = True
             if not e.is_alive:
+                e.active = False
+                e.wake_at_seconds = None
                 continue
             # Check wake_at expiry
             if e.wake_at_seconds is not None and now >= e.wake_at_seconds:
@@ -107,6 +109,7 @@ class ActivationManager:
             if not isinstance(e, Creature) or isinstance(e, PlayerCharacter):
                 continue
             if not e.is_alive:
+                e.active = False
                 continue
 
             # Expire wake_at for non-players too
