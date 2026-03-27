@@ -54,16 +54,24 @@ Run `make test-integration` after implementation. Add integration tests that exe
 
 ## Acceptance Criteria
 
-- [ ] Unit tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] EntityListEditor shows entity table, supports create/edit/delete via SchemaForm
-- [ ] CatalogBrowser lists monster and item catalogs
-- [ ] Catalog Picker adds monster_template with `base` reference to world
-- [ ] Library layers show read-only (no mutation buttons)
-- [ ] YAML textarea no longer the primary editor for entity-bearing layers
-- [ ] `make test-integration` passes, new integration tests added if needed
-- [ ] Existing tests still pass (`make check`)
+- [x] Unit tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] EntityListEditor shows entity table, supports create/edit/delete via SchemaForm
+- [x] CatalogBrowser lists monster and item catalogs
+- [x] Catalog Picker adds monster_template with `base` reference to world
+- [x] Library layers show read-only (no mutation buttons)
+- [x] YAML textarea no longer the primary editor for entity-bearing layers
+- [x] `make test-integration` passes, new integration tests added if needed
+- [x] Existing tests still pass (`make check`)
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Three new components: EntityListEditor (table + inline create/edit panel using SchemaForm), CatalogBrowser (table + detail view), CatalogPicker (thin wrapper with pick mode). WorldInspector now routes entity-bearing layers to EntityListEditor instead of LayerEditor, with a LAYER_ENTITY_TYPES mapping. Ecology layer gets a "Pick from catalog" button for monster_template entries.
+
+Used inline expand/collapse panel instead of Dialog for the editor — base-ui Dialog portals don't render in jsdom, and inline editing is better UX for this embedded context anyway. SchemaForm label/input elements work correctly but testing-library's `getByLabelText` struggles with base-ui Input primitive; tests use direct DOM queries (`form.querySelectorAll`) instead.
+
+Integration tests not modified — existing `test_content_api.py` already covers full entity CRUD lifecycle (create/read/update/delete) and catalog CRUD. 84 integration tests pass, 1407 unit tests pass, 31 frontend tests pass.
