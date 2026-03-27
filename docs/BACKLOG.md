@@ -38,6 +38,10 @@
 ## UX / World Builder
 
 - [x] `dm-player-restructure` — ~~Разделить главную на Player/DM входы~~ FIXED Sprint 008 phase 4-5: master restructure, stepper, world management
+- [ ] **could** `quickbar-drag-drop` — Drag-and-drop из инвентаря на action bar quickbar слоты: игрок сам выбирает какие consumables (зелья, свитки, бомбы) закрепить на панели для быстрого доступа. Сейчас consumables в drawer-popup, хватает.
+- [ ] **could** `drag-resize-panels` — Drag-and-drop / resizable панели на dashboard
+- [ ] **could** `mobile-layout` — Мобильная адаптация dashboard
+- [ ] **could** `log-filter-tabs` — Фильтрация лога табами (Все/Бой/Диалоги)
 
 ## Tech Debt (from audits 2026-03-25)
 
