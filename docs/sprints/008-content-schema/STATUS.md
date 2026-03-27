@@ -6,8 +6,9 @@
 
 ## Current
 
-Phase 4, Task 3: Master Restructure + Main Page — done. Landing page, MasterScreen with Worlds/Sessions tabs, WorldEditor layer stepper, route restructure, 10 new tests.
+Phase 5 planned. Phase 4 complete.
 
 ## Next Steps
 
-- All Phase 4 tasks complete. Phase ready to close.
+- Phase 5, Task 1: Restructure Player/Master World Flows — remove world builder from player, add readOnly to WorldEditor, remove fork-layer button
+- Phase 5, Task 2: Fork World + Create World UI on Master — fork world button, rename dialog, delete, editable flag from backend

@@ -64,6 +64,17 @@ Generic form renderer из JSON Schema. EntityListEditor заменяет YAML t
 2. [Entity CRUD UI + Catalog Browser](tasks/phase4-task2-entity-crud-ui.md)
 3. [Master Restructure + Main Page](tasks/phase4-task3-master-restructure.md)
 
+## Phase 5: DM World Management
+
+Мастер управляет мирами: форкает готовые (полная копия с новым именем), переименовывает, редактирует, удаляет. Игрок только выбирает мир и создаёт персонажа — конструктор миров у игрока убираем. Fork layer пока скрываем из UI (бэкенд остаётся, пригодится для продвинутого конструктора).
+
+**Верифицируем:** мастер форкает sword_vale → получает копию → переименовывает → редактирует NPC через stepper → создаёт сессию. Игрок видит оба мира, выбирает, создаёт персонажа. Удаление форкнутого мира работает.
+
+**Tasks:**
+
+1. [Restructure Player/Master World Flows](tasks/phase5-task1-restructure-flows.md)
+2. [Fork World + Create World UI on Master](tasks/phase5-task2-fork-world-ui.md)
+
 ---
 
 ## Status
