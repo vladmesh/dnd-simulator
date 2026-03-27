@@ -1,7 +1,11 @@
 {
   "title": "Мастер подземелий",
+  "dm_description": "Создавайте и управляйте мирами и сессиями",
+  "tab_worlds": "Миры",
+  "tab_sessions": "Сессии",
   "sessions": "Сессии",
   "no_sessions": "Нет активных сессий.",
+  "no_worlds": "Нет доступных миров.",
   "new_session": "Новая сессия",
   "delete_session": "Удалить сессию",
   "confirm_delete_session": "Удалить сессию {{id}}?",
@@ -130,5 +134,8 @@
   "editor_edit": "Редактировать",
   "editor_view": "Просмотр",
   "editor_save": "Сохранить",
-  "editor_load_error": "Не удалось загрузить файлы слоя"
+  "editor_load_error": "Не удалось загрузить файлы слоя",
+
+  "next": "Далее",
+  "close_editor": "Закрыть"
 }

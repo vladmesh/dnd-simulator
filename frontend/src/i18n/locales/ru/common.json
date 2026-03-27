@@ -24,5 +24,7 @@
   "ability_int": "ИНТ",
   "ability_wis": "МДР",
   "ability_cha": "ХАР",
-  "exit_session": "Выйти из сессии"
+  "exit_session": "Выйти из сессии",
+  "play": "Играть",
+  "play_description": "Присоединиться к миру как игрок"
 }

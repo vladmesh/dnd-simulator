@@ -63,4 +63,16 @@ Run `make test-integration` after implementation. Run E2E smoke test (manual or 
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented as planned. Key decisions:
+
+- `MasterScreen` refactored with shadcn Tabs (Worlds/Sessions). Worlds tab shows world cards, clicking opens `WorldEditor` stepper. Sessions tab has existing session management (world select, create, list, delete).
+- `WorldEditor` is a new component with a step-per-layer navigation. Reuses `EntityListEditor` and `CatalogPicker` from prior tasks. Library layers show fork button, custom layers are editable. Ecology step has catalog picker when custom.
+- `LandingPage` is a simple Play/DM choice screen at `/`.
+- Routes: `/` → LandingPage, `/play` → SetupScreen (player flow), `/master` → MasterScreen, `/master/:sessionId` → SessionView.
+- `WorldInspector` (in setup/) still exists and is used by the player-facing setup flow. `WorldEditor` is the DM-facing equivalent with stepper navigation — no code shared since UX is different (inspector = accordion, editor = stepper).
+- Added `tabs` shadcn component (`@base-ui/react` tabs primitive).
+- 10 new tests: 3 MasterScreen (tabs, world list, session switching), 4 WorldEditor (stepper, navigation, fork button, catalog picker), 3 LandingPage (render, navigation to /play, navigation to /master).

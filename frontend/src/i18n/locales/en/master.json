@@ -1,7 +1,11 @@
 {
   "title": "Dungeon Master",
+  "dm_description": "Create and manage worlds and sessions",
+  "tab_worlds": "Worlds",
+  "tab_sessions": "Sessions",
   "sessions": "Sessions",
   "no_sessions": "No active sessions.",
+  "no_worlds": "No worlds available.",
   "new_session": "New Session",
   "delete_session": "Delete Session",
   "confirm_delete_session": "Delete session {{id}}?",
@@ -130,5 +134,8 @@
   "editor_edit": "Edit",
   "editor_view": "View",
   "editor_save": "Save",
-  "editor_load_error": "Failed to load layer files"
+  "editor_load_error": "Failed to load layer files",
+
+  "next": "Next",
+  "close_editor": "Close"
 }

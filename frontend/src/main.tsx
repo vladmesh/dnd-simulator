@@ -17,6 +17,7 @@ window.addEventListener("error", (e) => reportError(e.message, e.error?.stack))
 window.addEventListener("unhandledrejection", (e) => reportError(String(e.reason), e.reason?.stack))
 import App from "./App"
 import { ErrorBoundary } from "./components/ErrorBoundary"
+import { LandingPage } from "./components/LandingPage"
 import { SetupScreen } from "./components/setup/SetupScreen"
 import { GameScreen } from "./components/game/GameScreen"
 import { MasterScreen } from "./components/master/MasterScreen"
@@ -28,7 +29,8 @@ createRoot(document.getElementById("root")!).render(
       <BrowserRouter>
         <Routes>
           <Route element={<App />}>
-            <Route index element={<SetupScreen />} />
+            <Route index element={<LandingPage />} />
+            <Route path="play" element={<SetupScreen />} />
             <Route path="play/:sessionId" element={<GameScreen />} />
             <Route path="master" element={<MasterScreen />} />
             <Route path="master/:sessionId" element={<SessionView />} />

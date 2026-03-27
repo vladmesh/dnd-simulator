@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 4, Task 2: Entity CRUD UI + Catalog Browser — done. EntityListEditor, CatalogBrowser, CatalogPicker, WorldInspector wiring, 9 new frontend tests.
+Phase 4, Task 3: Master Restructure + Main Page — done. Landing page, MasterScreen with Worlds/Sessions tabs, WorldEditor layer stepper, route restructure, 10 new tests.
 
 ## Next Steps
 
-- Task 3: Master Restructure + Main Page — Worlds/Sessions tabs, layer stepper, Player/DM landing
+- All Phase 4 tasks complete. Phase ready to close.

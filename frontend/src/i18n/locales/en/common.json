@@ -24,5 +24,7 @@
   "ability_int": "INT",
   "ability_wis": "WIS",
   "ability_cha": "CHA",
-  "exit_session": "Exit session"
+  "exit_session": "Exit session",
+  "play": "Play",
+  "play_description": "Join a world as a player character"
 }
