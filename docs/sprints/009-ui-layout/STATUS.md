@@ -1,13 +1,9 @@
 # Sprint 009 Status
 
 **Sprint:** 009 — Peaceful Dashboard Layout
-**Phase:** 4 — NPC Inspect Card
+**Phase:** 4 — NPC Inspect Card (COMPLETE)
 **Updated:** 2026-03-27
 
 ## Current
 
-Phase 4, Task 2: NPC Inspect Modal with Actions — done. Eye icon opens client-side modal with NPC info + action buttons (Attack, Talk, Trade). Works in both peaceful and combat modes.
-
-## Next Steps
-
-- Phase close: run E2E to validate all phase 4 changes
+Phase 4 complete. Eye icon opens client-side modal with NPC name, race, role, description, faction, and action buttons (Attack, Talk, Trade for merchants). Works in both peaceful and combat modes. All phases complete. Ready for sprint closure.

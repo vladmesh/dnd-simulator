@@ -101,7 +101,7 @@ Action bar с core-кнопками, категориями, визуальны�
 1. [Action Bar Core Layout + Cost Styling](tasks/phase3-task1-action-bar-core-layout.md)
 2. [Consumable, Class Feature, and Inventory Drawers](tasks/phase3-task2-action-drawers.md)
 
-## Phase 4: NPC Inspect Card
+## Phase 4: NPC Inspect Card ✓
 
 Кнопка "осмотреть" на NPC открывает модальную карточку: имя, раса, описание, фракция, HP (если в бою), кнопки действий (торговать, атаковать). Backend отдаёт `description` через awareness.
 
