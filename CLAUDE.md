@@ -18,6 +18,7 @@ make messages     # extract translatable strings to .pot
 make compile-messages  # compile .po → .mo
 make serve        # uvicorn API server on :8001 with --reload
 make frontend     # vite dev server on :5173, proxies /api → :8001
+make clean        # kill dev processes, wipe saves/logs/screenshots
 
 # Single test file
 uv run pytest tests/unit/test_character.py
@@ -81,7 +82,7 @@ frontend/          — React + TypeScript SPA (Vite, shadcn/ui, Zustand)
 
 ### Entity Hierarchy
 
-`Entity` (id, name, location_id, active, on_tick) → `Creature` (ability scores, HP, AC, in_combat, is_dodging, wake_at_seconds, brain, equipped_armor, equipped_shield, resource_pools) → `Character` (race, class, alignment, class_features) → `PlayerCharacter` / `Npc`. Creature delegates decisions to `brain.choose_action()` and executes via `execute_action()`. The `perceive()` method controls what information an observer sees about a target — LLM prompts never receive raw character data. All tracked entities live on the `EntitiesLayer`. `World.location_graph` (`LocationGraph`) maps locations to regions/settlements; entities reference `location_id`, and the graph resolves which region/settlement a location belongs to. NPCs have structured memory (`NpcMemory`: tags, recent, inner_state, current_conversation) readable by both LLM and RuleBrain; a `MemorySummarizer` compresses events into memory via LLM after combat/conversation ends. Combat is managed via `CombatState` (initiative order, round tracking, auto-exit after 2 idle rounds) and `BattleMap` (2D grid with positions, walls, and movement). Movement rules live in `rules/movement.py` (D&D 5e diagonal distance, wall collision, occupied-cell blocking).
+`Entity` (id, name, location_id, active, on_tick) → `Creature` (ability scores, HP, AC, in_combat, is_dodging, wake_at_seconds, brain, equipped_armor, equipped_shield, resource_pools) → `Character` (race, class, alignment, class_features) → `PlayerCharacter` / `Npc`. Creature delegates decisions to `brain.choose_action()` and executes via `execute_action()`. The `perceive()` method controls what information an observer sees about a target — LLM prompts never receive raw character data. All tracked entities live on the `EntitiesLayer`. `World.location_graph` (`LocationGraph`) maps locations to regions/settlements; entities reference `location_id`, and the graph resolves which region/settlement a location belongs to. NPCs have structured memory (`NpcMemory`: tags, recent, inner_state, current_conversation) readable by both LLM and RuleBrain; a `MemorySummarizer` compresses events into memory via LLM after combat/conversation ends. Combat is managed via `CombatState` (initiative order, round tracking, auto-exit after 2 idle rounds) and `BattleMap` (2D grid with positions, walls, and movement). Movement rules live in `rules/movement.py` (D&D 5e diagonal distance, wall collision, occupied-cell blocking). `move_to(x, y)` action uses BFS pathfinding (`find_path`) and budget-aware walking (`walk_path`); player-only (frontend click-to-move), excluded from LLM action schemas via `provider_managed=True`.
 
 ### Multi-Action Turns
 

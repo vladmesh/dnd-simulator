@@ -92,7 +92,9 @@ content/           — authored game data (YAML)
 frontend/          — React + TypeScript SPA (Vite + shadcn/ui + Zustand)
 ├── src/components/         — LandingPage (Player/DM split), ErrorBoundary
 ├── src/components/setup/   — world picker, character creation, session connect (player flow)
-├── src/components/game/    — EventLog, BattleMap, ActionBar, CombatPanel, PlayerStats, Perception
+├── src/components/game/    — GameScreen (dashboard: 3-col grid), EventLog (compact strip + expand overlay),
+│                             BattleMap (interactive CSS Grid, click-to-move), ActionBar (budget display, drawers),
+│                             CombatPanel, NpcInspectModal, Perception, LocationPanel
 ├── src/components/master/  — MasterScreen (Worlds/Sessions tabs), WorldEditor (layer stepper),
 │                             EntityListEditor (schema-driven CRUD), SchemaForm, CatalogBrowser,
 │                             SessionView (WorldOverview, CreatureList, TimeControl, SavesPanel)
@@ -190,7 +192,7 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 
 **Turn order:** Initiative = d20 + DEX modifier, tiebreaker by DEX score. Order is fixed for the entire combat. Game loop iterates combatants in this order.
 
-**Battle map:** Each `CombatState` owns a `BattleMap` — a 2D grid (coordinates in feet, 5-ft cells). Entities have `Position`s on the map. `Wall` segments block movement between adjacent cells. Perimeter walls auto-generated from map dimensions. Movement uses `rules/movement.py`: atomic direction + distance steps, D&D 5e alternating diagonal cost (5/10/5/…), wall collision. Dash is a self-buff action that adds speed to the movement pool. Abstract moves (toward/away from target) are resolved to concrete directions server-side. Failed moves refund budget.
+**Battle map:** Each `CombatState` owns a `BattleMap` — a 2D grid (coordinates in feet, 5-ft cells). Entities have `Position`s on the map. `Wall` segments block movement between adjacent cells. Perimeter walls auto-generated from map dimensions. Movement uses `rules/movement.py`: atomic direction + distance steps, D&D 5e alternating diagonal cost (5/10/5/…), wall collision. Dash is a self-buff action that adds speed to the movement pool. Abstract moves (toward/away from target) are resolved to concrete directions server-side. Failed moves refund budget. `move_to(x, y)` uses BFS pathfinding with D&D 5e diagonal costs and budget-aware walking; player-only (excluded from LLM schemas via `provider_managed`).
 
 **Dual awareness:** Creatures in combat get a focused prompt (HP, weapon, nearby combatants with positions/distances, round number — no weather/time/politics). Peaceful creatures get full world awareness. Two separate tool sets: combat (attack/move/dodge/flee/idle, no say — use description for flavor) and peaceful (say/attack/idle).
 

@@ -206,12 +206,40 @@
 
 ---
 
-## 10. LLM (only with --llm flag)
+## 10. Dashboard Layout (Sprint 009)
 
-### 10.1 Talk to LLM NPC
+### 10.1 Three-column dashboard
+- Войти в игру (любой мир)
+- **Ожидание:** три колонки видны: Nearby (левая), Character+Inventory (центр), Location (правая). Все панели на экране одновременно, без табов.
+
+### 10.2 Compact log + expand overlay
+- В игре кликнуть кнопку expand лога (стрелка вниз)
+- **Ожидание:** overlay с полным логом событий, кнопка закрытия. Compact лог показывает последние 1-2 события.
+
+### 10.3 NPC inspect modal
+- Нажать кнопку inspect (лупа) на NPC в Nearby панели
+- **Ожидание:** модалка с именем, расой, ролью, описанием из YAML, фракцией, кнопками Attack/Talk
+
+### 10.4 Click-to-move on BattleMap
+- Начать бой, в бою кликнуть по подсвеченной клетке на карте
+- **Ожидание:** персонаж перемещается, movement budget уменьшается, подсветка доступных клеток обновляется
+
+### 10.5 Combat layout switch
+- Начать бой
+- **Ожидание:** правая колонка заменяется на интерактивную BattleMap (CSS Grid), левая колонка = CombatPanel (вся высота). После боя LocationPanel возвращается.
+
+### 10.6 Action bar budget display
+- В бою проверить action bar
+- **Ожидание:** строка бюджета: Actions/Bonus/Movement/Reaction с числами. После использования действия — соответствующие кнопки исчезают.
+
+---
+
+## 11. LLM (only with --llm flag)
+
+### 11.1 Talk to LLM NPC
 - Переключить NPC на llm brain, поговорить
 - **Ожидание:** осмысленный ответ в логе, не шаблонная реплика
 
-### 10.2 LLM NPC combat decisions
+### 11.2 LLM NPC combat decisions
 - LLM NPC в бою принимает решения
 - **Ожидание:** NPC действует осмысленно (атакует, лечится, убегает при низком HP)

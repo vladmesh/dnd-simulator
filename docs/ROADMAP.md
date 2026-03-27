@@ -75,6 +75,10 @@ Save/load completeness (resource pools, combat state, spawned creatures, brain r
 Pydantic content models как единый source of truth для структуры контента. Phase 1: Pydantic-модели + перепись парсеров на model_validate. Phase 2: каталоги monsters + items — вынос из слоёв, ref-resolution между мирами и каталогами. Phase 3: entity CRUD API + JSON Schema endpoints + cross-layer refs. Phase 4: frontend schema-driven forms (SchemaForm, EntityListEditor, CatalogBrowser), DM restructure (Worlds/Sessions tabs, landing page Player/DM). Phase 5: DM world management (fork world, delete world, player flow simplified — no world builder).
 → [план спринта](sprints/008-content-schema/sprint.md)
 
+### Sprint 009 — UI Layout: Dashboard + Combat Map (фазы 1-5)
+Переработка игрового экрана в dashboard: три колонки панелей (Nearby, Character+Inventory, Location) всегда видны. Компактный лог (1-2 строки + expand overlay). Action bar с budget display, drawers для зелий/классовых умений/инвентаря. NPC inspect modal (описание, фракция, действия). Боевой layout: CombatPanel в левой колонке, интерактивная CSS Grid BattleMap в правой (заменяет LocationPanel в бою). Click-to-move: BFS pathfinding + подсветка доступных клеток + `move_to(x, y)` action на бэкенде.
+→ [план спринта](sprints/009-ui-layout/sprint.md)
+
 ## In Progress
 
 _(нет активного спринта)_

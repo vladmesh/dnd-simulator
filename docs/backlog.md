@@ -40,9 +40,9 @@ c2 (AC=12), удаляя из turn_order. Фикс: AC=30 чтобы атаки 
 `LocationPanel` шлёт `Action(name=WAIT, params={hours: 0, travel_to: location_id})`.
 Нужен отдельный `ActionType.TRAVEL` с собственным хендлером, валидацией маршрута и расчётом времени.
 
-### `inspect` реализован как параметр `idle`
-`CombatPanel`/`Perception` шлют `Action(name=IDLE, params={inspect_target: entity_id})`.
-Inspect должен быть отдельным query или free action, а не неявным параметром idle.
+### ~~`inspect` реализован как параметр `idle`~~ ✅ FIXED
+~~`CombatPanel`/`Perception` шлют `Action(name=IDLE, params={inspect_target: entity_id})`.~~
+Inspect теперь клиентская модалка: фронтенд берёт данные из awareness (description, faction, role) и показывает NpcInspectModal. Sprint 009 phase 4.
 
 ## Features
 
@@ -50,9 +50,9 @@ Inspect должен быть отдельным query или free action, а н
 `CreatureResponse` и `all_entities` query не включают inventory/equipped_weapon.
 Мастер не видит какие предметы у существ. Добавить поля в схему и query.
 
-### Master panel: UI для give_item
-Endpoint `POST /api/master/sessions/{id}/creatures/{entity_id}/items` есть, но кнопки нет.
-Добавить в карточку существа кнопку «Дать предмет» с формой (тип, название, параметры).
+### ~~Master panel: UI для give_item~~ ✅ FIXED
+~~Endpoint `POST /api/master/sessions/{id}/creatures/{entity_id}/items` есть, но кнопки нет.~~
+Кнопка "Выдать предмет" добавлена в карточку редактирования существа. Sprint 007 phase 2.
 
 ## Performance
 
@@ -76,8 +76,5 @@ Endpoint `POST /api/master/sessions/{id}/creatures/{entity_id}/items` есть, 
 
 ## Refactoring
 
-### world-builder.js — разбить на модули
-Файл 1700+ строк, 7 рендер-функций с копипастой паттерна "список карточек + CRUD-форма".
-Выделить общий `CrudStep` (список + add/edit/delete + auto-slug).
-Вынести form-builder helpers (translatableField, connectionEditor, neighborEditor).
-Разбить на файлы по шагам если появится bundler, или хотя бы на логические секции с чёткими границами.
+### ~~world-builder.js — разбить на модули~~ ✅ OBSOLETE
+~~Файл 1700+ строк.~~ Legacy vanilla JS frontend заменён React SPA (Sprint 008 phase 4). WorldEditor теперь React-компонент с SchemaForm/EntityListEditor.
