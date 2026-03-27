@@ -208,8 +208,8 @@ describe("ActionBar — cost-type styling", () => {
 
 describe("ActionBar — consumable drawer", () => {
   const potions: ItemInfo[] = [
-    { id: "pot_1", name: "Healing Potion", type: "potion", description: "Heals 2d4+2 HP" },
-    { id: "pot_2", name: "Greater Healing", type: "potion", description: "Heals 4d4+4 HP" },
+    { id: "pot_1", name: "Healing Potion", item_type: "potion", description: "Heals 2d4+2 HP" },
+    { id: "pot_2", name: "Greater Healing", item_type: "potion", description: "Heals 4d4+4 HP" },
   ]
 
   it("renders consumable drawer button with count when items available", () => {
@@ -330,7 +330,7 @@ describe("ActionBar — class features drawer", () => {
 
 describe("ActionBar — drawer interactions", () => {
   const potions: ItemInfo[] = [
-    { id: "pot_1", name: "Healing Potion", type: "potion", description: "Heals 2d4+2 HP" },
+    { id: "pot_1", name: "Healing Potion", item_type: "potion", description: "Heals 2d4+2 HP" },
   ]
 
   it("opening consumable drawer closes class features drawer", () => {
@@ -422,7 +422,7 @@ describe("ActionBar — inventory drawer", () => {
           makeAction("equip", "free", [{ name: "weapon_id", type: "string", required: true }]),
           makeAction("say", "free"),
         ],
-        available_items: [{ id: "w1", name: "Sword", type: "weapon", description: "A sharp sword" }],
+        available_items: [{ id: "w1", name: "Sword", item_type: "weapon", description: "A sharp sword" }],
       },
       budget: undefined,
     })
@@ -440,7 +440,7 @@ describe("ActionBar — inventory drawer", () => {
       ],
       fullBudget,
       [],
-      [{ id: "w1", name: "Sword", type: "weapon", description: "A sharp sword" }],
+      [{ id: "w1", name: "Sword", item_type: "weapon", description: "A sharp sword" }],
     )
 
     const { container } = render(<ActionBar />)

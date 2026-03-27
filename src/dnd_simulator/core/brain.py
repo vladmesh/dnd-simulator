@@ -172,7 +172,7 @@ class RuleBrain(Brain):
                 # Fallback: pick first item that looks like a weapon from inventory
                 weapon = next(
                     (
-                        ItemInfo(id=i.id, name=i.name, description=f"weapon: {i.name}")
+                        ItemInfo(id=i.id, name=i.name, description=f"weapon: {i.name}", item_type=str(i.item_type))
                         for i in creature.inventory
                         if i.item_type == ItemType.WEAPON
                     ),

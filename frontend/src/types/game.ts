@@ -68,7 +68,8 @@ export interface CombatEntity {
 export interface ItemInfo {
   id: string
   name: string
-  type?: string
+  item_type?: string
+  type?: string  // deprecated alias, use item_type
   slot?: string
   description: string
   price?: number | null

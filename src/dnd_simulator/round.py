@@ -102,7 +102,13 @@ class Round:
     def _build_available_items(creature: Creature, available_actions: list[ActionType]) -> list[ItemInfo]:
         """Build item info list for awareness — always returns full inventory."""
         return [
-            ItemInfo(id=item.id, name=item.name, description=describe_item(item), price=item.price)
+            ItemInfo(
+                id=item.id,
+                name=item.name,
+                description=describe_item(item),
+                item_type=str(item.item_type),
+                price=item.price,
+            )
             for item in creature.inventory
         ]
 
@@ -134,7 +140,13 @@ class Round:
         result: list[MerchantInfo] = []
         for npc in self._entities.get_merchants_at(creature.location_id, hour):
             items = [
-                ItemInfo(id=item.id, name=item.name, description=describe_item(item), price=item.price)
+                ItemInfo(
+                    id=item.id,
+                    name=item.name,
+                    description=describe_item(item),
+                    item_type=str(item.item_type),
+                    price=item.price,
+                )
                 for item in npc.inventory
                 if item.price is not None
             ]
@@ -261,6 +273,7 @@ class Round:
                     actions=[a.value for a in awareness.available_actions],
                     weapon=awareness.self_weapon,
                     conditions=[c.value for c in awareness.self_conditions],
+                    items=[{"id": i.id, "type": i.item_type, "name": i.name} for i in awareness.available_items],
                 )
 
             action = creature.brain.choose_action(creature, awareness, events)
@@ -334,6 +347,13 @@ class Round:
                 merchants=self._build_merchants(creature),
             )
             events = self._entities.get_perceived_events(creature)
+
+            logger.debug(
+                "peaceful_awareness",
+                creature_id=creature.id,
+                actions=[a.value for a in awareness.available_actions],
+                items=[{"id": i.id, "type": i.item_type, "name": i.name} for i in awareness.available_items],
+            )
 
             action = creature.brain.choose_action(creature, awareness, events)
 

@@ -36,6 +36,7 @@ class ItemInfo:
     id: str
     name: str
     description: str  # e.g. "Healing Potion (heals 2d4+2 HP)"
+    item_type: str = ""  # "potion", "weapon", "armor", etc.
     price: int | None = None
 
 

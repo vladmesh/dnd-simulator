@@ -103,9 +103,10 @@ export function ActionBar() {
   const groups = categorizeActions(available)
 
   // Filter consumable items (potions etc.) from available_items
-  const consumableItems = availableItems.filter(
-    (item) => item.type === "potion" || item.type === "scroll" || item.type === "bomb",
-  )
+  const consumableItems = availableItems.filter((item) => {
+    const t = item.item_type ?? item.type
+    return t === "potion" || t === "scroll" || t === "bomb"
+  })
 
   /** Render a single action — handles all parameter variants. */
   const renderAction = (action: ActionInfo) => {
@@ -329,7 +330,7 @@ export function ActionBar() {
             {groups.inventory.map((action) => {
               // For equip actions with weapon_id param, show weapon options
               if (hasParam(action, "weapon_id")) {
-                const weapons = availableItems.filter((i) => i.type === "weapon" || i.description.toLowerCase().includes("weapon"))
+                const weapons = availableItems.filter((i) => (i.item_type ?? i.type) === "weapon" || i.description.toLowerCase().includes("weapon"))
                 return weapons.map((w) => (
                   <button
                     key={`${action.name}:${w.id}`}
