@@ -222,6 +222,44 @@ export interface UpdateLayerFileRequest {
   content: string
 }
 
+// --- Content CRUD types ---
+
+export interface SchemaInfo {
+  entity_type: string
+  label: string
+}
+
+export interface RefOption {
+  id: string
+  name: string
+}
+
+export interface EntityEntry {
+  [key: string]: unknown
+}
+
+export interface CatalogEntry {
+  [key: string]: unknown
+}
+
+// JSON Schema types (subset we handle)
+export interface JsonSchema {
+  type?: string
+  title?: string
+  description?: string
+  properties?: Record<string, JsonSchema>
+  required?: string[]
+  items?: JsonSchema
+  enum?: string[]
+  $ref?: string
+  $defs?: Record<string, JsonSchema>
+  anyOf?: JsonSchema[]
+  default?: unknown
+  additionalProperties?: boolean | JsonSchema
+  "x-ref-type"?: string
+  "x-localized"?: boolean
+}
+
 export interface SessionListItem {
   session_id: string
   player_name: string

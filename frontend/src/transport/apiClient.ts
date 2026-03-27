@@ -1,11 +1,14 @@
 import type {
   AdvanceTimeRequest,
   AssembleWorldRequest,
+  CatalogEntry,
   CreatePlayerRequest,
   CreateSessionRequest,
   CreateWorldRequest,
   CreatureResponse,
+  EntityEntry,
   GiveItemRequest,
+  JsonSchema,
   LayerFileResponse,
   LayerFilesResponse,
   MessageResponse,
@@ -13,6 +16,8 @@ import type {
   PatchNationRequest,
   PatchSettlementRequest,
   PlayerStatusResponse,
+  RefOption,
+  SchemaInfo,
   SessionListItem,
   SessionResponse,
   SetBrainRequest,
@@ -250,6 +255,84 @@ const master = {
   deleteSave: (sessionId: string, saveName: string) =>
     del<MessageResponse>(
       `/api/master/sessions/${sessionId}/saves/${saveName}`,
+    ),
+
+  // Schemas
+  getSchemas: () => get<SchemaInfo[]>("/api/master/schemas"),
+
+  getSchema: (entityType: string) =>
+    get<JsonSchema>(`/api/master/schemas/${entityType}`),
+
+  // Cross-layer refs
+  getRefs: (worldId: string, refType: string) =>
+    get<RefOption[]>(`/api/master/worlds/${worldId}/refs/${refType}`),
+
+  // Entity CRUD (world layer entities)
+  listEntities: (worldId: string, entityType: string) =>
+    get<EntityEntry[]>(`/api/master/worlds/${worldId}/entities/${entityType}`),
+
+  getEntity: (worldId: string, entityType: string, entityId: string) =>
+    get<EntityEntry>(
+      `/api/master/worlds/${worldId}/entities/${entityType}/${entityId}`,
+    ),
+
+  createEntity: (
+    worldId: string,
+    entityType: string,
+    entityId: string,
+    body: EntityEntry,
+  ) =>
+    post<EntityEntry>(
+      `/api/master/worlds/${worldId}/entities/${entityType}/${entityId}`,
+      body,
+    ),
+
+  updateEntity: (
+    worldId: string,
+    entityType: string,
+    entityId: string,
+    body: EntityEntry,
+  ) =>
+    put<EntityEntry>(
+      `/api/master/worlds/${worldId}/entities/${entityType}/${entityId}`,
+      body,
+    ),
+
+  deleteEntity: (worldId: string, entityType: string, entityId: string) =>
+    del<MessageResponse>(
+      `/api/master/worlds/${worldId}/entities/${entityType}/${entityId}`,
+    ),
+
+  // Catalog CRUD
+  listCatalog: (catalogType: string) =>
+    get<CatalogEntry[]>(`/api/master/catalogs/${catalogType}`),
+
+  getCatalogEntry: (catalogType: string, entryId: string) =>
+    get<CatalogEntry>(`/api/master/catalogs/${catalogType}/${entryId}`),
+
+  createCatalogEntry: (
+    catalogType: string,
+    entryId: string,
+    body: CatalogEntry,
+  ) =>
+    post<CatalogEntry>(
+      `/api/master/catalogs/${catalogType}/${entryId}`,
+      body,
+    ),
+
+  updateCatalogEntry: (
+    catalogType: string,
+    entryId: string,
+    body: CatalogEntry,
+  ) =>
+    put<CatalogEntry>(
+      `/api/master/catalogs/${catalogType}/${entryId}`,
+      body,
+    ),
+
+  deleteCatalogEntry: (catalogType: string, entryId: string) =>
+    del<MessageResponse>(
+      `/api/master/catalogs/${catalogType}/${entryId}`,
     ),
 }
 

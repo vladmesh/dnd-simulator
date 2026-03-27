@@ -56,4 +56,13 @@ Run `make test-integration` after implementation. Add new integration tests if t
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Set up vitest + testing-library + jsdom for frontend unit testing (first test infra in this project)
+- SchemaForm handles all JSON Schema patterns from the backend: primitives, enums, $ref resolution, anyOf-with-null (nullable), nested objects, arrays of objects (useFieldArray), arrays of strings (comma-separated), localized text (additionalProperties: {type: string}), x-ref-type cross-layer references, defaults, and required markers
+- Used native `<select>` instead of shadcn Select for form fields — base-ui Select uses portals/popovers which are hard to test and don't work well with react-hook-form's register()
+- RefSelect caches fetched options in a module-level Map to avoid redundant API calls
+- API client now has full CRUD for entities, catalogs, schemas, and refs — matching all routes in routes_content.py
+- 22 unit tests covering all field types, submission shape, array add/remove, localized text wrapping

@@ -6,10 +6,9 @@
 
 ## Current
 
-Phase 4 tasks generated. Ready to start task 1.
+Phase 4, Task 1: Schema-Driven Form Renderer — done. SchemaForm component, RefSelect, API client CRUD, vitest setup, 22 tests.
 
 ## Next Steps
 
-- Task 1: Schema-Driven Form Renderer — generic SchemaForm component + API client additions
 - Task 2: Entity CRUD UI + Catalog Browser — replace YAML textarea, catalog picker
 - Task 3: Master Restructure + Main Page — Worlds/Sessions tabs, layer stepper, Player/DM landing
