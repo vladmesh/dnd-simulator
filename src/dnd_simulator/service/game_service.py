@@ -670,6 +670,22 @@ class GameService(
 
         delete_catalog_entry(entity_type, entry_id, self._content_dir)
 
+    # -- Cross-layer refs --
+
+    def list_refs(
+        self,
+        world_id: str,
+        ref_type: str,
+    ) -> list[dict[str, str]]:
+        """Return ID+name pairs for cross-layer reference dropdowns.
+
+        ref_type: locations, regions, settlements, nations, factions.
+        """
+        from dnd_simulator.content_loader.refs import RefType, get_ref_entries
+
+        rt = RefType(ref_type)  # raises ValueError on unknown
+        return get_ref_entries(rt, world_id, self._content_dir)
+
     # -- Layer accessors --
 
     def _get_entities_layer(self, session: GameSession) -> EntitiesLayer:

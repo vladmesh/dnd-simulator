@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 3, Task 2: Entity CRUD API Endpoints — done. 10 REST endpoints for world entities + catalogs.
+Phase 3, Task 3: JSON Schema + Layer-Refs Endpoints — done. 3 endpoints: schema list, schema detail with x-ref-type, cross-layer refs.
 
 ## Next Steps
 
-- Task 3: JSON Schema + Layer-Refs — schema endpoint, cross-layer refs for dropdowns
+- All Phase 3 tasks complete — ready for phase close.

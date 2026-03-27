@@ -244,3 +244,90 @@ class TestNotFound:
         client, _, _ = _make_client(tmp_path)
         resp = client.get("/api/master/worlds/no_such_world/entities/npc")
         assert resp.status_code == HTTPStatus.NOT_FOUND
+
+
+# ---------------------------------------------------------------------------
+# Schema endpoints
+# ---------------------------------------------------------------------------
+
+
+class TestSchemaEndpoint:
+    """GET /schemas/{entity_type} returns valid JSON Schema."""
+
+    def test_npc_schema_returns_json_schema(self, tmp_path: Path) -> None:
+        client, _, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/schemas/npc")
+        assert resp.status_code == HTTPStatus.OK
+        body = resp.json()
+        assert body["type"] == "object"
+        assert "properties" in body
+        assert "required" in body or "properties" in body  # valid schema structure
+
+    def test_unknown_entity_type_422(self, tmp_path: Path) -> None:
+        client, _, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/schemas/not_real")
+        assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+    def test_schema_list(self, tmp_path: Path) -> None:
+        client, _, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/schemas")
+        assert resp.status_code == HTTPStatus.OK
+        body = resp.json()
+        assert isinstance(body, list)
+        type_names = {s["entity_type"] for s in body}
+        assert "npc" in type_names
+        assert "region" in type_names
+
+
+# ---------------------------------------------------------------------------
+# Refs endpoints
+# ---------------------------------------------------------------------------
+
+
+class TestRefsEndpoint:
+    """GET /worlds/{world_id}/refs/{ref_type} returns ID+name pairs."""
+
+    def test_refs_locations(self, tmp_path: Path) -> None:
+        client, _, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/worlds/test_world/refs/locations")
+        assert resp.status_code == HTTPStatus.OK
+        body = resp.json()
+        assert isinstance(body, list)
+        assert len(body) > 0
+        first = body[0]
+        assert "id" in first
+        assert "name" in first
+
+    def test_refs_settlements(self, tmp_path: Path) -> None:
+        client, _, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/worlds/test_world/refs/settlements")
+        assert resp.status_code == HTTPStatus.OK
+        body = resp.json()
+        assert isinstance(body, list)
+        assert len(body) > 0
+
+    def test_refs_regions(self, tmp_path: Path) -> None:
+        client, _, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/worlds/test_world/refs/regions")
+        assert resp.status_code == HTTPStatus.OK
+        body = resp.json()
+        assert isinstance(body, list)
+        assert len(body) > 0
+
+    def test_refs_nations(self, tmp_path: Path) -> None:
+        client, _, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/worlds/test_world/refs/nations")
+        assert resp.status_code == HTTPStatus.OK
+        body = resp.json()
+        assert isinstance(body, list)
+        assert len(body) > 0
+
+    def test_refs_unknown_type_422(self, tmp_path: Path) -> None:
+        client, _, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/worlds/test_world/refs/not_real")
+        assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+    def test_refs_nonexistent_world_404(self, tmp_path: Path) -> None:
+        client, _, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/worlds/ghost_world/refs/locations")
+        assert resp.status_code == HTTPStatus.NOT_FOUND

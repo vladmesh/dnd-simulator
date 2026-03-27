@@ -10,6 +10,8 @@ from pydantic import ValidationError
 
 from dnd_simulator.adapters.api.deps import get_service
 from dnd_simulator.content_loader.crud import EntityType, get_registry_entry
+from dnd_simulator.content_loader.refs import RefType
+from dnd_simulator.content_loader.schema_gen import get_entity_schema, list_entity_schemas
 
 content_router = APIRouter(prefix="/api/master", tags=["content"])
 
@@ -175,4 +177,45 @@ def delete_catalog_entry(catalog_type: str, entry_id: str) -> dict[str, str]:
         get_service().delete_catalog_entry(et, entry_id)
         return {"message": "deleted"}
     except KeyError as e:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
+
+
+# ---------------------------------------------------------------------------
+# JSON Schema endpoints
+# ---------------------------------------------------------------------------
+
+
+@content_router.get("/schemas")
+def list_schemas() -> list[dict[str, str]]:
+    return list_entity_schemas()
+
+
+@content_router.get("/schemas/{entity_type}")
+def get_schema(entity_type: str) -> dict[str, Any]:
+    et = _parse_entity_type(entity_type)
+    return get_entity_schema(et)
+
+
+# ---------------------------------------------------------------------------
+# Cross-layer refs endpoints
+# ---------------------------------------------------------------------------
+
+
+def _parse_ref_type(raw: str) -> RefType:
+    """Parse and validate a ref type string."""
+    try:
+        return RefType(raw)
+    except ValueError:
+        raise HTTPException(
+            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+            detail=f"Unknown ref type: {raw!r}. Valid: {[r.value for r in RefType]}",
+        ) from None
+
+
+@content_router.get("/worlds/{world_id}/refs/{ref_type}")
+def list_refs(world_id: str, ref_type: str) -> list[dict[str, str]]:
+    rt = _parse_ref_type(ref_type)
+    try:
+        return get_service().list_refs(world_id, rt.value)
+    except FileNotFoundError as e:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e

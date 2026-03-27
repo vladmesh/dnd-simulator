@@ -83,4 +83,14 @@ Pydantic's `.model_json_schema()` already includes enum values as `enum` constra
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented in three new modules:
+- `content_loader/schema_gen.py` — `get_entity_schema()` wraps Pydantic's `model_json_schema(by_alias=True)` and injects `x-ref-type` extensions. `list_entity_schemas()` returns all types with labels.
+- `content_loader/refs.py` — `RefType` enum (locations/regions/settlements/nations/factions) + `get_ref_entries()` reads entities from resolved layer paths. Factions collected across NPCs, squads, and monster templates.
+- Three API endpoints added to `routes_content.py`: `GET /schemas`, `GET /schemas/{entity_type}`, `GET /worlds/{world_id}/refs/{ref_type}`.
+- `GameService.list_refs()` delegates to `refs.get_ref_entries()`.
+
+No old tests modified — all 1407 existing tests still pass.
