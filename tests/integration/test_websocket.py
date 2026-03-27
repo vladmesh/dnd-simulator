@@ -284,8 +284,8 @@ class TestMoveTo:
             cur_x = awareness["self_x"]
             cur_y = awareness["self_y"]
 
-            # Pick a target cell 1 step away (5ft grid)
-            target_x = cur_x + 5
+            # Pick a target cell 1 step away (5ft grid), moving inward to avoid grid edge
+            target_x = cur_x - 5 if cur_x >= 5 else cur_x + 5
             target_y = cur_y
 
             ws_send_action(sock, "move_to", x=target_x, y=target_y)
@@ -337,7 +337,13 @@ class TestMoveTo:
                 ws_send_action(sock, "move_to", x=5, y=5)
 
                 # In peaceful mode, a combat-only action fails —
-                # the turn breaks, round ends, and we get round_result then new turn
+                # server sends action_result with error, then round ends with new turn
+                msg = ws_recv(sock)
+                assert msg["type"] == "action_result", (
+                    f"Expected action_result with error after failed move_to, got: {msg['type']}"
+                )
+                assert msg.get("error"), "action_result should contain an error message"
+
                 msg = ws_recv(sock)
                 assert msg["type"] in ("round_result", "turn"), (
                     f"Expected round_result or turn after failed move_to, got: {msg['type']}"
@@ -345,7 +351,7 @@ class TestMoveTo:
             finally:
                 sock.close()
         finally:
-            requests.delete(f"{api}/sessions/{sid}", timeout=5)
+            requests.delete(f"{api}/sessions/{sid}", timeout=10)
 
 
 # ── Inventory & Equipment ─────────────────────────────────────────────

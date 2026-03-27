@@ -364,6 +364,8 @@ class Round:
             result = self._execute_action(creature, action, ctx, emit_fn)
             if not result.success:
                 logger.warning("action_failed", action=action.name.value, error=result.error)
+                if self._on_action:
+                    self._on_action(creature, action, None, result.error)
                 break
 
             actions.append(action)
