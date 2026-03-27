@@ -4,7 +4,12 @@ import { useGameStore } from "@/store/gameStore"
 import { Header } from "./Header"
 import { EventLog } from "./EventLog"
 import { ActionBar } from "./ActionBar"
-import { SidebarTabs } from "./SidebarTabs"
+import { Perception } from "./Perception"
+import { PlayerStats } from "./PlayerStats"
+import { LocationPanel } from "./LocationPanel"
+import { TradePanel } from "./TradePanel"
+import { BattleMap } from "./BattleMap"
+import { CombatPanel } from "./CombatPanel"
 
 export function GameScreen() {
   const { sessionId } = useParams<{ sessionId: string }>()
@@ -12,6 +17,8 @@ export function GameScreen() {
   const gameOver = useGameStore((s) => s.gameOver)
   const wsStatus = useGameStore((s) => s.wsStatus)
   const playerName = useGameStore((s) => s.player?.name)
+  const mode = useGameStore((s) => s.mode)
+  const isCombat = mode === "combat"
   const connectedRef = useRef(false)
   const navigate = useNavigate()
 
@@ -59,16 +66,36 @@ export function GameScreen() {
         </div>
       )}
 
-      {/* Main area: EventLog + Sidebar */}
-      <div className="flex min-h-0 flex-1">
-        {/* Event log (main panel) */}
-        <div className="flex flex-1 flex-col border-r border-border">
-          <EventLog />
+      {/* Compact log strip */}
+      <EventLog compact />
+
+      {/* Dashboard panels — 3 columns */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-px border-b border-border bg-border lg:grid-cols-3">
+        {/* Left column: Nearby (peaceful) or BattleMap + Combat (combat) */}
+        <div className="overflow-y-auto bg-background p-3">
+          {isCombat ? (
+            <>
+              <BattleMap />
+              <div className="my-3 border-t border-border" />
+              <CombatPanel />
+            </>
+          ) : (
+            <>
+              <Perception />
+              <div className="my-3 border-t border-border" />
+              <TradePanel />
+            </>
+          )}
         </div>
 
-        {/* Sidebar — tabbed panels */}
-        <div className="hidden w-72 flex-col md:flex">
-          <SidebarTabs />
+        {/* Center column: Character + Equipment */}
+        <div className="overflow-y-auto bg-background p-3">
+          <PlayerStats />
+        </div>
+
+        {/* Right column: Location */}
+        <div className="overflow-y-auto bg-background p-3">
+          <LocationPanel />
         </div>
       </div>
 

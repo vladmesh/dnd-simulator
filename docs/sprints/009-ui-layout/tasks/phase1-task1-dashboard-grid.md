@@ -49,15 +49,19 @@ Vitest component tests:
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] All three panels visible simultaneously — no tabs
-- [ ] Compact log shows last few events in a strip
-- [ ] Page does not scroll — panels scroll individually
-- [ ] Works on screens ≥ 1024px
-- [ ] Combat mode renders BattleMap + CombatPanel in left column
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] All three panels visible simultaneously — no tabs
+- [x] Compact log shows last few events in a strip
+- [x] Page does not scroll — panels scroll individually
+- [x] Works on screens ≥ 1024px (lg: breakpoint for 3-col grid)
+- [x] Combat mode renders BattleMap + CombatPanel in left column
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Replaced the 2-column layout (EventLog flex-1 | SidebarTabs w-72) with a dashboard: header → compact log strip → 3-col CSS grid → action bar. EventLog now accepts `compact` prop — compact mode renders last 5 events without virtualization; full mode preserves the existing virtualizer for the overlay (task 2). SidebarTabs component and its 9 tests deleted — panels render directly in the grid. Grid uses `gap-px bg-border` trick for 1px dividers between columns. Responsive: stacks to 1 column below `lg` (1024px). 6 new component tests cover layout structure for peaceful and combat modes.

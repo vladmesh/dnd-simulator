@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 1 tasks generated. Ready to start task 1.
+Phase 1, Task 1: Dashboard Grid Layout — done. 3-col dashboard replaces tabbed sidebar.
 
 ## Next Steps
 
-- Task 1: Dashboard grid layout — replace 2-col (log|sidebar) with header → compact log → 3-col panels → action bar
 - Task 2: Log expand overlay — expand/collapse compact log into full virtualized overlay

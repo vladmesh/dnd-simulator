@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { useGameStore } from "@/store/gameStore"
 
-const EVENT_COLORS: Record<string, string> = {
+export const EVENT_COLORS: Record<string, string> = {
   entity_attack: "text-red-400",
   entity_died: "text-red-500 font-bold",
   combat_started: "text-orange-400",
@@ -22,9 +22,62 @@ const EVENT_COLORS: Record<string, string> = {
   squad_dematerialized: "text-muted-foreground",
 }
 
-export function EventLog() {
+const COMPACT_VISIBLE_COUNT = 5
+
+interface EventLogProps {
+  compact?: boolean
+}
+
+export function EventLog({ compact }: EventLogProps) {
   const { t } = useTranslation(["common"])
   const log = useGameStore((s) => s.log)
+
+  if (compact) {
+    return <CompactLog />
+  }
+
+  return <FullLog log={log} emptyMessage={t("common:waiting_for_events")} />
+}
+
+function CompactLog() {
+  const log = useGameStore((s) => s.log)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll to bottom
+  const logLength = log.length
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el) {
+      el.scrollTop = el.scrollHeight
+    }
+  }, [logLength])
+
+  const visible = log.slice(-COMPACT_VISIBLE_COUNT)
+
+  return (
+    <div
+      ref={scrollRef}
+      className="max-h-24 overflow-y-auto border-b border-border font-mono text-xs"
+      data-testid="compact-log"
+    >
+      {visible.map((entry) => {
+        const colorClass = EVENT_COLORS[entry.event.event_type] ?? "text-foreground"
+        return (
+          <div key={entry.id} className="px-3 py-0.5">
+            <span className={colorClass}>{entry.event.description}</span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+interface FullLogProps {
+  log: ReturnType<typeof useGameStore.getState>["log"]
+  emptyMessage: string
+}
+
+function FullLog({ log, emptyMessage }: FullLogProps) {
   const parentRef = useRef<HTMLDivElement>(null)
 
   const virtualizer = useVirtualizer({
@@ -40,7 +93,6 @@ export function EventLog() {
     if (logLength > 0) {
       virtualizer.scrollToIndex(logLength - 1, { align: "end" })
     }
-    // virtualizer is stable, only scroll when log grows
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logLength])
 
@@ -48,7 +100,7 @@ export function EventLog() {
     <div ref={parentRef} className="flex-1 overflow-y-auto font-mono text-xs">
       {log.length === 0 ? (
         <div className="flex h-full items-center justify-center text-muted-foreground">
-          {t("common:waiting_for_events")}
+          {emptyMessage}
         </div>
       ) : (
         <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
