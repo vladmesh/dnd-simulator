@@ -79,5 +79,13 @@
   "trade": "Торговля",
   "buy": "Купить",
   "sell": "Продать",
-  "event_log": "Журнал событий"
+  "event_log": "Журнал событий",
+  "faction": "Фракция",
+  "role_commoner": "Обыватель",
+  "role_blacksmith": "Кузнец",
+  "role_tavern_keeper": "Трактирщик",
+  "role_guard": "Стражник",
+  "role_merchant": "Торговец",
+  "role_farmer": "Фермер",
+  "role_gladiator": "Гладиатор"
 }

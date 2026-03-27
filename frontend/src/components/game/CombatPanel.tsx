@@ -1,14 +1,17 @@
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useGameStore } from "@/store/gameStore"
 import { wsClient } from "@/transport/wsClient"
-import type { CombatAwareness } from "@/types/game"
+import type { CombatAwareness, CombatEntity } from "@/types/game"
 import { Button } from "@/components/ui/button"
 import { Sword, Eye } from "lucide-react"
+import { NpcInspectModal } from "./NpcInspectModal"
 
 export function CombatPanel() {
   const { t } = useTranslation(["game"])
   const awareness = useGameStore((s) => s.awareness)
   const isMyTurn = useGameStore((s) => s.isMyTurn)
+  const [inspectEntity, setInspectEntity] = useState<CombatEntity | null>(null)
 
   if (!awareness || !("self_hp" in awareness)) return null
   const combat = awareness as CombatAwareness
@@ -107,7 +110,7 @@ export function CombatPanel() {
                 <Button
                   size="xs"
                   variant="ghost"
-                  onClick={() => sendAction("idle", { inspect_target: entity.id })}
+                  onClick={() => setInspectEntity(entity)}
                 >
                   <Eye className="size-3" />
                 </Button>
@@ -116,6 +119,13 @@ export function CombatPanel() {
           </div>
         ))}
       </div>
+
+      <NpcInspectModal
+        entity={inspectEntity}
+        open={inspectEntity !== null}
+        onClose={() => setInspectEntity(null)}
+        isCombat={true}
+      />
     </div>
   )
 }

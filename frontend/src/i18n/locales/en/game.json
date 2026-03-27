@@ -79,5 +79,13 @@
   "trade": "Trade",
   "buy": "Buy",
   "sell": "Sell",
-  "event_log": "Event Log"
+  "event_log": "Event Log",
+  "faction": "Faction",
+  "role_commoner": "Commoner",
+  "role_blacksmith": "Blacksmith",
+  "role_tavern_keeper": "Tavern Keeper",
+  "role_guard": "Guard",
+  "role_merchant": "Merchant",
+  "role_farmer": "Farmer",
+  "role_gladiator": "Gladiator"
 }

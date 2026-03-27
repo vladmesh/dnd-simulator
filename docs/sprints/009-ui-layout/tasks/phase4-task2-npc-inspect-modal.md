@@ -52,4 +52,14 @@ Frontend component tests are not part of our test suite — this task is verifie
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Eye icon in Perception and CombatPanel now opens a client-side modal instead of sending `idle` action to backend.
+- In peaceful mode: modal shows full NPC info (name, race, role, description, faction) + action buttons (Attack, Talk, Trade for merchants).
+- In combat mode: modal shows description, conditions, distance — CombatEntity doesn't carry enriched NPC fields, which is fine (you don't read backstories mid-fight).
+- Trade button embeds MerchantView directly in the modal — exported it from TradePanel.
+- Talk input is inline in the modal with Enter to send, Escape to cancel.
+- Added i18n keys for faction label and all NpcRole values (en + ru).
+- Also fixed unrelated skip: test_squad.py pointed at wrong path for squads.yaml (worlds/ vs library/).

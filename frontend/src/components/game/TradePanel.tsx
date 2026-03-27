@@ -10,7 +10,7 @@ function sendAction(name: string, params?: Record<string, unknown>) {
   useGameStore.getState().setWaitingForAction(true)
 }
 
-function MerchantView({ merchant }: { merchant: MerchantInfo }) {
+export function MerchantView({ merchant }: { merchant: MerchantInfo }) {
   const { t } = useTranslation(["game"])
   const waitingForAction = useGameStore((s) => s.waitingForAction)
   const player = useGameStore((s) => s.player)

@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 4, Task 1: NPC Description Field + Structured Inspect Data — done. Added description to NPC/monster models, enriched NearbyEntity with structured fields for inspect modal.
+Phase 4, Task 2: NPC Inspect Modal with Actions — done. Eye icon opens client-side modal with NPC info + action buttons (Attack, Talk, Trade). Works in both peaceful and combat modes.
 
 ## Next Steps
 
-- Task 2: NPC Inspect Modal with Actions — modal dialog with NPC info, action buttons (Attack, Talk, Trade for merchants)
+- Phase close: run E2E to validate all phase 4 changes

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from dnd_simulator.core.squad import Squad, SquadBehavior, SquadType
 
 
@@ -205,15 +203,13 @@ class TestCreatureSquadId:
 
 
 class TestSwordValeSquads:
-    """Integration: load squads from the actual Sword Vale world content."""
+    """Integration: load squads from the actual Sword Vale ecology library template."""
 
     def test_load_sword_vale_squads(self) -> None:
         from dnd_simulator.content_loader import load_squads
 
-        world_path = Path(__file__).resolve().parents[2] / "content" / "worlds" / "sword_vale"
-        if not (world_path / "squads.yaml").exists():
-            pytest.skip("squads.yaml not yet created")
-        squads = load_squads(world_path)
+        library_path = Path(__file__).resolve().parents[2] / "content" / "library" / "ecology" / "sword_vale"
+        squads = load_squads(library_path)
         assert len(squads) >= 3
         # All squads must have a faction
         for squad in squads.values():
