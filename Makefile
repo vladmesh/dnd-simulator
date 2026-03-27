@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test test-unit test-integration check setup-hooks messages compile-messages serve stop frontend up
+.PHONY: install lint format typecheck test test-unit test-integration check setup-hooks messages compile-messages serve stop frontend up clean
 
 install:
 	uv sync
@@ -29,7 +29,7 @@ setup-hooks:
 	@bash scripts/setup-hooks.sh
 
 stop:
-	@fuser -k 8001/tcp 2>/dev/null && echo "Stopped server on :8001" || echo "Nothing running on :8001"
+	@pids=$$(lsof -ti tcp:8001 2>/dev/null) && kill $$pids 2>/dev/null && echo "Stopped server on :8001 ($$pids)" || echo "Nothing running on :8001"
 
 serve: stop
 	uv run uvicorn dnd_simulator.adapters.api.app:app --host 0.0.0.0 --port 8001 --reload --reload-exclude 'saves/*'
@@ -46,3 +46,6 @@ frontend:
 up: stop
 	uv run uvicorn dnd_simulator.adapters.api.app:app --host 0.0.0.0 --port 8001 --reload --reload-exclude 'saves/*' &
 	cd frontend && npm run dev
+
+clean:
+	@bash scripts/clean.sh
