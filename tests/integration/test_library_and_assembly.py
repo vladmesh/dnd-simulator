@@ -469,3 +469,100 @@ class TestLayerFiles:
             timeout=5,
         )
         assert resp.status_code in (HTTPStatus.BAD_REQUEST, HTTPStatus.NOT_FOUND)
+
+
+# ---------------------------------------------------------------------------
+# World editable flag, fork-world, delete-world
+# ---------------------------------------------------------------------------
+
+
+class TestWorldEditableFlag:
+    def test_assembled_world_is_editable(self, api_url: str, worlds: WorldFactory) -> None:
+        world_id = worlds.assemble("ed_yes", "Editable World")
+
+        resp = requests.get(f"{api_url}/worlds", timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+        world = next(w for w in resp.json() if w["id"] == world_id)
+        assert world["editable"] is True
+
+    def test_base_world_is_not_editable(self, api_url: str) -> None:
+        resp = requests.get(f"{api_url}/worlds", timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+        sword_vale = next((w for w in resp.json() if w["id"] == "sword_vale"), None)
+        if sword_vale is not None:
+            assert sword_vale["editable"] is False
+
+
+class TestForkWorld:
+    def test_fork_world(self, api_url: str, worlds: WorldFactory) -> None:
+        source_id = worlds.assemble("fk_src", "Fork Source")
+        fork_id = _uid("fk_dst")
+        worlds._created.append(fork_id)  # register for cleanup
+
+        resp = requests.post(
+            f"{api_url}/worlds/{source_id}/fork",
+            json={"new_id": fork_id},
+            timeout=10,
+        )
+        assert resp.status_code == HTTPStatus.CREATED
+        data = resp.json()
+        assert data["id"] == fork_id
+        assert data["editable"] is True
+
+        # Forked world appears in listing
+        list_resp = requests.get(f"{api_url}/worlds", timeout=5)
+        world_ids = [w["id"] for w in list_resp.json()]
+        assert fork_id in world_ids
+
+    def test_fork_nonexistent_world_404(self, api_url: str) -> None:
+        resp = requests.post(
+            f"{api_url}/worlds/nonexistent_world_xyz/fork",
+            json={"new_id": "whatever"},
+            timeout=10,
+        )
+        assert resp.status_code == HTTPStatus.NOT_FOUND
+
+    def test_fork_duplicate_id_409(self, api_url: str, worlds: WorldFactory) -> None:
+        source_id = worlds.assemble("fk_dup", "Fork Dup Source")
+        fork_id = _uid("fk_dup2")
+        worlds._created.append(fork_id)
+
+        requests.post(
+            f"{api_url}/worlds/{source_id}/fork",
+            json={"new_id": fork_id},
+            timeout=10,
+        )
+        # Second fork with same ID should 409
+        resp = requests.post(
+            f"{api_url}/worlds/{source_id}/fork",
+            json={"new_id": fork_id},
+            timeout=10,
+        )
+        assert resp.status_code == HTTPStatus.CONFLICT
+
+
+class TestDeleteWorld:
+    def test_delete_assembled_world(self, api_url: str) -> None:
+        # Create without factory so we control deletion manually
+        world_id = _uid("del_ok")
+        requests.post(
+            f"{api_url}/worlds/assemble",
+            json={"id": world_id, "name": "Deletable", "layer_selections": ALL_LAYER_SELECTIONS},
+            timeout=10,
+        )
+
+        resp = requests.delete(f"{api_url}/worlds/{world_id}", timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+
+        # Verify gone
+        list_resp = requests.get(f"{api_url}/worlds", timeout=5)
+        world_ids = [w["id"] for w in list_resp.json()]
+        assert world_id not in world_ids
+
+    def test_delete_base_world_403(self, api_url: str) -> None:
+        resp = requests.delete(f"{api_url}/worlds/sword_vale", timeout=5)
+        assert resp.status_code == HTTPStatus.FORBIDDEN
+
+    def test_delete_nonexistent_world_404(self, api_url: str) -> None:
+        resp = requests.delete(f"{api_url}/worlds/nonexistent_xyz_999", timeout=5)
+        assert resp.status_code == HTTPStatus.NOT_FOUND
