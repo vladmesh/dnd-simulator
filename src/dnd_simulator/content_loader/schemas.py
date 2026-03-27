@@ -284,7 +284,7 @@ class SettlementContent(BaseModel):
 
 
 class MonsterTemplateContent(BaseModel):
-    """A monster template from YAML."""
+    """A fully-specified monster template from YAML (inline or catalog entry)."""
 
     name: LocalizedText
     hp: int
@@ -294,6 +294,24 @@ class MonsterTemplateContent(BaseModel):
     ability_scores: AbilityScoresContent = AbilityScoresContent()
     attacks: list[AttackContent] = []
     faction: str = ""
+
+
+class MonsterTemplateEntryContent(BaseModel):
+    """A monster template entry in a world ecology layer.
+
+    Can be either a full inline definition or a catalog reference (``base`` key).
+    When ``base`` is set, all other fields are optional overrides resolved at assembly time.
+    """
+
+    base: str | None = None
+    name: LocalizedText | None = None
+    hp: int | None = None
+    ac: int | None = None
+    speed: int | None = None
+    cr: float | None = None
+    ability_scores: AbilityScoresContent | None = None
+    attacks: list[AttackContent] | None = None
+    faction: str | None = None
 
 
 class EncounterEntryContent(BaseModel):

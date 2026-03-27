@@ -21,6 +21,7 @@ from dnd_simulator.content_loader.schemas import (
     ItemContent,
     LocationContent,
     MonsterTemplateContent,
+    MonsterTemplateEntryContent,
     NationContent,
     NpcContent,
     RegionContent,
@@ -103,7 +104,7 @@ _REGISTRY: dict[EntityType, RegistryEntry] = {
         section="squads",
     ),
     EntityType.MONSTER_TEMPLATE: RegistryEntry(
-        schema=MonsterTemplateContent,
+        schema=MonsterTemplateEntryContent,
         layer_type="ecology",
         section="monsters",
         subsection="templates",
