@@ -1,12 +1,12 @@
 # Sprint 008 Status
 
 **Sprint:** 008-content-schema
-**Phase:** 5 — DM World Management (COMPLETE)
+**Status:** COMPLETE
 **Updated:** 2026-03-27
 
-## Current
+## Summary
 
-Phase 5 complete. Player flow simplified (no world builder), master has fork/delete/read-only/editable world management. All phases complete. Ready for sprint closure.
+Pydantic content models as single source of truth. Catalogs for monsters and items. Entity CRUD API with JSON Schema. Schema-driven forms in frontend. Master restructure with Worlds/Sessions tabs and layer stepper. Player/DM landing page split.
 
 ## Audit Triage
 

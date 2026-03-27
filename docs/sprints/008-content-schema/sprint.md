@@ -91,4 +91,10 @@ _(заполняется по ходу спринта)_
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-03-27
+
+Pydantic content models as single source of truth for all entity types. Parsers rewritten to use `model_validate`. Monster and item catalogs extracted from world layers into standalone `content/catalogs/`. Entity CRUD API with auto-generated JSON Schema and cross-layer refs. Frontend: schema-driven forms (SchemaForm + EntityListEditor), catalog browser, master restructure (Worlds/Sessions tabs, layer stepper), landing page with Player/DM split. Player flow simplified (no world builder — master creates worlds, player picks from list).
+
+5 phases, 14 tasks, ~60 commits. Integration tests: 92 pass. E2E: 18/18 green.
+
+**Deferred:** Layer editor (fork individual layer, YAML textarea) hidden from UI but backend remains — superseded by schema-driven forms for entity editing.
