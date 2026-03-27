@@ -28,11 +28,11 @@ Frontend component tests are not part of our test suite — this task is verifie
    - Action buttons: Attack (closes modal + sends attack), Talk (closes modal + opens talk input), Trade (opens TradePanel overlay for that merchant)
 
 2. **Perception.tsx changes:**
-   - Eye button click: instead of sending `idle` action, opens NpcInspectModal with the selected entity
-   - Remove old inspect action dispatch
+   - Eye button click: opens NpcInspectModal with the selected entity's enriched `NearbyEntity` data (already in awareness, no server round-trip)
+   - Remove old `idle` + `inspect_target` action dispatch
 
 3. **CombatPanel.tsx changes:**
-   - Same — eye button opens modal instead of sending idle action
+   - Same — eye button opens modal from awareness data, no server action
 
 4. **TradePanel integration:**
    - Trade button in modal opens TradePanel filtered to that specific merchant
