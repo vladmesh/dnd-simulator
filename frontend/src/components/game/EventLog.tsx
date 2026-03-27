@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import {
@@ -81,12 +81,6 @@ function EventIcon({ name, className }: { name: string; className?: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Compact visible count
-// ---------------------------------------------------------------------------
-
-const COMPACT_VISIBLE_COUNT = 5
-
-// ---------------------------------------------------------------------------
 // EventLog — public component
 // ---------------------------------------------------------------------------
 
@@ -120,6 +114,19 @@ function DisplayEntryRow({
   expanded?: boolean
   onToggleExpand?: () => void
 }) {
+  if (entry.kind === "round_header") {
+    return (
+      <div
+        data-testid="round-header"
+        className="flex items-center gap-2 border-t-2 border-orange-500/40 bg-orange-500/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-orange-400"
+      >
+        <div className="h-px flex-1 bg-orange-500/30" />
+        <span>Round {entry.roundNumber}</span>
+        <div className="h-px flex-1 bg-orange-500/30" />
+      </div>
+    )
+  }
+
   if (entry.kind === "turn_header") {
     return (
       <div
@@ -191,26 +198,33 @@ function CompactLog({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [expandedMoves, setExpandedMoves] = useState<Set<number>>(new Set())
+  const stickyRef = useRef(true)
 
-  // Auto-scroll to bottom
+  // Track whether user is scrolled to bottom
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    stickyRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 8
+  }, [])
+
+  // Auto-scroll to bottom only when sticky
   const entryCount = displayEntries.length
   useEffect(() => {
     const el = scrollRef.current
-    if (el) {
+    if (el && stickyRef.current) {
       el.scrollTop = el.scrollHeight
     }
   }, [entryCount])
-
-  const visible = displayEntries.slice(-COMPACT_VISIBLE_COUNT)
 
   return (
     <div className="flex items-stretch border-b border-border">
       <div
         ref={scrollRef}
+        onScroll={handleScroll}
         className="max-h-24 flex-1 overflow-y-auto font-mono text-xs"
         data-testid="compact-log"
       >
-        {visible.map((entry, idx) => (
+        {displayEntries.map((entry, idx) => (
           <DisplayEntryRow
             key={entry.kind === "event" ? entry.entry.id : `${entry.kind}-${idx}`}
             entry={entry}
@@ -252,12 +266,14 @@ function FullLog({
 }) {
   const parentRef = useRef<HTMLDivElement>(null)
   const [expandedMoves, setExpandedMoves] = useState<Set<number>>(new Set())
+  const stickyRef = useRef(true)
 
   const virtualizer = useVirtualizer({
     count: displayEntries.length,
     getScrollElement: () => parentRef.current,
     estimateSize: (index) => {
       const entry = displayEntries[index]
+      if (entry.kind === "round_header") return 34
       if (entry.kind === "turn_header") return 28
       if (entry.kind === "aggregated_move" && expandedMoves.has(index)) {
         return 24 + entry.entries.length * 20
@@ -267,17 +283,24 @@ function FullLog({
     overscan: 10,
   })
 
-  // Auto-scroll to bottom on new events
+  // Track whether user is scrolled to bottom
+  const handleScroll = useCallback(() => {
+    const el = parentRef.current
+    if (!el) return
+    stickyRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 16
+  }, [])
+
+  // Auto-scroll to bottom only when sticky
   const entryCount = displayEntries.length
   useEffect(() => {
-    if (entryCount > 0) {
+    if (entryCount > 0 && stickyRef.current) {
       virtualizer.scrollToIndex(entryCount - 1, { align: "end" })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entryCount])
 
   return (
-    <div ref={parentRef} className="flex-1 overflow-y-auto font-mono text-xs">
+    <div ref={parentRef} onScroll={handleScroll} className="h-full overflow-y-auto font-mono text-xs">
       {displayEntries.length === 0 ? (
         <div className="flex h-full items-center justify-center text-muted-foreground">
           {emptyMessage}

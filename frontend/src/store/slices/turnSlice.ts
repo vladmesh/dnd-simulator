@@ -31,7 +31,6 @@ export interface TurnSlice {
   waitingForAction: boolean
   gameOver: boolean
   lastError: string | null
-
   onTurn: (msg: TurnMessage) => void
   onActionResult: (msg: ActionResultMessage) => void
   onRoundResult: (msg: RoundResultMessage) => void

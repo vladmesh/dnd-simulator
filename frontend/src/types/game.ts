@@ -27,6 +27,7 @@ export type EventType =
   | "squad_combat"
   | "squad_materialized"
   | "squad_dematerialized"
+  | "round_start"
   | "custom"
 
 // --- Turn Budget ---

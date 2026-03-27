@@ -365,12 +365,15 @@ class TestHandleDash:
         result = handle_dash(_creature(), Action(name=ActionType.DASH), _noop_emit, _PEACEFUL, _WORLD)
         assert not result.success
 
-    def test_dash_emits_no_event(self) -> None:
+    def test_dash_emits_event(self) -> None:
         budget = TurnBudget(actions=1, bonus_actions=0, movement_remaining=30)
         ctx = _combat_ctx(budget)
         emitted, emit = _capture_emit()
-        handle_dash(_creature(), Action(name=ActionType.DASH), emit, ctx, _WORLD)
-        assert len(emitted) == 0
+        handle_dash(_creature(speed=25), Action(name=ActionType.DASH), emit, ctx, _WORLD)
+        assert len(emitted) == 1
+        assert emitted[0].event_type == EventType.ENTITY_DASH
+        assert emitted[0].data["entity_id"] == "test"
+        assert emitted[0].data["extra_movement_ft"] == 25
 
 
 # ---------------------------------------------------------------------------

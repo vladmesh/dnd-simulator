@@ -18,6 +18,11 @@ export interface TurnHeaderEntry {
   actorName: string
 }
 
+export interface RoundHeaderEntry {
+  kind: "round_header"
+  roundNumber: number
+}
+
 export interface AggregatedMoveEntry {
   kind: "aggregated_move"
   actorId: string
@@ -28,7 +33,7 @@ export interface AggregatedMoveEntry {
   colorClass: string
 }
 
-export type DisplayEntry = EventDisplayEntry | TurnHeaderEntry | AggregatedMoveEntry
+export type DisplayEntry = EventDisplayEntry | TurnHeaderEntry | RoundHeaderEntry | AggregatedMoveEntry
 
 // ---------------------------------------------------------------------------
 // Icon and color mappings
@@ -61,6 +66,7 @@ export const EVENT_ICONS: Record<EventType, string> = {
   squad_combat: "shield-alert",
   squad_materialized: "eye",
   squad_dematerialized: "eye-off",
+  round_start: "swords",
   custom: "scroll",
 }
 
@@ -91,6 +97,7 @@ export const EVENT_COLORS: Record<EventType, string> = {
   squad_combat: "text-orange-400",
   squad_materialized: "text-yellow-400",
   squad_dematerialized: "text-muted-foreground",
+  round_start: "text-orange-400 font-bold",
   custom: "text-foreground",
 }
 
@@ -99,7 +106,7 @@ export const EVENT_COLORS: Record<EventType, string> = {
 // ---------------------------------------------------------------------------
 
 function isMoveLike(eventType: EventType): boolean {
-  return eventType === "entity_move" || eventType === "entity_dash"
+  return eventType === "entity_move"
 }
 
 function getDistanceFt(event: PerceivedEvent): number {
@@ -163,6 +170,15 @@ export function processLogEntries(entries: LogEntry[]): DisplayEntry[] {
     } else if (eventType === "combat_ended") {
       inCombat = false
       lastCombatActorId = null
+    }
+
+    // Round boundary — prominent header, resets turn tracking
+    if (eventType === "round_start") {
+      flush()
+      const rn = (event.data?.round_number as number) ?? 0
+      result.push({ kind: "round_header", roundNumber: rn })
+      lastCombatActorId = null
+      continue
     }
 
     // Move aggregation: accumulate consecutive move/dash from same actor

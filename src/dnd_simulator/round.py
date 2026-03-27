@@ -448,6 +448,7 @@ class Round:
             combat = self._entities.get_combat(location_id)
             if not combat:
                 continue
+            self._entities.log_round_start(location_id, combat.round_number)
             for entity_id in list(combat.turn_order):
                 entity = self._entities.get_entity(entity_id)
                 if isinstance(entity, Creature) and entity.is_alive and entity.active and entity.in_combat:

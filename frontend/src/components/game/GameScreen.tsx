@@ -71,8 +71,8 @@ export function GameScreen() {
         </div>
       )}
 
-      {/* Compact log strip */}
-      <EventLog compact onExpand={openLog} />
+      {/* Compact log strip — hidden when full log overlay is open */}
+      {!logExpanded && <EventLog compact onExpand={openLog} />}
 
       {/* Dashboard panels — 3 columns, with overlay container */}
       <div className="relative min-h-0 flex-1">

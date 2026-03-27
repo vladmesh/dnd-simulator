@@ -27,8 +27,10 @@ def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -
         return _perceive_dodge(event, observer, get_entity)
     if event.event_type == EventType.ENTITY_FLEE:
         return _perceive_flee(event, observer, get_entity)
-    if event.event_type in (EventType.ENTITY_MOVE, EventType.ENTITY_DASH):
+    if event.event_type == EventType.ENTITY_MOVE:
         return _perceive_move(event, observer, get_entity)
+    if event.event_type == EventType.ENTITY_DASH:
+        return _perceive_dash(event, observer, get_entity)
     if event.event_type == EventType.ENTITY_USE_ITEM:
         return _perceive_use_item(event, observer, get_entity)
     if event.event_type == EventType.ENTITY_BLESS:
@@ -43,6 +45,9 @@ def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -
         return _perceive_sell(event, observer, get_entity)
     if event.event_type == EventType.TURN_SKIPPED:
         return _perceive_turn_skipped(event, observer, get_entity)
+    if event.event_type == EventType.ROUND_START:
+        round_number = event.data.get("round_number", "?")
+        return _("— Round {n} —").format(n=round_number)
     if event.event_type == EventType.COMBAT_STARTED:
         return _perceive_combat_started(event, observer, get_entity)
     if event.event_type == EventType.COMBAT_ENDED:
@@ -220,19 +225,25 @@ def _perceive_move(event: Event, observer: Character, get_entity: GetEntityFn) -
     dy = to_y - from_y
     dir_label = direction_label(dx, dy)
 
-    is_dash = event.event_type == EventType.ENTITY_DASH
-    verb = _("dashes") if is_dash else _("moves")
     desc_suffix = f" \u00ab{description}\u00bb" if description else ""
 
     if entity_id == observer.id:
-        verb_self = _("dash") if is_dash else _("move")
-        return _("You {verb} {direction} ({distance} ft){desc}").format(
-            verb=verb_self, direction=dir_label, distance=distance_ft, desc=desc_suffix
+        return _("You move {direction} ({distance} ft){desc}").format(
+            direction=dir_label, distance=distance_ft, desc=desc_suffix
         )
     desc = _describe(observer, entity_id, get_entity)
-    return _("{entity} {verb} {direction} ({distance} ft){desc}").format(
-        entity=desc, verb=verb, direction=dir_label, distance=distance_ft, desc=desc_suffix
+    return _("{entity} moves {direction} ({distance} ft){desc}").format(
+        entity=desc, direction=dir_label, distance=distance_ft, desc=desc_suffix
     )
+
+
+def _perceive_dash(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    entity_id = str(event.data.get("entity_id", ""))
+    extra_ft = event.data.get("extra_movement_ft", 0)
+    if entity_id == observer.id:
+        return _("You dash (+{ft} ft movement)").format(ft=extra_ft)
+    desc = _describe(observer, entity_id, get_entity)
+    return _("{entity} dashes (+{ft} ft movement)").format(entity=desc, ft=extra_ft)
 
 
 def _perceive_use_item(event: Event, observer: Character, get_entity: GetEntityFn) -> str:

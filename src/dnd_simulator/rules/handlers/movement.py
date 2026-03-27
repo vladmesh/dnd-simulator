@@ -99,10 +99,10 @@ def handle_move_to(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Action
 
 
 def handle_dash(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
-    """Dash: no world event. Adds creature's effective speed to movement budget.
+    """Dash: adds creature's effective speed to movement budget.
 
     Budget cost (1 action) is handled by the dispatcher; this handler only
-    applies the movement bonus.
+    applies the movement bonus and emits an ENTITY_DASH event for the log.
     """
     budget = ctx.turn_budget
     if budget is None:
@@ -110,6 +110,13 @@ def handle_dash(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
     speed = effective_speed(actor)
     budget.movement_remaining += speed
     logger.info("dash", extra_movement_ft=speed)
+    emit_fn(
+        Event(
+            event_type=EventType.ENTITY_DASH,
+            source_layer="entities",
+            data={"entity_id": actor.id, "extra_movement_ft": speed},
+        )
+    )
     return ActionResult()
 
 

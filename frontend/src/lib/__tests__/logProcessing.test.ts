@@ -88,6 +88,7 @@ describe("EVENT_ICONS", () => {
     "squad_combat",
     "squad_materialized",
     "squad_dematerialized",
+    "round_start",
     "custom",
   ]
 
@@ -142,6 +143,7 @@ describe("EVENT_COLORS", () => {
       "squad_combat",
       "squad_materialized",
       "squad_dematerialized",
+      "round_start",
       "custom",
     ]
 
@@ -210,7 +212,7 @@ describe("processLogEntries — move aggregation", () => {
     expect(result.every((e) => e.kind === "event")).toBe(true)
   })
 
-  it("includes entity_dash in move aggregation with entity_move", () => {
+  it("dash is NOT aggregated with moves — shown as separate event", () => {
     const entries = [
       makeMoveEntry("goblin_1", 10),
       makeDashEntry("goblin_1", 15),
@@ -218,12 +220,10 @@ describe("processLogEntries — move aggregation", () => {
 
     const result = processLogEntries(entries)
 
-    expect(result).toHaveLength(1)
-    expect(result[0].kind).toBe("aggregated_move")
-    if (result[0].kind === "aggregated_move") {
-      expect(result[0].totalDistanceFt).toBe(25)
-      expect(result[0].entries).toHaveLength(2)
-    }
+    // move (single, no aggregation) + dash as separate event
+    expect(result).toHaveLength(2)
+    expect(result[0].kind).toBe("event")
+    expect(result[1].kind).toBe("event")
   })
 
   it("does NOT aggregate a single move — keeps it as a regular event", () => {

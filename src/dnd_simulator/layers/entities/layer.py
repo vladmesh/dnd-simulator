@@ -165,6 +165,16 @@ class EntitiesLayer(Layer):
         """Get combat state for a location, or None if no active combat."""
         return self._combat.get_combat(location_id)
 
+    def log_round_start(self, location_id: str, round_number: int) -> None:
+        """Append a ROUND_START event to the location log."""
+        self._location_log[location_id].append(
+            Event(
+                event_type=EventType.ROUND_START,
+                source_layer="entities",
+                data={"location_id": location_id, "round_number": round_number},
+            )
+        )
+
     def end_combat_round(self, location_id: str) -> None:
         """Called by game loop at end of each combat round."""
         had_combat = self._combat.get_combat(location_id) is not None
@@ -254,7 +264,14 @@ class EntitiesLayer(Layer):
             return result
 
         if event.event_type == EventType.ENTITY_MOVE:
-            return self._combat.resolve_move(event)
+            if "direction" in event.data:
+                # Needs resolution (from handle_move via compass direction)
+                return self._combat.resolve_move(event)
+            # Already-resolved move (from handle_move_to) — just log it
+            location_id = self._event_location(event)
+            if location_id:
+                self._location_log[location_id].append(event)
+            return ActionResult()
 
         # Clean up temporary creatures on death
         if event.event_type == EventType.ENTITY_DIED:
