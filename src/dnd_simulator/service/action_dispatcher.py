@@ -45,6 +45,7 @@ from dnd_simulator.rules.handlers import (
     handle_flee,
     handle_idle,
     handle_move,
+    handle_move_to,
     handle_say,
     handle_second_wind,
     handle_sell,
@@ -153,6 +154,7 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.register(ActionType.DODGE, handle_dodge)
     dispatcher.register(ActionType.FLEE, handle_flee)
     dispatcher.register(ActionType.MOVE, handle_move)
+    dispatcher.register(ActionType.MOVE_TO, handle_move_to)
     dispatcher.register(ActionType.DASH, handle_dash)
     dispatcher.register(ActionType.DISENGAGE, handle_disengage)
     dispatcher.register(ActionType.WAIT, handle_wait)

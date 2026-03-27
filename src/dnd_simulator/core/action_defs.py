@@ -171,6 +171,20 @@ _reg(
 
 _reg(
     ActionDef(
+        action_type=ActionType.MOVE_TO,
+        description=N_("Move to a specific position on the battle map."),
+        cost_type=CostType.FREE,  # handler manages movement budget directly
+        combat_mode=CombatMode.COMBAT_ONLY,
+        provider_managed=True,
+        params=(
+            ParamDef("x", "integer", N_("Target X coordinate in feet"), required=True),
+            ParamDef("y", "integer", N_("Target Y coordinate in feet"), required=True),
+        ),
+    )
+)
+
+_reg(
+    ActionDef(
         action_type=ActionType.DASH,
         description=N_("Sprint: move up to double your speed. Costs 1 action."),
         cost_type=CostType.ACTION,

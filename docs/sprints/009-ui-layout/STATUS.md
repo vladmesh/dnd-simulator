@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 5, Task 2: Interactive BattleMap — done. CSS Grid replaces ASCII, structured wall/position data from backend.
+Phase 5, Task 3: Click-to-Move — done. BFS pathfinding backend + reachable cell highlighting frontend.
 
 ## Next Steps
 
-- Task 2: Interactive BattleMap — CSS Grid вместо ASCII, structured grid data с бэкенда
-- Task 3: Click-to-move — бэкенд action `move_to(x, y)` с BFS pathfinding + подсветка range на фронте
+All phase 5 tasks complete. Ready for phase close.

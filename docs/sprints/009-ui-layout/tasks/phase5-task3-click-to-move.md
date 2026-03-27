@@ -110,4 +110,10 @@ Click a cell on the battle map grid → character moves there, spending movement
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Backend: Added `MOVE_TO` action type with BFS pathfinding (`find_path`) and budget-aware walking (`walk_path`) as pure functions in `rules/movement.py`. Handler manages movement budget directly (cost_type=FREE) since feet spent aren't known upfront. The handler accesses battle map via `ctx.combat_state`, does pathfinding, walks the path, updates position, and emits an ENTITY_MOVE log event. No new event types or combat_manager changes needed. LLM exclusion: `provider_managed=True` means MOVE_TO never appears in available_actions (no provider offers it), so LLM tool schemas never see it.
+
+Frontend: BattleMap now computes reachable cells via client-side BFS matching D&D 5e diagonal cost rules. Reachable cells get `bg-blue-500/20` highlight and `cursor-pointer` on hover. Clicking sends `move_to` action with feet coordinates. `move` action hidden from ActionBar (added to ALWAYS_HIDDEN) — direction-based move still works for RuleBrain/LLM NPCs.

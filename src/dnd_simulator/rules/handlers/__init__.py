@@ -24,7 +24,13 @@ from dnd_simulator.rules.handlers.items import (
     handle_second_wind,
     handle_use_item,
 )
-from dnd_simulator.rules.handlers.movement import handle_dash, handle_disengage, handle_move, handle_wait
+from dnd_simulator.rules.handlers.movement import (
+    handle_dash,
+    handle_disengage,
+    handle_move,
+    handle_move_to,
+    handle_wait,
+)
 from dnd_simulator.rules.handlers.trade import handle_buy, handle_sell
 
 __all__ = [
@@ -45,6 +51,7 @@ __all__ = [
     "handle_flee",
     "handle_idle",
     "handle_move",
+    "handle_move_to",
     "handle_say",
     "handle_second_wind",
     "handle_sell",

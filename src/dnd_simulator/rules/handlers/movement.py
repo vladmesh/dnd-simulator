@@ -1,4 +1,4 @@
-"""Movement action handlers — move, dash, disengage, wait."""
+"""Movement action handlers — move, move_to, dash, disengage, wait."""
 
 from __future__ import annotations
 
@@ -6,8 +6,10 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from dnd_simulator.core.combat import Position
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.rules.modifiers import effective_speed
+from dnd_simulator.rules.movement import find_path, grid_distance, walk_path
 
 if TYPE_CHECKING:
     from dnd_simulator.core.action import Action
@@ -33,6 +35,67 @@ def handle_move(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
             data={"entity_id": actor.id, "direction": str(direction), "ft": ft},
         )
     )
+
+
+def handle_move_to(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
+    """Move to a specific (x, y) position via BFS pathfinding.
+
+    Player-only action triggered by clicking the battle map grid.
+    Finds a path, walks it spending movement budget, updates battle map position.
+    """
+    budget = ctx.turn_budget
+    if budget is None or budget.movement_remaining <= 0:
+        return ActionResult(success=False, error="No movement remaining")
+
+    combat_state = ctx.combat_state
+    if combat_state is None:
+        return ActionResult(success=False, error="Not in combat")
+
+    bm = combat_state.battle_map
+    cur_pos = bm.get_position(actor.id)
+    if cur_pos is None:
+        return ActionResult(success=False, error="Not on the battle map")
+
+    target_x = int(str(action.params["x"]))
+    target_y = int(str(action.params["y"]))
+    target = Position(target_x, target_y)
+
+    if target == cur_pos:
+        return ActionResult(success=False, error="Already at that position")
+
+    path = find_path(cur_pos, target, bm, actor.id)
+    if not path:
+        return ActionResult(success=False, error="No path to target")
+
+    final_pos, feet_spent = walk_path(path, budget.movement_remaining)
+
+    if final_pos == cur_pos:
+        return ActionResult(success=False, error="Cannot move — insufficient budget")
+
+    bm.set_position(actor.id, final_pos)
+    budget.movement_remaining -= feet_spent
+    moved_ft = grid_distance(cur_pos, final_pos)
+
+    logger.info(
+        "move_to", entity_id=actor.id, from_pos=(cur_pos.x, cur_pos.y), to_pos=(final_pos.x, final_pos.y), ft=moved_ft
+    )
+
+    # Emit log event for combat history
+    emit_fn(
+        Event(
+            event_type=EventType.ENTITY_MOVE,
+            source_layer="entities",
+            data={
+                "entity_id": actor.id,
+                "from_x": cur_pos.x,
+                "from_y": cur_pos.y,
+                "to_x": final_pos.x,
+                "to_y": final_pos.y,
+                "distance_ft": moved_ft,
+            },
+        )
+    )
+    return ActionResult()
 
 
 def handle_dash(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:

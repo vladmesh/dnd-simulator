@@ -31,6 +31,7 @@ class ActionType(StrEnum):
     UNEQUIP_FEET = "unequip_feet"
     EQUIP_RING = "equip_ring"
     UNEQUIP_RING = "unequip_ring"
+    MOVE_TO = "move_to"
     DISENGAGE = "disengage"
     SECOND_WIND = "second_wind"
     BUY = "buy"

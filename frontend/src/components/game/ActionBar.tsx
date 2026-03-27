@@ -88,7 +88,7 @@ export function ActionBar() {
 
   // buy/sell always handled by TradePanel; use_item/equip/unequip handled by
   // InventoryPanel in peaceful mode, but must stay in ActionBar during combat
-  const ALWAYS_HIDDEN = new Set(["buy", "sell"])
+  const ALWAYS_HIDDEN = new Set(["buy", "sell", "move"])
   const PEACEFUL_ONLY_HIDDEN = new Set(["use_item", "equip", "unequip"])
   const available = (awareness?.available_actions ?? []).filter(
     (a) => !ALWAYS_HIDDEN.has(a.name) && !(mode === "peaceful" && PEACEFUL_ONLY_HIDDEN.has(a.name)),
