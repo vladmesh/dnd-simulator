@@ -1,13 +1,11 @@
 # Sprint 010 Status
 
 **Sprint:** 010-e2e-polish
-**Phase:** 1 — E2E UX Fixes
+**Phase:** 1 — E2E UX Fixes (COMPLETE)
 **Updated:** 2026-03-28
 
 ## Current
 
-Phase 1, Task 3: Master panel + drawer UX — done. HP split into current/max, brain toggle returns warning on missing LLM key, consumable drawer has tooltip.
+Phase 1 complete. All 7 UX fixes from sprint 009 e2e report delivered: combat log i18n, battlemap click-to-inspect, faction display names, HP current/max edit, brain toggle warning, consumable tooltip, log overlay backfill. Combatants list removed — battlemap is sole combat UI. Quick fix: recompiled .mo file (broken charset), fixed Makefile compile-messages target. Integration tests green (94 passed). E2E green (8 scenarios + 6 regression).
 
-## Next Steps
-
-- All phase 1 tasks complete — ready for phase closure
+Ready for Phase 2 task generation.

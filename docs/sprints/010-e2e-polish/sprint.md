@@ -12,7 +12,7 @@ Sprint 009 оставил 9 minor findings в e2e-отчёте — мелкие 
 
 ---
 
-## Phase 1: E2E UX Fixes
+## Phase 1: E2E UX Fixes ✓
 
 7 фиксов из e2e-отчёта + расширение click-on-occupied-cell до inspect card на карте.
 
