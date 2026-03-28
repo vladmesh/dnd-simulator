@@ -14,7 +14,7 @@ Sprint 001 заложил инфраструктуру классовых мех
 
 ---
 
-## Phase 0: Structured Dice & Roll Breakdown
+## Phase 0: Structured Dice & Roll Breakdown ✓
 
 Рефактор dice pipeline: каждый бросок возвращает structured data с individual die faces, рероллами, advantage dice. Event data несёт полный breakdown. Фронтенд рендерит кликабельный лог с раскрывающейся детализацией.
 

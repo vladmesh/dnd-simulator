@@ -199,6 +199,66 @@ class TestCombatFlow:
         finally:
             sock.close()
 
+    def test_attack_event_has_structured_dice(self, ws_arena: tuple[str, str, str]) -> None:
+        """Attack events carry structured dice breakdown: attack_roll with d20, components, and damage_components."""
+        ws_base, sid, pid = ws_arena
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            msg = ws_recv(sock)
+            if msg["type"] != "turn":
+                msg = _recv_until(sock, "turn")
+                assert msg is not None
+
+            ws_send_action(sock, "attack", target_id="razor")
+
+            attack_data = None
+            for _ in range(20):
+                msg = ws_recv(sock)
+                if msg["type"] == "action_result" and msg["action"] == "attack":
+                    for ev in msg["events"]:
+                        data = ev.get("data", {})
+                        if data.get("attacker_id") and data.get("attack_roll"):
+                            attack_data = data
+                            break
+                    if attack_data:
+                        break
+                if msg["type"] == "turn":
+                    ws_send_action(sock, "attack", target_id="razor")
+
+            assert attack_data is not None, "Never got attack event with attack_roll"
+
+            # attack_roll structure
+            atk_roll = attack_data["attack_roll"]
+            assert "natural" in atk_roll
+            assert "total" in atk_roll
+            assert "advantage" in atk_roll
+            assert "disadvantage" in atk_roll
+            assert "components" in atk_roll
+
+            # d20 structure
+            d20 = atk_roll["d20"]
+            assert isinstance(d20["result"], int)
+            assert d20["sides"] == 20
+
+            # components are lists of {source, value, dice}
+            for comp in atk_roll["components"]:
+                assert "source" in comp
+                assert "value" in comp
+
+            # If hit, verify damage_components structure
+            if attack_data.get("hit"):
+                assert "damage_components" in attack_data
+                for dc in attack_data["damage_components"]:
+                    assert "source" in dc
+                    assert "amount" in dc
+                    assert "type" in dc
+                    assert "dice_detail" in dc
+                    for die in dc["dice_detail"]:
+                        assert "sides" in die
+                        assert "result" in die
+        finally:
+            sock.close()
+
     def test_end_turn(self, ws_arena: tuple[str, str, str]) -> None:
         """Send end_turn — round advances, eventually get next turn."""
         ws_base, sid, pid = ws_arena
