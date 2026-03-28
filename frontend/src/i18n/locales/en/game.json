@@ -108,5 +108,20 @@
   "source_weapon_magic": "Magic Weapon",
   "source_dueling": "Dueling",
   "source_blessed": "Bless",
-  "source_ability": "Ability"
+  "source_ability": "Ability",
+  "source_weapon": "Weapon",
+  "source_sneak_attack": "Sneak Attack",
+  "dmg_slashing": "slashing",
+  "dmg_bludgeoning": "bludgeoning",
+  "dmg_piercing": "piercing",
+  "dmg_fire": "fire",
+  "dmg_cold": "cold",
+  "dmg_lightning": "lightning",
+  "dmg_thunder": "thunder",
+  "dmg_poison": "poison",
+  "dmg_acid": "acid",
+  "dmg_necrotic": "necrotic",
+  "dmg_radiant": "radiant",
+  "dmg_force": "force",
+  "dmg_psychic": "psychic"
 }

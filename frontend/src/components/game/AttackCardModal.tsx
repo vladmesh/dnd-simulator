@@ -204,7 +204,7 @@ function DamageSection({
       </div>
 
       {components.map((comp, i) => (
-        <DamageComponentRow key={i} component={comp} />
+        <DamageComponentRow key={i} component={comp} t={t} />
       ))}
 
       {total != null && (
@@ -255,17 +255,25 @@ export function extractAttackCardData(
 // Single damage component
 // ---------------------------------------------------------------------------
 
-function DamageComponentRow({ component }: { component: DamageComponentData }) {
+function DamageComponentRow({
+  component,
+  t,
+}: {
+  component: DamageComponentData
+  t: (key: string, opts?: Record<string, unknown>) => string
+}) {
   const hasDice = component.dice_detail && component.dice_detail.length > 0
   const isFlat = !component.dice
+  const translatedType = t(`game:dmg_${component.type}`, { defaultValue: component.type })
+  const translatedSource = t(`game:source_${component.source}`, { defaultValue: component.source })
 
   return (
     <div className="space-y-1 rounded border border-border/20 bg-muted/30 p-2">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">{component.source}</span>
+        <span className="text-muted-foreground">{translatedSource}</span>
         {component.dice && (
           <span className="text-muted-foreground">
-            {component.dice} {component.type}
+            {component.dice} {translatedType}
           </span>
         )}
       </div>
@@ -286,7 +294,7 @@ function DamageComponentRow({ component }: { component: DamageComponentData }) {
 
       {isFlat && (
         <div className="text-sm font-bold">
-          +{component.amount} {component.type}
+          +{component.amount} {translatedType}
         </div>
       )}
     </div>
