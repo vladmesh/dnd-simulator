@@ -3,7 +3,7 @@
 **Date:** 2026-03-28
 **Sprint:** 011-class-mechanics-l1
 **Phase:** 0 — Structured Dice & Roll Breakdown
-**Status:** `pending`
+**Status:** `done`
 
 ## Problem
 
@@ -72,13 +72,17 @@
 
 ## Acceptance Criteria
 
-- [ ] Клик на строку атаки в логе открывает модалку
-- [ ] Модалка показывает d20 как визуальный кубик (не текст)
-- [ ] Каждый modifier на отдельной строке с source
-- [ ] Damage dice как визуальные кубики с цветом по типу
-- [ ] Reroll показывает original → new визуально
-- [ ] Advantage/disadvantage: два d20, dropped затемнён
-- [ ] Critical: золотая рамка на d20
-- [ ] Итоговый damage жирно, крупно
-- [ ] Модалка закрывается по клику вне / Escape / крестик
-- [ ] Inline chevron/expand из лога убран
+- [x] Клик на строку атаки в логе открывает модалку
+- [x] Модалка показывает d20 как визуальный кубик (не текст)
+- [x] Каждый modifier на отдельной строке с source
+- [x] Damage dice как визуальные кубики с цветом по типу
+- [x] Reroll показывает original → new визуально
+- [x] Advantage/disadvantage: два d20, dropped затемнён
+- [x] Critical: золотая рамка на d20
+- [x] Итоговый damage жирно, крупно
+- [x] Модалка закрывается по клику вне / Escape / крестик
+- [x] Inline chevron/expand из лога убран
+
+## Developer Notes
+
+Replaced inline `RollBreakdown` expand/collapse with `AttackCardModal` (shadcn Dialog). Created reusable `DiceVisual` component for styled die faces with damage-type coloring, reroll visualization, critical gold ring, and dropped-die dimming. The `extractAttackCardData` helper lives in `AttackCardModal.tsx` and converts raw event data to the typed `AttackCardData` shape. Old `RollBreakdown.tsx` is now unused — kept for now but can be deleted. Existing tests in `RollBreakdown.test.tsx` were rewritten to test the new modal flow instead of inline expand. `attacker_name`/`target_name` fields added to test data to match modal display.

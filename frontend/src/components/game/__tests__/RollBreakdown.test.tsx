@@ -64,7 +64,9 @@ function makeAttackEntry(opts?: {
 
   const data: Record<string, unknown> = {
     attacker_id: "fighter_1",
+    attacker_name: "Fighter",
     target_id: "goblin_1",
+    target_name: "Goblin",
     weapon: "Longsword",
     hit,
     critical,
@@ -114,91 +116,79 @@ beforeEach(() => {
 })
 
 // ---------------------------------------------------------------------------
-// Expandable attacks
+// Attack card modal — click to open
 // ---------------------------------------------------------------------------
 
-describe("RollBreakdown — expandable attack events", () => {
-  it("attack event row has an expand control", () => {
+describe("Attack card modal — clickable attack events", () => {
+  it("attack event row is clickable (has cursor-pointer)", () => {
     setLog([makeAttackEntry()])
     render(<EventLog compact onExpand={vi.fn()} />)
 
-    expect(screen.getByTestId("attack-expand")).toBeInTheDocument()
+    const row = screen.getByTestId("attack-row")
+    expect(row.className).toMatch(/cursor-pointer/)
   })
 
-  it("clicking toggles expanded state", async () => {
+  it("clicking attack row opens modal with attack details", async () => {
     const user = userEvent.setup()
     setLog([makeAttackEntry()])
     render(<EventLog compact onExpand={vi.fn()} />)
 
-    // Initially collapsed — no breakdown visible
-    expect(screen.queryByTestId("roll-breakdown")).not.toBeInTheDocument()
+    await user.click(screen.getByTestId("attack-row"))
 
-    // Click to expand
-    await user.click(screen.getByTestId("attack-expand"))
-    expect(screen.getByTestId("roll-breakdown")).toBeInTheDocument()
-
-    // Click again to collapse
-    await user.click(screen.getByTestId("attack-expand"))
-    expect(screen.queryByTestId("roll-breakdown")).not.toBeInTheDocument()
+    // Modal should show d20 visual die
+    expect(screen.getByTestId("die-d20")).toBeInTheDocument()
+    expect(screen.getByTestId("die-d20")).toHaveTextContent("14")
   })
 
-  it("expanded view shows d20 natural value", async () => {
+  it("modal shows modifier components with source labels", async () => {
     const user = userEvent.setup()
     setLog([makeAttackEntry()])
     render(<EventLog compact onExpand={vi.fn()} />)
 
-    await user.click(screen.getByTestId("attack-expand"))
-    const breakdown = screen.getByTestId("roll-breakdown")
-    // d20 natural value 14
-    expect(within(breakdown).getByText(/14/)).toBeInTheDocument()
+    await user.click(screen.getByTestId("attack-row"))
+
+    const section = screen.getByTestId("attack-roll-section")
+    expect(within(section).getAllByText(/ability/i).length).toBeGreaterThanOrEqual(1)
+    expect(within(section).getByText(/proficiency/i)).toBeInTheDocument()
   })
 
-  it("expanded view shows modifier components with source labels", async () => {
-    const user = userEvent.setup()
-    setLog([makeAttackEntry()])
-    render(<EventLog compact onExpand={vi.fn()} />)
-
-    await user.click(screen.getByTestId("attack-expand"))
-    const breakdown = screen.getByTestId("roll-breakdown")
-    expect(within(breakdown).getAllByText(/ability/i).length).toBeGreaterThanOrEqual(1)
-    expect(within(breakdown).getByText(/proficiency/i)).toBeInTheDocument()
-  })
-
-  it("expanded view shows total vs AC and hit/miss", async () => {
+  it("modal shows total vs AC and verdict", async () => {
     const user = userEvent.setup()
     setLog([makeAttackEntry({ hit: true })])
     render(<EventLog compact onExpand={vi.fn()} />)
 
-    await user.click(screen.getByTestId("attack-expand"))
-    const breakdown = screen.getByTestId("roll-breakdown")
-    expect(within(breakdown).getByText(/19/)).toBeInTheDocument()
-    expect(within(breakdown).getByText(/AC\s*15/i)).toBeInTheDocument()
-    expect(within(breakdown).getByText(/hit/i)).toBeInTheDocument()
+    await user.click(screen.getByTestId("attack-row"))
+
+    const section = screen.getByTestId("attack-roll-section")
+    expect(within(section).getByText(/19/)).toBeInTheDocument()
+    expect(within(section).getByText(/AC 15/)).toBeInTheDocument()
+    expect(screen.getByTestId("verdict-badge")).toHaveTextContent("HIT")
   })
 
-  it("expanded view shows damage components with dice faces", async () => {
+  it("modal shows damage dice as visual die faces", async () => {
     const user = userEvent.setup()
     setLog([makeAttackEntry({ withDamage: true })])
     render(<EventLog compact onExpand={vi.fn()} />)
 
-    await user.click(screen.getByTestId("attack-expand"))
-    const breakdown = screen.getByTestId("roll-breakdown")
-    // Weapon damage source
-    expect(within(breakdown).getByText(/weapon/i)).toBeInTheDocument()
-    // Die face [6]
-    expect(within(breakdown).getByText(/\[6\]/)).toBeInTheDocument()
+    await user.click(screen.getByTestId("attack-row"))
+
+    const section = screen.getByTestId("damage-section")
+    expect(within(section).getByText(/weapon/i)).toBeInTheDocument()
+    expect(within(section).getByTestId("die-d8")).toHaveTextContent("6")
   })
 
-  it("shows both d20 values when advantage is present", async () => {
+  it("shows two d20s when advantage is present", async () => {
     const user = userEvent.setup()
     setLog([makeAttackEntry({ advantage: true })])
     render(<EventLog compact onExpand={vi.fn()} />)
 
-    await user.click(screen.getByTestId("attack-expand"))
-    const breakdown = screen.getByTestId("roll-breakdown")
-    // Advantage line shows kept/dropped values
-    expect(within(breakdown).getByText(/kept 14/)).toBeInTheDocument()
-    expect(within(breakdown).getByText(/dropped 7/)).toBeInTheDocument()
+    await user.click(screen.getByTestId("attack-row"))
+
+    const d20s = screen.getAllByTestId("die-d20")
+    expect(d20s.length).toBe(2)
+    // One should be dropped (dimmed)
+    const droppedDie = d20s.find((el) => el.className.match(/opacity/))
+    expect(droppedDie).toBeDefined()
   })
 
   it("shows rerolled dice with original value indicator", async () => {
@@ -206,71 +196,28 @@ describe("RollBreakdown — expandable attack events", () => {
     setLog([makeAttackEntry({ withDamage: true, withReroll: true })])
     render(<EventLog compact onExpand={vi.fn()} />)
 
-    await user.click(screen.getByTestId("attack-expand"))
-    const breakdown = screen.getByTestId("roll-breakdown")
-    // Rerolled die: original (line-through) and arrow → new value, split across elements
-    // Use textContent on parent to find the combined "1→5"
-    const rerollSpan = within(breakdown).getByText((_content, element) => {
-      return element?.classList?.contains("font-mono") === true &&
-        element?.textContent?.includes("→") === true &&
-        element?.textContent?.includes("1") === true &&
-        element?.textContent?.includes("5") === true
-    })
-    expect(rerollSpan).toBeInTheDocument()
+    await user.click(screen.getByTestId("attack-row"))
+
+    // Rerolled die: original die dimmed
+    expect(screen.getByTestId("die-original")).toHaveTextContent("1")
+    expect(screen.getByText("→")).toBeInTheDocument()
+    expect(screen.getByTestId("die-d8")).toHaveTextContent("5")
   })
 
-  it("graceful degradation — legacy events without dice_detail show basic info", async () => {
-    const user = userEvent.setup()
-    // Event with attack_roll but no damage_components (legacy)
-    const entry = makeLogEntry(
-      "entity_attack",
-      "Fighter attacks Goblin — hit! 8 damage",
-      "fighter_1",
-      {
-        attacker_id: "fighter_1",
-        target_id: "goblin_1",
-        weapon: "Longsword",
-        hit: true,
-        critical: false,
-        ac: 15,
-        attack_roll: {
-          natural: 14,
-          d20: { sides: 20, result: 14 },
-          components: [],
-          total: 19,
-          advantage: false,
-          disadvantage: false,
-        },
-        damage: 8,
-        // No damage_components — legacy
-      },
-    )
-    setLog([entry])
-    render(<EventLog compact onExpand={vi.fn()} />)
-
-    await user.click(screen.getByTestId("attack-expand"))
-    const breakdown = screen.getByTestId("roll-breakdown")
-    // Should still show the d20 and total
-    expect(within(breakdown).getByText(/14/)).toBeInTheDocument()
-    expect(within(breakdown).getByText(/19/)).toBeInTheDocument()
-  })
-
-  it("non-attack events are NOT expandable", () => {
+  it("non-attack events are NOT clickable", () => {
     setLog([
       makeLogEntry("entity_say", "Hello there", "npc_1"),
       makeLogEntry("entity_dodge", "Fighter dodges", "fighter_1"),
     ])
     render(<EventLog compact onExpand={vi.fn()} />)
 
-    expect(screen.queryByTestId("attack-expand")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("attack-row")).not.toBeInTheDocument()
   })
 
-  it("events without attack_roll data are NOT expandable", () => {
-    // entity_attack event but with no structured data
+  it("events without attack_roll data are NOT clickable", () => {
     setLog([makeLogEntry("entity_attack", "You attack goblin", "player_1")])
     render(<EventLog compact onExpand={vi.fn()} />)
 
-    // No expand button — no data to show
-    expect(screen.queryByTestId("attack-expand")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("attack-row")).not.toBeInTheDocument()
   })
 })

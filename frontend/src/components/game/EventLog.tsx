@@ -39,8 +39,8 @@ import {
   EVENT_COLORS,
   hasAttackBreakdown,
 } from "@/lib/logProcessing"
-import type { DisplayEntry } from "@/lib/logProcessing"
-import { RollBreakdown } from "./RollBreakdown"
+import type { DisplayEntry, EventDisplayEntry } from "@/lib/logProcessing"
+import { AttackCardModal, extractAttackCardData } from "./AttackCardModal"
 
 // ---------------------------------------------------------------------------
 // Icon name → component mapping
@@ -111,10 +111,12 @@ function DisplayEntryRow({
   entry,
   expanded,
   onToggleExpand,
+  onAttackClick,
 }: {
   entry: DisplayEntry
   expanded?: boolean
   onToggleExpand?: () => void
+  onAttackClick?: (entry: EventDisplayEntry) => void
 }) {
   if (entry.kind === "round_header") {
     return (
@@ -179,27 +181,19 @@ function DisplayEntryRow({
   }
 
   // kind === "event"
-  const isExpandableAttack =
+  const isClickableAttack =
     entry.entry.event.event_type === "entity_attack" &&
     hasAttackBreakdown(entry.entry.event.data ?? undefined)
 
-  if (isExpandableAttack) {
+  if (isClickableAttack) {
     return (
-      <div className="px-3 py-0.5">
-        <div className="flex items-center gap-1.5">
-          <button
-            data-testid="attack-expand"
-            onClick={onToggleExpand}
-            className="shrink-0 text-muted-foreground hover:text-foreground"
-          >
-            {expanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
-          </button>
-          <EventIcon name={entry.icon} className={`size-3 shrink-0 ${entry.colorClass}`} />
-          <span className={entry.colorClass}>{entry.entry.event.description}</span>
-        </div>
-        {expanded && entry.entry.event.data && (
-          <RollBreakdown data={entry.entry.event.data} />
-        )}
+      <div
+        data-testid="attack-row"
+        className="flex cursor-pointer items-center gap-1.5 px-3 py-0.5 hover:bg-muted/40"
+        onClick={() => onAttackClick?.(entry)}
+      >
+        <EventIcon name={entry.icon} className={`size-3 shrink-0 ${entry.colorClass}`} />
+        <span className={entry.colorClass}>{entry.entry.event.description}</span>
       </div>
     )
   }
@@ -225,6 +219,7 @@ function CompactLog({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [expandedEntries, setExpandedEntries] = useState<Set<number>>(new Set())
+  const [modalEntry, setModalEntry] = useState<EventDisplayEntry | null>(null)
   const stickyRef = useRef(true)
 
   // Track whether user is scrolled to bottom
@@ -242,6 +237,10 @@ function CompactLog({
       el.scrollTop = el.scrollHeight
     }
   }, [entryCount])
+
+  const cardData = modalEntry?.entry.event.data
+    ? extractAttackCardData(modalEntry.entry.event.data)
+    : null
 
   return (
     <div className="flex items-stretch border-b border-border">
@@ -264,6 +263,7 @@ function CompactLog({
                 return next
               })
             }}
+            onAttackClick={setModalEntry}
           />
         ))}
       </div>
@@ -275,6 +275,13 @@ function CompactLog({
         >
           <ChevronDown className="size-4" />
         </button>
+      )}
+      {cardData && (
+        <AttackCardModal
+          data={cardData}
+          open={modalEntry != null}
+          onOpenChange={(open) => { if (!open) setModalEntry(null) }}
+        />
       )}
     </div>
   )
@@ -293,6 +300,7 @@ function FullLog({
 }) {
   const parentRef = useRef<HTMLDivElement>(null)
   const [expandedEntries, setExpandedEntries] = useState<Set<number>>(new Set())
+  const [modalEntry, setModalEntry] = useState<EventDisplayEntry | null>(null)
   const stickyRef = useRef(true)
 
   const virtualizer = useVirtualizer({
@@ -304,12 +312,6 @@ function FullLog({
       if (entry.kind === "turn_header") return 28
       if (entry.kind === "aggregated_move" && expandedEntries.has(index)) {
         return 24 + entry.entries.length * 20
-      }
-      if (entry.kind === "event" && expandedEntries.has(index)) {
-        // Rough estimate: d20 line + advantage line + damage header + components
-        const comps = entry.entry.event.data?.damage_components
-        const compCount = Array.isArray(comps) ? comps.length : 0
-        return 24 + 20 + 16 + compCount * 16
       }
       return 24
     },
@@ -331,6 +333,10 @@ function FullLog({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entryCount])
+
+  const cardData = modalEntry?.entry.event.data
+    ? extractAttackCardData(modalEntry.entry.event.data)
+    : null
 
   return (
     <div ref={parentRef} onScroll={handleScroll} className="h-full overflow-y-auto font-mono text-xs">
@@ -362,11 +368,19 @@ function FullLog({
                       return next
                     })
                   }}
+                  onAttackClick={setModalEntry}
                 />
               </div>
             )
           })}
         </div>
+      )}
+      {cardData && (
+        <AttackCardModal
+          data={cardData}
+          open={modalEntry != null}
+          onOpenChange={(open) => { if (!open) setModalEntry(null) }}
+        />
       )}
     </div>
   )

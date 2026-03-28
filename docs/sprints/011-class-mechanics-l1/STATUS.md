@@ -6,9 +6,9 @@
 
 ## Current
 
-Phase 0 reopened. Tasks 1-3 done (structured dice pipeline, attack event data, inline breakdown). Task 4 pending: attack card modal — полноценная модалка по клику на атаку в логе с подробным визуальным breakdown каждого кубика и модификатора.
+Phase 0, Task 4: Attack Card Modal — done. Click on attack event opens full modal with visual dice, modifiers, damage breakdown.
 
 ## Next Steps
 
-- Task 4: Attack Card Modal
-- Then close Phase 0 again
+- Close Phase 0
+- Begin Phase 1
