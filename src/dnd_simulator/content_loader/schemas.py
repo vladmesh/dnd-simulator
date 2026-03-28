@@ -402,3 +402,4 @@ class PlayerContent(BaseModel):
     attacks: list[AttackContent] = []
     items: list[ItemContent] = []
     ability_scores: CoercedAbilityScores = AbilityScoresContent()
+    class_features: dict[str, Any] = {}

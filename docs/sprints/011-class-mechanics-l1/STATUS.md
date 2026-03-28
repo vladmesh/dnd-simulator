@@ -2,15 +2,15 @@
 
 **Sprint:** 011-class-mechanics-l1
 **Phase:** 4 — Content & Tests
-**Updated:** 2026-03-28
+**Updated:** 2026-03-29
 
 ## Current
 
-Phase 4, Task 2: Unit Tests — Combat Mechanics Coverage — done. 25 new tests in test_combat_pipeline.py covering full attack pipeline composition, sneak attack damage flow, finesse ability selection, weapon property catalog preservation, and fighting style interactions.
+Phase 4, Task 3: Integration Tests — Full Fighter & Rogue Combat Turns — done. 6 tests pass, 6 real code bugs fixed.
 
 ## Next Steps
 
-- Task 3: Integration tests for complete Fighter & Rogue combat turns
+- Close phase 4
 
 ## Completed Phases
 

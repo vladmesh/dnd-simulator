@@ -23,6 +23,8 @@ class CreatePlayerRequest(BaseModel):
     start_location: str = ""
     ability_scores: dict[str, int] | None = None
     attacks: list[dict[str, object]] | None = None
+    items: list[dict[str, object]] | None = None
+    class_features: dict[str, object] | None = None
 
 
 class SpawnCreatureRequest(BaseModel):
@@ -76,6 +78,14 @@ class GiveItemRequest(BaseModel):
     is_magic: bool | None = None
     is_finesse: bool | None = None
     grant_actions: list[str] | None = None
+    # Armor fields
+    armor_id: str | None = None
+    base_ac: int | None = None
+    max_dex_bonus: int | None = None
+    strength_req: int | None = None
+    # Shield fields
+    shield_id: str | None = None
+    ac_bonus: int | None = None
 
 
 class SetBrainRequest(BaseModel):
@@ -203,6 +213,7 @@ class CreatureResponse(BaseModel):
     # Inventory & equipment
     inventory: list[dict[str, str]] = Field(default_factory=list)
     equipped_weapon: dict[str, str] | None = None
+    resource_pools: list[dict[str, object]] = Field(default_factory=list)
 
 
 class TemplateListItem(BaseModel):

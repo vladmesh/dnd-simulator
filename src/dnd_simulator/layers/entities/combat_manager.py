@@ -103,6 +103,10 @@ class CombatManager:
         )
         return combat
 
+    def reset_turn_state(self, creature_id: str) -> None:
+        """Reset per-turn combat state for a creature (sneak attack used, etc.)."""
+        self._sneak_attack_used.discard(creature_id)
+
     def end_combat_round(self, location_id: str) -> None:
         """Called by game loop at end of each combat round."""
         combat = self._combats.get(location_id)

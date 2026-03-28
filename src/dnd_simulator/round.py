@@ -219,6 +219,9 @@ class Round:
         if creature.brain is None:
             return []
 
+        # Reset per-turn combat state (sneak attack availability, etc.)
+        self._entities.reset_combat_turn_state(creature.id)
+
         # Tick timed conditions at the start of each turn
         expired = tick_conditions(creature.conditions)
         if expired:

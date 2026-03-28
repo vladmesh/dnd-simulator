@@ -46,6 +46,7 @@ _LOGGED_EVENTS = {
     EventType.ENTITY_BLESS,
     EventType.ENTITY_EQUIP,
     EventType.ENTITY_UNEQUIP,
+    EventType.ENTITY_SECOND_WIND,
     EventType.COMBAT_STARTED,
     EventType.COMBAT_ENDED,
     EventType.ENCOUNTER_SPAWNED,
@@ -174,6 +175,10 @@ class EntitiesLayer(Layer):
                 data={"location_id": location_id, "round_number": round_number},
             )
         )
+
+    def reset_combat_turn_state(self, creature_id: str) -> None:
+        """Reset per-turn combat state for a creature (e.g. sneak attack availability)."""
+        self._combat.reset_turn_state(creature_id)
 
     def end_combat_round(self, location_id: str) -> None:
         """Called by game loop at end of each combat round."""

@@ -256,6 +256,15 @@ class QueryHandler:
                         for item in entity.inventory
                     ],
                     "equipped_weapon": self._serialize_equipped_weapon(entity.equipped_weapon),
+                    "resource_pools": [
+                        {
+                            "id": rp.id,
+                            "max_uses": rp.max_uses,
+                            "current_uses": rp.current_uses,
+                            "reset_on": rp.reset_on.value,
+                        }
+                        for rp in entity.resource_pools
+                    ],
                 }
             )
         if isinstance(entity, Character):

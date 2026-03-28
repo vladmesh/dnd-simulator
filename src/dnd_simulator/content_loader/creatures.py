@@ -225,6 +225,8 @@ def _to_player(
 
     # class_features and resource_pools still use raw dict
     raw_data: dict[str, Any] = {}
+    if model.class_features:
+        raw_data["class_features"] = model.class_features
 
     return PlayerCharacter(
         id=player_id,

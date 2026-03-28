@@ -49,4 +49,20 @@ Tests verify complete combat turns for class-featured characters through the ful
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All 6 integration tests pass on the live docker compose stack. Several real code bugs were discovered and fixed during implementation:
+
+1. **`CreatePlayerRequest` missing `items` and `class_features` fields** — players couldn't be created with pre-equipped gear or fighting styles via the API. Added both fields to the schema; the full pipeline already supported them through `PlayerContent`.
+
+2. **`GiveItemRequest` missing armor/shield fields** — `base_ac`, `max_dex_bonus`, `strength_req`, `armor_id`, `shield_id`, `ac_bonus` were silently dropped by Pydantic validation, creating items without proper `armor_def`/`shield_def`.
+
+3. **`_entity_detail` missing `resource_pools`** — the master REST endpoint for creature details didn't include resource pool data. Added serialization.
+
+4. **Battle map configs not wired to sessions** — `load_battle_maps()` was called in `get_world_template()` for display but never passed to `EntitiesLayer` during session creation. Entities always used the default 60×60 map. Fixed by loading and remapping region battle maps to location IDs.
+
+5. **`ENTITY_SECOND_WIND` not in `_LOGGED_EVENTS`** — second wind events were emitted but never logged to `_location_log`, making them invisible to `get_perceived_events`.
+
+6. **Sneak attack once-per-turn reset was per-round, not per-turn** — `_sneak_attack_used` was only cleared at `end_combat_round`, meaning a peaceful-mode attack that triggered sneak attack would block sneak attack for the entire first combat round. Fixed by adding `reset_turn_state()` that clears per creature at the start of each combat turn, matching D&D 5e RAW.

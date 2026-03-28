@@ -1,0 +1,4 @@
+combat_floor:
+  name: Combat Arena Floor
+  region: combat_arena
+  description: A small arena for testing combat mechanics.

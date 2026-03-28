@@ -1,0 +1,71 @@
+target_dummy:
+  name: Training Dummy
+  start_location: combat_floor
+  role: gladiator
+  race: human
+  class: commoner
+  faction: enemy_faction
+  hp: 100
+  ac: 8
+  speed: 30
+  ability_scores:
+    str: 8
+    dex: 8
+    con: 10
+    int: 6
+    wis: 8
+    cha: 6
+  personality: 'You do nothing. End your turn immediately.'
+  items:
+  - name: Stick
+    type: weapon
+    weapon_id: club
+    category: simple
+    attack_name: stick hit
+    damage:
+    - dice: 1d4
+      type: bludgeoning
+    ability: str
+
+ally_fighter_npc:
+  name: Allied Fighter
+  start_location: combat_floor
+  role: gladiator
+  race: human
+  class: fighter
+  faction: hero_faction
+  class_features:
+    fighting_style: defense
+  hp: 40
+  ac: 16
+  speed: 30
+  ability_scores:
+    str: 16
+    dex: 11
+    con: 14
+    int: 10
+    wis: 12
+    cha: 13
+  personality: 'You attack the Training Dummy.'
+  items:
+  - name: Longsword
+    type: weapon
+    weapon_id: longsword
+    category: martial
+    attack_name: longsword slash
+    damage:
+    - dice: 1d8
+      type: slashing
+    ability: str
+  - name: Chain Mail
+    type: armor
+    armor_id: chain_mail
+    category: heavy
+    base_ac: 16
+    strength_req: 13
+    equipped: true
+  - name: Shield
+    type: shield
+    shield_id: shield
+    ac_bonus: 2
+    equipped: true

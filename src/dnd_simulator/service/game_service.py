@@ -14,6 +14,7 @@ from dnd_simulator.content_loader import (
     LayerType,
     extract_region_adjacency,
     extract_region_terrains,
+    load_battle_maps,
     load_catalog,
     load_factions,
     load_locations,
@@ -137,11 +138,19 @@ class GameService(
         for squad in squads.values():
             squad.member_crs = [monster_templates[tid].cr for tid in squad.member_templates]
         ecology_layer = EcologyLayer(squads=list(squads.values()), location_graph=location_graph)
+        # Load battle maps from geography and remap region_id → location_id
+        region_battle_maps = load_battle_maps(layer_paths["geography"])
+        battle_map_configs = {}
+        for loc in locations:
+            if loc.region_id in region_battle_maps:
+                battle_map_configs[loc.id] = region_battle_maps[loc.region_id]
+
         entities_layer = EntitiesLayer(
             entities=entities,
             summarizer=summarizer,
             monster_templates=monster_templates,
             encounter_tables=encounter_tables,
+            battle_map_configs=battle_map_configs,
         )
 
         # Assign brains via factory (content_loader only parses data, not brains)
