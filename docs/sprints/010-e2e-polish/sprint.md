@@ -47,7 +47,9 @@ Sprint 009 оставил 9 minor findings в e2e-отчёте — мелкие 
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Extract co-located components to own files](tasks/phase2-task1-extract-colocated.md)
+2. [Extract drawer sections into standalone components](tasks/phase2-task2-extract-drawers.md)
+3. [Extract ActionButton, finalize orchestration](tasks/phase2-task3-action-button-orchestration.md)
 
 ---
 
