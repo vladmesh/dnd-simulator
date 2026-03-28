@@ -33,7 +33,25 @@ Sprint 001 заложил инфраструктуру классовых мех
 3. [Frontend Clickable Roll Breakdown](tasks/phase0-task3-frontend-clickable-log.md)
 4. [Attack Card Modal](tasks/phase0-task4-attack-card-modal.md)
 
-## Phase 1: Weapon Properties & Fighting Styles
+## Phase 1: BattleMap Reachability
+
+Единый расчёт reachability на бэкенде. Устранить дублирование BFS между фронтом и бэком. Фронт становится тупым рендерером — рисует то, что бэк посчитал.
+
+- `rules/movement.py` — `compute_reachable(start, budget, battle_map, mover_id)` → `dict[Position, list[Position]]` (позиция → кратчайший путь). Dijkstra с D&D 5e diagonal costs (5/10 чередование)
+- `find_path` → обёртка над `compute_reachable` (убирает дублирование алгоритма)
+- `move_to` handler → берёт path из reachable map, гарантия согласованности фронт/бэк
+- `AwarenessBuilder` → добавляет `reachable: list[[x, y]]` в `CombatAwareness`
+- Frontend `BattleMap.tsx` → убрать `computeReachable()` и `buildBlockedEdges()`, рисовать reachable по данным с бэка
+- RuleBrain → использовать reachable для умного движения (обход стен, проверка достижимости цели)
+
+**Верифицируем:** Unit tests: reachable совпадает с ожидаемым при стенах и diagonal movement. `move_to` на edge cell работает корректно (баг из Gemini report). Фронт подсвечивает ровно те клетки, что бэк вернул. RuleBrain не ходит в стену.
+
+**Tasks:**
+
+1. [Backend Reachability Engine](tasks/phase1-task1-reachability-engine.md)
+2. [Awareness Pipeline + Frontend Simplification](tasks/phase1-task2-awareness-frontend.md)
+
+## Phase 2: Weapon Properties & Fighting Styles
 
 Добавить D&D 5e свойства оружия на WeaponDef и использовать их в боевых механиках.
 
@@ -47,10 +65,10 @@ Sprint 001 заложил инфраструктуру классовых мех
 
 **Tasks:**
 
-1. [Weapon Properties & Fighting Style Mechanics](tasks/phase1-task1-weapon-props-fighting-styles.md)
-2. [SRD Weapon & Armor Catalogs](tasks/phase1-task2-weapon-armor-catalogs.md)
+1. [Weapon Properties & Fighting Style Mechanics](tasks/phase2-task1-weapon-props-fighting-styles.md)
+2. [SRD Weapon & Armor Catalogs](tasks/phase2-task2-weapon-armor-catalogs.md)
 
-## Phase 2: Cunning Action Choice & SA Faction Check
+## Phase 3: Cunning Action Choice & SA Faction Check
 
 Дать рогу реальный выбор cost_mode и исправить SA ally detection.
 
@@ -66,7 +84,7 @@ Sprint 001 заложил инфраструктуру классовых мех
 
 _(генерируются отдельно перед началом фазы)_
 
-## Phase 3: Content & Tests
+## Phase 4: Content & Tests
 
 Закрыть долг Sprint 001 Phase 4. Контент + полное тестовое покрытие.
 
