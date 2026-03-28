@@ -16,7 +16,7 @@ export function WorldOverview({ sessionId, worldState }: Props) {
     <div className="space-y-8">
       <RegionsTable regions={worldState.regions} />
       <NationsTable sessionId={sessionId} nations={worldState.nations} />
-      <SettlementsTable sessionId={sessionId} settlements={worldState.settlements} />
+      <SettlementsTable sessionId={sessionId} settlements={worldState.settlements} regions={worldState.regions} />
     </div>
   )
 }
@@ -195,14 +195,18 @@ function NationsTable({
 function SettlementsTable({
   sessionId,
   settlements,
+  regions,
 }: {
   sessionId: string
   settlements: Array<Record<string, unknown>>
+  regions: Array<Record<string, unknown>>
 }) {
   const { t } = useTranslation(["master"])
   const [editing, setEditing] = useState<string | null>(null)
   const [values, setValues] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
+
+  const regionMap = Object.fromEntries(regions.map((r) => [String(r.id), String(r.name)]))
 
   if (settlements.length === 0) {
     return <p className="text-sm text-muted-foreground">{t("master:no_settlements")}</p>
@@ -257,7 +261,7 @@ function SettlementsTable({
                 <tr key={id} className="border-t border-border">
                   <td className="px-3 py-2 font-mono text-xs">{id}</td>
                   <td className="px-3 py-2">{String(s.name)}</td>
-                  <td className="px-3 py-2">{String(s.region_id ?? "—")}</td>
+                  <td className="px-3 py-2">{regionMap[String(s.region_id)] ?? "—"}</td>
                   <td className="px-3 py-2">
                     {isEditing ? (
                       <Input

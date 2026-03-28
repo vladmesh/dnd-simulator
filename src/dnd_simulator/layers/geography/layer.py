@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.location import LocationGraph
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
+from dnd_simulator.i18n import _
 from dnd_simulator.layers.geography.models import (
     Connection,
     Direction,
@@ -72,7 +73,7 @@ class GeographyLayer(Layer):
 
             if steps >= 1:
                 season = get_season(time.month, region.latitude)
-                for _ in range(steps):
+                for _step in range(steps):
                     base_temp = calculate_base_temperature(region.latitude, time.month, time.hour, region.elevation)
                     region.weather = self._weather.next_weather(region, season, base_temp)
 
@@ -91,8 +92,8 @@ class GeographyLayer(Layer):
                             "new_weather": region.weather.value,
                             "temperature": region.temperature,
                         },
-                        description=(
-                            f"Weather in {region.name} changed from {old_weather.value} to {region.weather.value}"
+                        description=_("Weather in {region} changed from {old} to {new}").format(
+                            region=region.name, old=_(old_weather.value), new=_(region.weather.value)
                         ),
                     )
                 )

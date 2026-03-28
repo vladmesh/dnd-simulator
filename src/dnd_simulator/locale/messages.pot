@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-03-28 01:45+0200\n"
+"POT-Creation-Date: 2026-03-28 14:09+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -15,88 +15,88 @@ msgstr ""
 "Generated-By: pygettext.py 1.5\n"
 
 
-#: src/dnd_simulator/adapters/api/routes_master.py:98
-#: src/dnd_simulator/adapters/api/routes_master.py:121
+#: src/dnd_simulator/adapters/api/routes_master.py:99
+#: src/dnd_simulator/adapters/api/routes_master.py:122
 msgid "World '{}' already exists"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:168
+#: src/dnd_simulator/adapters/api/routes_master.py:169
 msgid "World '{}' deleted"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:178
-#: src/dnd_simulator/adapters/api/routes_master.py:188
+#: src/dnd_simulator/adapters/api/routes_master.py:179
+#: src/dnd_simulator/adapters/api/routes_master.py:189
 msgid "World '{}' not found"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:236
+#: src/dnd_simulator/adapters/api/routes_master.py:237
 msgid "File '{}' updated"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:249
+#: src/dnd_simulator/adapters/api/routes_master.py:250
 msgid "Layer '{}' scaffolded in world '{}'"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:262
+#: src/dnd_simulator/adapters/api/routes_master.py:263
 msgid "Layer '{}' forked to custom in world '{}'"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:344
+#: src/dnd_simulator/adapters/api/routes_master.py:345
 msgid "Session {} deleted"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:392
-#: src/dnd_simulator/adapters/api/routes_master.py:442
-#: src/dnd_simulator/adapters/api/routes_master.py:456
+#: src/dnd_simulator/adapters/api/routes_master.py:393
+#: src/dnd_simulator/adapters/api/routes_master.py:448
+#: src/dnd_simulator/adapters/api/routes_master.py:462
 msgid "No fields to update"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:397
+#: src/dnd_simulator/adapters/api/routes_master.py:398
 msgid "Creature {} updated"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:408
+#: src/dnd_simulator/adapters/api/routes_master.py:409
 msgid "Creature {} removed"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:430
+#: src/dnd_simulator/adapters/api/routes_master.py:433
 msgid "Creature {} brain set to {}"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:447
+#: src/dnd_simulator/adapters/api/routes_master.py:453
 msgid "Nation {} updated"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:461
+#: src/dnd_simulator/adapters/api/routes_master.py:467
 msgid "Settlement {} updated"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:475
+#: src/dnd_simulator/adapters/api/routes_master.py:481
 msgid "Advanced {}h."
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:477
+#: src/dnd_simulator/adapters/api/routes_master.py:483
 msgid "Events:"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:490
+#: src/dnd_simulator/adapters/api/routes_master.py:496
 msgid "Language set to '{}'"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:513
+#: src/dnd_simulator/adapters/api/routes_master.py:519
 msgid "Saved as '{}'"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:526
+#: src/dnd_simulator/adapters/api/routes_master.py:532
 msgid "Loaded '{}'"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:539
+#: src/dnd_simulator/adapters/api/routes_master.py:545
 msgid "Deleted '{}'"
 msgstr ""
 
 #: src/dnd_simulator/adapters/api/routes_player.py:39
-#: src/dnd_simulator/service/game_service.py:760
+#: src/dnd_simulator/service/game_service.py:761
 msgid "No player in this session"
 msgstr ""
 

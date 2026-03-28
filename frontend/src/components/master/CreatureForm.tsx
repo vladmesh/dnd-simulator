@@ -90,9 +90,18 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
     promise
       .then(() => {
         onSaved()
-        toast.success(isEdit ? t("master:edit_creature") : t("master:spawn_creature"))
+        toast.success(isEdit ? t("master:creature_updated") : t("master:creature_spawned"))
       })
-      .catch((err) => setError(String(err.body?.detail ?? err.message)))
+      .catch((err) => {
+          const detail = err.body?.detail
+          if (Array.isArray(detail)) {
+            setError(detail.map((e: { loc?: string[]; msg?: string }) =>
+              `${(e.loc ?? []).slice(-1).join(".")}: ${e.msg}`
+            ).join("; "))
+          } else {
+            setError(String(detail ?? err.message))
+          }
+        })
       .finally(() => setSaving(false))
   }
 
@@ -125,8 +134,8 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
                   value={form.entity_type}
                   onChange={(e) => set("entity_type", e.target.value)}
                 >
-                  <option value="npc">NPC</option>
-                  <option value="monster">Monster</option>
+                  <option value="npc">{t("master:filter_npc")}</option>
+                  <option value="monster">{t("master:filter_monster")}</option>
                 </select>
               </div>
             </>
@@ -138,12 +147,12 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
           </div>
 
           <div>
-            <Label htmlFor="current_hp">{t("master:field_current_hp", "Current HP")}</Label>
+            <Label htmlFor="current_hp">{t("master:field_current_hp")}</Label>
             <Input id="current_hp" type="number" min={0} max={999} value={form.current_hp} onChange={(e) => set("current_hp", parseInt(e.target.value) || 0)} />
           </div>
           {isEdit && (
             <div>
-              <Label htmlFor="max_hp">{t("master:field_max_hp", "Max HP")}</Label>
+              <Label htmlFor="max_hp">{t("master:field_max_hp")}</Label>
               <Input id="max_hp" type="number" min={1} max={999} value={form.max_hp} onChange={(e) => set("max_hp", parseInt(e.target.value) || 1)} />
             </div>
           )}
@@ -201,7 +210,7 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
 
           {isEdit && (
             <div className="col-span-2">
-              <Label>{t("master:field_conditions", "Conditions")}</Label>
+              <Label>{t("master:field_conditions")}</Label>
               <div className="flex flex-wrap gap-1 mt-1">
                 {ALL_CONDITIONS.map((c) => {
                   const active = form.conditions.includes(c)
@@ -223,7 +232,7 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
                         }))
                       }
                     >
-                      {c}
+                      {t(`master:cond_${c}`)}
                     </button>
                   )
                 })}

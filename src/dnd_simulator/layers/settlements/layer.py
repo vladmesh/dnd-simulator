@@ -184,6 +184,7 @@ class SettlementsLayer(Layer):
                         {
                             "id": s.id,
                             "name": s.name,
+                            "region_id": s.region_id,
                             "type": s.type.value,
                             "population": s.population,
                             "prosperity": s.prosperity,
