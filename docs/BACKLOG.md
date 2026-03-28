@@ -43,6 +43,10 @@
 - [ ] **could** `mobile-layout` — Мобильная адаптация dashboard
 - [ ] **could** `log-filter-tabs` — Фильтрация лога табами (Все/Бой/Диалоги)
 
+## Bugs
+
+- [ ] **should** `battle-map-configs-not-wired` — `battle_map_configs` из `regions.yaml` не передаётся в `EntitiesLayer` при создании сессии в `game_service.py`. Все combat maps дефолтят в 60×60. `load_battle_maps()` keyed by region_id, `CombatManager` ищет по location_id — нужен маппинг через `location_graph`
+
 ## Tech Debt (from audits 2026-03-25)
 
 - [x] `god-class-entities` — ~~EntitiesLayer 1215 строк~~ FIXED Sprint 005: extracted awareness_builder, activation_manager, query_handler, combat_manager, perception

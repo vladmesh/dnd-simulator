@@ -4,6 +4,7 @@ dummy:
   role: gladiator
   race: human
   class: commoner
+  faction: enemy_faction
   hp: 50
   ac: 8
   speed: 30
@@ -26,4 +27,35 @@ dummy:
     damage:
     - dice: 1d4
       type: bludgeoning
+    ability: str
+
+ally_fighter:
+  name: Ally Fighter
+  start_location: test_floor
+  role: gladiator
+  race: human
+  class: fighter
+  faction: hero_faction
+  hp: 40
+  ac: 15
+  speed: 30
+  ability_scores:
+    str: 16
+    dex: 12
+    con: 14
+    int: 10
+    wis: 12
+    cha: 10
+  personality: 'You attack the Training Dummy.
+
+    '
+  items:
+  - name: Longsword
+    type: weapon
+    weapon_id: longsword
+    category: martial
+    attack_name: longsword slash
+    damage:
+    - dice: 1d8
+      type: slashing
     ability: str

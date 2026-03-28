@@ -68,7 +68,7 @@ Sprint 001 заложил инфраструктуру классовых мех
 1. [Weapon Properties & Fighting Style Mechanics](tasks/phase2-task1-weapon-props-fighting-styles.md)
 2. [SRD Weapon & Armor Catalogs](tasks/phase2-task2-weapon-armor-catalogs.md)
 
-## Phase 3: Cunning Action Choice & SA Faction Check
+## Phase 3: Cunning Action Choice & SA Faction Check ✓
 
 Дать рогу реальный выбор cost_mode и исправить SA ally detection.
 

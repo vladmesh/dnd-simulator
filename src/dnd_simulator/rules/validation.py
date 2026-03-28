@@ -82,6 +82,24 @@ def check_action_mode(actor: Creature, action: Action, ctx: ActionContext) -> Va
     return None
 
 
+def check_cost_mode(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
+    """If action carries a cost_mode param, the creature must have a matching cost override."""
+    cost_mode = action.params.get("cost_mode") if action.params else None
+    if not cost_mode:
+        return None
+
+    from dnd_simulator.rules.actions import collect_cost_overrides
+
+    for ov in collect_cost_overrides(actor):
+        if ov.action_type == action.name and ov.cost_type.value == str(cost_mode):
+            return None
+
+    return ValidationError(
+        "INVALID_COST_MODE",
+        _("No cost override '{mode}' available for '{action}'").format(mode=cost_mode, action=action.name),
+    )
+
+
 def check_budget(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
     """Turn budget must cover the action cost."""
     if ctx.turn_budget is None:
@@ -190,6 +208,7 @@ _CHECKS = [
     check_actor_alive,
     check_actor_active,
     check_action_mode,
+    check_cost_mode,
     check_budget,
     check_has_item,
     check_target_valid,

@@ -1,5 +1,6 @@
 name: Sneak Attack Test
 description: Minimal arena for testing sneak attack mechanics.
+default_player_faction: hero_faction
 
 layers:
   geography:
