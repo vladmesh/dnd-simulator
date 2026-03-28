@@ -93,7 +93,8 @@ frontend/          — React + TypeScript SPA (Vite + shadcn/ui + Zustand)
 ├── src/components/         — LandingPage (Player/DM split), ErrorBoundary
 ├── src/components/setup/   — world picker, character creation, session connect (player flow)
 ├── src/components/game/    — GameScreen (dashboard: 3-col grid), EventLog (compact strip + expand overlay),
-│                             BattleMap (interactive CSS Grid, click-to-move), ActionBar (budget display, drawers),
+│                             BattleMap (interactive CSS Grid, click-to-move, click-to-inspect),
+│                             ActionBar (orchestrator) + action-bar/ (ActionButton, SayAction, drawers, utils),
 │                             CombatPanel, NpcInspectModal, Perception, LocationPanel
 ├── src/components/master/  — MasterScreen (Worlds/Sessions tabs), WorldEditor (layer stepper),
 │                             EntityListEditor (schema-driven CRUD), SchemaForm, CatalogBrowser,

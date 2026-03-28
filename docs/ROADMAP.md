@@ -79,9 +79,15 @@ Pydantic content models как единый source of truth для структ�
 Переработка игрового экрана в dashboard: три колонки панелей (Nearby, Character+Inventory, Location) всегда видны. Компактный лог (1-2 строки + expand overlay). Action bar с budget display, drawers для зелий/классовых умений/инвентаря. NPC inspect modal (описание, фракция, действия). Боевой layout: CombatPanel в левой колонке, интерактивная CSS Grid BattleMap в правой (заменяет LocationPanel в бою). Click-to-move: BFS pathfinding + подсветка доступных клеток + `move_to(x, y)` action на бэкенде.
 → [план спринта](sprints/009-ui-layout/sprint.md)
 
+### Sprint 010 — E2E Polish + ActionBar Decomposition (фазы 1-2)
+Закрытие UX-багов из e2e-отчёта sprint 009: combat log i18n, click-to-inspect на BattleMap (клик по фигурке → карточка существа, combatants list убран), NPC inspect faction display, HP edit current/max, brain toggle warning toast, consumable drawer tooltip, log overlay backfill. ActionBar.tsx (532 строк) декомпозирован на 8 субкомпонентов (action-bar/), оркестратор < 150 строк.
+→ [план спринта](sprints/010-e2e-polish/sprint.md)
+
 ## In Progress
 
-_(нет активного спринта)_
+### Sprint 011 — Class Mechanics L1 Completion (фазы 1-3)
+Типизированное оружие/броня с D&D 5e свойствами (`is_two_handed`, `light`, `heavy`, `versatile`), Great Weapon Fighting style, Cunning Action с выбором cost_mode (bonus/action), SA faction check (ally detection через faction relations), SRD каталог оружия/брони, Fighter/Rogue NPC в контенте, unit tests для всех механик Sprint 001.
+→ [план спринта](sprints/011-class-mechanics-l1/sprint.md)
 
 ## Planned
 
