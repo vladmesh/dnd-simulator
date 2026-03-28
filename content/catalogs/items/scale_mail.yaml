@@ -1,0 +1,6 @@
+name: Scale Mail
+type: armor
+armor_id: scale_mail
+category: medium
+base_ac: 14
+max_dex_bonus: 2

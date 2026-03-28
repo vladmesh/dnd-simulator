@@ -1,0 +1,10 @@
+name: Greatsword
+type: weapon
+weapon_id: greatsword
+category: martial
+attack_name: greatsword slash
+damage:
+  - dice: "2d6"
+    type: slashing
+is_two_handed: true
+is_heavy: true

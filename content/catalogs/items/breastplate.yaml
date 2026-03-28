@@ -1,0 +1,6 @@
+name: Breastplate
+type: armor
+armor_id: breastplate
+category: medium
+base_ac: 14
+max_dex_bonus: 2

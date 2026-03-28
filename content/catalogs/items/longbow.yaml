@@ -1,0 +1,11 @@
+name: Longbow
+type: weapon
+weapon_id: longbow
+category: martial
+attack_name: longbow shot
+damage:
+  - dice: "1d8"
+    type: piercing
+ability: dex
+is_two_handed: true
+is_heavy: true

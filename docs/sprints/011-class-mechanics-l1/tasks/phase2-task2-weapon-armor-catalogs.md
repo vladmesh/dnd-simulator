@@ -73,4 +73,8 @@ Create YAML files in `content/catalogs/items/`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward data task. Created 12 weapon YAML files (longsword, greatsword, greataxe, shortsword, rapier, mace, warhammer, quarterstaff, longbow, shortbow, hand_crossbow) plus updated dagger with `is_light: true`. Created 12 armor files (padded through plate) and 1 shield. All files follow existing dagger.yaml format. Light armor omits max_dex_bonus (converter defaults to 99). 20 new tests covering individual stats, D&D rules constraints, and runtime conversion round-trips.

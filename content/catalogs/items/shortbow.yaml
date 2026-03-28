@@ -1,0 +1,10 @@
+name: Shortbow
+type: weapon
+weapon_id: shortbow
+category: simple
+attack_name: shortbow shot
+damage:
+  - dice: "1d6"
+    type: piercing
+ability: dex
+is_two_handed: true

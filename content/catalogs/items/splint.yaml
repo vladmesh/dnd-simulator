@@ -1,0 +1,6 @@
+name: Splint Armor
+type: armor
+armor_id: splint
+category: heavy
+base_ac: 17
+max_dex_bonus: 0

@@ -1,0 +1,10 @@
+name: Shortsword
+type: weapon
+weapon_id: shortsword
+category: martial
+attack_name: shortsword stab
+damage:
+  - dice: "1d6"
+    type: piercing
+is_finesse: true
+is_light: true

@@ -1,0 +1,6 @@
+name: Plate Armor
+type: armor
+armor_id: plate
+category: heavy
+base_ac: 18
+max_dex_bonus: 0

@@ -1,0 +1,5 @@
+name: Studded Leather Armor
+type: armor
+armor_id: studded_leather
+category: light
+base_ac: 12

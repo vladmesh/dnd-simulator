@@ -6,11 +6,11 @@
 
 ## Current
 
-Phase 2, Task 1: Weapon Properties & Fighting Style Mechanics — done. Added is_two_handed/is_light/is_heavy to WeaponDef, GWF fighting style with reroll 1-2 on weapon dice, fixed Dueling to exclude two-handed.
+Phase 2, Task 2: SRD Weapon & Armor Catalogs — done. Created 12 weapons, 12 armors, 1 shield; updated dagger with is_light.
 
 ## Next Steps
 
-- Task 2: SRD Weapon & Armor Catalogs
+- Phase 2 complete — ready for /close_phase
 
 ## Completed Phases
 

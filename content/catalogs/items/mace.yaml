@@ -1,0 +1,8 @@
+name: Mace
+type: weapon
+weapon_id: mace
+category: simple
+attack_name: mace strike
+damage:
+  - dice: "1d6"
+    type: bludgeoning

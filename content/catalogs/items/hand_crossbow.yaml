@@ -1,0 +1,10 @@
+name: Hand Crossbow
+type: weapon
+weapon_id: hand_crossbow
+category: martial
+attack_name: hand crossbow shot
+damage:
+  - dice: "1d6"
+    type: piercing
+ability: dex
+is_light: true

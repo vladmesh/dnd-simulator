@@ -1,0 +1,10 @@
+name: Greataxe
+type: weapon
+weapon_id: greataxe
+category: martial
+attack_name: greataxe chop
+damage:
+  - dice: "1d12"
+    type: slashing
+is_two_handed: true
+is_heavy: true

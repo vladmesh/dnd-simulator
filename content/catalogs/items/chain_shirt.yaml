@@ -1,0 +1,6 @@
+name: Chain Shirt
+type: armor
+armor_id: chain_shirt
+category: medium
+base_ac: 13
+max_dex_bonus: 2

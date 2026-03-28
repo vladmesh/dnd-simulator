@@ -1,0 +1,8 @@
+name: Warhammer
+type: weapon
+weapon_id: warhammer
+category: martial
+attack_name: warhammer smash
+damage:
+  - dice: "1d8"
+    type: bludgeoning
