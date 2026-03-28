@@ -1,15 +1,14 @@
 # Sprint 011 Status
 
 **Sprint:** 011-class-mechanics-l1
-**Phase:** 0 — Structured Dice & Roll Breakdown (COMPLETE)
+**Phase:** 0 — Structured Dice & Roll Breakdown
 **Updated:** 2026-03-28
 
 ## Current
 
-Phase 0 complete. Structured dice pipeline delivers full roll traceability: `DieRoll`/`DiceResult`/`D20Result` models, attack events carry `attack_roll` (d20 + components) and `damage_components` (individual dice with reroll tracking), frontend `RollBreakdown` component renders expandable breakdowns with d20, modifiers, and damage detail.
-
-Ready for Phase 1 task generation.
+Phase 0 reopened. Tasks 1-3 done (structured dice pipeline, attack event data, inline breakdown). Task 4 pending: attack card modal — полноценная модалка по клику на атаку в логе с подробным визуальным breakdown каждого кубика и модификатора.
 
 ## Next Steps
 
-- Phase 1: Weapon Properties & Fighting Styles
+- Task 4: Attack Card Modal
+- Then close Phase 0 again
