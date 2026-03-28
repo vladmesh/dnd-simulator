@@ -1,6 +1,6 @@
 # Sprint 011 — Class Mechanics L1 Completion
 
-**Goal:** Типизированное оружие/броня с D&D 5e свойствами, Great Weapon Fighting, Cunning Action с выбором cost, SA faction check, каталог экипировки, контент и тесты.
+**Goal:** Structured dice pipeline, типизированное оружие/броня с D&D 5e свойствами, Great Weapon Fighting, Cunning Action с выбором cost, SA faction check, каталог экипировки, кликабельный лог бросков, контент и тесты.
 
 **Started:** 2026-03-28
 
@@ -8,9 +8,29 @@
 
 Sprint 001 заложил инфраструктуру классовых механик (proficiency, armor/shield, ResourcePool, ClassFeatures, modifier pipeline) и реализовал Fighter/Rogue L1. Но Phase 4 (контент, тесты) не закрыта, а ключевые weapon properties (`is_two_handed`, `light`, `heavy`, `versatile`) отсутствуют — без них Dueling не может проверить "одноручное", Great Weapon Fighting невозможен. Cunning Action работает на бэкенде, но UI не даёт рогу выбрать bonus vs action. SA считает любое существо рядом с целью "союзником" — Sprint 004 добавил faction relations, зависимость закрыта.
 
+Параллельно: `roll()` возвращает голый `int`, теряя face values отдельных кубиков, рероллы, и advantage dice. Для GWF нужен механизм реролла, а для UX — кликабельный лог бросков с полной трассировкой модификаторов. Phase 0 строит structured dice pipeline как фундамент для обоих.
+
 **Ссылки:** [sprint 001](../001-class-mechanics/sprint.md), [ecs-and-content](../../brainstorms/ecs-and-content.md), [backlog](../../BACKLOG.md)
 
 ---
+
+## Phase 0: Structured Dice & Roll Breakdown
+
+Рефактор dice pipeline: каждый бросок возвращает structured data с individual die faces, рероллами, advantage dice. Event data несёт полный breakdown. Фронтенд рендерит кликабельный лог с раскрывающейся детализацией.
+
+- `core/rolls.py` — `DieRoll` (sides, result, original), `DiceResult` (expression, dice tuple, flat, total), `D20Result` (die, alt, advantage/disadvantage)
+- `rules/dice.py` — `roll()` → `DiceResult`, `roll_d20()` → `D20Result`, `reroll_below` для GWF-style рероллов
+- `rules/checks.py` / `rules/combat.py` — threading structured results through `CheckResult`, `DamageResult`, `AttackResult`
+- `combat_manager` — event serialization с `d20`, `d20_alt`, `dice_detail` (individual faces + originals)
+- Frontend — attack events expandable, `RollBreakdown` component с d20, модификаторами, dice faces, reroll indicators
+
+**Верифицируем:** `roll("2d6+3")` returns structured `DiceResult` with individual dies. Attack events in frontend are clickable and show full modifier breakdown. GWF rerolls visible as `[1→5]`.
+
+**Tasks:**
+
+1. [Structured Dice Results](tasks/phase0-task1-structured-dice.md)
+2. [Attack & Damage Breakdown Pipeline](tasks/phase0-task2-breakdown-pipeline.md)
+3. [Frontend Clickable Roll Breakdown](tasks/phase0-task3-frontend-clickable-log.md)
 
 ## Phase 1: Weapon Properties & Fighting Styles
 
@@ -64,13 +84,20 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** Phase 0 tasks generated. Ready to start Phase 0 Task 1.
 
 ## Decisions
+
+- **`roll()` returns `DiceResult`, not `int`.** Single source of truth — no parallel `roll_detailed()`. All callers use `.total` for arithmetic. Clean, no dual paths to maintain.
+- **`D20Result` is separate from `DiceResult`.** Advantage picks best/worst (not sum). Different semantics warrant different type.
+- **`reroll_below` on `roll()` — generic parameter.** Handles GWF (reroll ≤ 2), Halfling Lucky (reroll ≤ 1), and future per-die reroll effects. Single reroll, records `DieRoll.original`. Not recursive.
+- **GWF reroll, not range reduction.** `max(roll, 3)` changes the probability distribution (E[d6]=4.0 vs reroll E[d6]=4.17). Reroll is D&D RAW and gives better UX (visible reroll in log).
+- **Skill checks don't crit.** D&D 5e RAW — only attack rolls crit on nat 20.
 
 - **Disengage — заглушка.** Без системы реакций (opportunity attacks) Disengage не имеет механического эффекта. Оставляем как есть — действие существует, бюджет тратится, при добавлении реакций заработает без изменений.
 - **Thrown/ammunition/loading — вне скоупа.** Ranged weapon properties (thrown, ammunition, loading) требуют отдельной системы (боеприпасы, дальность). Longbow/shortbow добавляются в каталог, но без ammunition tracking.
 - **Extra Attack, skill checks, Hide, Expertise, saving throws — вне скоупа.**
+- **Clickable log — только attack events в Phase 0.** Skill checks, healing, Second Wind — данные в event data будут (dice_detail), но UI expand только для атак. Расширяем позже.
 
 ## Deferred
 
