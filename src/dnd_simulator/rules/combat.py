@@ -49,19 +49,21 @@ class AttackResult:
         return not self.hit
 
 
-def _roll_damage(expr: str, *, critical: bool = False, rng: random.Random | None = None) -> DiceResult:
+def _roll_damage(
+    expr: str, *, critical: bool = False, reroll_below: int = 0, rng: random.Random | None = None
+) -> DiceResult:
     """Roll damage dice, returning structured DiceResult. Doubles dice on crit."""
     if not critical:
-        return roll(expr, rng=rng)
+        return roll(expr, reroll_below=reroll_below, rng=rng)
 
     # Double dice only: "2d6+3" → roll 4d6+3
     expr = expr.strip()
     parts = expr.split("d", 1)
     if len(parts) == 2 and parts[0].strip().isdigit():
         count = int(parts[0].strip())
-        return roll(f"{count * 2}d{parts[1]}", rng=rng)
+        return roll(f"{count * 2}d{parts[1]}", reroll_below=reroll_below, rng=rng)
     # Constant (no dice) — crits don't double flat damage
-    return roll(expr, rng=rng)
+    return roll(expr, reroll_below=reroll_below, rng=rng)
 
 
 def resolve_attack(
@@ -74,6 +76,7 @@ def resolve_attack(
     advantage: bool = False,
     disadvantage: bool = False,
     force_crit: bool = False,
+    gwf_reroll: bool = False,
     rng: random.Random | None = None,
 ) -> AttackResult:
     """Resolve a single-target attack.
@@ -108,8 +111,9 @@ def resolve_attack(
     is_crit = (check.critical and check.success) or (check.success and force_crit)
     damage_results: list[DamageResult] = []
 
+    reroll_below = 2 if gwf_reroll else 0
     for comp in attack.damage:
-        dr = _roll_damage(comp.dice, critical=is_crit, rng=rng)
+        dr = _roll_damage(comp.dice, critical=is_crit, reroll_below=reroll_below, rng=rng)
         damage_results.append(
             DamageResult(amount=dr.total, type=comp.type, source="weapon", dice=comp.dice, dice_result=dr)
         )

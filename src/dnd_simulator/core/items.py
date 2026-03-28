@@ -68,6 +68,9 @@ class WeaponDef:
     modifier: int = 0  # magic bonus (+1, +2)
     is_magic: bool = False
     is_finesse: bool = False
+    is_two_handed: bool = False
+    is_light: bool = False
+    is_heavy: bool = False
     grant_conditions: tuple[Condition, ...] = ()
     grant_actions: tuple[ActionType, ...] = ()
 

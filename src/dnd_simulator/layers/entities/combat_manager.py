@@ -295,6 +295,7 @@ class CombatManager:
             advantage=atk_mods.advantage,
             disadvantage=atk_mods.disadvantage,
             force_crit=atk_mods.force_crit,
+            gwf_reroll=atk_mods.gwf_reroll,
         )
 
         hit_str = "CRIT!" if result.critical else ("HIT" if result.hit else "MISS")

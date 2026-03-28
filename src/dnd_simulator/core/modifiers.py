@@ -68,5 +68,6 @@ class AttackModifiers:
     disadvantage: bool
     force_crit: bool
     target_ac: int
+    gwf_reroll: bool = False
     roll_components: tuple[RollComponent, ...] = ()
     damage_components: tuple[RollComponent, ...] = ()

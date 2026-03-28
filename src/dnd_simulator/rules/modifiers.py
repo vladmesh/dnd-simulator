@@ -283,12 +283,25 @@ def attack_modifiers(attacker: Creature, target: Creature, *, melee: bool) -> At
     # Fighting Style Dueling (+2 damage with one-handed melee, no other weapon)
     # D&D 5e PHB p.72: "wielding a melee weapon in one hand and no other weapons"
     # We have a single weapon slot, so "no other weapons" is always true.
-    # TODO: exclude two-handed weapons when is_two_handed is added to WeaponDef
+    gwf_reroll = False
     if isinstance(attacker, Character) and melee:
         fighter = attacker.get_feature(FighterFeatures)
-        if fighter and fighter.fighting_style == FightingStyle.DUELING and attacker.equipped_weapon:
-            dmg_bonus += 2
-            dmg_components.append(RollComponent(source="dueling", value=2))
+        if fighter:
+            weapon = attacker.equipped_weapon
+            weapon_def = weapon.weapon_def if weapon else None
+            if (
+                fighter.fighting_style == FightingStyle.DUELING
+                and weapon
+                and (not weapon_def or not weapon_def.is_two_handed)
+            ):
+                dmg_bonus += 2
+                dmg_components.append(RollComponent(source="dueling", value=2))
+            elif (
+                fighter.fighting_style == FightingStyle.GREAT_WEAPON_FIGHTING
+                and weapon_def
+                and weapon_def.is_two_handed
+            ):
+                gwf_reroll = True
 
     # Dice bonuses (Bless +1d4, etc.) — unresolved, rolled later by combat_manager
     dice = collect_dice_bonuses(attacker_mods, StatType.ATTACK_ROLL)
@@ -311,6 +324,7 @@ def attack_modifiers(attacker: Creature, target: Creature, *, melee: bool) -> At
         disadvantage=dis,
         force_crit=is_auto_crit_target(target.conditions, melee=melee),
         target_ac=effective_ac(target),
+        gwf_reroll=gwf_reroll,
         roll_components=tuple(roll_components) + dice_roll_components,
         damage_components=tuple(dmg_components),
     )

@@ -56,4 +56,11 @@ After tests are red — make them green:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Clean implementation following existing patterns. `roll()` already had `reroll_below` param from Phase 0 — GWF plugs directly into it. Key decisions:
+- GWF reroll threaded via `gwf_reroll` flag on `AttackModifiers` → `resolve_attack` kwarg → `_roll_damage` → `roll(reroll_below=2)`. Only weapon damage components use it; extra damage (Sneak Attack, Smite) is unaffected.
+- Dueling fix: added `not weapon_def.is_two_handed` check. Handles case where weapon has no weapon_def gracefully.
+- No old tests modified — all 1515 existing tests still pass as-is.

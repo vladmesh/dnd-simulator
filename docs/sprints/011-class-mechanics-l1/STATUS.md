@@ -6,13 +6,13 @@
 
 ## Current
 
-Phase 1, Task 2: Awareness Pipeline + Frontend Simplification — done. Reachable computed in Round, serialized to frontend, BattleMap.tsx BFS removed.
+Phase 2, Task 1: Weapon Properties & Fighting Style Mechanics — done. Added is_two_handed/is_light/is_heavy to WeaponDef, GWF fighting style with reroll 1-2 on weapon dice, fixed Dueling to exclude two-handed.
+
+## Next Steps
+
+- Task 2: SRD Weapon & Armor Catalogs
 
 ## Completed Phases
 
 - **Phase 0:** Structured Dice & Roll Breakdown — all 4 tasks done
 - **Phase 1:** BattleMap Reachability — all 2 tasks done
-
-## Next Steps
-
-- Phase 2: Weapon Properties & Fighting Styles

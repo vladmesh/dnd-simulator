@@ -222,3 +222,72 @@ class TestItemReferenceResolution:
         assert len(items) == 2
         assert items[0].name == "Dagger"
         assert items[1].name == "Custom Artifact"
+
+
+# ---------------------------------------------------------------------------
+# Weapon properties round-trip
+# ---------------------------------------------------------------------------
+
+
+class TestWeaponPropertiesRoundTrip:
+    def test_two_handed_weapon_loads(self) -> None:
+        """YAML with is_two_handed: true → WeaponDef(is_two_handed=True)."""
+        items_data = [
+            {
+                "name": "Greatsword",
+                "type": "weapon",
+                "weapon_id": "greatsword",
+                "attack_name": "greatsword slash",
+                "category": "martial",
+                "damage": [{"dice": "2d6", "type": "slashing"}],
+                "is_two_handed": True,
+                "is_heavy": True,
+            },
+        ]
+        items = parse_items(items_data, item_catalog={})
+        assert len(items) == 1
+        wd = items[0].weapon_def
+        assert wd is not None
+        assert wd.is_two_handed is True
+        assert wd.is_heavy is True
+        assert wd.is_light is False
+
+    def test_weapon_without_properties_defaults_false(self) -> None:
+        """YAML without weapon properties → all default to False."""
+        items_data = [
+            {
+                "name": "Longsword",
+                "type": "weapon",
+                "weapon_id": "longsword",
+                "attack_name": "slash",
+                "category": "martial",
+                "damage": [{"dice": "1d8", "type": "slashing"}],
+            },
+        ]
+        items = parse_items(items_data, item_catalog={})
+        wd = items[0].weapon_def
+        assert wd is not None
+        assert wd.is_two_handed is False
+        assert wd.is_light is False
+        assert wd.is_heavy is False
+
+    def test_light_finesse_weapon_loads(self) -> None:
+        """YAML with is_light: true, is_finesse: true."""
+        items_data = [
+            {
+                "name": "Shortsword",
+                "type": "weapon",
+                "weapon_id": "shortsword",
+                "attack_name": "stab",
+                "category": "martial",
+                "damage": [{"dice": "1d6", "type": "piercing"}],
+                "is_light": True,
+                "is_finesse": True,
+            },
+        ]
+        items = parse_items(items_data, item_catalog={})
+        wd = items[0].weapon_def
+        assert wd is not None
+        assert wd.is_light is True
+        assert wd.is_finesse is True
+        assert wd.is_two_handed is False

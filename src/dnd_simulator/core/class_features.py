@@ -19,6 +19,7 @@ class FightingStyle(StrEnum):
 
     DEFENSE = "defense"  # +1 AC while wearing armor
     DUELING = "dueling"  # +2 damage with one-handed melee, no weapon in other hand
+    GREAT_WEAPON_FIGHTING = "great_weapon_fighting"  # reroll 1-2 on damage dice for two-handed weapons
 
 
 @dataclass(frozen=True)

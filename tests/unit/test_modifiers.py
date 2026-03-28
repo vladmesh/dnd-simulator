@@ -581,8 +581,71 @@ class TestFightingStyleDueling:
         result = attack_modifiers(fighter, target, melee=True)
         assert result.damage_bonus == 2  # ability only, no dueling
 
+    def test_dueling_no_bonus_with_two_handed_weapon(self) -> None:
+        """Dueling style does NOT apply to two-handed weapons (PHB p.72)."""
+        fighter = _fighter(FightingStyle.DUELING, strength=14)  # +2 ability
+        greatsword = Item(
+            id="gs_0",
+            name="Greatsword",
+            item_type=ItemType.WEAPON,
+            weapon_def=WeaponDef(
+                weapon_id="greatsword",
+                attack_name="slash",
+                category=WeaponCategory.MARTIAL,
+                damage=(DamageComponent("2d6", DamageType.SLASHING),),
+                is_two_handed=True,
+            ),
+        )
+        fighter.equipped_weapon = greatsword
+        target = _creature()
+        result = attack_modifiers(fighter, target, melee=True)
+        assert result.damage_bonus == 2  # ability only, no +2 dueling
+
     def test_plain_creature_damage_bonus_is_ability_mod(self) -> None:
         attacker = _creature(str_score=14)  # +2 ability
         target = _creature()
         result = attack_modifiers(attacker, target, melee=True)
         assert result.damage_bonus == 2
+
+
+class TestGWFModifier:
+    """Great Weapon Fighting sets gwf_reroll flag on AttackModifiers."""
+
+    def test_gwf_flag_with_two_handed_weapon(self) -> None:
+        fighter = _fighter(FightingStyle.GREAT_WEAPON_FIGHTING, strength=14)
+        greatsword = Item(
+            id="gs_0",
+            name="Greatsword",
+            item_type=ItemType.WEAPON,
+            weapon_def=WeaponDef(
+                weapon_id="greatsword",
+                attack_name="slash",
+                category=WeaponCategory.MARTIAL,
+                damage=(DamageComponent("2d6", DamageType.SLASHING),),
+                is_two_handed=True,
+            ),
+        )
+        fighter.equipped_weapon = greatsword
+        target = _creature()
+        result = attack_modifiers(fighter, target, melee=True)
+        assert result.gwf_reroll is True
+
+    def test_gwf_flag_false_with_one_handed_weapon(self) -> None:
+        fighter = _fighter(FightingStyle.GREAT_WEAPON_FIGHTING, strength=14)
+        fighter.equipped_weapon = _sword_item()  # longsword, not two-handed
+        target = _creature()
+        result = attack_modifiers(fighter, target, melee=True)
+        assert result.gwf_reroll is False
+
+    def test_gwf_flag_false_without_weapon(self) -> None:
+        fighter = _fighter(FightingStyle.GREAT_WEAPON_FIGHTING, strength=14)
+        target = _creature()
+        result = attack_modifiers(fighter, target, melee=True)
+        assert result.gwf_reroll is False
+
+    def test_non_gwf_fighter_no_flag(self) -> None:
+        fighter = _fighter(FightingStyle.DUELING, strength=14)
+        fighter.equipped_weapon = _sword_item()
+        target = _creature()
+        result = attack_modifiers(fighter, target, melee=True)
+        assert result.gwf_reroll is False

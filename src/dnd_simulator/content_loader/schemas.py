@@ -126,6 +126,9 @@ class WeaponDefContent(BaseModel):
     modifier: int = 0
     is_magic: bool = False
     is_finesse: bool = False
+    is_two_handed: bool = False
+    is_light: bool = False
+    is_heavy: bool = False
     grant_conditions: list[str] = []
     grant_actions: list[str] = []
 
@@ -178,6 +181,9 @@ class ItemContent(BaseModel):
     modifier: int | None = None
     is_magic: bool | None = None
     is_finesse: bool | None = None
+    is_two_handed: bool | None = None
+    is_light: bool | None = None
+    is_heavy: bool | None = None
     grant_conditions: list[str] | None = None
     grant_actions: list[str] | None = None
     # Armor fields

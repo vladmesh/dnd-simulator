@@ -49,6 +49,9 @@ def _to_weapon_def(model: ItemContent) -> WeaponDef:
         modifier=model.modifier or 0,
         is_magic=model.is_magic or False,
         is_finesse=model.is_finesse or False,
+        is_two_handed=model.is_two_handed or False,
+        is_light=model.is_light or False,
+        is_heavy=model.is_heavy or False,
         grant_conditions=grant_conditions,
         grant_actions=grant_actions,
     )
