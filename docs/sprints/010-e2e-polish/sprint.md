@@ -34,7 +34,7 @@ Sprint 009 оставил 9 minor findings в e2e-отчёте — мелкие 
 
 **Note:** Item 7 (log overlay backfill) fixed in commit 91d7200 before sprint started. Verified as part of task 3.
 
-## Phase 2: ActionBar Decomposition
+## Phase 2: ActionBar Decomposition ✓
 
 Разобрать ActionBar.tsx (532 строк) на субкомпоненты. Визуально идентичный результат.
 
@@ -55,7 +55,7 @@ Sprint 009 оставил 9 minor findings в e2e-отчёте — мелкие 
 
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** All phases complete. Ready for sprint closure.
 
 ## Decisions
 
