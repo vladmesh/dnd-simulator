@@ -48,4 +48,8 @@ These are product-level: "player clicks potion in drawer → use_item action sen
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Extracted three drawer components: ConsumableDrawer (41 lines), ClassFeatureDrawer (46 lines), InventoryDrawer (57 lines). Each uses `useTranslation` internally so ActionBar no longer needs to pass `t`. ActionBar.tsx dropped from 346 → 285 lines. 8 new isolated drawer tests + all 20 existing ActionBar tests pass. DOM structure identical — data attributes preserved.

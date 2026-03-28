@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 2, Task 1: Extract co-located components — done. ActionBar 536→346 lines. 4 new files under action-bar/.
+Phase 2, Task 2: Extract drawer sections — done. 3 new drawer components, ActionBar 346→285 lines.
 
 ## Next Steps
 
