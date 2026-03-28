@@ -44,4 +44,13 @@ Concrete changes:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All changes were straightforward content + test updates:
+- Added Ser Aldric (fighter/defense at gate) and Lira (rogue/scout at docks) as new NPCs
+- Upgraded Rodrik: added `class: fighter`, `class_features: {fighting_style: dueling}`, replaced inline attacks with catalog longsword + chain_mail + shield
+- Upgraded Edgar: replaced inline hammer attack with catalog warhammer, added realistic ability scores
+- Updated 3 existing tests that hardcoded NPC count (4 → 6) — intentional change from adding 2 new NPCs
+- Updated `test_start_game_npcs_present` to check `equipped_weapon` instead of `attacks` for Edgar

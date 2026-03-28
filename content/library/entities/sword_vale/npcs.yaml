@@ -8,6 +8,13 @@ edgar:
   role: blacksmith
   hp: 18
   ac: 12
+  ability_scores:
+    str: 14
+    dex: 10
+    con: 14
+    int: 11
+    wis: 12
+    cha: 10
   description:
     en: A burly man with soot-stained arms and a leather apron, standing by a glowing forge.
     ru: Крепкий мужчина с руками в саже и кожаным фартуком, стоящий у раскалённого горна.
@@ -20,12 +27,9 @@ edgar:
       Грубоватый, но справедливый. Гордится своим ремеслом.
       Беспокоится о поставках железа из Железных Пиков,
       так как отношения с Железной Конфедерацией напряжённые.
-  attacks:
-    - name: hammer
-      ability: str
-      damage:
-        - dice: "1d6"
-          type: bludgeoning
+  items:
+    - ref: warhammer
+      equipped: true
 
 marta:
   name:
@@ -90,8 +94,18 @@ rodrik:
   settlement_id: silverport_city
   faction: kingdom
   role: guard
+  class: fighter
   hp: 32
   ac: 16
+  ability_scores:
+    str: 16
+    dex: 12
+    con: 15
+    int: 10
+    wis: 13
+    cha: 14
+  class_features:
+    fighting_style: dueling
   description:
     en: A stern man in polished chainmail, a longsword at his hip and a watchful gaze.
     ru: Суровый мужчина в начищенной кольчуге, с длинным мечом на поясе и настороженным взглядом.
@@ -110,14 +124,90 @@ rodrik:
       армии королевства. Глубоко не доверяет тифлингам — считает,
       что их инфернальная кровь делает их ненадёжными. Откажется
       говорить с тифлингами и может приказать им уйти.
-  attacks:
-    - name: longsword
-      ability: str
-      damage:
-        - dice: "1d8"
-          type: slashing
-    - name: shield_bash
-      ability: str
-      damage:
-        - dice: "1d4"
-          type: bludgeoning
+  items:
+    - ref: longsword
+      equipped: true
+    - ref: chain_mail
+      equipped: true
+    - ref: shield
+      equipped: true
+
+aldric:
+  name:
+    en: Ser Aldric
+    ru: Сэр Олдрик
+  start_location: silverport_city_gate
+  settlement_id: silverport_city
+  faction: kingdom
+  role: guard
+  class: fighter
+  hp: 28
+  ac: 16
+  ability_scores:
+    str: 16
+    dex: 11
+    con: 14
+    int: 10
+    wis: 12
+    cha: 13
+  class_features:
+    fighting_style: defense
+  description:
+    en: A tall knight in well-maintained chainmail, standing watch at the city gate with a shield bearing the kingdom's crest.
+    ru: Высокий рыцарь в ухоженной кольчуге, стоящий на страже у городских ворот со щитом с гербом королевства.
+  personality:
+    en: >
+      Steadfast and dutiful. Takes his post seriously and
+      questions all who pass through the gate. Respects
+      Rodrik greatly and follows orders without hesitation.
+      Polite but firm with strangers.
+    ru: >
+      Стойкий и исполнительный. Серьёзно относится к своему
+      посту и расспрашивает всех проходящих через ворота.
+      Глубоко уважает Родрика и выполняет приказы без колебаний.
+      Вежлив, но твёрд с чужаками.
+  items:
+    - ref: longsword
+      equipped: true
+    - ref: chain_mail
+      equipped: true
+    - ref: shield
+      equipped: true
+
+lira:
+  name:
+    en: Lira
+    ru: Лира
+  start_location: silverport_city_docks
+  settlement_id: silverport_city
+  faction: kingdom
+  role: guard
+  class: rogue
+  hp: 20
+  ac: 12
+  ability_scores:
+    str: 10
+    dex: 16
+    con: 12
+    int: 14
+    wis: 13
+    cha: 11
+  description:
+    en: A lithe woman in dark studded leather, watching the docks from the shadows with sharp, attentive eyes.
+    ru: Стройная женщина в тёмной клёпаной коже, наблюдающая за доками из тени острыми, внимательными глазами.
+  personality:
+    en: >
+      Quiet and observant. Hired by Rodrik to keep an eye
+      on the docks for smugglers and spies. Prefers to
+      gather information before acting. Doesn't trust
+      easily but warms up to those who prove useful.
+    ru: >
+      Тихая и наблюдательная. Нанята Родриком следить
+      за доками на предмет контрабандистов и шпионов.
+      Предпочитает собрать информацию прежде чем действовать.
+      Не доверяет легко, но проникается к тем, кто оказывается полезен.
+  items:
+    - ref: rapier
+      equipped: true
+    - ref: studded_leather
+      equipped: true

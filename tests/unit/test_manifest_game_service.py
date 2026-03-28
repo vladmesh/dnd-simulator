@@ -48,7 +48,7 @@ class TestStartGameSwordVale:
         session = svc.start_game("sword_vale")
         entities = session.world.layers[4]
         npcs = [e for e in entities._entities.values() if hasattr(e, "role")]  # type: ignore[attr-defined]
-        assert len(npcs) == 4
+        assert len(npcs) == 6
 
     def test_squads(self, tmp_path: Path) -> None:
         svc = _make_service(tmp_path)

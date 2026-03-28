@@ -50,7 +50,7 @@ class TestDirectoryFormat:
 
     def test_load_npcs(self) -> None:
         npcs = load_npcs(LAYER_PATHS["entities"], item_catalog=ITEM_CATALOG)
-        assert len(npcs) == 4
+        assert len(npcs) == 6
         edgar = next(n for n in npcs if n.id == "edgar")
         assert edgar.role == NpcRole.BLACKSMITH
         assert edgar.ai_type == "rule_based"

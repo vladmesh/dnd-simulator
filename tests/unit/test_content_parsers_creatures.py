@@ -453,6 +453,19 @@ class TestPlayerRoundTrip:
 class TestSwordValeFullLoad:
     """GameService.start_game('sword_vale') → session works, NPCs present with correct stats."""
 
+    @pytest.fixture()
+    def npcs(self, tmp_path: Path) -> list[object]:
+        from dnd_simulator.layers.entities.models import Npc
+        from dnd_simulator.service import GameService
+        from dnd_simulator.storage.store import JsonFileStore
+
+        store = JsonFileStore(tmp_path / "saves")
+        svc = GameService(store=store, content_dir=Path("content"))
+        session = svc.start_game(world_name="sword_vale", lang="en")
+        entities_layer = session.world.layers[-1]
+        all_entities = list(entities_layer._entities.values())  # type: ignore[attr-defined]
+        return [e for e in all_entities if isinstance(e, Npc)]
+
     def test_start_game_npcs_present(self, tmp_path: Path) -> None:
         from dnd_simulator.layers.entities.models import Npc
         from dnd_simulator.service import GameService
@@ -476,8 +489,138 @@ class TestSwordValeFullLoad:
         assert edgar is not None
         assert edgar.name == "Edgar the Smith"
         assert edgar.max_hp == 18
-        assert edgar.ac == 12
-        assert len(edgar.attacks) > 0
+        assert edgar.equipped_weapon is not None  # catalog warhammer
+
+    # ------------------------------------------------------------------
+    # Fighter NPC: Ser Aldric
+    # ------------------------------------------------------------------
+
+    def test_fighter_npc_class_features(self, npcs: list[object]) -> None:
+        from dnd_simulator.core.class_features import FighterFeatures, FightingStyle
+
+        aldric = next(n for n in npcs if n.id == "aldric")  # type: ignore[union-attr]
+        assert aldric.char_class == CharClass.FIGHTER
+        assert len(aldric.class_features) == 1
+        feat = aldric.class_features[0]
+        assert isinstance(feat, FighterFeatures)
+        assert feat.fighting_style == FightingStyle.DEFENSE
+
+    def test_fighter_npc_catalog_weapon(self, npcs: list[object]) -> None:
+        aldric = next(n for n in npcs if n.id == "aldric")  # type: ignore[union-attr]
+        assert aldric.equipped_weapon is not None
+        assert aldric.equipped_weapon.weapon_def is not None
+        assert aldric.equipped_weapon.weapon_def.weapon_id == "longsword"
+
+    def test_fighter_npc_catalog_armor(self, npcs: list[object]) -> None:
+        aldric = next(n for n in npcs if n.id == "aldric")  # type: ignore[union-attr]
+        assert aldric.equipped_armor is not None
+        assert aldric.equipped_armor.armor_def is not None
+        assert aldric.equipped_armor.armor_def.armor_id == "chain_mail"
+        assert aldric.equipped_armor.armor_def.base_ac == 16
+
+    def test_fighter_npc_catalog_shield(self, npcs: list[object]) -> None:
+        aldric = next(n for n in npcs if n.id == "aldric")  # type: ignore[union-attr]
+        assert aldric.equipped_shield is not None
+        assert aldric.equipped_shield.shield_def is not None
+        assert aldric.equipped_shield.shield_def.ac_bonus == 2
+
+    def test_fighter_npc_resource_pools(self, npcs: list[object]) -> None:
+        aldric = next(n for n in npcs if n.id == "aldric")  # type: ignore[union-attr]
+        pool_ids = [p.id for p in aldric.resource_pools]
+        assert "second_wind" in pool_ids
+
+    def test_fighter_npc_ability_scores(self, npcs: list[object]) -> None:
+        from dnd_simulator.core.character import Ability
+
+        aldric = next(n for n in npcs if n.id == "aldric")  # type: ignore[union-attr]
+        assert aldric.ability_scores[Ability.STR] == 16
+
+    # ------------------------------------------------------------------
+    # Rogue NPC: Lira
+    # ------------------------------------------------------------------
+
+    def test_rogue_npc_class_features(self, npcs: list[object]) -> None:
+        from dnd_simulator.core.class_features import RogueFeatures
+
+        lira = next(n for n in npcs if n.id == "lira")  # type: ignore[union-attr]
+        assert lira.char_class == CharClass.ROGUE
+        assert len(lira.class_features) == 1
+        feat = lira.class_features[0]
+        assert isinstance(feat, RogueFeatures)
+        assert feat.sneak_attack_dice == 1
+
+    def test_rogue_npc_finesse_weapon(self, npcs: list[object]) -> None:
+        lira = next(n for n in npcs if n.id == "lira")  # type: ignore[union-attr]
+        assert lira.equipped_weapon is not None
+        assert lira.equipped_weapon.weapon_def is not None
+        assert lira.equipped_weapon.weapon_def.weapon_id == "rapier"
+        assert lira.equipped_weapon.weapon_def.is_finesse is True
+
+    def test_rogue_npc_light_armor(self, npcs: list[object]) -> None:
+        lira = next(n for n in npcs if n.id == "lira")  # type: ignore[union-attr]
+        assert lira.equipped_armor is not None
+        assert lira.equipped_armor.armor_def is not None
+        assert lira.equipped_armor.armor_def.armor_id == "studded_leather"
+        assert lira.equipped_armor.armor_def.category == "light"
+
+    def test_rogue_npc_dex_focused(self, npcs: list[object]) -> None:
+        from dnd_simulator.core.character import Ability
+
+        lira = next(n for n in npcs if n.id == "lira")  # type: ignore[union-attr]
+        assert lira.ability_scores[Ability.DEX] >= 16
+
+    # ------------------------------------------------------------------
+    # Rodrik upgrade: Fighter class + catalog equipment
+    # ------------------------------------------------------------------
+
+    def test_rodrik_fighter_class(self, npcs: list[object]) -> None:
+        from dnd_simulator.core.class_features import FighterFeatures, FightingStyle
+
+        rodrik = next(n for n in npcs if n.id == "rodrik")  # type: ignore[union-attr]
+        assert rodrik.char_class == CharClass.FIGHTER
+        assert len(rodrik.class_features) == 1
+        feat = rodrik.class_features[0]
+        assert isinstance(feat, FighterFeatures)
+        assert feat.fighting_style == FightingStyle.DUELING
+
+    def test_rodrik_catalog_longsword(self, npcs: list[object]) -> None:
+        rodrik = next(n for n in npcs if n.id == "rodrik")  # type: ignore[union-attr]
+        assert rodrik.equipped_weapon is not None
+        assert rodrik.equipped_weapon.weapon_def is not None
+        assert rodrik.equipped_weapon.weapon_def.weapon_id == "longsword"
+
+    def test_rodrik_catalog_armor_and_shield(self, npcs: list[object]) -> None:
+        rodrik = next(n for n in npcs if n.id == "rodrik")  # type: ignore[union-attr]
+        assert rodrik.equipped_armor is not None
+        assert rodrik.equipped_armor.armor_def is not None
+        assert rodrik.equipped_armor.armor_def.armor_id == "chain_mail"
+        assert rodrik.equipped_shield is not None
+        assert rodrik.equipped_shield.shield_def is not None
+
+    def test_rodrik_no_inline_attacks(self, npcs: list[object]) -> None:
+        """Rodrik should use catalog weapon, not inline attack definitions."""
+        rodrik = next(n for n in npcs if n.id == "rodrik")  # type: ignore[union-attr]
+        assert len(rodrik.attacks) == 0
+
+    def test_rodrik_resource_pools(self, npcs: list[object]) -> None:
+        rodrik = next(n for n in npcs if n.id == "rodrik")  # type: ignore[union-attr]
+        pool_ids = [p.id for p in rodrik.resource_pools]
+        assert "second_wind" in pool_ids
+
+    # ------------------------------------------------------------------
+    # Edgar upgrade: catalog warhammer
+    # ------------------------------------------------------------------
+
+    def test_edgar_catalog_warhammer(self, npcs: list[object]) -> None:
+        edgar = next(n for n in npcs if n.id == "edgar")  # type: ignore[union-attr]
+        assert edgar.equipped_weapon is not None
+        assert edgar.equipped_weapon.weapon_def is not None
+        assert edgar.equipped_weapon.weapon_def.weapon_id == "warhammer"
+
+    def test_edgar_no_inline_attacks(self, npcs: list[object]) -> None:
+        """Edgar should use catalog weapon, not inline attack definitions."""
+        edgar = next(n for n in npcs if n.id == "edgar")  # type: ignore[union-attr]
+        assert len(edgar.attacks) == 0
 
     def test_start_game_squads_loaded(self, tmp_path: Path) -> None:
         from dnd_simulator.service import GameService

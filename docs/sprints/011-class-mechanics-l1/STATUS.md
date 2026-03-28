@@ -6,11 +6,10 @@
 
 ## Current
 
-Phase 4 tasks generated. Ready to start task 1.
+Phase 4, Task 1: Content — Fighter & Rogue NPCs + Equip Existing NPCs — done. Added Ser Aldric (fighter) and Lira (rogue), upgraded Rodrik and Edgar to catalog equipment.
 
 ## Next Steps
 
-- Task 1: Fighter & Rogue NPCs with class features + catalog equipment; upgrade existing NPCs
 - Task 2: Unit tests for GWF reroll, sneak attack damage, weapon properties, full attack pipeline
 - Task 3: Integration tests for complete Fighter & Rogue combat turns
 
