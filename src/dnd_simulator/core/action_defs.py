@@ -198,10 +198,11 @@ _reg(
             ParamDef("away_from", "string", N_("ID of entity to dash away from")),
             ParamDef("direction", "string", N_("Compass direction: north, south, east, west, etc.")),
             ParamDef("description", "string", N_("Flavor text")),
+            ParamDef("cost_mode", "string", N_("Cost variant: action or bonus_action")),
         ),
         llm_hint=(
             "Sprint: move up to DOUBLE your speed. Uses your action — you cannot attack this turn. "
-            "Same parameters as move."
+            "Same parameters as move. Rogues can pass cost_mode=bonus_action via Cunning Action."
         ),
     )
 )
@@ -213,9 +214,10 @@ _reg(
         cost_type=CostType.ACTION,
         combat_mode=CombatMode.COMBAT_ONLY,
         ends_peaceful_turn=True,
+        params=(ParamDef("cost_mode", "string", N_("Cost variant: action or bonus_action")),),
         llm_hint=(
             "Disengage: your movement doesn't provoke opportunity attacks this turn. "
-            "Costs 1 action (bonus action for Rogues via Cunning Action)."
+            "Costs 1 action. Rogues can pass cost_mode=bonus_action via Cunning Action."
         ),
     )
 )

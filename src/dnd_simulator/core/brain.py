@@ -226,7 +226,13 @@ class RuleBrain(Brain):
             logger.info("rule_move_toward", target=target_id, distance_ft=dist)
             return self.move_toward_target(target, awareness)
 
-        # 6. Dash to get more movement (if have actions)
+        # 6. Dash to get more movement (prefer bonus action via Cunning Action)
+        dash_params = self._dash_params(creature)
+        if dash_params.get("cost_mode") == "bonus_action":
+            has_bonus = (budget.bonus_actions if budget else 0) > 0
+            if has_bonus:
+                logger.info("rule_dash", distance_ft=dist, cost_mode="bonus_action")
+                return Action(name=ActionType.DASH, params=dash_params)
         has_actions = (budget.actions if budget else 0) > 0
         if has_actions:
             logger.info("rule_dash", distance_ft=dist)
@@ -238,6 +244,16 @@ class RuleBrain(Brain):
             budget_move=movement_left,
         )
         return END_TURN
+
+    @staticmethod
+    def _dash_params(creature: Creature) -> dict[str, object]:
+        """Build params for Dash — use bonus_action cost_mode if creature has the override."""
+        from dnd_simulator.rules.actions import collect_cost_overrides
+
+        for ov in collect_cost_overrides(creature):
+            if ov.action_type == ActionType.DASH:
+                return {"cost_mode": ov.cost_type.value}
+        return {}
 
     def _pick_target(
         self,

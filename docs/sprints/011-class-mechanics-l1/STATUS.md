@@ -6,11 +6,11 @@
 
 ## Current
 
-Phase 3, Task 1: SA faction-aware ally detection — done. Sneak attack now queries PoliticsLayer for FRIENDLY faction relation before counting adjacent creature as ally.
+Phase 3, Task 2: Cunning Action cost choice — done. cost_mode wired end-to-end: ParamDef on DASH/DISENGAGE, RuleBrain bonus action preference, frontend CostChoiceButton dropdown.
 
 ## Next Steps
 
-- Task 2: Cunning Action cost choice — wire cost_mode end-to-end (ParamDef, frontend UI, RuleBrain)
+- All phase 3 tasks complete — ready to close phase
 
 ## Completed Phases
 

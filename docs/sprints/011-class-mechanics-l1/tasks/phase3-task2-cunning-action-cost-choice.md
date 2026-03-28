@@ -47,4 +47,16 @@ Wire end-to-end: add ParamDef, update frontend to show cost choice, teach RuleBr
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All three pieces wired end-to-end:
+
+1. **ParamDef on DASH/DISENGAGE** — Added `cost_mode` optional param to both ActionDefs. LLM tool schemas now auto-include it. LLM hint updated to mention Rogue Cunning Action.
+
+2. **RuleBrain cost_mode** — `_dash_params()` checks creature's cost overrides. If a DASH override exists (Rogue Cunning Action), returns `cost_mode=bonus_action`. Fallback logic: try bonus action first, then regular action, so rogues conserve their action for attacks.
+
+3. **Frontend CostChoiceButton** — ActionButton detects `cost_options` on an action. When present, renders a dropdown with cost choices (e.g. "action" / "bonus_action (cunning action)"). Each option sends the appropriate `cost_mode` param. Actions without cost_options render unchanged.
+
+Existing test `test_dash_when_no_movement_left` asserts `params == {}` for non-Rogue NPCs — verified still passing.

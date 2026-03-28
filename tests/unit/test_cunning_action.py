@@ -184,3 +184,112 @@ class TestCunningActionBudget:
 
         atk_cost = action_cost(Action(name=ActionType.ATTACK, params={"target_id": "x"}), creature=fighter)
         assert not budget.can_afford(atk_cost)
+
+
+# ---------------------------------------------------------------------------
+# ParamDef on DASH / DISENGAGE
+# ---------------------------------------------------------------------------
+
+
+class TestCostModeParamDef:
+    def test_dash_has_cost_mode_param(self) -> None:
+        """DASH ActionDef declares cost_mode so brains can pass it."""
+        from dnd_simulator.core.action_defs import get_action_def
+
+        ad = get_action_def(ActionType.DASH)
+        param_names = [p.name for p in ad.params]
+        assert "cost_mode" in param_names
+
+    def test_disengage_has_cost_mode_param(self) -> None:
+        """DISENGAGE ActionDef declares cost_mode so brains can pass it."""
+        from dnd_simulator.core.action_defs import get_action_def
+
+        ad = get_action_def(ActionType.DISENGAGE)
+        param_names = [p.name for p in ad.params]
+        assert "cost_mode" in param_names
+
+    def test_cost_mode_param_is_optional(self) -> None:
+        """cost_mode is not required — non-rogues don't need it."""
+        from dnd_simulator.core.action_defs import get_action_def
+
+        ad = get_action_def(ActionType.DASH)
+        cost_mode_param = next(p for p in ad.params if p.name == "cost_mode")
+        assert not cost_mode_param.required
+
+
+# ---------------------------------------------------------------------------
+# RuleBrain prefers bonus action Dash for rogues
+# ---------------------------------------------------------------------------
+
+
+class TestRuleBrainCunningAction:
+    def test_rogue_dashes_as_bonus_action(self) -> None:
+        """Rogue RuleBrain should Dash with cost_mode=bonus_action to save the action."""
+        from dnd_simulator.core.awareness import CombatAwareness, CombatEntity
+        from dnd_simulator.core.brain import RuleBrain
+
+        rogue = _rogue()
+        rogue.attacks = ()  # ensure no equipped weapon attack
+
+        awareness = CombatAwareness(
+            self_hp=20,
+            self_max_hp=20,
+            self_ac=14,
+            self_speed=30,
+            self_weapon="fists",
+            self_weapon_damage="1",
+            self_x=0,
+            self_y=0,
+            nearby=[
+                CombatEntity(
+                    id="enemy",
+                    description="Bandit",
+                    is_hostile=True,
+                    is_wounded=False,
+                    distance_ft=60,
+                    direction="north",
+                    x=0,
+                    y=60,
+                ),
+            ],
+            turn_budget=TurnBudget(actions=1, bonus_actions=1, movement_remaining=0),
+        )
+        brain = RuleBrain()
+        action = brain.choose_action(rogue, awareness, [])
+        assert action.name == ActionType.DASH
+        assert action.params["cost_mode"] == "bonus_action"
+
+    def test_fighter_dashes_without_cost_mode(self) -> None:
+        """Fighter RuleBrain dashes normally — no cost_mode param."""
+        from dnd_simulator.core.awareness import CombatAwareness, CombatEntity
+        from dnd_simulator.core.brain import RuleBrain
+
+        fighter = _fighter()
+
+        awareness = CombatAwareness(
+            self_hp=30,
+            self_max_hp=30,
+            self_ac=16,
+            self_speed=30,
+            self_weapon="fists",
+            self_weapon_damage="1",
+            self_x=0,
+            self_y=0,
+            nearby=[
+                CombatEntity(
+                    id="enemy",
+                    description="Bandit",
+                    is_hostile=True,
+                    is_wounded=False,
+                    distance_ft=60,
+                    direction="north",
+                    x=0,
+                    y=60,
+                ),
+            ],
+            turn_budget=TurnBudget(actions=1, bonus_actions=1, movement_remaining=0),
+        )
+        brain = RuleBrain()
+        action = brain.choose_action(fighter, awareness, [])
+        assert action.name == ActionType.DASH
+        assert "cost_mode" not in (action.params or {})
