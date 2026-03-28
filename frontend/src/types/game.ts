@@ -60,6 +60,7 @@ export interface NearbyEntity {
   race?: string
   role?: string
   faction_id?: string
+  faction_name?: string
   npc_description?: string
   is_merchant?: boolean
 }

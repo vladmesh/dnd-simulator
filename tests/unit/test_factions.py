@@ -118,21 +118,26 @@ class TestParseFactions:
         world_dir.mkdir()
         (world_dir / "factions.yaml").write_text(yaml.dump(factions_yaml, allow_unicode=True))
 
-        faction_relations = load_factions(world_dir)
+        faction_data = load_factions(world_dir)
 
-        assert faction_relations[("bandits", "kingdom")] is FactionRelation.HOSTILE
+        assert faction_data.relations[("bandits", "kingdom")] is FactionRelation.HOSTILE
         # Wildlife has no explicit relations → not in dict (defaults to NEUTRAL on query)
-        assert ("kingdom", "wildlife") not in faction_relations or faction_relations[
+        assert ("kingdom", "wildlife") not in faction_data.relations or faction_data.relations[
             ("kingdom", "wildlife")
         ] is FactionRelation.NEUTRAL
+        # Names loaded with default lang=en
+        assert faction_data.names["kingdom"] == "Kingdom Forces"
+        assert faction_data.names["bandits"] == "Bandits"
+        assert faction_data.names["wildlife"] == "Wildlife"
 
     def test_load_factions_missing_file(self, tmp_path: Path) -> None:
         from dnd_simulator.content_loader import load_factions
 
         world_dir = tmp_path / "empty_world"
         world_dir.mkdir()
-        faction_relations = load_factions(world_dir)
-        assert faction_relations == {}
+        faction_data = load_factions(world_dir)
+        assert faction_data.relations == {}
+        assert faction_data.names == {}
 
     def test_parse_npc_with_faction(self) -> None:
         from dnd_simulator.content_loader import parse_npc

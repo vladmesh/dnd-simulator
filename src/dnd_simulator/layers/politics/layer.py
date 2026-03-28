@@ -75,6 +75,7 @@ class PoliticsLayer(Layer):
         seed: int | None = None,
         region_income_fn: Callable[[str], float] | None = None,
         faction_relations: dict[tuple[str, str], FactionRelation] | None = None,
+        faction_names: dict[str, str] | None = None,
     ) -> None:
         self._nations: dict[str, Nation] = {}
         if nations:
@@ -86,6 +87,7 @@ class PoliticsLayer(Layer):
         self._relations: dict[tuple[str, str], DiplomaticStatus] = {}
         self._war_durations: dict[tuple[str, str], int] = {}
         self._faction_relations: dict[tuple[str, str], FactionRelation] = faction_relations or {}
+        self._faction_names: dict[str, str] = faction_names or {}
         self._rng = random.Random(seed)
 
         # Income from settlements (if available), else fall back to terrain-based
@@ -526,6 +528,10 @@ class PoliticsLayer(Layer):
         if q is QueryType.FACTION_RELATION:
             relation = self.get_faction_relation(str(params["a"]), str(params["b"]))
             return Answer(value=relation.value)
+
+        if q is QueryType.FACTION_NAME:
+            faction_id = str(params["faction_id"])
+            return Answer(value=self._faction_names.get(faction_id))
 
         raise ValueError(f"Unknown politics query: {q}")
 

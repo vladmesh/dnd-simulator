@@ -45,4 +45,13 @@ Key files:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implementation followed the plan closely. Key decisions:
+
+- **BattleMap gets `onEntityClick` prop** — keeps the map component focused on grid rendering, modal state managed by GameScreen.
+- **CombatPanel enemies list removed entirely** — the map is now the sole combat entity browser. CombatPanel retains round counter and self-stats only.
+- **Faction name resolution is backend-side** — added `FACTION_NAME` query to politics layer, `faction_name` field to `NearbyEntity` dataclass. `load_factions` now returns `FactionData` (relations + localized names). The existing `test_load_factions_from_yaml` and `test_load_factions_missing_file` tests updated to match the new return type (intentional contract change).
+- **NpcInspectModal** displays `faction_name` with fallback to `faction_id`.

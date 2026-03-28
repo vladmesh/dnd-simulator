@@ -171,25 +171,46 @@ def load_battle_maps(path: Path) -> dict[str, BattleMap]:
     return result
 
 
-def load_factions(path: Path) -> dict[tuple[str, str], FactionRelation]:
-    """Load faction relations from factions.yaml.
+class FactionData:
+    """Faction relations and display names loaded from factions.yaml."""
 
-    Returns a dict of (faction_a, faction_b) → FactionRelation.
-    Keys are canonically sorted (min, max). Missing file → empty dict.
+    __slots__ = ("names", "relations")
+
+    def __init__(
+        self,
+        relations: dict[tuple[str, str], FactionRelation],
+        names: dict[str, str],
+    ) -> None:
+        self.relations = relations
+        self.names = names
+
+
+def load_factions(path: Path, lang: str = "en") -> FactionData:
+    """Load faction relations and names from factions.yaml.
+
+    Returns FactionData with relations dict and localized names dict.
+    Missing file → empty data.
     """
     factions_data = _read_yaml(path / "factions.yaml")
 
     if not factions_data:
-        return {}
+        return FactionData(relations={}, names={})
 
     relations: dict[tuple[str, str], FactionRelation] = {}
+    names: dict[str, str] = {}
     for faction_id, fdata in factions_data.items():
         if not isinstance(fdata, dict):
             continue
         for other_id, rel_str in fdata.get("relations", {}).items():
             key = (min(str(faction_id), str(other_id)), max(str(faction_id), str(other_id)))
             relations[key] = FactionRelation(str(rel_str))
-    return relations
+        name_field = fdata.get("name")
+        if isinstance(name_field, dict):
+            resolved = name_field.get(lang) or name_field.get("en") or str(faction_id)
+            names[str(faction_id)] = str(resolved)
+        elif isinstance(name_field, str):
+            names[str(faction_id)] = name_field
+    return FactionData(relations=relations, names=names)
 
 
 def extract_region_adjacency(regions: list[Region]) -> dict[str, list[str]]:

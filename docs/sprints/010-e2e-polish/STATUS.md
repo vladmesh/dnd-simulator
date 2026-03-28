@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 1, Task 1: Combat log i18n — done. All dynamic values go through _().
+Phase 1, Task 2: BattleMap click-to-inspect — done. Enemy cells clickable, combatants list removed, faction names resolved.
 
 ## Next Steps
 
-- Task 2: BattleMap click-to-inspect — occupied cell → inspect card, faction display name, remove combatants list
 - Task 3: Master panel + drawer UX — HP current/max, brain toggle toast, consumable label

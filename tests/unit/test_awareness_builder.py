@@ -727,6 +727,83 @@ class TestCombatAwarenessStructuredGrid:
         assert awareness.nearby[0].y == 35
 
 
+class TestNearbyEntityFactionName:
+    """Nearby entities include faction display name resolved via politics query."""
+
+    def test_faction_name_populated_from_query(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="road",
+            faction_id="kingdom",
+        )
+        npc = Character(
+            id="n1",
+            name="Guard",
+            location_id="road",
+            faction_id="kingdom",
+        )
+
+        layer = EntitiesLayer([player, npc])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            if target == "politics" and query.question == QueryType.FACTION_NAME:
+                return Answer(value="Kingdom Forces")
+            return Answer(value=None)
+
+        nearby = layer.build_nearby_entities(player, hour=12, query_fn=query_fn)
+        assert len(nearby) == 1
+        assert nearby[0].faction_id == "kingdom"
+        assert nearby[0].faction_name == "Kingdom Forces"
+
+    def test_faction_name_empty_when_no_faction(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="road",
+        )
+        npc = Character(
+            id="n1",
+            name="Wanderer",
+            location_id="road",
+        )
+
+        layer = EntitiesLayer([player, npc])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            return Answer(value=None)
+
+        nearby = layer.build_nearby_entities(player, hour=12, query_fn=query_fn)
+        assert len(nearby) == 1
+        assert nearby[0].faction_id == ""
+        assert nearby[0].faction_name == ""
+
+    def test_faction_name_falls_back_to_empty_when_query_returns_none(self) -> None:
+        player = Character(
+            id="p1",
+            name="Hero",
+            location_id="road",
+            faction_id="kingdom",
+        )
+        npc = Character(
+            id="n1",
+            name="Guard",
+            location_id="road",
+            faction_id="unknown_faction",
+        )
+
+        layer = EntitiesLayer([player, npc])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            if target == "politics" and query.question == QueryType.FACTION_NAME:
+                return Answer(value=None)
+            return Answer(value=None)
+
+        nearby = layer.build_nearby_entities(player, hour=12, query_fn=query_fn)
+        assert len(nearby) == 1
+        assert nearby[0].faction_name == ""
+
+
 class TestFactionHostilityEdgeCases:
     """Edge cases for faction hostility checks."""
 

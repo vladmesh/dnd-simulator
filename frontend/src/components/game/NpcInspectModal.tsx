@@ -101,7 +101,7 @@ export function NpcInspectModal({ entity, open, onClose, isCombat }: NpcInspectM
           {/* Faction */}
           {nearby?.faction_id && (
             <p className="text-muted-foreground">
-              {t("game:faction")}: {nearby.faction_id}
+              {t("game:faction")}: {nearby.faction_name || nearby.faction_id}
             </p>
           )}
 

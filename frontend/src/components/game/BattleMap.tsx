@@ -160,7 +160,11 @@ function computeReachable(
   return reachable
 }
 
-export function BattleMap() {
+interface BattleMapProps {
+  onEntityClick?: (entity: CombatEntity) => void
+}
+
+export function BattleMap({ onEntityClick }: BattleMapProps = {}) {
   const { t } = useTranslation(["game"])
   const awareness = useGameStore((s) => s.awareness)
   const isMyTurn = useGameStore((s) => s.isMyTurn)
@@ -184,7 +188,7 @@ export function BattleMap() {
 
   // Build position lookup and blocked edges
   const { posLookup, blockedEdges, occupiedSet } = useMemo(() => {
-    const lookup = new Map<string, { glyph: string; isPlayer: boolean }>()
+    const lookup = new Map<string, { glyph: string; isPlayer: boolean; entity?: CombatEntity }>()
     const occ = new Set<string>()
 
     // Player position
@@ -194,13 +198,13 @@ export function BattleMap() {
       lookup.set(`${pCol},${pRow}`, { glyph: "@", isPlayer: true })
     }
 
-    // Enemy positions — numbered to match CombatPanel order
+    // Enemy positions — numbered to match map order
     combat.nearby.forEach((entity: CombatEntity, i: number) => {
       if (entity.x != null && entity.y != null) {
         const eCol = entity.x / 5
         const eRow = entity.y / 5
         const glyph = i < 9 ? String(i + 1) : "+"
-        lookup.set(`${eCol},${eRow}`, { glyph, isPlayer: false })
+        lookup.set(`${eCol},${eRow}`, { glyph, isPlayer: false, entity })
         occ.add(`${eCol},${eRow}`)
       }
     })
@@ -231,7 +235,8 @@ export function BattleMap() {
       const entity = posLookup.get(key)
       const walls = getCellWalls(col, gridRow, blockedEdges)
       const isReachable = reachableCells.has(key)
-      const isClickable = canClick && isReachable && !entity
+      const isMovable = canClick && isReachable && !entity
+      const isInspectable = !!onEntityClick && !!entity && !entity.isPlayer && !!entity.entity
 
       const wallClasses = [
         walls.top ? "border-t-yellow-600 border-t-2" : "border-t-transparent border-t",
@@ -252,8 +257,8 @@ export function BattleMap() {
         <div
           key={`${col}-${renderRow}`}
           data-testid={entity ? `cell-${col}-${gridRow}` : isReachable ? `reachable-${col}-${gridRow}` : undefined}
-          className={`aspect-square flex items-center justify-center text-xs font-mono ${wallClasses} ${bgClass} ${isClickable ? "cursor-pointer hover:bg-blue-500/40" : ""}`}
-          onClick={isClickable ? () => handleCellClick(col * 5, gridRow * 5) : undefined}
+          className={`aspect-square flex items-center justify-center text-xs font-mono ${wallClasses} ${bgClass} ${isMovable || isInspectable ? "cursor-pointer hover:bg-blue-500/40" : ""}`}
+          onClick={isMovable ? () => handleCellClick(col * 5, gridRow * 5) : isInspectable ? () => onEntityClick!(entity!.entity!) : undefined}
         >
           {entity ? entity.glyph : "·"}
         </div>,

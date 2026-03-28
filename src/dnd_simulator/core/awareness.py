@@ -31,6 +31,7 @@ class NearbyEntity:
     race: str = ""
     role: str = ""
     faction_id: str = ""
+    faction_name: str = ""
     npc_description: str = ""
     is_merchant: bool = False
 

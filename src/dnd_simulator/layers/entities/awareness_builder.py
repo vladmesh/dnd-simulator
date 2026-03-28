@@ -244,6 +244,7 @@ class AwarenessBuilder:
             race = ""
             role = ""
             faction_id = e.faction_id
+            faction_name = self._resolve_faction_name(faction_id, query_fn)
             npc_description = ""
             is_merchant = False
             if isinstance(e, Character):
@@ -262,6 +263,7 @@ class AwarenessBuilder:
                     race=race,
                     role=role,
                     faction_id=faction_id,
+                    faction_name=faction_name,
                     npc_description=npc_description,
                     is_merchant=is_merchant,
                 )
@@ -274,6 +276,19 @@ class AwarenessBuilder:
                 nearby=[{"id": n.id, "hostile": n.is_hostile} for n in result],
             )
         return result
+
+    def _resolve_faction_name(self, faction_id: str, query_fn: QueryFn | None) -> str:
+        """Resolve faction_id to a display name via politics query. Returns '' if unavailable."""
+        if not faction_id or query_fn is None:
+            return ""
+        try:
+            answer = query_fn(
+                "politics",
+                Query(question=QueryType.FACTION_NAME, params={"faction_id": faction_id}),
+            )
+            return str(answer.value) if answer.value else ""
+        except Exception:
+            return ""
 
     def check_faction_hostility(self, observer: Entity, other: Entity, query_fn: QueryFn | None) -> bool:
         """Check if two entities are hostile based on faction relations."""

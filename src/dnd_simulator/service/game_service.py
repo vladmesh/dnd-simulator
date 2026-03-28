@@ -111,7 +111,7 @@ class GameService(
         catalog_dir = self._content_dir / "catalogs" / "monsters"
         monster_catalog = load_catalog(catalog_dir, MonsterTemplateContent) if catalog_dir.exists() else {}
         monster_templates, encounter_tables = load_monsters(layer_paths["ecology"], lang=lang, catalog=monster_catalog)
-        faction_relations = load_factions(layer_paths["politics"])
+        faction_data = load_factions(layer_paths["politics"], lang=lang)
         squads = load_squads(layer_paths["ecology"], lang=lang)
         region_terrains = extract_region_terrains(regions)
 
@@ -125,7 +125,8 @@ class GameService(
             region_terrains=region_terrains,
             region_adjacency=extract_region_adjacency(regions),
             region_income_fn=settlements_layer.get_region_income,
-            faction_relations=faction_relations,
+            faction_relations=faction_data.relations,
+            faction_names=faction_data.names,
         )
         summarizer = None
         if self._llm:
