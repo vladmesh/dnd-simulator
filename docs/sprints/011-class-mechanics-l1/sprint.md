@@ -26,7 +26,8 @@ Sprint 001 заложил инфраструктуру классовых мех
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Weapon Properties & Fighting Style Mechanics](tasks/phase1-task1-weapon-props-fighting-styles.md)
+2. [SRD Weapon & Armor Catalogs](tasks/phase1-task2-weapon-armor-catalogs.md)
 
 ## Phase 2: Cunning Action Choice & SA Faction Check
 
