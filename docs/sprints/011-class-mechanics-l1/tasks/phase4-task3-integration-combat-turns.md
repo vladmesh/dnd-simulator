@@ -6,7 +6,9 @@
 
 ## Description
 
-Integration-level tests that verify complete combat turns for class-featured characters. These tests exercise the full chain: TurnBudget → ActionProvider → ActionDispatcher → combat rules → damage application → resource consumption.
+**This MUST be integration tests on a live docker compose stack (backend + test client).** Not unit tests, not E2E/Playwright. Tests hit the real API, use real content loading, real game state, real combat pipeline. The only thing mocked is dice randomness — if the system doesn't support deterministic dice in integration tests (e.g. battle map positions are random), add that capability first (seed or override mechanism).
+
+Tests verify complete combat turns for class-featured characters through the full HTTP chain: API request → GameService → Round → ActionDispatcher → combat rules → damage → response.
 
 ## Tests First
 
@@ -27,17 +29,20 @@ Integration-level tests that verify complete combat turns for class-featured cha
 
 ## Implementation
 
-- Create `tests/unit/test_combat_turns.py` (or integration/ if it needs full game state)
-- Build minimal combat state: creatures, battle_map, combat_state with initiative
-- Use `ActionDispatcher` or the handler functions directly to execute actions
-- Mock dice for deterministic assertions
-- Verify budget enforcement, resource tracking, damage application
+- Tests go in `tests/integration/` — run via `make test-integration` on live docker compose stack
+- If dice/positioning randomness prevents deterministic assertions: add a seed or override mechanism (e.g. env var `DND_DICE_SEED`, or a test-only API endpoint to fix dice rolls). This is a prerequisite — do it first if needed.
+- If battle map starting positions are random: add a way to set them deterministically (seed or explicit placement via API).
+- Use real content (sword_vale world with the Fighter/Rogue NPCs from Task 1).
+- Hit the REST/WebSocket API — no direct Python imports of game internals.
+- Assert on API response payloads: HP changes, damage breakdowns, budget decrements, resource states.
 
 ## Acceptance Criteria
 
 - [ ] Tests written and RED (before implementation)
 - [ ] Implementation makes tests GREEN
 - [ ] Existing tests still pass (`make check`)
+- [ ] Tests run on live stack via `make test-integration` (NOT unit tests, NOT E2E)
+- [ ] Dice randomness is controllable for deterministic assertions
 - [ ] Fighter: AC composition + attack + Second Wind + resource lifecycle
 - [ ] Rogue: Cunning Action as bonus + attack with sneak attack + budget enforcement
 - [ ] Cross-class: faction-aware sneak attack with Fighter ally
