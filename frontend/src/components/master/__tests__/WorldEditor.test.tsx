@@ -67,8 +67,10 @@ describe("WorldEditor stepper", () => {
     setup()
     await waitForStepper()
 
-    expect(mockApi.listEntities).toHaveBeenCalledWith("sword_vale", "region")
-    expect(mockApi.listEntities).toHaveBeenCalledWith("sword_vale", "location")
+    await waitFor(() => {
+      expect(mockApi.listEntities).toHaveBeenCalledWith("sword_vale", "region")
+      expect(mockApi.listEntities).toHaveBeenCalledWith("sword_vale", "location")
+    })
 
     const nextBtn = screen.getByRole("button", { name: /next/i })
     await user.click(nextBtn)
