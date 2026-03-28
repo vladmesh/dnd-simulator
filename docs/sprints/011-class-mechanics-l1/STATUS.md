@@ -1,14 +1,18 @@
 # Sprint 011 Status
 
 **Sprint:** 011-class-mechanics-l1
-**Phase:** 3 — Cunning Action Choice & SA Faction Check (COMPLETE)
+**Phase:** 4 — Content & Tests
 **Updated:** 2026-03-28
 
 ## Current
 
-Phase 3 complete. Cunning Action cost_mode wired end-to-end (backend ParamDef + ActionProvider + frontend CostChoiceButton). Sneak Attack ally detection uses faction relations. Integration tests (100 passed) and E2E green.
+Phase 4 tasks generated. Ready to start task 1.
 
-Ready for Phase 4 task generation.
+## Next Steps
+
+- Task 1: Fighter & Rogue NPCs with class features + catalog equipment; upgrade existing NPCs
+- Task 2: Unit tests for GWF reroll, sneak attack damage, weapon properties, full attack pipeline
+- Task 3: Integration tests for complete Fighter & Rogue combat turns
 
 ## Completed Phases
 

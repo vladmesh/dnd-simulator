@@ -98,7 +98,9 @@ Sprint 001 заложил инфраструктуру классовых мех
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Content — Fighter & Rogue NPCs + Equip Existing NPCs](tasks/phase4-task1-content-npcs-equipment.md)
+2. [Unit Tests — Combat Mechanics Coverage](tasks/phase4-task2-mechanics-unit-tests.md)
+3. [Integration Test — Full Fighter & Rogue Combat Turns](tasks/phase4-task3-integration-combat-turns.md)
 
 ---
 
