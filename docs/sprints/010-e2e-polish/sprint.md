@@ -64,8 +64,13 @@ Sprint 009 оставил 9 minor findings в e2e-отчёте — мелкие 
 
 ## Deferred
 
-_(заполняется по ходу спринта)_
+- **"Target too far" feedback** — клик по клетке вне reach не даёт визуальной обратной связи. Нужен дизайн.
+- **WS disconnect warning** — косметика, не влияет на gameplay.
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-03-28
+
+Закрыты 7 UX-багов из e2e-отчёта sprint 009. ActionBar.tsx декомпозирован с 532 до 140 строк — 8 субкомпонентов в action-bar/. Click-to-inspect на BattleMap: клик по занятой клетке → карточка существа (заменил combatants list). 22 E2E сценария пройдены, 94 интеграционных теста зелёные, 1452 unit теста.
+
+**Deferred:** target-too-far feedback (нужен дизайн), WS warning (косметика).
