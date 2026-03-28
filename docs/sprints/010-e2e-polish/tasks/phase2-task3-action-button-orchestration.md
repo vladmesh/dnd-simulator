@@ -53,4 +53,12 @@ Product-level: "player types 'Hello' in say box and presses Enter → say action
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Extracted `ActionButton` (99 lines) and `SayAction` (72 lines) from `ActionBar`. `ActionButton` dispatches to `TargetDropdown`, `DirectionalDropdown`, `SayAction`, or plain `Button` based on action params. `SayAction` owns its own `sayOpen`/`sayText` state.
+
+ActionBar reduced from 285 → 140 lines: pure orchestration (store reads, action filtering, layout). Removed the `containerRef`/`useEffect` for Escape handling and the `useRef` for say input — both now live in child components. The `onKeyDown` handler on the container div still handles Escape for dropdown state.
+
+All 136 frontend tests pass, all 1452 backend tests pass. No test modifications needed — pure refactor.
