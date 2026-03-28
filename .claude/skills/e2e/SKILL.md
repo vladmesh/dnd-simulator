@@ -52,6 +52,25 @@ From changed files, identify areas that might need additional testing beyond the
 
 Add ad-hoc scenarios for changed areas. These supplement the playbook, not replace it.
 
+### 2b. Verify Playwright MCP is available
+
+Before starting the stack, confirm that Playwright MCP tools are accessible:
+
+```
+ToolSearch: query="+playwright", max_results=3
+```
+
+If tools like `mcp__playwright__browser_navigate` are returned — proceed.
+
+**If no Playwright tools are found — this is a BLOCKER. Do NOT proceed.**
+
+Playwright MCP is installed as a Claude Code plugin (`@playwright/mcp`). If it disconnected mid-session, it cannot be restarted without restarting the Claude Code session itself.
+
+Action when Playwright is unavailable:
+1. Stop immediately. Do NOT run E2E without browser testing.
+2. Tell the user: "Playwright MCP is not available. Restart the Claude Code session (`/exit` then re-launch) and re-run the skill."
+3. Do NOT write an E2E report without browser testing.
+
 ### 3. Start the stack
 
 Kill any running instances and start fresh with full debug:
@@ -88,13 +107,24 @@ If either fails — check logs, fix, retry. Don't proceed with a broken stack.
 
 ### 4. Run scenarios
 
+Your job is to find problems, not to confirm the app works. Approach every screen like a paranoid QA engineer who gets paid per bug found. The playbook tells you what to do — but noticing what's wrong on each screen is your responsibility, not the playbook's.
+
 Work through each playbook scenario (filtered by `--section` and `--no-llm`). For each scenario:
 
 1. **State what you're testing** and what you expect
 2. **Execute** via Playwright MCP tools (navigate, click, fill, snapshot)
-3. **Verify** the expected outcome (check page content, event log, state changes)
+3. **Inspect the snapshot thoroughly** — this is the critical step. Don't just check "did the expected thing appear". Scrutinize everything visible on the screen:
+   - **Text content:** Are all strings in the correct language? Any raw IDs, enum values, or keys leaking into the UI? Any typos, broken encoding, or placeholder text left in?
+   - **Data correctness:** Do numbers make sense? Are HP, AC, damage, gold values consistent with what should be there? Do calculated values match expectations (armor + DEX + bonuses = displayed AC)?
+   - **Formatting:** Are log entries properly formatted? Do dice rolls show the full breakdown? Are timestamps, dates, names displaying correctly?
+   - **UI state:** Are buttons that should be disabled actually disabled? Are panels that should be visible/hidden in the right state? Any visual elements that look out of place, duplicated, or missing?
+   - **Consistency:** If the UI language is RU, is everything in RU — including log messages, toasts, item names, damage types, action names? Mixed languages = finding.
+   - **Edge cases on screen:** Anything weird in adjacent panels you weren't specifically testing? An NPC list that seems off, a stale value, a tooltip that doesn't make sense?
 4. **Record** the result: pass / fail / partial
-5. **If failed** — take a screenshot, check console messages, note the error
+5. **Record every anomaly** — even if the primary scenario "passed", any deviation from expected behavior is a finding. Don't save it for later, don't minimize it, write it into the scenario notes immediately.
+6. **If failed** — take a screenshot, check console messages, note the error
+
+The difference between a useful E2E and a rubber-stamp one: a rubber-stamp looks at the snapshot and asks "is the button there?" A real QA looks at the snapshot and reads every word on the screen.
 
 For scenarios that need a fresh session (combat, class features), create one via the setup flow or API before testing.
 

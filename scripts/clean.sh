@@ -32,6 +32,7 @@ kill_pattern() {
 echo "=== Killing processes ==="
 kill_port 8001
 kill_port 5173
+kill_pattern 'node.*vite' 'vite'
 kill_pattern 'playwright' 'playwright'
 kill_pattern 'chromium.*--remote-debugging' 'chromium'
 

@@ -54,6 +54,25 @@ make test-integration
 
 This is manual-ish testing through the actual UI with Playwright MCP, with full debug logging.
 
+#### 3.0. Verify Playwright MCP is available
+
+Before starting E2E, confirm that Playwright MCP tools are accessible:
+
+```
+ToolSearch: query="+playwright", max_results=3
+```
+
+If tools like `mcp__playwright__browser_navigate` are returned — proceed.
+
+**If no Playwright tools are found — this is a BLOCKER. Do NOT skip E2E or proceed without it.**
+
+Playwright MCP is installed as a Claude Code plugin (`@playwright/mcp`). If it disconnected mid-session, it cannot be restarted without restarting the Claude Code session itself.
+
+Action when Playwright is unavailable:
+1. Stop immediately. Do NOT close the phase without E2E.
+2. Tell the user: "Playwright MCP is not available. Restart the Claude Code session (`/exit` then re-launch) and re-run `/close_phase`."
+3. Do NOT write an E2E report without browser testing. Do NOT mark the phase as closed.
+
 #### 3a. Restart the stack with debug
 
 Kill any running stack and start fresh with full debug:

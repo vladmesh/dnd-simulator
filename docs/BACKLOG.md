@@ -65,8 +65,12 @@
 - [ ] **could** `action-parsing-in-adapter` — Adapter (routes_ws) парсит Action из JSON, должен service layer
 - [x] `magic-number-trade` — ~~Magic number 0.08 в politics/layer.py:338~~ FIXED 2026-03-24
 - [ ] **should** `thick-adapter-world-state` — routes_master.py:290-330 оркестрирует 7+ layer queries напрямую + assert-based validation (500 при плохих данных). Вынести в GameService.get_world_state()
-- [ ] **should** `routes-master-growing` — routes_master.py 554 строк, 32 роута. Разделить content-editing и session-control роуты
-- [ ] **should** `test-gap-content-loader` — content_loader/schema_gen, refs, utils без выделенных unit-тестов (частично покрыты интеграционными)
+- [ ] **should** `routes-master-growing` — routes_master.py 560 строк, 34 роута. Разделить content-editing и session-control роуты
+- [ ] **should** `test-gap-content-loader` — content_loader/refs, utils, creatures без выделенных unit-тестов (частично покрыты интеграционными)
+- [ ] **should** `core-brain-imports-rules` — core/brain.py:50,63,141 lazy-imports из rules/ (calculate_direction, get_weapon_attack). core не должен зависеть от rules. Перенести RuleBrain в rules/ или service/, или inject rule functions
+- [ ] **should** `test-gap-session` — service/session.py 457 строк, 27 методов без выделенных unit-тестов. Round lifecycle, listener dispatch, resolve_abstract_move непокрыты
+- [ ] **should** `god-class-combat-manager` — layers/entities/combat_manager.py 535 строк. Выделить initiative/turn logic от combat state management
+- [ ] **could** `entities-layer-imports-content-loader` — layers/entities/layer.py:465,484,490 lazy-imports из content_loader в load_state. Layers → core only, content_loader — peer module
 - [ ] **could** `player-status-in-adapter` — routes_player._player_status() маппит Ability enum → строки, presentation logic в адаптере
 
 ## Security (from audits 2026-03-25)
