@@ -37,8 +37,10 @@ import { useGameStore } from "@/store/gameStore"
 import {
   processLogEntries,
   EVENT_COLORS,
+  hasAttackBreakdown,
 } from "@/lib/logProcessing"
 import type { DisplayEntry } from "@/lib/logProcessing"
+import { RollBreakdown } from "./RollBreakdown"
 
 // ---------------------------------------------------------------------------
 // Icon name → component mapping
@@ -177,6 +179,31 @@ function DisplayEntryRow({
   }
 
   // kind === "event"
+  const isExpandableAttack =
+    entry.entry.event.event_type === "entity_attack" &&
+    hasAttackBreakdown(entry.entry.event.data ?? undefined)
+
+  if (isExpandableAttack) {
+    return (
+      <div className="px-3 py-0.5">
+        <div className="flex items-center gap-1.5">
+          <button
+            data-testid="attack-expand"
+            onClick={onToggleExpand}
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+          >
+            {expanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
+          </button>
+          <EventIcon name={entry.icon} className={`size-3 shrink-0 ${entry.colorClass}`} />
+          <span className={entry.colorClass}>{entry.entry.event.description}</span>
+        </div>
+        {expanded && entry.entry.event.data && (
+          <RollBreakdown data={entry.entry.event.data} />
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="flex items-center gap-1.5 px-3 py-0.5">
       <EventIcon name={entry.icon} className={`size-3 shrink-0 ${entry.colorClass}`} />
@@ -197,7 +224,7 @@ function CompactLog({
   onExpand?: () => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const [expandedMoves, setExpandedMoves] = useState<Set<number>>(new Set())
+  const [expandedEntries, setExpandedEntries] = useState<Set<number>>(new Set())
   const stickyRef = useRef(true)
 
   // Track whether user is scrolled to bottom
@@ -228,9 +255,9 @@ function CompactLog({
           <DisplayEntryRow
             key={entry.kind === "event" ? entry.entry.id : `${entry.kind}-${idx}`}
             entry={entry}
-            expanded={entry.kind === "aggregated_move" && expandedMoves.has(idx)}
+            expanded={expandedEntries.has(idx)}
             onToggleExpand={() => {
-              setExpandedMoves((prev) => {
+              setExpandedEntries((prev) => {
                 const next = new Set(prev)
                 if (next.has(idx)) next.delete(idx)
                 else next.add(idx)
@@ -265,7 +292,7 @@ function FullLog({
   emptyMessage: string
 }) {
   const parentRef = useRef<HTMLDivElement>(null)
-  const [expandedMoves, setExpandedMoves] = useState<Set<number>>(new Set())
+  const [expandedEntries, setExpandedEntries] = useState<Set<number>>(new Set())
   const stickyRef = useRef(true)
 
   const virtualizer = useVirtualizer({
@@ -275,8 +302,14 @@ function FullLog({
       const entry = displayEntries[index]
       if (entry.kind === "round_header") return 34
       if (entry.kind === "turn_header") return 28
-      if (entry.kind === "aggregated_move" && expandedMoves.has(index)) {
+      if (entry.kind === "aggregated_move" && expandedEntries.has(index)) {
         return 24 + entry.entries.length * 20
+      }
+      if (entry.kind === "event" && expandedEntries.has(index)) {
+        // Rough estimate: d20 line + advantage line + damage header + components
+        const comps = entry.entry.event.data?.damage_components
+        const compCount = Array.isArray(comps) ? comps.length : 0
+        return 24 + 20 + 16 + compCount * 16
       }
       return 24
     },
@@ -320,9 +353,9 @@ function FullLog({
               >
                 <DisplayEntryRow
                   entry={entry}
-                  expanded={entry.kind === "aggregated_move" && expandedMoves.has(vRow.index)}
+                  expanded={expandedEntries.has(vRow.index)}
                   onToggleExpand={() => {
-                    setExpandedMoves((prev) => {
+                    setExpandedEntries((prev) => {
                       const next = new Set(prev)
                       if (next.has(vRow.index)) next.delete(vRow.index)
                       else next.add(vRow.index)

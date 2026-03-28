@@ -6,8 +6,9 @@
 
 ## Current
 
-Phase 0, Task 2: Attack & Damage Breakdown Pipeline — done. `CheckResult.d20`, `DamageResult.dice_result`, event `dice_detail` fields, healing dice_detail.
+Phase 0, Task 3: Frontend Clickable Roll Breakdown — done. `RollBreakdown` component, expandable attack events with d20/modifier/damage breakdown, reroll indicators, advantage display.
 
 ## Next Steps
 
-- Task 3: Frontend `RollBreakdown` component, expandable attack events
+- All Phase 0 tasks complete — ready for phase closure
+- Phase 1: Weapon Properties & Fighting Styles

@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test test-unit test-integration check setup-hooks messages compile-messages serve stop frontend up clean
+.PHONY: install lint format typecheck test test-unit test-integration check setup-hooks messages compile-messages serve stop frontend up clean test-frontend lint-frontend typecheck-frontend
 
 install:
 	uv sync
@@ -23,7 +23,16 @@ test-unit:
 test-integration:
 	UID=$$(id -u) GID=$$(id -g) docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from integration-tests
 
-check: lint typecheck test
+test-frontend:
+	cd frontend && npx vitest run
+
+lint-frontend:
+	cd frontend && npx eslint src/
+
+typecheck-frontend:
+	cd frontend && npx tsc --noEmit
+
+check: lint typecheck test test-frontend typecheck-frontend
 
 setup-hooks:
 	@bash scripts/setup-hooks.sh

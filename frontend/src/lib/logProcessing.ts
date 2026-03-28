@@ -1,5 +1,19 @@
-import type { EventType, PerceivedEvent } from "@/types/game"
+import type { EventType, PerceivedEvent, AttackRollData } from "@/types/game"
 import type { LogEntry } from "@/store/slices/logSlice"
+
+// ---------------------------------------------------------------------------
+// Attack breakdown detection
+// ---------------------------------------------------------------------------
+
+function isAttackRollData(v: unknown): v is AttackRollData {
+  if (typeof v !== "object" || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.natural === "number" && typeof o.total === "number" && o.d20 != null
+}
+
+export function hasAttackBreakdown(data: Record<string, unknown> | undefined): boolean {
+  return data != null && isAttackRollData(data.attack_roll)
+}
 
 // ---------------------------------------------------------------------------
 // Display entry types

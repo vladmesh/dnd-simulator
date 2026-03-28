@@ -108,4 +108,15 @@ Key UI decisions:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Followed the existing aggregated-move expandable pattern in EventLog. Key decisions:
+
+- `hasAttackBreakdown()` guard function checks `event.data.attack_roll` exists — events without structured data (legacy or missing) are not expandable.
+- Renamed `expandedMoves` → `expandedEntries` since the Set now tracks both move and attack expansions.
+- `RollBreakdown` component uses type guards (`isAttackRollData`, `isDamageComponentArray`) for runtime safety since `PerceivedEvent.data` is `Record<string, unknown>`.
+- Rerolled dice render as `<strikethrough>original</strikethrough>→result` using Tailwind `line-through`.
+- Virtualizer size estimation accounts for expanded attacks (d20 line + advantage line + damage components).
+- 11 new tests covering expand/collapse, d20 display, modifiers, advantage, damage components, rerolls, graceful degradation, and non-expandable event types.

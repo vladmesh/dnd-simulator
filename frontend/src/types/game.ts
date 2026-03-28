@@ -39,6 +39,32 @@ export interface TurnBudget {
   reaction: number
 }
 
+// --- Dice / Roll Breakdown ---
+
+export interface DieRollData {
+  sides: number
+  result: number
+  original?: number | null  // pre-reroll value
+}
+
+export interface AttackRollData {
+  natural: number
+  d20: DieRollData
+  d20_alt?: DieRollData | null
+  components: Array<{ source: string; value: number; dice: string }>
+  total: number
+  advantage: boolean
+  disadvantage: boolean
+}
+
+export interface DamageComponentData {
+  source: string
+  dice: string
+  dice_detail?: DieRollData[]
+  amount: number
+  type: string
+}
+
 // --- Events ---
 
 export interface PerceivedEvent {
