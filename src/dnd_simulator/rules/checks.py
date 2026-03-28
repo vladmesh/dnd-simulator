@@ -32,7 +32,8 @@ def attack_roll(
     rng: random.Random | None = None,
 ) -> CheckResult:
     """d20 + modifier vs AC.  Nat 20 always hits, nat 1 always misses."""
-    d20 = roll_d20(advantage=advantage, disadvantage=disadvantage, rng=rng)
+    d20_result = roll_d20(advantage=advantage, disadvantage=disadvantage, rng=rng)
+    d20 = d20_result.natural
     total = d20 + modifier
     if d20 == 20:
         return CheckResult(success=True, roll=d20, total=total, dc=ac, critical=True)
@@ -50,7 +51,8 @@ def ability_check(
     rng: random.Random | None = None,
 ) -> CheckResult:
     """d20 + modifier vs DC.  No critical hits/misses on ability checks (RAW)."""
-    d20 = roll_d20(advantage=advantage, disadvantage=disadvantage, rng=rng)
+    d20_result = roll_d20(advantage=advantage, disadvantage=disadvantage, rng=rng)
+    d20 = d20_result.natural
     return CheckResult(success=d20 + modifier >= dc, roll=d20, total=d20 + modifier, dc=dc, critical=False)
 
 
@@ -69,13 +71,13 @@ def saving_throw(
 def damage_roll(expr: str, *, critical: bool = False, rng: random.Random | None = None) -> int:
     """Roll damage dice.  On a critical hit, double the dice (not the modifier)."""
     if not critical:
-        return roll(expr, rng=rng)
+        return roll(expr, rng=rng).total
 
     # Double dice only: "2d6+3" → roll 4d6+3
     expr = expr.strip()
     parts = expr.split("d", 1)
     if len(parts) == 2 and parts[0].strip().isdigit():
         count = int(parts[0].strip())
-        return roll(f"{count * 2}d{parts[1]}", rng=rng)
+        return roll(f"{count * 2}d{parts[1]}", rng=rng).total
     # Constant (no dice) — crits don't double flat damage
-    return roll(expr, rng=rng)
+    return roll(expr, rng=rng).total

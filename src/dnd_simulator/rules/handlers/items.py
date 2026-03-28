@@ -68,7 +68,7 @@ def _find_item(actor: Creature, item_id: str) -> Item:
 def _apply_potion(actor: Creature, item: Item) -> int:
     """Roll heal dice and apply healing. Returns actual HP restored."""
     heal_dice = str(item.params["heal_dice"])
-    rolled = roll(heal_dice)
+    rolled = roll(heal_dice).total
     return actor.heal(rolled)
 
 
@@ -136,7 +136,7 @@ def handle_second_wind(
         return ActionResult(success=False, error="Only characters can use Second Wind")
 
     use_resource(actor, "second_wind")
-    healing = roll_dice("1d10") + actor.level
+    healing = roll_dice("1d10").total + actor.level
     healed = actor.heal(healing)
 
     logger.info("second_wind", rolled=healing, healed=healed, level=actor.level)

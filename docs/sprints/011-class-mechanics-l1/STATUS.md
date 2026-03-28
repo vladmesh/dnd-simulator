@@ -6,10 +6,9 @@
 
 ## Current
 
-Phase 0 added before Phase 1. Structured dice pipeline as foundation for GWF rerolls and clickable combat log. 3 tasks, strictly sequential. Ready to start task 1.
+Phase 0, Task 1: Structured Dice Results — done. `roll()` → `DiceResult`, `roll_d20()` → `D20Result`, `reroll_below` param, all callers migrated.
 
 ## Next Steps
 
-- Task 1: `core/rolls.py` types + `rules/dice.py` refactor (`roll()` → `DiceResult`, `roll_d20()` → `D20Result`, `reroll_below`)
 - Task 2: Thread structured results through checks → combat → combat_manager → event data
 - Task 3: Frontend `RollBreakdown` component, expandable attack events

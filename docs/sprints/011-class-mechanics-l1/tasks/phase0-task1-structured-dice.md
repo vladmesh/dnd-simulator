@@ -103,4 +103,8 @@ Every caller that does arithmetic with `roll()` or `roll_d20()` result switches 
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Clean refactor. `roll()` now returns `DiceResult`, `roll_d20()` returns `D20Result` — both carry individual die faces. `reroll_below` parameter added for GWF-style mechanics (single reroll, records original value). All 6 caller sites migrated to `.total`/`.natural`. Existing test_dice.py updated to use structured accessors. No behavior changes — pure data enrichment. 14 new tests, 0 old tests broken.

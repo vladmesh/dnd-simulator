@@ -340,7 +340,7 @@ class CombatManager:
 
             for rc in atk_mods.roll_components:
                 if rc.dice:
-                    rolled_value = roll_dice_fn(rc.dice)
+                    rolled_value = roll_dice_fn(rc.dice).total
                     rolled_dice.append(RollComponent(source=rc.source, value=rolled_value, dice=rc.dice))
                     dice_total += rolled_value
             logger.debug(

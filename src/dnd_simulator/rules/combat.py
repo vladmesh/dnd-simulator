@@ -124,9 +124,9 @@ def roll_initiative(
     r = rng or random.Random()
     rolls: list[tuple[Creature, int, int, int]] = []
     for c in creatures:
-        d20 = roll_d20(rng=r)
+        d20_result = roll_d20(rng=r)
         modifier = c.ability_scores.modifier(Ability.DEX)
-        total = d20 + modifier
+        total = d20_result.natural + modifier
         dex_score = c.ability_scores[Ability.DEX]
         tiebreaker = r.randint(0, 1_000_000)
         rolls.append((c, total, dex_score, tiebreaker))
