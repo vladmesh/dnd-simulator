@@ -50,6 +50,7 @@ class PatchCreatureRequest(BaseModel):
     """Update mutable creature fields. Only applicable fields are applied."""
 
     current_hp: int | None = Field(default=None, ge=0, le=999)
+    max_hp: int | None = Field(default=None, ge=1, le=999)
     ac: int | None = Field(default=None, ge=0, le=30)
     location_id: str | None = None
     conditions: list[str] | None = None  # D&D 5e condition names
@@ -80,6 +81,12 @@ class GiveItemRequest(BaseModel):
 class SetBrainRequest(BaseModel):
     type: str  # "rule_based" or "llm"
     model: str = ""
+
+
+class SetBrainResponse(BaseModel):
+    message: str
+    brain_type: str
+    warning: str | None = None
 
 
 class PatchNationRequest(BaseModel):

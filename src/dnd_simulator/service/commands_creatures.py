@@ -84,6 +84,8 @@ class CreatureCommands(GameServiceProtocol):
         # Creature-level fields
         if "current_hp" in updates:
             entity.current_hp = int(updates["current_hp"])
+        if "max_hp" in updates:
+            entity.max_hp = int(updates["max_hp"])
         if "ac" in updates:
             entity.ac = int(updates["ac"])
         if "location_id" in updates:
@@ -141,18 +143,21 @@ class CreatureCommands(GameServiceProtocol):
 
     # -- Brain --
 
-    def set_creature_brain(self, session_id: str, entity_id: str, brain_type: str, model: str = "") -> None:
-        """Switch creature brain (rule_based or llm)."""
+    def set_creature_brain(self, session_id: str, entity_id: str, brain_type: str, model: str = "") -> str:
+        """Switch creature brain (rule_based or llm). Returns actual brain type set."""
         from dnd_simulator.core.character import Creature
         from dnd_simulator.layers.entities.models import Npc
+        from dnd_simulator.llm.brain import LlmBrain
 
         session = self._get_session(session_id)
         entity = self._get_entities_layer(session).get_entity(entity_id)
         if entity is None or not isinstance(entity, Creature):
             raise ValueError(f"Creature '{entity_id}' not found")
         entity.brain = self._brain_factory.create(brain_type)
+        actual_type = "llm" if isinstance(entity.brain, LlmBrain) else "rule_based"
         if isinstance(entity, Npc):
-            entity.ai_type = brain_type
+            entity.ai_type = actual_type
+        return actual_type
 
 
 def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) -> Entity:

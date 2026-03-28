@@ -22,6 +22,7 @@ import type {
   SessionListItem,
   SessionResponse,
   SetBrainRequest,
+  SetBrainResponse,
   SetLangRequest,
   SpawnCreatureRequest,
   TemplateListItem,
@@ -197,7 +198,7 @@ const master = {
     ),
 
   setBrain: (sessionId: string, entityId: string, data: SetBrainRequest) =>
-    put<MessageResponse>(
+    put<SetBrainResponse>(
       `/api/master/sessions/${sessionId}/creatures/${entityId}/brain`,
       data,
     ),

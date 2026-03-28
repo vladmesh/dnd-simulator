@@ -6,8 +6,8 @@
 
 ## Current
 
-Phase 1, Task 2: BattleMap click-to-inspect — done. Enemy cells clickable, combatants list removed, faction names resolved.
+Phase 1, Task 3: Master panel + drawer UX — done. HP split into current/max, brain toggle returns warning on missing LLM key, consumable drawer has tooltip.
 
 ## Next Steps
 
-- Task 3: Master panel + drawer UX — HP current/max, brain toggle toast, consumable label
+- All phase 1 tasks complete — ready for phase closure

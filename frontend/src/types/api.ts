@@ -39,6 +39,7 @@ export interface SpawnCreatureRequest {
 
 export interface PatchCreatureRequest {
   current_hp?: number | null
+  max_hp?: number | null
   ac?: number | null
   location_id?: string | null
   conditions?: string[] | null
@@ -212,6 +213,12 @@ export interface WorldManifestResponse {
 
 export interface MessageResponse {
   message: string
+}
+
+export interface SetBrainResponse {
+  message: string
+  brain_type: string
+  warning?: string | null
 }
 
 export interface LayerFilesResponse {

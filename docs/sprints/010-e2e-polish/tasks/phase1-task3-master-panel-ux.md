@@ -46,4 +46,14 @@ Key files:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Three independent UX fixes implemented:
+
+1. **HP current/max**: Split single HP input into two fields (current_hp, max_hp) in CreatureForm edit mode. Added `max_hp` to backend PatchCreatureRequest schema and service handler. Spawn mode still shows a single "Current HP" field since max_hp defaults to the same value.
+
+2. **Brain toggle warning**: Changed `set_creature_brain` to return actual brain type set. New `SetBrainResponse` schema with `brain_type` and optional `warning` field. When LLM key is missing and brain falls back to rule_based, response includes `warning: "no_llm_key"`. Frontend shows `toast.warning()` instead of `toast.success()`. Updated existing test that previously asserted the wrong ai_type ("llm" when actually rule_based) — the old behavior was an acknowledged inconsistency.
+
+3. **Consumable drawer tooltip**: Added `title` prop to ActionDrawer component, passed tooltip text to consumable drawer button.

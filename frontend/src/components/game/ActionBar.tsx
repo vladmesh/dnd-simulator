@@ -273,6 +273,7 @@ export function ActionBar() {
             isOpen={openDropdown === "drawer:consumables"}
             onToggle={() => setOpenDropdown(openDropdown === "drawer:consumables" ? null : "drawer:consumables")}
             disabled={isDisabled()}
+            title={t("game:consumables_tooltip", "Consumable items")}
           >
             {consumableItems.map((item) => (
               <button
@@ -385,10 +386,11 @@ interface ActionDrawerProps {
   isOpen: boolean
   onToggle: () => void
   disabled: boolean
+  title?: string
   children: React.ReactNode
 }
 
-function ActionDrawer({ drawerKey, icon, count, isOpen, onToggle, disabled, children }: ActionDrawerProps) {
+function ActionDrawer({ drawerKey, icon, count, isOpen, onToggle, disabled, title, children }: ActionDrawerProps) {
   return (
     <div className="relative">
       <Button
@@ -398,6 +400,7 @@ function ActionDrawer({ drawerKey, icon, count, isOpen, onToggle, disabled, chil
         data-drawer={drawerKey}
         onClick={onToggle}
         className="gap-1"
+        title={title}
       >
         {icon}
         <span className="text-xs">{count}</span>

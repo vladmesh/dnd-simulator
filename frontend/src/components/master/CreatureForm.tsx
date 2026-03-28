@@ -38,7 +38,8 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
     id: creature?.id ?? "",
     name: creature?.name ?? "",
     entity_type: creature?.entity_type ?? "npc",
-    hp: creature?.hp ?? 10,
+    current_hp: creature?.hp ?? 10,
+    max_hp: creature?.max_hp ?? 10,
     ac: creature?.ac ?? 10,
     speed: 30,
     start_location: creature?.location_id ?? "",
@@ -64,7 +65,8 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
 
     const promise = isEdit
       ? api.master.patchCreature(sessionId, creature.id, {
-          current_hp: form.hp,
+          current_hp: form.current_hp,
+          max_hp: form.max_hp,
           ac: form.ac,
           location_id: form.start_location || null,
           gold: form.gold,
@@ -75,7 +77,7 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
           id: form.id,
           name: form.name,
           entity_type: form.entity_type,
-          hp: form.hp,
+          hp: form.current_hp,
           ac: form.ac,
           speed: form.speed,
           start_location: form.start_location,
@@ -136,9 +138,15 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
           </div>
 
           <div>
-            <Label>{t("master:field_hp")}</Label>
-            <Input type="number" min={0} max={999} value={form.hp} onChange={(e) => set("hp", parseInt(e.target.value) || 0)} />
+            <Label htmlFor="current_hp">{t("master:field_current_hp", "Current HP")}</Label>
+            <Input id="current_hp" type="number" min={0} max={999} value={form.current_hp} onChange={(e) => set("current_hp", parseInt(e.target.value) || 0)} />
           </div>
+          {isEdit && (
+            <div>
+              <Label htmlFor="max_hp">{t("master:field_max_hp", "Max HP")}</Label>
+              <Input id="max_hp" type="number" min={1} max={999} value={form.max_hp} onChange={(e) => set("max_hp", parseInt(e.target.value) || 1)} />
+            </div>
+          )}
           <div>
             <Label>{t("master:field_ac")}</Label>
             <Input type="number" min={0} max={30} value={form.ac} onChange={(e) => set("ac", parseInt(e.target.value) || 0)} />

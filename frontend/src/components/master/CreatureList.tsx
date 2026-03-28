@@ -49,7 +49,14 @@ export function CreatureList({ sessionId }: Props) {
     const newType = c.ai_type === "llm" ? "rule_based" : "llm"
     api.master
       .setBrain(sessionId, c.id, { type: newType })
-      .then(() => { refresh(); toast.success(t("master:set_brain")) })
+      .then((res) => {
+        refresh()
+        if (res.warning) {
+          toast.warning(t("master:no_llm_key", "No LLM key configured"))
+        } else {
+          toast.success(t("master:set_brain"))
+        }
+      })
       .catch(() => toast.error(t("common:error")))
   }
 

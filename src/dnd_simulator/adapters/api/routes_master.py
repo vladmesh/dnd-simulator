@@ -20,6 +20,7 @@ from dnd_simulator.adapters.api.schemas import (
     PatchSettlementRequest,
     SessionResponse,
     SetBrainRequest,
+    SetBrainResponse,
     SetLangRequest,
     SpawnCreatureRequest,
     TemplateListItem,
@@ -419,15 +420,20 @@ def give_item(session_id: str, entity_id: str, body: GiveItemRequest) -> dict[st
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-@router.put("/sessions/{session_id}/creatures/{entity_id}/brain", response_model=MessageResponse)
-def set_brain(session_id: str, entity_id: str, body: SetBrainRequest) -> MessageResponse:
+@router.put("/sessions/{session_id}/creatures/{entity_id}/brain", response_model=SetBrainResponse)
+def set_brain(session_id: str, entity_id: str, body: SetBrainRequest) -> SetBrainResponse:
     """Switch creature brain type."""
     service = get_service()
     try:
-        service.set_creature_brain(session_id, entity_id, body.type, body.model)
+        actual_type = service.set_creature_brain(session_id, entity_id, body.type, body.model)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    return MessageResponse(message=_("Creature {} brain set to {}").format(entity_id, body.type))
+    warning = "no_llm_key" if body.type == "llm" and actual_type != "llm" else None
+    return SetBrainResponse(
+        message=_("Creature {} brain set to {}").format(entity_id, actual_type),
+        brain_type=actual_type,
+        warning=warning,
+    )
 
 
 # -- Nation/Settlement hot controls --

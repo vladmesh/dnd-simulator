@@ -226,6 +226,20 @@ describe("ActionBar — consumable drawer", () => {
     expect(drawerBtn!.textContent).toContain("2")
   })
 
+  it("consumable drawer button has a tooltip", () => {
+    setCombatState(
+      [makeAction("use_item", "action", [{ name: "item_id", type: "string", required: true }])],
+      fullBudget,
+      [],
+      potions,
+    )
+
+    const { container } = render(<ActionBar />)
+    const drawerBtn = container.querySelector("[data-drawer='consumables']") as HTMLElement
+    expect(drawerBtn).toBeTruthy()
+    expect(drawerBtn.getAttribute("title")).toBeTruthy()
+  })
+
   it("clicking consumable drawer opens popup with potion names", () => {
     setCombatState(
       [makeAction("use_item", "action", [{ name: "item_id", type: "string", required: true }])],
