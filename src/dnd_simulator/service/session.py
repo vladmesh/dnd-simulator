@@ -59,6 +59,9 @@ def _awareness_to_dict(
 ) -> dict[str, Any]:
     d = dataclasses.asdict(awareness)
     # frozenset[Condition] → sorted list of strings for JSON serialization
+    # frozenset[tuple[int, int]] → sorted list of [x, y] pairs for JSON serialization
+    d["reachable"] = sorted([x, y] for x, y in awareness.reachable)
+
     if isinstance(awareness, CombatAwareness):
         d["self_conditions"] = sorted(c.value for c in awareness.self_conditions)
         for i, nearby_entry in enumerate(awareness.nearby):

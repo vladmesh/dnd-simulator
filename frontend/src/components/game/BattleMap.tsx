@@ -49,26 +49,6 @@ function edgeKey(x1: number, y1: number, x2: number, y2: number): string {
   return `${x2},${y2}|${x1},${y1}`
 }
 
-/** Check if a single step between adjacent cells is blocked by a wall edge. */
-function isEdgeBlocked(
-  fromX: number, fromY: number,
-  toX: number, toY: number,
-  edges: Set<string>,
-): boolean {
-  const dx = toX - fromX
-  const dy = toY - fromY
-  const isDiag = dx !== 0 && dy !== 0
-  if (!isDiag) {
-    return edges.has(edgeKey(fromX, fromY, toX, toY))
-  }
-  // Diagonal: blocked only if BOTH L-shaped paths are blocked
-  const mid1Blocked = edges.has(edgeKey(fromX, fromY, fromX + dx, fromY)) &&
-    edges.has(edgeKey(fromX + dx, fromY, toX, toY))
-  const mid2Blocked = edges.has(edgeKey(fromX, fromY, fromX, fromY + dy)) &&
-    edges.has(edgeKey(fromX, fromY + dy, toX, toY))
-  return mid1Blocked && mid2Blocked
-}
-
 /** Determine which borders of a cell have inner walls. */
 function getCellWalls(
   col: number,
@@ -89,77 +69,6 @@ function getCellWalls(
   }
 }
 
-/**
- * BFS to compute reachable cells from player position within movement budget.
- * Uses D&D 5e diagonal cost: first diagonal = 5ft, second = 10ft, alternating.
- */
-function computeReachable(
-  startCol: number,
-  startRow: number,
-  budget: number,
-  maxCol: number,
-  maxRow: number,
-  occupied: Set<string>,
-  edges: Set<string>,
-): Set<string> {
-  const reachable = new Set<string>()
-  if (budget <= 0) return reachable
-
-  // BFS with cost tracking — state is (col, row, costSoFar, diagCount)
-  // We track best cost to each cell to prune
-  const bestCost = new Map<string, number>()
-  const queue: Array<[number, number, number, number]> = [[startCol, startRow, 0, 0]]
-  bestCost.set(`${startCol},${startRow}`, 0)
-
-  const dirs = [
-    [-1, 0], [1, 0], [0, -1], [0, 1],
-    [-1, -1], [-1, 1], [1, -1], [1, 1],
-  ]
-
-  while (queue.length > 0) {
-    const [col, row, cost, diagCount] = queue.shift()!
-    if (cost > budget) continue
-
-    for (const [dc, dr] of dirs) {
-      const nc = col + dc
-      const nr = row + dr
-      if (nc < 0 || nc > maxCol || nr < 0 || nr > maxRow) continue
-
-      const nKey = `${nc},${nr}`
-      if (occupied.has(nKey)) continue
-
-      const fromX = col * 5
-      const fromY = row * 5
-      const toX = nc * 5
-      const toY = nr * 5
-      if (isEdgeBlocked(fromX, fromY, toX, toY, edges)) continue
-
-      const isDiag = dc !== 0 && dr !== 0
-      let stepCost: number
-      let newDiag: number
-      if (isDiag) {
-        stepCost = diagCount % 2 === 1 ? 10 : 5
-        newDiag = diagCount + 1
-      } else {
-        stepCost = 5
-        newDiag = diagCount
-      }
-
-      const newCost = cost + stepCost
-      if (newCost > budget) continue
-
-      const prevBest = bestCost.get(nKey)
-      if (prevBest !== undefined && prevBest <= newCost) continue
-
-      bestCost.set(nKey, newCost)
-      reachable.add(nKey)
-      queue.push([nc, nr, newCost, newDiag])
-    }
-  }
-
-  return reachable
-}
-
 interface BattleMapProps {
   onEntityClick?: (entity: CombatEntity) => void
 }
@@ -168,7 +77,6 @@ export function BattleMap({ onEntityClick }: BattleMapProps = {}) {
   const { t } = useTranslation(["game"])
   const awareness = useGameStore((s) => s.awareness)
   const isMyTurn = useGameStore((s) => s.isMyTurn)
-  const budget = useGameStore((s) => s.budget)
   const waitingForAction = useGameStore((s) => s.waitingForAction)
 
   const handleCellClick = useCallback((x: number, y: number) => {
@@ -187,9 +95,8 @@ export function BattleMap({ onEntityClick }: BattleMapProps = {}) {
   const rows = height / 5 + 1
 
   // Build position lookup and blocked edges
-  const { posLookup, blockedEdges, occupiedSet } = useMemo(() => {
+  const { posLookup, blockedEdges } = useMemo(() => {
     const lookup = new Map<string, { glyph: string; isPlayer: boolean; entity?: CombatEntity }>()
-    const occ = new Set<string>()
 
     // Player position
     if (combat.self_x != null && combat.self_y != null) {
@@ -205,24 +112,25 @@ export function BattleMap({ onEntityClick }: BattleMapProps = {}) {
         const eRow = entity.y / 5
         const glyph = i < 9 ? String(i + 1) : "+"
         lookup.set(`${eCol},${eRow}`, { glyph, isPlayer: false, entity })
-        occ.add(`${eCol},${eRow}`)
       }
     })
 
     const edges = buildBlockedEdges(combat.battle_map_walls ?? [])
 
-    return { posLookup: lookup, blockedEdges: edges, occupiedSet: occ }
+    return { posLookup: lookup, blockedEdges: edges }
   }, [combat.self_x, combat.self_y, combat.nearby, combat.battle_map_walls])
 
-  // Compute reachable cells when it's player's turn
+  // Build reachable set from backend-computed data
   const reachableCells = useMemo(() => {
-    if (!isMyTurn || waitingForAction) return new Set<string>()
-    const moveBudget = budget?.movement_remaining ?? 0
-    if (moveBudget <= 0 || combat.self_x == null || combat.self_y == null) return new Set<string>()
-    const startCol = combat.self_x / 5
-    const startRow = combat.self_y / 5
-    return computeReachable(startCol, startRow, moveBudget, cols - 1, rows - 1, occupiedSet, blockedEdges)
-  }, [isMyTurn, waitingForAction, budget?.movement_remaining, combat.self_x, combat.self_y, cols, rows, occupiedSet, blockedEdges])
+    const cells = new Set<string>()
+    if (!isMyTurn || waitingForAction) return cells
+    for (const pair of combat.reachable ?? []) {
+      const col = pair[0] / 5
+      const row = pair[1] / 5
+      cells.add(`${col},${row}`)
+    }
+    return cells
+  }, [isMyTurn, waitingForAction, combat.reachable])
 
   const canClick = isMyTurn && !waitingForAction
 

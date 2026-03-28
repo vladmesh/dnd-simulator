@@ -134,6 +134,26 @@ class Round:
                 result.append(EquippedInfo(slot=slot, item_id=item.id, name=item.name, description=describe_item(item)))
         return result
 
+    @staticmethod
+    def _compute_reachable(
+        creature: Creature,
+        combat_state: object | None,
+        budget: TurnBudget,
+    ) -> frozenset[tuple[int, int]]:
+        """Compute reachable cells for the current turn-taker."""
+        if combat_state is None or budget.movement_remaining <= 0:
+            return frozenset()
+        from dnd_simulator.core.combat import CombatState
+
+        assert isinstance(combat_state, CombatState)
+        my_pos = combat_state.battle_map.positions.get(creature.id)
+        if my_pos is None:
+            return frozenset()
+        from dnd_simulator.rules.movement import compute_reachable
+
+        reachable_map = compute_reachable(my_pos, budget.movement_remaining, combat_state.battle_map, creature.id)
+        return frozenset((p.x, p.y) for p in reachable_map if p != my_pos)
+
     def _build_merchants(self, creature: Creature) -> list[MerchantInfo]:
         """Build merchant info for creatures at the same location."""
         hour = self._world.time.hour
@@ -258,12 +278,14 @@ class Round:
 
         while True:
             available = self._dispatcher.get_available_actions(creature, ctx)
+            reachable = self._compute_reachable(creature, combat_state, budget)
             awareness = replace(
                 self._entities.build_awareness(creature, time, query_fn),
                 turn_budget=budget,
                 available_actions=available,
                 available_items=self._build_available_items(creature, available),
                 equipped=self._build_equipped(creature),
+                reachable=reachable,
             )
             events = self._entities.get_perceived_events(creature)
 

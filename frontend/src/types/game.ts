@@ -185,6 +185,7 @@ export interface CombatAwareness {
   self_conditions?: string[]
   available_actions?: ActionInfo[]
   available_items?: ItemInfo[]
+  reachable?: number[][]
 }
 
 export type Awareness = PeacefulAwareness | CombatAwareness

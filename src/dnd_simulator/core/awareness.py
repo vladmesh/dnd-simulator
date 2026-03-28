@@ -132,6 +132,7 @@ class PeacefulAwareness:
     available_items: list[ItemInfo] = field(default_factory=list)
     equipped: list[EquippedInfo] = field(default_factory=list)
     merchants: list[MerchantInfo] = field(default_factory=list)
+    reachable: frozenset[tuple[int, int]] = field(default_factory=frozenset)
 
 
 @dataclass(frozen=True)
@@ -158,6 +159,7 @@ class CombatAwareness:
     available_actions: list[ActionType] = field(default_factory=list)
     available_items: list[ItemInfo] = field(default_factory=list)
     equipped: list[EquippedInfo] = field(default_factory=list)
+    reachable: frozenset[tuple[int, int]] = field(default_factory=frozenset)
 
 
 @dataclass(frozen=True)

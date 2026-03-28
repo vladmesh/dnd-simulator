@@ -55,4 +55,14 @@ Wall rendering (`buildBlockedEdges`, `getCellWalls`) stays on the frontend — t
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Deviated from task plan: reachable is computed in `Round._compute_reachable()` via `replace()`, not in `AwarenessBuilder`. The builder doesn't know whose turn it is — Round already injects turn-specific data (budget, actions) the same way, so this is consistent.
+
+Added `reachable` field to both `CombatAwareness` and `PeacefulAwareness` (always empty in peaceful) because `Round` calls `replace()` on the union type and mypy needs the field on both.
+
+Key gotcha: `frozenset` from `dataclasses.asdict()` is not JSON-serializable. Serialization to `[[x, y], ...]` must happen for both awareness types in `_awareness_to_dict`, not just CombatAwareness — otherwise WebSocket tests hang forever waiting for a response that fails silently.
+
+Frontend: removed `computeReachable()` (~65 lines BFS) and `isEdgeBlocked()` (~18 lines). `BattleMap.tsx` now reads `combat.reachable` directly from backend, converting feet coords to col/row. Wall rendering (`buildBlockedEdges`, `getCellWalls`) stays on frontend.

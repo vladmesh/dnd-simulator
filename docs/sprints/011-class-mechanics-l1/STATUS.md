@@ -6,12 +6,13 @@
 
 ## Current
 
-Phase 1, Task 1: Backend Reachability Engine — done. Dijkstra-based `compute_reachable()`, `find_path` as wrapper, `handle_move_to` uses reachable map.
+Phase 1, Task 2: Awareness Pipeline + Frontend Simplification — done. Reachable computed in Round, serialized to frontend, BattleMap.tsx BFS removed.
 
 ## Completed Phases
 
 - **Phase 0:** Structured Dice & Roll Breakdown — all 4 tasks done
+- **Phase 1:** BattleMap Reachability — all 2 tasks done
 
 ## Next Steps
 
-- Task 2: Thread reachable into awareness, frontend drops its own BFS
+- Phase 2: Weapon Properties & Fighting Styles
