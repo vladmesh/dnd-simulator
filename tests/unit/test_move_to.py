@@ -11,7 +11,7 @@ from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.combat import BattleMap, Position, Wall
 from dnd_simulator.core.models import ActionResult
 from dnd_simulator.core.turn_budget import TurnBudget
-from dnd_simulator.rules.movement import find_path, walk_path
+from dnd_simulator.rules.movement import compute_reachable, find_path, walk_path
 from dnd_simulator.rules.validation import ActionContext
 
 # ---------------------------------------------------------------------------
@@ -71,6 +71,33 @@ class TestFindPath:
         bm = BattleMap(width=30, height=30)
         path = find_path(Position(10, 10), Position(10, 10), bm, "mover")
         assert path == [Position(10, 10)]
+
+    def test_find_path_uses_cost_aware_routing(self) -> None:
+        """find_path returns the cost-optimal path, not the step-count-optimal path.
+
+        This is the root cause fix: old BFS minimized steps (preferring diagonals)
+        which could produce paths that cost more feet than necessary.
+        """
+        bm = BattleMap(width=60, height=60)
+        start = Position(15, 15)
+        goal = Position(45, 15)  # 6 squares east = 30ft straight
+        path = find_path(start, goal, bm, "mover")
+        assert path[-1] == goal
+        # Walk the path — cost should be exactly 30ft (pure cardinal)
+        # Old BFS might pick diagonal shortcuts that cost more due to alternating rule
+        _final, cost = walk_path(path, 999)
+        assert cost == 30
+
+    def test_find_path_matches_compute_reachable(self) -> None:
+        """find_path returns same path as compute_reachable for the same target."""
+        bm = BattleMap(width=60, height=60, walls=[Wall(20, 0, 20, 20)])
+        start = Position(15, 10)
+        goal = Position(25, 10)
+        path_direct = find_path(start, goal, bm, "mover")
+        reachable = compute_reachable(start, 999, bm, "mover")
+        path_reachable = reachable.get(goal, [])
+        # Both should find the same optimal path
+        assert path_direct == path_reachable
 
 
 # ---------------------------------------------------------------------------
@@ -195,6 +222,31 @@ class TestHandleMoveTo:
         result = handle_move_to(actor, action, MagicMock(), ctx, MagicMock())
 
         assert not result.success
+
+    def test_move_to_edge_of_range_reaches_target(self) -> None:
+        """Edge-of-range bug fix: clicking a cell at exact budget limit should reach it.
+
+        With 30ft budget, a cell at exactly 30ft via the optimal path must be reached.
+        The old BFS could pick a path with more diagonals (fewer steps but higher cost),
+        causing walk_path to stop short.
+        """
+        from dnd_simulator.rules.handlers.movement import handle_move_to
+
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("player", Position(15, 15))
+        # Target: 4 diagonal steps = 5+10+5+10 = 30ft exactly
+        ctx = self._make_ctx(bm, movement_remaining=30)
+        actor = self._make_creature()
+        action = Action(name=ActionType.MOVE_TO, params={"x": 35, "y": 35})
+        emit_fn = MagicMock(return_value=ActionResult())
+        world = MagicMock()
+
+        result = handle_move_to(actor, action, emit_fn, ctx, world)
+
+        assert result.success
+        assert bm.get_position("player") == Position(35, 35)
+        assert ctx.turn_budget is not None
+        assert ctx.turn_budget.movement_remaining == 0
 
     def test_existing_move_direction_still_works(self) -> None:
         """Regression: the original direction-based move action still works."""

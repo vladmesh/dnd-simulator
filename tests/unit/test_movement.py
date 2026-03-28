@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import itertools
+
 from dnd_simulator.core.combat import BattleMap, Position, Wall
 from dnd_simulator.rules.movement import (
+    compute_reachable,
     direction_label,
     grid_distance,
     move_direction,
@@ -95,6 +98,90 @@ class TestMoveDirection:
         origin = Position(10, 10)
         result = move_direction(origin, "south", speed=60, battle_map=bm)
         assert result.y >= 0
+
+
+class TestComputeReachable:
+    """compute_reachable: Dijkstra BFS with D&D 5e diagonal costs."""
+
+    def test_open_field_cardinal_at_budget(self) -> None:
+        """Cells exactly 30ft away in cardinal direction are reachable."""
+        bm = BattleMap(width=60, height=60)
+        reachable = compute_reachable(Position(15, 15), 30, bm, "mover")
+        # 6 squares east = 30ft
+        assert Position(45, 15) in reachable
+        # 7 squares east = 35ft → not reachable
+        assert Position(50, 15) not in reachable
+
+    def test_open_field_diagonal_cost(self) -> None:
+        """5 diagonal steps cost 5+10+5+10+5=35ft — not reachable at 30ft budget."""
+        bm = BattleMap(width=60, height=60)
+        reachable = compute_reachable(Position(15, 15), 30, bm, "mover")
+        # 5 diags = 35ft → unreachable
+        assert Position(40, 40) not in reachable
+        # 4 diags = 30ft → reachable
+        assert Position(35, 35) in reachable
+
+    def test_wall_blocks_direct_path(self) -> None:
+        """Wall blocks direct east; detour around wall is reachable if within budget."""
+        # Vertical wall at x=20 from y=0 to y=20 blocks east movement
+        bm = BattleMap(width=60, height=60, walls=[Wall(20, 0, 20, 20)])
+        reachable = compute_reachable(Position(15, 10), 30, bm, "mover")
+        # Directly east at x=25 requires detour around wall
+        # The cell should still be reachable via going north around wall
+        assert Position(25, 10) in reachable
+        # Path should go around the wall, not through it
+        path = reachable[Position(25, 10)]
+        for a, b in itertools.pairwise(path):
+            assert not bm.is_step_blocked(a, b), f"Path crosses wall: {a} -> {b}"
+
+    def test_wall_makes_cell_unreachable_if_detour_too_long(self) -> None:
+        """Wall forces long detour that exceeds budget."""
+        # Long wall blocks east, only opening at top — detour is very long
+        bm = BattleMap(width=60, height=60, walls=[Wall(20, 0, 20, 55)])
+        reachable = compute_reachable(Position(15, 10), 30, bm, "mover")
+        # Cell east of wall at same y — detour must go all the way to y=55+
+        # That's way more than 30ft
+        assert Position(25, 10) not in reachable
+
+    def test_occupied_cell_not_reachable(self) -> None:
+        """Cells occupied by other entities are not in reachable set."""
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("enemy", Position(20, 15))
+        bm.set_position("mover", Position(15, 15))
+        reachable = compute_reachable(Position(15, 15), 30, bm, "mover")
+        assert Position(20, 15) not in reachable
+
+    def test_cells_behind_occupied_are_reachable_via_detour(self) -> None:
+        """Cells beyond an occupied cell are reachable via alternate route."""
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("enemy", Position(20, 15))
+        bm.set_position("mover", Position(15, 15))
+        reachable = compute_reachable(Position(15, 15), 30, bm, "mover")
+        # Cell beyond enemy is reachable via diagonal detour
+        assert Position(25, 15) in reachable
+
+    def test_path_cost_matches_budget(self) -> None:
+        """Path to edge-of-range cell costs exactly the grid_distance."""
+        bm = BattleMap(width=60, height=60)
+        start = Position(15, 15)
+        reachable = compute_reachable(start, 30, bm, "mover")
+        # 4 diags = 5+10+5+10 = 30ft exactly
+        target = Position(35, 35)
+        assert target in reachable
+        # Walk the path and verify cost
+        from dnd_simulator.rules.movement import walk_path
+
+        path = reachable[target]
+        _final, cost = walk_path(path, 999)
+        assert cost == 30
+
+    def test_start_position_in_reachable(self) -> None:
+        """Start position is always in the reachable set (cost 0)."""
+        bm = BattleMap(width=60, height=60)
+        start = Position(15, 15)
+        reachable = compute_reachable(start, 30, bm, "mover")
+        assert start in reachable
+        assert reachable[start] == [start]
 
 
 class TestMoveWithWalls:

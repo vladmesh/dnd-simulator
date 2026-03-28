@@ -54,4 +54,10 @@ Update `handle_move_to()` to use `compute_reachable()` directly: look up the tar
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+`compute_reachable()` uses Dijkstra with D&D 5e alternating diagonal costs (5/10). Returns `dict[Position, list[Position]]` — every reachable cell mapped to its optimal path. `find_path()` is now a thin wrapper calling `compute_reachable` with a large budget. `handle_move_to()` uses `compute_reachable` with the actual movement budget, guaranteeing that any cell the frontend highlights is reachable at exact cost.
+
+Also reverted an unrelated bad edit from before the sprint (crit damage was changed from "double dice count" to "multiply result ×2" — wrong per PHB 5e rules). Reverted checks.py, combat.py, and frontend crit UI changes.

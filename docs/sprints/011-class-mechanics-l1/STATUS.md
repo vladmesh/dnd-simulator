@@ -6,7 +6,7 @@
 
 ## Current
 
-Phase 1 tasks generated. Ready to start task 1.
+Phase 1, Task 1: Backend Reachability Engine — done. Dijkstra-based `compute_reachable()`, `find_path` as wrapper, `handle_move_to` uses reachable map.
 
 ## Completed Phases
 
@@ -14,5 +14,4 @@ Phase 1 tasks generated. Ready to start task 1.
 
 ## Next Steps
 
-- Task 1: Backend reachability engine — `compute_reachable()` Dijkstra, refactor `find_path`, fix `handle_move_to`
 - Task 2: Thread reachable into awareness, frontend drops its own BFS

@@ -6,7 +6,8 @@ Uses DMG optional diagonal rule: first diagonal = 5 ft, second = 10 ft, alternat
 
 from __future__ import annotations
 
-from collections import deque
+import heapq
+from itertools import count
 
 from dnd_simulator.core.combat import BattleMap, Position
 from dnd_simulator.i18n import _
@@ -109,53 +110,77 @@ def move_direction(origin: Position, direction: str, speed: int, battle_map: Bat
     return _step_toward(origin, far_target, speed, battle_map, mover_id)
 
 
-def find_path(start: Position, goal: Position, battle_map: BattleMap, mover_id: str) -> list[Position]:
-    """BFS pathfinding from start to goal on the battle map grid.
+def compute_reachable(
+    start: Position, budget: int, battle_map: BattleMap, mover_id: str
+) -> dict[Position, list[Position]]:
+    """Compute all cells reachable within a movement budget using Dijkstra.
 
-    Returns a list of Positions from start to goal (inclusive), or [] if unreachable.
-    Respects walls (is_step_blocked) and occupied cells (other entities).
-    Steps are 5ft in all 8 directions.
+    Uses D&D 5e diagonal cost: first diagonal = 5 ft, second = 10 ft, alternating.
+    Respects walls and occupied cells.
+
+    Returns {position: path_from_start} for every reachable position (including start).
     """
-    if start == goal:
-        return [start]
-
     occupied = {pos for eid, pos in battle_map.positions.items() if eid != mover_id}
 
-    # BFS
-    queue: deque[Position] = deque([start])
-    came_from: dict[Position, Position | None] = {start: None}
+    # result: position → path (list of positions from start inclusive)
+    result: dict[Position, list[Position]] = {start: [start]}
+    best_cost: dict[Position, int] = {start: 0}
 
-    while queue:
-        cur = queue.popleft()
-        if cur == goal:
-            # Reconstruct path
-            path: list[Position] = []
-            node: Position | None = goal
-            while node is not None:
-                path.append(node)
-                node = came_from[node]
-            path.reverse()
-            return path
+    # Priority queue: (cost, tiebreaker, position, diag_count, path)
+    counter = count()
+    heap: list[tuple[int, int, Position, int, list[Position]]] = [(0, next(counter), start, 0, [start])]
 
-        for dx, dy in ((-5, 0), (5, 0), (0, -5), (0, 5), (-5, -5), (-5, 5), (5, -5), (5, 5)):
+    _steps = ((-5, 0), (5, 0), (0, -5), (0, 5), (-5, -5), (-5, 5), (5, -5), (5, 5))
+
+    while heap:
+        cost, _, cur, diag_count, path = heapq.heappop(heap)
+
+        # Skip if we already found a cheaper route to this cell
+        if cost > best_cost.get(cur, budget + 1):
+            continue
+
+        for dx, dy in _steps:
             nx, ny = cur.x + dx, cur.y + dy
-            # Bounds check
             if nx < 0 or nx > battle_map.width or ny < 0 or ny > battle_map.height:
                 continue
             neighbor = Position(nx, ny)
-            if neighbor in came_from:
-                continue
             if battle_map.is_step_blocked(cur, neighbor):
                 continue
-            if neighbor in occupied and neighbor != goal:
+            if neighbor in occupied:
                 continue
-            # Goal occupied by another entity = unreachable
-            if neighbor == goal and neighbor in occupied:
-                continue
-            came_from[neighbor] = cur
-            queue.append(neighbor)
 
-    return []  # unreachable
+            is_diag = dx != 0 and dy != 0
+            if is_diag:
+                step_cost = 10 if diag_count % 2 == 1 else 5
+                new_diag = diag_count + 1
+            else:
+                step_cost = 5
+                new_diag = diag_count
+
+            new_cost = cost + step_cost
+            if new_cost > budget:
+                continue
+            if new_cost < best_cost.get(neighbor, budget + 1):
+                best_cost[neighbor] = new_cost
+                new_path = [*path, neighbor]
+                result[neighbor] = new_path
+                heapq.heappush(heap, (new_cost, next(counter), neighbor, new_diag, new_path))
+
+    return result
+
+
+def find_path(start: Position, goal: Position, battle_map: BattleMap, mover_id: str) -> list[Position]:
+    """Cost-aware pathfinding from start to goal on the battle map grid.
+
+    Returns a list of Positions from start to goal (inclusive), or [] if unreachable.
+    Delegates to compute_reachable with a budget large enough to cover the entire map.
+    """
+    if start == goal:
+        return [start]
+    # Budget: worst case is traversing the entire map diagonally
+    max_budget = (battle_map.width + battle_map.height) * 2
+    reachable = compute_reachable(start, max_budget, battle_map, mover_id)
+    return reachable.get(goal, [])
 
 
 def walk_path(path: list[Position], speed: int) -> tuple[Position, int]:

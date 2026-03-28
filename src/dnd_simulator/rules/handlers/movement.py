@@ -9,7 +9,7 @@ import structlog
 from dnd_simulator.core.combat import Position
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.rules.modifiers import effective_speed
-from dnd_simulator.rules.movement import find_path, grid_distance, walk_path
+from dnd_simulator.rules.movement import compute_reachable, grid_distance, walk_path
 
 if TYPE_CHECKING:
     from dnd_simulator.core.action import Action
@@ -63,7 +63,8 @@ def handle_move_to(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Action
     if target == cur_pos:
         return ActionResult(success=False, error="Already at that position")
 
-    path = find_path(cur_pos, target, bm, actor.id)
+    reachable = compute_reachable(cur_pos, budget.movement_remaining, bm, actor.id)
+    path = reachable.get(target)
     if not path:
         return ActionResult(success=False, error="No path to target")
 
