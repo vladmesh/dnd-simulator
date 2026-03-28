@@ -4,46 +4,14 @@ import { useGameStore } from "@/store/gameStore"
 import { wsClient } from "@/transport/wsClient"
 import { BudgetDisplay } from "./BudgetDisplay"
 import { Button } from "@/components/ui/button"
-import { Loader2, ChevronDown, FlaskConical, Sparkles, Backpack } from "lucide-react"
+import { Loader2, FlaskConical, Sparkles, Backpack } from "lucide-react"
 import { categorizeActions } from "@/lib/actionCategories"
-import type { CombatAwareness, ActionInfo, TurnBudget, ItemInfo } from "@/types/game"
-
-/** Check if an action has a specific param by name. */
-function hasParam(action: ActionInfo, paramName: string): boolean {
-  return action.params.some((p) => p.name === paramName)
-}
-
-function getActionLabel(t: (key: string) => string, name: string): string {
-  const key = `game:${name}`
-  const result = t(key)
-  return result === key ? name : result
-}
-
-/** Check if the cost type's budget is depleted. */
-function isCostDepleted(costType: string | undefined, budget: TurnBudget | undefined): boolean {
-  if (!budget || !costType) return false
-  switch (costType) {
-    case "action": return budget.actions <= 0
-    case "bonus_action": return budget.bonus_actions <= 0
-    case "movement": return budget.movement_remaining <= 0
-    default: return false
-  }
-}
-
-/** Get button variant based on action name and cost type. */
-function getButtonVariant(name: string, costType: string | undefined): "destructive" | "secondary" | "outline" {
-  if (name === "attack") return "destructive"
-  if (name === "end_turn") return "outline"
-  if (costType === "bonus_action") return "secondary"
-  return "secondary"
-}
-
-/** Get cost-type specific className. */
-function getCostTypeClass(costType: string | undefined): string {
-  if (costType === "bonus_action") return "ring-1 ring-amber-400/60 text-amber-200"
-  if (costType === "free") return "opacity-80"
-  return ""
-}
+import type { CombatAwareness } from "@/types/game"
+import { hasParam, getActionLabel, isCostDepleted, getButtonVariant, getCostTypeClass } from "./action-bar/utils"
+import { ActionDrawer } from "./action-bar/ActionDrawer"
+import { TargetDropdown } from "./action-bar/TargetDropdown"
+import { DirectionalDropdown } from "./action-bar/DirectionalDropdown"
+import type { ActionInfo } from "@/types/game"
 
 export function ActionBar() {
   const { t } = useTranslation(["game", "common"])
@@ -373,163 +341,6 @@ export function ActionBar() {
           </Button>
         )}
       </div>
-    </div>
-  )
-}
-
-// --- ActionDrawer generic component ---
-
-interface ActionDrawerProps {
-  drawerKey: string
-  icon: React.ReactNode
-  count: number
-  isOpen: boolean
-  onToggle: () => void
-  disabled: boolean
-  title?: string
-  children: React.ReactNode
-}
-
-function ActionDrawer({ drawerKey, icon, count, isOpen, onToggle, disabled, title, children }: ActionDrawerProps) {
-  return (
-    <div className="relative">
-      <Button
-        size="sm"
-        variant="secondary"
-        disabled={disabled}
-        data-drawer={drawerKey}
-        onClick={onToggle}
-        className="gap-1"
-        title={title}
-      >
-        {icon}
-        <span className="text-xs">{count}</span>
-      </Button>
-      {isOpen && (
-        <div
-          data-drawer-popup={drawerKey}
-          className="absolute bottom-full left-0 z-10 mb-1 min-w-[200px] max-w-[280px] rounded border border-border bg-popover p-1 shadow-md"
-        >
-          {children}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// --- Sub-components for dropdowns ---
-
-interface CostProps {
-  costType?: string
-  depleted: boolean
-  costClass: string
-}
-
-interface DropdownProps extends CostProps {
-  openDropdown: string | null
-  setOpenDropdown: (v: string | null) => void
-  sendAction: (name: string, params?: Record<string, unknown>) => void
-  t: (key: string, opts?: Record<string, unknown>) => string
-  disabled: boolean
-  description: string
-}
-
-interface TargetDropdownProps extends DropdownProps {
-  name: string
-  enemies: { id: string; distance_ft?: number }[]
-}
-
-function TargetDropdown({ name, description, enemies, disabled, openDropdown, setOpenDropdown, sendAction, t, costType, depleted, costClass }: TargetDropdownProps) {
-  const dataAttrs: Record<string, string> = {}
-  if (costType) dataAttrs["data-cost-type"] = costType
-  if (depleted) dataAttrs["data-depleted"] = ""
-
-  return (
-    <div className="relative">
-      <Button
-        size="sm"
-        variant={getButtonVariant(name, costType)}
-        disabled={disabled}
-        title={description}
-        className={costClass}
-        {...dataAttrs}
-        onClick={() => {
-          if (enemies.length === 1) {
-            sendAction(name, { target_id: enemies[0].id })
-          } else {
-            setOpenDropdown(openDropdown === name ? null : name)
-          }
-        }}
-      >
-        {getActionLabel(t, name)}
-        {enemies.length > 1 && <ChevronDown className="ml-1 size-3" />}
-      </Button>
-      {openDropdown === name && enemies.length > 1 && (
-        <div className="absolute bottom-full left-0 z-10 mb-1 min-w-[160px] rounded border border-border bg-popover p-1 shadow-md">
-          {enemies.map((e) => (
-            <button
-              key={e.id}
-              className="w-full rounded px-2 py-1 text-left text-xs hover:bg-accent"
-              onClick={() => sendAction(name, { target_id: e.id })}
-            >
-              {t("game:attack_target", { target: e.id })}
-              {e.distance_ft != null && (
-                <span className="ml-1 text-muted-foreground">({e.distance_ft}ft)</span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-interface DirectionalDropdownProps extends DropdownProps {
-  name: string
-  enemies: { id: string }[]
-}
-
-function DirectionalDropdown({ name, description, enemies, disabled, openDropdown, setOpenDropdown, sendAction, t, costType, depleted, costClass }: DirectionalDropdownProps) {
-  const towardKey = name === "dash" ? "game:dash_toward" : "game:move_toward"
-  const awayKey = name === "dash" ? "game:dash_away" : "game:move_away"
-  const dataAttrs: Record<string, string> = {}
-  if (costType) dataAttrs["data-cost-type"] = costType
-  if (depleted) dataAttrs["data-depleted"] = ""
-
-  return (
-    <div className="relative">
-      <Button
-        size="sm"
-        variant="secondary"
-        disabled={disabled}
-        title={description}
-        className={costClass}
-        {...dataAttrs}
-        onClick={() => setOpenDropdown(openDropdown === name ? null : name)}
-      >
-        {getActionLabel(t, name)}
-        <ChevronDown className="ml-1 size-3" />
-      </Button>
-      {openDropdown === name && (
-        <div className="absolute bottom-full left-0 z-10 mb-1 min-w-[180px] rounded border border-border bg-popover p-1 shadow-md">
-          {enemies.map((e) => (
-            <div key={e.id} className="flex gap-1">
-              <button
-                className="flex-1 rounded px-2 py-1 text-left text-xs hover:bg-accent"
-                onClick={() => sendAction(name, { toward: e.id })}
-              >
-                {t(towardKey, { target: e.id })}
-              </button>
-              <button
-                className="flex-1 rounded px-2 py-1 text-left text-xs hover:bg-accent"
-                onClick={() => sendAction(name, { away_from: e.id })}
-              >
-                {t(awayKey, { target: e.id })}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

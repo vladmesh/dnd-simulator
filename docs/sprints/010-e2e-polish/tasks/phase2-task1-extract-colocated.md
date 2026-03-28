@@ -50,4 +50,8 @@ If any test breaks, it means the extraction changed something it shouldn't have.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Pure file extraction. ActionDrawer (39 lines), TargetDropdown (62 lines), DirectionalDropdown (62 lines), utils (38 lines) — all under `action-bar/`. ActionBar.tsx dropped from 536 → 346 lines. No barrel index needed — direct imports are cleaner with 4 files. All 20 existing tests pass unchanged. No DOM changes.

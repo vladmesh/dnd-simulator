@@ -6,10 +6,9 @@
 
 ## Current
 
-Phase 2 tasks generated. ActionBar.tsx (536 lines) → decompose into subcomponents under `components/game/action-bar/`. Three tasks: extract co-located components, extract drawer sections, extract ActionButton + finalize orchestration. Target: ActionBar.tsx < 150 lines, each subcomponent < 150 lines, visually identical, all tests green.
+Phase 2, Task 1: Extract co-located components — done. ActionBar 536→346 lines. 4 new files under action-bar/.
 
 ## Next Steps
 
-- Task 1: Extract ActionDrawer, TargetDropdown, DirectionalDropdown, utils to own files
 - Task 2: Extract ConsumableDrawer, ClassFeatureDrawer, InventoryDrawer
-- Task 3: Extract ActionButton + SayAction, slim ActionBar to orchestration
+- Task 3: Extract ActionButton + SayAction, slim ActionBar to < 150 lines
