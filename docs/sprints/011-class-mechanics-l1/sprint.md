@@ -51,7 +51,7 @@ Sprint 001 заложил инфраструктуру классовых мех
 1. [Backend Reachability Engine](tasks/phase1-task1-reachability-engine.md)
 2. [Awareness Pipeline + Frontend Simplification](tasks/phase1-task2-awareness-frontend.md)
 
-## Phase 2: Weapon Properties & Fighting Styles
+## Phase 2: Weapon Properties & Fighting Styles ✓
 
 Добавить D&D 5e свойства оружия на WeaponDef и использовать их в боевых механиках.
 
