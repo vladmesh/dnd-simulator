@@ -35,4 +35,12 @@ Fix: use the PoliticsLayer `FACTION_RELATION` query to check whether each adjace
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added `query_fn` parameter to `_check_sneak_attack` and `resolve_attack` in CombatManager. New `_is_faction_friendly` static method queries PoliticsLayer via `FACTION_RELATION` to check if adjacent creature is FRIENDLY to attacker. Uses string comparison against "friendly" value to avoid cross-layer model import.
+
+Updated `EntitiesLayer.handle_event` to pass `query_fn` through to `resolve_attack`.
+
+Old test `test_decompose_methods::TestSneakAttackWithAllyAdjacency` updated: added faction_ids to creatures and switched to a faction-aware query_fn. Contract change is intentional — "any alive creature = ally" was the bug being fixed.

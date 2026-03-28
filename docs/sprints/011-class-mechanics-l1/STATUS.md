@@ -6,11 +6,10 @@
 
 ## Current
 
-Phase 3 tasks generated. Ready to start task 1.
+Phase 3, Task 1: SA faction-aware ally detection — done. Sneak attack now queries PoliticsLayer for FRIENDLY faction relation before counting adjacent creature as ally.
 
 ## Next Steps
 
-- Task 1: SA faction-aware ally detection — fix _check_sneak_attack to use PoliticsLayer faction relations
 - Task 2: Cunning Action cost choice — wire cost_mode end-to-end (ParamDef, frontend UI, RuleBrain)
 
 ## Completed Phases

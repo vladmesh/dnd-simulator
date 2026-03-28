@@ -26,6 +26,14 @@ def _noop_query_fn(layer: str, query: Query) -> Answer:
     return Answer(value=None)
 
 
+def _faction_query_fn(layer: str, query: Query) -> Answer:
+    """Query function that resolves FACTION_RELATION: same faction = friendly."""
+    if query.question is QueryType.FACTION_RELATION:
+        a, b = str(query.params["a"]), str(query.params["b"])
+        return Answer(value="friendly" if a == b else "hostile")
+    return Answer(value=None)
+
+
 def _noop_emit_fn(event: object) -> ActionResult:
     return ActionResult()
 
@@ -75,10 +83,18 @@ class TestSneakAttackWithAllyAdjacency:
             race=Race.HUMAN,
             char_class=CharClass.ROGUE,
             class_features=[RogueFeatures(sneak_attack_dice=2)],
+            faction_id="party",
         )
-        target = Character(id="target", name="Goblin", location_id="arena", max_hp=50, current_hp=50, ac=5)
+        target = Character(
+            id="target", name="Goblin", location_id="arena", max_hp=50, current_hp=50, ac=5, faction_id="goblins"
+        )
         ally = Character(
-            id="ally", name="Fighter", location_id="arena", ability_scores=_scores(STR=16), attacks=(_sword(),)
+            id="ally",
+            name="Fighter",
+            location_id="arena",
+            ability_scores=_scores(STR=16),
+            attacks=(_sword(),),
+            faction_id="party",
         )
 
         bm = BattleMap(width=20, height=20)
@@ -96,7 +112,7 @@ class TestSneakAttackWithAllyAdjacency:
         found_sneak = False
         for _ in range(30):
             target.current_hp = 50
-            result = layer.handle_event(_attack_event(), _noop_query_fn, _noop_emit_fn)
+            result = layer.handle_event(_attack_event(), _faction_query_fn, _noop_emit_fn)
             if result.success:
                 log = layer._location_log["arena"]
                 attack_events = [e for e in log if e.event_type == EventType.ENTITY_ATTACK and e.data.get("hit")]

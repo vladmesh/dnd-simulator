@@ -7,7 +7,7 @@ import structlog
 from dnd_simulator.core.character import Attack, Creature, DamageType, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.models import ActionResult, Event, EventType
+from dnd_simulator.core.models import ActionResult, Event, EventType, Query, QueryFn, QueryType
 from dnd_simulator.core.modifiers import AttackModifiers, RollComponent
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.combat import AttackResult, ExtraDamage, resolve_attack, roll_initiative
@@ -244,7 +244,7 @@ class CombatManager:
         self._location_log[entity.location_id].append(log_event)
         return ActionResult(success=True)
 
-    def resolve_attack(self, event: Event) -> ActionResult:
+    def resolve_attack(self, event: Event, query_fn: QueryFn | None = None) -> ActionResult:
         """Resolve an attack: roll dice, apply damage, log.
 
         Preconditions (alive, target valid, same location, reach) are checked
@@ -270,7 +270,14 @@ class CombatManager:
 
         rolled_dice, dice_total = self._roll_attack_dice(attacker, attack, atk_mods)
         modifier = atk_mods.modifier + dice_total
-        extra_damage = self._check_sneak_attack(attacker, attack, target_id, atk_mods.advantage, atk_mods.disadvantage)
+        extra_damage = self._check_sneak_attack(
+            attacker,
+            attack,
+            target_id,
+            atk_mods.advantage,
+            atk_mods.disadvantage,
+            query_fn=query_fn,
+        )
 
         logger.info(
             "attack_roll",
@@ -360,6 +367,8 @@ class CombatManager:
         target_id: str,
         advantage: bool,
         disadvantage: bool,
+        *,
+        query_fn: QueryFn | None = None,
     ) -> tuple[ExtraDamage, ...]:
         """Check sneak attack eligibility including ally adjacency on battle map."""
         sa_dice = sneak_attack_dice(attacker)
@@ -376,6 +385,8 @@ class CombatManager:
                         continue
                     e = self._entities.get(eid)
                     if isinstance(e, Creature) and e.is_alive and grid_distance(target_pos, pos) <= 5:
+                        if not self._is_faction_friendly(attacker, e, query_fn):
+                            continue
                         ally_adjacent = True
                         break
 
@@ -397,6 +408,17 @@ class CombatManager:
             )
             return (ExtraDamage(dice=sa_expr, type=DamageType.PIERCING, source="sneak_attack"),)
         return ()
+
+    @staticmethod
+    def _is_faction_friendly(attacker: Creature, candidate: Creature, query_fn: QueryFn | None) -> bool:
+        """Check if candidate is FRIENDLY to attacker via PoliticsLayer faction relation."""
+        if query_fn is None:
+            return False
+        answer = query_fn(
+            "politics",
+            Query(question=QueryType.FACTION_RELATION, params={"a": attacker.faction_id, "b": candidate.faction_id}),
+        )
+        return str(answer.value) == "friendly"
 
     def _build_attack_event(
         self,

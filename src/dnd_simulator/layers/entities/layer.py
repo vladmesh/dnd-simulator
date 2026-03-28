@@ -262,7 +262,7 @@ class EntitiesLayer(Layer):
             location_id = self._event_location(event)
             had_combat = location_id is not None and self._combat.get_combat(location_id) is not None
             if event.event_type == EventType.ENTITY_ATTACK:
-                result = self._combat.resolve_attack(event)
+                result = self._combat.resolve_attack(event, query_fn=query_fn)
             else:
                 result = self._combat.resolve_flee(event)
             if had_combat and location_id and self._combat.get_combat(location_id) is None:
