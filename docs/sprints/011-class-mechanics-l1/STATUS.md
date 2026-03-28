@@ -1,16 +1,17 @@
 # Sprint 011 Status
 
 **Sprint:** 011-class-mechanics-l1
-**Phase:** 2 — Weapon Properties & Fighting Styles (COMPLETE)
+**Phase:** 3 — Cunning Action Choice & SA Faction Check
 **Updated:** 2026-03-28
 
 ## Current
 
-Phase 2 complete. Added D&D 5e weapon properties (is_two_handed, is_light, is_heavy) to WeaponDef, implemented Great Weapon Fighting style, created SRD weapon & armor catalogs (12 weapons, 12 armors, 1 shield). Ready for Phase 3 task generation.
+Phase 3 tasks generated. Ready to start task 1.
 
 ## Next Steps
 
-- Phase 3: Cunning Action Choice & SA Faction Check — needs /plan_phase
+- Task 1: SA faction-aware ally detection — fix _check_sneak_attack to use PoliticsLayer faction relations
+- Task 2: Cunning Action cost choice — wire cost_mode end-to-end (ParamDef, frontend UI, RuleBrain)
 
 ## Completed Phases
 
