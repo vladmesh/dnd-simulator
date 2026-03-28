@@ -49,4 +49,8 @@ Fill gaps in unit test coverage for Sprint 001 + Sprint 011 mechanics. Focus on 
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All 25 tests pass immediately — these cover already-implemented mechanics (GWF, sneak attack, finesse, proficiency, fighting styles). No implementation gaps found. Tests were added to a new `test_combat_pipeline.py` rather than scattered across existing files, as the task's main value is end-to-end composition tests that exercise multiple rules layers together (attack_modifiers → resolve_attack → damage breakdown). Catalog property preservation tests verify YAML → Pydantic → WeaponDef pipeline for is_light, is_finesse, is_two_handed, is_heavy.

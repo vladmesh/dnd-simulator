@@ -6,11 +6,10 @@
 
 ## Current
 
-Phase 4, Task 1: Content — Fighter & Rogue NPCs + Equip Existing NPCs — done. Added Ser Aldric (fighter) and Lira (rogue), upgraded Rodrik and Edgar to catalog equipment.
+Phase 4, Task 2: Unit Tests — Combat Mechanics Coverage — done. 25 new tests in test_combat_pipeline.py covering full attack pipeline composition, sneak attack damage flow, finesse ability selection, weapon property catalog preservation, and fighting style interactions.
 
 ## Next Steps
 
-- Task 2: Unit tests for GWF reroll, sneak attack damage, weapon properties, full attack pipeline
 - Task 3: Integration tests for complete Fighter & Rogue combat turns
 
 ## Completed Phases
