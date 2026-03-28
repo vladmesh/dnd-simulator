@@ -9,8 +9,9 @@ import random
 from dataclasses import dataclass
 
 from dnd_simulator.core.character import Ability, Attack, Creature, DamageType
-from dnd_simulator.rules.checks import CheckResult, attack_roll, damage_roll
-from dnd_simulator.rules.dice import roll_d20
+from dnd_simulator.core.rolls import DiceResult
+from dnd_simulator.rules.checks import CheckResult, attack_roll
+from dnd_simulator.rules.dice import roll, roll_d20
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,7 @@ class DamageResult:
     type: DamageType
     source: str = ""
     dice: str = ""
+    dice_result: DiceResult | None = None  # individual die faces for UI breakdown
 
 
 @dataclass(frozen=True)
@@ -45,6 +47,21 @@ class AttackResult:
     @property
     def miss(self) -> bool:
         return not self.hit
+
+
+def _roll_damage(expr: str, *, critical: bool = False, rng: random.Random | None = None) -> DiceResult:
+    """Roll damage dice, returning structured DiceResult. Doubles dice on crit."""
+    if not critical:
+        return roll(expr, rng=rng)
+
+    # Double dice only: "2d6+3" → roll 4d6+3
+    expr = expr.strip()
+    parts = expr.split("d", 1)
+    if len(parts) == 2 and parts[0].strip().isdigit():
+        count = int(parts[0].strip())
+        return roll(f"{count * 2}d{parts[1]}", rng=rng)
+    # Constant (no dice) — crits don't double flat damage
+    return roll(expr, rng=rng)
 
 
 def resolve_attack(
@@ -92,12 +109,16 @@ def resolve_attack(
     damage_results: list[DamageResult] = []
 
     for comp in attack.damage:
-        amount = damage_roll(comp.dice, critical=is_crit, rng=rng)
-        damage_results.append(DamageResult(amount=amount, type=comp.type, source="weapon", dice=comp.dice))
+        dr = _roll_damage(comp.dice, critical=is_crit, rng=rng)
+        damage_results.append(
+            DamageResult(amount=dr.total, type=comp.type, source="weapon", dice=comp.dice, dice_result=dr)
+        )
 
     for ed in extra_damage:
-        amount = damage_roll(ed.dice, critical=is_crit, rng=rng)
-        damage_results.append(DamageResult(amount=amount, type=ed.type, source=ed.source, dice=ed.dice))
+        dr = _roll_damage(ed.dice, critical=is_crit, rng=rng)
+        damage_results.append(
+            DamageResult(amount=dr.total, type=ed.type, source=ed.source, dice=ed.dice, dice_result=dr)
+        )
 
     # Flat damage bonus (e.g. Dueling +2) — not doubled on crit
     total = sum(d.amount for d in damage_results) + damage_bonus

@@ -120,4 +120,14 @@ Option A keeps `damage_roll()` simple (backward compat) and gives `resolve_attac
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented as planned. Key decisions:
+
+- Added `_roll_damage()` helper in `rules/combat.py` — duplicates the crit-doubling logic from `damage_roll()` but returns `DiceResult` instead of `int`. Chose this over modifying `damage_roll()` to preserve backward compatibility for callers that only need an int.
+- `CheckResult.d20` uses a module-level `_PLACEHOLDER_D20` sentinel as default (frozen dataclass can't use function call defaults). All real codepaths now pass the actual `D20Result`.
+- `_build_damage_components` now always includes `dice_detail` (empty list for flat bonuses), so frontend doesn't need null checks.
+- Healing events (`second_wind`, `use_item`) include `dice_detail` matching the same format.
+- No old tests were modified — all 1466 existing tests pass unchanged.

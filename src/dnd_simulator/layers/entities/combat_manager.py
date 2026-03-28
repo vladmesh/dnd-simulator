@@ -411,6 +411,19 @@ class CombatManager:
             {"source": rc.source, "value": rc.value, "dice": rc.dice} for rc in atk_mods.roll_components if not rc.dice
         ] + [{"source": rc.source, "value": rc.value, "dice": rc.dice} for rc in rolled_dice]
 
+        d20 = result.attack_check.d20
+        d20_data: dict[str, object] = {"result": d20.die.result, "sides": d20.die.sides}
+        atk_roll_data: dict[str, object] = {
+            "natural": result.attack_check.roll,
+            "d20": d20_data,
+            "components": all_roll_components,
+            "total": result.attack_check.total,
+            "advantage": atk_mods.advantage,
+            "disadvantage": atk_mods.disadvantage,
+        }
+        if d20.alt is not None:
+            atk_roll_data["d20_alt"] = {"result": d20.alt.result, "sides": d20.alt.sides}
+
         return {
             "attacker_id": attacker_id,
             "target_id": target_id,
@@ -418,13 +431,7 @@ class CombatManager:
             "hit": result.hit,
             "critical": result.critical,
             "ac": atk_mods.target_ac,
-            "attack_roll": {
-                "natural": result.attack_check.roll,
-                "components": all_roll_components,
-                "total": result.attack_check.total,
-                "advantage": atk_mods.advantage,
-                "disadvantage": atk_mods.disadvantage,
-            },
+            "attack_roll": atk_roll_data,
         }
 
     @staticmethod
@@ -433,12 +440,33 @@ class CombatManager:
         atk_mods: AttackModifiers,
     ) -> list[dict[str, object]]:
         """Build damage component list for event data."""
-        components: list[dict[str, object]] = [
-            {"source": dr.source, "dice": dr.dice, "amount": dr.amount, "type": dr.type.value} for dr in result.damage
-        ]
+        components: list[dict[str, object]] = []
+        for dr in result.damage:
+            dice_detail: list[dict[str, object]] = []
+            if dr.dice_result is not None:
+                for die in dr.dice_result.dice:
+                    entry: dict[str, object] = {"sides": die.sides, "result": die.result}
+                    if die.original is not None:
+                        entry["original"] = die.original
+                    dice_detail.append(entry)
+            components.append(
+                {
+                    "source": dr.source,
+                    "dice": dr.dice,
+                    "dice_detail": dice_detail,
+                    "amount": dr.amount,
+                    "type": dr.type.value,
+                }
+            )
         for dbc in atk_mods.damage_components:
             components.append(
-                {"source": dbc.source, "dice": "", "amount": dbc.value, "type": result.damage[0].type.value}
+                {
+                    "source": dbc.source,
+                    "dice": "",
+                    "dice_detail": [],
+                    "amount": dbc.value,
+                    "type": result.damage[0].type.value,
+                }
             )
         return components
 

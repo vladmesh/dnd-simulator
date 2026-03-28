@@ -65,11 +65,13 @@ def _find_item(actor: Creature, item_id: str) -> Item:
     raise KeyError(f"Item '{item_id}' not in {actor.name}'s inventory")
 
 
-def _apply_potion(actor: Creature, item: Item) -> int:
-    """Roll heal dice and apply healing. Returns actual HP restored."""
+def _apply_potion(actor: Creature, item: Item) -> tuple[int, list[dict[str, object]]]:
+    """Roll heal dice and apply healing. Returns (actual HP restored, dice_detail)."""
     heal_dice = str(item.params["heal_dice"])
-    rolled = roll(heal_dice).total
-    return actor.heal(rolled)
+    result = roll(heal_dice)
+    healed = actor.heal(result.total)
+    dice_detail: list[dict[str, object]] = [{"sides": d.sides, "result": d.result} for d in result.dice]
+    return healed, dice_detail
 
 
 def handle_use_item(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
@@ -78,7 +80,7 @@ def handle_use_item(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Actio
     item = _find_item(actor, item_id)
 
     if item.item_type == ItemType.POTION:
-        healed = _apply_potion(actor, item)
+        healed, dice_detail = _apply_potion(actor, item)
         actor.inventory.remove(item)
         logger.info("use_item", item=item.name, healed=healed)
         emit_fn(
@@ -91,6 +93,7 @@ def handle_use_item(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Actio
                     "item_name": item.name,
                     "item_type": item.item_type.value,
                     "healed": healed,
+                    "dice_detail": dice_detail,
                 },
             )
         )
@@ -136,15 +139,17 @@ def handle_second_wind(
         return ActionResult(success=False, error="Only characters can use Second Wind")
 
     use_resource(actor, "second_wind")
-    healing = roll_dice("1d10").total + actor.level
+    dice_result = roll_dice("1d10")
+    healing = dice_result.total + actor.level
     healed = actor.heal(healing)
+    dice_detail: list[dict[str, object]] = [{"sides": d.sides, "result": d.result} for d in dice_result.dice]
 
     logger.info("second_wind", rolled=healing, healed=healed, level=actor.level)
     emit_fn(
         Event(
             event_type=EventType.ENTITY_SECOND_WIND,
             source_layer="entities",
-            data={"entity_id": actor.id, "healed": healed},
+            data={"entity_id": actor.id, "healed": healed, "dice_detail": dice_detail},
         )
     )
     return ActionResult()

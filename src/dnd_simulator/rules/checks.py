@@ -9,7 +9,10 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
+from dnd_simulator.core.rolls import D20Result, DieRoll
 from dnd_simulator.rules.dice import roll, roll_d20
+
+_PLACEHOLDER_D20 = D20Result(die=DieRoll(sides=20, result=0))
 
 
 @dataclass(frozen=True)
@@ -21,6 +24,7 @@ class CheckResult:
     total: int  # roll + modifier
     dc: int  # what we were rolling against
     critical: bool  # nat 20 (hit) or nat 1 (miss)
+    d20: D20Result = _PLACEHOLDER_D20
 
 
 def attack_roll(
@@ -36,10 +40,10 @@ def attack_roll(
     d20 = d20_result.natural
     total = d20 + modifier
     if d20 == 20:
-        return CheckResult(success=True, roll=d20, total=total, dc=ac, critical=True)
+        return CheckResult(success=True, roll=d20, total=total, dc=ac, critical=True, d20=d20_result)
     if d20 == 1:
-        return CheckResult(success=False, roll=d20, total=total, dc=ac, critical=True)
-    return CheckResult(success=d20 + modifier >= ac, roll=d20, total=total, dc=ac, critical=False)
+        return CheckResult(success=False, roll=d20, total=total, dc=ac, critical=True, d20=d20_result)
+    return CheckResult(success=d20 + modifier >= ac, roll=d20, total=total, dc=ac, critical=False, d20=d20_result)
 
 
 def ability_check(
@@ -53,7 +57,9 @@ def ability_check(
     """d20 + modifier vs DC.  No critical hits/misses on ability checks (RAW)."""
     d20_result = roll_d20(advantage=advantage, disadvantage=disadvantage, rng=rng)
     d20 = d20_result.natural
-    return CheckResult(success=d20 + modifier >= dc, roll=d20, total=d20 + modifier, dc=dc, critical=False)
+    return CheckResult(
+        success=d20 + modifier >= dc, roll=d20, total=d20 + modifier, dc=dc, critical=False, d20=d20_result
+    )
 
 
 def saving_throw(

@@ -6,9 +6,8 @@
 
 ## Current
 
-Phase 0, Task 1: Structured Dice Results — done. `roll()` → `DiceResult`, `roll_d20()` → `D20Result`, `reroll_below` param, all callers migrated.
+Phase 0, Task 2: Attack & Damage Breakdown Pipeline — done. `CheckResult.d20`, `DamageResult.dice_result`, event `dice_detail` fields, healing dice_detail.
 
 ## Next Steps
 
-- Task 2: Thread structured results through checks → combat → combat_manager → event data
 - Task 3: Frontend `RollBreakdown` component, expandable attack events
