@@ -167,5 +167,6 @@ class PerceivedEvent:
     description: str
     event_type: EventType
     actor_id: str | None = None
+    actor_name: str | None = None
     target_id: str | None = None
     data: dict[str, object] = field(default_factory=dict)

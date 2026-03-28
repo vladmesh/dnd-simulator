@@ -225,11 +225,17 @@ class EntitiesLayer(Layer):
             desc = perceive_event(e, creature, self.get_entity)
             actor_id = e.data.get("entity_id") or e.data.get("attacker_id")
             target_id = e.data.get("target_id")
+            actor_name: str | None = None
+            if actor_id:
+                actor_entity = self.get_entity(str(actor_id))
+                if actor_entity is not None:
+                    actor_name = actor_entity.name
             result.append(
                 PerceivedEvent(
                     description=desc,
                     event_type=e.event_type,
                     actor_id=str(actor_id) if actor_id else None,
+                    actor_name=actor_name,
                     target_id=str(target_id) if target_id else None,
                     data=dict(e.data),
                 )

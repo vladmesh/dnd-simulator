@@ -45,6 +45,7 @@ export interface PerceivedEvent {
   description: string
   event_type: EventType
   actor_id?: string | null
+  actor_name?: string | null
   target_id?: string | null
   data?: Record<string, unknown>
 }

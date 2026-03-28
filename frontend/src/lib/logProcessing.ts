@@ -115,7 +115,7 @@ function getDistanceFt(event: PerceivedEvent): number {
 }
 
 function actorNameFromEntry(entry: LogEntry): string {
-  return entry.event.actor_id ?? "?"
+  return entry.event.actor_name ?? entry.event.actor_id ?? "?"
 }
 
 function makeEventDisplay(entry: LogEntry): EventDisplayEntry {
@@ -202,7 +202,7 @@ export function processLogEntries(entries: LogEntry[]): DisplayEntry[] {
         result.push({
           kind: "turn_header",
           actorId: currentActorId,
-          actorName: currentActorId,
+          actorName: event.actor_name ?? currentActorId,
         })
       }
       continue
@@ -221,7 +221,7 @@ export function processLogEntries(entries: LogEntry[]): DisplayEntry[] {
       result.push({
         kind: "turn_header",
         actorId: event.actor_id,
-        actorName: event.actor_id,
+        actorName: event.actor_name ?? event.actor_id,
       })
     }
 

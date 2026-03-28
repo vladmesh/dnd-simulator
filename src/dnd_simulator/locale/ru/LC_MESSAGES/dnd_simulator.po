@@ -5,8 +5,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: dnd_simulator 1.0\n"
-"POT-Creation-Date: 2026-03-20 22:25+0200\n"
-"PO-Revision-Date: 2026-03-20 22:30+0200\n"
+"POT-Creation-Date: 2026-03-28 18:00+0200\n"
+"PO-Revision-Date: 2026-03-28 18:00+0200\n"
 "Last-Translator: \n"
 "Language-Team: Russian\n"
 "Language: ru\n"
@@ -15,621 +15,290 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
 
-#: src/dnd_simulator/core/character.py:335
-#: src/dnd_simulator/core/character.py:340
+# =========================================================================
+# core/character.py — perceive() output
+# =========================================================================
+
 msgid "looks wounded"
 msgstr "выглядит раненым"
 
-#: src/dnd_simulator/core/character.py:443
 msgid "fists"
 msgstr "кулаки"
 
-#: src/dnd_simulator/core/combat.py:170
+# =========================================================================
+# core/combat.py — BattleMap description
+# =========================================================================
+
 msgid "Arena bounded by walls: {w}x{h} ft"
 msgstr "Арена ограничена стенами: {w}x{h} ft"
 
-#: src/dnd_simulator/core/combat.py:175
 msgid "vertical wall x={x} from y={y1} to y={y2}"
 msgstr "вертикальная стена x={x} от y={y1} до y={y2}"
 
-#: src/dnd_simulator/core/combat.py:181
 msgid "horizontal wall y={y} from x={x1} to x={x2}"
 msgstr "горизонтальная стена y={y} от x={x1} до x={x2}"
 
-#: src/dnd_simulator/core/player.py:86 src/dnd_simulator/core/player.py:152
+# =========================================================================
+# core/conditions.py — Condition enum values (used via _(c.value))
+# =========================================================================
+
+msgid "blinded"
+msgstr "ослеплён"
+
+msgid "charmed"
+msgstr "очарован"
+
+msgid "deafened"
+msgstr "оглушён"
+
+msgid "frightened"
+msgstr "напуган"
+
+msgid "grappled"
+msgstr "схвачен"
+
+msgid "incapacitated"
+msgstr "недееспособен"
+
+msgid "invisible"
+msgstr "невидим"
+
+msgid "paralyzed"
+msgstr "парализован"
+
+msgid "petrified"
+msgstr "окаменел"
+
+msgid "poisoned"
+msgstr "отравлен"
+
+msgid "prone"
+msgstr "сбит с ног"
+
+msgid "restrained"
+msgstr "обездвижен"
+
+msgid "stunned"
+msgstr "оглушён"
+
+msgid "unconscious"
+msgstr "без сознания"
+
+msgid "blessed"
+msgstr "благословлён"
+
+msgid "dodging"
+msgstr "уклоняется"
+
+# =========================================================================
+# core/player.py — CLI interface
+# =========================================================================
+
 msgid "Usage: attack <target>"
 msgstr "Использование: attack <цель>"
 
-#: src/dnd_simulator/core/player.py:100
 msgid "Commands: look, status, say <text>, attack <target>, wait [hours], idle"
 msgstr "Команды: look, status, say <текст>, attack <цель>, wait [часы], idle"
 
-#: src/dnd_simulator/core/player.py:116
 msgid "combat> "
 msgstr "бой> "
 
-#: src/dnd_simulator/core/player.py:170
 msgid "Usage: move/dash <toward|away|north|south|...> [target]"
 msgstr "Использование: move/dash <toward|away|north|south|...> [цель]"
 
-#: src/dnd_simulator/core/player.py:193
 msgid "Commands: attack <target>, move <direction> [target], dash <direction> [target], dodge, flee, status, idle"
 msgstr "Команды: attack <цель>, move <направление> [цель], dash <направление> [цель], dodge, flee, status, idle"
 
-#: src/dnd_simulator/core/player.py:212
 msgid "Terrain:"
 msgstr "Местность:"
 
-#: src/dnd_simulator/core/player.py:214
 msgid "Weather:"
 msgstr "Погода:"
 
-#: src/dnd_simulator/core/player.py:220
 msgid "Creatures:"
 msgstr "Существа:"
 
-#: src/dnd_simulator/core/player.py:228
 msgid "Paths:"
 msgstr "Пути:"
 
-#: src/dnd_simulator/core/player.py:239
 msgid "HP: {hp}/{max_hp} | AC: {ac} | Gold: {gold}"
 msgstr "HP: {hp}/{max_hp} | AC: {ac} | Золото: {gold}"
 
-#: src/dnd_simulator/core/player.py:246
 msgid "Attacks:"
 msgstr "Атаки:"
 
-#: src/dnd_simulator/core/player.py:259
 msgid "Usage: wait [hours]"
 msgstr "Использование: wait [часы]"
 
-#: src/dnd_simulator/core/player.py:262
 msgid "Minimum 1 hour."
 msgstr "Минимум 1 час."
 
-#: src/dnd_simulator/core/player.py:265
 msgid "Passed {hours} h."
 msgstr "Прошло {hours} ч."
 
-#: src/dnd_simulator/core/player.py:276
 msgid "Combat, round {round} (HP: {hp}/{max_hp}, weapon: {weapon}, speed: {speed} ft)"
 msgstr "Бой, раунд {round} (HP: {hp}/{max_hp}, оружие: {weapon}, скорость: {speed} ft)"
 
-#: src/dnd_simulator/core/player.py:284
 msgid "Around:"
 msgstr "Вокруг:"
 
-#: src/dnd_simulator/core/player.py:295
 msgid "Walls:"
 msgstr "Стены:"
 
-#: src/dnd_simulator/core/player.py:301 src/dnd_simulator/core/player.py:320
 msgid "What happened:"
 msgstr "Что произошло:"
 
-#: src/dnd_simulator/core/player.py:312
 msgid "Your turn (HP: {hp}/{max_hp}, time: {hour}:00, day {day})"
 msgstr "Ваш ход (HP: {hp}/{max_hp}, время: {hour}:00, день {day})"
 
-#: src/dnd_simulator/layers/entities/layer.py:241
+# =========================================================================
+# layers/entities/combat_manager.py — validation errors
+# =========================================================================
+
 msgid "Creature '{id}' not found."
 msgstr "Существо '{id}' не найдено."
 
-#: src/dnd_simulator/layers/entities/layer.py:245
 msgid "No active combat for movement."
 msgstr "Нет активного боя для перемещения."
 
-#: src/dnd_simulator/layers/entities/layer.py:250
 msgid "Creature not on the battle map."
 msgstr "Существо не на карте."
 
-#: src/dnd_simulator/layers/entities/layer.py:262
-#: src/dnd_simulator/layers/entities/layer.py:268
+msgid "Cannot move there — blocked."
+msgstr "Невозможно переместиться — путь заблокирован."
+
 msgid "Target '{id}' not on the battle map."
 msgstr "Цель '{id}' не на карте."
 
-#: src/dnd_simulator/layers/entities/layer.py:274
 msgid "Specify direction: toward, away_from, or direction."
 msgstr "Укажи направление: toward, away_from или direction."
 
-#: src/dnd_simulator/layers/entities/layer.py:309
 msgid "Attacker '{id}' not found."
 msgstr "Атакующий '{id}' не найден."
 
-#: src/dnd_simulator/layers/entities/layer.py:313
 msgid "Target '{id}' not found."
 msgstr "Цель '{id}' не найдена."
 
-#: src/dnd_simulator/layers/entities/layer.py:316
 msgid "You are dead and cannot attack."
 msgstr "Ты мёртв и не можешь атаковать."
 
-#: src/dnd_simulator/layers/entities/layer.py:319
 msgid "Target '{id}' is already dead."
 msgstr "Цель '{id}' уже мертва."
 
-#: src/dnd_simulator/layers/entities/layer.py:322
 msgid "Target '{id}' is not in this region."
 msgstr "Цель '{id}' не в этом регионе."
 
-#: src/dnd_simulator/layers/entities/layer.py:333
 msgid "fist"
 msgstr "кулак"
 
-#: src/dnd_simulator/layers/entities/layer.py:345
 msgid "Target too far ({dist} ft, reach {reach} ft)."
 msgstr "Цель слишком далеко ({dist} ft, досягаемость {reach} ft)."
 
-#: src/dnd_simulator/layers/entities/perception.py:35
-msgid "Combat ended."
-msgstr "Бой окончен."
+# =========================================================================
+# layers/entities/perception.py — event descriptions
+# =========================================================================
 
-#: src/dnd_simulator/layers/entities/perception.py:36
-msgid "Something happened ({type})"
-msgstr "Что-то произошло ({type})"
+#: Roll prefix labels
+msgid "adv "
+msgstr "прев "
 
-#: src/dnd_simulator/layers/entities/perception.py:47
-msgid "someone"
-msgstr "кто-то"
+msgid "disadv "
+msgstr "помеха "
 
-#: src/dnd_simulator/layers/entities/perception.py:49
-msgid "you"
-msgstr "ты"
-
-#: src/dnd_simulator/layers/entities/perception.py:62
-msgid "You say: \"{text}\""
-msgstr "Ты говоришь: «{text}»"
-
-#: src/dnd_simulator/layers/entities/perception.py:63
-msgid "{speaker} says: \"{text}\""
-msgstr "{speaker} говорит: «{text}»"
-
-#: src/dnd_simulator/layers/entities/perception.py:80
+#: Damage outcome
 msgid ", miss"
 msgstr ", промах"
 
-#: src/dnd_simulator/layers/entities/perception.py:82
 msgid ", {damage} damage"
 msgstr ", {damage} урона"
 
-#: src/dnd_simulator/layers/entities/perception.py:87
-msgid "You attack {target}{weapon}{outcome}"
-msgstr "Ты атакуешь {target}{weapon}{outcome}"
+msgid ", CRIT! {damage} damage{detail}"
+msgstr ", КРИТ! {damage} урона{detail}"
 
-#: src/dnd_simulator/layers/entities/perception.py:89
-msgid "{attacker} attacks you{weapon}{outcome}"
-msgstr "{attacker} атакует тебя{weapon}{outcome}"
+msgid ", {damage} damage{detail}"
+msgstr ", {damage} урона{detail}"
 
-#: src/dnd_simulator/layers/entities/perception.py:92
-msgid "{attacker} attacks {target}{weapon}{outcome}"
-msgstr "{attacker} атакует {target}{weapon}{outcome}"
+#: Round separator
+msgid "— Round {n} —"
+msgstr "— Раунд {n} —"
 
-#: src/dnd_simulator/layers/entities/perception.py:102
+msgid "Combat ended."
+msgstr "Бой окончен."
+
+msgid "Something happened ({type})"
+msgstr "Что-то произошло ({type})"
+
+msgid "someone"
+msgstr "кто-то"
+
+msgid "you"
+msgstr "ты"
+
+#: Say
+msgid "You say: \"{text}\""
+msgstr "Ты говоришь: «{text}»"
+
+msgid "{speaker} says: \"{text}\""
+msgstr "{speaker} говорит: «{text}»"
+
+#: Attack (with roll detail)
+msgid "You attack {target}{weapon}{roll}{outcome}"
+msgstr "Ты атакуешь {target}{weapon}{roll}{outcome}"
+
+msgid "{attacker} attacks you{weapon}{roll}{outcome}"
+msgstr "{attacker} атакует тебя{weapon}{roll}{outcome}"
+
+msgid "{attacker} attacks {target}{weapon}{roll}{outcome}"
+msgstr "{attacker} атакует {target}{weapon}{roll}{outcome}"
+
+#: Death
 msgid "You die"
 msgstr "Ты погибаешь"
 
-#: src/dnd_simulator/layers/entities/perception.py:104
 msgid "{entity} dies"
 msgstr "{entity} погибает"
 
-#: src/dnd_simulator/layers/entities/perception.py:114
+#: Dodge
 msgid "You take a defensive stance{desc}"
 msgstr "Ты принимаешь защитную стойку{desc}"
 
-#: src/dnd_simulator/layers/entities/perception.py:116
 msgid "{entity} takes a defensive stance{desc}"
 msgstr "{entity} принимает защитную стойку{desc}"
 
-#: src/dnd_simulator/layers/entities/perception.py:126
+#: Flee
 msgid "You try to flee{desc}"
 msgstr "Ты пытаешься сбежать{desc}"
 
-#: src/dnd_simulator/layers/entities/perception.py:128
 msgid "{entity} tries to flee{desc}"
 msgstr "{entity} пытается сбежать{desc}"
 
-#: src/dnd_simulator/layers/entities/perception.py:150
-msgid "dashes"
-msgstr "бежит"
+#: Move
+msgid "You move {direction} ({distance} ft){desc}"
+msgstr "Ты перемещаешься {direction} ({distance} ft){desc}"
 
-#: src/dnd_simulator/layers/entities/perception.py:150
-msgid "moves"
-msgstr "перемещается"
+msgid "{entity} moves {direction} ({distance} ft){desc}"
+msgstr "{entity} перемещается {direction} ({distance} ft){desc}"
 
-#: src/dnd_simulator/layers/entities/perception.py:154
-msgid "dash"
-msgstr "бежишь"
+#: Dash
+msgid "You dash (+{ft} ft movement)"
+msgstr "Ты ускоряешься (+{ft} ft движения)"
 
-#: src/dnd_simulator/layers/entities/perception.py:154
-msgid "move"
-msgstr "перемещаешься"
+msgid "{entity} dashes (+{ft} ft movement)"
+msgstr "{entity} ускоряется (+{ft} ft движения)"
 
-#: src/dnd_simulator/layers/entities/perception.py:155
-msgid "You {verb} {direction} ({distance} ft){desc}"
-msgstr "Ты {verb} {direction} ({distance} ft){desc}"
+#: Use item
+msgid "You use {item} (healed {hp} HP)"
+msgstr "Ты используешь {item} (восстановлено {hp} HP)"
 
-#: src/dnd_simulator/layers/entities/perception.py:159
-msgid "{entity} {verb} {direction} ({distance} ft){desc}"
-msgstr "{entity} {verb} {direction} ({distance} ft){desc}"
+msgid "{entity} uses {item} (healed {hp} HP)"
+msgstr "{entity} использует {item} (восстановлено {hp} HP)"
 
-#: src/dnd_simulator/layers/entities/perception.py:167
-msgid "Combat started! Initiative order: {order}"
-msgstr "Бой начался! Порядок инициативы: {order}"
-
-#: src/dnd_simulator/llm/brain.py:44
-msgid "You must choose an action: attack, move, dash, dodge, flee, or idle."
-msgstr "Ты должен выбрать действие: attack, move, dash, dodge, flee или idle."
-
-#: src/dnd_simulator/llm/brain.py:57
-msgid "You must choose an action: say, attack, or idle."
-msgstr "Ты должен выбрать действие: say, attack или idle."
-
-#: src/dnd_simulator/llm/brain.py:63
-msgid "Your turn. Choose an action."
-msgstr "Твой ход. Выбери действие."
-
-#: src/dnd_simulator/llm/brain.py:66
-msgid ""
-"What happened since your last turn:\n"
-"{events}\n"
-"\n"
-"Your turn. Choose an action."
-msgstr ""
-"Что произошло с твоего прошлого хода:\n"
-"{events}\n"
-"\n"
-"Твой ход. Выбери действие."
-
-#: src/dnd_simulator/llm/prompts.py:25
-msgid "unknown"
-msgstr "неизвестен"
-
-#: src/dnd_simulator/llm/prompts.py:26
-msgid "Territory: {nation}. Ruler: {leader}."
-msgstr "Территория: {nation}. Правитель: {leader}."
-
-#: src/dnd_simulator/llm/prompts.py:28
-msgid "Independent territory."
-msgstr "Независимая территория."
-
-#: src/dnd_simulator/llm/prompts.py:34
-msgid "Settlements: {names}"
-msgstr "Поселения: {names}"
-
-#: src/dnd_simulator/llm/prompts.py:39
-msgid "You have already spoken with this traveler: {summary}"
-msgstr "Ты уже общался с этим путником: {summary}"
-
-#: src/dnd_simulator/llm/prompts.py:49
-msgid "Near you:"
-msgstr "Рядом с тобой:"
-
-#: src/dnd_simulator/llm/prompts.py:53
-msgid ""
-"Rules:\n"
-"- Stay in character, do not break role\n"
-"- Answer briefly (1-3 sentences)\n"
-"- Speak as a medieval fantasy character\n"
-"- Always respond in the game language\n"
-"- By default use idle() — do nothing\n"
-"- Use say() only if there is a reason to speak: someone addressed you,\n"
-"  something important happened, or you need to react to a threat\n"
-"- Do NOT speak just because it is your turn — silence is normal\n"
-"- Use attack(target_id) only if you have a good reason to fight.\n"
-"  target_id is the id of a creature from the nearby list"
-msgstr ""
-"Правила:\n"
-"- Отыгрывай персонажа, не выходи из роли\n"
-"- Отвечай коротко (1-3 предложения)\n"
-"- Говори как персонаж средневекового фэнтези\n"
-"- Всегда отвечай на русском языке\n"
-"- По умолчанию используй idle() — ничего не делать\n"
-"- Используй say() только если есть причина говорить: кто-то обратился к тебе,\n"
-"  произошло что-то важное, или нужно отреагировать на угрозу\n"
-"- НЕ говори просто потому что наступил твой ход — молчание нормально\n"
-"- Используй attack(target_id) только если у тебя есть веская причина драться.\n"
-"  target_id — это id существа из списка рядом с тобой"
-
-#: src/dnd_simulator/llm/prompts.py:68
-msgid "You are {name}, {role} in {location}."
-msgstr "Ты — {name}, {role} в {location}."
-
-#: src/dnd_simulator/llm/prompts.py:72 src/dnd_simulator/llm/prompts.py:150
-msgid "Personality:"
-msgstr "Характер:"
-
-#: src/dnd_simulator/llm/prompts.py:74
-msgid "Setting:"
-msgstr "Обстановка:"
-
-#: src/dnd_simulator/llm/prompts.py:77
-msgid "Time: {hour}:00, day {day}, month {month}, year {year}"
-msgstr "Время: {hour}:00, день {day}, месяц {month}, год {year}"
-
-#: src/dnd_simulator/llm/prompts.py:82
-msgid "Weather: {condition}, {temperature}C"
-msgstr "Погода: {condition}, {temperature}°C"
-
-#: src/dnd_simulator/llm/prompts.py:85
-msgid "You are currently {activity}, located at: {location}"
-msgstr "Ты сейчас {activity}, находишься: {location}"
-
-#: src/dnd_simulator/llm/prompts.py:107
-msgid "healthy"
-msgstr "здоров"
-
-#: src/dnd_simulator/llm/prompts.py:109
-msgid "badly wounded"
-msgstr "тяжело ранен"
-
-#: src/dnd_simulator/llm/prompts.py:111
-msgid "wounded"
-msgstr "ранен"
-
-#: src/dnd_simulator/llm/prompts.py:125
-msgid "Around you:"
-msgstr "Вокруг тебя:"
-
-#: src/dnd_simulator/llm/prompts.py:125
-msgid "Nobody around."
-msgstr "Вокруг никого нет."
-
-#: src/dnd_simulator/llm/prompts.py:133
-msgid "Walls in the arena:"
-msgstr "Стены на арене:"
-
-#: src/dnd_simulator/llm/prompts.py:137
-msgid ""
-"Rules:\n"
-"- Choose one action: attack, dodge, move, dash, flee, or idle\n"
-"- attack(target_id) — strike a target (must be within weapon reach)\n"
-"- move(toward/away_from/direction) — move up to {speed} ft\n"
-"- dash(toward/away_from/direction) — sprint up to {dash_speed} ft (instead of attacking)\n"
-"- Walls block movement — you cannot move through a wall\n"
-"- Want to say something — put it in description\n"
-"- Respond in the game language"
-msgstr ""
-"Правила:\n"
-"- Выбери одно действие: attack, dodge, move, dash, flee или idle\n"
-"- attack(target_id) — ударить цель (должна быть в пределах досягаемости оружия)\n"
-"- move(toward/away_from/direction) — переместиться на {speed} ft\n"
-"- dash(toward/away_from/direction) — спринт на {dash_speed} ft (вместо атаки)\n"
-"- Стены блокируют движение — нельзя пройти сквозь стену\n"
-"- Хочешь что-то сказать — впиши в description\n"
-"- Отвечай на русском языке"
-
-#: src/dnd_simulator/llm/prompts.py:149
-msgid "You are {name}, {role}. You are in combat!"
-msgstr "Ты — {name}, {role}. Ты в бою!"
-
-#: src/dnd_simulator/llm/prompts.py:152
-msgid "Your status:"
-msgstr "Твоё состояние:"
-
-#: src/dnd_simulator/llm/prompts.py:155
-msgid "HP: {hp}/{max_hp} ({status})"
-msgstr "HP: {hp}/{max_hp} ({status})"
-
-#: src/dnd_simulator/llm/prompts.py:158
-msgid "Weapon: {weapon} ({dmg})"
-msgstr "Оружие: {weapon} ({dmg})"
-
-#: src/dnd_simulator/llm/prompts.py:161
-msgid "Speed: {speed} ft"
-msgstr "Скорость: {speed} ft"
-
-#: src/dnd_simulator/llm/prompts.py:164
-msgid "Round {num}."
-msgstr "Раунд {num}."
-
-#: src/dnd_simulator/rules/movement.py:43
-#: src/dnd_simulator/rules/movement.py:56
-msgid "here"
-msgstr "здесь"
-
-#: src/dnd_simulator/rules/movement.py:47
-msgid "to the north"
-msgstr "на севере"
-
-#: src/dnd_simulator/rules/movement.py:48
-msgid "to the south"
-msgstr "на юге"
-
-#: src/dnd_simulator/rules/movement.py:49
-msgid "to the east"
-msgstr "на востоке"
-
-#: src/dnd_simulator/rules/movement.py:50
-msgid "to the west"
-msgstr "на западе"
-
-#: src/dnd_simulator/rules/movement.py:51
-msgid "to the northeast"
-msgstr "на северо-востоке"
-
-#: src/dnd_simulator/rules/movement.py:52
-msgid "to the northwest"
-msgstr "на северо-западе"
-
-#: src/dnd_simulator/rules/movement.py:53
-msgid "to the southeast"
-msgstr "на юго-востоке"
-
-#: src/dnd_simulator/rules/movement.py:54
-msgid "to the southwest"
-msgstr "на юго-западе"
-
-#: src/dnd_simulator/layers/entities/models.py (canned dialogue — blacksmith)
-msgid "Need something forged?"
-msgstr "Нужно что-нибудь выковать?"
-
-msgid "Hm? Oh, I'm off duty."
-msgstr "Хм? А, я не на работе."
-
-#: src/dnd_simulator/layers/entities/models.py (canned dialogue — tavern_keeper)
-msgid "What'll it be?"
-msgstr "Что будете заказывать?"
-
-msgid "Kitchen's closed. Come back later."
-msgstr "Кухня закрыта. Приходи позже."
-
-#: src/dnd_simulator/layers/entities/models.py (canned dialogue — guard)
-msgid "Move along, citizen."
-msgstr "Проходи, гражданин."
-
-msgid "Quiet night, eh?"
-msgstr "Тихая ночка, а?"
-
-#: src/dnd_simulator/layers/entities/models.py (canned dialogue — merchant)
-msgid "Looking to buy something?"
-msgstr "Хочешь что-нибудь купить?"
-
-msgid "Shop's closed. Try tomorrow."
-msgstr "Лавка закрыта. Приходи завтра."
-
-#: src/dnd_simulator/layers/entities/models.py (canned dialogue — farmer)
-msgid "Can't talk, crops won't tend themselves."
-msgstr "Некогда болтать, урожай сам себя не соберёт."
-
-msgid "Fine evening, isn't it?"
-msgstr "Хороший вечер, правда?"
-
-#: src/dnd_simulator/layers/entities/models.py (canned dialogue — generic)
-msgid "I'm busy."
-msgstr "Я занят."
-
-msgid "Hm?"
-msgstr "Хм?"
-
-msgid "Zzz..."
-msgstr "Zzz..."
-
-#: src/dnd_simulator/layers/entities/models.py (mood overrides)
-msgid "Leave me alone!"
-msgstr "Оставь меня в покое!"
-
-msgid "Shh... Something's not right."
-msgstr "Тсс... Что-то тут не так."
-
-msgid "I... I can't talk right now."
-msgstr "Я... Не могу сейчас говорить."
-
-msgid "What do you want?"
-msgstr "Чего тебе надо?"
-
-#: src/dnd_simulator/adapters/api/ (API messages)
-msgid "World '{}' already exists"
-msgstr "Мир '{}' уже существует"
-
-msgid "World '{}' not found"
-msgstr "Мир '{}' не найден"
-
-msgid "Session {} deleted"
-msgstr "Сессия {} удалена"
-
-msgid "No fields to update"
-msgstr "Нет полей для обновления"
-
-msgid "Creature {} updated"
-msgstr "Существо {} обновлено"
-
-msgid "Creature {} removed"
-msgstr "Существо {} удалено"
-
-msgid "Creature {} brain set to {}"
-msgstr "Мозг существа {} установлен на {}"
-
-msgid "Nation {} updated"
-msgstr "Нация {} обновлена"
-
-msgid "Settlement {} updated"
-msgstr "Поселение {} обновлено"
-
-msgid "Advanced {}h."
-msgstr "Перемотано на {}ч."
-
-msgid "Events:"
-msgstr "События:"
-
-msgid "Language set to '{}'"
-msgstr "Язык установлен на '{}'"
-
-msgid "Saved as '{}'"
-msgstr "Сохранено как '{}'"
-
-msgid "Loaded '{}'"
-msgstr "Загружено '{}'"
-
-msgid "Deleted '{}'"
-msgstr "Удалено '{}'"
-
-msgid "No player in this session"
-msgstr "В этой сессии нет игрока"
-
-msgid "Session already has a player"
-msgstr "В сессии уже есть игрок"
-
-#: src/dnd_simulator/adapters/api/routes_ws.py
-msgid "Session '{}' not found"
-msgstr "Сессия '{}' не найдена"
-
-msgid "No player in session"
-msgstr "В сессии нет игрока"
-
-msgid "Rate limited, slow down"
-msgstr "Слишком много запросов, подождите"
-
-msgid "Unknown message type: {}"
-msgstr "Неизвестный тип сообщения: {}"
-
-#: src/dnd_simulator/service/commands_creatures.py
-msgid "Cannot edit player character from master panel"
-msgstr "Нельзя редактировать персонажа игрока из панели мастера"
-
-msgid "Cannot remove player character from master panel"
-msgstr "Нельзя удалить персонажа игрока из панели мастера"
-
-msgid "Cannot change player brain from master panel"
-msgstr "Нельзя изменить мозг игрока из панели мастера"
-
-msgid "LLM not configured"
-msgstr "LLM не настроен"
-
-#: Race names
-msgid "human"
-msgstr "человек"
-
-msgid "elf"
-msgstr "эльф"
-
-msgid "dwarf"
-msgstr "дварф"
-
-msgid "halfling"
-msgstr "полурослик"
-
-msgid "gnome"
-msgstr "гном"
-
-msgid "half orc"
-msgstr "полуорк"
-
-msgid "half elf"
-msgstr "полуэльф"
-
-msgid "tiefling"
-msgstr "тифлинг"
-
-msgid "dragonborn"
-msgstr "драконорождённый"
-
-#: Inspect action
+#: Inspect
 msgid "You look around but see no one matching '{id}'."
-msgstr "Вы осматриваетесь, но не видите никого похожего на '{id}'."
+msgstr "Ты осматриваешься, но не видишь никого похожего на '{id}'."
 
 msgid "You inspect {desc}."
-msgstr "Вы осматриваете {desc}."
+msgstr "Ты осматриваешь {desc}."
 
 msgid "They look badly wounded."
 msgstr "Тяжело ранен."
@@ -640,7 +309,86 @@ msgstr "Слегка ранен."
 msgid "They look healthy."
 msgstr "Выглядит здоровым."
 
-#: Combat log i18n — damage types
+#: Turn skipped
+msgid "You can't act ({conditions}) — turn skipped"
+msgstr "Ты не можешь действовать ({conditions}) — ход пропущен"
+
+msgid "{entity} can't act ({conditions}) — turn skipped"
+msgstr "{entity} не может действовать ({conditions}) — ход пропущен"
+
+#: Bless
+msgid "You invoke a blessing (+d4 to attack rolls for {n} rounds)"
+msgstr "Ты призываешь благословение (+d4 к броскам атаки на {n} раундов)"
+
+msgid "{entity} invokes a blessing (+d4 to attack rolls for {n} rounds)"
+msgstr "{entity} призывает благословение (+d4 к броскам атаки на {n} раундов)"
+
+#: Equip / Unequip
+msgid "You equip {weapon}"
+msgstr "Ты экипируешь {weapon}"
+
+msgid "{entity} equips {weapon}"
+msgstr "{entity} экипирует {weapon}"
+
+msgid "You put away {weapon}"
+msgstr "Ты убираешь {weapon}"
+
+msgid "{entity} puts away {weapon}"
+msgstr "{entity} убирает {weapon}"
+
+#: Buy / Sell
+msgid "You buy {item} from {merchant} for {price} gold"
+msgstr "Ты покупаешь {item} у {merchant} за {price} золота"
+
+msgid "{buyer} buys {item} from {merchant} for {price} gold"
+msgstr "{buyer} покупает {item} у {merchant} за {price} золота"
+
+msgid "You sell {item} to {merchant} for {price} gold"
+msgstr "Ты продаёшь {item} {merchant} за {price} золота"
+
+msgid "{seller} sells {item} to {merchant} for {price} gold"
+msgstr "{seller} продаёт {item} {merchant} за {price} золота"
+
+#: Combat started
+msgid "Combat started! Initiative order: {order}"
+msgstr "Бой начался! Порядок инициативы: {order}"
+
+#: Squad events
+msgid "A group"
+msgstr "Отряд"
+
+msgid "another group"
+msgstr "другой отряд"
+
+msgid "{name} passes through"
+msgstr "{name} проходит мимо"
+
+msgid "{name} arrives"
+msgstr "{name} прибывает"
+
+msgid "{name} departs"
+msgstr "{name} уходит"
+
+msgid "{name} is on the move"
+msgstr "{name} в движении"
+
+msgid "{winner} destroyed {loser}"
+msgstr "{winner} уничтожил {loser}"
+
+msgid "{winner} defeated {loser}"
+msgstr "{winner} победил {loser}"
+
+msgid "{name} appears — {count} creatures materialize"
+msgstr "{name} появляется — {count} существ материализуются"
+
+msgid "{name} moves on, disappearing into the distance"
+msgstr "{name} уходит, исчезая вдали"
+
+# =========================================================================
+# layers/entities/perception.py — translatable dynamic values
+# =========================================================================
+
+#: Damage types
 msgid "slashing"
 msgstr "рубящий"
 
@@ -680,7 +428,7 @@ msgstr "силовой"
 msgid "psychic"
 msgstr "психический"
 
-#: Combat log i18n — damage source labels
+#: Damage source labels
 msgid "weapon"
 msgstr "оружие"
 
@@ -693,11 +441,11 @@ msgstr "скрытая атака"
 msgid "dueling"
 msgstr "дуэлянт"
 
-#: Combat log i18n — roll labels
+#: Roll labels
 msgid "AC"
 msgstr "КЗ"
 
-#: Combat log i18n — common items and weapons
+#: Common item/weapon names
 msgid "Health Potion"
 msgstr "Зелье лечения"
 
@@ -742,3 +490,445 @@ msgstr "предмет"
 
 msgid "a weapon"
 msgstr "оружие"
+
+# =========================================================================
+# layers/entities/models.py — NPC canned dialogue
+# =========================================================================
+
+#: Blacksmith
+msgid "Need something forged?"
+msgstr "Нужно что-нибудь выковать?"
+
+msgid "Hm? Oh, I'm off duty."
+msgstr "Хм? А, я не на работе."
+
+#: Tavern keeper
+msgid "What'll it be?"
+msgstr "Что будете заказывать?"
+
+msgid "Kitchen's closed. Come back later."
+msgstr "Кухня закрыта. Приходи позже."
+
+#: Guard
+msgid "Move along, citizen."
+msgstr "Проходи, гражданин."
+
+msgid "Quiet night, eh?"
+msgstr "Тихая ночка, а?"
+
+#: Merchant
+msgid "Looking to buy something?"
+msgstr "Хочешь что-нибудь купить?"
+
+msgid "Shop's closed. Try tomorrow."
+msgstr "Лавка закрыта. Приходи завтра."
+
+#: Farmer
+msgid "Can't talk, crops won't tend themselves."
+msgstr "Некогда болтать, урожай сам себя не соберёт."
+
+msgid "Fine evening, isn't it?"
+msgstr "Хороший вечер, правда?"
+
+#: Generic
+msgid "I'm busy."
+msgstr "Я занят."
+
+msgid "Hm?"
+msgstr "Хм?"
+
+msgid "Zzz..."
+msgstr "Zzz..."
+
+#: Mood overrides
+msgid "Leave me alone!"
+msgstr "Оставь меня в покое!"
+
+msgid "Shh... Something's not right."
+msgstr "Тсс... Что-то тут не так."
+
+msgid "I... I can't talk right now."
+msgstr "Я... Не могу сейчас говорить."
+
+msgid "What do you want?"
+msgstr "Чего тебе надо?"
+
+# =========================================================================
+# rules/validation.py — action validation errors
+# =========================================================================
+
+msgid "Dead creatures cannot act"
+msgstr "Мёртвые существа не могут действовать"
+
+msgid "Dormant creatures cannot act"
+msgstr "Спящие существа не могут действовать"
+
+msgid "'{action}' is not available in combat"
+msgstr "'{action}' недоступно в бою"
+
+msgid "'{action}' is not available outside combat"
+msgstr "'{action}' недоступно вне боя"
+
+msgid "Insufficient budget for '{action}'"
+msgstr "Недостаточно ресурсов для '{action}'"
+
+msgid "Item '{id}' not in inventory."
+msgstr "Предмет '{id}' не в инвентаре."
+
+# =========================================================================
+# rules/trade.py — trade validation errors
+# =========================================================================
+
+msgid "{name} is not a merchant"
+msgstr "{name} не торговец"
+
+msgid "Must be at the same location as the merchant"
+msgstr "Нужно быть в том же месте, что и торговец"
+
+msgid "Merchant does not have that item"
+msgstr "У торговца нет этого предмета"
+
+msgid "Item has no price and cannot be traded"
+msgstr "У предмета нет цены, его нельзя продать"
+
+msgid "Not enough gold (need {price}, have {gold})"
+msgstr "Недостаточно золота (нужно {price}, есть {gold})"
+
+msgid "You don't have that item"
+msgstr "У тебя нет этого предмета"
+
+msgid "Merchant doesn't have enough gold (need {price}, have {gold})"
+msgstr "У торговца недостаточно золота (нужно {price}, есть {gold})"
+
+# =========================================================================
+# rules/movement.py — direction labels
+# =========================================================================
+
+msgid "here"
+msgstr "здесь"
+
+msgid "to the north"
+msgstr "на север"
+
+msgid "to the south"
+msgstr "на юг"
+
+msgid "to the east"
+msgstr "на восток"
+
+msgid "to the west"
+msgstr "на запад"
+
+msgid "to the northeast"
+msgstr "на северо-восток"
+
+msgid "to the northwest"
+msgstr "на северо-запад"
+
+msgid "to the southeast"
+msgstr "на юго-восток"
+
+msgid "to the southwest"
+msgstr "на юго-запад"
+
+# =========================================================================
+# llm/brain.py — action prompts
+# =========================================================================
+
+msgid "You must choose an action: attack, move, dash, dodge, flee, or idle."
+msgstr "Ты должен выбрать действие: attack, move, dash, dodge, flee или idle."
+
+msgid "You must choose an action: say, attack, or idle."
+msgstr "Ты должен выбрать действие: say, attack или idle."
+
+msgid "Your turn. Choose an action."
+msgstr "Твой ход. Выбери действие."
+
+msgid ""
+"What happened since your last turn:\n"
+"{events}\n"
+"\n"
+"Your turn. Choose an action."
+msgstr ""
+"Что произошло с твоего прошлого хода:\n"
+"{events}\n"
+"\n"
+"Твой ход. Выбери действие."
+
+# =========================================================================
+# llm/prompts.py — NPC system prompts (peaceful)
+# =========================================================================
+
+msgid "unknown"
+msgstr "неизвестен"
+
+msgid "Territory: {nation}. Ruler: {leader}."
+msgstr "Территория: {nation}. Правитель: {leader}."
+
+msgid "Independent territory."
+msgstr "Независимая территория."
+
+msgid "Settlements: {names}"
+msgstr "Поселения: {names}"
+
+msgid "Your memory:"
+msgstr "Твои воспоминания:"
+
+msgid "Near you:"
+msgstr "Рядом с тобой:"
+
+msgid "Your inventory:"
+msgstr "Твой инвентарь:"
+
+msgid ""
+"Rules:\n"
+"- Stay in character, do not break role\n"
+"- Answer briefly (1-3 sentences)\n"
+"- Speak as a medieval fantasy character\n"
+"- Always respond in the game language\n"
+"- Choose one of the available tools. Default to idle if nothing to do\n"
+"- Do NOT speak just because it is your turn — silence is normal"
+msgstr ""
+"Правила:\n"
+"- Отыгрывай персонажа, не выходи из роли\n"
+"- Отвечай коротко (1-3 предложения)\n"
+"- Говори как персонаж средневекового фэнтези\n"
+"- Всегда отвечай на русском языке\n"
+"- Выбери один из доступных инструментов. По умолчанию idle\n"
+"- НЕ говори просто потому что наступил твой ход — молчание нормально"
+
+msgid "You are {name}, {role} in {location}."
+msgstr "Ты — {name}, {role} в {location}."
+
+msgid "Personality:"
+msgstr "Характер:"
+
+msgid "Setting:"
+msgstr "Обстановка:"
+
+msgid "Time: {hour}:00, day {day}, month {month}, year {year}"
+msgstr "Время: {hour}:00, день {day}, месяц {month}, год {year}"
+
+msgid "Weather: {condition}, {temperature}C"
+msgstr "Погода: {condition}, {temperature}°C"
+
+msgid "You are currently {activity}, located at: {location}"
+msgstr "Ты сейчас {activity}, находишься: {location}"
+
+# =========================================================================
+# llm/prompts.py — NPC system prompts (combat)
+# =========================================================================
+
+msgid "healthy"
+msgstr "здоров"
+
+msgid "badly wounded"
+msgstr "тяжело ранен"
+
+msgid "wounded"
+msgstr "ранен"
+
+msgid "Around you:"
+msgstr "Вокруг тебя:"
+
+msgid "Nobody around."
+msgstr "Вокруг никого нет."
+
+msgid "Active effects: {effects}"
+msgstr "Активные эффекты: {effects}"
+
+msgid "Walls in the arena:"
+msgstr "Стены на арене:"
+
+msgid "Battle map:"
+msgstr "Карта боя:"
+
+msgid ""
+"IMPORTANT: You are fighting UNARMED (fists, 1 damage). "
+"You have weapons in your inventory! Use equip(weapon_id) — it's a FREE action."
+msgstr ""
+"ВАЖНО: Ты сражаешься ГОЛЫМИ РУКАМИ (кулаки, 1 урон). "
+"У тебя есть оружие в инвентаре! Используй equip(weapon_id) — это БЕСПЛАТНОЕ действие."
+
+msgid ""
+"Rules:\n"
+"- Choose one of the available tools\n"
+"- Walls block movement — you cannot move through a wall\n"
+"- Want to say something — put it in the description parameter of any action\n"
+"- Respond in the game language"
+msgstr ""
+"Правила:\n"
+"- Выбери один из доступных инструментов\n"
+"- Стены блокируют движение — нельзя пройти сквозь стену\n"
+"- Хочешь что-то сказать — впиши в параметр description любого действия\n"
+"- Отвечай на русском языке"
+
+msgid "You are {name}, {role}. You are in combat!"
+msgstr "Ты — {name}, {role}. Ты в бою!"
+
+msgid "Your status:"
+msgstr "Твоё состояние:"
+
+msgid "HP: {hp}/{max_hp} ({status})"
+msgstr "HP: {hp}/{max_hp} ({status})"
+
+msgid "Weapon: {weapon} ({dmg})"
+msgstr "Оружие: {weapon} ({dmg})"
+
+msgid "Speed: {speed} ft"
+msgstr "Скорость: {speed} ft"
+
+msgid "Round {num}."
+msgstr "Раунд {num}."
+
+# =========================================================================
+# adapters/api/routes_master.py — API messages
+# =========================================================================
+
+msgid "World '{}' already exists"
+msgstr "Мир '{}' уже существует"
+
+msgid "World '{}' not found"
+msgstr "Мир '{}' не найден"
+
+msgid "World '{}' deleted"
+msgstr "Мир '{}' удалён"
+
+msgid "File '{}' updated"
+msgstr "Файл '{}' обновлён"
+
+msgid "Layer '{}' scaffolded in world '{}'"
+msgstr "Слой '{}' создан в мире '{}'"
+
+msgid "Layer '{}' forked to custom in world '{}'"
+msgstr "Слой '{}' скопирован в пользовательский в мире '{}'"
+
+msgid "Session {} deleted"
+msgstr "Сессия {} удалена"
+
+msgid "No fields to update"
+msgstr "Нет полей для обновления"
+
+msgid "Creature {} updated"
+msgstr "Существо {} обновлено"
+
+msgid "Creature {} removed"
+msgstr "Существо {} удалено"
+
+msgid "Creature {} brain set to {}"
+msgstr "Мозг существа {} установлен на {}"
+
+msgid "Nation {} updated"
+msgstr "Нация {} обновлена"
+
+msgid "Settlement {} updated"
+msgstr "Поселение {} обновлено"
+
+msgid "Advanced {}h."
+msgstr "Перемотано на {}ч."
+
+msgid "Events:"
+msgstr "События:"
+
+msgid "Language set to '{}'"
+msgstr "Язык установлен на '{}'"
+
+msgid "Saved as '{}'"
+msgstr "Сохранено как '{}'"
+
+msgid "Loaded '{}'"
+msgstr "Загружено '{}'"
+
+msgid "Deleted '{}'"
+msgstr "Удалено '{}'"
+
+# =========================================================================
+# adapters/api/routes_player.py, service/game_service.py
+# =========================================================================
+
+msgid "No player in this session"
+msgstr "В этой сессии нет игрока"
+
+# =========================================================================
+# adapters/api/routes_ws.py — WebSocket messages
+# =========================================================================
+
+msgid "Session '{}' not found"
+msgstr "Сессия '{}' не найдена"
+
+msgid "No player in session"
+msgstr "В сессии нет игрока"
+
+msgid "Rate limited, slow down"
+msgstr "Слишком много запросов, подождите"
+
+msgid "Invalid JSON"
+msgstr "Некорректный JSON"
+
+msgid "Unknown action: {}"
+msgstr "Неизвестное действие: {}"
+
+msgid "Unknown message type: {}"
+msgstr "Неизвестный тип сообщения: {}"
+
+# =========================================================================
+# Race names (used via _(race.value.replace("_", " ")))
+# =========================================================================
+
+msgid "human"
+msgstr "человек"
+
+msgid "elf"
+msgstr "эльф"
+
+msgid "dwarf"
+msgstr "дварф"
+
+msgid "halfling"
+msgstr "полурослик"
+
+msgid "gnome"
+msgstr "гном"
+
+msgid "half orc"
+msgstr "полуорк"
+
+msgid "half elf"
+msgstr "полуэльф"
+
+msgid "tiefling"
+msgstr "тифлинг"
+
+msgid "dragonborn"
+msgstr "драконорождённый"
+
+# =========================================================================
+# Weather condition values (used via _(condition))
+# =========================================================================
+
+msgid "Weather in {region} changed from {old} to {new}"
+msgstr "Погода в {region} изменилась с {old} на {new}"
+
+msgid "clear"
+msgstr "ясно"
+
+msgid "cloudy"
+msgstr "облачно"
+
+msgid "light_rain"
+msgstr "лёгкий дождь"
+
+msgid "heavy_rain"
+msgstr "сильный дождь"
+
+msgid "storm"
+msgstr "шторм"
+
+msgid "snow"
+msgstr "снег"
+
+msgid "blizzard"
+msgstr "метель"
+
+msgid "fog"
+msgstr "туман"
