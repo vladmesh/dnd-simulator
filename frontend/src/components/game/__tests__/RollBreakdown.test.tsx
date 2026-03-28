@@ -51,7 +51,7 @@ function makeAttackEntry(opts?: {
     natural: 14,
     d20: { sides: 20, result: 14 },
     components: [
-      { source: "ability", value: 3, dice: "" },
+      { source: "str", value: 3, dice: "" },
       { source: "proficiency", value: 2, dice: "" },
     ],
     total: 19,
@@ -89,7 +89,7 @@ function makeAttackEntry(opts?: {
         type: "slashing",
       },
       {
-        source: "ability",
+        source: "str",
         dice: "",
         dice_detail: [],
         amount: 3,
@@ -148,7 +148,7 @@ describe("Attack card modal — clickable attack events", () => {
     await user.click(screen.getByTestId("attack-row"))
 
     const section = screen.getByTestId("attack-roll-section")
-    expect(within(section).getAllByText(/ability/i).length).toBeGreaterThanOrEqual(1)
+    expect(within(section).getAllByText(/STR/i).length).toBeGreaterThanOrEqual(1)
     expect(within(section).getByText(/proficiency/i)).toBeInTheDocument()
   })
 

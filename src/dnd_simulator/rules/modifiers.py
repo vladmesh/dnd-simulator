@@ -265,7 +265,8 @@ def attack_modifiers(attacker: Creature, target: Creature, *, melee: bool) -> At
     flat_mod = compute_stat(base_mod, attacker_mods, StatType.ATTACK_ROLL)
 
     # Build roll component breakdown
-    roll_components: list[RollComponent] = [RollComponent(source="ability", value=ability_mod)]
+    ability_source = attack.ability.value  # "str", "dex", etc.
+    roll_components: list[RollComponent] = [RollComponent(source=ability_source, value=ability_mod)]
     if prof:
         roll_components.append(RollComponent(source="proficiency", value=prof))
     for m in attacker_mods:
@@ -277,7 +278,7 @@ def attack_modifiers(attacker: Creature, target: Creature, *, melee: bool) -> At
     dmg_bonus = ability_mod
     dmg_components: list[RollComponent] = []
     if ability_mod:
-        dmg_components.append(RollComponent(source="ability", value=ability_mod))
+        dmg_components.append(RollComponent(source=ability_source, value=ability_mod))
 
     # Fighting Style Dueling (+2 damage with one-handed melee, no other weapon)
     # D&D 5e PHB p.72: "wielding a melee weapon in one hand and no other weapons"

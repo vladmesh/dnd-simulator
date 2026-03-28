@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import {
   Dialog,
   DialogContent,
@@ -38,7 +39,8 @@ interface AttackCardModalProps {
 }
 
 export function AttackCardModal({ data, open, onOpenChange }: AttackCardModalProps) {
-  const verdict = data.critical ? "CRIT" : data.hit ? "HIT" : "MISS"
+  const { t } = useTranslation(["game"])
+  const verdict = data.critical ? t("game:verdict_crit") : data.hit ? t("game:verdict_hit") : t("game:verdict_miss")
   const verdictColor = data.critical
     ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
     : data.hit
@@ -52,7 +54,7 @@ export function AttackCardModal({ data, open, onOpenChange }: AttackCardModalPro
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Swords className="size-5 text-red-400" />
-            <span>{data.weapon} Attack</span>
+            <span>{t("game:attack_card_title", { weapon: data.weapon })}</span>
           </DialogTitle>
           <DialogDescription className="flex items-center justify-between">
             <span>
@@ -75,6 +77,7 @@ export function AttackCardModal({ data, open, onOpenChange }: AttackCardModalPro
           roll={data.attackRoll}
           ac={data.ac}
           critical={data.critical}
+          t={t}
         />
 
         {/* Damage (only on hit) */}
@@ -82,6 +85,7 @@ export function AttackCardModal({ data, open, onOpenChange }: AttackCardModalPro
           <DamageSection
             components={data.damageComponents}
             total={data.totalDamage}
+            t={t}
           />
         )}
       </DialogContent>
@@ -97,17 +101,19 @@ function AttackRollSection({
   roll,
   ac,
   critical,
+  t,
 }: {
   roll: AttackRollData
   ac: number
   critical: boolean
+  t: (key: string, opts?: Record<string, unknown>) => string
 }) {
   const hasAdvantage = roll.advantage || roll.disadvantage
 
   return (
     <div data-testid="attack-roll-section" className="space-y-2">
       <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Attack Roll
+        {t("game:attack_roll")}
       </div>
 
       {/* d20 dice */}
@@ -118,6 +124,7 @@ function AttackRollSection({
             dropped={roll.d20_alt}
             advantage={roll.advantage}
             critical={critical}
+            t={t}
           />
         ) : (
           <DieVisual sides={20} result={roll.natural} critical={critical} />
@@ -133,7 +140,9 @@ function AttackRollSection({
                 {comp.value >= 0 ? "+" : ""}
                 {comp.value}
               </span>
-              <span className="text-muted-foreground">{comp.source}</span>
+              <span className="text-muted-foreground">
+                {t(`game:source_${comp.source}`, { defaultValue: comp.source })}
+              </span>
             </div>
           ))}
         </div>
@@ -142,7 +151,7 @@ function AttackRollSection({
       {/* Total vs AC */}
       <div className="flex items-center gap-2 border-t border-border/30 pt-1 text-sm">
         <span className="font-bold">= {roll.total}</span>
-        <span className="text-muted-foreground">vs AC {ac}</span>
+        <span className="text-muted-foreground">{t("game:vs_ac", { ac })}</span>
       </div>
     </div>
   )
@@ -157,13 +166,15 @@ function AdvantageD20s({
   dropped,
   advantage,
   critical,
+  t,
 }: {
   kept: DieRollData
   dropped: DieRollData
   advantage: boolean
   critical: boolean
+  t: (key: string) => string
 }) {
-  const label = advantage ? "Advantage" : "Disadvantage"
+  const label = advantage ? t("game:advantage") : t("game:disadvantage")
   return (
     <div className="flex items-center gap-2">
       <DieVisual sides={20} result={kept.result} critical={critical} />
@@ -180,14 +191,16 @@ function AdvantageD20s({
 function DamageSection({
   components,
   total,
+  t,
 }: {
   components: DamageComponentData[]
   total?: number
+  t: (key: string, opts?: Record<string, unknown>) => string
 }) {
   return (
     <div data-testid="damage-section" className="space-y-2">
       <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Damage
+        {t("game:damage")}
       </div>
 
       {components.map((comp, i) => (
@@ -197,9 +210,10 @@ function DamageSection({
       {total != null && (
         <div
           data-testid="total-damage"
-          className="border-t border-border/30 pt-1 text-right text-lg font-bold"
+          className="flex items-center gap-2 border-t border-border/30 pt-1 text-sm"
         >
-          {total}
+          <span className="text-lg font-bold">= {total}</span>
+          <span className="text-muted-foreground">{t("game:damage_total")}</span>
         </div>
       )}
     </div>

@@ -21,6 +21,7 @@ const DAMAGE_TYPE_COLORS: Record<string, string> = {
 }
 
 const DEFAULT_DIE_COLOR = "border-border bg-muted text-foreground"
+const D20_COLOR = "border-indigo-500/60 bg-indigo-950/50 text-indigo-200"
 
 // ---------------------------------------------------------------------------
 // DieVisual — a single styled die face
@@ -45,7 +46,11 @@ export function DieVisual({
 }: DieVisualProps) {
   const isD20 = sides === 20
   const sizeClass = isD20 ? "w-10 h-10 text-base" : "w-7 h-7 text-xs"
-  const colorClass = damageType ? (DAMAGE_TYPE_COLORS[damageType] ?? DEFAULT_DIE_COLOR) : DEFAULT_DIE_COLOR
+  const colorClass = damageType
+    ? (DAMAGE_TYPE_COLORS[damageType] ?? DEFAULT_DIE_COLOR)
+    : isD20
+      ? D20_COLOR
+      : DEFAULT_DIE_COLOR
 
   if (original != null) {
     // Reroll: show original (dimmed) → arrow → new result

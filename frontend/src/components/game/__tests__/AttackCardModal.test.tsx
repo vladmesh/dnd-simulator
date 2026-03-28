@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi } from "vitest"
+import "@/i18n"
 import { AttackCardModal } from "../AttackCardModal"
 import type { AttackCardData } from "../AttackCardModal"
 
@@ -20,7 +21,7 @@ function makeCardData(overrides?: Partial<AttackCardData>): AttackCardData {
       natural: 14,
       d20: { sides: 20, result: 14 },
       components: [
-        { source: "STR", value: 3, dice: "" },
+        { source: "str", value: 3, dice: "" },
         { source: "Proficiency", value: 2, dice: "" },
       ],
       total: 19,
@@ -37,7 +38,7 @@ function makeCardData(overrides?: Partial<AttackCardData>): AttackCardData {
         type: "slashing",
       },
       {
-        source: "STR",
+        source: "str",
         dice: "",
         dice_detail: [],
         amount: 3,
