@@ -13,7 +13,7 @@ from dnd_simulator.core.awareness import (
     PeacefulAwareness,
 )
 from dnd_simulator.core.character import Character, Creature, Entity
-from dnd_simulator.core.models import Event, Query, QueryType
+from dnd_simulator.core.models import Event, FactionRelation, Query, QueryType
 from dnd_simulator.layers.entities.models import Npc
 
 if TYPE_CHECKING:
@@ -303,15 +303,14 @@ class AwarenessBuilder:
                 "politics",
                 Query(question=QueryType.FACTION_RELATION, params={"a": observer.faction_id, "b": other.faction_id}),
             )
-            relation = str(answer.value)
-            is_hostile = relation == "hostile"
+            is_hostile = answer.value == FactionRelation.HOSTILE
             logger.info(
                 "faction_hostility_check",
                 observer=observer.id,
                 other=other.id,
                 observer_faction=observer.faction_id,
                 other_faction=other.faction_id,
-                relation=relation,
+                relation=str(answer.value),
                 hostile=is_hostile,
             )
             return is_hostile

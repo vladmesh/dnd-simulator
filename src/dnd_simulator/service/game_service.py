@@ -242,6 +242,7 @@ class GameService(
         """Read a world template from disk (YAML data, not a live session)."""
         from dnd_simulator.content_loader import load_battle_maps
 
+        self._validate_world_id(world_id)
         world_path = self._content_dir / "worlds" / world_id
         if not world_path.exists():
             raise FileNotFoundError(f"World '{world_id}' not found")
@@ -418,6 +419,7 @@ class GameService(
         """Delete a world. Blocked for base worlds and worlds with active sessions."""
         from dnd_simulator.content_loader.assembly import delete_world
 
+        self._validate_world_id(world_id)
         if world_id in self._BASE_WORLDS:
             raise ValueError(f"Cannot delete base world '{world_id}'")
 
@@ -432,6 +434,7 @@ class GameService(
         from dnd_simulator.content_loader.manifest import LayerSource
         from dnd_simulator.content_loader.utils import _read_yaml, resolve_text
 
+        self._validate_world_id(world_id)
         world_path = self._content_dir / "worlds" / world_id
         if not world_path.exists():
             raise FileNotFoundError(f"World '{world_id}' not found")
@@ -461,12 +464,14 @@ class GameService(
         """Create a minimal valid custom layer from scratch."""
         from dnd_simulator.content_loader.assembly import scaffold_layer
 
+        self._validate_world_id(world_id)
         return scaffold_layer(self._content_dir, world_id, layer_type)
 
     def fork_layer(self, world_id: str, layer_type: LayerType) -> Path:
         """Fork a library template into a world's custom directory."""
         from dnd_simulator.content_loader.assembly import fork_layer
 
+        self._validate_world_id(world_id)
         return fork_layer(self._content_dir, world_id, layer_type)
 
     # -- Layer files (read/write YAML) --
@@ -476,6 +481,7 @@ class GameService(
         from dnd_simulator.content_loader.manifest import LayerSource
         from dnd_simulator.content_loader.utils import _read_yaml
 
+        self._validate_world_id(world_id)
         world_path = self._content_dir / "worlds" / world_id
         if not world_path.is_dir():
             raise FileNotFoundError(f"World '{world_id}' not found")
@@ -486,6 +492,14 @@ class GameService(
 
         layer_paths = resolve_manifest(world_path, self._content_dir)
         return layer_paths[layer_type.value], source.value
+
+    _SAFE_ID_RE = __import__("re").compile(r"^[a-z0-9][a-z0-9_-]*$")
+
+    @classmethod
+    def _validate_world_id(cls, world_id: str) -> None:
+        """Reject path-traversal attempts in world_id."""
+        if not cls._SAFE_ID_RE.match(world_id):
+            raise ValueError(f"Invalid world_id: {world_id!r}")
 
     @staticmethod
     def _validate_filename(filename: str) -> None:
@@ -697,6 +711,7 @@ class GameService(
         """
         from dnd_simulator.content_loader.refs import RefType, get_ref_entries
 
+        self._validate_world_id(world_id)
         rt = RefType(ref_type)  # raises ValueError on unknown
         return get_ref_entries(rt, world_id, self._content_dir)
 

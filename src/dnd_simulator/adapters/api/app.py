@@ -58,7 +58,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     store = JsonFileStore(DEFAULT_SAVES_DIR)
 
     llm: LlmClient | None = None
-    api_key = os.getenv("OPENROUTER_API_KEY", "")
+    api_key = os.getenv("OPENROUTER_API_KEY")
     if api_key:
         model = os.environ["LLM_MODEL"]  # no default — must be set explicitly
         llm = LlmClient(api_key=api_key, model=model)

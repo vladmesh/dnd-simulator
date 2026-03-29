@@ -43,7 +43,7 @@ class TestFactionRelation:
 
         layer = self._make_politics({("kingdom", "goblin_tribe"): FactionRelation.HOSTILE})
         answer = layer.query(Query(question=QueryType.FACTION_RELATION, params={"a": "kingdom", "b": "goblin_tribe"}))
-        assert answer.value == "hostile"
+        assert answer.value is FactionRelation.HOSTILE
 
 
 class TestFactionOnCreature:

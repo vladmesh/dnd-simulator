@@ -222,6 +222,14 @@ class Query:
     params: dict[str, Any] = field(default_factory=dict)
 
 
+class FactionRelation(Enum):
+    """Creature-level faction relation. Drives hostility/alliance."""
+
+    HOSTILE = "hostile"
+    NEUTRAL = "neutral"
+    FRIENDLY = "friendly"
+
+
 @dataclass(frozen=True)
 class Answer:
     """Response from a layer to a query."""

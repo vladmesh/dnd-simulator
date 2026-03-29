@@ -16,7 +16,7 @@ from dnd_simulator.core.character import (
 from dnd_simulator.core.class_features import RogueFeatures
 from dnd_simulator.core.combat import BattleMap, Position
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, FactionRelation, Query, QueryType
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
@@ -30,7 +30,7 @@ def _faction_query_fn(layer: str, query: Query) -> Answer:
     """Query function that resolves FACTION_RELATION: same faction = friendly."""
     if query.question is QueryType.FACTION_RELATION:
         a, b = str(query.params["a"]), str(query.params["b"])
-        return Answer(value="friendly" if a == b else "hostile")
+        return Answer(value=FactionRelation.FRIENDLY if a == b else FactionRelation.HOSTILE)
     return Answer(value=None)
 
 

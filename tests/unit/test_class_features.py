@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from dnd_simulator.content_loader import parse_class_features
 from dnd_simulator.core.character import Character, CharClass
 from dnd_simulator.core.class_features import FighterFeatures, FightingStyle, RogueFeatures
@@ -95,6 +97,10 @@ class TestParseClassFeatures:
             {"class_features": {"sneak_attack_dice": 3}},
         )
         assert features[0].sneak_attack_dice == 3
+
+    def test_fighter_class_features_block_without_style_raises(self) -> None:
+        with pytest.raises(ValueError, match="fighting_style"):
+            parse_class_features(CharClass.FIGHTER, {"class_features": {"some_other_key": True}})
 
     def test_commoner_no_features(self) -> None:
         features = parse_class_features(CharClass.COMMONER, {})

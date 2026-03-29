@@ -7,7 +7,7 @@ import structlog
 from dnd_simulator.core.character import Attack, Creature, DamageType, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.models import ActionResult, Event, EventType, Query, QueryFn, QueryType
+from dnd_simulator.core.models import ActionResult, Event, EventType, FactionRelation, Query, QueryFn, QueryType
 from dnd_simulator.core.modifiers import AttackModifiers, RollComponent
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.combat import AttackResult, ExtraDamage, resolve_attack, roll_initiative
@@ -422,7 +422,7 @@ class CombatManager:
             "politics",
             Query(question=QueryType.FACTION_RELATION, params={"a": attacker.faction_id, "b": candidate.faction_id}),
         )
-        return str(answer.value) == "friendly"
+        return answer.value == FactionRelation.FRIENDLY
 
     def _build_attack_event(
         self,

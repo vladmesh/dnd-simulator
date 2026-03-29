@@ -81,6 +81,8 @@ def parse_class_features(char_class: CharClass, data: dict[str, Any]) -> list[Cl
         style_raw = cf_data.get("fighting_style")
         if style_raw:
             features.append(FighterFeatures(fighting_style=FightingStyle(style_raw)))
+        elif cf_data:
+            raise ValueError("Fighter class_features block requires 'fighting_style' key")
 
     if char_class == CharClass.ROGUE:
         sneak_dice = int(cf_data.get("sneak_attack_dice", 1))

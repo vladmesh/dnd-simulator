@@ -110,10 +110,10 @@ def _make_faction_query(relations: dict[tuple[str, str], FactionRelation]):
             a = str(query.params["a"])
             b = str(query.params["b"])
             if a == b:
-                return Answer(value=FactionRelation.FRIENDLY.value)
+                return Answer(value=FactionRelation.FRIENDLY)
             key = (min(a, b), max(a, b))
             relation = relations.get(key, FactionRelation.NEUTRAL)
-            return Answer(value=relation.value)
+            return Answer(value=relation)
         return Answer(value=None)
 
     return query_fn

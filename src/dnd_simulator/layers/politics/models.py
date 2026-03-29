@@ -5,6 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+# FactionRelation moved to core/models.py — re-export for backward compatibility
+from dnd_simulator.core.models import FactionRelation as FactionRelation
+
 
 class LeaderTrait(Enum):
     """Leader personality — affects nation behavior."""
@@ -21,14 +24,6 @@ class DiplomaticStatus(Enum):
     WAR = "war"
     TRADE_AGREEMENT = "trade_agreement"
     ALLIANCE = "alliance"
-
-
-class FactionRelation(Enum):
-    """Creature-level faction relation. Drives hostility/alliance."""
-
-    HOSTILE = "hostile"
-    NEUTRAL = "neutral"
-    FRIENDLY = "friendly"
 
 
 @dataclass

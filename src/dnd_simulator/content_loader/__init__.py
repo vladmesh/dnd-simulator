@@ -12,8 +12,6 @@ from dnd_simulator.content_loader.creatures import (
 )
 from dnd_simulator.content_loader.items import (
     extract_all_equipped,
-    parse_equipped_armor,
-    parse_equipped_shield,
     parse_equipped_weapon,
     parse_items,
 )
@@ -74,8 +72,6 @@ __all__ = [
     "parse_attacks",
     "parse_class_features",
     "parse_encounters",
-    "parse_equipped_armor",
-    "parse_equipped_shield",
     "parse_equipped_weapon",
     "parse_items",
     "parse_monster_template",

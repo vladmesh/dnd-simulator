@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 import structlog
 
 from dnd_simulator.core.layer import Layer
-from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, FactionRelation, Query, QueryType
 from dnd_simulator.core.squad import Squad, SquadBehavior
 from dnd_simulator.rules.abstract_combat import TriggeredEncounter, resolve_abstract_combat
 
@@ -289,7 +289,7 @@ class EcologyLayer(Layer):
             "politics",
             Query(QueryType.FACTION_RELATION, params={"a": a.faction_id, "b": b.faction_id}),
         )
-        return str(answer.value) == "hostile"
+        return answer.value == FactionRelation.HOSTILE
 
     def _fight_squads(self, a: Squad, b: Squad, location_id: str) -> Event:
         """Resolve combat between two squads. Loser retreats."""

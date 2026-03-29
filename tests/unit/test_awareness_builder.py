@@ -14,7 +14,7 @@ from dnd_simulator.core.character import (
 )
 from dnd_simulator.core.combat import BattleMap, CombatState, Position, Wall
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.models import Answer, GameDateTime, Query, QueryType
+from dnd_simulator.core.models import Answer, FactionRelation, GameDateTime, Query, QueryType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc, NpcActivity, ScheduleEntry
 
@@ -167,7 +167,7 @@ class TestNearbyEntitiesHostility:
 
         def query_fn(target: str, query: Query) -> Answer:
             if target == "politics" and query.question == QueryType.FACTION_RELATION:
-                return Answer(value="hostile")
+                return Answer(value=FactionRelation.HOSTILE)
             return Answer(value=None)
 
         nearby = layer.build_nearby_entities(creature_a, hour=12, query_fn=query_fn)
@@ -215,7 +215,7 @@ class TestFactionHostilityDelegatesToPoliticsQuery:
         def query_fn(target: str, query: Query) -> Answer:
             calls.append(query)
             if target == "politics" and query.question == QueryType.FACTION_RELATION:
-                return Answer(value="hostile")
+                return Answer(value=FactionRelation.HOSTILE)
             return Answer(value=None)
 
         result = layer._awareness.check_faction_hostility(observer, other, query_fn)
@@ -233,7 +233,7 @@ class TestFactionHostilityDelegatesToPoliticsQuery:
 
         def query_fn(target: str, query: Query) -> Answer:
             if target == "politics" and query.question == QueryType.FACTION_RELATION:
-                return Answer(value="neutral")
+                return Answer(value=FactionRelation.NEUTRAL)
             return Answer(value=None)
 
         result = layer._awareness.check_faction_hostility(observer, other, query_fn)

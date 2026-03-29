@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 import structlog
 
 from dnd_simulator.core.character import Creature, Entity
-from dnd_simulator.core.models import Event, EventType, Query, QueryType
+from dnd_simulator.core.models import Event, EventType, FactionRelation, Query, QueryType
 from dnd_simulator.core.monster import EncounterEntry
 
 if TYPE_CHECKING:
@@ -237,7 +237,7 @@ class ActivationManager:
                         "politics",
                         Query(question=QueryType.FACTION_RELATION, params={"a": sc.faction_id, "b": ex.faction_id}),
                     )
-                    if str(answer.value) == "hostile":
+                    if answer.value == FactionRelation.HOSTILE:
                         logger.info(
                             "encounter_auto_combat",
                             location=location_id,

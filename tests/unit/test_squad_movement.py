@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from dnd_simulator.core.location import Location, LocationEdge, LocationGraph
-from dnd_simulator.core.models import Answer, EventType, GameDateTime, Query, QueryType, TimeDelta
+from dnd_simulator.core.models import Answer, EventType, FactionRelation, GameDateTime, Query, QueryType, TimeDelta
 from dnd_simulator.core.squad import Squad, SquadBehavior, SquadType
 from dnd_simulator.layers.ecology.layer import EcologyLayer
 
@@ -70,8 +70,8 @@ def _faction_query_fn(hostile_pairs: set[tuple[str, str]]) -> object:
             a, b = str(query.params["a"]), str(query.params["b"])
             key = (min(a, b), max(a, b))
             if key in hostile_pairs:
-                return Answer(value="hostile")
-            return Answer(value="neutral")
+                return Answer(value=FactionRelation.HOSTILE)
+            return Answer(value=FactionRelation.NEUTRAL)
         raise RuntimeError(f"Unexpected query to {layer}: {query.question}")
 
     return query_fn

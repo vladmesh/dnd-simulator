@@ -47,7 +47,7 @@
 
 - [ ] **should** `battle-map-configs-not-wired` — `battle_map_configs` из `regions.yaml` не передаётся в `EntitiesLayer` при создании сессии в `game_service.py`. Все combat maps дефолтят в 60×60. `load_battle_maps()` keyed by region_id, `CombatManager` ищет по location_id — нужен маппинг через `location_graph`
 
-## Tech Debt (from audits 2026-03-25)
+## Tech Debt (from audits 2026-03-25, updated 2026-03-29)
 
 - [x] `god-class-entities` — ~~EntitiesLayer 1215 строк~~ FIXED Sprint 005: extracted awareness_builder, activation_manager, query_handler, combat_manager, perception
 - [ ] **should** `god-class-game-service` — GameService 836 строк, 43 метода. Продолжить выделение commands_*.py модулей
@@ -76,6 +76,28 @@
 - [ ] **should** `god-class-combat-manager` — layers/entities/combat_manager.py 535 строк. Выделить initiative/turn logic от combat state management
 - [ ] **could** `entities-layer-imports-content-loader` — layers/entities/layer.py:465,484,490 lazy-imports из content_loader в load_state. Layers → core only, content_loader — peer module
 - [ ] **could** `player-status-in-adapter` — routes_player._player_status() маппит Ability enum → строки, presentation logic в адаптере
+- [ ] **should** `merchant-provider-in-rules` — MerchantActionProvider в rules/ хранит world-query callback (I/O в pure rules). Перенести в service/ или передавать данные аргументом
+- [ ] **should** `dice-os-import` — rules/dice.py `import os` для DND_DICE_SEED. Seed injection через конструктор или переданный rng
+- [ ] **should** `base-action-provider-stateful` — BaseActionProvider в rules/ — stateful class с self._types. Сделать standalone функцией или frozen dataclass
+- [ ] **should** `adapter-imports-core-directly` — routes_player импортирует PlayerCharacter/Ability, routes_master — Query/QueryType напрямую из core. Вынести бизнес-логику в GameService
+- [ ] **should** `any-to-object-sweep` — 15+ файлов используют dict[str, Any] вместо dict[str, object] (core/models, layers, llm, adapters)
+- [ ] **should** `entity-type-enum` — "player"/"npc"/"creature" строковые сравнения в 5+ файлах. Добавить EntityType(StrEnum)
+- [ ] **should** `brain-type-enum` — ai_type == "rule_based" строковые сравнения. Добавить BrainType(StrEnum)
+- [ ] **should** `layer-source-string-cmp` — game_service.py L535,595,611,626 source == "library" вместо LayerSource.LIBRARY enum
+- [ ] **should** `long-func-run-combat-turn` — round.py run_combat_turn 132 строки. Split: _prepare_turn() + _run_action_loop()
+- [ ] **should** `long-func-choose-combat-action` — core/brain.py _choose_combat_action 114 строк. Break into per-action helpers
+- [ ] **should** `long-func-start-round` — service/session.py start_round 103 строки. Extract closures into named methods
+- [ ] **could** `perception-dispatch-chain` — perception.py if-elif chain для event dispatch → dict[EventType, handler] lookup
+- [ ] **could** `activation-manager-growing` — activation_manager.py 406 строк. Extract _materialize_squads()
+- [ ] **could** `deep-nesting-diplomacy` — politics/layer.py _process_diplomacy 7 уровней вложенности
+- [ ] **should** `silent-failure-autosave` — 3x contextlib.suppress(Exception) вокруг autosave. Логировать ошибки, не глушить
+- [ ] **should** `silent-failure-awareness` — awareness_builder.py 6x broad except Exception. Сузить до KeyError/LookupError
+- [ ] **should** `silent-failure-movement` — handle_wait except ValueError: pass. Возвращать ошибку в ActionResult
+- [ ] **could** `schema-form-growing` — frontend SchemaForm.tsx 488 строк, 30+ nested helpers
+- [ ] **could** `event-log-eslint-suppress` — EventLog.tsx eslint-disable-next-line react-hooks/exhaustive-deps
+- [ ] **could** `api-client-growing` — apiClient.ts 365 строк, 35+ методов. Разделить по домену
+- [ ] **could** `world-overview-growing` — WorldOverview.tsx 331 строка. Split sub-components
+- [ ] **should** `class-features-hardcoded` — ClassFeatures/proficiency system hardcoded в Python. Adding new class requires code, not YAML. Vision drift.
 
 ## Security (from audits 2026-03-25)
 
@@ -88,6 +110,10 @@
 - [ ] **could** `rest-rate-limiting` — Нет rate limiting на REST эндпоинтах (WS имеет token bucket)
 - [ ] **could** `action-params-validation` — Action params из клиента без schema validation
 - [ ] **could** `llm-prompt-injection` — Player say() текст попадает в NPC memory → system prompt
+- [ ] **could** `ws-stall-vector` — routes_ws.py future.result(timeout=30) блокирует Round thread если клиент не читает
+- [ ] **could** `layer-file-max-length` — UpdateLayerFileRequest.content без max_length — произвольный YAML на диск
+- [ ] **could** `llm-prompt-no-separation` — NPC memory, entity descriptions интерполируются в system prompt без разделительной границы
+- [ ] **could** `ability-scores-no-bounds` — ability_scores и attacks принимают произвольные значения без bounds validation
 
 ## Dead Code (from audit 2026-03-25)
 
@@ -95,3 +121,16 @@
 - [ ] `dead-auto-fail-saves` — rules/conditions.py:32 (future saving throws)
 - [ ] `dead-refund` — core/turn_budget.py:54 (future reaction system)
 - [ ] `dead-check-reactions` — round.py:302, stubbed (future reaction system)
+- [ ] `dead-is-daylight` — rules/geography.py:172, tested but unused in prod. Wire into geography layer or remove
+- [ ] `dead-prone-stand-cost` — rules/conditions.py:27, tested but never integrated into movement handler
+
+## Test Gaps (from audit 2026-03-29)
+
+- [ ] **should** `test-gap-equipment-handlers` — rules/handlers/equipment.py только indirect coverage через test_accessories.py
+- [ ] **should** `test-gap-entities-layer` — нет integration test для EntitiesLayer (activation, awareness, combat state, materialization)
+- [ ] **should** `test-gap-save-commands` — autosave_all_sessions, delete_save, list_saves без unit-тестов
+- [ ] **should** `test-gap-content-routes` — list_catalog_entries, list_schemas, get_schema, list_refs без тестов
+- [ ] **should** `test-gap-master-routes` — list_library_templates, fork_world_layer без тестов
+- [ ] **could** `test-gap-ws-fastforward` — player wait → time skip → NPC resume не тестируется
+- [ ] **could** `test-gap-ws-disconnect-npc` — disconnect during NPC turn + reconnect не тестируется
+- [ ] **could** `test-gap-ws-npc-combat-turn` — NPC full multi-action RuleBrain combat turn только indirect

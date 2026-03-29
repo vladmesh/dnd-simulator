@@ -12,7 +12,16 @@ from dnd_simulator.core.character import (
     DamageComponent,
     DamageType,
 )
-from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query, QueryType
+from dnd_simulator.core.models import (
+    ActionResult,
+    Answer,
+    Event,
+    EventType,
+    FactionRelation,
+    GameDateTime,
+    Query,
+    QueryType,
+)
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -285,7 +294,7 @@ class TestHostileEncounterAutoCombat:
 
         def hostile_query_fn(target: str, query: Query) -> Answer:
             if target == "politics" and query.question == QueryType.FACTION_RELATION:
-                return Answer(value="hostile")
+                return Answer(value=FactionRelation.HOSTILE)
             if target == "ecology" and query.question == QueryType.SQUADS_AT_LOCATION:
                 return Answer(value=[])
             return Answer(value=None)

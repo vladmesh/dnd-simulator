@@ -225,14 +225,6 @@ def parse_equipped_weapon(items: list[Item]) -> Item | None:
     return _parse_equipped(items, ItemType.WEAPON)
 
 
-def parse_equipped_armor(items: list[Item]) -> Item | None:
-    return _parse_equipped(items, ItemType.ARMOR)
-
-
-def parse_equipped_shield(items: list[Item]) -> Item | None:
-    return _parse_equipped(items, ItemType.SHIELD)
-
-
 def extract_all_equipped(inventory: list[Item]) -> tuple[dict[str, Item | None], list[Item]]:
     """Extract all equipped items from inventory, returning (equipped_dict, remaining_inventory).
 

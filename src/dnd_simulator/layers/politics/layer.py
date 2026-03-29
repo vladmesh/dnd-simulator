@@ -527,7 +527,7 @@ class PoliticsLayer(Layer):
 
         if q is QueryType.FACTION_RELATION:
             relation = self.get_faction_relation(str(params["a"]), str(params["b"]))
-            return Answer(value=relation.value)
+            return Answer(value=relation)
 
         if q is QueryType.FACTION_NAME:
             faction_id = str(params["faction_id"])
