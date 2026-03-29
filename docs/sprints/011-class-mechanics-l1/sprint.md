@@ -85,7 +85,7 @@ Sprint 001 заложил инфраструктуру классовых мех
 1. [Sneak Attack Faction-Aware Ally Detection](tasks/phase3-task1-sa-faction-check.md)
 2. [Cunning Action Cost Choice (Backend + Frontend)](tasks/phase3-task2-cunning-action-cost-choice.md)
 
-## Phase 4: Content & Tests
+## Phase 4: Content & Tests ✓
 
 Закрыть долг Sprint 001 Phase 4. Контент + полное тестовое покрытие.
 
