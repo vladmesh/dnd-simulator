@@ -23,7 +23,9 @@ from dnd_simulator.core.awareness import (
     describe_item,
 )
 from dnd_simulator.core.character import Creature
+from dnd_simulator.core.combat import CombatState, Position
 from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType, GameDateTime, QueryFn, TimeDelta
+from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -272,12 +274,14 @@ class Round:
         consecutive_failures = 0
 
         combat_state = self._entities.get_combat(creature.location_id)
+        on_leave_reach = self._make_on_leave_reach(combat_state, time, query_fn, emit_fn) if combat_state else None
         ctx = ActionContext(
             is_combat=True,
             current_turn_entity_id=creature.id,
             turn_budget=creature.turn_budget,
             combat_state=combat_state,
             get_entity=self._entities.get_entity,
+            on_leave_reach=on_leave_reach,
         )
 
         while True:
@@ -407,36 +411,26 @@ class Round:
 
     def check_reactions(
         self,
-        trigger_event: Event,
+        trigger: ReactionTrigger,
+        options: list[ReactionOption],
         candidates: list[Creature],
-        time: GameDateTime,
-        query_fn: QueryFn,
-        emit_fn: EmitFn,
+        emit_fn: EmitFn | None = None,
     ) -> list[Action]:
-        """Check if any candidates want to use a reaction to the trigger event.
+        """Ask candidates whether they want to react to the trigger.
 
-        This is the interrupt mini-turn: each candidate with reaction budget gets
-        a choose_action call with available reactions + skip. If not skip, execute.
-
-        Returns list of reaction actions taken.
-
-        Note: actual reaction trigger points (opportunity attacks during move,
-        counterspell on cast, etc.) are not wired yet — this is the skeleton
-        that will be called from the appropriate places in run_combat_turn.
+        Each candidate with reaction budget and a brain gets choose_reaction().
+        If not SKIP, the action is dispatched. Returns list of reactions taken.
         """
         reactions: list[Action] = []
+        _emit: EmitFn = emit_fn or (lambda e: ActionResult())
 
         for creature in candidates:
             if creature.brain is None or not creature.is_alive:
                 continue
+            if creature.turn_budget is None or creature.turn_budget.reaction <= 0:
+                continue
 
-            # Build awareness for the reacting creature
-            awareness = self._entities.build_awareness(creature, time, query_fn)
-            # TODO: set awareness.available_actions to reaction list + skip
-            # For now, just ask the brain
-            perceived = self._entities.get_perceived_events(creature)
-
-            action = creature.brain.choose_action(creature, awareness, perceived)
+            action = creature.brain.choose_reaction(creature, trigger, options)
 
             if action.name == ActionType.SKIP:
                 continue
@@ -445,14 +439,55 @@ class Round:
             ctx = ActionContext(
                 is_combat=True,
                 current_turn_entity_id=creature.id,
+                turn_budget=creature.turn_budget,
                 combat_state=combat_state,
                 get_entity=self._entities.get_entity,
             )
-            reaction_result = self._execute_action(creature, action, ctx, emit_fn)
-            if reaction_result.success:
+            result = self._execute_action(creature, action, ctx, _emit)
+            if result.success:
                 reactions.append(action)
 
         return reactions
+
+    def _make_on_leave_reach(
+        self,
+        combat_state: CombatState,
+        time: GameDateTime,
+        query_fn: QueryFn,
+        emit_fn: EmitFn,
+    ) -> Callable[[Creature, Position, Position, list[Creature]], bool]:
+        """Create on_leave_reach callback for movement handlers.
+
+        Returns a closure that builds a LEAVING_REACH trigger, asks reactors
+        via check_reactions, and returns True if the mover is still alive.
+        """
+
+        def on_leave_reach(
+            mover: Creature,
+            from_pos: Position,
+            to_pos: Position,
+            reactors: list[Creature],
+        ) -> bool:
+            trigger = ReactionTrigger(
+                trigger_type=TriggerType.LEAVING_REACH,
+                source_creature_id=mover.id,
+                data={
+                    "mover_id": mover.id,
+                    "from_pos": (from_pos.x, from_pos.y),
+                    "to_pos": (to_pos.x, to_pos.y),
+                },
+            )
+            options = [
+                ReactionOption(
+                    action_type=ActionType.OPPORTUNITY_ATTACK,
+                    description=f"Melee attack against {mover.name}",
+                    params={"target_id": mover.id},
+                )
+            ]
+            self.check_reactions(trigger, options, reactors, emit_fn)
+            return mover.is_alive
+
+        return on_leave_reach
 
     def run_round(self) -> RoundResult:
         """Execute one round: combat turns (initiative order), then peaceful turns, then advance time."""

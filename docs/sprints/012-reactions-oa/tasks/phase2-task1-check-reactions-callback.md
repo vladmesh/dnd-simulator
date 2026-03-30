@@ -47,4 +47,12 @@ Unit-тесты в `tests/unit/test_check_reactions.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `check_reactions` rewritten: takes `ReactionTrigger` + `list[ReactionOption]` + candidates, calls `choose_reaction` on each eligible brain. `emit_fn` passed as parameter (not stored attribute).
+- `OnLeaveReachFn` type alias and field added to `ActionContext`.
+- `_make_on_leave_reach` on Round creates closure that builds trigger/options and calls `check_reactions`, returns `mover.is_alive`.
+- `run_combat_turn` wires callback into `ActionContext`.
+- No old tests broken.

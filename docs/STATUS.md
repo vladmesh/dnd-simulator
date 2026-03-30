@@ -7,7 +7,7 @@
 **Sprint:** 012-reactions-oa
 **Goal:** Система реакций D&D 5e — opportunity attacks при выходе из reach, Disengage предотвращает, все три мозга единообразно поддерживают choose_reaction.
 **Started:** 2026-03-30
-**Phase:** 2 — Movement Integration + Round Wiring (tasks generated) — 2026-03-31. Ready to start task 1.
+**Phase:** 2 — Movement Integration + Round Wiring (task 1 done, task 2 pending) — 2026-03-31
 
 ### Phases
 

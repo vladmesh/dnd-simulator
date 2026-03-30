@@ -16,12 +16,15 @@ from dnd_simulator.rules.actions import action_cost
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature, Entity
-    from dnd_simulator.core.combat import CombatState
+    from dnd_simulator.core.combat import CombatState, Position
     from dnd_simulator.core.turn_budget import TurnBudget
 
 
 # Type alias for entity lookup — returns Entity or None given an ID.
 EntityLookup = Callable[[str], "Entity | None"]
+
+# Callback: (mover, from_pos, to_pos, reactors) → True if mover still alive after reactions.
+OnLeaveReachFn = Callable[["Creature", "Position", "Position", "list[Creature]"], bool]
 
 
 @dataclass(frozen=True)
@@ -33,6 +36,7 @@ class ActionContext:
     turn_budget: TurnBudget | None = None
     combat_state: CombatState | None = None  # for reach checks via BattleMap
     get_entity: EntityLookup | None = field(default=None, repr=False)  # for target validation
+    on_leave_reach: OnLeaveReachFn | None = field(default=None, repr=False)  # OA callback
 
 
 @dataclass(frozen=True)
