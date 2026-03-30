@@ -261,12 +261,13 @@ class Round:
                 effective_speed=speed,
                 conditions=[c.value for c in creature.conditions],
             )
-        budget = TurnBudget(
+        creature.turn_budget = TurnBudget(
             actions=get_num_actions(creature),
             bonus_actions=get_num_bonus_actions(creature),
             movement_remaining=speed,
             reaction=1,
         )
+        creature.is_disengaging = False
         actions: list[Action] = []
         consecutive_failures = 0
 
@@ -274,17 +275,17 @@ class Round:
         ctx = ActionContext(
             is_combat=True,
             current_turn_entity_id=creature.id,
-            turn_budget=budget,
+            turn_budget=creature.turn_budget,
             combat_state=combat_state,
             get_entity=self._entities.get_entity,
         )
 
         while True:
             available = self._dispatcher.get_available_actions(creature, ctx)
-            reachable = self._compute_reachable(creature, combat_state, budget)
+            reachable = self._compute_reachable(creature, combat_state, creature.turn_budget)
             awareness = replace(
                 self._entities.build_awareness(creature, time, query_fn),
-                turn_budget=budget,
+                turn_budget=creature.turn_budget,
                 available_actions=available,
                 available_items=self._build_available_items(creature, available),
                 equipped=self._build_equipped(creature),
@@ -322,7 +323,7 @@ class Round:
                 logger.info("action_failed", action=action.name.value, error=result.error)
                 # Notify client about failed action (so UI can show error)
                 if self._on_action:
-                    self._on_action(creature, action, budget, result.error)
+                    self._on_action(creature, action, creature.turn_budget, result.error)
                 if consecutive_failures >= 3:
                     logger.warning("consecutive_failures_end_turn", failures=consecutive_failures)
                     break
@@ -331,10 +332,10 @@ class Round:
             actions.append(action)
 
             if self._on_action:
-                self._on_action(creature, action, budget, result.error)
+                self._on_action(creature, action, creature.turn_budget, result.error)
 
             # If budget exhausted, end turn automatically
-            if budget.turn_over:
+            if creature.turn_budget.turn_over:
                 break
 
         return actions
@@ -478,6 +479,7 @@ class Round:
                 entity = self._entities.get_entity(entity_id)
                 if isinstance(entity, Creature) and entity.is_alive and entity.active and entity.in_combat:
                     entity.is_dodging = False  # dodge lasts until start of next turn
+                    entity.is_disengaging = False
                     self.run_creature_turn(entity, time, query_fn, emit_fn)
             # End of round — check for combat exit
             self._entities.end_combat_round(location_id)

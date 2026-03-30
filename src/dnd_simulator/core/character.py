@@ -12,6 +12,7 @@ from dnd_simulator.core.class_features import ClassFeatures
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.items import Item
 from dnd_simulator.core.resource import ResourcePool
+from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
@@ -220,6 +221,8 @@ class Creature(Entity):
     attacks: tuple[Attack, ...] = ()
     in_combat: bool = False
     is_dodging: bool = False
+    is_disengaging: bool = False
+    turn_budget: TurnBudget | None = None
     conditions: dict[Condition, int | None] = field(default_factory=dict)
     inventory: list[Item] = field(default_factory=list)
     equipped_weapon: Item | None = None

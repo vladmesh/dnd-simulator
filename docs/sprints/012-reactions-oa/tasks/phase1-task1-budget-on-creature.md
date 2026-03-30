@@ -48,4 +48,8 @@ Scenarios (in `tests/unit/test_turn_budget_on_creature.py`):
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward refactor. Added `turn_budget: TurnBudget | None` and `is_disengaging: bool` to Creature. Replaced all local `budget` variable usage in `run_combat_turn` with `creature.turn_budget`. Reset `is_disengaging` both in `run_combat_turn` (at budget creation) and in `run_round` (alongside `is_dodging`). No existing tests broke — zero behavioral change.
