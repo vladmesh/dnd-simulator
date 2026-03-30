@@ -36,6 +36,7 @@ class ActionType(StrEnum):
     SECOND_WIND = "second_wind"
     BUY = "buy"
     SELL = "sell"
+    OPPORTUNITY_ATTACK = "opportunity_attack"
     END_TURN = "end_turn"
     SKIP = "skip"
 

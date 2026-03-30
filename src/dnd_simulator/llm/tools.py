@@ -11,6 +11,7 @@ from typing import Any
 
 from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.action_defs import ActionDef, get_action_def
+from dnd_simulator.core.reactions import ReactionOption
 
 # ---------------------------------------------------------------------------
 # Schema builder
@@ -48,6 +49,34 @@ def _build_schema(d: ActionDef) -> dict[str, Any]:
 def get_tools(available_actions: list[ActionType]) -> list[dict[str, Any]]:
     """Build tool list from available actions. Internal actions are excluded."""
     return [_build_schema(get_action_def(at)) for at in available_actions if not get_action_def(at).internal]
+
+
+def get_reaction_tools(options: list[ReactionOption]) -> list[dict[str, Any]]:
+    """Build tool list from reaction options.
+
+    Simpler than action tools — each option becomes a tool with its
+    pre-built params as properties.
+    """
+    tools: list[dict[str, Any]] = []
+    for opt in options:
+        properties: dict[str, Any] = {}
+        required: list[str] = []
+        for key, value in opt.params.items():
+            properties[key] = {"type": "string", "description": f"Value: {value}"}
+            required.append(key)
+
+        schema: dict[str, Any] = {
+            "type": "function",
+            "function": {
+                "name": opt.action_type.value,
+                "description": opt.description,
+                "parameters": {"type": "object", "properties": properties},
+            },
+        }
+        if required:
+            schema["function"]["parameters"]["required"] = required
+        tools.append(schema)
+    return tools
 
 
 # Legacy API — used by LlmBrain when available_actions is empty (shouldn't happen in practice)

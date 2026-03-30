@@ -9,9 +9,10 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from dnd_simulator.core.action import END_TURN, Action, ActionType
+from dnd_simulator.core.action import END_TURN, SKIP, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, CombatEntity, ItemInfo, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.models import EventType
+from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
 from dnd_simulator.core.tags import NpcTag, find_tags, has_tag
 
 if TYPE_CHECKING:
@@ -22,6 +23,12 @@ logger = structlog.get_logger(domain="brain")
 # Callback type: notified when it's the player's turn (awareness push).
 OnTurnCallback = Callable[
     ["Creature", "PeacefulAwareness | CombatAwareness", "list[PerceivedEvent]"],
+    None,
+]
+
+# Callback type: notified when a reaction is available for the player.
+OnReactionCallback = Callable[
+    ["Creature", "ReactionTrigger", "list[ReactionOption]"],
     None,
 ]
 
@@ -37,6 +44,19 @@ class Brain(ABC):
         events: list[PerceivedEvent],
     ) -> Action:
         """Decide what to do this turn. Must return a valid Action."""
+
+    def choose_reaction(
+        self,
+        creature: Creature,
+        trigger: ReactionTrigger,
+        options: list[ReactionOption],
+    ) -> Action:
+        """Decide whether to use a reaction. Default: skip.
+
+        Subclasses override for specific reaction logic. Safe default
+        means new brain types don't need to implement reactions immediately.
+        """
+        return SKIP
 
     # -- Movement helpers (available to all brains) --
 
@@ -90,6 +110,19 @@ class RuleBrain(Brain):
         if isinstance(awareness, CombatAwareness):
             return self._choose_combat_action(creature, awareness)
         return self._peaceful_action(creature, awareness, events)
+
+    def choose_reaction(
+        self,
+        creature: Creature,
+        trigger: ReactionTrigger,
+        options: list[ReactionOption],
+    ) -> Action:
+        """Deterministic reaction: for LEAVING_REACH, always take OA if available."""
+        if trigger.trigger_type == TriggerType.LEAVING_REACH:
+            for opt in options:
+                if opt.action_type == ActionType.OPPORTUNITY_ATTACK:
+                    return Action(name=opt.action_type, params=dict(opt.params))
+        return SKIP
 
     def _peaceful_action(
         self,
@@ -314,11 +347,17 @@ class PlayerBrain(Brain):
 
     def __init__(self) -> None:
         self._action_queue: queue.Queue[Action] = queue.Queue()
+        self._reaction_queue: queue.Queue[Action] = queue.Queue()
         self._on_turn: OnTurnCallback | None = None
+        self._on_reaction: OnReactionCallback | None = None
 
     def set_on_turn(self, callback: OnTurnCallback) -> None:
         """Transport sets this to receive awareness when it's the player's turn."""
         self._on_turn = callback
+
+    def set_on_reaction(self, callback: OnReactionCallback) -> None:
+        """Transport sets this to receive reaction prompts."""
+        self._on_reaction = callback
 
     def choose_action(
         self,
@@ -330,6 +369,20 @@ class PlayerBrain(Brain):
             self._on_turn(creature, awareness, events)
         return self._action_queue.get()
 
+    def choose_reaction(
+        self,
+        creature: Creature,
+        trigger: ReactionTrigger,
+        options: list[ReactionOption],
+    ) -> Action:
+        if self._on_reaction:
+            self._on_reaction(creature, trigger, options)
+        return self._reaction_queue.get()
+
     def submit_action(self, action: Action) -> None:
         """Called by transport to provide the player's chosen action."""
         self._action_queue.put(action)
+
+    def submit_reaction(self, action: Action) -> None:
+        """Called by transport to provide the player's chosen reaction."""
+        self._reaction_queue.put(action)

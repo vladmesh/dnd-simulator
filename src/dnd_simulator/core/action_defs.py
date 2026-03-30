@@ -426,6 +426,18 @@ _reg(
 
 _reg(
     ActionDef(
+        action_type=ActionType.OPPORTUNITY_ATTACK,
+        description=N_("Make a melee attack as a reaction when a creature leaves your reach."),
+        cost_type=CostType.FREE,  # placeholder — task 3 adds CostType.REACTION
+        combat_mode=CombatMode.COMBAT_ONLY,
+        targeted=True,
+        internal=True,  # not offered by providers — triggered by movement only
+        params=(ParamDef("target_id", "string", N_("Target creature ID"), required=True),),
+    )
+)
+
+_reg(
+    ActionDef(
         action_type=ActionType.END_TURN,
         description=N_("End your turn."),
         cost_type=CostType.FREE,

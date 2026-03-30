@@ -51,4 +51,8 @@ Scenarios (in `tests/unit/test_reaction_infrastructure.py`):
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Created `core/reactions.py` with TriggerType, ReactionTrigger, ReactionOption. Added `choose_reaction` to Brain ABC with default SKIP. Implemented in RuleBrain (deterministic: always take OA), LlmBrain (single LLM call with reaction tools), PlayerBrain (queue+callback pattern mirroring choose_action). Added `get_reaction_tools` to `llm/tools.py`. Also added `ActionType.OPPORTUNITY_ATTACK` enum value and a placeholder ActionDef registration (cost=FREE, internal=True) since the action_defs registry enforces completeness — task 3 will upgrade to CostType.REACTION.

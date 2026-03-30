@@ -6,13 +6,14 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from dnd_simulator.core.action import Action, ActionType
+from dnd_simulator.core.action import SKIP, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain
+from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger
 from dnd_simulator.i18n import _
 from dnd_simulator.llm.client import LlmClient
 from dnd_simulator.llm.prompts import build_npc_combat_prompt, build_npc_system_prompt
-from dnd_simulator.llm.tools import build_npc_combat_tools, build_npc_tools, get_tools
+from dnd_simulator.llm.tools import build_npc_combat_tools, build_npc_tools, get_reaction_tools, get_tools
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
@@ -99,6 +100,32 @@ class LlmBrain(Brain):
 
         # Exhausted retries — idle as fallback
         return Action(name=ActionType.IDLE)
+
+    def choose_reaction(
+        self,
+        creature: Creature,
+        trigger: ReactionTrigger,
+        options: list[ReactionOption],
+    ) -> Action:
+        """Ask LLM whether to use a reaction. Single call, no retry."""
+        tools = get_reaction_tools(options)
+        if not tools:
+            return SKIP
+
+        trigger_desc = _("A creature is {trigger_type}. You can react or skip.").format(
+            trigger_type=trigger.trigger_type.value.replace("_", " "),
+        )
+        messages: list[dict[str, object]] = [
+            {"role": "system", "content": _("You are an NPC deciding whether to use your reaction.")},
+            {"role": "user", "content": trigger_desc},
+        ]
+
+        response = self._llm.generate_with_tools(messages, tools)
+        if response.is_tool_call:
+            assert response.tool_call is not None
+            tc = response.tool_call
+            return Action(name=ActionType(tc.name), params=dict(tc.arguments))
+        return SKIP
 
 
 def _peaceful_awareness_to_dict(aw: PeacefulAwareness) -> dict[str, object]:
