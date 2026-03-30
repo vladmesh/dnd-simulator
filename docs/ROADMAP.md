@@ -83,10 +83,8 @@ Pydantic content models как единый source of truth для структ�
 Закрытие UX-багов из e2e-отчёта sprint 009: combat log i18n, click-to-inspect на BattleMap (клик по фигурке → карточка существа, combatants list убран), NPC inspect faction display, HP edit current/max, brain toggle warning toast, consumable drawer tooltip, log overlay backfill. ActionBar.tsx (532 строк) декомпозирован на 8 субкомпонентов (action-bar/), оркестратор < 150 строк.
 → [план спринта](sprints/010-e2e-polish/sprint.md)
 
-## In Progress
-
-### Sprint 011 — Class Mechanics L1 Completion (фазы 1-3)
-Типизированное оружие/броня с D&D 5e свойствами (`is_two_handed`, `light`, `heavy`, `versatile`), Great Weapon Fighting style, Cunning Action с выбором cost_mode (bonus/action), SA faction check (ally detection через faction relations), SRD каталог оружия/брони, Fighter/Rogue NPC в контенте, unit tests для всех механик Sprint 001.
+### Sprint 011 — Class Mechanics L1 Completion (фазы 0-4)
+Structured dice pipeline (DiceResult, D20Result, reroll_below для GWF). BattleMap reachability на бэкенде (Dijkstra, единый BFS, фронт = рендерер). Типизированное оружие/броня с D&D 5e свойствами (`is_two_handed`, `light`, `heavy`), Great Weapon Fighting style, Cunning Action с выбором cost_mode (bonus/action), SA faction check (ally detection через faction relations). SRD каталог оружия (12 видов) и брони (12 видов + shield). Fighter/Rogue NPC с полной экипировкой, 106 integration tests. Кликабельный лог бросков (RollBreakdown, AttackCardModal). Fix: equipment persistence в save/load, potion crash.
 → [план спринта](sprints/011-class-mechanics-l1/sprint.md)
 
 ## Planned
@@ -112,4 +110,4 @@ Spell slots, ki, rage. Дополнительные типы брони и ор�
 
 ## Known Issues
 
-См. [e2e-report.md](e2e-report.md) — результаты E2E-тестирования фронтенда.
+См. [e2e-reports/](e2e-reports/) — результаты E2E-тестирования, [BACKLOG.md](BACKLOG.md) — баги и tech debt.
