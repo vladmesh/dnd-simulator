@@ -7,9 +7,9 @@
 **Sprint:** 012-reactions-oa
 **Goal:** Система реакций D&D 5e — opportunity attacks при выходе из reach, Disengage предотвращает, все три мозга единообразно поддерживают choose_reaction.
 **Started:** 2026-03-30
-**Phase:** Planning (COMPLETE) — 2026-03-30
+**Phase:** 1 — Reaction Infrastructure + OA Mechanics (tasks generated) — 2026-03-30
 
-Ready for Phase 1 task generation.
+Ready to start task 1.
 
 ### Phases
 

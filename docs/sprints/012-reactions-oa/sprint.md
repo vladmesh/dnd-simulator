@@ -38,7 +38,9 @@ Reaction infrastructure — фундамент для будущих реакц�
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [TurnBudget on Creature + is_disengaging](tasks/phase1-task1-budget-on-creature.md)
+2. [Reaction Infrastructure — Triggers + Brain.choose_reaction](tasks/phase1-task2-reaction-infrastructure.md)
+3. [OA Rules + Handler + Disengage Fix](tasks/phase1-task3-oa-rules-handler.md)
 
 ## Phase 2: Movement Integration + Round Wiring
 
