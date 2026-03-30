@@ -123,8 +123,14 @@ Sprint 001 заложил инфраструктуру классовых мех
 
 ## Deferred
 
-_(заполняется по ходу спринта)_
+- Extra Attack, skill checks, Hide, Expertise, saving throws — вне скоупа текущего L1
+- Thrown/ammunition/loading для ranged weapons — требует отдельной системы боеприпасов
+- Clickable log for non-attack events (healing, skill checks) — data in events, UI expand only for attacks
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-03-30
+
+Built structured dice pipeline (DiceResult/D20Result with reroll support), unified BattleMap reachability engine (backend Dijkstra, frontend as pure renderer), D&D 5e weapon properties (two-handed, light, heavy, finesse) with full SRD catalogs (12 weapons, 12 armor + shield), Great Weapon Fighting style with visible rerolls, Cunning Action cost choice UI, faction-aware Sneak Attack ally detection, clickable roll breakdown in frontend (RollBreakdown + AttackCardModal). Equipment persistence fix (save/load was losing equipped items). 13 tasks across 5 phases, 106 integration tests, 1588 unit tests green.
+
+**Deferred:** Extra Attack, ammunition system, non-attack roll breakdown UI
