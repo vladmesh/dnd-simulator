@@ -16,7 +16,7 @@ Finalize the current sprint. This is a gate — everything must be green or the 
 
 ### 1. Find the sprint
 
-Read `docs/sprints/` — highest-numbered folder. Read `STATUS.md` and `sprint.md`.
+Read `docs/STATUS.md` to find the active sprint. Then read `sprint.md` from `docs/sprints/NNN-slug/`.
 
 If no active sprint — stop.
 
@@ -26,19 +26,19 @@ Verify each item. If ANY fails — collect all failures, report them, and **do n
 
 #### 2a. All phases complete
 
-Every phase in `sprint.md` must be marked complete (✓ or COMPLETE in STATUS.md). Check task files too — all must be `done`.
+Every phase in `sprint.md` must be marked complete (✓). Check task files too — all must be `done`.
 
 **Blocker if:** any phase or task is not done.
 
 #### 2b. Audit exists and was triaged
 
-`docs/audit.md` must exist with a date AFTER the last phase was closed. Check the audit date vs the last phase completion date in STATUS.md.
+`docs/audit.md` must exist with a date AFTER the last phase was closed. Check the audit date vs the last phase completion date in `docs/STATUS.md`.
 
 **Blocker if:** no audit, or audit predates last phase closure.
 
 #### 2c. Audit findings were handled
 
-Sprint-relevant findings from the audit should have been addressed — either fixed in a refactor phase/task, or explicitly deferred to backlog with a note. Check that `docs/BACKLOG.md` has entries for deferred items if any were mentioned in STATUS.md or sprint.md.
+Sprint-relevant findings from the audit should have been addressed — either fixed in a refactor phase/task, or explicitly deferred to backlog with a note. Check that `docs/BACKLOG.md` has entries for deferred items if any were mentioned in `docs/STATUS.md` or sprint.md.
 
 **Blocker if:** audit findings exist but there's no evidence they were triaged (no refactor phase, no backlog entries, no notes in sprint.md).
 
@@ -98,18 +98,21 @@ Update `sprint.md` Results section:
 **Deferred:** <list items that were punted to backlog, if any>
 ```
 
-#### 4c. Close STATUS.md
+#### 4c. Update docs/STATUS.md
+
+Move the completed sprint to the Sprint History table. Set the current sprint section to empty or the next sprint if one is planned:
 
 ```markdown
-# Sprint NNN Status
+## Current Sprint
 
-**Sprint:** NNN-slug
-**Status:** COMPLETE
-**Updated:** <date>
+No active sprint.
 
-## Summary
+## Sprint History
 
-<1-3 sentences: what the sprint delivered>
+| Sprint | Goal | Started | Completed |
+|--------|------|---------|-----------|
+| NNN-slug | <goal> | <started> | <today> |
+| ... previous sprints ... |
 ```
 
 #### 4d. Commit and push

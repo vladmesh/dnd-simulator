@@ -46,16 +46,15 @@ Create `docs/sprints/NNN-TBD/sprint.md` with only:
 **Started:** <today's date>
 ```
 
-Update `docs/sprints/NNN-TBD/STATUS.md`:
+Update `docs/STATUS.md` (the project-level status file) to reflect that a new sprint is being planned:
 
 ```markdown
-# Sprint NNN Status
+## Current Sprint
 
-**Sprint:** NNN
+**Sprint:** NNN-TBD
+**Goal:** TBD
+**Started:** <today's date>
 **Phase:** Planning
-**Updated:** <today's date>
-
-## Current
 
 Scope selection in progress.
 ```
@@ -154,22 +153,23 @@ _(заполняется по ходу спринта)_
 _(заполняется в конце спринта)_
 ```
 
-Update `STATUS.md`:
+Update `docs/STATUS.md`:
 
 ```markdown
-# Sprint NNN Status
+## Current Sprint
 
 **Sprint:** NNN-slug
-**Phase:** Planning (COMPLETE)
-**Updated:** <date>
+**Goal:** <one sentence>
+**Started:** <date>
+**Phase:** Planning (COMPLETE) — <date>
 
-## Current
+Ready for Phase 1 task generation.
 
-Sprint planned. <N> phases. Ready for Phase 1 task generation.
+### Phases
 
-## Next Steps
-
-Phase 1 task generation.
+1. <phase name>
+2. <phase name>
+...
 ```
 
 ### 7. Commit

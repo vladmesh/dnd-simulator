@@ -22,7 +22,7 @@ Validate and close the current sprint phase. Integration tests → E2E via Playw
 
 ### 1. Find the current phase
 
-Read `docs/sprints/` — highest-numbered folder. Read `STATUS.md` and `sprint.md`.
+Read `docs/STATUS.md` to find the active sprint and current phase. Then read the sprint's `sprint.md` from `docs/sprints/NNN-slug/`.
 
 **If no active sprint or current phase** — stop, nothing to close.
 
@@ -189,17 +189,13 @@ Update `sprint.md` — mark the phase as complete:
 ...
 ```
 
-Update `STATUS.md`:
+Update `docs/STATUS.md`:
 
 ```markdown
-**Phase:** N — <Phase Name> (COMPLETE)
-**Updated:** <date>
+**Phase:** N — <Phase Name> (COMPLETE) — <date>
 
-## Current
-
-Phase N complete. <brief summary of results>.
 <If there's a next phase:> Ready for Phase N+1 task generation.
-<If this was the last phase:> All phases complete. Ready for sprint closure.
+<If this was the last phase:> All phases complete. Ready for audit.
 ```
 
 Commit:
@@ -215,15 +211,12 @@ Do NOT push.
 
 Do NOT mark the phase as complete.
 
-Update `STATUS.md`:
+Update `docs/STATUS.md`:
 
 ```markdown
-## Current
+**Phase:** N — <Phase Name> (BLOCKED) — <date>
 
-Phase N: E2E found blockers. Phase NOT closed.
-
-## Blockers
-
+Blockers:
 - <blocker 1>
 - <blocker 2>
 ```

@@ -31,7 +31,7 @@ Each of these is a single agent spawn. No combining.
 
 ### 1. Read initial state
 
-Read the sprint STATUS.md to understand where we are. This tells you how many steps remain and what the next one is.
+Read `docs/STATUS.md` to understand where we are. This tells you how many steps remain and what the next one is.
 
 ### 2. The loop
 
@@ -40,7 +40,7 @@ Spawn an Agent with this exact prompt structure:
 ```
 You are working on a D&D simulator project at /home/vlad/projects/dnd_simulator.
 
-Read CLAUDE.md for project rules. Read the sprint STATUS.md at docs/sprints/<current>/STATUS.md.
+Read CLAUDE.md for project rules. Read docs/STATUS.md for current sprint state.
 
 Then invoke the /go skill to determine and execute the next pipeline step.
 
@@ -56,7 +56,7 @@ If /go determines the next step is /audit_triage:
 - For sprint-relevant items (bucket 2): create a refactor phase if there are items with effort >5min.
   Items <5min — fix immediately alongside the quick-fixes.
 - Add all backlog items (bucket 3) to docs/BACKLOG.md.
-- Then mark the triage complete in STATUS.md.
+- Then mark the triage complete in docs/STATUS.md.
 - Prefer architecturally clean solutions. When in doubt, consult docs/VISION.md.
 
 If you encounter an architecture problem that /implement flags as "stop and report":
@@ -115,4 +115,4 @@ The loop ends when:
 - **Don't accumulate implementation details.** You're an orchestrator. You track state transitions, not code changes.
 - **Don't retry the same failing step more than once.** If an agent fails, one retry with a clearer prompt is ok. Second failure = stop and report.
 - **Don't spawn agents in parallel.** The pipeline is sequential — each step depends on the previous one.
-- **Don't let the sprint STATUS.md get stale in your head.** Re-read it every 3-4 iterations to stay grounded, since agents update it.
+- **Don't let docs/STATUS.md get stale in your head.** Re-read it every 3-4 iterations to stay grounded, since agents update it.

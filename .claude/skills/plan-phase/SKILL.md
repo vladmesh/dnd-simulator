@@ -1,7 +1,7 @@
 ---
 name: plan-phase
 description: >
-  Generate tasks for the current sprint phase. Reads STATUS.md, reviews code, breaks the phase into
+  Generate tasks for the current sprint phase. Reads docs/STATUS.md, reviews code, breaks the phase into
   testable tasks with TDD approach (tests first, then implementation). Use when user says "plan phase",
   "generate tasks", "break down phase", "what are the tasks", "task generation", or when a new phase
   is ready to start after the previous one was completed. Also trigger when user asks "what's next"
@@ -24,15 +24,11 @@ Generate tasks for the current phase of the active sprint. Read the code, unders
 
 ### 1. Find the active sprint
 
-Read `docs/sprints/` — find the highest-numbered sprint folder. Read its `STATUS.md` to determine:
-
-- Which sprint is active
-- Which phase is current
-- Whether there's actually work to plan
+Read `docs/STATUS.md` to determine which sprint is active and which phase is current.
 
 **If there's no active sprint or all phases are marked COMPLETE** — tell the user there's nothing to plan and stop. Don't sugarcoat it.
 
-Then read the sprint's `sprint.md` to understand the phase description — what it should deliver and why.
+Then read the sprint's `sprint.md` (from the path in `docs/sprints/NNN-slug/`) to understand the phase description — what it should deliver and why.
 
 ### 2. Review the code
 
@@ -158,21 +154,12 @@ Add task links to the phase section in `sprint.md`:
 2. [Task Title](tasks/phaseN-task2-slug.md)
 ```
 
-Update `STATUS.md`:
+Update `docs/STATUS.md` — set the current phase and note task generation:
 
 ```markdown
-**Phase:** N — <Phase Name>
-**Updated:** <date>
+**Phase:** N — <Phase Name> (tasks generated) — <date>
 
-## Current
-
-Phase N tasks generated. Ready to start task 1.
-
-## Next Steps
-
-- Task 1: <brief description>
-- Task 2: <brief description>
-- ...
+Ready to start task 1.
 ```
 
 ### 9. Commit

@@ -21,7 +21,7 @@ Read `docs/audit.md`. If it doesn't exist or is empty — tell the user to run `
 
 ### 2. Determine context
 
-Check if there's an active sprint: read `docs/sprints/` for the highest-numbered folder, read its `STATUS.md` and `sprint.md`.
+Check if there's an active sprint: read `docs/STATUS.md` and the sprint's `sprint.md` from `docs/sprints/NNN-slug/`.
 
 **If active sprint exists:**
 - Note the sprint goal, current phase, and which code areas the sprint touches
@@ -116,12 +116,10 @@ This step happens ONLY when the user has given the go-ahead AND every finding ha
 - Sprint-relevant items either in a refactor phase or explicitly deferred
 - Backlog items added to BACKLOG.md or explicitly dismissed
 
-Only then — append to `STATUS.md`:
+Only then — append audit triage note to `docs/STATUS.md`:
 
 ```markdown
-## Audit Triage
-
-Triaged on <date>. Quick-fix: N applied. Sprint-relevant: N (→ refactor phase / deferred). Backlog: N added.
+**Audit:** Triaged <date>. Quick-fix: N applied. Sprint-relevant: N (→ refactor phase / deferred). Backlog: N added.
 ```
 
 Do NOT write this marker at the start of the triage or after just presenting the report. It signals to `/go` and `/close_sprint` that the audit cycle is complete.

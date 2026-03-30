@@ -17,14 +17,11 @@ Find and implement the next pending task in the current sprint phase. Follow TDD
 
 ### 1. Find the current task
 
-Read `docs/sprints/` — find the highest-numbered sprint folder. Read its `STATUS.md` to find:
-
-- The active sprint and current phase
-- Which tasks exist for this phase
+Read `docs/STATUS.md` to find the active sprint and current phase.
 
 **If there's no active sprint, or no current phase, or the phase has no task files** — tell the user there's nothing to implement and stop.
 
-Read the phase's task files (from `sprint.md` links or `tasks/` directory). Find the first task with `status: pending`. That's what we're implementing.
+Read the sprint's `sprint.md` from `docs/sprints/NNN-slug/` and the phase's task files from `tasks/`. Find the first task with `status: pending`. That's what we're implementing.
 
 **If all tasks are done** — tell the user the phase is complete and stop. Don't start the next phase — that requires `/plan-phase`.
 
@@ -37,11 +34,9 @@ In the task file, change:
 `pending` → `in_progress`
 ```
 
-Update `STATUS.md` to reflect what we're working on:
+Update `docs/STATUS.md` to reflect what we're working on:
 ```markdown
-## Current
-
-Phase N, Task M: <task title> — in progress.
+**Phase:** N — <Phase Name> (task M in progress) — <date>
 ```
 
 ### 3. Read the task and review relevant code
@@ -135,17 +130,10 @@ If old tests were modified — explain why. If you deviated from the plan — ex
 Keep it brief but informative for future context recovery.>
 ```
 
-Update `STATUS.md`:
+Update `docs/STATUS.md` — note the completed task:
 
 ```markdown
-## Current
-
-Phase N, Task M: <task title> — done. <brief result>.
-
-## Next Steps
-
-- Task M+1: <description>
-- ...
+**Phase:** N — <Phase Name> (task M done, M+1 pending) — <date>
 ```
 
 Commit:
