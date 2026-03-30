@@ -57,7 +57,9 @@ Wiring реакций в game loop. OA реально срабатывает п�
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [check_reactions rewrite + on_leave_reach callback](tasks/phase2-task1-check-reactions-callback.md)
+2. [Wire movement handlers to trigger OA](tasks/phase2-task2-movement-wiring.md)
+3. [Integration tests — OA fires during movement](tasks/phase2-task3-integration-tests.md)
 
 ## Phase 3: Frontend + Content
 
