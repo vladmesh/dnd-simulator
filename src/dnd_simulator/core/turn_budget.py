@@ -12,6 +12,7 @@ class ActionCost:
     actions: int = 0
     bonus_actions: int = 0
     movement_ft: int = 0
+    reaction: int = 0
 
 
 @dataclass
@@ -38,6 +39,7 @@ class TurnBudget:
             self.actions >= cost.actions
             and self.bonus_actions >= cost.bonus_actions
             and self.movement_remaining >= cost.movement_ft
+            and self.reaction >= cost.reaction
         )
 
     def consume(self, cost: ActionCost) -> None:
@@ -45,14 +47,17 @@ class TurnBudget:
         if not self.can_afford(cost):
             raise ValueError(
                 f"Insufficient budget: need {cost}, have "
-                f"actions={self.actions}, bonus={self.bonus_actions}, move={self.movement_remaining}"
+                f"actions={self.actions}, bonus={self.bonus_actions}, "
+                f"move={self.movement_remaining}, reaction={self.reaction}"
             )
         self.actions -= cost.actions
         self.bonus_actions -= cost.bonus_actions
         self.movement_remaining -= cost.movement_ft
+        self.reaction -= cost.reaction
 
     def refund(self, cost: ActionCost) -> None:
         """Return cost to budget after a failed action."""
         self.actions += cost.actions
         self.bonus_actions += cost.bonus_actions
         self.movement_remaining += cost.movement_ft
+        self.reaction += cost.reaction

@@ -65,4 +65,13 @@ Scenarios (in `tests/unit/test_opportunity_attack.py`):
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All 12 test scenarios implemented plus 3 extras (dead reactor, no turn_budget, reactor-is-mover). Key decisions:
+
+- **OA handler reuses combat_manager via emit_fn**: emits ENTITY_ATTACK for combat resolution (same pipeline as normal attacks — modifiers, sneak attack, death handling all work), then emits separate OPPORTUNITY_ATTACK log event. Zero duplication.
+- **Handler consumes reaction directly** (`actor.turn_budget.reaction -= 1`) since OA runs outside the normal dispatcher cost flow.
+- **CostType.REACTION** added as new cost type. ActionCost/TurnBudget updated to handle reaction in can_afford/consume/refund. Reaction does NOT prevent turn_over (per D&D 5e — unused reaction doesn't mean your turn isn't over).
+- **Updated old test** `test_internal_actions_are_free` → `test_internal_actions_have_no_standard_cost` — OA is the first internal action with non-free cost. Contract change is intentional: "internal" means "not offered by providers", not "free".

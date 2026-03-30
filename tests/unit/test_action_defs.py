@@ -24,10 +24,13 @@ class TestActionDefRegistry:
         with pytest.raises(KeyError):
             get_action_def("nonexistent_action")  # type: ignore[arg-type]
 
-    def test_internal_actions_are_free(self) -> None:
+    def test_internal_actions_have_no_standard_cost(self) -> None:
+        """Internal actions are free or reaction-cost — never action/bonus/movement."""
         for ad in ACTION_DEFS.values():
             if ad.internal:
-                assert ad.cost_type == CostType.FREE, f"Internal action {ad.action_type} should be free"
+                assert ad.cost_type in (CostType.FREE, CostType.REACTION), (
+                    f"Internal action {ad.action_type} has unexpected cost {ad.cost_type}"
+                )
 
     def test_targeted_actions_have_target_id_param(self) -> None:
         for ad in ACTION_DEFS.values():

@@ -126,9 +126,10 @@ def handle_disengage(
 ) -> ActionResult:
     """Disengage: movement doesn't provoke opportunity attacks this turn.
 
-    Currently a no-op since opportunity attacks aren't implemented.
+    Sets is_disengaging flag so OA triggers skip this creature.
     Budget cost is handled by the dispatcher.
     """
+    actor.is_disengaging = True
     logger.info("disengage", entity_id=actor.id)
     emit_fn(
         Event(

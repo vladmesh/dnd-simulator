@@ -46,6 +46,7 @@ from dnd_simulator.rules.handlers import (
     handle_idle,
     handle_move,
     handle_move_to,
+    handle_opportunity_attack,
     handle_say,
     handle_second_wind,
     handle_sell,
@@ -175,6 +176,7 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.register(ActionType.SECOND_WIND, handle_second_wind)
     dispatcher.register(ActionType.BUY, handle_buy)
     dispatcher.register(ActionType.SELL, handle_sell)
+    dispatcher.register(ActionType.OPPORTUNITY_ATTACK, handle_opportunity_attack)
 
     # Register providers — base types exclude provider-managed actions
     base_types = frozenset(at for at in dispatcher._handlers if not get_action_def(at).provider_managed)

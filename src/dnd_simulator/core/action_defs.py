@@ -19,6 +19,7 @@ class CostType(StrEnum):
     ACTION = "action"
     BONUS_ACTION = "bonus_action"
     MOVEMENT = "movement"
+    REACTION = "reaction"
 
 
 class CombatMode(StrEnum):
@@ -428,7 +429,7 @@ _reg(
     ActionDef(
         action_type=ActionType.OPPORTUNITY_ATTACK,
         description=N_("Make a melee attack as a reaction when a creature leaves your reach."),
-        cost_type=CostType.FREE,  # placeholder — task 3 adds CostType.REACTION
+        cost_type=CostType.REACTION,
         combat_mode=CombatMode.COMBAT_ONLY,
         targeted=True,
         internal=True,  # not offered by providers — triggered by movement only
