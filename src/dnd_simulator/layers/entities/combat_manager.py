@@ -9,6 +9,7 @@ from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import ActionResult, Event, EventType, FactionRelation, Query, QueryFn, QueryType
 from dnd_simulator.core.modifiers import AttackModifiers, RollComponent
+from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.combat import AttackResult, ExtraDamage, resolve_attack, roll_initiative
 from dnd_simulator.rules.modifiers import attack_modifiers
@@ -77,6 +78,10 @@ class CombatManager:
         self._attack_this_round[location_id] = False
         for c in creatures:
             c.in_combat = True
+            # Initialize reaction-only budget so creatures can OA before their first turn.
+            # Full budget (actions, movement) is set at turn start by Round.
+            if c.turn_budget is None:
+                c.turn_budget = TurnBudget(actions=0, bonus_actions=0, movement_remaining=0, reaction=1)
 
         initiative = [(c.id, c.name) for c in ordered]
         positions = {eid: (pos.x, pos.y) for eid, pos in battle_map.positions.items()}

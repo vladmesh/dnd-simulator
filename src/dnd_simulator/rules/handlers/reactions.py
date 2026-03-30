@@ -29,11 +29,6 @@ def handle_opportunity_attack(
     """
     target_id = str(action.params["target_id"])
 
-    # Consume reaction — OA is outside normal dispatcher cost flow
-    if actor.turn_budget is None or actor.turn_budget.reaction <= 0:
-        return ActionResult(success=False, error="No reaction available")
-    actor.turn_budget.reaction -= 1
-
     logger.info("opportunity_attack", attacker=actor.id, target=target_id)
 
     # Resolve via normal attack pipeline

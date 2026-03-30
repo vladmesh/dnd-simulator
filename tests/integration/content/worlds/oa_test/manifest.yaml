@@ -1,0 +1,15 @@
+name: OA Test
+description: Integration test world for opportunity attack mechanics. Larger map for movement-based tests.
+default_player_faction: hero_faction
+
+layers:
+  geography:
+    source: custom
+  politics:
+    source: custom
+  settlements:
+    source: custom
+  ecology:
+    source: custom
+  entities:
+    source: custom

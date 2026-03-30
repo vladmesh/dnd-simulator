@@ -42,4 +42,16 @@ End-to-end тесты через docker compose стек (REST + WebSocket). П�
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Three bugs were found and fixed during implementation:
+
+1. **Double reaction consumption (crash):** `handle_opportunity_attack` manually consumed `turn_budget.reaction -= 1`, but the dispatcher also called `turn_budget.consume(cost)` on success. The handler's manual consumption was removed since the dispatcher handles it via ActionDef's `CostType.REACTION`.
+
+2. **Missing initial turn_budget (OA never triggered):** When combat starts, creatures that haven't had their first turn have `turn_budget = None`. `find_oa_triggers` skips creatures with no budget. Fix: `start_combat()` now initializes a reaction-only budget (`TurnBudget(actions=0, bonus=0, movement=0, reaction=1)`) for all combatants.
+
+3. **OPPORTUNITY_ATTACK event not logged:** `EventType.OPPORTUNITY_ATTACK` was missing from `_LOGGED_EVENTS` in `EntitiesLayer`, so the event was emitted but never stored in the location log and never sent to the WebSocket client.
+
+Tests: 5 new integration tests, 1 unit test modified (reaction consumption assertion). All 111 integration tests + 1648 unit tests pass.

@@ -355,7 +355,9 @@ class TestOaHandler:
         result = handle_opportunity_attack(reactor, action, mock_emit, ctx, world)
 
         assert result.success is True
-        assert reactor.turn_budget.reaction == 0
+        # Reaction is consumed by the dispatcher, not the handler.
+        # Handler only resolves the attack and emits events.
+        assert reactor.turn_budget.reaction == 1
 
         # Should have emitted ENTITY_ATTACK event (for combat_manager resolution)
         # and OPPORTUNITY_ATTACK event (for combat log)

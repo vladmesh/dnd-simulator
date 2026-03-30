@@ -1,0 +1,4 @@
+oa_floor:
+  name: OA Arena Floor
+  region: oa_arena
+  description: A training arena for testing opportunity attack mechanics.
