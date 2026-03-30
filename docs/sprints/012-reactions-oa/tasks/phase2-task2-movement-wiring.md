@@ -46,4 +46,13 @@ Unit-тесты в `tests/unit/test_movement_oa.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `handle_move_to`: replaced `walk_path()` with step-by-step loop. Each step calls `find_oa_triggers` for the (cur, next) pair. If trigger found and callback returns False (mover dead), movement stops at current position.
+- `handle_move`: in combat with `on_leave_reach` callback, resolves movement directly (using `move_direction` from rules/movement.py) instead of emitting event for combat_manager. Checks OA triggers before applying the step. Falls back to event-based resolution when no callback (non-combat or no wiring).
+- Added `step_cost()` pure function to `rules/movement.py` for D&D 5e step cost calculation (extracted from walk_path logic).
+- Added `_get_combatants()` helper to get creatures from `ActionContext.combat_state.turn_order` via `get_entity`.
+- `combat_manager.resolve_move` left unchanged — still used for non-combat event-based moves.
+- No old tests broken. `walk_path` import removed from movement handlers (no longer used there).

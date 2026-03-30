@@ -183,6 +183,21 @@ def find_path(start: Position, goal: Position, battle_map: BattleMap, mover_id: 
     return reachable.get(goal, [])
 
 
+def step_cost(current: Position, next_pos: Position, diag_count: int) -> tuple[int, int]:
+    """Calculate movement cost for a single step using D&D 5e diagonal rules.
+
+    Returns (cost_in_feet, new_diag_count).
+    """
+    dx = abs(next_pos.x - current.x)
+    dy = abs(next_pos.y - current.y)
+    is_diag = dx > 0 and dy > 0
+
+    if is_diag:
+        cost = 10 if diag_count % 2 == 1 else 5
+        return cost, diag_count + 1
+    return 5, diag_count
+
+
 def walk_path(path: list[Position], speed: int) -> tuple[Position, int]:
     """Walk along a path spending movement budget with D&D 5e diagonal cost.
 
