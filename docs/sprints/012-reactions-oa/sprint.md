@@ -21,7 +21,7 @@ Reaction infrastructure — фундамент для будущих реакц�
 
 ---
 
-## Phase 1: Reaction Infrastructure + OA Mechanics
+## Phase 1: Reaction Infrastructure + OA Mechanics ✓
 
 Фундамент системы реакций и pure mechanics для opportunity attacks. Всё тестируемо unit-тестами без wiring.
 
