@@ -11,6 +11,7 @@ from dnd_simulator.content_loader.creatures import (
     parse_player,
 )
 from dnd_simulator.content_loader.items import (
+    deserialize_item,
     extract_all_equipped,
     parse_equipped_weapon,
     parse_items,
@@ -52,6 +53,7 @@ __all__ = [
     "TemplateInfo",
     "_load_section",
     "build_class_resource_pools",
+    "deserialize_item",
     "extract_all_equipped",
     "extract_region_adjacency",
     "extract_region_terrains",

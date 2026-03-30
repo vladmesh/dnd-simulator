@@ -425,10 +425,14 @@ class EntitiesLayer(Layer):
                     data["wake_at_seconds"] = e.wake_at_seconds
                 if e.conditions:
                     data["conditions"] = {c.value: r for c, r in e.conditions.items()}
-                if e.inventory:
-                    from dnd_simulator.core.player import _serialize_item
+                from dnd_simulator.core.player import _EQUIPMENT_FIELDS, _serialize_item
 
+                if e.inventory:
                     data["inventory"] = [_serialize_item(item) for item in e.inventory]
+                for field_name in _EQUIPMENT_FIELDS:
+                    eq_item = getattr(e, field_name)
+                    if eq_item is not None:
+                        data[field_name] = _serialize_item(eq_item)
                 if e.resource_pools:
                     data["resource_pools"] = [
                         {
@@ -534,17 +538,16 @@ class EntitiesLayer(Layer):
                         entity.conditions = {Condition(str(c)): None for c in conditions_raw}
                     inv_raw = edata.get("inventory")
                     if isinstance(inv_raw, list):
-                        from dnd_simulator.core.items import Item, ItemType
+                        from dnd_simulator.content_loader.items import deserialize_item
 
-                        entity.inventory = [
-                            Item(
-                                id=str(d["id"]),
-                                name=str(d["name"]),
-                                item_type=ItemType(d["type"]),
-                                params={k: v for k, v in d.items() if k not in ("id", "name", "type")},
-                            )
-                            for d in inv_raw
-                        ]
+                        entity.inventory = [deserialize_item(d) for d in inv_raw]
+                    from dnd_simulator.content_loader.items import deserialize_item as _deser
+                    from dnd_simulator.core.player import _EQUIPMENT_FIELDS
+
+                    for field_name in _EQUIPMENT_FIELDS:
+                        eq_data = edata.get(field_name)
+                        if isinstance(eq_data, dict):
+                            setattr(entity, field_name, _deser(eq_data))
                     pools_raw = edata.get("resource_pools")
                     if isinstance(pools_raw, list):
                         from dnd_simulator.core.resource import ResourcePool, RestType

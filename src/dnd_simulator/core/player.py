@@ -52,6 +52,16 @@ def _serialize_item(item: Item) -> dict[str, Any]:
     return d
 
 
+_EQUIPMENT_FIELDS = (
+    "equipped_weapon",
+    "equipped_armor",
+    "equipped_shield",
+    "equipped_head",
+    "equipped_feet",
+    "equipped_ring",
+)
+
+
 @dataclass
 class PlayerCharacter(Character):
     """The player's avatar in the world.
@@ -86,23 +96,23 @@ class PlayerCharacter(Character):
         }
         if self.inventory:
             data["items"] = [_serialize_item(item) for item in self.inventory]
+        for field_name in _EQUIPMENT_FIELDS:
+            item = getattr(self, field_name)
+            if item is not None:
+                data[field_name] = _serialize_item(item)
         return data
 
     def load_save_data(self, data: dict[str, Any]) -> None:
         """Restore mutable state from a save."""
-        from dnd_simulator.core.items import Item, ItemType
+        from dnd_simulator.content_loader.items import deserialize_item
 
         self.location_id = str(data.get("location_id", data.get("region_id", self.location_id)))
         self.current_hp = int(data.get("current_hp", self.current_hp))
         self.gold = int(data.get("gold", self.gold))
         items_data = data.get("items")
         if isinstance(items_data, list):
-            self.inventory = [
-                Item(
-                    id=str(d["id"]),
-                    name=str(d["name"]),
-                    item_type=ItemType(d["type"]),
-                    params={k: v for k, v in d.items() if k not in ("id", "name", "type")},
-                )
-                for d in items_data
-            ]
+            self.inventory = [deserialize_item(d) for d in items_data]
+        for field_name in _EQUIPMENT_FIELDS:
+            eq_data = data.get(field_name)
+            if isinstance(eq_data, dict):
+                setattr(self, field_name, deserialize_item(eq_data))

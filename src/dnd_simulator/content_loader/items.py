@@ -130,8 +130,14 @@ def _to_item(model: ItemContent, index: int) -> Item:
         accessory_def = _to_accessory_def(model)
         if model.equipped:
             params["equipped"] = True
+    elif model.type == ItemType.POTION:
+        if not model.heal_dice:
+            raise RuntimeError(f"Potion '{model.name}' missing required field 'heal_dice'")
+        params = {"heal_dice": model.heal_dice}
+        if model.equipped:
+            params["equipped"] = True
     else:
-        # Potion and other types: collect non-standard fields into params
+        # Unknown item types: collect non-standard fields into params
         dumped = model.model_dump(exclude_none=True, exclude={"name", "type", "equipped"})
         params = {k: v for k, v in dumped.items() if v is not None}
         if model.equipped:
@@ -218,6 +224,22 @@ def _parse_equipped(items: list[Item], item_type: ItemType, slot: EquipmentSlot 
             continue
         return item
     return None
+
+
+def deserialize_item(data: dict[str, Any]) -> Item:
+    """Deserialize an item dict (from ``_serialize_item``) back to a runtime Item with typed defs.
+
+    Unlike bare ``Item()`` construction, this rebuilds WeaponDef / ArmorDef / ShieldDef / AccessoryDef
+    from the flat dict, so ``effective_ac`` and weapon attack logic work correctly after save/load.
+    """
+    from dataclasses import replace
+
+    model = ItemContent.model_validate(data)
+    item = _to_item(model, 0)
+    saved_id = data.get("id")
+    if saved_id:
+        return replace(item, id=str(saved_id))
+    return item
 
 
 # Backward compatibility aliases

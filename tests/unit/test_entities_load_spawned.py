@@ -140,7 +140,7 @@ class TestSpawnedEntityWithConditionsAndInventory:
         )
         spawned.conditions = {Condition.POISONED: 3, Condition.PRONE: None}
         spawned.inventory = [
-            Item(id="health_potion", name="Health Potion", item_type=ItemType.POTION),
+            Item(id="health_potion", name="Health Potion", item_type=ItemType.POTION, params={"heal_dice": "2d4+2"}),
             Item(id="short_sword", name="Short Sword", item_type=ItemType.WEAPON),
         ]
         spawned.resource_pools = [

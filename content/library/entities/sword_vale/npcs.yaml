@@ -6,6 +6,7 @@ edgar:
   settlement_id: silverport_city
   faction: kingdom
   role: blacksmith
+  ai: llm
   hp: 18
   ac: 12
   ability_scores:
@@ -39,7 +40,7 @@ marta:
   settlement_id: silverport_city
   faction: kingdom
   role: tavern_keeper
-  ai: rule_based
+  ai: llm
   description:
     en: A plump, cheerful woman wiping down mugs behind the bar counter.
     ru: Полная, весёлая женщина, протирающая кружки за барной стойкой.
@@ -67,6 +68,7 @@ gretta:
   settlement_id: silverport_city
   faction: kingdom
   role: merchant
+  ai: llm
   hp: 10
   ac: 10
   gold: 500
@@ -94,6 +96,7 @@ rodrik:
   settlement_id: silverport_city
   faction: kingdom
   role: guard
+  ai: llm
   class: fighter
   hp: 32
   ac: 16
@@ -140,6 +143,7 @@ aldric:
   settlement_id: silverport_city
   faction: kingdom
   role: guard
+  ai: llm
   class: fighter
   hp: 28
   ac: 16
@@ -182,6 +186,7 @@ lira:
   settlement_id: silverport_city
   faction: kingdom
   role: guard
+  ai: llm
   class: rogue
   hp: 20
   ac: 12
