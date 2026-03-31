@@ -17,6 +17,7 @@ from dnd_simulator.core.brain import PlayerBrain
 from dnd_simulator.core.character import Ability, Creature
 from dnd_simulator.core.models import Query, QueryType
 from dnd_simulator.core.player import PlayerCharacter
+from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.i18n import _
@@ -45,6 +46,7 @@ class SessionEventListener(Protocol):
     def on_turn(self, msg: dict[str, Any]) -> None: ...
     def on_action_result(self, msg: dict[str, Any]) -> None: ...
     def on_round_result(self, msg: dict[str, Any]) -> None: ...
+    def on_reaction(self, msg: dict[str, Any]) -> None: ...
     def on_game_over(self) -> None: ...
 
 
@@ -103,6 +105,26 @@ def _events_to_list(events: list[PerceivedEvent]) -> list[dict[str, Any]]:
 
 def _budget_to_dict(budget: TurnBudget) -> dict[str, Any]:
     return dataclasses.asdict(budget)
+
+
+def _reaction_to_dict(trigger: ReactionTrigger, options: list[ReactionOption]) -> dict[str, Any]:
+    """Build the reaction_prompt message sent to the client."""
+    return {
+        "type": "reaction_prompt",
+        "trigger": {
+            "trigger_type": trigger.trigger_type.value,
+            "source_creature_id": trigger.source_creature_id,
+            "data": {k: v for k, v in trigger.data.items()},
+        },
+        "options": [
+            {
+                "action_type": opt.action_type.value,
+                "description": opt.description,
+                "params": {k: v for k, v in opt.params.items()},
+            }
+            for opt in options
+        ],
+    }
 
 
 def _player_to_dict(player: PlayerCharacter) -> dict[str, Any]:
@@ -355,6 +377,17 @@ class GameSession:
                 self._fire("on_turn", msg)
 
             brain.set_on_turn(on_turn)
+
+            # Wire on_reaction: fires when Round calls brain.choose_reaction for the player
+            def on_reaction(
+                creature: Creature,
+                trigger: ReactionTrigger,
+                options: list[ReactionOption],
+            ) -> None:
+                msg = _reaction_to_dict(trigger, options)
+                self._fire("on_reaction", msg)
+
+            brain.set_on_reaction(on_reaction)
             player.brain = brain
 
             dispatcher = create_dispatcher(self.world)
@@ -458,3 +491,13 @@ class GameSession:
                 action = resolve_abstract_move(action, player, entities_layer)
 
         brain.submit_action(action)
+
+    def submit_player_reaction(self, action: Action) -> None:
+        """Submit a player reaction to the brain queue.
+
+        Raises RuntimeError if round is not running.
+        """
+        brain = self._player_brain
+        if brain is None:
+            raise RuntimeError("Round not running — cannot submit reaction")
+        brain.submit_reaction(action)

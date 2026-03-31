@@ -408,6 +408,96 @@ class TestCombatLogI18n:
         result = perceive_event(event, observer, _get_entity_fn(observer, user))
         assert "[T]Health Potion" in result
 
+    def test_opportunity_attack_annotated(self) -> None:
+        """OA attack event shows '(opportunity attack)' annotation."""
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        attacker = Character(id="orc", name="Orc", location_id="r1", race=Race.HUMAN)
+        target = Character(id="player", name="Hero", location_id="r1", race=Race.ELF)
+        event = Event(
+            event_type=EventType.ENTITY_ATTACK,
+            source_layer="entities",
+            data={
+                "attacker_id": "orc",
+                "target_id": "player",
+                "weapon": "Greataxe",
+                "hit": True,
+                "critical": False,
+                "ac": 15,
+                "attack_roll": {
+                    "natural": 16,
+                    "components": [{"source": "ability", "value": 3, "dice": ""}],
+                    "total": 19,
+                    "advantage": False,
+                    "disadvantage": False,
+                },
+                "damage": 10,
+                "damage_components": [
+                    {"source": "weapon", "dice": "1d12", "amount": 10, "type": "slashing"},
+                ],
+                "is_opportunity_attack": True,
+            },
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer, attacker, target))
+        assert "opportunity attack" in result.lower()
+        assert "d20(16)" in result
+        assert "AC 15" in result
+
+    def test_regular_attack_no_oa_annotation(self) -> None:
+        """Regular attack without is_opportunity_attack flag has no OA annotation."""
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        attacker = Character(id="orc", name="Orc", location_id="r1", race=Race.HUMAN)
+        target = Character(id="player", name="Hero", location_id="r1", race=Race.ELF)
+        event = Event(
+            event_type=EventType.ENTITY_ATTACK,
+            source_layer="entities",
+            data={
+                "attacker_id": "orc",
+                "target_id": "player",
+                "weapon": "Greataxe",
+                "hit": True,
+                "critical": False,
+                "ac": 15,
+                "attack_roll": {
+                    "natural": 16,
+                    "components": [{"source": "ability", "value": 3, "dice": ""}],
+                    "total": 19,
+                    "advantage": False,
+                    "disadvantage": False,
+                },
+                "damage": 10,
+                "damage_components": [
+                    {"source": "weapon", "dice": "1d12", "amount": 10, "type": "slashing"},
+                ],
+            },
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer, attacker, target))
+        assert "opportunity attack" not in result.lower()
+
+    def test_disengage_other(self) -> None:
+        """Disengage event shows readable text for observer."""
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        actor = Character(id="rogue", name="Rogue", location_id="r1", race=Race.ELF)
+        event = Event(
+            event_type=EventType.ENTITY_DISENGAGE,
+            source_layer="entities",
+            data={"entity_id": "rogue"},
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer, actor))
+        assert "disengage" in result.lower()
+        assert "elf" in result.lower()
+
+    def test_disengage_self(self) -> None:
+        """Disengage event shows 'You' for self-observer."""
+        observer = Character(id="rogue", name="Rogue", location_id="r1")
+        event = Event(
+            event_type=EventType.ENTITY_DISENGAGE,
+            source_layer="entities",
+            data={"entity_id": "rogue"},
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer))
+        assert "you" in result.lower()
+        assert "disengage" in result.lower()
+
     def test_weapon_name_translated_on_equip(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Weapon name in equip description must go through _()."""
         monkeypatch.setattr(perception_mod, "_", _mark_translator(perception_mod._))

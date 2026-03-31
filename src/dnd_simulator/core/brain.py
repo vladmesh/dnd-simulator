@@ -375,11 +375,10 @@ class PlayerBrain(Brain):
         trigger: ReactionTrigger,
         options: list[ReactionOption],
     ) -> Action:
-        if self._on_reaction:
-            self._on_reaction(creature, trigger, options)
-            return self._reaction_queue.get()
-        # No transport wired — auto-skip until frontend reaction UI exists
-        return Action(name=ActionType.SKIP)
+        if self._on_reaction is None:
+            raise RuntimeError("PlayerBrain.choose_reaction called without on_reaction wired")
+        self._on_reaction(creature, trigger, options)
+        return self._reaction_queue.get()
 
     def submit_action(self, action: Action) -> None:
         """Called by transport to provide the player's chosen action."""

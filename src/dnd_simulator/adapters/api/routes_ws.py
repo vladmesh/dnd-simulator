@@ -68,6 +68,9 @@ class WsEventListener:
     def on_round_result(self, msg: dict[str, Any]) -> None:
         self._send(msg)
 
+    def on_reaction(self, msg: dict[str, Any]) -> None:
+        self._send(msg)
+
     def on_game_over(self) -> None:
         self._send({"type": "game_over"})
 
@@ -164,6 +167,16 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
                     await ws.send_json({"type": "error", "message": _("Unknown action: {}").format(msg.get("name"))})
                     continue
                 session.submit_player_action(action)
+            elif msg_type == "reaction":
+                try:
+                    action = Action(
+                        name=ActionType(str(msg.get("name", "skip"))),
+                        params=msg.get("params", {}),
+                    )
+                except ValueError:
+                    await ws.send_json({"type": "error", "message": _("Unknown reaction: {}").format(msg.get("name"))})
+                    continue
+                session.submit_player_reaction(action)
             else:
                 await ws.send_json({"type": "error", "message": _("Unknown message type: {}").format(msg_type)})
 

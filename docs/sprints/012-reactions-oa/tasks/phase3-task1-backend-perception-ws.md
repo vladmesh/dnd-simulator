@@ -45,4 +45,16 @@ Two backend gaps blocking the frontend:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All changes straightforward, no deviations from plan:
+- Added `is_opportunity_attack: True` flag to ENTITY_ATTACK event data in `handle_opportunity_attack`
+- `_perceive_attack` annotates with "(opportunity attack)" when flag present
+- `_perceive_disengage` and `_perceive_opportunity_attack` handlers added
+- PlayerBrain.choose_reaction now raises RuntimeError if `_on_reaction` not wired (was auto-SKIP)
+- GameSession wires `on_reaction` callback in `start_round()`, adds `submit_player_reaction`
+- SessionEventListener protocol extended with `on_reaction`
+- WsEventListener and WS endpoint handle `"reaction"` message type
+- `_reaction_to_dict` serializes trigger + options for the client

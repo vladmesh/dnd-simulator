@@ -47,6 +47,10 @@ def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -
         return _perceive_attack(event, observer, get_entity)
     if event.event_type == EventType.ENTITY_DIED:
         return _perceive_death(event, observer, get_entity)
+    if event.event_type == EventType.ENTITY_DISENGAGE:
+        return _perceive_disengage(event, observer, get_entity)
+    if event.event_type == EventType.OPPORTUNITY_ATTACK:
+        return _perceive_opportunity_attack(event, observer, get_entity)
     if event.event_type == EventType.ENTITY_DODGE:
         return _perceive_dodge(event, observer, get_entity)
     if event.event_type == EventType.ENTITY_FLEE:
@@ -165,6 +169,7 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
     hit = d["hit"]
     weapon = d.get("weapon", "")
     critical = d.get("critical", False)
+    is_oa = bool(d.get("is_opportunity_attack"))
     atk_roll = d["attack_roll"]
     assert isinstance(atk_roll, dict)
 
@@ -172,6 +177,7 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
     target = _describe(observer, target_id, get_entity)
 
     weapon_str = f" ({_(str(weapon))})" if weapon else ""
+    oa_str = _(" (opportunity attack)") if is_oa else ""
     roll_str = _format_roll(atk_roll, d["ac"])
 
     if not hit:
@@ -186,16 +192,41 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
         outcome_str = ""
 
     if attacker_id == observer.id:
-        return _("You attack {target}{weapon}{roll}{outcome}").format(
-            target=target, weapon=weapon_str, roll=roll_str, outcome=outcome_str
+        return _("You attack {target}{weapon}{oa}{roll}{outcome}").format(
+            target=target, weapon=weapon_str, oa=oa_str, roll=roll_str, outcome=outcome_str
         )
     if target_id == observer.id:
-        return _("{attacker} attacks you{weapon}{roll}{outcome}").format(
-            attacker=attacker, weapon=weapon_str, roll=roll_str, outcome=outcome_str
+        return _("{attacker} attacks you{weapon}{oa}{roll}{outcome}").format(
+            attacker=attacker, weapon=weapon_str, oa=oa_str, roll=roll_str, outcome=outcome_str
         )
-    return _("{attacker} attacks {target}{weapon}{roll}{outcome}").format(
-        attacker=attacker, target=target, weapon=weapon_str, roll=roll_str, outcome=outcome_str
+    return _("{attacker} attacks {target}{weapon}{oa}{roll}{outcome}").format(
+        attacker=attacker, target=target, weapon=weapon_str, oa=oa_str, roll=roll_str, outcome=outcome_str
     )
+
+
+def _perceive_disengage(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    entity_id = str(event.data.get("entity_id", ""))
+    if entity_id == observer.id:
+        return _("You disengage")
+    desc = _describe(observer, entity_id, get_entity)
+    return _("{entity} disengages").format(entity=desc)
+
+
+def _perceive_opportunity_attack(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    """Brief contextual note for the OA log marker.
+
+    The detailed attack info is in the preceding ENTITY_ATTACK event
+    (annotated with '(opportunity attack)'), so this is kept minimal.
+    """
+    attacker_id = str(event.data.get("attacker_id", ""))
+    target_id = str(event.data.get("target_id", ""))
+    attacker = _describe(observer, attacker_id, get_entity)
+    target = _describe(observer, target_id, get_entity)
+    if attacker_id == observer.id:
+        return _("You seize the opening against {target}!").format(target=target)
+    if target_id == observer.id:
+        return _("{attacker} seizes the opening against you!").format(attacker=attacker)
+    return _("{attacker} seizes the opening against {target}!").format(attacker=attacker, target=target)
 
 
 def _perceive_death(event: Event, observer: Character, get_entity: GetEntityFn) -> str:

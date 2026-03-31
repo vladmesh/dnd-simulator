@@ -31,7 +31,7 @@ def handle_opportunity_attack(
 
     logger.info("opportunity_attack", attacker=actor.id, target=target_id)
 
-    # Resolve via normal attack pipeline
+    # Resolve via normal attack pipeline — flag as OA for perception
     result = emit_fn(
         Event(
             event_type=EventType.ENTITY_ATTACK,
@@ -39,6 +39,7 @@ def handle_opportunity_attack(
             data={
                 "attacker_id": actor.id,
                 "target_id": target_id,
+                "is_opportunity_attack": True,
             },
         )
     )
