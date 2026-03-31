@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import math
 
-from dnd_simulator.core.character import CharClass
+from dnd_simulator.core.character import Ability, CharClass
 
 # Hit die size per class (only Fighter and Rogue implemented).
 HIT_DICE: dict[CharClass, int] = {
@@ -40,3 +40,37 @@ def calculate_max_hp(char_class: CharClass, level: int, con_modifier: int) -> in
     hp_per_level = max(die_avg + con_modifier, 1)
 
     return l1_hp + (level - 1) * hp_per_level
+
+
+# D&D 5e point buy cost table: score -> point cost.
+POINT_BUY_COSTS: dict[int, int] = {
+    8: 0,
+    9: 1,
+    10: 2,
+    11: 3,
+    12: 4,
+    13: 5,
+    14: 7,
+    15: 9,
+}
+
+POINT_BUY_BUDGET = 27
+
+
+def validate_point_buy(scores: dict[Ability, int]) -> None:
+    """Validate a point buy ability score allocation.
+
+    Raises ValueError if scores are invalid (missing abilities, out of range, over budget).
+    """
+    missing = set(Ability) - set(scores)
+    if missing:
+        names = ", ".join(sorted(a.value for a in missing))
+        raise ValueError(f"Missing abilities: {names}")
+
+    for ability, score in scores.items():
+        if score < 8 or score > 15:
+            raise ValueError(f"{ability.value} score {score} out of range [8, 15]")
+
+    total_cost = sum(POINT_BUY_COSTS[score] for score in scores.values())
+    if total_cost > POINT_BUY_BUDGET:
+        raise ValueError(f"Point buy cost {total_cost} exceeds budget of {POINT_BUY_BUDGET}")

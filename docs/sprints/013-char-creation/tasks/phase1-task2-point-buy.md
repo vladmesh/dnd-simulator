@@ -40,4 +40,10 @@ In `rules/character_creation.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward implementation. Cost table as dict, budget=27, underspending allowed per task spec.
+Validation order: missing abilities -> range check -> budget check. All error messages descriptive with actual values.
+Ruff RUF043 required raw strings for regex `match=` patterns containing `.*`.

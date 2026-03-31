@@ -1,9 +1,9 @@
-"""Tests for character creation rules — HP formula, hit dice."""
+"""Tests for character creation rules — HP formula, hit dice, point buy."""
 
 import pytest
 
-from dnd_simulator.core.character import CharClass
-from dnd_simulator.rules.character_creation import HIT_DICE, calculate_max_hp
+from dnd_simulator.core.character import Ability, CharClass
+from dnd_simulator.rules.character_creation import HIT_DICE, calculate_max_hp, validate_point_buy
 
 
 class TestCalculateMaxHp:
@@ -70,3 +70,100 @@ class TestHitDice:
 
     def test_rogue_d8(self) -> None:
         assert HIT_DICE[CharClass.ROGUE] == 8
+
+
+class TestValidatePointBuy:
+    """D&D 5e point buy: 27 points, scores 8-15, specific cost table."""
+
+    def test_standard_array_valid(self) -> None:
+        # {15, 14, 13, 12, 10, 8} -> 9+7+5+4+2+0 = 27
+        scores = {
+            Ability.STR: 15,
+            Ability.DEX: 14,
+            Ability.CON: 13,
+            Ability.INT: 12,
+            Ability.WIS: 10,
+            Ability.CHA: 8,
+        }
+        validate_point_buy(scores)  # should not raise
+
+    def test_all_13s_over_budget(self) -> None:
+        scores = {a: 13 for a in Ability}
+        with pytest.raises(ValueError, match=r"30.*exceeds.*27"):
+            validate_point_buy(scores)
+
+    def test_all_8s_underspend_valid(self) -> None:
+        scores = {a: 8 for a in Ability}
+        validate_point_buy(scores)  # underspending allowed
+
+    def test_score_above_15_raises(self) -> None:
+        scores = {
+            Ability.STR: 16,
+            Ability.DEX: 8,
+            Ability.CON: 8,
+            Ability.INT: 8,
+            Ability.WIS: 8,
+            Ability.CHA: 8,
+        }
+        with pytest.raises(ValueError, match=r"16.*out of range"):
+            validate_point_buy(scores)
+
+    def test_score_below_8_raises(self) -> None:
+        scores = {
+            Ability.STR: 7,
+            Ability.DEX: 8,
+            Ability.CON: 8,
+            Ability.INT: 8,
+            Ability.WIS: 8,
+            Ability.CHA: 8,
+        }
+        with pytest.raises(ValueError, match=r"7.*out of range"):
+            validate_point_buy(scores)
+
+    def test_missing_ability_raises(self) -> None:
+        scores = {
+            Ability.STR: 10,
+            Ability.DEX: 10,
+            Ability.CON: 10,
+            Ability.INT: 10,
+            Ability.WIS: 10,
+        }
+        with pytest.raises(ValueError, match="Missing abilities"):
+            validate_point_buy(scores)
+
+    def test_balanced_build_underspend_valid(self) -> None:
+        # {14,14,14,10,8,8} -> 7+7+7+2+0+0 = 23
+        scores = {
+            Ability.STR: 14,
+            Ability.DEX: 14,
+            Ability.CON: 14,
+            Ability.INT: 10,
+            Ability.WIS: 8,
+            Ability.CHA: 8,
+        }
+        validate_point_buy(scores)
+
+    def test_exact_max_valid(self) -> None:
+        # {15,15,15,8,8,8} -> 9+9+9+0+0+0 = 27
+        scores = {
+            Ability.STR: 15,
+            Ability.DEX: 15,
+            Ability.CON: 15,
+            Ability.INT: 8,
+            Ability.WIS: 8,
+            Ability.CHA: 8,
+        }
+        validate_point_buy(scores)
+
+    def test_one_over_budget_raises(self) -> None:
+        # {15,15,15,9,8,8} -> 9+9+9+1+0+0 = 28
+        scores = {
+            Ability.STR: 15,
+            Ability.DEX: 15,
+            Ability.CON: 15,
+            Ability.INT: 9,
+            Ability.WIS: 8,
+            Ability.CHA: 8,
+        }
+        with pytest.raises(ValueError, match=r"28.*exceeds.*27"):
+            validate_point_buy(scores)
