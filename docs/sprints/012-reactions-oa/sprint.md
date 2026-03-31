@@ -120,4 +120,10 @@ UI для реакций игрока и обновление контента.
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-03-31
+
+Полная система реакций D&D 5e с opportunity attacks. Brain.choose_reaction() — единый метод на ABC для всех трёх мозгов. TurnBudget на Creature персистирует между ходами. Movement handlers вызывают on_leave_reach callback, check_reactions рекурсивный. Frontend: reaction prompt UI (popup с Attack/Skip), budget display с Reaction, perception handlers для OA/Disengage. Creature.combat_position для детерминированной расстановки на battle map. BattleMap.set_position — fail-fast на out-of-bounds (был тихий clamp). Phase 4 audit refactor: perception dispatch dict, session closure dedup, awareness exception narrowing, round.py run_combat_turn 137→65 строк, 37 новых unit-тестов для reactions/handlers/movement.
+
+111 integration tests, 1720 unit tests, 176 frontend tests — все зелёные.
+
+**Deferred:** Counterspell, Shield, Ready action, Sentinel/Polearm Master feat interactions — инфраструктура готова.

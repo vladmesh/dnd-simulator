@@ -4,24 +4,13 @@
 
 ## Current Sprint
 
-**Sprint:** 012-reactions-oa
-**Goal:** Система реакций D&D 5e — opportunity attacks при выходе из reach, Disengage предотвращает, все три мозга единообразно поддерживают choose_reaction.
-**Started:** 2026-03-30
-**Phase:** 4 — Audit Refactor (COMPLETE) — 2026-03-31
-
-All phases complete. Ready for audit.
-
-### Phases
-
-1. Reaction Infrastructure + OA Mechanics ✓
-2. Movement Integration + Round Wiring ✓
-3. Frontend + Content ✓
-4. Audit Refactor
+No active sprint.
 
 ## Sprint History
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 012-reactions-oa | D&D 5e reactions — opportunity attacks, Disengage, Brain.choose_reaction, reaction prompt UI | 2026-03-30 | 2026-03-31 |
 | 011-class-mechanics-l1 | Structured dice, weapon/armor properties, GWF, Cunning Action choice, SA faction, SRD catalogs | 2026-03-28 | 2026-03-30 |
 | 010-e2e-polish | UX-баги из e2e sprint 009 + ActionBar decomposition | 2026-03-28 | 2026-03-28 |
 | 009-ui-layout | Dashboard layout + combat map + click-to-move | 2026-03-27 | 2026-03-27 |
