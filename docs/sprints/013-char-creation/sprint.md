@@ -48,7 +48,8 @@ Fighter и Rogue полностью прописаны (sprints 001, 011, 012), 
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Backend — Derive Stats + Equip Starting Gear](tasks/phase2-task1-backend-api.md)
+2. [Frontend — Point Buy UI + Fighting Style + Preview](tasks/phase2-task2-frontend-form.md)
 
 ## Phase 3: Content Fixes + Polish
 
