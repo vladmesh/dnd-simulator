@@ -61,7 +61,7 @@ Wiring реакций в game loop. OA реально срабатывает п�
 2. [Wire movement handlers to trigger OA](tasks/phase2-task2-movement-wiring.md)
 3. [Integration tests — OA fires during movement](tasks/phase2-task3-integration-tests.md)
 
-## Phase 3: Frontend + Content
+## Phase 3: Frontend + Content ✓
 
 UI для реакций игрока и обновление контента.
 
