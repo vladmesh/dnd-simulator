@@ -80,11 +80,24 @@ UI для реакций игрока и обновление контента.
 2. [Frontend — Reaction Prompt + Disengage Indicator](tasks/phase3-task2-frontend-reaction-ui.md)
 3. [RuleBrain Tactical Disengage](tasks/phase3-task3-rulebrain-disengage.md)
 
+## Phase 4: Audit Refactor
+
+Устранение audit findings в коде, затронутом спринтом 012. Чистка перед закрытием.
+
+- **perception.py — 54 `.get()` → fail-fast.** Заменить `event.data.get("key", "")` на `event.data["key"]` во всех perception handlers. Маскировка пропущенных полей скрывает баги.
+- **awareness_builder.py — убрать catch-all except.** 7 `except Exception` блоков заменяют реальные данные хардкоженными fallback-ами. Сузить до конкретных исключений или убрать.
+- **perception.py — dispatch dict.** Заменить 55-строчный if/elif chain на `dict[EventType, Callable]` lookup.
+- **session.py — extract closure duplication.** `start_round()` 116 строк, 4 closure (включая `on_reaction` добавленный в этом спринте) с одинаковой сериализацией. Вынести shared event builder.
+- **round.py — extract helpers из run_combat_turn.** 137 строк, Sprint 012 добавил reaction integration. Вынести awareness rebuild и action execution.
+- **Test gaps для sprint 012 files:** `rules/reactions.py`, `rules/handlers/reactions.py`, `rules/handlers/movement.py` — добавить выделенные unit тесты.
+
+**Верифицируем:** `make check` проходит. Все новые тесты зелёные. Строки perception.py < 400, run_combat_turn < 80.
+
 ---
 
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** Phase 3 complete. Phase 4 (audit refactor) pending.
 
 ## Decisions
 

@@ -77,7 +77,7 @@
 - [ ] **could** `entities-layer-imports-content-loader` — layers/entities/layer.py:465,484,490 lazy-imports из content_loader в load_state. Layers → core only, content_loader — peer module
 - [ ] **could** `player-status-in-adapter` — routes_player._player_status() маппит Ability enum → строки, presentation logic в адаптере
 - [ ] **should** `merchant-provider-in-rules` — MerchantActionProvider в rules/ хранит world-query callback (I/O в pure rules). Перенести в service/ или передавать данные аргументом
-- [ ] **should** `dice-os-import` — rules/dice.py `import os` для DND_DICE_SEED. Seed injection через конструктор или переданный rng
+- [x] `dice-os-import` — ~~rules/dice.py import os~~ FIXED audit 2026-03-31: set_global_seed() function
 - [ ] **should** `base-action-provider-stateful` — BaseActionProvider в rules/ — stateful class с self._types. Сделать standalone функцией или frozen dataclass
 - [ ] **should** `adapter-imports-core-directly` — routes_player импортирует PlayerCharacter/Ability, routes_master — Query/QueryType напрямую из core. Вынести бизнес-логику в GameService
 - [ ] **should** `any-to-object-sweep` — 15+ файлов используют dict[str, Any] вместо dict[str, object] (core/models, layers, llm, adapters)
@@ -94,6 +94,14 @@
 - [ ] **should** `silent-failure-awareness` — awareness_builder.py 6x broad except Exception. Сузить до KeyError/LookupError
 - [ ] **should** `silent-failure-movement` — handle_wait except ValueError: pass. Возвращать ошибку в ActionResult
 - [ ] **could** `schema-form-growing` — frontend SchemaForm.tsx 488 строк, 30+ nested helpers
+- [ ] **should** `llm-imports-layer-models` — llm/brain.py и llm/summarizer.py импортируют из layers.entities.models (Npc, NpcMemory). llm не должен зависеть от layers
+- [ ] **should** `round-imports-entities-layer-v2` — round.py:31 напрямую импортирует EntitiesLayer (sprint 012 re-introduced coupling). Взаимодействовать через World/Layer interface
+- [ ] **should** `mutable-dataclass-models` — Region, Nation, Settlement, Leader — @dataclass без frozen=True. Аудит: мутируются ли in-place или можно frozen
+- [ ] **should** `proficiency-hardcoded-weapons` — rules/proficiency.py:33-34 хардкоженные строки оружия ("rapier", "shortsword"). Использовать enum или catalog ref
+- [ ] **should** `perception-hardcoded-weapons` — perception.py:29-31 дублирует названия оружия из YAML каталогов
+- [ ] **should** `content-loader-fail-fast` — 31 .get() с дефолтами в content_loader/. Некоторые оправданы (YAML boundary), но bm_data.get("width", 60) молча дефолтит размер карты
+- [ ] **should** `dict-str-object-overuse` — 57+ dict[str, object] вместо TypedDict/dataclass в query_handler, game_service, combat_manager, schemas
+- [ ] **should** `world-private-method-access` — world._make_query_fn() вызывается из session.py и round.py. Выставить как public API
 - [ ] **could** `event-log-eslint-suppress` — EventLog.tsx eslint-disable-next-line react-hooks/exhaustive-deps
 - [ ] **could** `api-client-growing` — apiClient.ts 365 строк, 35+ методов. Разделить по домену
 - [ ] **could** `world-overview-growing` — WorldOverview.tsx 331 строка. Split sub-components
@@ -117,10 +125,10 @@
 
 ## Dead Code (from audit 2026-03-25)
 
-- [ ] `dead-move-away-from-target` — core/brain.py:59, zero callers (future movement AI)
-- [ ] `dead-auto-fail-saves` — rules/conditions.py:32 (future saving throws)
-- [ ] `dead-refund` — core/turn_budget.py:54 (future reaction system)
-- [ ] `dead-check-reactions` — round.py:302, stubbed (future reaction system)
+- [x] `dead-move-away-from-target` — ~~core/brain.py, zero callers~~ FIXED audit 2026-03-31: removed
+- [x] `dead-auto-fail-saves` — ~~rules/conditions.py:32~~ FIXED audit 2026-03-31: removed
+- [ ] `dead-refund` — core/turn_budget.py:58 (tested but unused, future budget mechanic)
+- [x] `dead-check-reactions` — ~~stubbed~~ FIXED Sprint 012: wired into round loop
 - [ ] `dead-is-daylight` — rules/geography.py:172, tested but unused in prod. Wire into geography layer or remove
 - [ ] `dead-prone-stand-cost` — rules/conditions.py:27, tested but never integrated into movement handler
 
@@ -134,3 +142,12 @@
 - [ ] **could** `test-gap-ws-fastforward` — player wait → time skip → NPC resume не тестируется
 - [ ] **could** `test-gap-ws-disconnect-npc` — disconnect during NPC turn + reconnect не тестируется
 - [ ] **could** `test-gap-ws-npc-combat-turn` — NPC full multi-action RuleBrain combat turn только indirect
+- [ ] **should** `test-gap-action-provider` — rules/action_provider.py без unit-тестов
+- [ ] **should** `test-gap-geography-rules` — rules/geography.py без выделенных unit-тестов
+- [ ] **should** `test-gap-politics-rules` — rules/politics.py без выделенных unit-тестов
+- [ ] **should** `test-gap-settlements-rules` — rules/settlements.py без выделенных unit-тестов
+- [ ] **should** `test-gap-reactions-rules` — rules/reactions.py без выделенных unit-тестов (only integration)
+- [ ] **should** `test-gap-handlers-combat` — rules/handlers/combat.py без unit-тестов
+- [ ] **should** `test-gap-handlers-items` — rules/handlers/items.py без unit-тестов
+- [ ] **should** `test-gap-handlers-movement` — rules/handlers/movement.py без unit-тестов
+- [ ] **should** `test-gap-handlers-reactions` — rules/handlers/reactions.py без unit-тестов

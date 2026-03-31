@@ -7,15 +7,16 @@
 **Sprint:** 012-reactions-oa
 **Goal:** Система реакций D&D 5e — opportunity attacks при выходе из reach, Disengage предотвращает, все три мозга единообразно поддерживают choose_reaction.
 **Started:** 2026-03-30
-**Phase:** 3 — Frontend + Content (COMPLETE) — 2026-03-31
+**Phase:** 4 — Audit Refactor (PENDING)
 
-All phases complete. Ready for audit.
+Phases 1-3 complete. Audit done, quick-fixes applied. Phase 4: refactor sprint-touched code.
 
 ### Phases
 
-1. Reaction Infrastructure + OA Mechanics
-2. Movement Integration + Round Wiring
-3. Frontend + Content
+1. Reaction Infrastructure + OA Mechanics ✓
+2. Movement Integration + Round Wiring ✓
+3. Frontend + Content ✓
+4. Audit Refactor
 
 ## Sprint History
 
