@@ -65,13 +65,14 @@ Wiring реакций в game loop. OA реально срабатывает п�
 
 UI для реакций игрока и обновление контента.
 
-- Reaction prompt в UI — когда PlayerBrain получает choose_reaction, клиент показывает компактный prompt ("Враг покидает вашу зону. Атаковать?") с кнопками (Attack / Skip).
-- Combat log показывает OA как отдельное событие (кто, кого, урон).
-- Disengage indicator в ActionBar — badge показывает что движение безопасно.
-- WebSocket: новый тип сообщения для reaction prompt, ответ от клиента.
-- Контент: существующие NPC в combat scenarios используют Disengage осмысленно (RuleBrain).
+- **Perception handlers для OA и Disengage.** Сейчас `perceive_event` не имеет case-ветки для `EventType.OPPORTUNITY_ATTACK` и `EventType.ENTITY_DISENGAGE` — в логе показывается fallback "Что-то произошло (opportunity_attack)". Добавить handler-ы в `layers/entities/perception.py` по аналогии с `entity_attack`. OA: "X атакует Y (opportunity attack) [d20...]". Disengage: "X отступает".
+- **WebSocket: reaction prompt.** Новый тип сообщения `type: "reaction_prompt"` с trigger info и available options. В `service/session.py` вызвать `brain.set_on_reaction(on_reaction)` по аналогии с `set_on_turn` — callback формирует message и отправляет через `_fire`. Новый тип входящего WS-сообщения `submit_reaction` вызывает `brain.submit_reaction(action)`. Убрать auto-SKIP fallback в `PlayerBrain.choose_reaction` (сейчас в `core/brain.py:381`) — после wiring он не нужен.
+- **Reaction prompt в UI.** Когда приходит `reaction_prompt`, клиент показывает компактный overlay/toast ("Враг покидает вашу зону. Атаковать?") с кнопками (Attack / Skip). По клику отправляет `submit_reaction` через WS. Таймаут не нужен — Round блокируется на queue.get() до ответа.
+- **Combat log показывает OA и Disengage** как отдельные читаемые события (зависит от perception handlers выше).
+- **Disengage indicator в ActionBar** — badge или визуальная подсказка показывает что `is_disengaging` активен и движение безопасно.
+- **Контент:** существующие NPC в combat scenarios используют Disengage осмысленно (RuleBrain). Проверить что RuleBrain._choose_combat_action выбирает Disengage перед отходом когда HP низкий.
 
-**Верифицируем:** Игрок видит reaction prompt, может выбрать. Лог показывает OA. NPC используют Disengage когда нужно отойти от врага.
+**Верифицируем:** Игрок видит reaction prompt при OA, может выбрать Attack/Skip. Лог показывает OA и Disengage читаемым текстом. NPC используют Disengage когда нужно отойти от врага.
 
 **Tasks:**
 
