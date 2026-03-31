@@ -87,6 +87,10 @@ Pydantic content models как единый source of truth для структ�
 Structured dice pipeline (DiceResult, D20Result, reroll_below для GWF). BattleMap reachability на бэкенде (Dijkstra, единый BFS, фронт = рендерер). Типизированное оружие/броня с D&D 5e свойствами (`is_two_handed`, `light`, `heavy`), Great Weapon Fighting style, Cunning Action с выбором cost_mode (bonus/action), SA faction check (ally detection через faction relations). SRD каталог оружия (12 видов) и брони (12 видов + shield). Fighter/Rogue NPC с полной экипировкой, 106 integration tests. Кликабельный лог бросков (RollBreakdown, AttackCardModal). Fix: equipment persistence в save/load, potion crash.
 → [план спринта](sprints/011-class-mechanics-l1/sprint.md)
 
+### Sprint 012 — Reactions & Opportunity Attacks (фазы 1-4)
+Система реакций D&D 5e. Brain.choose_reaction() — единый метод на ABC для RuleBrain/LlmBrain/PlayerBrain. Opportunity attacks при выходе из reach врага, Disengage предотвращает OA. TurnBudget на Creature (персистирует между ходами для реакций). Movement handlers вызывают on_leave_reach callback. check_reactions рекурсивный (reaction → reaction). Frontend: reaction prompt UI, disengage indicator, perception handlers для OA/Disengage. Creature.combat_position для детерминированной расстановки на карте. BattleMap.set_position raises ValueError на out-of-bounds. Phase 4 (audit refactor): perception dispatch dict, session closure dedup, awareness exception narrowing, round helpers extraction, unit tests для reactions/handlers/movement.
+→ [план спринта](sprints/012-reactions-oa/sprint.md)
+
 ## Planned
 
 ### Level 2 — Расходуемые ресурсы

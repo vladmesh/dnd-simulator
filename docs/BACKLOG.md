@@ -64,7 +64,7 @@
 - [x] `long-methods` — ~~query() 125, resolve_attack 186~~ FIXED Sprint 005: query→query_handler, resolve_attack 186→62 lines
 - [ ] **should** `test-gap-actions` — rules/actions.py (90 строк) без выделенных unit-тестов
 - [ ] **should** `test-gap-weapons` — rules/weapons.py (48 строк) частично покрыт через test_combat/test_proficiency, но нет выделенных тестов
-- [ ] **could** `session-serialization-duplication` — on_turn, on_action, on_round_end повторяют awareness/events/player/location сериализацию
+- [x] `session-serialization-duplication` — ~~on_turn, on_action, on_round_end повторяют сериализацию~~ FIXED Sprint 012 phase 4: shared event builder extracted
 - [ ] **could** `npc-behaviors-yaml-loading` — layers/entities/npc_behaviors.py загружает YAML на уровне модуля с global state mutation. Перенести в content_loader
 - [ ] **could** `action-parsing-in-adapter` — Adapter (routes_ws) парсит Action из JSON, должен service layer
 - [x] `magic-number-trade` — ~~Magic number 0.08 в politics/layer.py:338~~ FIXED 2026-03-24
@@ -84,14 +84,14 @@
 - [ ] **should** `entity-type-enum` — "player"/"npc"/"creature" строковые сравнения в 5+ файлах. Добавить EntityType(StrEnum)
 - [ ] **should** `brain-type-enum` — ai_type == "rule_based" строковые сравнения. Добавить BrainType(StrEnum)
 - [ ] **should** `layer-source-string-cmp` — game_service.py L535,595,611,626 source == "library" вместо LayerSource.LIBRARY enum
-- [ ] **should** `long-func-run-combat-turn` — round.py run_combat_turn 132 строки. Split: _prepare_turn() + _run_action_loop()
+- [x] `long-func-run-combat-turn` — ~~round.py run_combat_turn 132 строки~~ FIXED Sprint 012 phase 4: extracted _prepare_combat_turn() + _build_combat_awareness()
 - [ ] **should** `long-func-choose-combat-action` — core/brain.py _choose_combat_action 114 строк. Break into per-action helpers
 - [ ] **should** `long-func-start-round` — service/session.py start_round 103 строки. Extract closures into named methods
-- [ ] **could** `perception-dispatch-chain` — perception.py if-elif chain для event dispatch → dict[EventType, handler] lookup
+- [x] `perception-dispatch-chain` — ~~perception.py if-elif chain~~ FIXED Sprint 012 phase 4: dict[EventType, handler] dispatch
 - [ ] **could** `activation-manager-growing` — activation_manager.py 406 строк. Extract _materialize_squads()
 - [ ] **could** `deep-nesting-diplomacy` — politics/layer.py _process_diplomacy 7 уровней вложенности
 - [ ] **should** `silent-failure-autosave` — 3x contextlib.suppress(Exception) вокруг autosave. Логировать ошибки, не глушить
-- [ ] **should** `silent-failure-awareness` — awareness_builder.py 6x broad except Exception. Сузить до KeyError/LookupError
+- [x] `silent-failure-awareness` — ~~awareness_builder.py 6x broad except Exception~~ FIXED Sprint 012 phase 4: narrowed to KeyError/LookupError
 - [ ] **should** `silent-failure-movement` — handle_wait except ValueError: pass. Возвращать ошибку в ActionResult
 - [ ] **could** `schema-form-growing` — frontend SchemaForm.tsx 488 строк, 30+ nested helpers
 - [ ] **should** `llm-imports-layer-models` — llm/brain.py и llm/summarizer.py импортируют из layers.entities.models (Npc, NpcMemory). llm не должен зависеть от layers
@@ -146,8 +146,8 @@
 - [ ] **should** `test-gap-geography-rules` — rules/geography.py без выделенных unit-тестов
 - [ ] **should** `test-gap-politics-rules` — rules/politics.py без выделенных unit-тестов
 - [ ] **should** `test-gap-settlements-rules` — rules/settlements.py без выделенных unit-тестов
-- [ ] **should** `test-gap-reactions-rules` — rules/reactions.py без выделенных unit-тестов (only integration)
+- [x] `test-gap-reactions-rules` — ~~rules/reactions.py без unit-тестов~~ FIXED Sprint 012 phase 4: 20 tests in test_rules_reactions.py
 - [ ] **should** `test-gap-handlers-combat` — rules/handlers/combat.py без unit-тестов
 - [ ] **should** `test-gap-handlers-items` — rules/handlers/items.py без unit-тестов
-- [ ] **should** `test-gap-handlers-movement` — rules/handlers/movement.py без unit-тестов
-- [ ] **should** `test-gap-handlers-reactions` — rules/handlers/reactions.py без unit-тестов
+- [x] `test-gap-handlers-movement` — ~~rules/handlers/movement.py без unit-тестов~~ FIXED Sprint 012 phase 4: 12 tests in test_handlers_movement.py
+- [x] `test-gap-handlers-reactions` — ~~rules/handlers/reactions.py без unit-тестов~~ FIXED Sprint 012 phase 4: 5 tests in test_handlers_reactions.py

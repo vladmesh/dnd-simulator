@@ -238,12 +238,36 @@
 
 ---
 
-## 11. LLM (only with --llm flag)
+## 11. Reactions & Opportunity Attacks (Sprint 012)
 
-### 11.1 Talk to LLM NPC
+### 11.1 OA triggers on leaving reach
+- В бою рядом с врагом, нажать move_to на клетку далеко от врага
+- **Ожидание:** "Reaction!" popup с кнопками "Melee attack against X" и "Skip". Если враг реагирует — OA event в логе.
+
+### 11.2 Disengage prevents OA
+- В бою рядом с врагом, нажать Disengage, затем move_to подальше
+- **Ожидание:** перемещение без OA popup, никакого opportunity_attack в логе
+
+### 11.3 Rogue Cunning Action Disengage
+- Создать rogue, в бою нажать Disengage (bonus action), затем Attack (action), затем move_to
+- **Ожидание:** Disengage потребляет bonus (не action), Attack остаётся, move_to без OA
+
+### 11.4 NPC OA on player movement
+- В бою End Turn, подождать ход NPC. Если NPC подошёл и стоит рядом — reaction prompt
+- **Ожидание:** NPC двигается, если покидает reach игрока — "Reaction!" popup для игрока
+
+### 11.5 Reaction budget in action bar
+- В бою проверить budget display
+- **Ожидание:** "Reaction: 1" видно. После OA — "Reaction: 0"
+
+---
+
+## 12. LLM (only with --llm flag)
+
+### 12.1 Talk to LLM NPC
 - Переключить NPC на llm brain, поговорить
 - **Ожидание:** осмысленный ответ в логе, не шаблонная реплика
 
-### 11.2 LLM NPC combat decisions
+### 12.2 LLM NPC combat decisions
 - LLM NPC в бою принимает решения
 - **Ожидание:** NPC действует осмысленно (атакует, лечится, убегает при низком HP)

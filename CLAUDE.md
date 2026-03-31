@@ -86,7 +86,11 @@ frontend/          — React + TypeScript SPA (Vite, shadcn/ui, Zustand)
 
 ### Multi-Action Turns
 
-Each creature's turn is a multi-action loop orchestrated by `Round` (in `round.py`). A `TurnBudget` (actions, bonus_actions, movement_remaining, reaction) is created from creature stats at the start of each turn. The brain is called repeatedly: choose action → `ActionDispatcher` validates (budget, target, reach via `rules/validation.py`) → executes handler (`rules/handlers/`) → rebuilds awareness → repeat, until the brain returns `end_turn` or budget is exhausted. `ActionProvider` (`rules/action_provider.py`) determines which actions are currently available to a creature. `PlayerBrain` uses a queue + callback pattern for interactive I/O.
+Each creature's turn is a multi-action loop orchestrated by `Round` (in `round.py`). A `TurnBudget` (actions, bonus_actions, movement_remaining, reaction) lives on `Creature.turn_budget` — persists between turns for reaction spending. Created fresh at the start of each creature's turn. The brain is called repeatedly: choose action → `ActionDispatcher` validates (budget, target, reach via `rules/validation.py`) → executes handler (`rules/handlers/`) → rebuilds awareness → repeat, until the brain returns `end_turn` or budget is exhausted. `ActionProvider` (`rules/action_provider.py`) determines which actions are currently available to a creature. `PlayerBrain` uses a queue + callback pattern for interactive I/O.
+
+### Reactions & Opportunity Attacks
+
+D&D 5e reaction system. `Brain.choose_reaction(creature, trigger, available_reactions)` — unified method on ABC (RuleBrain: always attack, LlmBrain: LLM call, PlayerBrain: callback + queue). `ReactionTrigger` typed data object (extensible: `TriggerType.LEAVING_REACH` for OA, future: Counterspell, Shield). Movement handlers call `on_leave_reach` callback (injected via `ActionContext`) when a mover exits an enemy's reach. `check_reactions` in Round is recursive — a reaction can trigger another reaction, depth limited naturally (1 reaction per creature per round). `rules/reactions.py`: pure functions `can_opportunity_attack()`, `find_oa_triggers()`. OA handler in `rules/handlers/reactions.py`. Disengage sets `creature.is_disengaging = True` (reset at turn start), prevents OA. `Creature.combat_position` enables deterministic battle map placement from YAML/API.
 
 ### Conditions & Items
 

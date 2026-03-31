@@ -47,8 +47,8 @@ src/dnd_simulator/
 │       ├── query_handler.py      — QueryHandler (layer query dispatch)
 │       └── perception.py         — event perception and visibility filtering
 ├── master/        — DM orchestrator (LLM-powered)
-├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation, conditions, weapons, modifiers, proficiency, sneak attack, resources, action providers, abstract combat, physics, economics
-│   └── handlers/  — per-action-type execution (combat, movement, equipment, items, trade)
+├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation, conditions, weapons, modifiers, proficiency, sneak attack, reactions, resources, action providers, abstract combat, physics, economics
+│   └── handlers/  — per-action-type execution (combat, movement, equipment, items, trade, reactions)
 ├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, MemorySummarizer
 ├── i18n.py        — gettext internationalization, per-session language via contextvars
 ├── adapters/      — transport layer
@@ -167,7 +167,7 @@ Calendar: 30 days/month, 12 months/year.
 
 ```
 Entity (id, name, location_id, active, on_tick)
-└── Creature (ability_scores, HP, AC, in_combat, is_dodging, wake_at_seconds, brain, equipped_armor, equipped_shield, resource_pools, execute_action)
+└── Creature (ability_scores, HP, AC, in_combat, is_dodging, is_disengaging, wake_at_seconds, brain, turn_budget, combat_position, equipped_armor, equipped_shield, resource_pools, execute_action)
     └── Character (race, class, alignment, gold, appearance, class_features, perceive_by_id, get_npc_data)
         ├── PlayerCharacter (interactive I/O, overrides take_turn directly)
         └── Npc (role, personality, schedule, memory: NpcMemory, ai_type — brain assigned by content_loader/adapter)
@@ -198,6 +198,8 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 **Dual awareness:** Creatures in combat get a focused prompt (HP, weapon, nearby combatants with positions/distances, round number — no weather/time/politics). Peaceful creatures get full world awareness. Two separate tool sets: combat (attack/move/dodge/flee/idle, no say — use description for flavor) and peaceful (say/attack/idle).
 
 **Dodge:** Creatures can use the dodge action (`is_dodging` flag on `Creature`). Attackers have disadvantage against dodging targets. The flag resets at the start of the creature's next turn.
+
+**Reactions & Opportunity Attacks:** D&D 5e reactions via `Brain.choose_reaction()` — unified ABC method (RuleBrain: always OA, LlmBrain: LLM call, PlayerBrain: interactive prompt). `TurnBudget` lives on `Creature.turn_budget` (persists between turns for reaction spending, reset at turn start). Movement handlers call `on_leave_reach` callback when mover exits enemy reach → `check_reactions` in Round asks eligible creatures to react. OA consumes reaction budget. Disengage (`is_disengaging` flag, reset at turn start) prevents OA. `ReactionTrigger` typed data is extensible for future reactions (Counterspell, Shield). `check_reactions` is recursive (reaction can trigger reaction, depth limited by 1 reaction/creature/round). `Creature.combat_position: tuple[int,int] | None` enables deterministic map placement from YAML/API — `start_combat` places fixed positions first, then scatters rest randomly. `BattleMap.set_position` raises `ValueError` on out-of-bounds.
 
 **Exit conditions:**
 - 2 consecutive rounds without any attack → auto-end
