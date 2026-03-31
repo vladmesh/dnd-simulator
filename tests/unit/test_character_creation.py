@@ -3,6 +3,7 @@
 import pytest
 
 from dnd_simulator.core.character import Ability, CharClass
+from dnd_simulator.core.class_features import FightingStyle
 from dnd_simulator.rules.character_creation import (
     HIT_DICE,
     STARTING_GOLD,
@@ -199,6 +200,20 @@ class TestStartingEquipment:
     def test_unknown_class_raises(self) -> None:
         with pytest.raises(RuntimeError, match="No starting equipment"):
             starting_equipment(CharClass.WIZARD)
+
+    def test_fighter_gwf_gets_greatsword(self) -> None:
+        equip = starting_equipment(CharClass.FIGHTER, FightingStyle.GREAT_WEAPON_FIGHTING)
+        assert set(equip) == {"chain_mail", "greatsword"}
+        assert "shield" not in equip
+        assert "longsword" not in equip
+
+    def test_fighter_defense_gets_longsword_shield(self) -> None:
+        equip = starting_equipment(CharClass.FIGHTER, FightingStyle.DEFENSE)
+        assert set(equip) == {"chain_mail", "longsword", "shield"}
+
+    def test_fighter_no_style_gets_longsword_shield(self) -> None:
+        equip = starting_equipment(CharClass.FIGHTER, None)
+        assert set(equip) == {"chain_mail", "longsword", "shield"}
 
     def test_returns_copy(self) -> None:
         a = starting_equipment(CharClass.FIGHTER)

@@ -112,6 +112,23 @@ class TestFighterCreation:
         assert resp.status_code == HTTPStatus.OK
         assert resp.json()["ac"] == 18
 
+    def test_fighter_gwf_gets_greatsword_no_shield(self, tmp_path: Path) -> None:
+        """Fighter with GWF: chain mail (16), greatsword, no shield → AC 16."""
+        client = _make_client(tmp_path)
+        sid = _create_session(client)
+        resp = client.post(
+            f"/api/player/sessions/{sid}/character",
+            json={
+                "name": "Thrain",
+                "race": "dwarf",
+                "char_class": "fighter",
+                "ability_scores": FIGHTER_SCORES,
+                "fighting_style": "great_weapon_fighting",
+            },
+        )
+        assert resp.status_code == HTTPStatus.OK
+        assert resp.json()["ac"] == 16
+
     def test_fighter_ability_scores_stored(self, tmp_path: Path) -> None:
         client = _make_client(tmp_path)
         sid = _create_session(client)

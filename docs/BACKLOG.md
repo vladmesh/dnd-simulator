@@ -16,6 +16,7 @@
 - [ ] **should** `npc-wandering` — Динамические маршруты NPC между поселениями (сейчас только статичные расписания)
 - [ ] **should** `npc-death-on-war` — NPC гибнут/исчезают при захвате поселения, войне
 - [ ] **should** `combat-reassess` — NPC переоценивает стратегию при смене ситуации (союзник упал, новый враг появился)
+- [ ] **should** `versatile-weapons` — Versatile weapon property: переключение одноручный/двуручный хват, разный урон (longsword 1d8/1d10, warhammer 1d8/1d10, quarterstaff 1d6/1d8). WeaponDef.versatile_damage, автовыбор хвата по наличию щита
 - [ ] **could** `conversation-costs-time` — Каждая реплика разговора тратит 6 секунд игрового времени (частично)
 
 ## World Simulation

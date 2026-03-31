@@ -30,6 +30,7 @@ const HIT_DICE: Record<string, number> = { fighter: 10, rogue: 8 }
 // Starting equipment display
 const STARTING_EQUIPMENT: Record<string, string[]> = {
   fighter: ["Chain Mail", "Longsword", "Shield"],
+  fighter_gwf: ["Chain Mail", "Greatsword"],
   rogue: ["Leather Armor", "Rapier", "Shortbow", "Dagger"],
 }
 
@@ -50,12 +51,21 @@ function previewHp(charClass: string, conScore: number): number {
 
 function previewAc(charClass: string, dexScore: number, fightingStyle: string): number {
   if (charClass === "fighter") {
+    if (fightingStyle === "great_weapon_fighting") {
+      // Chain mail (16), no shield (two-handed weapon)
+      return 16
+    }
     // Chain mail (16) + shield (+2) + defense (+1 if selected)
     const base = 16 + 2
     return fightingStyle === "defense" ? base + 1 : base
   }
   // Rogue: leather (11) + DEX mod (no cap for light armor)
   return 11 + abilityModifier(dexScore)
+}
+
+function getEquipmentKey(charClass: string, fightingStyle: string): string {
+  if (charClass === "fighter" && fightingStyle === "great_weapon_fighting") return "fighter_gwf"
+  return charClass
 }
 
 interface Props {
@@ -131,7 +141,7 @@ export function CharacterForm({ sessionId, onCreated }: Props) {
 
   const hp = previewHp(charClass, scores.con)
   const ac = previewAc(charClass, scores.dex, fightingStyle)
-  const equipment = STARTING_EQUIPMENT[charClass] ?? []
+  const equipment = STARTING_EQUIPMENT[getEquipmentKey(charClass, fightingStyle)] ?? []
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">

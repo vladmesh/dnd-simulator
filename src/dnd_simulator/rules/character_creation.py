@@ -8,6 +8,7 @@ from __future__ import annotations
 import math
 
 from dnd_simulator.core.character import Ability, CharClass
+from dnd_simulator.core.class_features import FightingStyle
 
 # Hit die size per class (only Fighter and Rogue implemented).
 HIT_DICE: dict[CharClass, int] = {
@@ -84,9 +85,14 @@ _STARTING_EQUIPMENT: dict[CharClass, list[str]] = {
     CharClass.ROGUE: ["leather", "rapier", "shortbow", "dagger"],
 }
 
+# GWF fighters get a greatsword instead of longsword + shield.
+_FIGHTER_GWF_EQUIPMENT: list[str] = ["chain_mail", "greatsword"]
 
-def starting_equipment(char_class: CharClass) -> list[str]:
+
+def starting_equipment(char_class: CharClass, fighting_style: FightingStyle | None = None) -> list[str]:
     """Return starting equipment item refs for a class. Returns a copy."""
+    if char_class == CharClass.FIGHTER and fighting_style == FightingStyle.GREAT_WEAPON_FIGHTING:
+        return list(_FIGHTER_GWF_EQUIPMENT)
     items = _STARTING_EQUIPMENT.get(char_class)
     if items is None:
         raise RuntimeError(f"No starting equipment defined for {char_class.value}")

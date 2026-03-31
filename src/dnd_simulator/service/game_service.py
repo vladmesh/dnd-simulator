@@ -811,7 +811,8 @@ class GameService(
         item_catalog_dir = self._content_dir / "catalogs" / "items"
         item_catalog = load_catalog(item_catalog_dir, ItemContent) if item_catalog_dir.exists() else {}
 
-        equip_refs = starting_equipment(char_class)
+        fs = FightingStyle(fighting_style_raw) if fighting_style_raw else None
+        equip_refs = starting_equipment(char_class, fs)
         items_data = [{"ref": ref, "equipped": True} for ref in equip_refs]
 
         # --- Build player dict for parse_player ---

@@ -187,6 +187,22 @@ describe("CharacterForm — Preview", () => {
     expect(screen.getByTestId("preview-ac")).toHaveTextContent("18")
   })
 
+  it("shows correct AC preview for Fighter with GWF (no shield)", async () => {
+    const { user } = setup()
+    // GWF: chain mail(16), no shield → AC 16
+    await user.selectOptions(screen.getByTestId("fighting-style-select"), "great_weapon_fighting")
+    expect(screen.getByTestId("preview-ac")).toHaveTextContent("16")
+  })
+
+  it("shows greatsword equipment for Fighter with GWF", async () => {
+    const { user } = setup()
+    await user.selectOptions(screen.getByTestId("fighting-style-select"), "great_weapon_fighting")
+    const equipText = screen.getByTestId("preview-equipment").textContent
+    expect(equipText).toContain("Greatsword")
+    expect(equipText).not.toContain("Shield")
+    expect(equipText).not.toContain("Longsword")
+  })
+
   it("shows correct AC preview for Rogue with DEX 15", async () => {
     const { user } = setup()
     await user.selectOptions(screen.getByTestId("class-select"), "rogue")
