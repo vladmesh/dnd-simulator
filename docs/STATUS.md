@@ -4,7 +4,18 @@
 
 ## Current Sprint
 
-No active sprint.
+**Sprint:** 013-char-creation
+**Goal:** Character creation overhaul — point buy, derived HP/AC, starting equipment, Fighter/Rogue only
+**Started:** 2026-04-01
+**Phase:** Planning (COMPLETE) — 2026-04-01
+
+Ready for Phase 1 task generation.
+
+### Phases
+
+1. HP Formula + Starting Equipment Rules
+2. Creation API + Frontend Form
+3. Content Fixes + Polish
 
 ## Sprint History
 
