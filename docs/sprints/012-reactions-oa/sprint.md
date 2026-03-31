@@ -93,6 +93,12 @@ UI для реакций игрока и обновление контента.
 
 **Верифицируем:** `make check` проходит. Все новые тесты зелёные. Строки perception.py < 400, run_combat_turn < 80.
 
+**Tasks:**
+
+1. [Perception dispatch dict + fail-fast](tasks/phase4-task1-perception-refactor.md)
+2. [Session closure dedup + awareness_builder exception narrowing](tasks/phase4-task2-session-awareness-cleanup.md)
+3. [Round helpers + sprint 012 test gaps](tasks/phase4-task3-round-helpers-test-gaps.md)
+
 ---
 
 ## Status
