@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from http import HTTPStatus
+
 from fastapi import APIRouter, HTTPException
 
 from dnd_simulator.adapters.api.deps import get_service
@@ -25,7 +27,7 @@ def create_character(session_id: str, body: CreatePlayerRequest) -> PlayerStatus
     try:
         player = service.create_player(session_id, data)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e)) from e
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e)) from e
     return _player_status(player)
 
 

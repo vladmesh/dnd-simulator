@@ -30,7 +30,12 @@ def _create_session_with_player(client: TestClient) -> str:
     sid = resp.json()["session_id"]
     resp = client.post(
         f"/api/player/sessions/{sid}/character",
-        json={"name": "Tester", "race": "human", "char_class": "fighter"},
+        json={
+            "name": "Tester",
+            "race": "human",
+            "char_class": "fighter",
+            "ability_scores": {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 12, "cha": 8},
+        },
     )
     assert resp.status_code == HTTPStatus.OK
     return sid

@@ -14,17 +14,11 @@ class CreatePlayerRequest(BaseModel):
     name: str = "Adventurer"
     race: str = "human"
     char_class: str = "fighter"
-    level: int = Field(default=1, ge=1, le=20)
     alignment: str = "true_neutral"
     appearance: str = ""
-    hp: int = Field(default=10, ge=1, le=999)
-    ac: int = Field(default=10, ge=0, le=30)
-    gold: int = Field(default=0, ge=0)
     start_location: str = ""
-    ability_scores: dict[str, int] | None = None
-    attacks: list[dict[str, object]] | None = None
-    items: list[dict[str, object]] | None = None
-    class_features: dict[str, object] | None = None
+    ability_scores: dict[str, int]
+    fighting_style: str | None = None
     combat_position: list[int] | None = None
 
 

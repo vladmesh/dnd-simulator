@@ -73,4 +73,10 @@ Key files:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Contract change: `CreatePlayerRequest` no longer accepts `hp`, `ac`, `gold`, `level`, `attacks`, `items`, `class_features`. Instead requires `ability_scores` (dict) and optional `fighting_style`. Server computes all derived values.
+
+Updated 3 test files (`test_api.py`, `test_ws.py`, `test_trade_ws.py`) — their helper functions that create players needed valid `ability_scores` added. The old assertions on hp/ac/gold were updated to match server-computed values. This is an intentional contract change per the sprint scope.

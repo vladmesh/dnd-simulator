@@ -44,10 +44,14 @@ def _create_session(client: TestClient) -> str:
     return resp.json()["session_id"]
 
 
+_DEFAULT_SCORES = {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 12, "cha": 8}
+
+
 def _create_session_with_player(client: TestClient) -> str:
     sid = _create_session(client)
     resp = client.post(
-        f"/api/player/sessions/{sid}/character", json={"name": "Tester", "race": "human", "char_class": "fighter"}
+        f"/api/player/sessions/{sid}/character",
+        json={"name": "Tester", "race": "human", "char_class": "fighter", "ability_scores": _DEFAULT_SCORES},
     )
     assert resp.status_code == HTTPStatus.OK
     return sid
@@ -351,9 +355,8 @@ class TestPlayerCharacterCreation:
                 "name": "Thrain",
                 "race": "dwarf",
                 "char_class": "fighter",
-                "hp": 14,
-                "ac": 16,
-                "gold": 100,
+                "ability_scores": _DEFAULT_SCORES,
+                "fighting_style": "defense",
                 "start_location": "silverport_city_tavern",
             },
         )
@@ -361,7 +364,8 @@ class TestPlayerCharacterCreation:
         data = resp.json()
         assert data["name"] == "Thrain"
         assert data["race"] == "dwarf"
-        assert data["hp"] == 14
+        assert data["max_hp"] == 12  # d10 + CON 14 (+2)
+        assert data["gold"] == 100
         assert data["location_id"] == "silverport_city_tavern"
 
     def test_create_character_default_region(self, tmp_path: object) -> None:
@@ -370,7 +374,7 @@ class TestPlayerCharacterCreation:
 
         resp = client.post(
             f"/api/player/sessions/{sid}/character",
-            json={"name": "Nobody"},
+            json={"name": "Nobody", "ability_scores": _DEFAULT_SCORES},
         )
         assert resp.status_code == HTTPStatus.OK
         assert resp.json()["location_id"] != ""
@@ -379,8 +383,10 @@ class TestPlayerCharacterCreation:
         client, _ = _make_client(tmp_path)
         sid = self._create_session_no_player(client)
 
-        resp1 = client.post(f"/api/player/sessions/{sid}/character", json={"name": "First"})
-        resp2 = client.post(f"/api/player/sessions/{sid}/character", json={"name": "Second"})
+        body = {"name": "First", "ability_scores": _DEFAULT_SCORES}
+        resp1 = client.post(f"/api/player/sessions/{sid}/character", json=body)
+        body2 = {"name": "Second", "ability_scores": _DEFAULT_SCORES}
+        resp2 = client.post(f"/api/player/sessions/{sid}/character", json=body2)
         assert resp1.status_code == HTTPStatus.OK
         assert resp2.status_code == HTTPStatus.OK
         # Each player gets a unique ID
