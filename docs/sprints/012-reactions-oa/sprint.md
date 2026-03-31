@@ -76,7 +76,9 @@ UI для реакций игрока и обновление контента.
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Backend — Perception Handlers + WS Reaction Wiring](tasks/phase3-task1-backend-perception-ws.md)
+2. [Frontend — Reaction Prompt + Disengage Indicator](tasks/phase3-task2-frontend-reaction-ui.md)
+3. [RuleBrain Tactical Disengage](tasks/phase3-task3-rulebrain-disengage.md)
 
 ---
 
