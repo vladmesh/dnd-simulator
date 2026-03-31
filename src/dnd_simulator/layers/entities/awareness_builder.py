@@ -14,6 +14,7 @@ from dnd_simulator.core.awareness import (
 )
 from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.models import Event, FactionRelation, Query, QueryType
+from dnd_simulator.core.world import LayerError
 from dnd_simulator.layers.entities.models import Npc
 
 if TYPE_CHECKING:
@@ -61,7 +62,7 @@ class AwarenessBuilder:
             )
             if loc_answer.value and isinstance(loc_answer.value, str):
                 region_id = loc_answer.value
-        except Exception:
+        except (KeyError, ValueError, LayerError):
             logger.warning("region_resolve_failed", location_id=creature.location_id, exc_info=True)
 
         # Region-dependent data: weather, settlements, politics
@@ -77,7 +78,7 @@ class AwarenessBuilder:
                 )
                 if region_answer.value and isinstance(region_answer.value, dict):
                     region_name = str(region_answer.value.get("name", region_name))
-            except Exception:
+            except (KeyError, ValueError, LayerError):
                 logger.warning("region_info_query_failed", region_id=region_id, exc_info=True)
 
             try:
@@ -86,7 +87,7 @@ class AwarenessBuilder:
                 )
                 if weather_answer.value and isinstance(weather_answer.value, dict):
                     weather = dict(weather_answer.value)
-            except Exception:
+            except (KeyError, ValueError, LayerError):
                 logger.warning("weather_query_failed", region_id=region_id, exc_info=True)
 
             try:
@@ -95,7 +96,7 @@ class AwarenessBuilder:
                 )
                 if isinstance(settlements_answer.value, list):
                     settlements = settlements_answer.value
-            except Exception:
+            except (KeyError, ValueError, LayerError):
                 logger.warning("settlements_query_failed", region_id=region_id, exc_info=True)
 
             try:
@@ -109,7 +110,7 @@ class AwarenessBuilder:
                     )
                     if nation_answer.value and isinstance(nation_answer.value, dict):
                         nation_info = dict(nation_answer.value)
-            except Exception:
+            except (KeyError, ValueError, LayerError):
                 logger.warning("politics_query_failed", region_id=region_id, exc_info=True)
 
         # Nearby entities (uses query_fn for faction hostility)
@@ -288,7 +289,7 @@ class AwarenessBuilder:
                 Query(question=QueryType.FACTION_NAME, params={"faction_id": faction_id}),
             )
             return str(answer.value) if answer.value else ""
-        except Exception:
+        except (KeyError, ValueError, LayerError):
             return ""
 
     def check_faction_hostility(self, observer: Entity, other: Entity, query_fn: QueryFn | None) -> bool:
@@ -315,7 +316,7 @@ class AwarenessBuilder:
                 hostile=is_hostile,
             )
             return is_hostile
-        except Exception:
+        except (KeyError, ValueError, LayerError):
             logger.warning(
                 "faction_relation_query_failed",
                 a=observer.faction_id,

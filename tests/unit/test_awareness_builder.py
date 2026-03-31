@@ -15,6 +15,7 @@ from dnd_simulator.core.character import (
 from dnd_simulator.core.combat import BattleMap, CombatState, Position, Wall
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import Answer, FactionRelation, GameDateTime, Query, QueryType
+from dnd_simulator.core.world import LayerError
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc, NpcActivity, ScheduleEntry
 
@@ -192,7 +193,9 @@ class TestNearbyEntitiesHostility:
         layer = EntitiesLayer([creature_a, creature_b])
 
         def query_fn(target: str, query: Query) -> Answer:
-            # Same faction — should never even be queried
+            if query.question == QueryType.FACTION_NAME:
+                return Answer(value="Kingdom Forces")
+            # Same faction — hostility should never be queried
             raise AssertionError("Should not query faction relation for same faction")
 
         nearby = layer.build_nearby_entities(creature_a, hour=12, query_fn=query_fn)
@@ -261,7 +264,7 @@ class TestPeacefulAwarenessQueryResilience:
 
         def query_fn(target: str, query: Query) -> Answer:
             if target == "geography" and query.question == QueryType.LOCATION_REGION:
-                raise RuntimeError("geography layer down")
+                raise LayerError("geography layer not found")
             raise AssertionError(f"Unexpected query: {target} {query.question}")
 
         awareness = layer.build_awareness(player, _TIME, query_fn)
@@ -282,7 +285,7 @@ class TestPeacefulAwarenessQueryResilience:
             if target == "geography" and query.question == QueryType.REGION_INFO:
                 return Answer(value={"name": "Northern Region", "terrain": "forest"})
             if target == "geography" and query.question == QueryType.WEATHER:
-                raise RuntimeError("weather service down")
+                raise KeyError("region_id")
             return Answer(value=None)
 
         awareness = layer.build_awareness(player, _TIME, query_fn)
@@ -324,7 +327,7 @@ class TestPeacefulAwarenessQueryResilience:
             if target == "settlements":
                 return Answer(value=[])
             if target == "politics":
-                raise RuntimeError("politics layer down")
+                raise LayerError("politics layer not found")
             return Answer(value=None)
 
         awareness = layer.build_awareness(player, _TIME, query_fn)
@@ -838,7 +841,7 @@ class TestFactionHostilityEdgeCases:
         layer = EntitiesLayer([observer, other])
 
         def query_fn(target: str, query: Query) -> Answer:
-            raise RuntimeError("politics layer crashed")
+            raise LayerError("politics layer not found")
 
         result = layer._awareness.check_faction_hostility(observer, other, query_fn)
         assert result is False

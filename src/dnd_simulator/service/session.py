@@ -336,6 +336,30 @@ class GameSession:
                 logger.exception("listener_error", listener=type(listener).__name__, method=method)
 
     # ---------------------------------------------------------------------------
+    # Shared state builder for round callbacks
+    # ---------------------------------------------------------------------------
+
+    def _build_round_state(
+        self,
+        msg_type: str,
+        player: PlayerCharacter,
+        game_round: Round,
+        entities_layer: EntitiesLayer,
+    ) -> dict[str, Any]:
+        """Build the common state dict shared by on_turn, on_action, and on_round_end."""
+        perceived = game_round.get_perceived_events(player)
+        query_fn = self.world._make_query_fn("entities")
+        awareness = entities_layer.build_awareness(player, self.world.time, query_fn)
+        return {
+            "type": msg_type,
+            "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
+            "awareness": _awareness_to_dict(awareness, creature=player),
+            "events": _events_to_list(perceived),
+            "player": _player_to_dict(player),
+            "location": _location_data(self.world, player.location_id),
+        }
+
+    # ---------------------------------------------------------------------------
     # Round lifecycle
     # ---------------------------------------------------------------------------
 
@@ -358,6 +382,7 @@ class GameSession:
             entities_layer = get_entities_layer(self.world)
 
             # Wire on_turn: fires when Round calls brain.choose_action for the player
+            # Uses awareness from Round (which includes merchants, etc.) — not _build_round_state
             def on_turn(
                 creature: Creature,
                 awareness: PeacefulAwareness | CombatAwareness,
@@ -396,19 +421,9 @@ class GameSession:
             # Wire on_action: fires after each action by any creature
             def on_action(creature: Creature, action: Action, budget: TurnBudget | None, error: str) -> None:
                 self._last_turn_msg = None  # turn is being processed
-                perceived = game_round.get_perceived_events(player)
-                query_fn = self.world._make_query_fn("entities")
-                awareness = entities_layer.build_awareness(player, self.world.time, query_fn)
-                msg: dict[str, Any] = {
-                    "type": "action_result",
-                    "actor": creature.id,
-                    "action": action.name,
-                    "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
-                    "awareness": _awareness_to_dict(awareness, creature=player),
-                    "events": _events_to_list(perceived),
-                    "player": _player_to_dict(player),
-                    "location": _location_data(self.world, player.location_id),
-                }
+                msg = self._build_round_state("action_result", player, game_round, entities_layer)
+                msg["actor"] = creature.id
+                msg["action"] = action.name
                 if error:
                     msg["error"] = error
                 if budget is not None and creature.id == player.id:
@@ -419,17 +434,7 @@ class GameSession:
 
             # Wire on_round_end: fires after each complete round
             def on_round_end(result: object) -> None:
-                perceived = game_round.get_perceived_events(player)
-                query_fn = self.world._make_query_fn("entities")
-                awareness = entities_layer.build_awareness(player, self.world.time, query_fn)
-                msg: dict[str, Any] = {
-                    "type": "round_result",
-                    "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
-                    "awareness": _awareness_to_dict(awareness, creature=player),
-                    "events": _events_to_list(perceived),
-                    "player": _player_to_dict(player),
-                    "location": _location_data(self.world, player.location_id),
-                }
+                msg = self._build_round_state("round_result", player, game_round, entities_layer)
                 self._fire("on_round_result", msg)
 
             game_round.set_on_round_end(on_round_end)

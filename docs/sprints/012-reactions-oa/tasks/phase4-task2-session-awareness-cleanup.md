@@ -44,4 +44,12 @@ Narrow to the specific exceptions that layer queries can raise. Check what `quer
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+**Session dedup:** Extracted `_build_round_state()` on `GameSession` — shared builder for `on_action` and `on_round_end` callbacks. `on_turn` could NOT be deduplicated because it receives a richer awareness object from Round (with merchants, etc.) that `entities_layer.build_awareness()` doesn't produce. The dedup still eliminates the main copy-paste between on_action and on_round_end.
+
+**Awareness exception narrowing:** Replaced all 7 `except Exception` blocks in `awareness_builder.py` with `except (KeyError, ValueError, LayerError)`. These are the three exception types that `query_fn` (from `World._make_query_fn`) and individual layer `query()` methods can raise for expected failures (missing key, unknown query type, layer not found/direction violation). Unexpected exceptions (TypeError, AttributeError, RuntimeError) now propagate instead of being silently swallowed.
+
+**Old test updates:** 5 existing tests in `test_awareness_builder.py` used `RuntimeError` to simulate "layer down" — updated to use `LayerError`/`KeyError` since RuntimeError is no longer caught. Also fixed `test_same_faction_not_hostile` which had an overly strict query_fn that didn't handle `FACTION_NAME` queries (previously masked by the broad `except Exception`).

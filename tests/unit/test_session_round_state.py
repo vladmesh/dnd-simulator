@@ -1,0 +1,162 @@
+"""Tests for GameSession._build_round_state — shared state builder for round callbacks."""
+
+from __future__ import annotations
+
+from typing import Any
+from unittest.mock import MagicMock
+
+from dnd_simulator.core.character import Ability, AbilityScores, Attack, DamageComponent, DamageType
+from dnd_simulator.core.models import Answer, GameDateTime, Query
+from dnd_simulator.core.player import PlayerCharacter
+from dnd_simulator.core.world import World
+from dnd_simulator.layers.entities.layer import EntitiesLayer
+from dnd_simulator.service.session import GameSession
+
+_SWORD = Attack(
+    name="longsword",
+    ability=Ability.STR,
+    damage=(DamageComponent("1d8", DamageType.SLASHING),),
+)
+
+
+def _scores(**overrides: int) -> AbilityScores:
+    scores = dict(AbilityScores().scores)
+    for name, val in overrides.items():
+        scores[Ability[name.upper()]] = val
+    return AbilityScores(scores=scores)
+
+
+# Required fields for on_turn, on_action, and on_round_end messages
+_COMMON_FIELDS = {"type", "mode", "awareness", "events", "player", "location"}
+
+
+class _CapturingListener:
+    """Listener that captures messages by type."""
+
+    def __init__(self) -> None:
+        self.turn_msgs: list[dict[str, Any]] = []
+        self.action_msgs: list[dict[str, Any]] = []
+        self.round_msgs: list[dict[str, Any]] = []
+        self.reaction_msgs: list[dict[str, Any]] = []
+
+    def on_turn(self, msg: dict[str, Any]) -> None:
+        self.turn_msgs.append(msg)
+
+    def on_action_result(self, msg: dict[str, Any]) -> None:
+        self.action_msgs.append(msg)
+
+    def on_round_result(self, msg: dict[str, Any]) -> None:
+        self.round_msgs.append(msg)
+
+    def on_reaction(self, msg: dict[str, Any]) -> None:
+        self.reaction_msgs.append(msg)
+
+    def on_game_over(self) -> None:
+        pass
+
+
+class TestBuildRoundState:
+    """_build_round_state produces the common dict used by all round callbacks."""
+
+    def test_returns_common_fields(self) -> None:
+        """The returned dict has all common fields: type, mode, awareness, events, player, location."""
+        player = PlayerCharacter(
+            id="p1",
+            name="Hero",
+            location_id="village",
+            ability_scores=_scores(STR=16),
+            attacks=(_SWORD,),
+        )
+
+        entities_layer = EntitiesLayer([player])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            return Answer(value=None)
+
+        time = GameDateTime(year=1490, month=6, day=15, hour=14)
+
+        # Build a mock world + round just enough for _build_round_state
+        world = MagicMock(spec=World)
+        world.time = time
+        world._make_query_fn.return_value = query_fn
+        world.location_graph = MagicMock()
+        world.location_graph.has.return_value = False
+
+        session = GameSession(session_id="test", world=world)
+        game_round = MagicMock()
+        game_round.get_perceived_events.return_value = []
+
+        result = session._build_round_state("test_type", player, game_round, entities_layer)
+
+        assert result["type"] == "test_type"
+        assert result["mode"] in ("peaceful", "combat")
+        assert "awareness" in result
+        assert "events" in result
+        assert "player" in result
+        assert "location" in result
+
+
+class TestCallbackFieldConsistency:
+    """on_turn, on_action, and on_round_end messages all share the same base structure."""
+
+    def test_action_result_has_common_fields(self) -> None:
+        """on_action messages contain all common fields from _build_round_state."""
+        player = PlayerCharacter(
+            id="p1",
+            name="Hero",
+            location_id="village",
+            ability_scores=_scores(STR=16),
+            attacks=(_SWORD,),
+        )
+
+        entities_layer = EntitiesLayer([player])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            return Answer(value=None)
+
+        time = GameDateTime(year=1490, month=6, day=15, hour=14)
+
+        world = MagicMock(spec=World)
+        world.time = time
+        world._make_query_fn.return_value = query_fn
+        world.location_graph = MagicMock()
+        world.location_graph.has.return_value = False
+
+        session = GameSession(session_id="test", world=world)
+        game_round = MagicMock()
+        game_round.get_perceived_events.return_value = []
+
+        result = session._build_round_state("action_result", player, game_round, entities_layer)
+
+        assert _COMMON_FIELDS.issubset(result.keys()), f"Missing fields: {_COMMON_FIELDS - result.keys()}"
+
+    def test_round_result_has_common_fields(self) -> None:
+        """on_round_end messages contain all common fields from _build_round_state."""
+        player = PlayerCharacter(
+            id="p1",
+            name="Hero",
+            location_id="village",
+            ability_scores=_scores(STR=16),
+            attacks=(_SWORD,),
+        )
+
+        entities_layer = EntitiesLayer([player])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            return Answer(value=None)
+
+        time = GameDateTime(year=1490, month=6, day=15, hour=14)
+
+        world = MagicMock(spec=World)
+        world.time = time
+        world._make_query_fn.return_value = query_fn
+        world.location_graph = MagicMock()
+        world.location_graph.has.return_value = False
+
+        session = GameSession(session_id="test", world=world)
+        game_round = MagicMock()
+        game_round.get_perceived_events.return_value = []
+
+        result = session._build_round_state("round_result", player, game_round, entities_layer)
+
+        assert _COMMON_FIELDS.issubset(result.keys()), f"Missing fields: {_COMMON_FIELDS - result.keys()}"
