@@ -76,17 +76,6 @@ class Brain(ABC):
             return END_TURN  # already at target
         return Action(name=ActionType.MOVE, params={"direction": direction, "ft": ft})
 
-    @staticmethod
-    def move_away_from_target(target: CombatEntity, awareness: CombatAwareness, ft: int = 5) -> Action:
-        """Calculate a concrete move action away from a combat target."""
-        from dnd_simulator.core.combat import Position
-        from dnd_simulator.rules.movement import calculate_away_direction
-
-        origin = Position(awareness.self_x, awareness.self_y)
-        dest = Position(target.x, target.y)
-        direction = calculate_away_direction(origin, dest)
-        return Action(name=ActionType.MOVE, params={"direction": direction, "ft": ft})
-
 
 class RuleBrain(Brain):
     """Utility-scoring combat AI. Peaceful mode = idle.

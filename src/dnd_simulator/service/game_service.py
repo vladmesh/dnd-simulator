@@ -37,7 +37,6 @@ from dnd_simulator.core.location import LocationGraph
 from dnd_simulator.core.models import GameDateTime, TimeDelta
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
-from dnd_simulator.i18n import _
 from dnd_simulator.layers.ecology.layer import EcologyLayer
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.geography.layer import GeographyLayer
@@ -84,6 +83,7 @@ class GameService(
         session_id = uuid.uuid4().hex[:8]
         structlog.contextvars.bind_contextvars(session_id=session_id)
 
+        self._validate_world_id(world_name)
         world_path = self._content_dir / "worlds" / world_name
         layer_paths = resolve_manifest(world_path, self._content_dir)
         missing = {lt.value for lt in LayerType} - set(layer_paths)
@@ -777,12 +777,6 @@ class GameService(
         self._get_entities_layer(session).add_entity(player)
         with contextlib.suppress(Exception):
             self.autosave_session(session_id)
-        return player
-
-    def _require_player(self, session: GameSession, player_id: str | None = None) -> PlayerCharacter:
-        player = session.get_player(player_id)
-        if player is None:
-            raise ValueError(_("No player in this session"))
         return player
 
     def _get_session(self, session_id: str) -> GameSession:

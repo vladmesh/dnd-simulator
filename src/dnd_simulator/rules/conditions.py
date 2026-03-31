@@ -29,22 +29,6 @@ def prone_stand_cost(base_speed: int) -> int:
     return base_speed // 2
 
 
-def auto_fail_str_dex_saves(conditions: ConditionsMap) -> bool:
-    """Creature auto-fails STR and DEX saving throws.
-
-    Paralyzed, Petrified, Stunned, Unconscious.
-    """
-    return bool(
-        conditions.keys()
-        & {
-            Condition.PARALYZED,
-            Condition.PETRIFIED,
-            Condition.STUNNED,
-            Condition.UNCONSCIOUS,
-        }
-    )
-
-
 def tick_conditions(conditions: ConditionsMap) -> list[Condition]:
     """Decrement timed conditions, remove expired ones. Returns list of removed conditions."""
     expired: list[Condition] = []

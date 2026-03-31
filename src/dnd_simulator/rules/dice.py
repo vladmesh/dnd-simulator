@@ -6,14 +6,19 @@ deterministic testing.  When omitted, the module-level RNG is used.
 
 from __future__ import annotations
 
-import os
 import random
 import re
 
 from dnd_simulator.core.rolls import D20Result, DiceResult, DieRoll
 
-_seed_env = os.environ.get("DND_DICE_SEED")
-_rng = random.Random(int(_seed_env)) if _seed_env is not None else random.Random()
+_rng = random.Random()
+
+
+def set_global_seed(seed: int) -> None:
+    """Set the module-level RNG seed (for deterministic testing)."""
+    global _rng
+    _rng = random.Random(seed)
+
 
 # Pattern: "2d6", "1d8+3", "2d6-1", "4" (constant)
 _DICE_RE = re.compile(r"^(?:(\d+)d(\d+))?\s*([+-]?\s*\d+)?$", re.IGNORECASE)

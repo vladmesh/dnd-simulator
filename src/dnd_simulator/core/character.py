@@ -201,9 +201,6 @@ class Entity:
     faction_id: str = ""
     _last_seen_log_index: int = field(default=0, repr=False)
 
-    def on_tick(self, hour: int) -> None:
-        """Update state based on time of day. Override in subclasses."""
-
 
 @dataclass
 class Creature(Entity):

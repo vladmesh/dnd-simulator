@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -25,13 +26,13 @@ def _make_client(tmp_path: object) -> tuple[TestClient, GameService]:
 
 def _create_session_with_player(client: TestClient) -> str:
     resp = client.post("/api/master/sessions", json={})
-    assert resp.status_code == 200
+    assert resp.status_code == HTTPStatus.OK
     sid = resp.json()["session_id"]
     resp = client.post(
         f"/api/player/sessions/{sid}/character",
         json={"name": "Tester", "race": "human", "char_class": "fighter"},
     )
-    assert resp.status_code == 200
+    assert resp.status_code == HTTPStatus.OK
     return sid
 
 

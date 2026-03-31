@@ -24,12 +24,7 @@ from dnd_simulator.core.character import (
     NpcRole,
     Race,
 )
-from dnd_simulator.core.items import (
-    ArmorCategory,
-    EquipmentSlot,
-    ItemType,
-    WeaponCategory,
-)
+from dnd_simulator.core.items import ItemType
 from dnd_simulator.core.models import TerrainType
 from dnd_simulator.core.squad import SquadBehavior, SquadType
 from dnd_simulator.layers.geography.models import Direction
@@ -112,50 +107,6 @@ CoercedAbilityScores = Annotated[AbilityScoresContent, BeforeValidator(_coerce_a
 # ---------------------------------------------------------------------------
 # Item models
 # ---------------------------------------------------------------------------
-
-
-class WeaponDefContent(BaseModel):
-    """Weapon definition fields within an item."""
-
-    weapon_id: str
-    attack_name: str = ""
-    category: WeaponCategory = WeaponCategory.SIMPLE
-    damage: list[DamageComponentContent] = []
-    reach: int = 5
-    ability: Ability | None = None
-    modifier: int = 0
-    is_magic: bool = False
-    is_finesse: bool = False
-    is_two_handed: bool = False
-    is_light: bool = False
-    is_heavy: bool = False
-    grant_conditions: list[str] = []
-    grant_actions: list[str] = []
-
-
-class ArmorDefContent(BaseModel):
-    """Armor definition fields within an item."""
-
-    armor_id: str
-    category: ArmorCategory
-    base_ac: int
-    max_dex_bonus: int | None = None
-    strength_req: int = 0
-
-
-class ShieldDefContent(BaseModel):
-    """Shield definition fields within an item."""
-
-    shield_id: str = "shield"
-    ac_bonus: int = 2
-
-
-class AccessoryDefContent(BaseModel):
-    """Accessory definition fields within an item."""
-
-    accessory_id: str
-    slot: EquipmentSlot
-    modifiers: list[dict[str, Any]] = []
 
 
 class ItemContent(BaseModel):

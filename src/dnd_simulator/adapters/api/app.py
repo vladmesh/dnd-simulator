@@ -55,6 +55,12 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     log_dir_raw = os.getenv("LOG_DIR")
     configure_logging(log_level=log_level, log_dir=Path(log_dir_raw) if log_dir_raw else None)
 
+    dice_seed = os.getenv("DND_DICE_SEED")
+    if dice_seed is not None:
+        from dnd_simulator.rules.dice import set_global_seed
+
+        set_global_seed(int(dice_seed))
+
     store = JsonFileStore(DEFAULT_SAVES_DIR)
 
     llm: LlmClient | None = None
