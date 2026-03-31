@@ -14,7 +14,7 @@ Fighter и Rogue полностью прописаны (sprints 001, 011, 012), 
 
 ---
 
-## Phase 1: HP Formula + Starting Equipment Rules
+## Phase 1: HP Formula + Starting Equipment Rules ✓
 
 Чистые rules-функции без UI. Всё в `rules/` как pure functions, unit-тестами покрыто.
 
