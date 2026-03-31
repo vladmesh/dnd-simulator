@@ -186,7 +186,8 @@ class TestRuleBrainCombat:
         assert action.name == "dash"
         assert action.params == {}
 
-    def test_flee_when_critically_wounded(self) -> None:
+    def test_disengage_when_critically_wounded_enemy_in_reach(self) -> None:
+        """With OA system, critically wounded NPC disengages instead of fleeing into OA."""
         npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=100, current_hp=10)
         enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=60, height=60)
@@ -195,9 +196,10 @@ class TestRuleBrainCombat:
         awareness = _build_combat_awareness(npc, [npc, enemy], bm)
         brain = RuleBrain()
         action = brain.choose_action(npc, awareness, [])
-        assert action.name == "flee"
+        assert action.name == "disengage"
 
-    def test_dodge_when_badly_hurt_and_in_reach(self) -> None:
+    def test_disengage_when_badly_hurt_and_in_reach(self) -> None:
+        """With OA system, badly hurt NPC disengages instead of dodging in place."""
         npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=100, current_hp=20)
         enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=60, height=60)
@@ -206,7 +208,7 @@ class TestRuleBrainCombat:
         awareness = _build_combat_awareness(npc, [npc, enemy], bm)
         brain = RuleBrain()
         action = brain.choose_action(npc, awareness, [])
-        assert action.name == "dodge"
+        assert action.name == "disengage"
 
     def test_idle_when_no_enemies(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
@@ -261,7 +263,8 @@ class TestRuleBrainTags:
         assert action.name == "attack"
         assert action.params.get("target_id") == "far"
 
-    def test_scared_npc_flees_earlier(self) -> None:
+    def test_scared_npc_disengages_when_enemy_in_reach(self) -> None:
+        """Scared NPC at 20% HP with enemy in reach → disengage (not flee into OA)."""
         npc = Npc(
             id="n1",
             name="Guard",
@@ -278,7 +281,7 @@ class TestRuleBrainTags:
         awareness = _build_combat_awareness(npc, [npc, enemy], bm)
         brain = RuleBrain()
         action = brain.choose_action(npc, awareness, [])
-        assert action.name == "flee"
+        assert action.name == "disengage"
 
     def test_no_tags_unchanged_behavior(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
@@ -453,3 +456,102 @@ class TestRuleBrainFactionHostility:
         )
         action = brain.choose_action(npc, awareness, [])
         assert action.name == "end_turn"
+
+
+class TestRuleBrainTacticalDisengage:
+    """RuleBrain should Disengage before retreating when enemies are in melee reach."""
+
+    def test_disengage_when_low_hp_and_enemy_adjacent(self) -> None:
+        """NPC at 20% HP with enemy at 5ft → DISENGAGE (not FLEE)."""
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=100, current_hp=20)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("e1", Position(10, 15))  # 5 ft
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
+        brain = RuleBrain()
+        action = brain.choose_action(npc, awareness, [])
+        assert action.name == "disengage"
+
+    def test_move_away_after_disengage(self) -> None:
+        """NPC at 20% HP, is_disengaging=True, enemy at 5ft → MOVE away."""
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=100, current_hp=20)
+        npc.is_disengaging = True
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("n1", Position(10, 15))
+        bm.set_position("e1", Position(10, 20))  # enemy is north
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
+        brain = RuleBrain()
+        action = brain.choose_action(npc, awareness, [])
+        assert action.name == "move"
+        # Should move away from enemy (south, since enemy is north)
+        assert action.params["direction"] == "south"
+
+    def test_flee_when_low_hp_no_enemies_in_reach(self) -> None:
+        """NPC at 10% HP, enemy at 30ft → FLEE directly (no Disengage needed)."""
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=100, current_hp=10)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("e1", Position(10, 40))  # 30 ft away
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
+        brain = RuleBrain()
+        action = brain.choose_action(npc, awareness, [])
+        assert action.name == "flee"
+
+    def test_attack_when_high_hp(self) -> None:
+        """NPC at 80% HP, enemy at 5ft → ATTACK (no Disengage)."""
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=100, current_hp=80)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("e1", Position(10, 15))  # 5 ft
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
+        brain = RuleBrain()
+        action = brain.choose_action(npc, awareness, [])
+        assert action.name == "attack"
+        assert action.params["target_id"] == "e1"
+
+    def test_scared_npc_disengages_at_higher_threshold(self) -> None:
+        """SCARED NPC at 30% HP, enemy at 5ft → DISENGAGE (scared flee threshold is 25%)."""
+        npc = Npc(
+            id="n1",
+            name="Guard",
+            location_id="arena",
+            attacks=(_SWORD,),
+            max_hp=100,
+            current_hp=30,
+            memory=NpcMemory(tags=["scared"]),
+        )
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("e1", Position(10, 15))  # 5 ft
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
+        brain = RuleBrain()
+        action = brain.choose_action(npc, awareness, [])
+        assert action.name == "disengage"
+
+    def test_choose_reaction_still_returns_oa(self) -> None:
+        """RuleBrain.choose_reaction returns opportunity_attack for LEAVING_REACH trigger."""
+        from dnd_simulator.core.action import ActionType
+        from dnd_simulator.core.brain import ReactionOption
+        from dnd_simulator.core.reactions import ReactionTrigger, TriggerType
+
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        trigger = ReactionTrigger(
+            trigger_type=TriggerType.LEAVING_REACH,
+            source_creature_id="e1",
+            data={"mover_id": "e1"},
+        )
+        options = [
+            ReactionOption(
+                action_type=ActionType.OPPORTUNITY_ATTACK,
+                description="Attack the fleeing enemy",
+                params={"target_id": "e1"},
+            ),
+        ]
+        brain = RuleBrain()
+        action = brain.choose_reaction(npc, trigger, options)
+        assert action.name == "opportunity_attack"

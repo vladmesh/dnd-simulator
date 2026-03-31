@@ -232,16 +232,30 @@ class RuleBrain(Brain):
         dist = target.distance_ft
         logger.debug("rule_target_selected", target=target_id, distance_ft=dist)
 
-        # 1. Flee if critically wounded (scared NPCs flee earlier)
-        if hp_ratio < flee_threshold:
+        nearest_dist = min(e.distance_ft for e in nearby)
+        has_actions = (budget.actions if budget else 0) > 0
+
+        # 0. Already disengaged — move away from nearest enemy (retreat phase 2)
+        if creature.is_disengaging and (budget.movement_remaining if budget else 0) > 0:
+            nearest_hostile = min((e for e in nearby if e.is_hostile), key=lambda e: e.distance_ft, default=None)
+            if nearest_hostile:
+                logger.info("rule_retreat", hp_pct=round(hp_ratio * 100))
+                return self._move_away_from(nearest_hostile, awareness)
+
+        # 1. Flee if critically wounded and no enemies in melee reach
+        if hp_ratio < flee_threshold and nearest_dist > primary_reach:
             logger.info("rule_flee", hp_pct=round(hp_ratio * 100))
             return Action(name=ActionType.FLEE)
 
-        # 2. Dodge if badly hurt and enemy in melee reach
-        nearest_dist = min(e.distance_ft for e in nearby)
-        if hp_ratio < dodge_threshold and nearest_dist <= 5:
-            logger.info("rule_dodge", hp_pct=round(hp_ratio * 100))
-            return Action(name=ActionType.DODGE)
+        # 2. Disengage if wounded and enemies in melee reach (covers both flee and dodge range)
+        if hp_ratio < dodge_threshold and nearest_dist <= primary_reach and has_actions:
+            logger.info("rule_disengage", hp_pct=round(hp_ratio * 100))
+            return Action(name=ActionType.DISENGAGE)
+
+        # 3. Flee if critically wounded (fallback — no action budget for Disengage)
+        if hp_ratio < flee_threshold:
+            logger.info("rule_flee", hp_pct=round(hp_ratio * 100))
+            return Action(name=ActionType.FLEE)
 
         # 3. Ranged attacker: shoot if target in range, move closer if not
         if is_ranged and dist <= primary_reach:
@@ -277,6 +291,17 @@ class RuleBrain(Brain):
             budget_move=movement_left,
         )
         return END_TURN
+
+    @staticmethod
+    def _move_away_from(target: CombatEntity, awareness: CombatAwareness, ft: int = 5) -> Action:
+        """Calculate a concrete move action away from a combat target."""
+        from dnd_simulator.core.combat import Position
+        from dnd_simulator.rules.movement import calculate_away_direction
+
+        origin = Position(awareness.self_x, awareness.self_y)
+        dest = Position(target.x, target.y)
+        direction = calculate_away_direction(origin, dest)
+        return Action(name=ActionType.MOVE, params={"direction": direction, "ft": ft})
 
     @staticmethod
     def _dash_params(creature: Creature) -> dict[str, object]:

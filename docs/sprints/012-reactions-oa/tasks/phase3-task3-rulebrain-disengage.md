@@ -50,4 +50,11 @@ Also verify: RuleBrain `choose_reaction` (always OA) is still correct behavior. 
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Restructured `_choose_combat_action` flee/dodge priority: now checks flee-without-enemies first, then disengage (covers both flee and dodge HP ranges when enemies in reach), then flee fallback (no action budget).
+- Added `_move_away_from` static method using `calculate_away_direction` for retreat phase 2.
+- Step 0 (top of combat logic): if `creature.is_disengaging` and has movement → move away from nearest hostile.
+- 3 old tests updated (intentional contract change): `test_flee_when_critically_wounded` → `test_disengage_when_critically_wounded_enemy_in_reach`, `test_dodge_when_badly_hurt_and_in_reach` → `test_disengage_when_badly_hurt_and_in_reach`, `test_scared_npc_flees_earlier` → `test_scared_npc_disengages_when_enemy_in_reach`. All reflect the new tactical behavior: NPCs disengage instead of fleeing into OA or dodging in place.
