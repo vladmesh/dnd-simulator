@@ -35,64 +35,6 @@ _TRANSLATABLE_STRINGS = [
 # fmt: on
 
 
-def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    """Describe an event from the observer's point of view.
-
-    Uses observer.perceive() to describe participants, so the same event
-    looks different to different observers.
-    """
-    if event.event_type == EventType.ENTITY_SAY:
-        return _perceive_say(event, observer, get_entity)
-    if event.event_type == EventType.ENTITY_ATTACK:
-        return _perceive_attack(event, observer, get_entity)
-    if event.event_type == EventType.ENTITY_DIED:
-        return _perceive_death(event, observer, get_entity)
-    if event.event_type == EventType.ENTITY_DISENGAGE:
-        return _perceive_disengage(event, observer, get_entity)
-    if event.event_type == EventType.OPPORTUNITY_ATTACK:
-        return _perceive_opportunity_attack(event, observer, get_entity)
-    if event.event_type == EventType.ENTITY_DODGE:
-        return _perceive_dodge(event, observer, get_entity)
-    if event.event_type == EventType.ENTITY_FLEE:
-        return _perceive_flee(event, observer, get_entity)
-    if event.event_type == EventType.ENTITY_MOVE:
-        return _perceive_move(event, observer, get_entity)
-    if event.event_type == EventType.ENTITY_DASH:
-        return _perceive_dash(event, observer, get_entity)
-    if event.event_type == EventType.ENTITY_USE_ITEM:
-        return _perceive_use_item(event, observer, get_entity)
-    if event.event_type == EventType.ENTITY_BLESS:
-        return _perceive_bless(event, observer, get_entity)
-    if event.event_type == EventType.ENTITY_EQUIP:
-        return _perceive_equip(event, observer, get_entity)
-    if event.event_type == EventType.ENTITY_UNEQUIP:
-        return _perceive_unequip(event, observer, get_entity)
-    if event.event_type == EventType.ENTITY_BUY:
-        return _perceive_buy(event, observer, get_entity)
-    if event.event_type == EventType.ENTITY_SELL:
-        return _perceive_sell(event, observer, get_entity)
-    if event.event_type == EventType.TURN_SKIPPED:
-        return _perceive_turn_skipped(event, observer, get_entity)
-    if event.event_type == EventType.ROUND_START:
-        round_number = event.data.get("round_number", "?")
-        return _("— Round {n} —").format(n=round_number)
-    if event.event_type == EventType.COMBAT_STARTED:
-        return _perceive_combat_started(event, observer, get_entity)
-    if event.event_type == EventType.COMBAT_ENDED:
-        return _("Combat ended.")
-    if event.event_type == EventType.SQUAD_MOVE:
-        return _perceive_squad_move(event, observer)
-    if event.event_type == EventType.SQUAD_COMBAT:
-        return _perceive_squad_combat(event)
-    if event.event_type == EventType.SQUAD_MATERIALIZED:
-        return _perceive_squad_materialized(event)
-    if event.event_type == EventType.SQUAD_DEMATERIALIZED:
-        return _perceive_squad_dematerialized(event)
-    if event.event_type == EventType.CUSTOM and event.data.get("inspect_target"):
-        return _perceive_inspect(event, observer, get_entity)
-    return _("Something happened ({type})").format(type=event.event_type.value)
-
-
 def _describe(observer: Character, entity_id: str, get_entity: GetEntityFn) -> str:
     """Get observer's perception of an entity by ID."""
     entity = get_entity(entity_id)
@@ -103,11 +45,15 @@ def _describe(observer: Character, entity_id: str, get_entity: GetEntityFn) -> s
     return observer.perceive(entity)
 
 
+# ---------------------------------------------------------------------------
+# Per-event-type handlers
+# ---------------------------------------------------------------------------
+
+
 def _perceive_say(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    speaker_id = event.data.get("entity_id", "")
-    text = event.data.get("text", "")
-    assert isinstance(speaker_id, str)
-    assert isinstance(text, str)
+    d = event.data
+    speaker_id = str(d["entity_id"])
+    text = str(d["text"])
 
     speaker = _describe(observer, speaker_id, get_entity)
     if speaker_id == observer.id:
@@ -167,9 +113,9 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
     attacker_id = str(d["attacker_id"])
     target_id = str(d["target_id"])
     hit = d["hit"]
-    weapon = d.get("weapon", "")
-    critical = d.get("critical", False)
-    is_oa = bool(d.get("is_opportunity_attack"))
+    weapon = d.get("weapon", "")  # optional — empty for unarmed
+    critical = d.get("critical", False)  # optional — absent on miss
+    is_oa = bool(d.get("is_opportunity_attack"))  # optional — absent on normal attacks
     atk_roll = d["attack_roll"]
     assert isinstance(atk_roll, dict)
 
@@ -205,7 +151,7 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
 
 
 def _perceive_disengage(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    entity_id = str(event.data.get("entity_id", ""))
+    entity_id = str(event.data["entity_id"])
     if entity_id == observer.id:
         return _("You disengage")
     desc = _describe(observer, entity_id, get_entity)
@@ -218,8 +164,8 @@ def _perceive_opportunity_attack(event: Event, observer: Character, get_entity: 
     The detailed attack info is in the preceding ENTITY_ATTACK event
     (annotated with '(opportunity attack)'), so this is kept minimal.
     """
-    attacker_id = str(event.data.get("attacker_id", ""))
-    target_id = str(event.data.get("target_id", ""))
+    attacker_id = str(event.data["attacker_id"])
+    target_id = str(event.data["target_id"])
     attacker = _describe(observer, attacker_id, get_entity)
     target = _describe(observer, target_id, get_entity)
     if attacker_id == observer.id:
@@ -230,9 +176,7 @@ def _perceive_opportunity_attack(event: Event, observer: Character, get_entity: 
 
 
 def _perceive_death(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    entity_id = event.data.get("entity_id", "")
-    assert isinstance(entity_id, str)
-
+    entity_id = str(event.data["entity_id"])
     if entity_id == observer.id:
         return _("You die")
     desc = _describe(observer, entity_id, get_entity)
@@ -240,9 +184,8 @@ def _perceive_death(event: Event, observer: Character, get_entity: GetEntityFn) 
 
 
 def _perceive_dodge(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    entity_id = event.data.get("entity_id", "")
-    description = event.data.get("description", "")
-    assert isinstance(entity_id, str)
+    entity_id = str(event.data["entity_id"])
+    description = event.data.get("description", "")  # optional flavor text
 
     desc_suffix = f" \u00ab{description}\u00bb" if description else ""
     if entity_id == observer.id:
@@ -252,9 +195,8 @@ def _perceive_dodge(event: Event, observer: Character, get_entity: GetEntityFn) 
 
 
 def _perceive_flee(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    entity_id = event.data.get("entity_id", "")
-    description = event.data.get("description", "")
-    assert isinstance(entity_id, str)
+    entity_id = str(event.data["entity_id"])
+    description = event.data.get("description", "")  # optional flavor text
 
     desc_suffix = f" \u00ab{description}\u00bb" if description else ""
     if entity_id == observer.id:
@@ -266,14 +208,14 @@ def _perceive_flee(event: Event, observer: Character, get_entity: GetEntityFn) -
 def _perceive_move(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     from dnd_simulator.rules.movement import direction_label
 
-    entity_id = event.data.get("entity_id", "")
-    assert isinstance(entity_id, str)
-    description = event.data.get("description", "")
-    distance_ft = event.data.get("distance_ft", 0)
-    from_x = event.data.get("from_x", 0)
-    from_y = event.data.get("from_y", 0)
-    to_x = event.data.get("to_x", 0)
-    to_y = event.data.get("to_y", 0)
+    d = event.data
+    entity_id = str(d["entity_id"])
+    description = d.get("description", "")  # optional flavor text
+    distance_ft = d["distance_ft"]
+    from_x = d["from_x"]
+    from_y = d["from_y"]
+    to_x = d["to_x"]
+    to_y = d["to_y"]
     assert isinstance(from_x, int) and isinstance(from_y, int)
     assert isinstance(to_x, int) and isinstance(to_y, int)
 
@@ -294,8 +236,8 @@ def _perceive_move(event: Event, observer: Character, get_entity: GetEntityFn) -
 
 
 def _perceive_dash(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    entity_id = str(event.data.get("entity_id", ""))
-    extra_ft = event.data.get("extra_movement_ft", 0)
+    entity_id = str(event.data["entity_id"])
+    extra_ft = event.data["extra_movement_ft"]
     if entity_id == observer.id:
         return _("You dash (+{ft} ft movement)").format(ft=extra_ft)
     desc = _describe(observer, entity_id, get_entity)
@@ -303,9 +245,10 @@ def _perceive_dash(event: Event, observer: Character, get_entity: GetEntityFn) -
 
 
 def _perceive_use_item(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    entity_id = str(event.data.get("entity_id", ""))
-    item_name = _(str(event.data.get("item_name", "an item")))
-    healed = event.data.get("healed", 0)
+    d = event.data
+    entity_id = str(d["entity_id"])
+    item_name = _(str(d["item_name"]))
+    healed = d["healed"]
 
     if entity_id == observer.id:
         return _("You use {item} (healed {hp} HP)").format(item=item_name, hp=healed)
@@ -316,7 +259,7 @@ def _perceive_use_item(event: Event, observer: Character, get_entity: GetEntityF
 def _perceive_inspect(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     from dnd_simulator.core.character import Creature
 
-    target_id = str(event.data.get("inspect_target", ""))
+    target_id = str(event.data["inspect_target"])
     target = get_entity(target_id)
     if target is None:
         return _("You look around but see no one matching '{id}'.").format(id=target_id)
@@ -333,9 +276,10 @@ def _perceive_inspect(event: Event, observer: Character, get_entity: GetEntityFn
 
 
 def _perceive_turn_skipped(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    entity_id = event.data.get("entity_id", "")
-    conditions = event.data.get("conditions", [])
-    assert isinstance(entity_id, str)
+    d = event.data
+    entity_id = str(d["entity_id"])
+    conditions = d["conditions"]
+    assert isinstance(conditions, list)
 
     cond_str = ", ".join(str(c) for c in conditions) if conditions else "?"
     if entity_id == observer.id:
@@ -345,8 +289,9 @@ def _perceive_turn_skipped(event: Event, observer: Character, get_entity: GetEnt
 
 
 def _perceive_bless(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    entity_id = str(event.data.get("entity_id", ""))
-    duration = event.data.get("duration_rounds", "?")
+    d = event.data
+    entity_id = str(d["entity_id"])
+    duration = d["duration_rounds"]
     if entity_id == observer.id:
         return _("You invoke a blessing (+d4 to attack rolls for {n} rounds)").format(n=duration)
     desc = _describe(observer, entity_id, get_entity)
@@ -354,8 +299,9 @@ def _perceive_bless(event: Event, observer: Character, get_entity: GetEntityFn) 
 
 
 def _perceive_equip(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    entity_id = str(event.data.get("entity_id", ""))
-    weapon_name = _(str(event.data.get("weapon_name", "a weapon")))
+    d = event.data
+    entity_id = str(d["entity_id"])
+    weapon_name = _(str(d["weapon_name"]))
     if entity_id == observer.id:
         return _("You equip {weapon}").format(weapon=weapon_name)
     desc = _describe(observer, entity_id, get_entity)
@@ -363,8 +309,9 @@ def _perceive_equip(event: Event, observer: Character, get_entity: GetEntityFn) 
 
 
 def _perceive_unequip(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    entity_id = str(event.data.get("entity_id", ""))
-    weapon_name = _(str(event.data.get("weapon_name", "a weapon")))
+    d = event.data
+    entity_id = str(d["entity_id"])
+    weapon_name = _(str(d["weapon_name"]))
     if entity_id == observer.id:
         return _("You put away {weapon}").format(weapon=weapon_name)
     desc = _describe(observer, entity_id, get_entity)
@@ -372,10 +319,11 @@ def _perceive_unequip(event: Event, observer: Character, get_entity: GetEntityFn
 
 
 def _perceive_buy(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    buyer_id = str(event.data.get("buyer_id", ""))
-    merchant_id = str(event.data.get("merchant_id", ""))
-    item_name = _(str(event.data.get("item_name", "an item")))
-    price = event.data.get("price", 0)
+    d = event.data
+    buyer_id = str(d["buyer_id"])
+    merchant_id = str(d["merchant_id"])
+    item_name = _(str(d["item_name"]))
+    price = d["price"]
 
     merchant = _describe(observer, merchant_id, get_entity)
     if buyer_id == observer.id:
@@ -389,10 +337,11 @@ def _perceive_buy(event: Event, observer: Character, get_entity: GetEntityFn) ->
 
 
 def _perceive_sell(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    seller_id = str(event.data.get("seller_id", ""))
-    merchant_id = str(event.data.get("merchant_id", ""))
-    item_name = _(str(event.data.get("item_name", "an item")))
-    price = event.data.get("price", 0)
+    d = event.data
+    seller_id = str(d["seller_id"])
+    merchant_id = str(d["merchant_id"])
+    item_name = _(str(d["item_name"]))
+    price = d["price"]
 
     merchant = _describe(observer, merchant_id, get_entity)
     if seller_id == observer.id:
@@ -406,18 +355,29 @@ def _perceive_sell(event: Event, observer: Character, get_entity: GetEntityFn) -
 
 
 def _perceive_combat_started(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    names = event.data.get("turn_order_names", [])
+    names = event.data["turn_order_names"]
+    assert isinstance(names, list)
     order_str = ", ".join(str(n) for n in names) if names else "?"
     return _("Combat started! Initiative order: {order}").format(order=order_str)
+
+
+def _perceive_round_start(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    round_number = event.data["round_number"]
+    return _("— Round {n} —").format(n=round_number)
+
+
+def _perceive_combat_ended(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    return _("Combat ended.")
 
 
 # -- Squad events --
 
 
-def _perceive_squad_move(event: Event, observer: Character) -> str:
-    name = str(event.data.get("squad_name", _("A group")))
-    to_loc = event.data.get("to", "")
-    from_loc = event.data.get("from", "")
+def _perceive_squad_move(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    d = event.data
+    name = str(d["squad_name"])
+    to_loc = d["to"]
+    from_loc = d["from"]
     at_dest = observer.location_id == to_loc
     at_origin = observer.location_id == from_loc
     if at_dest and at_origin:
@@ -429,21 +389,73 @@ def _perceive_squad_move(event: Event, observer: Character) -> str:
     return _("{name} is on the move").format(name=name)
 
 
-def _perceive_squad_combat(event: Event) -> str:
-    winner = str(event.data.get("winner_name", _("A group")))
-    loser = str(event.data.get("loser_name", _("another group")))
-    loser_strength = event.data.get("loser_strength", 1)
+def _perceive_squad_combat(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    d = event.data
+    winner = str(d["winner_name"])
+    loser = str(d["loser_name"])
+    loser_strength = d["loser_strength"]
     if loser_strength == 0:
         return _("{winner} destroyed {loser}").format(winner=winner, loser=loser)
     return _("{winner} defeated {loser}").format(winner=winner, loser=loser)
 
 
-def _perceive_squad_materialized(event: Event) -> str:
-    name = str(event.data.get("squad_name", _("A group")))
-    count = event.data.get("creature_count", 0)
+def _perceive_squad_materialized(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    d = event.data
+    name = str(d["squad_name"])
+    count = d["creature_count"]
     return _("{name} appears — {count} creatures materialize").format(name=name, count=count)
 
 
-def _perceive_squad_dematerialized(event: Event) -> str:
-    name = str(event.data.get("squad_name", _("A group")))
+def _perceive_squad_dematerialized(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    name = str(event.data["squad_name"])
     return _("{name} moves on, disappearing into the distance").format(name=name)
+
+
+# ---------------------------------------------------------------------------
+# Dispatch table: EventType → handler
+# ---------------------------------------------------------------------------
+
+_PerceiveHandler = Callable[[Event, Character, GetEntityFn], str]
+
+_DISPATCH: dict[EventType, _PerceiveHandler] = {
+    EventType.ENTITY_SAY: _perceive_say,
+    EventType.ENTITY_ATTACK: _perceive_attack,
+    EventType.ENTITY_DIED: _perceive_death,
+    EventType.ENTITY_DISENGAGE: _perceive_disengage,
+    EventType.OPPORTUNITY_ATTACK: _perceive_opportunity_attack,
+    EventType.ENTITY_DODGE: _perceive_dodge,
+    EventType.ENTITY_FLEE: _perceive_flee,
+    EventType.ENTITY_MOVE: _perceive_move,
+    EventType.ENTITY_DASH: _perceive_dash,
+    EventType.ENTITY_USE_ITEM: _perceive_use_item,
+    EventType.ENTITY_BLESS: _perceive_bless,
+    EventType.ENTITY_EQUIP: _perceive_equip,
+    EventType.ENTITY_UNEQUIP: _perceive_unequip,
+    EventType.ENTITY_BUY: _perceive_buy,
+    EventType.ENTITY_SELL: _perceive_sell,
+    EventType.TURN_SKIPPED: _perceive_turn_skipped,
+    EventType.ROUND_START: _perceive_round_start,
+    EventType.COMBAT_STARTED: _perceive_combat_started,
+    EventType.COMBAT_ENDED: _perceive_combat_ended,
+    EventType.SQUAD_MOVE: _perceive_squad_move,
+    EventType.SQUAD_COMBAT: _perceive_squad_combat,
+    EventType.SQUAD_MATERIALIZED: _perceive_squad_materialized,
+    EventType.SQUAD_DEMATERIALIZED: _perceive_squad_dematerialized,
+}
+
+
+def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    """Describe an event from the observer's point of view.
+
+    Uses observer.perceive() to describe participants, so the same event
+    looks different to different observers.
+    """
+    # CUSTOM with inspect_target is a sub-type — check before dispatch
+    if event.event_type == EventType.CUSTOM and event.data.get("inspect_target"):
+        return _perceive_inspect(event, observer, get_entity)
+
+    handler = _DISPATCH.get(event.event_type)
+    if handler is not None:
+        return handler(event, observer, get_entity)
+
+    return _("Something happened ({type})").format(type=event.event_type.value)

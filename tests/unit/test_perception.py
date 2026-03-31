@@ -510,3 +510,76 @@ class TestCombatLogI18n:
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, equipper))
         assert "[T]Dagger" in result
+
+
+class TestPerceptionDispatchAndFailFast:
+    """Dispatch dict routing and fail-fast on missing event data."""
+
+    def test_dispatch_routes_to_correct_handler(self) -> None:
+        """Dispatch dict routes each EventType to the right handler function."""
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        actor = Character(id="rogue", name="Rogue", location_id="r1", race=Race.ELF)
+        # Verify a sample of event types route correctly
+        disengage = Event(
+            event_type=EventType.ENTITY_DISENGAGE,
+            source_layer="entities",
+            data={"entity_id": "rogue"},
+        )
+        result = perceive_event(disengage, observer, _get_entity_fn(observer, actor))
+        assert "disengage" in result.lower()
+
+    def test_unrecognized_event_type_fallback(self) -> None:
+        """Event types not in dispatch produce the fallback message."""
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        event = Event(
+            event_type=EventType.WEATHER_CHANGED,
+            source_layer="geography",
+            data={},
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer))
+        assert "Something happened" in result
+        assert "weather_changed" in result
+
+    def test_missing_required_data_raises_key_error(self) -> None:
+        """ENTITY_SAY without 'text' raises KeyError — fail-fast, no silent defaults."""
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        event = Event(
+            event_type=EventType.ENTITY_SAY,
+            source_layer="entities",
+            data={"entity_id": "guard"},  # missing "text"
+        )
+        with pytest.raises(KeyError, match="text"):
+            perceive_event(event, observer, _get_entity_fn(observer))
+
+    def test_missing_entity_id_raises_key_error(self) -> None:
+        """ENTITY_DIED without 'entity_id' raises KeyError."""
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        event = Event(
+            event_type=EventType.ENTITY_DIED,
+            source_layer="entities",
+            data={},  # missing "entity_id"
+        )
+        with pytest.raises(KeyError, match="entity_id"):
+            perceive_event(event, observer, _get_entity_fn(observer))
+
+    def test_missing_round_number_raises_key_error(self) -> None:
+        """ROUND_START without 'round_number' raises KeyError."""
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        event = Event(
+            event_type=EventType.ROUND_START,
+            source_layer="entities",
+            data={},  # missing "round_number"
+        )
+        with pytest.raises(KeyError, match="round_number"):
+            perceive_event(event, observer, _get_entity_fn(observer))
+
+    def test_missing_squad_name_raises_key_error(self) -> None:
+        """SQUAD_DEMATERIALIZED without 'squad_name' raises KeyError."""
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        event = Event(
+            event_type=EventType.SQUAD_DEMATERIALIZED,
+            source_layer="ecology",
+            data={},  # missing "squad_name"
+        )
+        with pytest.raises(KeyError, match="squad_name"):
+            perceive_event(event, observer, _get_entity_fn(observer))

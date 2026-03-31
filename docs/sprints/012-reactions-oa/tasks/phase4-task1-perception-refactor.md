@@ -39,4 +39,13 @@ Existing tests in `tests/unit/test_perception.py` cover all event types. Before 
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Replaced 24-branch if/elif chain with `_DISPATCH: dict[EventType, _PerceiveHandler]` lookup table.
+- `CUSTOM` with `inspect_target` handled as special case before dispatch (sub-type check on data).
+- `ROUND_START` and `COMBAT_ENDED` extracted into named functions to match dispatch signature.
+- Converted ~30 `.get("key", default)` to `data["key"]` for required fields. Kept `.get()` only for genuinely optional fields: `weapon` (empty for unarmed), `critical` (absent on miss), `is_opportunity_attack` (absent on normal attacks), `description` (optional flavor text on dodge/flee/move).
+- Squad event handlers unified to 3-arg signature `(event, observer, get_entity)` for dispatch compatibility (squad handlers previously had 2-arg signatures).
+- File went from 450 to 415 lines — modest decrease because the dispatch dict itself adds lines, but the structure is much cleaner.
