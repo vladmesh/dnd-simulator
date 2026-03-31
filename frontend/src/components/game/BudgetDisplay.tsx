@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next"
-import type { TurnBudget } from "@/types/game"
-import { Swords, Footprints, Zap, Shield } from "lucide-react"
+import { useGameStore } from "@/store/gameStore"
+import type { CombatAwareness, TurnBudget } from "@/types/game"
+import { Swords, Footprints, Zap, Shield, ShieldOff } from "lucide-react"
 
 interface BudgetDisplayProps {
   budget: TurnBudget
@@ -25,6 +26,8 @@ function Resource({
 
 export function BudgetDisplay({ budget }: BudgetDisplayProps) {
   const { t } = useTranslation(["game"])
+  const awareness = useGameStore((s) => s.awareness)
+  const isDisengaging = awareness && "self_hp" in awareness && (awareness as CombatAwareness).is_disengaging
 
   return (
     <div className="flex gap-3 text-xs">
@@ -52,6 +55,16 @@ export function BudgetDisplay({ budget }: BudgetDisplayProps) {
 
         depleted={budget.reaction <= 0}
       />
+      {isDisengaging && (
+        <div
+          data-testid="disengage-indicator"
+          className="flex items-center gap-1 text-green-400"
+          title={t("game:disengaging_tooltip", { defaultValue: "Disengaged — movement won't provoke opportunity attacks" })}
+        >
+          <ShieldOff className="size-3" />
+          <span>{t("game:disengage", { defaultValue: "Disengaged" })}</span>
+        </div>
+      )}
     </div>
   )
 }

@@ -52,4 +52,17 @@ Wire the frontend to handle `reaction_prompt` WS messages and let the player res
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All changes follow existing patterns, no deviations from plan:
+- Added `ReactionPrompt`, `ReactionTriggerInfo`, `ReactionOptionInfo` types to `types/game.ts`
+- Added `ReactionPromptMessage` (server→client) and `ReactionMessage` (client→server) to `types/ws.ts`
+- Extended `TurnSlice` with `reactionPrompt` state, `onReactionPrompt` handler, `submitReaction` action
+- Added `reaction_prompt` case to WS message router in `connectionSlice.ts`
+- Created `ReactionPrompt.tsx` component: compact banner with option buttons + skip, renders above ActionBar
+- Extended `BudgetDisplay.tsx` with disengage indicator using `is_disengaging` from `CombatAwareness`
+- Backend: added `is_disengaging: bool` to `CombatAwareness` dataclass and wired it in `build_combat_awareness`
+- Added `is_disengaging` to `CombatAwareness` TypeScript interface
+- 11 new tests (4 store, 4 component ReactionPrompt, 3 BudgetDisplay disengage)

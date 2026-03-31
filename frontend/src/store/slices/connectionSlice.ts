@@ -57,6 +57,9 @@ export const createConnectionSlice: StateCreator<
         case "game_over":
           state.onGameOver()
           break
+        case "reaction_prompt":
+          state.onReactionPrompt(msg)
+          break
       }
     }, 0)
   })
@@ -82,6 +85,7 @@ export const createConnectionSlice: StateCreator<
         waitingForAction: false,
         gameOver: false,
         lastError: null,
+        reactionPrompt: null,
       })
       wsClient.connect(sessionId, playerId)
     },

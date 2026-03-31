@@ -215,6 +215,7 @@ class AwarenessBuilder:
             battle_map_height=battle_map_height,
             battle_map_walls=battle_map_walls,
             self_conditions=frozenset(creature.conditions),
+            is_disengaging=creature.is_disengaging,
         )
 
     def build_nearby_entities(

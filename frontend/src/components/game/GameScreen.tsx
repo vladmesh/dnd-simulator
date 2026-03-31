@@ -13,6 +13,7 @@ import { BattleMap } from "./BattleMap"
 import { CombatPanel } from "./CombatPanel"
 import { NpcInspectModal } from "./NpcInspectModal"
 import { LogOverlay } from "./LogOverlay"
+import { ReactionPrompt } from "./ReactionPrompt"
 
 export function GameScreen() {
   const { sessionId } = useParams<{ sessionId: string }>()
@@ -117,6 +118,9 @@ export function GameScreen() {
         onClose={closeInspect}
         isCombat={true}
       />
+
+      {/* Reaction prompt — shown above action bar when server requests a reaction */}
+      <ReactionPrompt />
 
       {/* Action bar */}
       <ActionBar />

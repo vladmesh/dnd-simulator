@@ -186,9 +186,29 @@ export interface CombatAwareness {
   available_actions?: ActionInfo[]
   available_items?: ItemInfo[]
   reachable?: number[][]
+  is_disengaging?: boolean
 }
 
 export type Awareness = PeacefulAwareness | CombatAwareness
+
+// --- Reaction Prompt ---
+
+export interface ReactionTriggerInfo {
+  trigger_type: string
+  source_creature_id: string
+  data: Record<string, unknown>
+}
+
+export interface ReactionOptionInfo {
+  action_type: string
+  description: string
+  params: Record<string, unknown>
+}
+
+export interface ReactionPrompt {
+  trigger: ReactionTriggerInfo
+  options: ReactionOptionInfo[]
+}
 
 export type GameMode = "peaceful" | "combat"
 

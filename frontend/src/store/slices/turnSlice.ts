@@ -4,14 +4,17 @@ import type {
   GameMode,
   LocationData,
   PeacefulAwareness,
+  ReactionPrompt,
   TurnBudget,
 } from "@/types/game"
 import type {
   ActionResultMessage,
   ErrorMessage,
+  ReactionPromptMessage,
   RoundResultMessage,
   TurnMessage,
 } from "@/types/ws"
+import { wsClient } from "@/transport/wsClient"
 import type { GameStore } from "../gameStore"
 
 export interface GameTime {
@@ -31,11 +34,14 @@ export interface TurnSlice {
   waitingForAction: boolean
   gameOver: boolean
   lastError: string | null
+  reactionPrompt: ReactionPrompt | null
   onTurn: (msg: TurnMessage) => void
   onActionResult: (msg: ActionResultMessage) => void
   onRoundResult: (msg: RoundResultMessage) => void
   onError: (msg: ErrorMessage) => void
   onGameOver: () => void
+  onReactionPrompt: (msg: ReactionPromptMessage) => void
+  submitReaction: (name: string, params?: Record<string, unknown>) => void
   setWaitingForAction: (waiting: boolean) => void
 }
 
@@ -54,6 +60,7 @@ export const createTurnSlice: StateCreator<
   waitingForAction: false,
   gameOver: false,
   lastError: null,
+  reactionPrompt: null,
 
   onTurn: (msg) => {
     get().updatePlayer(msg.player)
@@ -121,6 +128,24 @@ export const createTurnSlice: StateCreator<
 
   onGameOver: () => {
     set({ gameOver: true, isMyTurn: false })
+  },
+
+  onReactionPrompt: (msg) => {
+    set({
+      reactionPrompt: {
+        trigger: msg.trigger,
+        options: msg.options,
+      },
+    })
+  },
+
+  submitReaction: (name, params) => {
+    const message: Record<string, unknown> = { type: "reaction", name }
+    if (params) {
+      message.params = params
+    }
+    wsClient.send(message as import("@/types/ws").ReactionMessage)
+    set({ reactionPrompt: null })
   },
 
   setWaitingForAction: (waiting) => {

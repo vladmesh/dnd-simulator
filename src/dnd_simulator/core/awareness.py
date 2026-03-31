@@ -160,6 +160,7 @@ class CombatAwareness:
     available_items: list[ItemInfo] = field(default_factory=list)
     equipped: list[EquippedInfo] = field(default_factory=list)
     reachable: frozenset[tuple[int, int]] = field(default_factory=frozenset)
+    is_disengaging: bool = False
 
 
 @dataclass(frozen=True)

@@ -4,6 +4,8 @@ import type {
   LocationData,
   PerceivedEvent,
   PlayerStatus,
+  ReactionOptionInfo,
+  ReactionTriggerInfo,
   TurnBudget,
 } from "./game"
 
@@ -50,12 +52,19 @@ export interface GameOverMessage {
   type: "game_over"
 }
 
+export interface ReactionPromptMessage {
+  type: "reaction_prompt"
+  trigger: ReactionTriggerInfo
+  options: ReactionOptionInfo[]
+}
+
 export type ServerMessage =
   | TurnMessage
   | ActionResultMessage
   | RoundResultMessage
   | ErrorMessage
   | GameOverMessage
+  | ReactionPromptMessage
 
 // --- Client → Server ---
 
@@ -65,4 +74,10 @@ export interface ActionMessage {
   params?: Record<string, unknown>
 }
 
-export type ClientMessage = ActionMessage
+export interface ReactionMessage {
+  type: "reaction"
+  name: string
+  params?: Record<string, unknown>
+}
+
+export type ClientMessage = ActionMessage | ReactionMessage
