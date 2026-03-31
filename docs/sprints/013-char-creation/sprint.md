@@ -27,7 +27,9 @@ Fighter и Rogue полностью прописаны (sprints 001, 011, 012), 
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [HP Formula + Hit Dice](tasks/phase1-task1-hp-formula.md)
+2. [Point Buy Validation](tasks/phase1-task2-point-buy.md)
+3. [Starting Equipment + Gold](tasks/phase1-task3-starting-equipment.md)
 
 ## Phase 2: Creation API + Frontend Form
 

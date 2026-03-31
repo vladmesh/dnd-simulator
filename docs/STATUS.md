@@ -7,9 +7,9 @@
 **Sprint:** 013-char-creation
 **Goal:** Character creation overhaul — point buy, derived HP/AC, starting equipment, Fighter/Rogue only
 **Started:** 2026-04-01
-**Phase:** Planning (COMPLETE) — 2026-04-01
+**Phase:** 1 — HP Formula + Starting Equipment Rules (tasks generated) — 2026-04-01
 
-Ready for Phase 1 task generation.
+Ready to start task 1.
 
 ### Phases
 
