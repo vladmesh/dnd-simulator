@@ -38,4 +38,11 @@ New file `src/dnd_simulator/rules/character_creation.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward implementation. `HIT_DICE` dict maps CharClass to die size (Fighter→10, Rogue→8).
+`calculate_max_hp` uses D&D 5e formula with min 1 HP per level and min 1 total at L1.
+The `die_avg` is `ceil(die/2) + 1` which gives d10→6, d8→5 matching PHB averages.
+No existing code touched — new module + new test file only.
