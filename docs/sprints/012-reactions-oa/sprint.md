@@ -42,7 +42,7 @@ Reaction infrastructure — фундамент для будущих реакц�
 2. [Reaction Infrastructure — Triggers + Brain.choose_reaction](tasks/phase1-task2-reaction-infrastructure.md)
 3. [OA Rules + Handler + Disengage Fix](tasks/phase1-task3-oa-rules-handler.md)
 
-## Phase 2: Movement Integration + Round Wiring
+## Phase 2: Movement Integration + Round Wiring ✓
 
 Wiring реакций в game loop. OA реально срабатывает при движении.
 
