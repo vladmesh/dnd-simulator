@@ -19,6 +19,7 @@ from dnd_simulator.core.awareness import (
     EquippedInfo,
     ItemInfo,
     MerchantInfo,
+    PeacefulAwareness,
     PerceivedEvent,
     describe_item,
 )
@@ -207,29 +208,21 @@ class Round:
                 return self.run_combat_turn(creature, time, query_fn, emit_fn)
             return self.run_peaceful_turn(creature, time, query_fn, emit_fn)
 
-    def run_combat_turn(
+    def _prepare_combat_turn(
         self,
         creature: Creature,
-        time: GameDateTime,
-        query_fn: QueryFn,
         emit_fn: EmitFn,
-    ) -> list[Action]:
-        """Run one creature's combat turn as a multi-action loop with budget.
+    ) -> ActionContext | None:
+        """Set up a creature's combat turn: tick conditions, check incapacitation, create budget.
 
-        Returns the list of actions taken (excluding end_turn).
+        Returns an ActionContext if the creature can act, or None if the turn is skipped.
         """
-        if creature.brain is None:
-            return []
-
-        # Reset per-turn combat state (sneak attack availability, etc.)
         self._entities.reset_combat_turn_state(creature.id)
 
-        # Tick timed conditions at the start of each turn
         expired = tick_conditions(creature.conditions)
         if expired:
             logger.info("conditions_expired", conditions=[c.value for c in expired])
 
-        # Incapacitated creatures (stunned, paralyzed, etc.) skip their turn entirely
         if is_incapacitated(creature.conditions):
             logger.info("turn_skipped_incapacitated")
             reasons = sorted(c.value for c in creature.conditions if is_incapacitated({c: None}))
@@ -237,16 +230,11 @@ class Round:
                 Event(
                     event_type=EventType.TURN_SKIPPED,
                     source_layer="entities",
-                    data={
-                        "entity_id": creature.id,
-                        "reason": "incapacitated",
-                        "conditions": reasons,
-                    },
+                    data={"entity_id": creature.id, "reason": "incapacitated", "conditions": reasons},
                 )
             )
-            return []
+            return None
 
-        # Debug: log weapon and conditions at turn start
         weapon_info = "fists"
         if creature.equipped_weapon and creature.equipped_weapon.weapon_def:
             wd = creature.equipped_weapon.weapon_def
@@ -270,41 +258,76 @@ class Round:
             reaction=1,
         )
         creature.is_disengaging = False
-        actions: list[Action] = []
-        consecutive_failures = 0
 
         combat_state = self._entities.get_combat(creature.location_id)
-        on_leave_reach = self._make_on_leave_reach(combat_state, time, query_fn, emit_fn) if combat_state else None
-        ctx = ActionContext(
+        return ActionContext(
             is_combat=True,
             current_turn_entity_id=creature.id,
             turn_budget=creature.turn_budget,
             combat_state=combat_state,
             get_entity=self._entities.get_entity,
-            on_leave_reach=on_leave_reach,
         )
 
-        while True:
-            available = self._dispatcher.get_available_actions(creature, ctx)
-            reachable = self._compute_reachable(creature, combat_state, creature.turn_budget)
-            awareness = replace(
-                self._entities.build_awareness(creature, time, query_fn),
-                turn_budget=creature.turn_budget,
-                available_actions=available,
-                available_items=self._build_available_items(creature, available),
-                equipped=self._build_equipped(creature),
-                reachable=reachable,
-            )
-            events = self._entities.get_perceived_events(creature)
+    def _build_combat_awareness(
+        self,
+        creature: Creature,
+        ctx: ActionContext,
+        time: GameDateTime,
+        query_fn: QueryFn,
+    ) -> PeacefulAwareness | CombatAwareness:
+        """Build awareness for a combat turn iteration."""
+        assert creature.turn_budget is not None
+        available = self._dispatcher.get_available_actions(creature, ctx)
+        reachable = self._compute_reachable(creature, ctx.combat_state, creature.turn_budget)
+        awareness = replace(
+            self._entities.build_awareness(creature, time, query_fn),
+            turn_budget=creature.turn_budget,
+            available_actions=available,
+            available_items=self._build_available_items(creature, available),
+            equipped=self._build_equipped(creature),
+            reachable=reachable,
+        )
 
-            if isinstance(awareness, CombatAwareness):
-                logger.debug(
-                    "combat_awareness",
-                    actions=[a.value for a in awareness.available_actions],
-                    weapon=awareness.self_weapon,
-                    conditions=[c.value for c in awareness.self_conditions],
-                    items=[{"id": i.id, "type": i.item_type, "name": i.name} for i in awareness.available_items],
-                )
+        if isinstance(awareness, CombatAwareness):
+            logger.debug(
+                "combat_awareness",
+                actions=[a.value for a in awareness.available_actions],
+                weapon=awareness.self_weapon,
+                conditions=[c.value for c in awareness.self_conditions],
+                items=[{"id": i.id, "type": i.item_type, "name": i.name} for i in awareness.available_items],
+            )
+        return awareness
+
+    def run_combat_turn(
+        self,
+        creature: Creature,
+        time: GameDateTime,
+        query_fn: QueryFn,
+        emit_fn: EmitFn,
+    ) -> list[Action]:
+        """Run one creature's combat turn as a multi-action loop with budget.
+
+        Returns the list of actions taken (excluding end_turn).
+        """
+        if creature.brain is None:
+            return []
+
+        ctx = self._prepare_combat_turn(creature, emit_fn)
+        if ctx is None:
+            return []
+
+        # Wire OA callback if in active combat
+        if ctx.combat_state is not None:
+            on_leave_reach = self._make_on_leave_reach(ctx.combat_state, time, query_fn, emit_fn)
+            ctx = replace(ctx, on_leave_reach=on_leave_reach)
+
+        assert creature.turn_budget is not None
+        actions: list[Action] = []
+        consecutive_failures = 0
+
+        while True:
+            awareness = self._build_combat_awareness(creature, ctx, time, query_fn)
+            events = self._entities.get_perceived_events(creature)
 
             action = creature.brain.choose_action(creature, awareness, events)
 
@@ -317,7 +340,6 @@ class Round:
 
                 action = resolve_abstract_move(action, creature, self._entities)
 
-            # Dispatcher handles: validation → budget check → execute → budget consume
             result = self._execute_action(creature, action, ctx, emit_fn)
 
             if result.success:
@@ -325,7 +347,6 @@ class Round:
             else:
                 consecutive_failures += 1
                 logger.info("action_failed", action=action.name.value, error=result.error)
-                # Notify client about failed action (so UI can show error)
                 if self._on_action:
                     self._on_action(creature, action, creature.turn_budget, result.error)
                 if consecutive_failures >= 3:
@@ -338,7 +359,6 @@ class Round:
             if self._on_action:
                 self._on_action(creature, action, creature.turn_budget, result.error)
 
-            # If budget exhausted, end turn automatically
             if creature.turn_budget.turn_over:
                 break
 
