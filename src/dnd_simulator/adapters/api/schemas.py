@@ -25,6 +25,7 @@ class CreatePlayerRequest(BaseModel):
     attacks: list[dict[str, object]] | None = None
     items: list[dict[str, object]] | None = None
     class_features: dict[str, object] | None = None
+    combat_position: list[int] | None = None
 
 
 class SpawnCreatureRequest(BaseModel):

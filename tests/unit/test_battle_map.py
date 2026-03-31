@@ -1,8 +1,10 @@
-"""Tests for BattleMap — placement, bounds clamping, random scatter, walls."""
+"""Tests for BattleMap — placement, bounds validation, random scatter, walls."""
 
 from __future__ import annotations
 
 import random
+
+import pytest
 
 from dnd_simulator.core.combat import BattleMap, Position, Wall
 
@@ -13,13 +15,10 @@ class TestBattleMap:
         bm.set_position("a", Position(10, 20))
         assert bm.get_position("a") == Position(10, 20)
 
-    def test_set_position_clamps_to_bounds(self) -> None:
+    def test_set_position_rejects_out_of_bounds(self) -> None:
         bm = BattleMap(width=40, height=30)
-        bm.set_position("a", Position(100, -10))
-        pos = bm.get_position("a")
-        assert pos is not None
-        assert 0 <= pos.x <= 40
-        assert 0 <= pos.y <= 30
+        with pytest.raises(ValueError, match="out of bounds"):
+            bm.set_position("a", Position(100, -10))
 
     def test_remove(self) -> None:
         bm = BattleMap(width=60, height=60)

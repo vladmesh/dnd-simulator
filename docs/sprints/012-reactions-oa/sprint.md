@@ -80,7 +80,7 @@ UI для реакций игрока и обновление контента.
 2. [Frontend — Reaction Prompt + Disengage Indicator](tasks/phase3-task2-frontend-reaction-ui.md)
 3. [RuleBrain Tactical Disengage](tasks/phase3-task3-rulebrain-disengage.md)
 
-## Phase 4: Audit Refactor
+## Phase 4: Audit Refactor ✓
 
 Устранение audit findings в коде, затронутом спринтом 012. Чистка перед закрытием.
 
@@ -103,7 +103,7 @@ UI для реакций игрока и обновление контента.
 
 ## Status
 
-**Current:** Phase 3 complete. Phase 4 (audit refactor) pending.
+**Current:** All phases complete. Ready for audit.
 
 ## Decisions
 

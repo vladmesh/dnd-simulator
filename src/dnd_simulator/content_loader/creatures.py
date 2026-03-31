@@ -167,6 +167,7 @@ def _to_npc(
         equipped_ring=equipped["equipped_ring"],
         class_features=parse_class_features(model.char_class, raw_data),
         resource_pools=build_class_resource_pools(model.char_class),
+        combat_position=tuple(model.combat_position) if model.combat_position else None,  # type: ignore[arg-type]
     )
 
 
@@ -255,6 +256,7 @@ def _to_player(
         equipped_ring=equipped["equipped_ring"],
         class_features=parse_class_features(model.char_class, raw_data),
         resource_pools=build_class_resource_pools(model.char_class),
+        combat_position=tuple(model.combat_position) if model.combat_position else None,  # type: ignore[arg-type]
     )
 
 

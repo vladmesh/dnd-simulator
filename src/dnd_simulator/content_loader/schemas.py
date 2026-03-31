@@ -328,6 +328,7 @@ class NpcContent(BaseModel):
     items: list[ItemContent] = []
     ability_scores: CoercedAbilityScores = AbilityScoresContent()
     class_features: dict[str, Any] = {}
+    combat_position: list[int] | None = None  # [x, y] fixed starting position on battle map
     memory: NpcMemoryContent | None = None
 
 
@@ -354,3 +355,4 @@ class PlayerContent(BaseModel):
     items: list[ItemContent] = []
     ability_scores: CoercedAbilityScores = AbilityScoresContent()
     class_features: dict[str, Any] = {}
+    combat_position: list[int] | None = None  # [x, y] fixed starting position on battle map

@@ -8,6 +8,7 @@ oa_guard_1:
   hp: 100
   ac: 10
   speed: 30
+  combat_position: [15, 30]
   ability_scores:
     str: 16
     dex: 10
@@ -37,6 +38,7 @@ oa_guard_2:
   hp: 100
   ac: 10
   speed: 30
+  combat_position: [25, 30]
   ability_scores:
     str: 16
     dex: 10

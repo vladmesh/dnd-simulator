@@ -48,23 +48,24 @@ def _enemy_pos(turn: dict[str, Any], enemy_id: str) -> tuple[int, int]:
 
 
 def _find_cell_away_from(
-    px: int, py: int, ex: int, ey: int, *, min_dist: int = 15, map_size: int = 25
+    px: int, py: int, ex: int, ey: int, *, min_dist: int = 15, map_size: int = 60
 ) -> tuple[int, int]:
     """Find a grid cell at least min_dist from enemy, reachable from player.
 
-    Searches cells in the map for one far enough from the enemy.
+    Searches cells within 20ft of the player (to stay within movement budget
+    even with D&D diagonal cost), preferring cells farthest from the enemy.
     """
     best: tuple[int, int] | None = None
     best_dist = 0
-    for x in range(0, map_size, 5):
-        for y in range(0, map_size, 5):
+    for x in range(5, map_size, 5):
+        for y in range(5, map_size, 5):
             d_from_enemy = _grid_distance(x, y, ex, ey)
             d_from_player = _grid_distance(x, y, px, py)
-            if d_from_enemy >= min_dist and d_from_player <= 30 and (best is None or d_from_enemy > best_dist):
+            if d_from_enemy >= min_dist and d_from_player <= 20 and (best is None or d_from_enemy > best_dist):
                 best = (x, y)
                 best_dist = d_from_enemy
     if best is None:
-        raise AssertionError(f"No cell found ≥{min_dist}ft from enemy ({ex},{ey}) within 30ft of player ({px},{py})")
+        raise AssertionError(f"No cell found ≥{min_dist}ft from enemy ({ex},{ey}) within 20ft of player ({px},{py})")
     return best
 
 
@@ -79,6 +80,7 @@ def _create_session(
     hp: int = 200,
     items: list[dict[str, Any]] | None = None,
     class_features: dict[str, Any] | None = None,
+    combat_position: list[int] | None = None,
 ) -> tuple[str, str]:
     """Create session + player. Returns (session_id, player_id)."""
     resp = requests.post(f"{api_url}/sessions", json={"world_name": WORLD, "lang": "en"}, timeout=10)
@@ -106,6 +108,8 @@ def _create_session(
         body["items"] = items
     if class_features:
         body["class_features"] = class_features
+    if combat_position:
+        body["combat_position"] = combat_position
 
     resp = requests.post(f"{player_api_url}/sessions/{sid}/character", json=body, timeout=10)
     resp.raise_for_status()
@@ -181,8 +185,8 @@ def _ensure_adjacent_to_enemy(
         # Find a cell within 5ft of enemy that's closest to player
         best_cell: tuple[int, int] | None = None
         best_player_dist = 999
-        for x in range(0, 25, 5):
-            for y in range(0, 25, 5):
+        for x in range(5, 60, 5):
+            for y in range(5, 60, 5):
                 if _grid_distance(x, y, ex, ey) <= 5:
                     pd = _grid_distance(x, y, px, py)
                     if pd < best_player_dist:
@@ -240,7 +244,7 @@ class TestOAFires:
 
     def test_oa_triggers_on_leaving_reach(self, api_url: str, player_api_url: str, ws_base_url: str) -> None:
         """Player within 5ft of enemy moves away — OA fires, player takes damage."""
-        sid, pid = _create_session(api_url, player_api_url, "fighter", items=[LONGSWORD])
+        sid, pid = _create_session(api_url, player_api_url, "fighter", items=[LONGSWORD], combat_position=[20, 30])
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
@@ -267,7 +271,7 @@ class TestOAFires:
                 )
 
                 oa_data = oa_events[0]["data"]
-                assert oa_data["attacker_id"] == "oa_guard_1"
+                assert oa_data["attacker_id"] in ("oa_guard_1", "oa_guard_2")
                 assert oa_data["target_id"] == pid
 
                 # If the OA hit, player should have taken damage
@@ -290,7 +294,7 @@ class TestDisengagePreventsOA:
 
     def test_disengage_then_move_no_oa(self, api_url: str, player_api_url: str, ws_base_url: str) -> None:
         """Player uses Disengage, then moves away — no OA fires."""
-        sid, pid = _create_session(api_url, player_api_url, "fighter", items=[LONGSWORD])
+        sid, pid = _create_session(api_url, player_api_url, "fighter", items=[LONGSWORD], combat_position=[20, 30])
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
@@ -334,7 +338,7 @@ class TestRogueCunningDisengage:
         self, api_url: str, player_api_url: str, ws_base_url: str
     ) -> None:
         """Rogue uses Disengage as bonus action, Attack as action, then moves. No OA."""
-        sid, pid = _create_session(api_url, player_api_url, "rogue", items=[RAPIER])
+        sid, pid = _create_session(api_url, player_api_url, "rogue", items=[RAPIER], combat_position=[20, 30])
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
@@ -385,7 +389,9 @@ class TestOAKillsMover:
 
     def test_oa_kills_1hp_mover(self, api_url: str, player_api_url: str, ws_base_url: str) -> None:
         """Player with 1 HP moves away from enemy. OA kills. Movement stops."""
-        sid, pid = _create_session(api_url, player_api_url, "fighter", hp=200, items=[LONGSWORD])
+        sid, pid = _create_session(
+            api_url, player_api_url, "fighter", hp=200, items=[LONGSWORD], combat_position=[20, 30]
+        )
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
@@ -445,49 +451,47 @@ class TestOAKillsMover:
 
 
 class TestTwoEnemiesOA:
-    """Player moves past two enemies — both make opportunity attacks."""
+    """Player between two enemies — both make opportunity attacks on one move."""
 
     def test_two_enemies_both_oa(self, api_url: str, player_api_url: str, ws_base_url: str) -> None:
-        """Trigger OA from guard_1 in one turn, then OA from guard_2 in a later turn."""
-        sid, pid = _create_session(api_url, player_api_url, "fighter", hp=200, items=[LONGSWORD])
+        """Player at (20,30), guard_1 at (15,30), guard_2 at (25,30). One move away triggers OA from both."""
+        sid, pid = _create_session(
+            api_url, player_api_url, "fighter", hp=200, items=[LONGSWORD], combat_position=[20, 30]
+        )
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
                 turn = _get_turn(sock)
                 turn = _ensure_combat(sock, turn, "oa_guard_1")
 
-                # --- OA from guard_1 ---
-                turn = _ensure_adjacent_to_enemy(sock, turn, "oa_guard_1")
+                # Verify both guards are adjacent (5ft)
                 px, py = _player_pos(turn)
-                ex, ey = _enemy_pos(turn, "oa_guard_1")
-                target = _find_cell_away_from(px, py, ex, ey)
+                g1x, g1y = _enemy_pos(turn, "oa_guard_1")
+                g2x, g2y = _enemy_pos(turn, "oa_guard_2")
+                assert _grid_distance(px, py, g1x, g1y) <= 5, (
+                    f"Guard_1 not adjacent: player=({px},{py}), guard_1=({g1x},{g1y})"
+                )
+                assert _grid_distance(px, py, g2x, g2y) <= 5, (
+                    f"Guard_2 not adjacent: player=({px},{py}), guard_2=({g2x},{g2y})"
+                )
+
+                # Move away from both guards — should trigger OA from each
+                target = _find_cell_away_from(px, py, g1x, g1y)
+                # Also verify target is far from guard_2
+                assert _grid_distance(target[0], target[1], g2x, g2y) >= 15, (
+                    f"Target {target} too close to guard_2 ({g2x},{g2y})"
+                )
 
                 ws_send_action(sock, "move_to", x=target[0], y=target[1])
-                events1, _turn2 = _collect_events_until_turn(sock)
-                oa_events1 = _find_events(events1, "opportunity_attack")
-                assert len(oa_events1) >= 1, f"Expected OA from guard_1, got: {[e.get('event_type') for e in events1]}"
+                events, _next_turn = _collect_events_until_turn(sock)
 
-                # End turn, wait for next player turn (guards take their turns)
-                ws_send_action(sock, "end_turn")
-                turn3 = _get_turn(sock)
+                oa_events = _find_events(events, "opportunity_attack")
+                assert len(oa_events) >= 2, (
+                    f"Expected OA from both guards, got {len(oa_events)}: {[e.get('event_type') for e in events]}"
+                )
 
-                # --- OA from guard_2 ---
-                # Re-read guard_2 position (may have moved during their turn)
-                turn3 = _ensure_adjacent_to_enemy(sock, turn3, "oa_guard_2")
-                px2, py2 = _player_pos(turn3)
-                e2x, e2y = _enemy_pos(turn3, "oa_guard_2")
-                target2 = _find_cell_away_from(px2, py2, e2x, e2y)
-
-                ws_send_action(sock, "move_to", x=target2[0], y=target2[1])
-                events2, _ = _collect_events_until_turn(sock)
-                oa_events2 = _find_events(events2, "opportunity_attack")
-                assert len(oa_events2) >= 1, f"Expected OA from guard_2, got: {[e.get('event_type') for e in events2]}"
-
-                # Verify different guards attacked
-                attacker1 = oa_events1[0]["data"]["attacker_id"]
-                attacker2 = oa_events2[0]["data"]["attacker_id"]
-                attackers = {attacker1, attacker2}
-                assert len(attackers) == 2, f"Expected OAs from 2 different guards, got: {attacker1}, {attacker2}"
+                attackers = {e["data"]["attacker_id"] for e in oa_events}
+                assert attackers == {"oa_guard_1", "oa_guard_2"}, f"Expected OAs from both guards, got: {attackers}"
             finally:
                 sock.close()
         finally:

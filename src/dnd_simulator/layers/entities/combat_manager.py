@@ -5,7 +5,7 @@ from __future__ import annotations
 import structlog
 
 from dnd_simulator.core.character import Attack, Creature, DamageType, Entity
-from dnd_simulator.core.combat import BattleMap, CombatState
+from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import ActionResult, Event, EventType, FactionRelation, Query, QueryFn, QueryType
 from dnd_simulator.core.modifiers import AttackModifiers, RollComponent
@@ -67,7 +67,15 @@ class CombatManager:
             battle_map = BattleMap(width=template.width, height=template.height, walls=list(template._inner_walls))
         else:
             battle_map = BattleMap(width=60, height=60)
-        battle_map.place_randomly([c.id for c in creatures])
+        # Place creatures with fixed combat_position first, then scatter the rest
+        fixed_ids: set[str] = set()
+        for c in creatures:
+            if c.combat_position is not None:
+                battle_map.set_position(c.id, Position(c.combat_position[0], c.combat_position[1]))
+                fixed_ids.add(c.id)
+        remaining = [c.id for c in creatures if c.id not in fixed_ids]
+        if remaining:
+            battle_map.place_randomly(remaining)
 
         combat = CombatState(
             location_id=location_id,

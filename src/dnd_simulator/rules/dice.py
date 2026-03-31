@@ -20,6 +20,11 @@ def set_global_seed(seed: int) -> None:
     _rng = random.Random(seed)
 
 
+def get_global_rng() -> random.Random:
+    """Return the module-level RNG (seeded via set_global_seed or unseeded default)."""
+    return _rng
+
+
 # Pattern: "2d6", "1d8+3", "2d6-1", "4" (constant)
 _DICE_RE = re.compile(r"^(?:(\d+)d(\d+))?\s*([+-]?\s*\d+)?$", re.IGNORECASE)
 

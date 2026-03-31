@@ -7,6 +7,6 @@ oa_arena:
   water_proximity: 0.0
   connections: []
   battle_map:
-    width: 25
-    height: 25
+    width: 60
+    height: 60
     walls: []

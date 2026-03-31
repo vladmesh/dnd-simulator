@@ -52,12 +52,12 @@ class BattleMap:
         self._inner_walls: list[Wall] = list(self.walls)
 
     def set_position(self, entity_id: str, pos: Position) -> None:
-        """Place or move an entity on the map, clamping to bounds."""
-        clamped = Position(
-            x=max(0, min(pos.x, self.width)),
-            y=max(0, min(pos.y, self.height)),
-        )
-        self.positions[entity_id] = clamped
+        """Place or move an entity on the map."""
+        if pos.x < 0 or pos.x > self.width or pos.y < 0 or pos.y > self.height:
+            raise ValueError(
+                f"Position ({pos.x}, {pos.y}) out of bounds for {entity_id} on {self.width}x{self.height} map"
+            )
+        self.positions[entity_id] = pos
 
     def remove(self, entity_id: str) -> None:
         """Remove an entity from the map."""
@@ -137,7 +137,7 @@ class BattleMap:
         all_cells = [Position(x, y) for x in range(5, self.width, 5) for y in range(5, self.height, 5)]
         r.shuffle(all_cells)
 
-        placed: list[Position] = []
+        placed: list[Position] = list(self.positions.values())
         for eid in entity_ids:
             best: Position | None = None
             # First pass: find a cell far enough from all placed entities

@@ -231,6 +231,7 @@ class Creature(Entity):
     resource_pools: list[ResourcePool] = field(default_factory=list)
     squad_id: str | None = None  # which squad this creature belongs to (if materialized)
     wake_at_seconds: int | None = None  # absolute game-time seconds; None = not waiting
+    combat_position: tuple[int, int] | None = None  # fixed starting position on battle map (x, y in feet)
     brain: Brain | None = field(default=None, repr=False)
 
     @property
