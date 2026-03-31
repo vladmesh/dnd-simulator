@@ -36,4 +36,10 @@ In `rules/character_creation.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Simple mapping of CharClass to item catalog ref IDs. Private `_STARTING_EQUIPMENT` dict, public
+`starting_equipment()` returns a copy to prevent mutation. All refs verified against
+`content/catalogs/items/` directory. `STARTING_GOLD = 100` as module-level constant.

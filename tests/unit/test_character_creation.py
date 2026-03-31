@@ -3,7 +3,13 @@
 import pytest
 
 from dnd_simulator.core.character import Ability, CharClass
-from dnd_simulator.rules.character_creation import HIT_DICE, calculate_max_hp, validate_point_buy
+from dnd_simulator.rules.character_creation import (
+    HIT_DICE,
+    STARTING_GOLD,
+    calculate_max_hp,
+    starting_equipment,
+    validate_point_buy,
+)
 
 
 class TestCalculateMaxHp:
@@ -167,3 +173,39 @@ class TestValidatePointBuy:
         }
         with pytest.raises(ValueError, match=r"28.*exceeds.*27"):
             validate_point_buy(scores)
+
+
+class TestStartingEquipment:
+    """Starting equipment per class — item catalog refs."""
+
+    def test_fighter_equipment(self) -> None:
+        equip = starting_equipment(CharClass.FIGHTER)
+        assert set(equip) == {"chain_mail", "longsword", "shield"}
+
+    def test_rogue_equipment(self) -> None:
+        equip = starting_equipment(CharClass.ROGUE)
+        assert set(equip) == {"leather", "rapier", "shortbow", "dagger"}
+
+    def test_fighter_no_rogue_items(self) -> None:
+        equip = starting_equipment(CharClass.FIGHTER)
+        assert "dagger" not in equip
+        assert "shortbow" not in equip
+
+    def test_rogue_no_fighter_items(self) -> None:
+        equip = starting_equipment(CharClass.ROGUE)
+        assert "chain_mail" not in equip
+        assert "shield" not in equip
+
+    def test_unknown_class_raises(self) -> None:
+        with pytest.raises(RuntimeError, match="No starting equipment"):
+            starting_equipment(CharClass.WIZARD)
+
+    def test_returns_copy(self) -> None:
+        a = starting_equipment(CharClass.FIGHTER)
+        b = starting_equipment(CharClass.FIGHTER)
+        assert a is not b
+
+
+class TestStartingGold:
+    def test_starting_gold_is_100(self) -> None:
+        assert STARTING_GOLD == 100

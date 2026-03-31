@@ -74,3 +74,20 @@ def validate_point_buy(scores: dict[Ability, int]) -> None:
     total_cost = sum(POINT_BUY_COSTS[score] for score in scores.values())
     if total_cost > POINT_BUY_BUDGET:
         raise ValueError(f"Point buy cost {total_cost} exceeds budget of {POINT_BUY_BUDGET}")
+
+
+STARTING_GOLD = 100
+
+# Starting equipment per class — item catalog ref IDs.
+_STARTING_EQUIPMENT: dict[CharClass, list[str]] = {
+    CharClass.FIGHTER: ["chain_mail", "longsword", "shield"],
+    CharClass.ROGUE: ["leather", "rapier", "shortbow", "dagger"],
+}
+
+
+def starting_equipment(char_class: CharClass) -> list[str]:
+    """Return starting equipment item refs for a class. Returns a copy."""
+    items = _STARTING_EQUIPMENT.get(char_class)
+    if items is None:
+        raise RuntimeError(f"No starting equipment defined for {char_class.value}")
+    return list(items)
