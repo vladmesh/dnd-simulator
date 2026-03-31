@@ -9,15 +9,12 @@ export interface CreatePlayerRequest {
   name?: string
   race?: string
   char_class?: string
-  level?: number
   alignment?: string
   appearance?: string
-  hp?: number
-  ac?: number
-  gold?: number
-  start_region?: string
-  ability_scores?: Record<string, number> | null
-  attacks?: Array<Record<string, unknown>> | null
+  start_location?: string
+  ability_scores: Record<string, number>
+  fighting_style?: string
+  combat_position?: number[] | null
 }
 
 export interface SpawnCreatureRequest {

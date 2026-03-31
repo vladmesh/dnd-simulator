@@ -69,4 +69,14 @@ Key files:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Rewrote CharacterForm from react-hook-form/zod to plain useState — simpler for the interactive point buy UI with +/- steppers. Dropped all server-computed fields (level, hp, ac, gold) from the form. Classes restricted to fighter/rogue. Fighting style selector conditionally shown for fighter only.
+
+Client-side preview mirrors backend formulas: HP = max(hit_die + CON mod, 1), AC = chain mail+shield for fighter (18, +1 with defense), leather+DEX mod for rogue. Equipment shown as text list per class, gold hardcoded 100.
+
+Updated `CreatePlayerRequest` in `types/api.ts` — removed old fields (level, hp, ac, gold, attacks, start_region), added `fighting_style`, `start_location`, `combat_position`, made `ability_scores` required. Cleaned up i18n: removed unused class keys (wizard, cleric, etc.), added fighting style + preview keys.
+
+21 new tests covering point buy interaction, budget enforcement, class restrictions, fighting style visibility, preview calculations, and submission payload shape.
