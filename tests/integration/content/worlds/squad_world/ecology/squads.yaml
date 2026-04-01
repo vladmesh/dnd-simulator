@@ -10,6 +10,6 @@ test_patrol:
   - road_east
   strength: 5
   members:
-  - bandit
-  - bandit
+  - guard
+  - guard
   tick_interval: 3600

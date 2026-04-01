@@ -36,4 +36,10 @@ If the entities endpoint doesn't expose enough detail for stat verification, use
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added `TestSquadMaterialization` with 2 tests: patrol materializes guards (not bandits) at player location, and materialized guard has correct stats (HP 11, AC 16). Dropped strength scaling test — would require hostile squad encounters in the test world, too much fixture complexity for this phase.
+
+Updated squad_world test fixture: added guard inline template to monsters.yaml, changed test_patrol members from bandit→guard. Also cleaned up `_create_squad_session` helper to use current API (removed deprecated `level`/`hp`/`ac` fields, added `fighting_style`).

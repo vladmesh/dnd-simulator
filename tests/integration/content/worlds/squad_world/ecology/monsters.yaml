@@ -17,3 +17,22 @@ templates:
       damage:
       - dice: 1d6+1
         type: slashing
+  guard:
+    name: Guard
+    hp: 11
+    ac: 16
+    speed: 30
+    str: 13
+    dex: 12
+    con: 12
+    int: 10
+    wis: 11
+    cha: 10
+    cr: 0.125
+    faction: ""
+    attacks:
+    - name: spear
+      ability: str
+      damage:
+      - dice: 1d6
+        type: piercing
