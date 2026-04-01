@@ -82,7 +82,8 @@ class TestResolveAttack:
         rng.randint = lambda a, b: 20  # type: ignore[method-assign]
         result = resolve_attack(modifier=3, ac=10, attack=_flame_tongue(), rng=rng)
         assert result.hit is True
-        assert len(result.damage) == 2
+        # nat20 = crit → 4 entries: weapon, weapon_crit, weapon (fire), weapon_crit (fire)
+        assert len(result.damage) == 4
         types = {d.type for d in result.damage}
         assert DamageType.SLASHING in types
         assert DamageType.FIRE in types
@@ -109,7 +110,8 @@ class TestResolveAttack:
             rng=rng,
         )
         assert result.hit is True
-        assert len(result.damage) == 2
+        # nat20 = crit → 4 entries: weapon, weapon_crit, divine_smite, divine_smite_crit
+        assert len(result.damage) == 4
         types = {d.type for d in result.damage}
         assert DamageType.SLASHING in types
         assert DamageType.RADIANT in types
@@ -263,3 +265,98 @@ class TestGWFReroll:
         )
         assert result.hit is True
         assert result.total_damage == 3  # 1 + 2, no rerolls
+
+
+class TestCritDamage:
+    """Critical hit: separate base and crit damage components."""
+
+    def test_crit_produces_two_weapon_components(self) -> None:
+        """On crit, weapon damage has base + crit entries."""
+        rng = random.Random()
+        rng.randint = lambda a, b: 20  # type: ignore[method-assign]
+        result = resolve_attack(
+            modifier=5,
+            ac=10,
+            attack=_greatsword(),
+            rng=rng,
+        )
+        assert result.hit is True
+        assert result.critical is True
+        weapon_entries = [d for d in result.damage if d.source == "weapon"]
+        crit_entries = [d for d in result.damage if d.source == "weapon_crit"]
+        assert len(weapon_entries) == 1
+        assert len(crit_entries) == 1
+        # Both should have 2d6 (2 dice each)
+        assert weapon_entries[0].dice_result is not None
+        assert len(weapon_entries[0].dice_result.dice) == 2
+        assert crit_entries[0].dice_result is not None
+        assert len(crit_entries[0].dice_result.dice) == 2
+
+    def test_crit_gwf_only_on_base_dice(self) -> None:
+        """GWF rerolls only apply to base weapon dice, not crit dice."""
+        call_idx = 0
+        # d20=20 (crit), base 2d6=[1→5, 2→6] (GWF rerolls), crit 2d6=[1, 2] (NO reroll)
+        values = [20, 1, 5, 2, 6, 1, 2]
+
+        def fixed_randint(a: int, b: int) -> int:
+            nonlocal call_idx
+            v = values[call_idx]
+            call_idx += 1
+            return v
+
+        rng = random.Random()
+        rng.randint = fixed_randint  # type: ignore[method-assign]
+        result = resolve_attack(
+            modifier=5,
+            ac=10,
+            attack=_greatsword(),
+            gwf_reroll=True,
+            rng=rng,
+        )
+        assert result.hit is True
+        assert result.critical is True
+        # Base weapon dice: 1→5, 2→6 = 11 (with GWF rerolls)
+        weapon = next(d for d in result.damage if d.source == "weapon")
+        assert weapon.dice_result is not None
+        assert weapon.dice_result.dice[0] == DieRoll(sides=6, result=5, original=1)
+        assert weapon.dice_result.dice[1] == DieRoll(sides=6, result=6, original=2)
+        assert weapon.amount == 11
+        # Crit dice: 1, 2 — NOT rerolled (no GWF on crit dice)
+        crit = next(d for d in result.damage if d.source == "weapon_crit")
+        assert crit.dice_result is not None
+        assert crit.dice_result.dice[0] == DieRoll(sides=6, result=1)
+        assert crit.dice_result.dice[1] == DieRoll(sides=6, result=2)
+        assert crit.dice_result.dice[0].original is None
+        assert crit.dice_result.dice[1].original is None
+        assert crit.amount == 3
+        # Total: base 11 + crit 3 = 14
+        assert result.total_damage == 14
+
+    def test_crit_extra_damage_also_doubled(self) -> None:
+        """Extra damage (e.g. sneak attack) also gets crit dice."""
+        call_idx = 0
+        # d20=20, weapon 2d6=[3, 4], weapon_crit 2d6=[5, 6],
+        # sneak 1d6=[2], sneak_crit 1d6=[3]
+        values = [20, 3, 4, 5, 6, 2, 3]
+
+        def fixed_randint(a: int, b: int) -> int:
+            nonlocal call_idx
+            v = values[call_idx]
+            call_idx += 1
+            return v
+
+        rng = random.Random()
+        rng.randint = fixed_randint  # type: ignore[method-assign]
+        result = resolve_attack(
+            modifier=5,
+            ac=10,
+            attack=_greatsword(),
+            extra_damage=(ExtraDamage(dice="1d6", type=DamageType.PIERCING, source="sneak_attack"),),
+            rng=rng,
+        )
+        assert result.hit is True
+        assert result.critical is True
+        sources = [d.source for d in result.damage]
+        assert sources == ["weapon", "weapon_crit", "sneak_attack", "sneak_attack_crit"]
+        # weapon 3+4=7, weapon_crit 5+6=11, sneak 2, sneak_crit 3 → total 23
+        assert result.total_damage == 23

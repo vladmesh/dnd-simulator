@@ -337,6 +337,7 @@ class CombatManager:
         if result.hit:
             actual_damage = target.take_damage(result.total_damage)
             log_data["damage"] = actual_damage
+            log_data["total_damage"] = result.total_damage
             log_data["damage_components"] = self._build_damage_components(result, atk_mods)
             # Mark sneak attack as used only on hit (D&D 5e PHB p.96)
             if extra_damage and attacker_id not in self._sneak_attack_used:

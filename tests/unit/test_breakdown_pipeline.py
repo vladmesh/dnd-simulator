@@ -130,24 +130,34 @@ class TestDamageResultDiceResult:
         assert len(sneak.dice_result.dice) == 2
         assert all(d.sides == 6 for d in sneak.dice_result.dice)
 
-    def test_critical_doubles_dice_count(self) -> None:
-        """On crit, 1d8 → 2d8 — dice_result has doubled dice."""
-        # nat 20 = crit, then 2 damage dice (doubled)
+    def test_critical_produces_separate_crit_damage(self) -> None:
+        """On crit, 1d8 → two DamageResults: base (1d8) + crit (1d8)."""
+        # nat 20 = crit, base die=4, crit die=5
         rng = _rng_returning(20, 4, 5)
         result = resolve_attack(modifier=0, ac=10, attack=_sword(), rng=rng)
         assert result.critical is True
-        dr = result.damage[0]
-        assert dr.dice_result is not None
-        assert len(dr.dice_result.dice) == 2  # 1d8 doubled to 2d8
-        assert all(d.sides == 8 for d in dr.dice_result.dice)
+        assert len(result.damage) == 2
+        base = result.damage[0]
+        crit = result.damage[1]
+        assert base.source == "weapon"
+        assert crit.source == "weapon_crit"
+        assert base.dice_result is not None
+        assert crit.dice_result is not None
+        assert len(base.dice_result.dice) == 1
+        assert len(crit.dice_result.dice) == 1
+        assert all(d.sides == 8 for d in base.dice_result.dice)
+        assert all(d.sides == 8 for d in crit.dice_result.dice)
 
-    def test_force_crit_doubles_dice(self) -> None:
-        """force_crit=True doubles dice even without nat 20."""
-        rng = _rng_returning(15, 4, 5)  # d20=15 (hit but not nat20), 2 damage dice
+    def test_force_crit_produces_separate_crit_damage(self) -> None:
+        """force_crit=True creates separate crit damage even without nat 20."""
+        rng = _rng_returning(15, 4, 5)  # d20=15 (hit but not nat20), base die=4, crit die=5
         result = resolve_attack(modifier=5, ac=10, attack=_sword(), force_crit=True, rng=rng)
         assert result.critical is True
+        assert len(result.damage) == 2
+        assert result.damage[0].source == "weapon"
+        assert result.damage[1].source == "weapon_crit"
         assert result.damage[0].dice_result is not None
-        assert len(result.damage[0].dice_result.dice) == 2
+        assert len(result.damage[0].dice_result.dice) == 1
 
 
 # ---------------------------------------------------------------------------

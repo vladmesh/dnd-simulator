@@ -119,6 +119,21 @@ describe("AttackCardModal", () => {
     expect(total).toHaveTextContent("9")
   })
 
+  it("shows rolled damage with overkill indicator when clamped", () => {
+    render(
+      <AttackCardModal
+        data={makeCardData({ totalDamage: 5, rolledDamage: 9 })}
+        open
+        onOpenChange={vi.fn()}
+      />,
+    )
+    const total = screen.getByTestId("total-damage")
+    // Shows rolled amount as the main number
+    expect(total).toHaveTextContent("9")
+    // Shows dealt amount in parentheses
+    expect(total).toHaveTextContent("5")
+  })
+
   it("does not show damage section on miss", () => {
     render(
       <AttackCardModal
@@ -156,12 +171,12 @@ describe("AttackCardModal", () => {
     expect(droppedDie).toBeDefined()
   })
 
-  it("shows gold border on d20 when critical", () => {
+  it("shows ring on d20 when critical", () => {
     render(
       <AttackCardModal data={makeCardData({ critical: true })} open onOpenChange={vi.fn()} />,
     )
     const d20 = screen.getByTestId("die-d20")
-    expect(d20.className).toMatch(/yellow|gold|amber/)
+    expect(d20.className).toMatch(/sky/)
   })
 
   it("shows reroll visually in damage dice", () => {

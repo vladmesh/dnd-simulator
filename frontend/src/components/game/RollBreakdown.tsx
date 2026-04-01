@@ -1,4 +1,5 @@
 import type { AttackRollData, DamageComponentData, DieRollData } from "@/types/game"
+import { cn } from "@/lib/utils"
 
 // ---------------------------------------------------------------------------
 // Type guards for untyped event data
@@ -65,35 +66,46 @@ function AttackRollSection({ roll, ac, hit, critical }: {
   )
 }
 
-function DamageSection({ components, total }: {
+function DamageSection({ components, total, rolledTotal }: {
   components: DamageComponentData[]
   total?: number
+  rolledTotal?: number
 }) {
+  const hasOverkill = rolledTotal != null && total != null && rolledTotal > total
   return (
     <div className="space-y-0.5">
       <div className="flex items-center gap-1">
         <span className="text-muted-foreground">Damage:</span>
-        {total != null && <span className="font-bold">{total}</span>}
+        {(rolledTotal ?? total) != null && <span className="font-bold">{rolledTotal ?? total}</span>}
+        {hasOverkill && (
+          <span className="text-muted-foreground text-[10px]">({total} dealt)</span>
+        )}
       </div>
-      {components.map((comp, i) => (
-        <div key={i} className="ml-4 flex flex-wrap items-center gap-1 text-[10px]">
-          {comp.dice ? (
-            <span className="text-muted-foreground">{comp.dice} {comp.type}</span>
-          ) : (
-            <span className="text-muted-foreground">+{comp.amount}</span>
-          )}
-          {comp.dice_detail && comp.dice_detail.length > 0 && (
-            <span>
-              {comp.dice_detail.map((die, j) => (
-                <span key={j} className="mx-0.5">
-                  <DieDisplay die={die} />
-                </span>
-              ))}
-            </span>
-          )}
-          <span className="italic text-muted-foreground/70">{comp.source}</span>
-        </div>
-      ))}
+      {components.map((comp, i) => {
+        const isCrit = comp.source.endsWith("_crit")
+        return (
+          <div key={i} className={cn(
+            "ml-4 flex flex-wrap items-center gap-1 text-[10px]",
+            isCrit && "text-sky-300",
+          )}>
+            {comp.dice ? (
+              <span className="text-muted-foreground">{comp.dice} {comp.type}</span>
+            ) : (
+              <span className="text-muted-foreground">+{comp.amount}</span>
+            )}
+            {comp.dice_detail && comp.dice_detail.length > 0 && (
+              <span>
+                {comp.dice_detail.map((die, j) => (
+                  <span key={j} className="mx-0.5">
+                    <DieDisplay die={die} />
+                  </span>
+                ))}
+              </span>
+            )}
+            <span className="italic text-muted-foreground/70">{comp.source}</span>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -113,6 +125,7 @@ export function RollBreakdown({ data }: { data: Record<string, unknown> }) {
     ? data.damage_components
     : undefined
   const totalDamage = typeof data.damage === "number" ? data.damage : undefined
+  const rolledDamage = typeof data.total_damage === "number" ? data.total_damage : undefined
 
   return (
     <div
@@ -121,7 +134,7 @@ export function RollBreakdown({ data }: { data: Record<string, unknown> }) {
     >
       <AttackRollSection roll={attackRoll} ac={ac} hit={hit} critical={critical} />
       {hit && damageComponents && damageComponents.length > 0 && (
-        <DamageSection components={damageComponents} total={totalDamage} />
+        <DamageSection components={damageComponents} total={totalDamage} rolledTotal={rolledDamage} />
       )}
     </div>
   )

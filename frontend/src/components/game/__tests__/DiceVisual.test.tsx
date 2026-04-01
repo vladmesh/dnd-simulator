@@ -48,10 +48,10 @@ describe("DieVisual", () => {
     expect(newDie).toHaveTextContent("5")
   })
 
-  it("shows gold border on d20 when critical", () => {
+  it("shows ring on d20 when critical", () => {
     render(<DieVisual sides={20} result={20} critical />)
     const die = screen.getByTestId("die-d20")
-    expect(die.className).toMatch(/yellow|gold|amber/)
+    expect(die.className).toMatch(/sky/)
   })
 
   it("shows dimmed state when dropped (advantage/disadvantage)", () => {

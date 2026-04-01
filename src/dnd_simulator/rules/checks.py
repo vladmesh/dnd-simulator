@@ -75,15 +75,9 @@ def saving_throw(
 
 
 def damage_roll(expr: str, *, critical: bool = False, rng: random.Random | None = None) -> int:
-    """Roll damage dice.  On a critical hit, double the dice (not the modifier)."""
-    if not critical:
-        return roll(expr, rng=rng).total
-
-    # Double dice only: "2d6+3" → roll 4d6+3
-    expr = expr.strip()
-    parts = expr.split("d", 1)
-    if len(parts) == 2 and parts[0].strip().isdigit():
-        count = int(parts[0].strip())
-        return roll(f"{count * 2}d{parts[1]}", rng=rng).total
-    # Constant (no dice) — crits don't double flat damage
-    return roll(expr, rng=rng).total
+    """Roll damage dice.  On a critical hit, multiply dice total by 2 (not the modifier)."""
+    result = roll(expr, rng=rng)
+    if not critical or not result.dice:
+        return result.total
+    dice_sum = sum(d.result for d in result.dice)
+    return dice_sum * 2 + result.flat

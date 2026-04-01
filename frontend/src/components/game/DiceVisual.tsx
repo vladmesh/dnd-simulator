@@ -34,6 +34,7 @@ interface DieVisualProps {
   critical?: boolean
   dropped?: boolean
   damageType?: string
+  rerollReason?: string  // e.g. "GWF" — shown next to reroll arrow
 }
 
 export function DieVisual({
@@ -43,6 +44,7 @@ export function DieVisual({
   critical,
   dropped,
   damageType,
+  rerollReason,
 }: DieVisualProps) {
   const isD20 = sides === 20
   const sizeClass = isD20 ? "w-10 h-10 text-base" : "w-7 h-7 text-xs"
@@ -77,6 +79,14 @@ export function DieVisual({
         >
           {result}
         </span>
+        {rerollReason && (
+          <span
+            data-testid="reroll-reason"
+            className="text-[9px] font-semibold text-amber-400/80"
+          >
+            {rerollReason}
+          </span>
+        )}
       </span>
     )
   }
@@ -88,7 +98,7 @@ export function DieVisual({
         "inline-flex items-center justify-center rounded border font-mono font-bold shadow-sm",
         sizeClass,
         colorClass,
-        critical && "ring-2 ring-amber-400 border-amber-400",
+        critical && "ring-2 ring-sky-400 border-sky-400",
         dropped && "opacity-40 line-through",
       )}
     >

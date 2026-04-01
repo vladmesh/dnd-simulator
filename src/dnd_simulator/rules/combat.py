@@ -49,21 +49,14 @@ class AttackResult:
         return not self.hit
 
 
-def _roll_damage(
-    expr: str, *, critical: bool = False, reroll_below: int = 0, rng: random.Random | None = None
-) -> DiceResult:
-    """Roll damage dice, returning structured DiceResult. Doubles dice on crit."""
-    if not critical:
-        return roll(expr, reroll_below=reroll_below, rng=rng)
-
-    # Double dice only: "2d6+3" → roll 4d6+3
-    expr = expr.strip()
-    parts = expr.split("d", 1)
-    if len(parts) == 2 and parts[0].strip().isdigit():
-        count = int(parts[0].strip())
-        return roll(f"{count * 2}d{parts[1]}", reroll_below=reroll_below, rng=rng)
-    # Constant (no dice) — crits don't double flat damage
+def _roll_damage(expr: str, *, reroll_below: int = 0, rng: random.Random | None = None) -> DiceResult:
+    """Roll damage dice, returning structured DiceResult."""
     return roll(expr, reroll_below=reroll_below, rng=rng)
+
+
+def _roll_crit_damage(expr: str, *, rng: random.Random | None = None) -> DiceResult | None:
+    """Roll extra crit dice (same expression, no GWF reroll)."""
+    return roll(expr, rng=rng)
 
 
 def resolve_attack(
@@ -113,16 +106,40 @@ def resolve_attack(
 
     reroll_below = 2 if gwf_reroll else 0
     for comp in attack.damage:
-        dr = _roll_damage(comp.dice, critical=is_crit, reroll_below=reroll_below, rng=rng)
+        # Base damage (with GWF reroll)
+        dr = _roll_damage(comp.dice, reroll_below=reroll_below, rng=rng)
         damage_results.append(
             DamageResult(amount=dr.total, type=comp.type, source="weapon", dice=comp.dice, dice_result=dr)
         )
+        # Crit dice — same dice expression, NO GWF reroll
+        if is_crit:
+            crit_dr = _roll_crit_damage(comp.dice, rng=rng)
+            if crit_dr is not None:
+                damage_results.append(
+                    DamageResult(
+                        amount=crit_dr.total, type=comp.type, source="weapon_crit", dice=comp.dice, dice_result=crit_dr
+                    )
+                )
 
     for ed in extra_damage:
-        dr = _roll_damage(ed.dice, critical=is_crit, rng=rng)
+        # Base extra damage (no GWF on extra damage)
+        dr = _roll_damage(ed.dice, rng=rng)
         damage_results.append(
             DamageResult(amount=dr.total, type=ed.type, source=ed.source, dice=ed.dice, dice_result=dr)
         )
+        # Crit dice for extra damage
+        if is_crit:
+            crit_dr = _roll_crit_damage(ed.dice, rng=rng)
+            if crit_dr is not None:
+                damage_results.append(
+                    DamageResult(
+                        amount=crit_dr.total,
+                        type=ed.type,
+                        source=f"{ed.source}_crit",
+                        dice=ed.dice,
+                        dice_result=crit_dr,
+                    )
+                )
 
     # Flat damage bonus (e.g. Dueling +2) — not doubled on crit
     total = sum(d.amount for d in damage_results) + damage_bonus

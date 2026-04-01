@@ -24,7 +24,8 @@ export interface AttackCardData {
   critical: boolean
   ac: number
   attackRoll: AttackRollData
-  totalDamage?: number
+  totalDamage?: number       // actual damage dealt (after HP clamp)
+  rolledDamage?: number      // total rolled damage (before HP clamp)
   damageComponents?: DamageComponentData[]
 }
 
@@ -85,6 +86,7 @@ export function AttackCardModal({ data, open, onOpenChange }: AttackCardModalPro
           <DamageSection
             components={data.damageComponents}
             total={data.totalDamage}
+            rolledTotal={data.rolledDamage}
             t={t}
           />
         )}
@@ -191,12 +193,15 @@ function AdvantageD20s({
 function DamageSection({
   components,
   total,
+  rolledTotal,
   t,
 }: {
   components: DamageComponentData[]
   total?: number
+  rolledTotal?: number
   t: (key: string, opts?: Record<string, unknown>) => string
 }) {
+  const hasOverkill = rolledTotal != null && total != null && rolledTotal > total
   return (
     <div data-testid="damage-section" className="space-y-2">
       <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -207,13 +212,18 @@ function DamageSection({
         <DamageComponentRow key={i} component={comp} t={t} />
       ))}
 
-      {total != null && (
+      {(rolledTotal ?? total) != null && (
         <div
           data-testid="total-damage"
           className="flex items-center gap-2 border-t border-border/30 pt-1 text-sm"
         >
-          <span className="text-lg font-bold">= {total}</span>
+          <span className="text-lg font-bold">= {rolledTotal ?? total}</span>
           <span className="text-muted-foreground">{t("game:damage_total")}</span>
+          {hasOverkill && (
+            <span className="text-muted-foreground text-xs">
+              {t("game:damage_overkill", { dealt: total })}
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -247,6 +257,7 @@ export function extractAttackCardData(
     ac: typeof data.ac === "number" ? data.ac : 0,
     attackRoll,
     totalDamage: typeof data.damage === "number" ? data.damage : undefined,
+    rolledDamage: typeof data.total_damage === "number" ? data.total_damage : undefined,
     damageComponents,
   }
 }
@@ -264,13 +275,28 @@ function DamageComponentRow({
 }) {
   const hasDice = component.dice_detail && component.dice_detail.length > 0
   const isFlat = !component.dice
+  const isCritComponent = component.source.endsWith("_crit")
+  const isWeaponBase = component.source === "weapon"
   const translatedType = t(`game:dmg_${component.type}`, { defaultValue: component.type })
   const translatedSource = t(`game:source_${component.source}`, { defaultValue: component.source })
 
+  // GWF reroll reason: only on base weapon dice that have rerolls
+  const gwfLabel = isWeaponBase ? t("game:gwf_short") : undefined
+
   return (
-    <div className="space-y-1 rounded border border-border/20 bg-muted/30 p-2">
+    <div className={cn(
+      "space-y-1 rounded border p-2",
+      isCritComponent
+        ? "border-sky-400/40 bg-sky-950/20"
+        : "border-border/20 bg-muted/30",
+    )}>
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">{translatedSource}</span>
+        <span className={cn(
+          "text-muted-foreground",
+          isCritComponent && "text-sky-300 font-semibold",
+        )}>
+          {translatedSource}
+        </span>
         {component.dice && (
           <span className="text-muted-foreground">
             {component.dice} {translatedType}
@@ -286,7 +312,9 @@ function DamageComponentRow({
               sides={die.sides}
               result={die.result}
               original={die.original}
+              critical={isCritComponent}
               damageType={component.type}
+              rerollReason={die.original != null ? gwfLabel : undefined}
             />
           ))}
         </div>
