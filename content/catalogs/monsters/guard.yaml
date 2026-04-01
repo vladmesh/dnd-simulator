@@ -1,0 +1,14 @@
+name: {en: Guard, ru: Стражник}
+faction: ""
+hp: 11
+ac: 16
+speed: 30
+ability_scores: {str: 13, dex: 12, con: 12, int: 10, wis: 11, cha: 10}
+attacks:
+  - name: spear
+    ability: str
+    damage:
+      - dice: "1d6"
+        type: piercing
+    reach: 5
+cr: 0.125

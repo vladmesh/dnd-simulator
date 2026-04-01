@@ -40,4 +40,8 @@ Unit tests in `tests/unit/test_content_loader.py` (or new file if cleaner):
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+SRD Guard stat block: HP 11 (2d8+2), AC 16 (chain shirt + shield), STR 13, spear (STR-based 1d6+1 piercing). WIS 11 per SRD (not 10). No faction set on template — faction comes from the squad definition at materialization time. Updated both sword_vale library and test_vale world.

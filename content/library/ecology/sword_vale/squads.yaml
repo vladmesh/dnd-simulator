@@ -6,7 +6,7 @@ kingdom_patrol_1:
   start_location: silverport_highfield_road
   route: [silverport_highfield_road, highfield_town_gate, highfield_iron_road]
   strength: 5
-  members: [bandit, bandit, bandit]
+  members: [guard, guard, guard]
   tick_interval: 3600
 
 bandit_gang_1:
