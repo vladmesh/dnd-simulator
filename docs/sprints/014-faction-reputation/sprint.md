@@ -1,0 +1,91 @@
+# Sprint 014 — Faction Relations & Reputation
+
+**Goal:** Combat sides from faction relations, personal reputation per-faction with auto-hostility thresholds, friendly OA fix.
+
+**Started:** 2026-04-02
+
+## Context
+
+Баг: opportunity attacks срабатывают между союзниками (гоблины бьют друг друга). Корень — `reactions.py` не знает о сторонах в бою. Шире: нет явной структуры "сторона в бою", targeting/OA/brain каждый решает по-своему (ad-hoc `_is_faction_friendly`).
+
+Заодно закладываем reputation system: числовая репутация per-creature per-faction, пороги FRIENDLY/NEUTRAL/HOSTILE, omniscient reputation changes от kills. Архитектурно: `faction_id` = происхождение (не меняется), `reputation` dict = текущие отношения (sparse, fallback на faction-to-faction defaults).
+
+Ключевое решение: `effective_relation(A, B)` — единая функция, personal reputation если есть, иначе faction relation fallback. Все системы (combat sides, OA, targeting, awareness) используют её.
+
+**Ссылки:** [sprint 012 — reactions](../012-reactions-oa/sprint.md), [backlog](../../BACKLOG.md), [vision](../../VISION.md)
+
+---
+
+## Phase 1: Combat Sides + OA Fix
+
+Фиксим баг с friendly OA, используя существующие faction_id + FactionRelation. Без репутации.
+
+- `CombatSides` — при старте боя строим стороны из faction relations. Граф: FRIENDLY → merge в одну сторону, HOSTILE → разные стороны. "Друг обоих" → приоритет same faction, иначе higher relation number.
+- `find_oa_triggers` / `can_opportunity_attack` фильтруют по сторонам — союзников не бьют.
+- RuleBrain targeting через sides (формализация `_is_faction_friendly`).
+- Combat end condition через sides (замена `_has_opposing_factions`).
+
+**Верифицируем:** Unit tests — гоблины не бьют друг друга OA, mixed factions (3+ фракции) разрешаются корректно, "друг обоих" встаёт на правильную сторону.
+
+**Tasks:**
+
+_(генерируются отдельно перед началом фазы)_
+
+## Phase 2: Personal Reputation + effective_relation
+
+Числовая репутация подменяет raw faction lookups.
+
+- `reputation: dict[str, int]` на Creature (sparse dict, дефолт вычисляется из faction relations).
+- `effective_relation(A, B)` — pure function: personal rep если есть, иначе faction-to-faction fallback. Пороги: 75+ FRIENDLY, 25-74 NEUTRAL, <25 HOSTILE.
+- CombatSides переключается на `effective_relation` вместо raw faction relations.
+- Изгнанник-паттерн: `faction_id` не меняется при падении репутации с своей фракцией. Faction_id = происхождение, reputation = текущие отношения.
+
+**Верифицируем:** Unit tests — creature с personal override обрабатывается иначе чем faction default. Creature с низкой репутацией со своей фракцией = HOSTILE к бывшим союзникам. CombatSides корректно строятся из effective_relation.
+
+**Tasks:**
+
+_(генерируются отдельно перед началом фазы)_
+
+## Phase 3: Reputation Dynamics + Auto-hostility
+
+Репутация начинает двигаться от действий.
+
+- Kill → reputation drop (omniscient). Множитель от репутации жертвы со своей фракцией: `delta = base_delta * (victim_rep_with_own_faction / 100)`. Изгнанника убил → ~0 падения. Вождя → полное.
+- Атака NPC вне боя → auto-hostility: цель + союзники (по effective_relation) vs атакующий + союзники. Инициация боя с корректными CombatSides.
+- Awareness показывает faction/reputation info для brain decisions.
+- Frontend: изменения репутации в логе событий.
+
+**Верифицируем:** Integration tests — убийство гоблина роняет репутацию с гоблинами, повторные убийства двигают порог в HOSTILE. Атака мирного NPC → бой с правильными сторонами. E2E: лог показывает reputation change.
+
+**Tasks:**
+
+_(генерируются отдельно перед началом фазы)_
+
+---
+
+## Status
+
+**Current:** Planning complete. Sprint pre-planned, waiting for sprint 013 closure.
+
+## Decisions
+
+- **Reputation-first модель.** `faction_id` = происхождение/идентичность, `reputation` dict = текущие отношения. Всё поведение через `effective_relation()`.
+- **Sparse reputation.** Только фракции, с которыми creature лично взаимодействовал. У 99% гоблинов dict пустой — всё из faction defaults.
+- **Omniscient reputation.** Фракция мгновенно знает о действиях. Witness-based — future scope.
+- **Стороны заморожены на бой.** Смена стороны в бою — out of scope.
+- **Пороги: 75/25.** 75+ FRIENDLY, 25-74 NEUTRAL, <25 HOSTILE. Числа тюнятся, но структура фиксирована.
+- **"Друг обоих" → same faction priority, потом выше число.** Если FRIENDLY к обеим сторонам: сначала проверяем same faction_id, потом сравниваем reputation числа.
+- **Изгнанник не теряет faction_id.** Низкая репутация со своей фракцией ≠ смена фракции. Интересный контент: NPC-изгнанник, которого бьют свои.
+
+## Deferred
+
+- Witness-based reputation (свидетели, побег, доклад)
+- Typed crimes (murder, theft, assault) как события
+- Settlement-level consequences (розыск, bounty)
+- Friendly fire в бою (атака союзника)
+- Смена стороны в бою
+- Reputation decay / восстановление со временем
+
+## Results
+
+_(заполняется в конце спринта)_

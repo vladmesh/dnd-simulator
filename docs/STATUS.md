@@ -7,13 +7,25 @@
 **Sprint:** 013-char-creation
 **Goal:** Character creation overhaul — point buy, derived HP/AC, starting equipment, Fighter/Rogue only
 **Started:** 2026-04-01
-**Phase:** 2 — Creation API + Frontend Form (all tasks done) — 2026-04-01
+**Phase:** 3 — Content Fixes + Polish (not started)
 
 ### Phases
 
-1. HP Formula + Starting Equipment Rules
-2. Creation API + Frontend Form
+1. HP Formula + Starting Equipment Rules ✓
+2. Creation API + Frontend Form ✓
 3. Content Fixes + Polish
+
+## Next Sprint (pre-planned)
+
+**Sprint:** 014-faction-reputation
+**Goal:** Combat sides from faction relations, personal reputation per-faction with auto-hostility thresholds, friendly OA fix.
+**Started:** 2026-04-02 (planning only)
+
+### Phases
+
+1. Combat Sides + OA Fix
+2. Personal Reputation + effective_relation
+3. Reputation Dynamics + Auto-hostility
 
 ## Sprint History
 
