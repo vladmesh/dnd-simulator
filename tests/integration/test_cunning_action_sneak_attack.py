@@ -25,9 +25,9 @@ def _create_session(api_url: str, player_api_url: str, world: str, location: str
     sid = resp.json()["session_id"]
 
     scores = (
-        {"str": 10, "dex": 18, "con": 12, "int": 14, "wis": 12, "cha": 10}
+        {"str": 10, "dex": 15, "con": 12, "int": 14, "wis": 12, "cha": 8}
         if char_class == "rogue"
-        else {"str": 16, "dex": 14, "con": 14, "int": 10, "wis": 12, "cha": 10}
+        else {"str": 15, "dex": 14, "con": 14, "int": 10, "wis": 10, "cha": 8}
     )
 
     resp = requests.post(
@@ -36,10 +36,7 @@ def _create_session(api_url: str, player_api_url: str, world: str, location: str
             "name": f"Test {char_class.title()}",
             "race": "elf" if char_class == "rogue" else "human",
             "char_class": char_class,
-            "level": 1,
             "alignment": "true_neutral",
-            "hp": 20 if char_class == "rogue" else 30,
-            "ac": 15,
             "start_location": location,
             "ability_scores": scores,
         },

@@ -1,0 +1,9 @@
+name: Rapier
+type: weapon
+weapon_id: rapier
+category: martial
+attack_name: rapier thrust
+damage:
+  - dice: "1d8"
+    type: piercing
+is_finesse: true

@@ -15,6 +15,9 @@ templates:
         reach: 5
     cr: 0.125
 
+  guard:
+    base: guard
+
 encounters:
   forest_road:
     - template: bandit

@@ -20,8 +20,11 @@ def _recv_until(sock: ws_lib.WebSocket, target_type: str, max_msgs: int = 15) ->
     return None
 
 
-def _make_trade_session(urls: tuple[str, str, str], gold: int = 100) -> tuple[str, str, str]:
-    """Create a village session with a player at village_square (same loc as merchant)."""
+def _make_trade_session(urls: tuple[str, str, str], gold: int | None = None) -> tuple[str, str, str]:
+    """Create a village session with a player at village_square (same loc as merchant).
+
+    If *gold* is specified, patch player's gold to that amount after creation.
+    """
     api, player_api, ws_base = urls
     resp = requests.post(f"{api}/sessions", json={"world_name": "village", "lang": "en"}, timeout=10)
     resp.raise_for_status()
@@ -33,11 +36,7 @@ def _make_trade_session(urls: tuple[str, str, str], gold: int = 100) -> tuple[st
             "name": "Trader",
             "race": "human",
             "char_class": "fighter",
-            "level": 1,
             "alignment": "true_neutral",
-            "hp": 20,
-            "ac": 12,
-            "gold": gold,
             "start_location": "millbrook_market",
             "ability_scores": {"str": 12, "dex": 12, "con": 12, "int": 10, "wis": 10, "cha": 10},
         },
@@ -45,6 +44,14 @@ def _make_trade_session(urls: tuple[str, str, str], gold: int = 100) -> tuple[st
     )
     resp.raise_for_status()
     pid = resp.json()["player_id"]
+
+    if gold is not None:
+        requests.patch(
+            f"{api}/sessions/{sid}/creatures/{pid}",
+            json={"gold": gold},
+            timeout=10,
+        ).raise_for_status()
+
     return ws_base, sid, pid
 
 

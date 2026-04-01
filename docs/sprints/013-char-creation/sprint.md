@@ -51,7 +51,7 @@ Fighter и Rogue полностью прописаны (sprints 001, 011, 012), 
 1. [Backend — Derive Stats + Equip Starting Gear](tasks/phase2-task1-backend-api.md)
 2. [Frontend — Point Buy UI + Fighting Style + Preview](tasks/phase2-task2-frontend-form.md)
 
-## Phase 3: Content Fixes + Polish
+## Phase 3: Content Fixes + Polish ✓
 
 Контентные правки и интеграционная проверка.
 
@@ -72,7 +72,7 @@ Fighter и Rogue полностью прописаны (sprints 001, 011, 012), 
 
 ## Status
 
-**Current:** Phase 3 tasks generated. Ready to start task 1.
+**Current:** All phases complete. Ready for audit.
 
 ## Decisions
 

@@ -7,15 +7,18 @@ Tests run against a live backend in docker compose with:
 
 from __future__ import annotations
 
+import time
 from http import HTTPStatus
 
 import requests
+from conftest import ws_connect, ws_recv
 
 # ── Fixtures ─────────────────────────────────────────────────────────
 
 
-def _create_squad_session(api_url: str, player_api_url: str) -> tuple[str, str]:
-    """Create a squad_world session with a player. Returns (session_id, player_id)."""
+def _create_squad_session(backend_url: str, api_url: str, player_api_url: str) -> tuple[str, str, str]:
+    """Create a squad_world session with a player. Returns (ws_base, session_id, player_id)."""
+    ws_base = backend_url.replace("http://", "ws://") + "/api/ws"
     resp = requests.post(
         f"{api_url}/sessions",
         json={"world_name": "squad_world", "lang": "en"},
@@ -32,14 +35,14 @@ def _create_squad_session(api_url: str, player_api_url: str) -> tuple[str, str]:
             "char_class": "fighter",
             "alignment": "true_neutral",
             "start_location": "road_center",
-            "ability_scores": {"str": 16, "dex": 14, "con": 14, "int": 10, "wis": 12, "cha": 10},
+            "ability_scores": {"str": 15, "dex": 14, "con": 14, "int": 10, "wis": 10, "cha": 8},
             "fighting_style": "defense",
         },
         timeout=10,
     )
     resp.raise_for_status()
     pid = resp.json()["player_id"]
-    return sid, pid
+    return ws_base, sid, pid
 
 
 # ── Squad world loads ────────────────────────────────────────────────
@@ -48,9 +51,9 @@ def _create_squad_session(api_url: str, player_api_url: str) -> tuple[str, str]:
 class TestSquadWorldLoads:
     """Verify the squad_world.yaml loads and the session is functional."""
 
-    def test_create_session_with_squads(self, api_url: str, player_api_url: str) -> None:
+    def test_create_session_with_squads(self, backend_url: str, api_url: str, player_api_url: str) -> None:
         """EcologyLayer + squads + factions load without errors."""
-        sid, _pid = _create_squad_session(api_url, player_api_url)
+        _ws_base, sid, _pid = _create_squad_session(backend_url, api_url, player_api_url)
 
         # World state endpoint works
         resp = requests.get(f"{api_url}/sessions/{sid}", timeout=5)
@@ -63,9 +66,9 @@ class TestSquadWorldLoads:
         # Cleanup
         requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
 
-    def test_time_advancement_with_squads(self, api_url: str, player_api_url: str) -> None:
+    def test_time_advancement_with_squads(self, backend_url: str, api_url: str, player_api_url: str) -> None:
         """Advancing time ticks EcologyLayer without crashing."""
-        sid, _pid = _create_squad_session(api_url, player_api_url)
+        _ws_base, sid, _pid = _create_squad_session(backend_url, api_url, player_api_url)
 
         # Get initial time
         resp = requests.get(f"{api_url}/sessions/{sid}", timeout=5)
@@ -93,17 +96,29 @@ class TestSquadWorldLoads:
 class TestSquadMaterialization:
     """Verify that squads materialize into creatures with correct stats."""
 
-    def test_patrol_materializes_guards_at_player_location(self, api_url: str, player_api_url: str) -> None:
+    def test_patrol_materializes_guards_at_player_location(
+        self, backend_url: str, api_url: str, player_api_url: str
+    ) -> None:
         """Patrol moves to player location and spawns guard creatures."""
-        sid, _pid = _create_squad_session(api_url, player_api_url)
+        ws_base, sid, pid = _create_squad_session(backend_url, api_url, player_api_url)
 
-        # Advance 2 hours — patrol (tick_interval=3600) moves road_west → road_center
+        # Advance 1 hour — patrol (tick_interval=3600) moves road_west → road_center
         resp = requests.post(
             f"{api_url}/sessions/{sid}/time/advance",
-            json={"hours": 2},
+            json={"hours": 1},
             timeout=30,
         )
         assert resp.status_code == HTTPStatus.OK
+
+        # Connect via WS to trigger the round → update_activation → materialization
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            msg = ws_recv(sock)
+            assert msg["type"] == "turn"
+        finally:
+            sock.close()
+
+        time.sleep(0.5)  # let round thread finish activation
 
         # Query creatures at player location — should have materialized guards
         resp = requests.get(
@@ -122,16 +137,26 @@ class TestSquadMaterialization:
         for guard in guards:
             assert guard["name"] == "Guard", f"Expected 'Guard', got '{guard['name']}'"
 
-    def test_materialized_guard_has_correct_stats(self, api_url: str, player_api_url: str) -> None:
+    def test_materialized_guard_has_correct_stats(self, backend_url: str, api_url: str, player_api_url: str) -> None:
         """Materialized guard creature has SRD guard HP and AC."""
-        sid, _pid = _create_squad_session(api_url, player_api_url)
+        ws_base, sid, pid = _create_squad_session(backend_url, api_url, player_api_url)
 
         resp = requests.post(
             f"{api_url}/sessions/{sid}/time/advance",
-            json={"hours": 2},
+            json={"hours": 1},
             timeout=30,
         )
         assert resp.status_code == HTTPStatus.OK
+
+        # Connect via WS to trigger the round → materialization
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            msg = ws_recv(sock)
+            assert msg["type"] == "turn"
+        finally:
+            sock.close()
+
+        time.sleep(0.5)
 
         resp = requests.get(
             f"{api_url}/sessions/{sid}/creatures",
@@ -153,9 +178,9 @@ class TestSquadMaterialization:
 class TestSquadSaveLoad:
     """Verify squad state persists through save/load cycle."""
 
-    def test_save_and_load_with_squads(self, api_url: str, player_api_url: str) -> None:
+    def test_save_and_load_with_squads(self, backend_url: str, api_url: str, player_api_url: str) -> None:
         """Save and load a session with active squads."""
-        sid, _pid = _create_squad_session(api_url, player_api_url)
+        _ws_base, sid, _pid = _create_squad_session(backend_url, api_url, player_api_url)
 
         # Advance time so squads have moved
         resp = requests.post(

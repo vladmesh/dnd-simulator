@@ -8,6 +8,9 @@ templates:
   bandit:
     base: bandit
 
+  guard:
+    base: guard
+
 encounters:
   silverport_greenwood_road:
     - template: goblin

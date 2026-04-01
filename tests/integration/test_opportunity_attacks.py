@@ -77,8 +77,6 @@ def _create_session(
     player_api_url: str,
     char_class: str,
     *,
-    hp: int = 200,
-    items: list[dict[str, Any]] | None = None,
     class_features: dict[str, Any] | None = None,
     combat_position: list[int] | None = None,
 ) -> tuple[str, str]:
@@ -88,24 +86,19 @@ def _create_session(
     sid = resp.json()["session_id"]
 
     scores = (
-        {"str": 10, "dex": 16, "con": 12, "int": 14, "wis": 12, "cha": 10}
+        {"str": 10, "dex": 15, "con": 12, "int": 14, "wis": 12, "cha": 8}
         if char_class == "rogue"
-        else {"str": 16, "dex": 11, "con": 14, "int": 10, "wis": 12, "cha": 13}
+        else {"str": 15, "dex": 11, "con": 14, "int": 10, "wis": 10, "cha": 9}
     )
 
     body: dict[str, Any] = {
         "name": f"Test {char_class.title()}",
         "race": "human",
         "char_class": char_class,
-        "level": 1,
         "alignment": "true_neutral",
-        "hp": hp,
-        "ac": 15,
         "start_location": LOCATION,
         "ability_scores": scores,
     }
-    if items:
-        body["items"] = items
     if class_features:
         body["class_features"] = class_features
     if combat_position:
@@ -210,32 +203,6 @@ def _ensure_adjacent_to_enemy(
     raise AssertionError(f"Could not get adjacent to {enemy_id} after 5 turns")
 
 
-# ── Item definitions ──────────────────────────────────────────────────────
-
-LONGSWORD = {
-    "name": "Longsword",
-    "type": "weapon",
-    "weapon_id": "longsword",
-    "category": "martial",
-    "attack_name": "longsword slash",
-    "damage": [{"dice": "1d8", "type": "slashing"}],
-    "ability": "str",
-    "equipped": True,
-}
-
-RAPIER = {
-    "name": "Rapier",
-    "type": "weapon",
-    "weapon_id": "rapier",
-    "category": "martial",
-    "attack_name": "rapier thrust",
-    "damage": [{"dice": "1d8", "type": "piercing"}],
-    "ability": "dex",
-    "is_finesse": True,
-    "equipped": True,
-}
-
-
 # ── Test: OA fires when leaving reach ─────────────────────────────────────
 
 
@@ -244,7 +211,7 @@ class TestOAFires:
 
     def test_oa_triggers_on_leaving_reach(self, api_url: str, player_api_url: str, ws_base_url: str) -> None:
         """Player within 5ft of enemy moves away — OA fires, player takes damage."""
-        sid, pid = _create_session(api_url, player_api_url, "fighter", items=[LONGSWORD], combat_position=[20, 30])
+        sid, pid = _create_session(api_url, player_api_url, "fighter", combat_position=[20, 30])
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
@@ -294,7 +261,7 @@ class TestDisengagePreventsOA:
 
     def test_disengage_then_move_no_oa(self, api_url: str, player_api_url: str, ws_base_url: str) -> None:
         """Player uses Disengage, then moves away — no OA fires."""
-        sid, pid = _create_session(api_url, player_api_url, "fighter", items=[LONGSWORD], combat_position=[20, 30])
+        sid, pid = _create_session(api_url, player_api_url, "fighter", combat_position=[20, 30])
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
@@ -338,7 +305,7 @@ class TestRogueCunningDisengage:
         self, api_url: str, player_api_url: str, ws_base_url: str
     ) -> None:
         """Rogue uses Disengage as bonus action, Attack as action, then moves. No OA."""
-        sid, pid = _create_session(api_url, player_api_url, "rogue", items=[RAPIER], combat_position=[20, 30])
+        sid, pid = _create_session(api_url, player_api_url, "rogue", combat_position=[20, 30])
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
@@ -389,9 +356,7 @@ class TestOAKillsMover:
 
     def test_oa_kills_1hp_mover(self, api_url: str, player_api_url: str, ws_base_url: str) -> None:
         """Player with 1 HP moves away from enemy. OA kills. Movement stops."""
-        sid, pid = _create_session(
-            api_url, player_api_url, "fighter", hp=200, items=[LONGSWORD], combat_position=[20, 30]
-        )
+        sid, pid = _create_session(api_url, player_api_url, "fighter", combat_position=[20, 30])
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
@@ -455,9 +420,7 @@ class TestTwoEnemiesOA:
 
     def test_two_enemies_both_oa(self, api_url: str, player_api_url: str, ws_base_url: str) -> None:
         """Player at (20,30), guard_1 at (15,30), guard_2 at (25,30). One move away triggers OA from both."""
-        sid, pid = _create_session(
-            api_url, player_api_url, "fighter", hp=200, items=[LONGSWORD], combat_position=[20, 30]
-        )
+        sid, pid = _create_session(api_url, player_api_url, "fighter", combat_position=[20, 30])
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:

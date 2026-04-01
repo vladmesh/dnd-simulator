@@ -97,10 +97,12 @@ class TestPlayer:
         assert resp.status_code == HTTPStatus.OK
         status = resp.json()
         assert status["player_id"] == arena_player["player_id"]
-        assert status["hp"] == 30
-        assert status["ac"] == 15
+        # Fighter L1: CON 14 (+2) → HP = 10 + 2 = 12
+        assert status["hp"] == 12
+        # Chain mail (16) + shield (+2) = 18
+        assert status["ac"] == 18
         assert status["location_id"] == "arena_floor"
-        assert status["ability_scores"]["str"] == 16
+        assert status["ability_scores"]["str"] == 15
 
 
 # ── Creatures (hot controls) ─────────────────────────────────────────

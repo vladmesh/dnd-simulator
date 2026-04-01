@@ -28,41 +28,30 @@ def _create_session(
     player_api_url: str,
     char_class: str,
     *,
-    hp: int = 30,
-    ac: int = 15,
     ability_scores: dict[str, int] | None = None,
-    items: list[dict[str, Any]] | None = None,
-    class_features: dict[str, Any] | None = None,
+    fighting_style: str | None = None,
 ) -> tuple[str, str]:
-    """Create session + player character. Returns (session_id, player_id).
-
-    Items with ``equipped: true`` are auto-equipped at creation time.
-    """
+    """Create session + player character. Returns (session_id, player_id)."""
     resp = requests.post(f"{api_url}/sessions", json={"world_name": WORLD, "lang": "en"}, timeout=10)
     resp.raise_for_status()
     sid = resp.json()["session_id"]
 
     scores = ability_scores or (
-        {"str": 10, "dex": 16, "con": 12, "int": 14, "wis": 12, "cha": 10}
+        {"str": 10, "dex": 15, "con": 12, "int": 14, "wis": 12, "cha": 8}
         if char_class == "rogue"
-        else {"str": 16, "dex": 11, "con": 14, "int": 10, "wis": 12, "cha": 13}
+        else {"str": 15, "dex": 11, "con": 14, "int": 10, "wis": 10, "cha": 9}
     )
 
     body: dict[str, Any] = {
         "name": f"Test {char_class.title()}",
         "race": "human",
         "char_class": char_class,
-        "level": 1,
         "alignment": "true_neutral",
-        "hp": hp,
-        "ac": ac,
         "start_location": LOCATION,
         "ability_scores": scores,
     }
-    if items:
-        body["items"] = items
-    if class_features:
-        body["class_features"] = class_features
+    if fighting_style:
+        body["fighting_style"] = fighting_style
 
     resp = requests.post(f"{player_api_url}/sessions/{sid}/character", json=body, timeout=10)
     resp.raise_for_status()
@@ -124,62 +113,6 @@ def _collect_events_until_turn(
     raise AssertionError("Never received next turn message")
 
 
-# ── Fighter items ────────────────────────────────────────────────────────
-
-LONGSWORD = {
-    "name": "Longsword",
-    "type": "weapon",
-    "weapon_id": "longsword",
-    "category": "martial",
-    "attack_name": "longsword slash",
-    "damage": [{"dice": "1d8", "type": "slashing"}],
-    "ability": "str",
-    "equipped": True,
-}
-
-CHAIN_MAIL = {
-    "name": "Chain Mail",
-    "type": "armor",
-    "armor_id": "chain_mail",
-    "category": "heavy",
-    "base_ac": 16,
-    "strength_req": 13,
-    "max_dex_bonus": 0,
-    "equipped": True,
-}
-
-SHIELD = {
-    "name": "Shield",
-    "type": "shield",
-    "shield_id": "shield",
-    "ac_bonus": 2,
-    "equipped": True,
-}
-
-# ── Rogue items ──────────────────────────────────────────────────────────
-
-RAPIER = {
-    "name": "Rapier",
-    "type": "weapon",
-    "weapon_id": "rapier",
-    "category": "martial",
-    "attack_name": "rapier thrust",
-    "damage": [{"dice": "1d8", "type": "piercing"}],
-    "ability": "dex",
-    "is_finesse": True,
-    "equipped": True,
-}
-
-STUDDED_LEATHER = {
-    "name": "Studded Leather",
-    "type": "armor",
-    "armor_id": "studded_leather",
-    "category": "light",
-    "base_ac": 12,
-    "equipped": True,
-}
-
-
 # ── Test: Fighter Full Turn ──────────────────────────────────────────────
 
 
@@ -192,17 +125,14 @@ class TestFighterFullTurn:
             api_url,
             player_api_url,
             "fighter",
-            hp=40,
-            ac=16,
-            items=[LONGSWORD, CHAIN_MAIL, SHIELD],
-            class_features={"fighting_style": "defense"},
+            fighting_style="defense",
         )
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
                 turn = _get_turn(sock)
 
-                # Verify AC: chain_mail(16) + shield(+2) + defense(+1) = 19
+                # Starting equipment: chain_mail(16) + shield(+2) + defense(+1) = 19
                 assert turn["player"]["ac"] == 19, (
                     f"Expected AC 19 (chain_mail 16 + shield 2 + defense 1), got {turn['player']['ac']}"
                 )
@@ -243,7 +173,7 @@ class TestFighterFullTurn:
 
     def test_fighter_second_wind_heals_and_exhausts(self, api_url: str, player_api_url: str, ws_base_url: str) -> None:
         """Fighter uses Second Wind (bonus action): heals 1d10+level, resource consumed. Second use fails."""
-        sid, pid = _create_session(api_url, player_api_url, "fighter", hp=40, ac=16, items=[LONGSWORD])
+        sid, pid = _create_session(api_url, player_api_url, "fighter")
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
@@ -312,7 +242,7 @@ class TestRogueFullTurn:
 
         On 3x3 map with ally_fighter_npc adjacent to target, sneak attack triggers.
         """
-        sid, pid = _create_session(api_url, player_api_url, "rogue", hp=20, ac=12, items=[RAPIER, STUDDED_LEATHER])
+        sid, pid = _create_session(api_url, player_api_url, "rogue")
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
@@ -356,7 +286,7 @@ class TestRogueFullTurn:
 
     def test_rogue_attack_budget_enforcement(self, api_url: str, player_api_url: str, ws_base_url: str) -> None:
         """Rogue attacks once (action consumed), second attack rejected (no budget)."""
-        sid, pid = _create_session(api_url, player_api_url, "rogue", hp=20, ac=12, items=[RAPIER])
+        sid, pid = _create_session(api_url, player_api_url, "rogue")
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
@@ -397,7 +327,7 @@ class TestMixedCombatFactionSneakAttack:
         Player gets hero_faction from manifest default_player_faction.
         On a 3x3 map, all entities are adjacent.
         """
-        sid, pid = _create_session(api_url, player_api_url, "rogue", hp=20, ac=12, items=[RAPIER, STUDDED_LEATHER])
+        sid, pid = _create_session(api_url, player_api_url, "rogue")
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
@@ -427,7 +357,7 @@ class TestMixedCombatFactionSneakAttack:
 
     def test_fighter_player_no_sneak_attack(self, api_url: str, player_api_url: str, ws_base_url: str) -> None:
         """Fighter player attacks dummy — no sneak attack (wrong class)."""
-        sid, pid = _create_session(api_url, player_api_url, "fighter", hp=40, ac=16, items=[LONGSWORD])
+        sid, pid = _create_session(api_url, player_api_url, "fighter")
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
