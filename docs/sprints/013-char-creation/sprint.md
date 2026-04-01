@@ -65,13 +65,14 @@ Fighter и Rogue полностью прописаны (sprints 001, 011, 012), 
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Guard Template + Content Fixes](tasks/phase3-task1-guard-template.md)
+2. [Integration Tests — Squad Materialization](tasks/phase3-task2-materialization-integration.md)
 
 ---
 
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** Phase 3 tasks generated. Ready to start task 1.
 
 ## Decisions
 
