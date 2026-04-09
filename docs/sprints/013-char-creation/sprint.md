@@ -88,4 +88,8 @@ _(заполняется по ходу спринта)_
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-04-09
+
+Character creation overhaul shipped: D&D 5e point buy (27 pts, 8-15 range), HP formula (max hit die + CON mod), class-locked starting equipment (Fighter: chain mail/longsword/shield or greatsword for GWF; Rogue: leather/rapier/shortbow/dagger). Frontend CharacterForm with +/- buttons, remaining points counter, Fighting Style selector, live HP/AC/Gold preview. Guard monster template added for Kingdom Patrol squads. Crit dice separated from base dice for correct GWF reroll. 7 tasks across 3 phases, 113 integration tests green, E2E green.
+
+**Deferred:** Starting equipment items not created as actual Item objects in inventory — AC/stats calculated correctly but equipped_weapon is null (uses fists in combat). Tracked as a finding for future sprint.

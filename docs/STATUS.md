@@ -4,24 +4,9 @@
 
 ## Current Sprint
 
-**Sprint:** 013-char-creation
-**Goal:** Character creation overhaul — point buy, derived HP/AC, starting equipment, Fighter/Rogue only
-**Started:** 2026-04-01
-**Phase:** 3 — Content Fixes + Polish (COMPLETE) — 2026-04-02
-
-All phases complete. **Audit:** Triaged 2026-04-09. Quick-fix: 3 applied. Sprint-relevant: 6 (→ sprint 014 phase 0). Backlog: 28 added.
-
-### Phases
-
-1. HP Formula + Starting Equipment Rules ✓
-2. Creation API + Frontend Form ✓
-3. Content Fixes + Polish
-
-## Next Sprint (pre-planned)
-
 **Sprint:** 014-faction-reputation
 **Goal:** Combat sides from faction relations, personal reputation per-faction with auto-hostility thresholds, friendly OA fix.
-**Started:** 2026-04-02 (planning only)
+**Started:** 2026-04-09
 
 ### Phases
 
@@ -34,6 +19,7 @@ All phases complete. **Audit:** Triaged 2026-04-09. Quick-fix: 3 applied. Sprint
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 013-char-creation | Character creation overhaul — point buy, derived HP/AC, starting equipment, Fighter/Rogue only | 2026-04-01 | 2026-04-09 |
 | 012-reactions-oa | D&D 5e reactions — opportunity attacks, Disengage, Brain.choose_reaction, reaction prompt UI | 2026-03-30 | 2026-03-31 |
 | 011-class-mechanics-l1 | Structured dice, weapon/armor properties, GWF, Cunning Action choice, SA faction, SRD catalogs | 2026-03-28 | 2026-03-30 |
 | 010-e2e-polish | UX-баги из e2e sprint 009 + ActionBar decomposition | 2026-03-28 | 2026-03-28 |
