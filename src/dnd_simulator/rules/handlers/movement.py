@@ -56,7 +56,7 @@ def handle_move(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
             return ActionResult(success=False, error="Cannot move there — blocked")
 
         # Check OA triggers
-        triggers = find_oa_triggers([cur_pos, new_pos], actor, _get_combatants(ctx), bm)
+        triggers = find_oa_triggers([cur_pos, new_pos], actor, _get_combatants(ctx), bm, ctx.combat_state)
         for _step_idx, reactors in triggers:
             alive = ctx.on_leave_reach(actor, cur_pos, new_pos, reactors)
             if not alive:
@@ -136,7 +136,7 @@ def handle_move_to(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Action
 
         # Check OA triggers before moving to next_pos
         if ctx.on_leave_reach is not None:
-            triggers = find_oa_triggers([cur_pos, next_pos], actor, combatants, bm)
+            triggers = find_oa_triggers([cur_pos, next_pos], actor, combatants, bm, ctx.combat_state)
             for _step_idx, reactors in triggers:
                 alive = ctx.on_leave_reach(actor, cur_pos, next_pos, reactors)
                 if not alive:

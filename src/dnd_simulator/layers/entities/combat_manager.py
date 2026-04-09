@@ -12,6 +12,7 @@ from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.i18n import _
 from dnd_simulator.layers.entities.combat_serialization import deserialize_combats, serialize_combats
 from dnd_simulator.rules.combat import AttackResult, resolve_attack, roll_initiative
+from dnd_simulator.rules.combat_sides import build_combat_sides
 from dnd_simulator.rules.handlers.attack_resolution import (
     build_attack_event,
     build_damage_components,
@@ -55,8 +56,8 @@ class CombatManager:
         """Get combat state for a location, or None if no active combat."""
         return self._combats.get(location_id)
 
-    def start_combat(self, location_id: str) -> CombatState | None:
-        """Roll initiative, create battle map, and start combat at a location."""
+    def start_combat(self, location_id: str, query_fn: QueryFn | None = None) -> CombatState | None:
+        """Roll initiative, create battle map, build combat sides, and start combat at a location."""
         creatures = self._active_creatures_at_location(location_id)
         if len(creatures) < 2:
             return None
@@ -81,6 +82,18 @@ class CombatManager:
             turn_order=[c.id for c in ordered],
             battle_map=battle_map,
         )
+        if query_fn is not None:
+
+            def get_relation(a: str, b: str) -> FactionRelation:
+                answer = query_fn(
+                    "politics",
+                    Query(question=QueryType.FACTION_RELATION, params={"a": a, "b": b}),
+                )
+                assert isinstance(answer.value, FactionRelation)
+                return answer.value
+
+            combat.sides, combat.entity_to_side = build_combat_sides(creatures, get_relation)
+
         self._combats[location_id] = combat
         self._attack_this_round[location_id] = False
         for c in creatures:
@@ -149,19 +162,37 @@ class CombatManager:
         )
 
     def _remove_from_combat(self, location_id: str, entity_id: str) -> None:
-        """Remove an entity from combat turn order and map. End combat if no hostility remains."""
+        """Remove an entity from combat turn order, map, and sides. End combat if no hostility remains."""
         combat = self._combats.get(location_id)
         if not combat:
             return
         if entity_id in combat.turn_order:
             combat.turn_order.remove(entity_id)
         combat.battle_map.remove(entity_id)
+        # Clean up sides tracking
+        side = combat.entity_to_side.pop(entity_id, None)
+        if side is not None and side in combat.sides:
+            combat.sides[side].discard(entity_id)
         if len(combat.turn_order) <= 1 or not self._has_opposing_factions(combat):
             self._end_combat(location_id)
 
     def _has_opposing_factions(self, combat: CombatState) -> bool:
-        """Check if alive creatures in combat could still be hostile to each other."""
-        alive = [e for eid in combat.turn_order if isinstance((e := self._entities.get(eid)), Creature) and e.is_alive]
+        """Check if alive creatures in combat could still be hostile to each other.
+
+        Uses combat sides when available: counts sides that still have at least
+        one alive member. Combat continues if 2+ sides are alive.
+        Falls back to faction_id counting when sides are not built.
+        """
+        alive_ids = {
+            eid for eid in combat.turn_order if isinstance((e := self._entities.get(eid)), Creature) and e.is_alive
+        }
+
+        if combat.sides:
+            alive_sides = sum(1 for members in combat.sides.values() if members & alive_ids)
+            return alive_sides >= 2
+
+        # Fallback for combats started without query_fn (no sides built)
+        alive = [self._entities[eid] for eid in alive_ids if isinstance(self._entities.get(eid), Creature)]
         if any(not c.faction_id for c in alive):
             return True
         return len({c.faction_id for c in alive}) > 1
@@ -215,7 +246,7 @@ class CombatManager:
             return ActionResult(success=False, error=_("Target '{id}' not found.").format(id=target_id))
 
         if attacker.location_id not in self._combats:
-            self.start_combat(attacker.location_id)
+            self.start_combat(attacker.location_id, query_fn)
         self._attack_this_round[attacker.location_id] = True
 
         attack = get_weapon_attack(attacker)

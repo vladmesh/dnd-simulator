@@ -47,4 +47,14 @@ Product-level scenarios:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Clean integration — all changes were additive with backward compatibility:
+- `find_oa_triggers` got optional `combat_state` parameter; existing callers without it behave identically (no ally filtering).
+- `start_combat` got optional `query_fn` parameter; existing callers without it skip side building (sides stay empty, fallback logic in `_has_opposing_factions` handles this).
+- `_has_opposing_factions` rewritten to use sides when available, falls back to old faction_id counting when sides not built.
+- `_remove_from_combat` now also cleans `entity_to_side` and `sides` to prevent stale references.
+- Movement handlers (`handle_move`, `handle_move_to`) pass `ctx.combat_state` through to `find_oa_triggers`.
+- No old tests needed modification — all 1809 pre-existing tests pass unchanged.
