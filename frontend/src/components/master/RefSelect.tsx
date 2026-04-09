@@ -60,7 +60,3 @@ export function RefSelect({
   )
 }
 
-/** Clear the ref cache (useful when world data changes). */
-export function clearRefCache() {
-  refCache.clear()
-}

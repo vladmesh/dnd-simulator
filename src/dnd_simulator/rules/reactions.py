@@ -12,33 +12,6 @@ from dnd_simulator.rules.movement import grid_distance
 from dnd_simulator.rules.weapons import get_weapon_attack
 
 
-def can_opportunity_attack(reactor: Creature, mover: Creature, battle_map: BattleMap) -> bool:
-    """Check if reactor can make an opportunity attack against mover.
-
-    Requires: reactor alive, not incapacitated, has reaction budget,
-    mover in weapon reach, mover not disengaging, reactor is not the mover.
-    """
-    if reactor is mover:
-        return False
-    if not reactor.is_alive:
-        return False
-    if is_incapacitated(reactor.conditions):
-        return False
-    if reactor.turn_budget is None or reactor.turn_budget.reaction <= 0:
-        return False
-    if mover.is_disengaging:
-        return False
-
-    reactor_pos = battle_map.get_position(reactor.id)
-    mover_pos = battle_map.get_position(mover.id)
-    if reactor_pos is None or mover_pos is None:
-        return False
-
-    reach = get_weapon_attack(reactor).reach
-    distance = grid_distance(reactor_pos, mover_pos)
-    return distance <= reach
-
-
 def find_oa_triggers(
     path: list[Position],
     mover: Creature,

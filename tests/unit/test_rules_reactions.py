@@ -1,4 +1,4 @@
-"""Focused unit tests for rules/reactions.py — can_opportunity_attack and find_oa_triggers.
+"""Focused unit tests for rules/reactions.py — find_oa_triggers.
 
 Sprint 012, Phase 4, Task 3.
 """
@@ -9,7 +9,7 @@ from dnd_simulator.core.character import Ability, Attack, Creature, DamageCompon
 from dnd_simulator.core.combat import BattleMap, Position
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.turn_budget import TurnBudget
-from dnd_simulator.rules.reactions import can_opportunity_attack, find_oa_triggers
+from dnd_simulator.rules.reactions import find_oa_triggers
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -44,121 +44,6 @@ def _creature(
 
 def _battle_map() -> BattleMap:
     return BattleMap(width=50, height=50)
-
-
-# ---------------------------------------------------------------------------
-# can_opportunity_attack
-# ---------------------------------------------------------------------------
-
-
-class TestCanOpportunityAttack:
-    def test_eligible_reactor(self) -> None:
-        """Basic case: alive, has reaction, mover in reach, not disengaging."""
-        reactor = _creature("guard")
-        mover = _creature("goblin")
-        bm = _battle_map()
-        bm.set_position("guard", Position(10, 10))
-        bm.set_position("goblin", Position(10, 15))  # 5ft away = in reach
-        assert can_opportunity_attack(reactor, mover, bm) is True
-
-    def test_reactor_is_mover(self) -> None:
-        """A creature cannot OA itself."""
-        c = _creature("guard")
-        bm = _battle_map()
-        bm.set_position("guard", Position(10, 10))
-        assert can_opportunity_attack(c, c, bm) is False
-
-    def test_dead_reactor(self) -> None:
-        """Dead reactor cannot OA."""
-        reactor = _creature("guard", hp=0)
-        reactor.current_hp = 0
-        mover = _creature("goblin")
-        bm = _battle_map()
-        bm.set_position("guard", Position(10, 10))
-        bm.set_position("goblin", Position(10, 15))
-        assert can_opportunity_attack(reactor, mover, bm) is False
-
-    def test_no_reaction_budget(self) -> None:
-        """Reactor with 0 reactions cannot OA."""
-        reactor = _creature("guard", reaction=0)
-        mover = _creature("goblin")
-        bm = _battle_map()
-        bm.set_position("guard", Position(10, 10))
-        bm.set_position("goblin", Position(10, 15))
-        assert can_opportunity_attack(reactor, mover, bm) is False
-
-    def test_no_turn_budget_at_all(self) -> None:
-        """Reactor with turn_budget=None cannot OA."""
-        reactor = _creature("guard")
-        reactor.turn_budget = None
-        mover = _creature("goblin")
-        bm = _battle_map()
-        bm.set_position("guard", Position(10, 10))
-        bm.set_position("goblin", Position(10, 15))
-        assert can_opportunity_attack(reactor, mover, bm) is False
-
-    def test_incapacitated_reactor(self) -> None:
-        """Incapacitated creature cannot OA even with budget."""
-        reactor = _creature("guard", conditions={Condition.STUNNED: None})
-        mover = _creature("goblin")
-        bm = _battle_map()
-        bm.set_position("guard", Position(10, 10))
-        bm.set_position("goblin", Position(10, 15))
-        assert can_opportunity_attack(reactor, mover, bm) is False
-
-    def test_paralyzed_reactor(self) -> None:
-        """Paralyzed also means incapacitated."""
-        reactor = _creature("guard", conditions={Condition.PARALYZED: 2})
-        mover = _creature("goblin")
-        bm = _battle_map()
-        bm.set_position("guard", Position(10, 10))
-        bm.set_position("goblin", Position(10, 15))
-        assert can_opportunity_attack(reactor, mover, bm) is False
-
-    def test_mover_disengaging(self) -> None:
-        """Disengaging mover does not provoke OA."""
-        reactor = _creature("guard")
-        mover = _creature("goblin", disengaging=True)
-        bm = _battle_map()
-        bm.set_position("guard", Position(10, 10))
-        bm.set_position("goblin", Position(10, 15))
-        assert can_opportunity_attack(reactor, mover, bm) is False
-
-    def test_mover_out_of_reach(self) -> None:
-        """Mover beyond weapon reach cannot be OA'd."""
-        reactor = _creature("guard", reach=5)
-        mover = _creature("goblin")
-        bm = _battle_map()
-        bm.set_position("guard", Position(10, 10))
-        bm.set_position("goblin", Position(10, 20))  # 10ft away, reach=5
-        assert can_opportunity_attack(reactor, mover, bm) is False
-
-    def test_extended_reach_weapon(self) -> None:
-        """Polearm with 10ft reach can OA targets at 10ft."""
-        reactor = _creature("guard", reach=10)
-        mover = _creature("goblin")
-        bm = _battle_map()
-        bm.set_position("guard", Position(10, 10))
-        bm.set_position("goblin", Position(10, 20))  # 10ft away, reach=10
-        assert can_opportunity_attack(reactor, mover, bm) is True
-
-    def test_reactor_not_on_map(self) -> None:
-        """Reactor without a position on the battle map cannot OA."""
-        reactor = _creature("guard")
-        mover = _creature("goblin")
-        bm = _battle_map()
-        bm.set_position("goblin", Position(10, 15))
-        # guard not placed
-        assert can_opportunity_attack(reactor, mover, bm) is False
-
-    def test_mover_not_on_map(self) -> None:
-        """Mover without a position on the battle map cannot be OA'd."""
-        reactor = _creature("guard")
-        mover = _creature("goblin")
-        bm = _battle_map()
-        bm.set_position("guard", Position(10, 10))
-        # goblin not placed
-        assert can_opportunity_attack(reactor, mover, bm) is False
 
 
 # ---------------------------------------------------------------------------

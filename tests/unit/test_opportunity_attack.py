@@ -8,11 +8,10 @@ from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.action_defs import CostType, get_action_def
 from dnd_simulator.core.character import Ability, AbilityScores, Attack, Creature, DamageComponent, DamageType
 from dnd_simulator.core.combat import BattleMap, Position
-from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.items import Item, ItemType, WeaponCategory, WeaponDef
 from dnd_simulator.core.models import ActionResult, EventType
 from dnd_simulator.core.turn_budget import ActionCost, TurnBudget
-from dnd_simulator.rules.reactions import can_opportunity_attack, find_oa_triggers
+from dnd_simulator.rules.reactions import find_oa_triggers
 
 
 def _make_creature(
@@ -73,105 +72,6 @@ def _make_creature(
 
 def _make_battle_map() -> BattleMap:
     return BattleMap(width=100, height=100)
-
-
-# ---------------------------------------------------------------------------
-# can_opportunity_attack
-# ---------------------------------------------------------------------------
-
-
-class TestCanOpportunityAttack:
-    def test_basic_eligibility(self) -> None:
-        """Reactor with sword, mover 5ft away, reactor has reaction → True."""
-        reactor = _make_creature("Reactor")
-        mover = _make_creature("Mover")
-        bm = _make_battle_map()
-        bm.set_position("reactor", Position(10, 10))
-        bm.set_position("mover", Position(15, 10))
-
-        assert can_opportunity_attack(reactor, mover, bm) is True
-
-    def test_blocked_by_incapacitated(self) -> None:
-        """Reactor is stunned → False."""
-        reactor = _make_creature("Reactor")
-        reactor.conditions[Condition.STUNNED] = 1
-        mover = _make_creature("Mover")
-        bm = _make_battle_map()
-        bm.set_position("reactor", Position(10, 10))
-        bm.set_position("mover", Position(15, 10))
-
-        assert can_opportunity_attack(reactor, mover, bm) is False
-
-    def test_blocked_by_no_reaction_budget(self) -> None:
-        """Reactor's turn_budget.reaction == 0 → False."""
-        reactor = _make_creature("Reactor")
-        assert reactor.turn_budget is not None
-        reactor.turn_budget.reaction = 0
-        mover = _make_creature("Mover")
-        bm = _make_battle_map()
-        bm.set_position("reactor", Position(10, 10))
-        bm.set_position("mover", Position(15, 10))
-
-        assert can_opportunity_attack(reactor, mover, bm) is False
-
-    def test_blocked_by_disengaging(self) -> None:
-        """Mover has is_disengaging=True → False."""
-        reactor = _make_creature("Reactor")
-        mover = _make_creature("Mover", is_disengaging=True)
-        bm = _make_battle_map()
-        bm.set_position("reactor", Position(10, 10))
-        bm.set_position("mover", Position(15, 10))
-
-        assert can_opportunity_attack(reactor, mover, bm) is False
-
-    def test_blocked_by_out_of_reach(self) -> None:
-        """Mover is 10ft away, reactor has 5ft reach → False."""
-        reactor = _make_creature("Reactor")
-        mover = _make_creature("Mover")
-        bm = _make_battle_map()
-        bm.set_position("reactor", Position(10, 10))
-        bm.set_position("mover", Position(20, 10))  # 10ft away
-
-        assert can_opportunity_attack(reactor, mover, bm) is False
-
-    def test_extended_reach(self) -> None:
-        """Reactor has polearm (reach 10), mover 10ft away → True."""
-        reactor = _make_creature("Reactor", reach=10)
-        mover = _make_creature("Mover")
-        bm = _make_battle_map()
-        bm.set_position("reactor", Position(10, 10))
-        bm.set_position("mover", Position(20, 10))  # 10ft away
-
-        assert can_opportunity_attack(reactor, mover, bm) is True
-
-    def test_reactor_is_mover(self) -> None:
-        """Creature can't OA itself."""
-        creature = _make_creature("Fighter")
-        bm = _make_battle_map()
-        bm.set_position("fighter", Position(10, 10))
-
-        assert can_opportunity_attack(creature, creature, bm) is False
-
-    def test_blocked_by_dead(self) -> None:
-        """Dead reactor can't OA."""
-        reactor = _make_creature("Reactor", hp=0)
-        mover = _make_creature("Mover")
-        bm = _make_battle_map()
-        bm.set_position("reactor", Position(10, 10))
-        bm.set_position("mover", Position(15, 10))
-
-        assert can_opportunity_attack(reactor, mover, bm) is False
-
-    def test_no_turn_budget(self) -> None:
-        """Reactor without turn_budget (out of combat) → False."""
-        reactor = _make_creature("Reactor")
-        reactor.turn_budget = None
-        mover = _make_creature("Mover")
-        bm = _make_battle_map()
-        bm.set_position("reactor", Position(10, 10))
-        bm.set_position("mover", Position(15, 10))
-
-        assert can_opportunity_attack(reactor, mover, bm) is False
 
 
 # ---------------------------------------------------------------------------

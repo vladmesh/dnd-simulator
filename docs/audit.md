@@ -5,9 +5,9 @@
 
 ## Summary
 - Dead code: 1 issue
-- Code smells: 10 issues
+- Code smells: 8 issues
 - Security: 6 issues
-- Architecture violations: 5 issues
+- Architecture violations: 4 issues
 - Convention violations: 8 issues
 - Layer contract: 0 issues
 - Test gaps: 8 issues
@@ -40,9 +40,7 @@ All 8 dead-code items from the previous audit (2026-03-31) have been removed. No
 | `layers/entities/combat_manager.py` (604 lines) | Large combat module | Consider splitting initiative/damage/state transitions |
 | `adapters/api/routes_master.py` (560 lines, 40+ routes) | Oversized route module | Split by domain (sessions, creatures, world editing, saves) |
 | `perception.py` (54 `.get()` calls with silent defaults) | Systematic fail-fast violation — masks missing event data with `""`, `0`, `"?"` | Use `data["key"]` — crash on missing keys |
-| `awareness_builder.py` (7 broad `except Exception` blocks) | Swallows bugs, replaces real data with hardcoded fallbacks like `{"condition": "clear", "temperature": 15}` | Remove catch-alls or narrow to specific expected exceptions |
 | `core/brain.py:165` | `RuleBrain._choose_combat_action` is 131 lines of if/elif chain | Decompose into strategy sub-methods or decision table |
-| `layers/entities/perception.py:38-93` | 55-line if/elif chain mapping EventType to handlers | Replace with dispatch dict |
 | `frontend/src/components/master/SchemaForm.tsx` (488 lines) | Large component with inline sub-components | Extract `ArrayOfObjectsField` and field renderers |
 
 ## Security
@@ -64,7 +62,6 @@ All 8 dead-code items from the previous audit (2026-03-31) have been removed. No
 | `round.py:31` | `Round` directly imports `EntitiesLayer` (service → layer coupling) | Interact via World/Layer interface | medium |
 | `adapters/api/routes_player.py:12-13` | Imports `Ability`, `PlayerCharacter` from core for response building | Build response dict in service layer | low |
 | `llm/brain.py:49`, `llm/summarizer.py:10` | Imports layer-specific models (`Npc`, `NpcMemory`) | Pass data through interface, not concrete layer type | low |
-| `rules/dice.py:9,15-16` | `import os` + `os.environ.get("DND_DICE_SEED")` at import time | Inject seed via parameter or factory | low |
 
 ## Convention Violations
 

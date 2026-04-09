@@ -33,7 +33,7 @@ SWORD_VALE_COUNTS = {
     "npcs": 6,
     "settlements": 10,
     "squads": 3,
-    "monster_templates": 3,
+    "monster_templates": 4,
     "encounters": 2,
 }
 

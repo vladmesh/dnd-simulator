@@ -87,6 +87,9 @@
 - [ ] **should** `layer-source-string-cmp` — game_service.py L535,595,611,626 source == "library" вместо LayerSource.LIBRARY enum
 - [x] `long-func-run-combat-turn` — ~~round.py run_combat_turn 132 строки~~ FIXED Sprint 012 phase 4: extracted _prepare_combat_turn() + _build_combat_awareness()
 - [ ] **should** `long-func-choose-combat-action` — core/brain.py _choose_combat_action 114 строк. Break into per-action helpers
+- [ ] **should** `round-growing` — round.py 612 строк. Extract combat-turn and awareness-building into helpers
+- [ ] **should** `perception-fail-fast` — layers/entities/perception.py 54x .get() с silent defaults. Маскирует отсутствие данных в событиях
+- [ ] **could** `test-bare-status-codes` — test_api.py, test_trade_ws.py используют bare 200/404 вместо HTTPStatus
 - [ ] **should** `long-func-start-round` — service/session.py start_round 103 строки. Extract closures into named methods
 - [x] `perception-dispatch-chain` — ~~perception.py if-elif chain~~ FIXED Sprint 012 phase 4: dict[EventType, handler] dispatch
 - [ ] **could** `activation-manager-growing` — activation_manager.py 406 строк. Extract _materialize_squads()
@@ -123,6 +126,7 @@
 - [ ] **could** `layer-file-max-length` — UpdateLayerFileRequest.content без max_length — произвольный YAML на диск
 - [ ] **could** `llm-prompt-no-separation` — NPC memory, entity descriptions интерполируются в system prompt без разделительной границы
 - [ ] **could** `ability-scores-no-bounds` — ability_scores и attacks принимают произвольные значения без bounds validation
+- [ ] **could** `world-name-path-traversal` — game_service.py:81 world_name from request used in path construction without regex guard at call site
 
 ## Dead Code (from audit 2026-03-25)
 
@@ -132,6 +136,9 @@
 - [x] `dead-check-reactions` — ~~stubbed~~ FIXED Sprint 012: wired into round loop
 - [ ] `dead-is-daylight` — rules/geography.py:172, tested but unused in prod. Wire into geography layer or remove
 - [ ] `dead-prone-stand-cost` — rules/conditions.py:27, tested but never integrated into movement handler
+- [ ] `dead-reset-resources` — rules/resources.py:32, 12 test refs, 0 prod. Wire with rest mechanics
+- [ ] `dead-walk-path` — rules/movement.py:201, 12 test refs, 0 prod. Budget-aware path walking
+- [ ] `dead-to-save-data` — core/player.py:73, 1 test ref, 0 prod
 
 ## Test Gaps (from audit 2026-03-29)
 
@@ -152,3 +159,5 @@
 - [ ] **should** `test-gap-handlers-items` — rules/handlers/items.py без unit-тестов
 - [x] `test-gap-handlers-movement` — ~~rules/handlers/movement.py без unit-тестов~~ FIXED Sprint 012 phase 4: 12 tests in test_handlers_movement.py
 - [x] `test-gap-handlers-reactions` — ~~rules/handlers/reactions.py без unit-тестов~~ FIXED Sprint 012 phase 4: 5 tests in test_handlers_reactions.py
+- [ ] **should** `test-gap-commands-politics` — service/commands_politics.py 0 test references
+- [ ] **should** `test-gap-commands-time` — service/commands_time.py 0 test references
