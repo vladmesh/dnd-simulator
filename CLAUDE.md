@@ -58,7 +58,7 @@ service/           — GameService, ActionDispatcher, BrainFactory, command modu
   ↓
 adapters/          — FastAPI REST + WebSocket API
 
-rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, resources, action providers, handlers/ package (no deps)
+rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, resources, character creation (point buy, HP, starting equipment), action providers, handlers/ package (no deps)
 llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
 storage/           — SaveStore interface, JsonFileStore
 content_loader/    — loads worlds, nations, settlements, NPCs, player from YAML; Pydantic content schemas, JSON Schema generation, entity CRUD, manifest resolver, library catalog, world assembly, catalog loader (monsters/items)
@@ -90,7 +90,7 @@ Each creature's turn is a multi-action loop orchestrated by `Round` (in `round.p
 
 ### Reactions & Opportunity Attacks
 
-D&D 5e reaction system. `Brain.choose_reaction(creature, trigger, available_reactions)` — unified method on ABC (RuleBrain: always attack, LlmBrain: LLM call, PlayerBrain: callback + queue). `ReactionTrigger` typed data object (extensible: `TriggerType.LEAVING_REACH` for OA, future: Counterspell, Shield). Movement handlers call `on_leave_reach` callback (injected via `ActionContext`) when a mover exits an enemy's reach. `check_reactions` in Round is recursive — a reaction can trigger another reaction, depth limited naturally (1 reaction per creature per round). `rules/reactions.py`: pure functions `can_opportunity_attack()`, `find_oa_triggers()`. OA handler in `rules/handlers/reactions.py`. Disengage sets `creature.is_disengaging = True` (reset at turn start), prevents OA. `Creature.combat_position` enables deterministic battle map placement from YAML/API.
+D&D 5e reaction system. `Brain.choose_reaction(creature, trigger, available_reactions)` — unified method on ABC (RuleBrain: always attack, LlmBrain: LLM call, PlayerBrain: callback + queue). `ReactionTrigger` typed data object (extensible: `TriggerType.LEAVING_REACH` for OA, future: Counterspell, Shield). Movement handlers call `on_leave_reach` callback (injected via `ActionContext`) when a mover exits an enemy's reach. `check_reactions` in Round is recursive — a reaction can trigger another reaction, depth limited naturally (1 reaction per creature per round). `rules/reactions.py`: pure function `find_oa_triggers()`. OA handler in `rules/handlers/reactions.py`. Disengage sets `creature.is_disengaging = True` (reset at turn start), prevents OA. `Creature.combat_position` enables deterministic battle map placement from YAML/API.
 
 ### Conditions & Items
 

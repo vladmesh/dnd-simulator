@@ -47,7 +47,7 @@ src/dnd_simulator/
 │       ├── query_handler.py      — QueryHandler (layer query dispatch)
 │       └── perception.py         — event perception and visibility filtering
 ├── master/        — DM orchestrator (LLM-powered)
-├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation, conditions, weapons, modifiers, proficiency, sneak attack, reactions, resources, action providers, abstract combat, physics, economics
+├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation, conditions, weapons, modifiers, proficiency, sneak attack, reactions, resources, character creation, action providers, abstract combat, physics, economics
 │   └── handlers/  — per-action-type execution (combat, movement, equipment, items, trade, reactions)
 ├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, MemorySummarizer
 ├── i18n.py        — gettext internationalization, per-session language via contextvars

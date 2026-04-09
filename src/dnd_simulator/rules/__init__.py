@@ -15,7 +15,8 @@ Stateless calculations that can be used by any layer or the Master:
 - proficiency: proficiency bonus by level, weapon/armor proficiency per class
 - sneak_attack: Rogue sneak attack eligibility and dice count (pure functions)
 - resources: resource pool management (has_resource, use_resource, reset)
-- reactions: OA eligibility (can_opportunity_attack), trigger detection (find_oa_triggers)
+- character_creation: point buy validation, HP formula (max hit die + CON mod), starting equipment by class
+- reactions: OA trigger detection (find_oa_triggers)
 - movement: grid distance (D&D 5e diagonal rule), move toward/away/direction with wall collision
 - geography: temperature, daylight, travel time, distance calculations
 - politics: warfare, trade, stability, diplomacy formulas

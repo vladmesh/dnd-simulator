@@ -91,6 +91,10 @@ Structured dice pipeline (DiceResult, D20Result, reroll_below для GWF). Battl
 Система реакций D&D 5e. Brain.choose_reaction() — единый метод на ABC для RuleBrain/LlmBrain/PlayerBrain. Opportunity attacks при выходе из reach врага, Disengage предотвращает OA. TurnBudget на Creature (персистирует между ходами для реакций). Movement handlers вызывают on_leave_reach callback. check_reactions рекурсивный (reaction → reaction). Frontend: reaction prompt UI, disengage indicator, perception handlers для OA/Disengage. Creature.combat_position для детерминированной расстановки на карте. BattleMap.set_position raises ValueError на out-of-bounds. Phase 4 (audit refactor): perception dispatch dict, session closure dedup, awareness exception narrowing, round helpers extraction, unit tests для reactions/handlers/movement.
 → [план спринта](sprints/012-reactions-oa/sprint.md)
 
+### Sprint 013 — Character Creation Overhaul (фазы 1-3)
+Экран создания персонажа из "впиши любые цифры" → D&D-подобный flow. Phase 1: HP формула (max hit die + CON mod), point buy валидация (27 очков, 8-15), starting equipment по классу. Phase 2: backend derive stats + API, frontend CharacterForm с point buy UI (+/− кнопками, preview HP/AC/gold), Fighting Style selector для Fighter. Phase 3: Guard monster template для Kingdom Patrol, integration tests squad materialization. GWF fighter получает greatsword вместо longsword+shield. Crit dice отделены от base dice для корректного GWF reroll.
+→ [план спринта](sprints/013-char-creation/sprint.md)
+
 ## Planned
 
 ### Level 2 — Расходуемые ресурсы

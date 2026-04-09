@@ -2,7 +2,7 @@
 
 Сценарии для регрессионного тестирования через Playwright. Каждый сценарий — что делаем, что ожидаем. Обновляется при добавлении новых фич.
 
-**Последнее обновление:** 2026-03-28
+**Последнее обновление:** 2026-04-09
 
 ---
 
@@ -13,8 +13,16 @@
 - **Ожидание:** две карточки: "Play" (→ /play) и "Dungeon Master" (→ /master)
 
 ### 1.2 Quick start — pick existing world
-- Нажать "Play" → выбрать мир (Sword Vale) → "New Session" → создать персонажа (fighter, human, STR 16)
+- Нажать "Play" → выбрать мир (Sword Vale) → "New Session" → создать персонажа (fighter, human, point buy STR 15 CON 14, Defense style)
 - **Ожидание:** редирект на `/play/:sessionId`, WebSocket подключён, первый turn в логе
+
+### 1.4 Character creation — point buy
+- На экране создания: проверить что есть +/- кнопки для ability scores, счётчик оставшихся очков (27), preview HP/AC/Gold, текст Starting Equipment
+- **Ожидание:** point buy корректный (15→9pts, остаток обновляется), + disabled при 15, - disabled при 8. Preview: Fighter L1 CON 14 → HP 12, Chain Mail + Shield + Defense → AC 19, Gold 100
+
+### 1.5 Character creation — class-specific UI
+- Выбрать Fighter → появляется Fighting Style selector (Defense/Dueling/GWF). Выбрать Rogue → selector исчезает. Starting equipment меняется.
+- **Ожидание:** Fighter: Chain Mail, Longsword, Shield (или Greatsword для GWF). Rogue: Leather Armor, Rapier, Shortbow, Dagger
 
 ### 1.3 Language toggle
 - На любом экране переключить язык EN→RU
