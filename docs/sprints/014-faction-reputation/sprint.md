@@ -16,7 +16,7 @@
 
 ---
 
-## Phase 0: Refactor — Prep for Faction Work
+## Phase 0: Refactor — Prep for Faction Work ✓
 
 Audit-driven cleanup of files sprint 014 will heavily modify. Reduces friction and prevents debt growth.
 
@@ -85,7 +85,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 0 — tasks generated 2026-04-09. Ready to start task 1.
+**Current:** Phase 0 complete (2026-04-10). Ready for Phase 1 task generation.
 
 ## Decisions
 
