@@ -66,7 +66,9 @@ Audit-driven cleanup of files sprint 014 will heavily modify. Reduces friction a
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [effective_relation Pure Function + Reputation Field](tasks/phase2-task1-effective-relation.md)
+2. [CombatSides Uses effective_relation](tasks/phase2-task2-combat-sides-effective-relation.md)
+3. [Awareness + Serialization for Reputation](tasks/phase2-task3-awareness-serialization.md)
 
 ## Phase 3: Reputation Dynamics + Auto-hostility
 
