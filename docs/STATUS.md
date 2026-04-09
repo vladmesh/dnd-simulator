@@ -10,7 +10,7 @@
 
 ### Phases
 
-0. Refactor — Prep for Faction Work
+0. **Refactor — Prep for Faction Work** ← current (tasks generated 2026-04-09)
 1. Combat Sides + OA Fix
 2. Personal Reputation + effective_relation
 3. Reputation Dynamics + Auto-hostility

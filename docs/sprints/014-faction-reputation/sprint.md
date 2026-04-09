@@ -31,7 +31,10 @@ Audit-driven cleanup of files sprint 014 will heavily modify. Reduces friction a
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Extract Politics Layer Submodules](tasks/phase0-task1-politics-extraction.md)
+2. [Split Combat Manager](tasks/phase0-task2-combat-manager-split.md)
+3. [Decompose Brain Combat Decision Tree](tasks/phase0-task3-brain-decompose.md)
+4. [Small Fixes — Perception, Proficiency, Commands Tests](tasks/phase0-task4-small-fixes.md)
 
 ## Phase 1: Combat Sides + OA Fix
 
@@ -82,7 +85,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Planning complete. Sprint pre-planned, waiting for sprint 013 closure.
+**Current:** Phase 0 — tasks generated 2026-04-09. Ready to start task 1.
 
 ## Decisions
 
