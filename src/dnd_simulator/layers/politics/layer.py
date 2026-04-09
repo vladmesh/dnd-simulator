@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
+from dnd_simulator.layers.politics.diplomacy import process_diplomacy
+from dnd_simulator.layers.politics.economy import process_economy
 from dnd_simulator.layers.politics.models import (
     DiplomaticStatus,
     FactionRelation,
@@ -15,23 +17,23 @@ from dnd_simulator.layers.politics.models import (
     LeaderTrait,
     Nation,
 )
+from dnd_simulator.layers.politics.warfare import process_wars
 from dnd_simulator.rules.politics import (
-    calculate_military_upkeep,
-    calculate_region_income,
     calculate_stability_drift,
-    calculate_trade_income,
-    calculate_war_strength,
     clamp,
     leader_death_chance,
-    peace_chance,
     rebellion_chance,
-    trade_agreement_chance,
-    war_declaration_chance,
 )
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn, TimeDelta
 
+_TICK_INTERVAL_SECONDS = 2_592_000  # 30 days
+
+REBELLION_WEALTH_FACTOR = 0.7
+REBELLION_MILITARY_FACTOR = 0.6
+REBELLION_STABILITY_RESET = 30.0
+LEADER_DEATH_STABILITY_COST = 10.0
 
 _LEADER_NAMES = [
     "Aldric",
@@ -90,7 +92,6 @@ class PoliticsLayer(Layer):
         self._faction_names: dict[str, str] = faction_names or {}
         self._rng = random.Random(seed)
 
-        # Income from settlements (if available), else fall back to terrain-based
         self._region_income_fn = region_income_fn
 
     @property
@@ -99,7 +100,7 @@ class PoliticsLayer(Layer):
 
     @property
     def tick_interval(self) -> int:
-        return 2_592_000  # 30 days in seconds
+        return _TICK_INTERVAL_SECONDS
 
     def get_nation(self, nation_id: str) -> Nation:
         """Get a nation by ID. Raises KeyError if not found."""
@@ -127,10 +128,7 @@ class PoliticsLayer(Layer):
         self._faction_relations[key] = relation
 
     def get_faction_relation(self, faction_a: str, faction_b: str) -> FactionRelation:
-        """Get relation between two factions.
-
-        Same faction = FRIENDLY. Unspecified = NEUTRAL.
-        """
+        """Get relation between two factions. Same faction = FRIENDLY. Unspecified = NEUTRAL."""
         if faction_a == faction_b:
             return FactionRelation.FRIENDLY
         return self._faction_relations.get(_relation_key(faction_a, faction_b), FactionRelation.NEUTRAL)
@@ -143,12 +141,8 @@ class PoliticsLayer(Layer):
         return None
 
     def tick(self, delta: TimeDelta, time: GameDateTime, query_fn: QueryFn, emit_fn: EmitFn) -> list[Event]:
-        """Process monthly political updates.
-
-        World only calls this when tick_interval has elapsed,
-        so delta covers at least one month.
-        """
-        months = max(1, delta.seconds // 2_592_000)
+        """Process monthly political updates."""
+        months = max(1, delta.seconds // _TICK_INTERVAL_SECONDS)
         events: list[Event] = []
         for _ in range(months):
             events.extend(self._monthly_tick())
@@ -159,16 +153,25 @@ class PoliticsLayer(Layer):
         events: list[Event] = []
 
         # 1. Economy
-        events.extend(self._process_economy())
+        process_economy(
+            self._nations,
+            self._relations,
+            self._region_terrains,
+            region_income_fn=self._region_income_fn,
+        )
 
         # 2. Wars
-        events.extend(self._process_wars())
+        events.extend(
+            process_wars(self._nations, self._relations, self._war_durations, self._region_adjacency, self._rng)
+        )
 
         # 3. Stability
         events.extend(self._process_stability())
 
         # 4. Diplomacy (new wars, peace, trade)
-        events.extend(self._process_diplomacy())
+        events.extend(
+            process_diplomacy(self._nations, self._relations, self._war_durations, self._region_adjacency, self._rng)
+        )
 
         # 5. Leaders (death, aging)
         events.extend(self._process_leaders())
@@ -180,83 +183,6 @@ class PoliticsLayer(Layer):
 
         # 7. Remove dead nations (no regions)
         self._remove_dead_nations(events)
-
-        return events
-
-    def _process_economy(self) -> list[Event]:
-        """Calculate income, trade, and upkeep for each nation."""
-        for nation in self._nations.values():
-            # Base income from controlled regions
-            if self._region_income_fn:
-                income = sum(self._region_income_fn(rid) for rid in nation.regions)
-            else:
-                income = sum(
-                    calculate_region_income(self._region_terrains.get(rid, "plains")) for rid in nation.regions
-                )
-
-            # Trade income
-            trade_partners = self._count_trade_partners(nation.id)
-            income += calculate_trade_income(nation.wealth, trade_partners)
-
-            # Leader merchant bonus
-            if nation.leader and nation.leader.trait == LeaderTrait.MERCHANT:
-                income *= 1.3
-
-            # Military upkeep
-            upkeep = calculate_military_upkeep(nation.military)
-
-            nation.wealth = clamp(nation.wealth + income - upkeep)
-
-        return []
-
-    def _process_wars(self) -> list[Event]:
-        """Resolve active wars — winner takes a border region."""
-        events: list[Event] = []
-
-        for key, status in list(self._relations.items()):
-            if status != DiplomaticStatus.WAR:
-                continue
-
-            nation_a = self._nations.get(key[0])
-            nation_b = self._nations.get(key[1])
-            if not nation_a or not nation_b:
-                continue
-
-            # Roll for each side
-            strength_a = calculate_war_strength(nation_a.military, nation_a.stability, self._rng.random())
-            strength_b = calculate_war_strength(nation_b.military, nation_b.stability, self._rng.random())
-
-            if abs(strength_a - strength_b) < 5.0:
-                # Stalemate — both lose a bit of military
-                nation_a.military = clamp(nation_a.military - 1.0)
-                nation_b.military = clamp(nation_b.military - 1.0)
-                continue
-
-            winner, loser = (nation_a, nation_b) if strength_a > strength_b else (nation_b, nation_a)
-
-            # Find border region to conquer
-            border_region = self._find_border_region(winner.id, loser.id)
-            if border_region:
-                loser.regions.remove(border_region)
-                winner.regions.append(border_region)
-                events.append(
-                    Event(
-                        event_type=EventType.CUSTOM,
-                        source_layer=self.name,
-                        data={
-                            "type": "region_conquered",
-                            "winner": winner.id,
-                            "loser": loser.id,
-                            "region": border_region,
-                        },
-                        description=(f"{winner.name} conquers {border_region} from {loser.name}"),
-                    )
-                )
-
-            # War costs
-            winner.military = clamp(winner.military - 2.0)
-            loser.military = clamp(loser.military - 4.0)
-            loser.stability = clamp(loser.stability - 3.0)
 
         return events
 
@@ -279,11 +205,10 @@ class PoliticsLayer(Layer):
             )
             nation.stability = clamp(nation.stability + drift)
 
-            # Rebellion check
             if self._rng.random() < rebellion_chance(nation.stability):
-                nation.wealth = clamp(nation.wealth * 0.7)
-                nation.military = clamp(nation.military * 0.6)
-                nation.stability = 30.0  # Reset to low-but-not-critical
+                nation.wealth = clamp(nation.wealth * REBELLION_WEALTH_FACTOR)
+                nation.military = clamp(nation.military * REBELLION_MILITARY_FACTOR)
+                nation.stability = REBELLION_STABILITY_RESET
                 nation.leader = self._generate_leader()
 
                 events.append(
@@ -297,79 +222,6 @@ class PoliticsLayer(Layer):
 
         return events
 
-    def _process_diplomacy(self) -> list[Event]:
-        """Check for new wars, peace treaties, trade agreements."""
-        events: list[Event] = []
-        nation_ids = list(self._nations.keys())
-
-        for i, nid_a in enumerate(nation_ids):
-            for nid_b in nation_ids[i + 1 :]:
-                nation_a = self._nations[nid_a]
-                nation_b = self._nations[nid_b]
-                key = _relation_key(nid_a, nid_b)
-                status = self._relations.get(key, DiplomaticStatus.PEACE)
-
-                # Are they neighbors?
-                if not self._nations_are_neighbors(nid_a, nid_b):
-                    continue
-
-                if status == DiplomaticStatus.WAR:
-                    # Peace check
-                    months = self._war_durations.get(key, 0)
-                    if self._rng.random() < peace_chance(months):
-                        self._relations[key] = DiplomaticStatus.PEACE
-                        self._war_durations.pop(key, None)
-                        events.append(
-                            Event(
-                                event_type=EventType.CUSTOM,
-                                source_layer=self.name,
-                                data={"type": "peace", "nation_a": nid_a, "nation_b": nid_b},
-                                description=f"{nation_a.name} and {nation_b.name} sign a peace treaty",
-                            )
-                        )
-
-                elif status == DiplomaticStatus.PEACE:
-                    # War declaration check (both directions)
-                    for aggressor, target in [(nation_a, nation_b), (nation_b, nation_a)]:
-                        chance = war_declaration_chance(
-                            aggressor.military,
-                            target.military,
-                            aggressor.leader.trait.value if aggressor.leader else None,
-                        )
-                        if self._rng.random() < chance:
-                            self._relations[key] = DiplomaticStatus.WAR
-                            self._war_durations[key] = 0
-                            events.append(
-                                Event(
-                                    event_type=EventType.CUSTOM,
-                                    source_layer=self.name,
-                                    data={"type": "war_declared", "aggressor": aggressor.id, "target": target.id},
-                                    description=f"{aggressor.name} declares war on {target.name}!",
-                                ),
-                            )
-                            break  # Only one war declaration per pair per month
-
-                    # Trade agreement check (if still at peace)
-                    if self._relations.get(key) == DiplomaticStatus.PEACE:
-                        for n in [nation_a, nation_b]:
-                            if (
-                                n.leader
-                                and n.leader.trait in (LeaderTrait.MERCHANT, LeaderTrait.DIPLOMAT)
-                                and self._rng.random() < trade_agreement_chance()
-                            ):
-                                self._relations[key] = DiplomaticStatus.TRADE_AGREEMENT
-                                events.append(
-                                    Event(
-                                        event_type=EventType.CUSTOM,
-                                        source_layer=self.name,
-                                        data={"type": "trade_agreement", "nation_a": nid_a, "nation_b": nid_b},
-                                        description=(f"{nation_a.name} and {nation_b.name} sign a trade agreement"),
-                                    )
-                                )
-                                break
-
-        return events
-
     def _process_leaders(self) -> list[Event]:
         """Age leaders and check for death."""
         events: list[Event] = []
@@ -379,12 +231,12 @@ class PoliticsLayer(Layer):
                 nation.leader = self._generate_leader()
                 continue
 
-            nation.leader.age += 1  # 1 month = ~1 year in game terms for leader aging
+            nation.leader.age += 1
 
             if self._rng.random() < leader_death_chance(nation.leader.age):
                 old_name = nation.leader.name
                 nation.leader = self._generate_leader()
-                nation.stability = clamp(nation.stability - 10.0)
+                nation.stability = clamp(nation.stability - LEADER_DEATH_STABILITY_COST)
 
                 events.append(
                     Event(
@@ -410,7 +262,6 @@ class PoliticsLayer(Layer):
         dead = [nid for nid, n in self._nations.items() if not n.regions]
         for nid in dead:
             nation = self._nations.pop(nid)
-            # Clean up relations
             for key in list(self._relations):
                 if nid in key:
                     self._relations.pop(key, None)
@@ -423,46 +274,6 @@ class PoliticsLayer(Layer):
                     description=f"{nation.name} has fallen!",
                 )
             )
-
-    # -- helpers --
-
-    def _count_trade_partners(self, nation_id: str) -> int:
-        """Count nations with trade agreement or alliance."""
-        count = 0
-        for key, status in self._relations.items():
-            if nation_id in key and status in (DiplomaticStatus.TRADE_AGREEMENT, DiplomaticStatus.ALLIANCE):
-                count += 1
-        return count
-
-    def _find_border_region(self, winner_id: str, loser_id: str) -> str | None:
-        """Find a loser's region adjacent to any winner's region."""
-        winner = self._nations.get(winner_id)
-        loser = self._nations.get(loser_id)
-        if not winner or not loser:
-            return None
-
-        winner_regions = set(winner.regions)
-
-        for rid in loser.regions:
-            neighbors = self._region_adjacency.get(rid, [])
-            if any(n in winner_regions for n in neighbors):
-                return rid
-
-        return None
-
-    def _nations_are_neighbors(self, nid_a: str, nid_b: str) -> bool:
-        """Check if two nations share a border."""
-        nation_a = self._nations.get(nid_a)
-        nation_b = self._nations.get(nid_b)
-        if not nation_a or not nation_b:
-            return False
-
-        b_regions = set(nation_b.regions)
-        for rid in nation_a.regions:
-            neighbors = self._region_adjacency.get(rid, [])
-            if any(n in b_regions for n in neighbors):
-                return True
-        return False
 
     def _generate_leader(self) -> Leader:
         """Create a random new leader."""
@@ -478,14 +289,7 @@ class PoliticsLayer(Layer):
         return ActionResult()
 
     def query(self, query: Query) -> Answer:
-        """Answer queries about the political world.
-
-        Supported queries (see QueryType enum):
-        - NATIONS: list all nation IDs
-        - NATION_INFO: params={nation_id} -> full nation data
-        - RELATIONS: params={nation_id} -> all relations for a nation
-        - REGION_OWNER: params={region_id} -> owning nation ID or None
-        """
+        """Answer queries about the political world."""
         q = query.question
         params = query.params
 

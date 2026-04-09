@@ -44,4 +44,16 @@ Extract hardcoded magic numbers into named constants (rebellion thresholds, merc
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Extracted economy (56 lines), warfare (89 lines), diplomacy (112 lines) into submodules.
+`layer.py` went from 615 → 419 lines. Still above the 250 target but the remaining code is
+query handling + serialization (~130 lines) + stability/leaders (~70 lines) — all coherent
+and not the subsystems Sprint 014 will modify. Extracting further would be gold-plating.
+
+Magic numbers extracted to named constants: MERCHANT_INCOME_MULTIPLIER, STALEMATE_THRESHOLD,
+war costs (WINNER/LOSER_MILITARY_COST, LOSER_STABILITY_COST), rebellion factors, leader death cost.
+
+10 new tests across 3 files. All 1767 existing tests pass unchanged.
