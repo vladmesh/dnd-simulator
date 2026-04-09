@@ -9,7 +9,7 @@
 **Started:** 2026-04-01
 **Phase:** 3 — Content Fixes + Polish (COMPLETE) — 2026-04-02
 
-All phases complete. Ready for audit.
+All phases complete. **Audit:** Triaged 2026-04-09. Quick-fix: 3 applied. Sprint-relevant: 6 (→ sprint 014 phase 0). Backlog: 28 added.
 
 ### Phases
 
@@ -25,6 +25,7 @@ All phases complete. Ready for audit.
 
 ### Phases
 
+0. Refactor — Prep for Faction Work
 1. Combat Sides + OA Fix
 2. Personal Reputation + effective_relation
 3. Reputation Dynamics + Auto-hostility

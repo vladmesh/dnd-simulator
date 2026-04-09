@@ -16,6 +16,23 @@
 
 ---
 
+## Phase 0: Refactor — Prep for Faction Work
+
+Audit-driven cleanup of files sprint 014 will heavily modify. Reduces friction and prevents debt growth.
+
+- `layers/politics/layer.py` (615 lines) — extract diplomacy/warfare/economy sub-modules. Sprint adds faction relation logic here.
+- `layers/entities/combat_manager.py` (604 lines) — split initiative/damage/state. Sprint adds CombatSides here.
+- `core/brain.py:165` `_choose_combat_action` (131-line if/elif) — decompose into per-action helpers or decision table. Sprint rewrites targeting logic.
+- `layers/entities/perception.py` — replace 54x `.get()` silent defaults with `data["key"]` fail-fast. Sprint adds reputation events.
+- `rules/proficiency.py:33-34` + `perception.py:29-31` — hardcoded weapon name strings → catalog/enum reference.
+- `service/commands_politics.py` — add unit tests (0 test references). Sprint exercises politics commands heavily.
+
+**Верифицируем:** `make check` green. No behavior changes — pure refactor + tests.
+
+**Tasks:**
+
+_(генерируются отдельно перед началом фазы)_
+
 ## Phase 1: Combat Sides + OA Fix
 
 Фиксим баг с friendly OA, используя существующие faction_id + FactionRelation. Без репутации.
