@@ -12,7 +12,7 @@ from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.i18n import _
 from dnd_simulator.layers.entities.combat_serialization import deserialize_combats, serialize_combats
 from dnd_simulator.rules.combat import AttackResult, resolve_attack, roll_initiative
-from dnd_simulator.rules.combat_sides import build_combat_sides
+from dnd_simulator.rules.combat_sides import are_allies, build_combat_sides
 from dnd_simulator.rules.handlers.attack_resolution import (
     build_attack_event,
     build_damage_components,
@@ -258,12 +258,16 @@ class CombatManager:
         ally_adjacent = False
         combat = self._combats.get(attacker.location_id)
         if combat:
+            if combat.entity_to_side:
+                is_ally_fn = lambda eid: are_allies(combat, attacker.id, eid)  # noqa: E731
+            else:
+                is_ally_fn = lambda eid: self._is_faction_friendly(attacker, eid, query_fn)  # noqa: E731
             ally_adjacent = find_adjacent_ally(
                 attacker_id=attacker.id,
                 target_id=target_id,
                 battle_map=combat.battle_map,
                 entities=self._entities,
-                is_ally=lambda eid: self._is_faction_friendly(attacker, eid, query_fn),
+                is_ally=is_ally_fn,
             )
         extra_damage = check_sneak_attack(
             attacker,

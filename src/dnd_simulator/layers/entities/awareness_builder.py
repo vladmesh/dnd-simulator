@@ -16,6 +16,7 @@ from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.models import Event, FactionRelation, Query, QueryType
 from dnd_simulator.core.world import LayerError
 from dnd_simulator.layers.entities.models import Npc
+from dnd_simulator.rules.combat_sides import are_allies
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import GameDateTime, QueryFn
@@ -163,7 +164,12 @@ class AwarenessBuilder:
                 dy = other_pos.y - my_pos.y
                 direction = direction_label(dx, dy)
             e_conditions = frozenset(e.conditions) if isinstance(e, Creature) else frozenset()
-            is_hostile = self.check_faction_hostility(creature, e, query_fn)
+            # In combat with sides: use sides as single source of truth.
+            # Without sides or outside combat: fall back to faction relation query.
+            if combat and combat.entity_to_side and creature.id in combat.entity_to_side:
+                is_hostile = not are_allies(combat, creature.id, e.id)
+            else:
+                is_hostile = self.check_faction_hostility(creature, e, query_fn)
             nearby.append(
                 CombatEntity(
                     id=e.id,

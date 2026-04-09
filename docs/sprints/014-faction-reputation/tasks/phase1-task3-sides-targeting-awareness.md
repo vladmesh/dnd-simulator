@@ -45,4 +45,16 @@ Product-level scenarios:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Minimal changes to two files:
+
+1. `awareness_builder.py` — `build_combat_awareness()` now checks `combat.entity_to_side` first. If sides exist and the observer is in them, `is_hostile = not are_allies(...)`. Falls back to `check_faction_hostility()` when no sides (combat started without query_fn).
+
+2. `combat_manager.py` — `resolve_attack()` switches the `is_ally` lambda for `find_adjacent_ally()`: uses `are_allies()` when `combat.entity_to_side` is populated, otherwise falls back to `_is_faction_friendly()`.
+
+`_is_faction_friendly()` kept as-is — still used as fallback. `check_faction_hostility()` on AwarenessBuilder also kept — used for peaceful awareness (out of combat) and as combat fallback.
+
+No changes to `reactions.py` — it already uses `are_allies()` from task 2.

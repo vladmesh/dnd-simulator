@@ -87,7 +87,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 1 tasks generated (2026-04-10). Ready to start task 1.
+**Current:** Phase 1 complete (2026-04-10). All 3 tasks done. Ready for phase 2.
 
 ## Decisions
 
