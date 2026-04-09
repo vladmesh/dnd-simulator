@@ -24,6 +24,7 @@ from dnd_simulator.core.combat import Position
 from dnd_simulator.core.models import Answer, Event, Query, QueryType
 from dnd_simulator.layers.entities.combat_manager import CombatManager
 from dnd_simulator.layers.politics.models import FactionRelation
+from dnd_simulator.rules.sneak_attack import check_sneak_attack, find_adjacent_ally
 from dnd_simulator.rules.weapons import get_weapon_attack
 
 
@@ -119,6 +120,15 @@ def _make_faction_query(relations: dict[tuple[str, str], FactionRelation]):
     return query_fn
 
 
+def _is_ally_via_query(attacker: Creature, candidate: Creature, query_fn: object) -> bool:
+    """Check if candidate is FRIENDLY to attacker using query_fn."""
+    answer = query_fn(  # type: ignore[operator]
+        "politics",
+        Query(question=QueryType.FACTION_RELATION, params={"a": attacker.faction_id, "b": candidate.faction_id}),
+    )
+    return answer.value == FactionRelation.FRIENDLY
+
+
 def _setup_combat(
     *creatures: Creature,
     positions: dict[str, Position],
@@ -138,6 +148,40 @@ def _setup_combat(
 class TestSneakAttackFactionCheck:
     """SA ally detection must use faction relations, not just proximity."""
 
+    def _check_sa(
+        self,
+        rogue: Character,
+        target_id: str,
+        cm: CombatManager,
+        query_fn: object,
+        *,
+        advantage: bool = False,
+        disadvantage: bool = False,
+    ) -> tuple[object, ...]:
+        """Helper: compute ally adjacency via find_adjacent_ally, then check_sneak_attack."""
+        combat = cm.get_combat("loc")
+        assert combat is not None
+        entities: dict[str, Creature] = {
+            eid: cm._entities[eid] for eid in cm._entities if isinstance(cm._entities[eid], Creature)
+        }  # type: ignore[misc]
+
+        ally_adjacent = find_adjacent_ally(
+            attacker_id=rogue.id,
+            target_id=target_id,
+            battle_map=combat.battle_map,
+            entities=entities,
+            is_ally=lambda eid: _is_ally_via_query(rogue, entities[eid], query_fn),
+        )
+        attack = get_weapon_attack(rogue)
+        return check_sneak_attack(
+            rogue,
+            attack,
+            advantage=advantage,
+            disadvantage=disadvantage,
+            already_used=False,
+            ally_adjacent=ally_adjacent,
+        )
+
     def test_sa_granted_when_friendly_ally_adjacent(self) -> None:
         """Rogue attacks goblin. Fighter (same faction, FRIENDLY) within 5ft of target."""
         rogue = _rogue(faction_id="party")
@@ -151,25 +195,15 @@ class TestSneakAttackFactionCheck:
             positions={
                 "rogue": Position(30, 30),
                 "target": Position(35, 30),
-                "fighter": Position(35, 35),  # 5ft from target
+                "fighter": Position(35, 35),
             },
         )
-
         query_fn = _make_faction_query(
             {
                 (min("goblins", "party"), max("goblins", "party")): FactionRelation.HOSTILE,
             }
         )
-
-        attack = get_weapon_attack(rogue)
-        result = cm._check_sneak_attack(
-            rogue,
-            attack,
-            "target",
-            advantage=False,
-            disadvantage=False,
-            query_fn=query_fn,
-        )
+        result = self._check_sa(rogue, "target", cm, query_fn)
         assert len(result) == 1
         assert result[0].source == "sneak_attack"
 
@@ -186,25 +220,15 @@ class TestSneakAttackFactionCheck:
             positions={
                 "rogue": Position(30, 30),
                 "target": Position(35, 30),
-                "goblin2": Position(35, 35),  # 5ft from target
+                "goblin2": Position(35, 35),
             },
         )
-
         query_fn = _make_faction_query(
             {
                 (min("goblins", "party"), max("goblins", "party")): FactionRelation.HOSTILE,
             }
         )
-
-        attack = get_weapon_attack(rogue)
-        result = cm._check_sneak_attack(
-            rogue,
-            attack,
-            "target",
-            advantage=False,
-            disadvantage=False,
-            query_fn=query_fn,
-        )
+        result = self._check_sa(rogue, "target", cm, query_fn)
         assert result == ()
 
     def test_sa_denied_when_only_neutral_adjacent(self) -> None:
@@ -220,22 +244,11 @@ class TestSneakAttackFactionCheck:
             positions={
                 "rogue": Position(30, 30),
                 "target": Position(35, 30),
-                "bystander": Position(35, 35),  # 5ft from target
+                "bystander": Position(35, 35),
             },
         )
-
-        # townsfolk-party is NEUTRAL by default (not in dict)
         query_fn = _make_faction_query({})
-
-        attack = get_weapon_attack(rogue)
-        result = cm._check_sneak_attack(
-            rogue,
-            attack,
-            "target",
-            advantage=False,
-            disadvantage=False,
-            query_fn=query_fn,
-        )
+        result = self._check_sa(rogue, "target", cm, query_fn)
         assert result == ()
 
     def test_sa_via_advantage_ignores_faction(self) -> None:
@@ -251,18 +264,8 @@ class TestSneakAttackFactionCheck:
                 "target": Position(35, 30),
             },
         )
-
         query_fn = _make_faction_query({})
-
-        attack = get_weapon_attack(rogue)
-        result = cm._check_sneak_attack(
-            rogue,
-            attack,
-            "target",
-            advantage=True,
-            disadvantage=False,
-            query_fn=query_fn,
-        )
+        result = self._check_sa(rogue, "target", cm, query_fn, advantage=True)
         assert len(result) == 1
         assert result[0].source == "sneak_attack"
 
@@ -279,16 +282,6 @@ class TestSneakAttackFactionCheck:
                 "target": Position(35, 30),
             },
         )
-
         query_fn = _make_faction_query({})
-
-        attack = get_weapon_attack(rogue)
-        result = cm._check_sneak_attack(
-            rogue,
-            attack,
-            "target",
-            advantage=False,
-            disadvantage=False,
-            query_fn=query_fn,
-        )
+        result = self._check_sa(rogue, "target", cm, query_fn)
         assert result == ()

@@ -4,20 +4,28 @@ from __future__ import annotations
 
 import structlog
 
-from dnd_simulator.core.character import Attack, Creature, DamageType, Entity
+from dnd_simulator.core.character import Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import ActionResult, Event, EventType, FactionRelation, Query, QueryFn, QueryType
-from dnd_simulator.core.modifiers import AttackModifiers, RollComponent
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.i18n import _
-from dnd_simulator.rules.combat import AttackResult, ExtraDamage, resolve_attack, roll_initiative
+from dnd_simulator.layers.entities.combat_serialization import deserialize_combats, serialize_combats
+from dnd_simulator.rules.combat import AttackResult, resolve_attack, roll_initiative
+from dnd_simulator.rules.handlers.attack_resolution import (
+    build_attack_event,
+    build_damage_components,
+    resolve_combat_move,
+    roll_attack_dice,
+)
 from dnd_simulator.rules.modifiers import attack_modifiers
-from dnd_simulator.rules.movement import grid_distance, move_direction
-from dnd_simulator.rules.sneak_attack import is_sneak_attack_eligible, sneak_attack_dice
+from dnd_simulator.rules.sneak_attack import check_sneak_attack, find_adjacent_ally
 from dnd_simulator.rules.weapons import get_weapon_attack
 
 logger = structlog.get_logger(domain="combat")
+DEFAULT_BATTLE_MAP_SIZE = 60
+IDLE_ROUNDS_TO_END_COMBAT = 2
+INITIAL_REACTION_BUDGET = 1
 
 
 class CombatManager:
@@ -39,8 +47,6 @@ class CombatManager:
         self._sneak_attack_used: set[str] = set()  # creature IDs that used SA this round
         self._battle_map_configs: dict[str, BattleMap] = battle_map_configs or {}
 
-    # -- Combat queries --
-
     def get_combat_locations(self) -> list[str]:
         """Return location IDs with active combats."""
         return list(self._combats)
@@ -49,25 +55,18 @@ class CombatManager:
         """Get combat state for a location, or None if no active combat."""
         return self._combats.get(location_id)
 
-    # -- Combat lifecycle --
-
     def start_combat(self, location_id: str) -> CombatState | None:
-        """Roll initiative, create battle map, and start combat at a location.
-
-        Returns None if fewer than 2 alive creatures are present.
-        """
+        """Roll initiative, create battle map, and start combat at a location."""
         creatures = self._active_creatures_at_location(location_id)
         if len(creatures) < 2:
             return None
         ordered = roll_initiative(creatures)
 
-        # Use pre-configured battle map (with walls etc.) if available, otherwise default
         if location_id in self._battle_map_configs:
             template = self._battle_map_configs[location_id]
             battle_map = BattleMap(width=template.width, height=template.height, walls=list(template._inner_walls))
         else:
-            battle_map = BattleMap(width=60, height=60)
-        # Place creatures with fixed combat_position first, then scatter the rest
+            battle_map = BattleMap(width=DEFAULT_BATTLE_MAP_SIZE, height=DEFAULT_BATTLE_MAP_SIZE)
         fixed_ids: set[str] = set()
         for c in creatures:
             if c.combat_position is not None:
@@ -86,23 +85,18 @@ class CombatManager:
         self._attack_this_round[location_id] = False
         for c in creatures:
             c.in_combat = True
-            # Initialize reaction-only budget so creatures can OA before their first turn.
-            # Full budget (actions, movement) is set at turn start by Round.
-            if c.turn_budget is None:
-                c.turn_budget = TurnBudget(actions=0, bonus_actions=0, movement_remaining=0, reaction=1)
+            if c.turn_budget is None:  # reaction-only budget for OA before first turn
+                c.turn_budget = TurnBudget(
+                    actions=0, bonus_actions=0, movement_remaining=0, reaction=INITIAL_REACTION_BUDGET
+                )
 
-        initiative = [(c.id, c.name) for c in ordered]
-        positions = {eid: (pos.x, pos.y) for eid, pos in battle_map.positions.items()}
         logger.info(
             "combat_start",
             location_id=location_id,
-            initiative=initiative,
+            initiative=[(c.id, c.name) for c in ordered],
             map_size=f"{battle_map.width}x{battle_map.height}",
-            positions=positions,
-            battle_map="\n" + battle_map.render_ascii(),
+            positions={eid: (pos.x, pos.y) for eid, pos in battle_map.positions.items()},
         )
-
-        # Log combat start with initiative order
         self._location_log[location_id].append(
             Event(
                 event_type=EventType.COMBAT_STARTED,
@@ -134,7 +128,7 @@ class CombatManager:
         self._sneak_attack_used.clear()
         combat.round_number += 1
 
-        if combat.rounds_without_attack >= 2:
+        if combat.rounds_without_attack >= IDLE_ROUNDS_TO_END_COMBAT:
             self._end_combat(location_id)
 
     def _end_combat(self, location_id: str) -> None:
@@ -146,7 +140,6 @@ class CombatManager:
         self._attack_this_round.pop(location_id, None)
 
         logger.info("combat_end", location_id=location_id)
-
         self._location_log[location_id].append(
             Event(
                 event_type=EventType.COMBAT_ENDED,
@@ -167,23 +160,11 @@ class CombatManager:
             self._end_combat(location_id)
 
     def _has_opposing_factions(self, combat: CombatState) -> bool:
-        """Check if alive creatures in combat could still be hostile to each other.
-
-        Returns True (keep fighting) if:
-        - Any creature lacks a faction (unknown hostility — assume hostile)
-        - Two or more different factions are present
-        """
-        alive: list[Creature] = []
-        for eid in combat.turn_order:
-            e = self._entities.get(eid)
-            if isinstance(e, Creature) and e.is_alive:
-                alive.append(e)
+        """Check if alive creatures in combat could still be hostile to each other."""
+        alive = [e for eid in combat.turn_order if isinstance((e := self._entities.get(eid)), Creature) and e.is_alive]
         if any(not c.faction_id for c in alive):
-            return True  # unknown faction — can't prove they're allies
-        factions = {c.faction_id for c in alive}
-        return len(factions) > 1
-
-    # -- Action resolution --
+            return True
+        return len({c.faction_id for c in alive}) > 1
 
     def resolve_dodge(self, event: Event) -> ActionResult:
         """Resolve a dodge action: set is_dodging until next turn."""
@@ -210,63 +191,18 @@ class CombatManager:
         return ActionResult()
 
     def resolve_move(self, event: Event) -> ActionResult:
-        """Resolve an atomic move: single step in a compass direction.
-
-        The brain has already resolved any 'toward/away' into a concrete direction.
-        Returns success=False if blocked (wall, occupied cell, off-map).
-        """
+        """Resolve an atomic move: single step in a compass direction."""
         entity_id = str(event.data.get("entity_id", ""))
         entity = self._entities.get(entity_id)
         if not isinstance(entity, Creature):
             return ActionResult(success=False, error=_("Creature '{id}' not found.").format(id=entity_id))
-
         combat = self._combats.get(entity.location_id)
         if not combat:
             return ActionResult(success=False, error=_("No active combat for movement."))
-
-        bm = combat.battle_map
-        cur_pos = bm.get_position(entity_id)
-        if cur_pos is None:
-            return ActionResult(success=False, error=_("Creature not on the battle map."))
-
-        direction = str(event.data.get("direction", ""))
-        ft = int(event.data.get("ft", 5))
-        new_pos = move_direction(cur_pos, direction, ft, bm, entity_id)
-
-        if new_pos == cur_pos:
-            logger.info(
-                "move_blocked",
-                entity_id=entity_id,
-                pos=(cur_pos.x, cur_pos.y),
-                direction=direction,
-                battle_map="\n" + bm.render_ascii(),
-            )
-            return ActionResult(success=False, error=_("Cannot move there — blocked."))
-
-        bm.set_position(entity_id, new_pos)
-        moved_ft = grid_distance(cur_pos, new_pos)
-
-        log_event = Event(
-            event_type=EventType.ENTITY_MOVE,
-            source_layer="entities",
-            data={
-                "entity_id": entity_id,
-                "from_x": cur_pos.x,
-                "from_y": cur_pos.y,
-                "to_x": new_pos.x,
-                "to_y": new_pos.y,
-                "distance_ft": moved_ft,
-            },
-        )
-        self._location_log[entity.location_id].append(log_event)
-        return ActionResult(success=True)
+        return resolve_combat_move(entity, event, combat, self._location_log)
 
     def resolve_attack(self, event: Event, query_fn: QueryFn | None = None) -> ActionResult:
-        """Resolve an attack: roll dice, apply damage, log.
-
-        Preconditions (alive, target valid, same location, reach) are checked
-        by the validator before dispatch. This method only does mechanics.
-        """
+        """Resolve an attack: roll dice, apply damage, log."""
         attacker_id = str(event.data.get("attacker_id", ""))
         target_id = str(event.data.get("target_id", ""))
 
@@ -285,15 +221,26 @@ class CombatManager:
         attack = get_weapon_attack(attacker)
         atk_mods = attack_modifiers(attacker, target, melee=attack.reach <= 10)
 
-        rolled_dice, dice_total = self._roll_attack_dice(attacker, attack, atk_mods)
+        rolled_dice, dice_total = roll_attack_dice(atk_mods)
         modifier = atk_mods.modifier + dice_total
-        extra_damage = self._check_sneak_attack(
+
+        ally_adjacent = False
+        combat = self._combats.get(attacker.location_id)
+        if combat:
+            ally_adjacent = find_adjacent_ally(
+                attacker_id=attacker.id,
+                target_id=target_id,
+                battle_map=combat.battle_map,
+                entities=self._entities,
+                is_ally=lambda eid: self._is_faction_friendly(attacker, eid, query_fn),
+            )
+        extra_damage = check_sneak_attack(
             attacker,
             attack,
-            target_id,
-            atk_mods.advantage,
-            atk_mods.disadvantage,
-            query_fn=query_fn,
+            advantage=atk_mods.advantage,
+            disadvantage=atk_mods.disadvantage,
+            already_used=attacker.id in self._sneak_attack_used,
+            ally_adjacent=ally_adjacent,
         )
 
         logger.info(
@@ -302,14 +249,10 @@ class CombatManager:
             target=target.name,
             weapon=attack.name,
             modifier=modifier,
-            base_mod=atk_mods.modifier,
-            dice_bonus=dice_total,
+            target_ac=atk_mods.target_ac,
             advantage=atk_mods.advantage,
             disadvantage=atk_mods.disadvantage,
-            force_crit=atk_mods.force_crit,
-            target_ac=atk_mods.target_ac,
         )
-
         result = resolve_attack(
             modifier=modifier,
             ac=atk_mods.target_ac,
@@ -321,25 +264,22 @@ class CombatManager:
             force_crit=atk_mods.force_crit,
             gwf_reroll=atk_mods.gwf_reroll,
         )
-
-        hit_str = "CRIT!" if result.critical else ("HIT" if result.hit else "MISS")
         logger.info(
             "attack_result",
             roll=result.attack_check.roll,
             total=result.attack_check.total,
             target_ac=atk_mods.target_ac,
-            outcome=hit_str,
+            outcome="CRIT!" if result.critical else ("HIT" if result.hit else "MISS"),
             damage=result.total_damage if result.hit else 0,
         )
 
-        log_data = self._build_attack_event(attacker_id, target_id, attack, result, atk_mods, rolled_dice)
+        log_data = build_attack_event(attacker_id, target_id, attack, result, atk_mods, rolled_dice)
 
         if result.hit:
             actual_damage = target.take_damage(result.total_damage)
             log_data["damage"] = actual_damage
             log_data["total_damage"] = result.total_damage
-            log_data["damage_components"] = self._build_damage_components(result, atk_mods)
-            # Mark sneak attack as used only on hit (D&D 5e PHB p.96)
+            log_data["damage_components"] = build_damage_components(result, atk_mods.damage_components)
             if extra_damage and attacker_id not in self._sneak_attack_used:
                 for ed in extra_damage:
                     if ed.source == "sneak_attack":
@@ -352,85 +292,12 @@ class CombatManager:
 
         return self._handle_death(target, target_id, result)
 
-    def _roll_attack_dice(
-        self,
-        attacker: Creature,
-        attack: Attack,
-        atk_mods: AttackModifiers,
-    ) -> tuple[list[RollComponent], int]:
-        """Roll dice bonuses (Bless +1d4, etc.). Returns (rolled_components, total)."""
-        rolled_dice: list[RollComponent] = []
-        dice_total = 0
-        if atk_mods.dice_bonuses:
-            from dnd_simulator.rules.dice import roll as roll_dice_fn
-
-            for rc in atk_mods.roll_components:
-                if rc.dice:
-                    rolled_value = roll_dice_fn(rc.dice).total
-                    rolled_dice.append(RollComponent(source=rc.source, value=rolled_value, dice=rc.dice))
-                    dice_total += rolled_value
-            logger.debug(
-                "dice_bonuses",
-                attacker=attacker.name,
-                bonus=dice_total,
-                dice=atk_mods.dice_bonuses,
-                weapon=attack.name,
-            )
-        return rolled_dice, dice_total
-
-    def _check_sneak_attack(
-        self,
-        attacker: Creature,
-        attack: Attack,
-        target_id: str,
-        advantage: bool,
-        disadvantage: bool,
-        *,
-        query_fn: QueryFn | None = None,
-    ) -> tuple[ExtraDamage, ...]:
-        """Check sneak attack eligibility including ally adjacency on battle map."""
-        sa_dice = sneak_attack_dice(attacker)
-        if sa_dice == 0 or attacker.id in self._sneak_attack_used:
-            return ()
-
-        ally_adjacent = False
-        combat = self._combats.get(attacker.location_id)
-        if combat:
-            target_pos = combat.battle_map.get_position(target_id)
-            if target_pos:
-                for eid, pos in combat.battle_map.positions.items():
-                    if eid in (attacker.id, target_id):
-                        continue
-                    e = self._entities.get(eid)
-                    if isinstance(e, Creature) and e.is_alive and grid_distance(target_pos, pos) <= 5:
-                        if not self._is_faction_friendly(attacker, e, query_fn):
-                            continue
-                        ally_adjacent = True
-                        break
-
-        if is_sneak_attack_eligible(
-            attacker,
-            attack,
-            has_advantage=advantage,
-            has_disadvantage=disadvantage,
-            ally_adjacent_to_target=ally_adjacent,
-        ):
-            sa_expr = f"{sa_dice}d6"
-            # Don't mark as used here — only on hit (D&D 5e: "deal extra damage
-            # to one creature you hit"). Marked in resolve_attack after hit check.
-            logger.info(
-                "sneak_attack",
-                attacker=attacker.name,
-                dice=sa_expr,
-                reason="advantage" if advantage else "ally_adjacent",
-            )
-            return (ExtraDamage(dice=sa_expr, type=DamageType.PIERCING, source="sneak_attack"),)
-        return ()
-
-    @staticmethod
-    def _is_faction_friendly(attacker: Creature, candidate: Creature, query_fn: QueryFn | None) -> bool:
+    def _is_faction_friendly(self, attacker: Creature, candidate_id: str, query_fn: QueryFn | None) -> bool:
         """Check if candidate is FRIENDLY to attacker via PoliticsLayer faction relation."""
         if query_fn is None:
+            return False
+        candidate = self._entities.get(candidate_id)
+        if not isinstance(candidate, Creature):
             return False
         answer = query_fn(
             "politics",
@@ -438,148 +305,27 @@ class CombatManager:
         )
         return answer.value == FactionRelation.FRIENDLY
 
-    def _build_attack_event(
-        self,
-        attacker_id: str,
-        target_id: str,
-        attack: Attack,
-        result: AttackResult,
-        atk_mods: AttackModifiers,
-        rolled_dice: list[RollComponent],
-    ) -> dict[str, object]:
-        """Build structured attack event data from resolution result."""
-        all_roll_components = [
-            {"source": rc.source, "value": rc.value, "dice": rc.dice} for rc in atk_mods.roll_components if not rc.dice
-        ] + [{"source": rc.source, "value": rc.value, "dice": rc.dice} for rc in rolled_dice]
-
-        d20 = result.attack_check.d20
-        d20_data: dict[str, object] = {"result": d20.die.result, "sides": d20.die.sides}
-        atk_roll_data: dict[str, object] = {
-            "natural": result.attack_check.roll,
-            "d20": d20_data,
-            "components": all_roll_components,
-            "total": result.attack_check.total,
-            "advantage": atk_mods.advantage,
-            "disadvantage": atk_mods.disadvantage,
-        }
-        if d20.alt is not None:
-            atk_roll_data["d20_alt"] = {"result": d20.alt.result, "sides": d20.alt.sides}
-
-        return {
-            "attacker_id": attacker_id,
-            "target_id": target_id,
-            "weapon": attack.name,
-            "hit": result.hit,
-            "critical": result.critical,
-            "ac": atk_mods.target_ac,
-            "attack_roll": atk_roll_data,
-        }
-
-    @staticmethod
-    def _build_damage_components(
-        result: AttackResult,
-        atk_mods: AttackModifiers,
-    ) -> list[dict[str, object]]:
-        """Build damage component list for event data."""
-        components: list[dict[str, object]] = []
-        for dr in result.damage:
-            dice_detail: list[dict[str, object]] = []
-            if dr.dice_result is not None:
-                for die in dr.dice_result.dice:
-                    entry: dict[str, object] = {"sides": die.sides, "result": die.result}
-                    if die.original is not None:
-                        entry["original"] = die.original
-                    dice_detail.append(entry)
-            components.append(
-                {
-                    "source": dr.source,
-                    "dice": dr.dice,
-                    "dice_detail": dice_detail,
-                    "amount": dr.amount,
-                    "type": dr.type.value,
-                }
-            )
-        for dbc in atk_mods.damage_components:
-            components.append(
-                {
-                    "source": dbc.source,
-                    "dice": "",
-                    "dice_detail": [],
-                    "amount": dbc.value,
-                    "type": result.damage[0].type.value,
-                }
-            )
-        return components
-
     def _handle_death(self, target: Creature, target_id: str, result: AttackResult) -> ActionResult:
         """Handle target death and combat end if the attack killed the target."""
-        result_events: list[Event] = []
-        if result.hit and not target.is_alive:
-            target.in_combat = False
-            death_event = Event(
-                event_type=EventType.ENTITY_DIED,
-                source_layer="entities",
-                data={"entity_id": target_id},
-            )
-            result_events.append(death_event)
-            self._location_log[target.location_id].append(death_event)
-            self._remove_from_combat(target.location_id, target_id)
-        return ActionResult(success=True, events=result_events)
-
-    # -- Serialization --
+        if not result.hit or target.is_alive:
+            return ActionResult(success=True)
+        target.in_combat = False
+        death_event = Event(
+            event_type=EventType.ENTITY_DIED,
+            source_layer="entities",
+            data={"entity_id": target_id},
+        )
+        self._location_log[target.location_id].append(death_event)
+        self._remove_from_combat(target.location_id, target_id)
+        return ActionResult(success=True, events=[death_event])
 
     def get_combats_state(self) -> dict[str, object]:
         """Serialize all active combats."""
-        result: dict[str, object] = {}
-        for loc_id, combat in self._combats.items():
-            bm = combat.battle_map
-            positions = {eid: {"x": pos.x, "y": pos.y} for eid, pos in bm.positions.items()}
-            walls = [{"x1": w.x1, "y1": w.y1, "x2": w.x2, "y2": w.y2} for w in bm._inner_walls]
-            result[loc_id] = {
-                "location_id": combat.location_id,
-                "turn_order": list(combat.turn_order),
-                "round_number": combat.round_number,
-                "rounds_without_attack": combat.rounds_without_attack,
-                "battle_map": {
-                    "width": bm.width,
-                    "height": bm.height,
-                    "positions": positions,
-                    "walls": walls,
-                },
-            }
-        return result
+        return serialize_combats(self._combats)
 
     def load_combats_state(self, data: dict[str, object]) -> None:
         """Restore active combats from saved data."""
-        from dnd_simulator.core.combat import BattleMap, Position, Wall
-
-        for loc_id, cdata in data.items():
-            assert isinstance(cdata, dict)
-            bm_data = cdata["battle_map"]
-            assert isinstance(bm_data, dict)
-
-            walls = [
-                Wall(x1=int(w["x1"]), y1=int(w["y1"]), x2=int(w["x2"]), y2=int(w["y2"]))
-                for w in bm_data.get("walls", [])
-            ]
-            bm = BattleMap(width=int(bm_data["width"]), height=int(bm_data["height"]), walls=walls)
-
-            positions_raw = bm_data.get("positions", {})
-            assert isinstance(positions_raw, dict)
-            for eid, pos_data in positions_raw.items():
-                assert isinstance(pos_data, dict)
-                bm.set_position(str(eid), Position(x=int(pos_data["x"]), y=int(pos_data["y"])))
-
-            combat = CombatState(
-                location_id=str(cdata["location_id"]),
-                turn_order=list(cdata["turn_order"]),
-                round_number=int(cdata["round_number"]),
-                rounds_without_attack=int(cdata.get("rounds_without_attack", 0)),
-                battle_map=bm,
-            )
-            self._combats[str(loc_id)] = combat
-
-    # -- Helpers --
+        self._combats = deserialize_combats(data)
 
     def _active_creatures_at_location(self, location_id: str, exclude_id: str = "") -> list[Creature]:
         """Get active, alive creatures at a location."""

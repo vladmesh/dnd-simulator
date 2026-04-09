@@ -16,9 +16,9 @@ from dnd_simulator.core.character import (
     DamageType,
 )
 from dnd_simulator.core.rolls import D20Result, DiceResult, DieRoll
-from dnd_simulator.layers.entities.combat_manager import CombatManager
 from dnd_simulator.rules.checks import CheckResult, attack_roll
 from dnd_simulator.rules.combat import ExtraDamage, resolve_attack
+from dnd_simulator.rules.handlers.attack_resolution import build_attack_event, build_damage_components
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -214,15 +214,7 @@ class TestBuildAttackEvent:
             damage=(DamageResult(amount=6, type=DamageType.SLASHING, source="weapon", dice="1d8"),),
             total_damage=6,
         )
-        data = CombatManager._build_attack_event(
-            self=None,  # type: ignore[arg-type]
-            attacker_id="a",
-            target_id="t",
-            attack=_sword(),
-            result=attack_result,
-            atk_mods=_atk_mods(),
-            rolled_dice=[],
-        )
+        data = build_attack_event("a", "t", _sword(), attack_result, _atk_mods(), [])
         atk_roll = data["attack_roll"]
         assert isinstance(atk_roll, dict)
         assert "d20" in atk_roll
@@ -242,15 +234,7 @@ class TestBuildAttackEvent:
             damage=(DamageResult(amount=6, type=DamageType.SLASHING, source="weapon", dice="1d8"),),
             total_damage=6,
         )
-        data = CombatManager._build_attack_event(
-            self=None,  # type: ignore[arg-type]
-            attacker_id="a",
-            target_id="t",
-            attack=_sword(),
-            result=attack_result,
-            atk_mods=_atk_mods(advantage=True),
-            rolled_dice=[],
-        )
+        data = build_attack_event("a", "t", _sword(), attack_result, _atk_mods(advantage=True), [])
         atk_roll = data["attack_roll"]
         assert isinstance(atk_roll, dict)
         assert "d20_alt" in atk_roll
@@ -279,10 +263,7 @@ class TestBuildAttackEvent:
             total_damage=6,
         )
 
-        components = CombatManager._build_damage_components(
-            attack_result,
-            _atk_mods(),
-        )
+        components = build_damage_components(attack_result, _atk_mods().damage_components)
         assert len(components) >= 1
         comp = components[0]
         assert "dice_detail" in comp
@@ -312,10 +293,7 @@ class TestBuildAttackEvent:
             total_damage=5,
         )
 
-        components = CombatManager._build_damage_components(
-            attack_result,
-            _atk_mods(),
-        )
+        components = build_damage_components(attack_result, _atk_mods().damage_components)
         detail = components[0]["dice_detail"]
         assert isinstance(detail, list)
         assert detail[0]["original"] == 1
@@ -333,12 +311,9 @@ class TestBuildAttackEvent:
             total_damage=8,
         )
 
-        components = CombatManager._build_damage_components(
+        components = build_damage_components(
             attack_result,
-            _atk_mods(
-                damage_bonus=2,
-                damage_components=(RollComponent(source="dueling", value=2, dice=""),),
-            ),
+            (RollComponent(source="dueling", value=2, dice=""),),
         )
         # The flat "dueling" component should have empty dice_detail
         dueling = [c for c in components if c["source"] == "dueling"]

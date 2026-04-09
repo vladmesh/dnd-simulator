@@ -41,4 +41,18 @@ Extract magic numbers: battle map dimensions (60x60), stalemate threshold (5.0),
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Split `combat_manager.py` from 604 → 350 lines. Extracted:
+
+- `check_sneak_attack()` + `find_adjacent_ally()` → `rules/sneak_attack.py` (pure functions)
+- `build_attack_event()`, `build_damage_components()`, `roll_attack_dice()` → `rules/handlers/attack_resolution.py`
+- `resolve_combat_move()` → `rules/handlers/attack_resolution.py`
+- `serialize_combats()` / `deserialize_combats()` → `layers/entities/combat_serialization.py`
+- Magic numbers → named constants (`DEFAULT_BATTLE_MAP_SIZE`, `IDLE_ROUNDS_TO_END_COMBAT`, `INITIAL_REACTION_BUDGET`)
+
+Task specified `rules/combat.py` for sneak attack, but `rules/sneak_attack.py` was the correct home — all SA logic already lived there.
+
+Updated existing tests in `test_breakdown_pipeline.py` and `test_sneak_attack_faction.py` to call the extracted functions directly instead of CombatManager private methods. No behavior changes.
