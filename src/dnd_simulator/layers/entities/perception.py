@@ -113,8 +113,8 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
     attacker_id = str(d["attacker_id"])
     target_id = str(d["target_id"])
     hit = d["hit"]
-    weapon = d.get("weapon", "")  # optional — empty for unarmed
-    critical = d.get("critical", False)  # optional — absent on miss
+    weapon = d["weapon"]  # empty string for unarmed, always present
+    critical = d["critical"]  # always present (False on miss)
     is_oa = bool(d.get("is_opportunity_attack"))  # optional — absent on normal attacks
     atk_roll = d["attack_roll"]
     assert isinstance(atk_roll, dict)

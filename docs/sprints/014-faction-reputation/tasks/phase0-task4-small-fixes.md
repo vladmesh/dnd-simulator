@@ -44,4 +44,10 @@ Bundle of three small refactors that don't warrant separate tasks:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- **Perception:** Changed `weapon` and `critical` from `.get()` with silent defaults to `d["key"]` fail-fast. Both are always present in `build_attack_event`. `is_opportunity_attack` kept as `.get()` — genuinely optional (only on OA events). `description` kept as `.get()` — genuinely optional flavor text. Net: 2 of the original `.get()` calls were hiding real contract requirements.
+- **Proficiency:** All weapon IDs in `_CLASS_SPECIFIC_WEAPONS` (rapier, shortsword, longsword, hand_crossbow) already match catalog YAML files. Added validation test to catch future drift.
+- **Commands politics:** Added 4 tests covering `patch_nation` (single + multi-field) and `patch_settlement` (single + multi-field) using real `GameService` with sword_vale world.

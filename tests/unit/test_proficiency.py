@@ -330,3 +330,26 @@ class TestEffectiveAc:
         target = _plain_creature()
         mods = attack_modifiers(fighter, target, melee=True)
         assert mods.disadvantage is False
+
+
+# ---------------------------------------------------------------------------
+# Catalog validation — weapon IDs in _CLASS_SPECIFIC_WEAPONS must exist in SRD catalog
+# ---------------------------------------------------------------------------
+
+
+class TestWeaponIdCatalogConsistency:
+    def test_specific_weapon_ids_exist_in_catalog(self) -> None:
+        """Every weapon_id in _CLASS_SPECIFIC_WEAPONS must match a YAML file in content/catalogs/items/."""
+        from pathlib import Path
+
+        from dnd_simulator.rules.proficiency import _CLASS_SPECIFIC_WEAPONS
+
+        catalog_dir = Path(__file__).resolve().parents[2] / "content" / "catalogs" / "items"
+        catalog_ids = {p.stem for p in catalog_dir.glob("*.yaml")}
+
+        all_weapon_ids: set[str] = set()
+        for weapons in _CLASS_SPECIFIC_WEAPONS.values():
+            all_weapon_ids.update(weapons)
+
+        missing = all_weapon_ids - catalog_ids
+        assert not missing, f"Weapon IDs in _CLASS_SPECIFIC_WEAPONS not found in item catalog: {missing}"
