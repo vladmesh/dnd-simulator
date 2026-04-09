@@ -11,7 +11,7 @@
 ### Phases
 
 0. **Refactor — Prep for Faction Work** (COMPLETE) — 2026-04-10
-1. **Combat Sides + OA Fix** (tasks generated) — 2026-04-10
+1. **Combat Sides + OA Fix** (task 1 done, task 2 pending) — 2026-04-10
 2. Personal Reputation + effective_relation
 3. Reputation Dynamics + Auto-hostility
 

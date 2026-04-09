@@ -271,3 +271,5 @@ class CombatState:
     round_number: int = 1
     rounds_without_attack: int = 0
     battle_map: BattleMap = field(default_factory=lambda: BattleMap(width=60, height=60))
+    sides: dict[int, set[str]] = field(default_factory=dict)  # side index → entity IDs
+    entity_to_side: dict[str, int] = field(default_factory=dict)  # entity ID → side index

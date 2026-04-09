@@ -55,4 +55,8 @@ Product-level scenarios in `tests/unit/test_combat_sides.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Union-Find was the initial approach but it merges transitively — a faction FRIENDLY to two warring factions would incorrectly merge the warring factions into one side. Switched to greedy assignment: process factions in order, join the first existing side that has a FRIENDLY faction, or create a new side. This correctly handles "friend of both" by joining the first-encountered side without merging hostile factions together.
