@@ -49,7 +49,9 @@ Audit-driven cleanup of files sprint 014 will heavily modify. Reduces friction a
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [CombatSides Model + Build Algorithm](tasks/phase1-task1-combat-sides-model.md)
+2. [Wire Sides into Combat — OA Fix + Combat End](tasks/phase1-task2-wire-sides-combat.md)
+3. [Sides-Based Targeting + Awareness](tasks/phase1-task3-sides-targeting-awareness.md)
 
 ## Phase 2: Personal Reputation + effective_relation
 
@@ -85,7 +87,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 0 complete (2026-04-10). Ready for Phase 1 task generation.
+**Current:** Phase 1 tasks generated (2026-04-10). Ready to start task 1.
 
 ## Decisions
 
