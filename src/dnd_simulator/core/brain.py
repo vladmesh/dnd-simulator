@@ -5,6 +5,7 @@ from __future__ import annotations
 import queue
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import structlog
@@ -19,6 +20,29 @@ if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
 
 logger = structlog.get_logger(domain="brain")
+
+# --- RuleBrain threshold constants ---
+FLEE_HP_THRESHOLD = 0.15
+DODGE_HP_THRESHOLD = 0.25
+POTION_HP_THRESHOLD = 0.50
+SCARED_FLEE_HP_THRESHOLD = 0.25
+SCARED_DODGE_HP_THRESHOLD = 0.35
+
+
+@dataclass
+class _CombatContext:
+    """Shared state for RuleBrain decision helpers within a single turn."""
+
+    creature: Creature
+    awareness: CombatAwareness
+    hp_ratio: float
+    primary_reach: int
+    is_ranged: bool
+    flee_threshold: float
+    dodge_threshold: float
+    target: CombatEntity | None
+    tags: list[str]
+
 
 # Callback type: notified when it's the player's turn (awareness push).
 OnTurnCallback = Callable[
@@ -152,134 +176,183 @@ class RuleBrain(Brain):
         return creature.memory_tags
 
     def _choose_combat_action(self, creature: Creature, awareness: CombatAwareness) -> Action:
-        nearby = awareness.nearby
-        if not nearby:
+        if not awareness.nearby:
             return Action(name=ActionType.IDLE)
+
+        ctx = self._build_context(creature, awareness)
+        self._log_turn_start(ctx)
+
+        rules = [
+            self._try_equip,
+            self._try_potion,
+            self._try_retreat,
+            self._try_flee,
+            self._try_disengage,
+            self._try_flee_fallback,
+            self._try_attack,
+            self._try_advance,
+            self._try_dash,
+        ]
+        for rule in rules:
+            result = rule(ctx)
+            if result is not None:
+                return result
+        return END_TURN
+
+    def _build_context(self, creature: Creature, awareness: CombatAwareness) -> _CombatContext:
+        from dnd_simulator.rules.weapons import get_weapon_attack
 
         hp = awareness.self_hp
         max_hp = awareness.self_max_hp
         hp_ratio = hp / max_hp if max_hp > 0 else 0.0
-
-        from dnd_simulator.rules.weapons import get_weapon_attack
-
         primary_reach = get_weapon_attack(creature).reach
-        is_ranged = primary_reach > 10
-        budget = awareness.turn_budget
-
         tags = self._get_tags(creature)
+        is_scared = has_tag(tags, NpcTag.SCARED)
 
-        # Debug: log turn state
+        hated_ids = find_tags(tags, NpcTag.HATES)
+        feared_ids = find_tags(tags, NpcTag.FEARS)
+        target = self._pick_target(awareness.nearby, primary_reach, hated_ids, feared_ids)
+
+        return _CombatContext(
+            creature=creature,
+            awareness=awareness,
+            hp_ratio=hp_ratio,
+            primary_reach=primary_reach,
+            is_ranged=primary_reach > 10,
+            flee_threshold=SCARED_FLEE_HP_THRESHOLD if is_scared else FLEE_HP_THRESHOLD,
+            dodge_threshold=SCARED_DODGE_HP_THRESHOLD if is_scared else DODGE_HP_THRESHOLD,
+            target=target,
+            tags=tags,
+        )
+
+    @staticmethod
+    def _log_turn_start(ctx: _CombatContext) -> None:
+        awareness = ctx.awareness
+        budget = awareness.turn_budget
         logger.debug(
             "rule_turn_start",
-            hp=hp,
-            max_hp=max_hp,
-            hp_pct=round(hp_ratio * 100),
+            hp=awareness.self_hp,
+            max_hp=awareness.self_max_hp,
+            hp_pct=round(ctx.hp_ratio * 100),
             speed=awareness.self_speed,
             conditions=[c.value for c in awareness.self_conditions],
             budget_actions=budget.actions if budget else 0,
             budget_move=budget.movement_remaining if budget else 0,
-            enemies=len([e for e in nearby if e.is_hostile]),
+            enemies=len([e for e in awareness.nearby if e.is_hostile]),
         )
 
-        # Tag-adjusted thresholds
-        flee_threshold = 0.25 if has_tag(tags, NpcTag.SCARED) else 0.15
-        dodge_threshold = 0.35 if has_tag(tags, NpcTag.SCARED) else 0.25
+    @staticmethod
+    def _try_equip(ctx: _CombatContext) -> Action | None:
+        awareness = ctx.awareness
+        creature = ctx.creature
+        if ActionType.EQUIP not in awareness.available_actions or creature.equipped_weapon is not None:
+            return None
+        from dnd_simulator.core.items import ItemType
 
-        # --- Equip weapon if unarmed and have one in inventory ---
-        if ActionType.EQUIP in awareness.available_actions and creature.equipped_weapon is None:
-            from dnd_simulator.core.items import ItemType
+        weapon = next((i for i in awareness.available_items if "weapon" in i.description.lower()), None)
+        if weapon is None:
+            weapon = next(
+                (
+                    ItemInfo(id=i.id, name=i.name, description=f"weapon: {i.name}", item_type=str(i.item_type))
+                    for i in creature.inventory
+                    if i.item_type == ItemType.WEAPON
+                ),
+                None,
+            )
+        if weapon is None:
+            return None
+        logger.info("rule_equip", weapon=weapon.name)
+        return Action(name=ActionType.EQUIP, params={"weapon_id": weapon.id})
 
-            weapon = next((i for i in awareness.available_items if "weapon" in i.description.lower()), None)
-            if weapon is None:
-                # Fallback: pick first item that looks like a weapon from inventory
-                weapon = next(
-                    (
-                        ItemInfo(id=i.id, name=i.name, description=f"weapon: {i.name}", item_type=str(i.item_type))
-                        for i in creature.inventory
-                        if i.item_type == ItemType.WEAPON
-                    ),
-                    None,
-                )
-            if weapon:
-                logger.info("rule_equip", weapon=weapon.name)
-                return Action(name=ActionType.EQUIP, params={"weapon_id": weapon.id})
+    @staticmethod
+    def _try_potion(ctx: _CombatContext) -> Action | None:
+        awareness = ctx.awareness
+        if ctx.hp_ratio >= POTION_HP_THRESHOLD:
+            return None
+        if ActionType.USE_ITEM not in awareness.available_actions or not awareness.available_items:
+            return None
+        potion = next((i for i in awareness.available_items if "heal" in i.description.lower()), None)
+        if potion is None:
+            return None
+        logger.info("rule_use_item", item=potion.name, hp_pct=round(ctx.hp_ratio * 100))
+        return Action(name=ActionType.USE_ITEM, params={"item_id": potion.id})
 
-        # --- Use healing potion if wounded and available ---
-        if hp_ratio < 0.5 and ActionType.USE_ITEM in awareness.available_actions and awareness.available_items:
-            potion = next((i for i in awareness.available_items if "heal" in i.description.lower()), None)
-            if potion:
-                logger.info("rule_use_item", item=potion.name, hp_pct=round(hp_ratio * 100))
-                return Action(name=ActionType.USE_ITEM, params={"item_id": potion.id})
+    def _try_retreat(self, ctx: _CombatContext) -> Action | None:
+        creature = ctx.creature
+        awareness = ctx.awareness
+        budget = awareness.turn_budget
+        if not creature.is_disengaging or (budget.movement_remaining if budget else 0) <= 0:
+            return None
+        nearest_hostile = min((e for e in awareness.nearby if e.is_hostile), key=lambda e: e.distance_ft, default=None)
+        if nearest_hostile is None:
+            return None
+        logger.info("rule_retreat", hp_pct=round(ctx.hp_ratio * 100))
+        return self._move_away_from(nearest_hostile, awareness)
 
-        # --- Target selection: score each enemy, tag-aware ---
-        hated_ids = find_tags(tags, NpcTag.HATES)
-        feared_ids = find_tags(tags, NpcTag.FEARS)
-        target = self._pick_target(nearby, primary_reach, hated_ids, feared_ids)
-        if target is None:
-            return END_TURN  # no hostile targets — nothing to fight
-        target_id = target.id
-        dist = target.distance_ft
-        logger.debug("rule_target_selected", target=target_id, distance_ft=dist)
+    @staticmethod
+    def _try_flee(ctx: _CombatContext) -> Action | None:
+        nearest_dist = min(e.distance_ft for e in ctx.awareness.nearby)
+        if ctx.hp_ratio < ctx.flee_threshold and nearest_dist > ctx.primary_reach:
+            logger.info("rule_flee", hp_pct=round(ctx.hp_ratio * 100))
+            return Action(name=ActionType.FLEE)
+        return None
 
-        nearest_dist = min(e.distance_ft for e in nearby)
+    @staticmethod
+    def _try_disengage(ctx: _CombatContext) -> Action | None:
+        budget = ctx.awareness.turn_budget
         has_actions = (budget.actions if budget else 0) > 0
-
-        # 0. Already disengaged — move away from nearest enemy (retreat phase 2)
-        if creature.is_disengaging and (budget.movement_remaining if budget else 0) > 0:
-            nearest_hostile = min((e for e in nearby if e.is_hostile), key=lambda e: e.distance_ft, default=None)
-            if nearest_hostile:
-                logger.info("rule_retreat", hp_pct=round(hp_ratio * 100))
-                return self._move_away_from(nearest_hostile, awareness)
-
-        # 1. Flee if critically wounded and no enemies in melee reach
-        if hp_ratio < flee_threshold and nearest_dist > primary_reach:
-            logger.info("rule_flee", hp_pct=round(hp_ratio * 100))
-            return Action(name=ActionType.FLEE)
-
-        # 2. Disengage if wounded and enemies in melee reach (covers both flee and dodge range)
-        if hp_ratio < dodge_threshold and nearest_dist <= primary_reach and has_actions:
-            logger.info("rule_disengage", hp_pct=round(hp_ratio * 100))
+        nearest_dist = min(e.distance_ft for e in ctx.awareness.nearby)
+        if ctx.hp_ratio < ctx.dodge_threshold and nearest_dist <= ctx.primary_reach and has_actions:
+            logger.info("rule_disengage", hp_pct=round(ctx.hp_ratio * 100))
             return Action(name=ActionType.DISENGAGE)
+        return None
 
-        # 3. Flee if critically wounded (fallback — no action budget for Disengage)
-        if hp_ratio < flee_threshold:
-            logger.info("rule_flee", hp_pct=round(hp_ratio * 100))
+    @staticmethod
+    def _try_flee_fallback(ctx: _CombatContext) -> Action | None:
+        if ctx.hp_ratio < ctx.flee_threshold:
+            logger.info("rule_flee", hp_pct=round(ctx.hp_ratio * 100))
             return Action(name=ActionType.FLEE)
+        return None
 
-        # 3. Ranged attacker: shoot if target in range, move closer if not
-        if is_ranged and dist <= primary_reach:
-            logger.info("rule_attack", target=target_id, ranged=True, distance_ft=dist)
-            return Action(name=ActionType.ATTACK, params={"target_id": target_id})
+    def _try_attack(self, ctx: _CombatContext) -> Action | None:
+        if ctx.target is None:
+            return None
+        dist = ctx.target.distance_ft
+        if dist <= ctx.primary_reach:
+            logger.info(
+                "rule_attack",
+                target=ctx.target.id,
+                distance_ft=dist,
+                ranged=ctx.is_ranged,
+            )
+            return Action(name=ActionType.ATTACK, params={"target_id": ctx.target.id})
+        return None
 
-        # 4. Melee: attack if in weapon reach
-        if dist <= primary_reach:
-            logger.info("rule_attack", target=target_id, distance_ft=dist)
-            return Action(name=ActionType.ATTACK, params={"target_id": target_id})
-
-        # 5. Move toward if have movement remaining
+    def _try_advance(self, ctx: _CombatContext) -> Action | None:
+        if ctx.target is None:
+            return None
+        budget = ctx.awareness.turn_budget
         movement_left = budget.movement_remaining if budget else 0
         if movement_left > 0:
-            logger.info("rule_move_toward", target=target_id, distance_ft=dist)
-            return self.move_toward_target(target, awareness)
+            logger.info("rule_move_toward", target=ctx.target.id, distance_ft=ctx.target.distance_ft)
+            return self.move_toward_target(ctx.target, ctx.awareness)
+        return None
 
-        # 6. Dash to get more movement (prefer bonus action via Cunning Action)
-        dash_params = self._dash_params(creature)
+    def _try_dash(self, ctx: _CombatContext) -> Action | None:
+        if ctx.target is None:
+            return None
+        budget = ctx.awareness.turn_budget
+        dash_params = self._dash_params(ctx.creature)
         if dash_params.get("cost_mode") == "bonus_action":
             has_bonus = (budget.bonus_actions if budget else 0) > 0
             if has_bonus:
-                logger.info("rule_dash", distance_ft=dist, cost_mode="bonus_action")
+                logger.info("rule_dash", distance_ft=ctx.target.distance_ft, cost_mode="bonus_action")
                 return Action(name=ActionType.DASH, params=dash_params)
         has_actions = (budget.actions if budget else 0) > 0
         if has_actions:
-            logger.info("rule_dash", distance_ft=dist)
+            logger.info("rule_dash", distance_ft=ctx.target.distance_ft)
             return Action(name=ActionType.DASH)
-
-        logger.debug(
-            "rule_end_turn",
-            budget_actions=budget.actions if budget else 0,
-            budget_move=movement_left,
-        )
-        return END_TURN
+        return None
 
     @staticmethod
     def _move_away_from(target: CombatEntity, awareness: CombatAwareness, ft: int = 5) -> Action:

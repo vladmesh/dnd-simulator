@@ -46,4 +46,17 @@ Also fix: duplicate flee logic (lines 234-237 ≈ lines 244-247).
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Decomposed `_choose_combat_action` from a 95-line monolith into a 20-line dispatch loop over 9 decision rules:
+`_try_equip`, `_try_potion`, `_try_retreat`, `_try_flee`, `_try_disengage`, `_try_flee_fallback`, `_try_attack`, `_try_advance`, `_try_dash`.
+
+Introduced `_CombatContext` dataclass to carry shared state between helpers (hp_ratio, reach, thresholds, target) instead of recomputing in each.
+
+5 named threshold constants exported: `FLEE_HP_THRESHOLD`, `DODGE_HP_THRESHOLD`, `POTION_HP_THRESHOLD`, `SCARED_FLEE_HP_THRESHOLD`, `SCARED_DODGE_HP_THRESHOLD`.
+
+Merged the duplicate ranged/melee attack branches — both just check `dist <= reach`, no need for separate `is_ranged` path.
+
+6 new tests added, all 31 brain tests pass, no existing tests modified.

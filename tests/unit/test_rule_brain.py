@@ -458,6 +458,121 @@ class TestRuleBrainFactionHostility:
         assert action.name == "end_turn"
 
 
+class TestRuleBrainDecisionRules:
+    """Tests for decomposed decision helpers and threshold constants."""
+
+    def test_threshold_constants_exist(self) -> None:
+        """Named threshold constants should be importable from brain module."""
+        from dnd_simulator.core.brain import (
+            DODGE_HP_THRESHOLD,
+            FLEE_HP_THRESHOLD,
+            POTION_HP_THRESHOLD,
+            SCARED_DODGE_HP_THRESHOLD,
+            SCARED_FLEE_HP_THRESHOLD,
+        )
+
+        assert FLEE_HP_THRESHOLD < DODGE_HP_THRESHOLD
+        assert POTION_HP_THRESHOLD > FLEE_HP_THRESHOLD
+        assert SCARED_FLEE_HP_THRESHOLD > FLEE_HP_THRESHOLD
+        assert SCARED_DODGE_HP_THRESHOLD > DODGE_HP_THRESHOLD
+
+    def test_ranged_creature_shoots_at_range(self) -> None:
+        """Creature with ranged weapon and enemy at range attacks without moving closer."""
+        longbow = Attack(
+            name="longbow",
+            ability=Ability.DEX,
+            damage=(DamageComponent("1d8", DamageType.PIERCING),),
+            reach=150,
+        )
+        archer = Npc(
+            id="a1",
+            name="Archer",
+            location_id="arena",
+            attacks=(longbow,),
+            max_hp=20,
+            current_hp=20,
+            speed=30,
+        )
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=200, height=200)
+        bm.set_position("a1", Position(10, 10))
+        bm.set_position("e1", Position(10, 80))  # 70 ft away — within longbow range
+        awareness = _build_combat_awareness(archer, [archer, enemy], bm)
+        brain = RuleBrain()
+        action = brain.choose_action(archer, awareness, [])
+        assert action.name == "attack"
+        assert action.params["target_id"] == "e1"
+
+    def test_creature_with_potion_uses_it_when_wounded(self) -> None:
+        """Creature below potion threshold with healing potion uses it before attacking."""
+        from dnd_simulator.core.action import ActionType
+        from dnd_simulator.core.awareness import ItemInfo
+
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=100, current_hp=30)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("e1", Position(10, 15))
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
+        # Add a potion to available items and USE_ITEM to available actions
+        from dataclasses import replace
+
+        awareness = replace(
+            awareness,
+            available_items=[ItemInfo(id="pot1", name="Healing Potion", description="heals 2d4+2 HP")],
+            available_actions=[ActionType.USE_ITEM, ActionType.ATTACK],
+        )
+        brain = RuleBrain()
+        action = brain.choose_action(npc, awareness, [])
+        assert action.name == "use_item"
+        assert action.params["item_id"] == "pot1"
+
+    def test_no_hostile_targets_ends_turn(self) -> None:
+        """Creature in combat with only friendlies nearby ends turn."""
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("ally", Position(10, 15))
+        ally = Npc(id="ally", name="Ally", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        awareness = _build_combat_awareness(npc, [npc, ally], bm)
+        # Override is_hostile to False for the ally
+        from dataclasses import replace
+
+        patched = [replace(e, is_hostile=False) for e in awareness.nearby]
+        awareness = replace(awareness, nearby=patched)
+        brain = RuleBrain()
+        action = brain.choose_action(npc, awareness, [])
+        assert action.name == "end_turn"
+
+    def test_choose_combat_action_is_dispatch_loop(self) -> None:
+        """_choose_combat_action should be a short dispatch loop, not a monolith."""
+        import inspect
+
+        source = inspect.getsource(RuleBrain._choose_combat_action)
+        lines = [line for line in source.splitlines() if line.strip() and not line.strip().startswith("#")]
+        assert len(lines) <= 30, f"_choose_combat_action has {len(lines)} non-blank non-comment lines, expected <= 30"
+
+    def test_melee_creature_moves_then_dashes_when_far(self) -> None:
+        """Creature with melee weapon, enemy far away: moves first, then dashes when movement exhausted."""
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20, speed=30)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=200, height=200)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("e1", Position(10, 80))  # 70 ft — way beyond speed
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
+        brain = RuleBrain()
+
+        # First call: should move toward
+        action1 = brain.choose_action(npc, awareness, [])
+        assert action1.name == "move"
+
+        # Simulate movement exhausted
+        assert awareness.turn_budget is not None
+        awareness.turn_budget.movement_remaining = 0
+        action2 = brain.choose_action(npc, awareness, [])
+        assert action2.name == "dash"
+
+
 class TestRuleBrainTacticalDisengage:
     """RuleBrain should Disengage before retreating when enemies are in melee reach."""
 
