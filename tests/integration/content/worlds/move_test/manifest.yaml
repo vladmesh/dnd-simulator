@@ -1,0 +1,15 @@
+name: Move Test
+description: Minimal world for move_to integration tests. One weak NPC.
+default_player_faction: hero_faction
+
+layers:
+  geography:
+    source: custom
+  politics:
+    source: custom
+  settlements:
+    source: custom
+  ecology:
+    source: custom
+  entities:
+    source: custom

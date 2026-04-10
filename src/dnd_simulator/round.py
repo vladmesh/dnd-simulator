@@ -504,7 +504,11 @@ class Round:
                     params={"target_id": mover.id},
                 )
             ]
-            self.check_reactions(trigger, options, reactors, emit_fn)
+            # Process reactors one at a time — stop if mover dies from an OA
+            for reactor in reactors:
+                if not mover.is_alive:
+                    break
+                self.check_reactions(trigger, options, [reactor], emit_fn)
             return mover.is_alive
 
         return on_leave_reach

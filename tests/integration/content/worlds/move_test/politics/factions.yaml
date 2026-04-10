@@ -1,0 +1,9 @@
+hero_faction:
+  name: Heroes
+  relations:
+    enemy_faction: hostile
+
+enemy_faction:
+  name: Enemies
+  relations:
+    hero_faction: hostile

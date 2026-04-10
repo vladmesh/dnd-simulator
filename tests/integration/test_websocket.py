@@ -285,9 +285,9 @@ class TestMoveTo:
 
     @pytest.fixture(scope="class")
     def ws_move_arena(self, _urls: tuple[str, str, str]) -> Iterator[tuple[str, str, str]]:
-        """Fresh arena session for move_to tests."""
+        """Fresh session for move_to tests. Uses move_test world (1 weak NPC)."""
         api, player_api, ws_base = _urls
-        resp = requests.post(f"{api}/sessions", json={"world_name": "arena", "lang": "en"}, timeout=10)
+        resp = requests.post(f"{api}/sessions", json={"world_name": "move_test", "lang": "en"}, timeout=10)
         resp.raise_for_status()
         sid = resp.json()["session_id"]
 
@@ -298,7 +298,7 @@ class TestMoveTo:
                 "race": "human",
                 "char_class": "fighter",
                 "alignment": "true_neutral",
-                "start_location": "arena_floor",
+                "start_location": "test_floor",
                 "ability_scores": {"str": 15, "dex": 14, "con": 14, "int": 10, "wis": 10, "cha": 8},
             },
             timeout=10,
@@ -314,12 +314,16 @@ class TestMoveTo:
         ws_base, sid, pid = ws_move_arena
         sock = ws_connect(ws_base, sid, pid)
         try:
-            # Get initial peaceful turn
-            msg = ws_recv(sock)
-            assert msg["type"] == "turn"
+            # Wait for initial peaceful turn (skip non-turn messages)
+            msg = None
+            for _ in range(10):
+                msg = ws_recv(sock)
+                if msg["type"] == "turn":
+                    break
+            assert msg is not None and msg["type"] == "turn", f"Never got initial turn, last: {msg}"
 
             # Attack to start combat
-            ws_send_action(sock, "attack", target_id="razor")
+            ws_send_action(sock, "attack", target_id="dummy")
 
             # Wait for a combat turn (ours)
             combat_turn = None

@@ -1,0 +1,4 @@
+test_floor:
+  name: Test Floor
+  region: test_region
+  description: A flat open area for movement testing.
