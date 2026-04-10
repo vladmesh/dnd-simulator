@@ -107,7 +107,7 @@ Audit-driven cleanup of files sprint 014 will heavily modify. Reduces friction a
 
 ## Status
 
-**Current:** Phase 4 added (2026-04-10). Ready for task breakdown.
+**Current:** Phase 4 tasks generated (2026-04-10). Ready to start task 1.
 
 ## Decisions
 
