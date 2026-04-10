@@ -83,13 +83,15 @@ Audit-driven cleanup of files sprint 014 will heavily modify. Reduces friction a
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Kill Reputation Drop](tasks/phase3-task1-kill-reputation-drop.md)
+2. [Auto-Hostility Combat Initiation](tasks/phase3-task2-auto-hostility.md)
+3. [Reputation in Awareness, Perception & Frontend](tasks/phase3-task3-awareness-perception-frontend.md)
 
 ---
 
 ## Status
 
-**Current:** Phase 2 complete (2026-04-10). All 3 tasks done. Ready for phase 3.
+**Current:** Phase 3 tasks generated (2026-04-10). Ready to start task 1.
 
 ## Decisions
 
