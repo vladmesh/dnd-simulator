@@ -434,6 +434,8 @@ class EntitiesLayer(Layer):
                     eq_item = getattr(e, field_name)
                     if eq_item is not None:
                         data[field_name] = _serialize_item(eq_item)
+                if e.reputation:
+                    data["reputation"] = dict(e.reputation)
                 if e.resource_pools:
                     data["resource_pools"] = [
                         {
@@ -568,6 +570,9 @@ class EntitiesLayer(Layer):
                                         reset_on=RestType(str(pdata["reset_on"])),
                                     )
                                 )
+                    rep_raw = edata.get("reputation")
+                    if isinstance(rep_raw, dict):
+                        entity.reputation = {str(k): int(v) for k, v in rep_raw.items()}
                 if isinstance(entity, PlayerCharacter):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
                     entity.gold = int(edata.get("gold", entity.gold))

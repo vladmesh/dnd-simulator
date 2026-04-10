@@ -17,6 +17,7 @@ from dnd_simulator.core.models import Event, FactionRelation, Query, QueryType
 from dnd_simulator.core.world import LayerError
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.rules.combat_sides import are_allies
+from dnd_simulator.rules.reputation import effective_relation
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import GameDateTime, QueryFn
@@ -299,26 +300,39 @@ class AwarenessBuilder:
             return ""
 
     def check_faction_hostility(self, observer: Entity, other: Entity, query_fn: QueryFn | None) -> bool:
-        """Check if two entities are hostile based on faction relations."""
+        """Check if two entities are hostile based on effective relation (reputation + faction)."""
         if not observer.faction_id or not other.faction_id:
-            return False
-        if observer.faction_id == other.faction_id:
             return False
         if query_fn is None:
             return False
+
         try:
-            answer = query_fn(
-                "politics",
-                Query(question=QueryType.FACTION_RELATION, params={"a": observer.faction_id, "b": other.faction_id}),
-            )
-            is_hostile = answer.value == FactionRelation.HOSTILE
+
+            def get_faction_relation(a: str, b: str) -> FactionRelation:
+                answer = query_fn(
+                    "politics",
+                    Query(question=QueryType.FACTION_RELATION, params={"a": a, "b": b}),
+                )
+                if isinstance(answer.value, FactionRelation):
+                    return answer.value
+                return FactionRelation.NEUTRAL
+
+            if isinstance(observer, Creature) and isinstance(other, Creature):
+                relation = effective_relation(observer, other, get_faction_relation)
+            else:
+                # Plain Entity — no reputation, use faction-only logic
+                if observer.faction_id == other.faction_id:
+                    return False
+                relation = get_faction_relation(observer.faction_id, other.faction_id)
+
+            is_hostile = relation == FactionRelation.HOSTILE
             logger.info(
                 "faction_hostility_check",
                 observer=observer.id,
                 other=other.id,
                 observer_faction=observer.faction_id,
                 other_faction=other.faction_id,
-                relation=str(answer.value),
+                relation=str(relation),
                 hostile=is_hostile,
             )
             return is_hostile

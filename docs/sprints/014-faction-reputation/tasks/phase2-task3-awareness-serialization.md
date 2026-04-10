@@ -47,4 +47,15 @@ Scenarios:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All 6 scenarios from task spec implemented and passing.
+
+Key changes:
+- `check_faction_hostility` now uses `effective_relation` when both entities are Creature instances. Plain Entity fallback preserved with same-faction short-circuit.
+- `get_faction_relation` closure returns NEUTRAL (instead of crashing) when politics query returns None — handles unknown/unregistered factions gracefully.
+- Reputation serialized only when non-empty (sparse). Restored via `{str(k): int(v)}` coercion.
+- `NpcContent` and `PlayerContent` schemas both got `reputation: dict[str, int] = {}` field, wired through `_to_npc`/`_to_player`.
+- Two old tests initially failed: `test_faction_name_falls_back_to_empty_when_query_returns_none` and `test_unexpected_error_in_faction_name_propagates` — both due to `assert isinstance(answer.value, FactionRelation)` crashing on None. Fixed by using a graceful fallback to NEUTRAL instead of assert. Contract change is intentional: awareness context can get None from politics queries (unknown factions), and crashing there is wrong.

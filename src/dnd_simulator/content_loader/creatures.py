@@ -168,6 +168,7 @@ def _to_npc(
         class_features=parse_class_features(model.char_class, raw_data),
         resource_pools=build_class_resource_pools(model.char_class),
         combat_position=tuple(model.combat_position) if model.combat_position else None,  # type: ignore[arg-type]
+        reputation=dict(model.reputation),
     )
 
 
@@ -257,6 +258,7 @@ def _to_player(
         class_features=parse_class_features(model.char_class, raw_data),
         resource_pools=build_class_resource_pools(model.char_class),
         combat_position=tuple(model.combat_position) if model.combat_position else None,  # type: ignore[arg-type]
+        reputation=dict(model.reputation),
     )
 
 
