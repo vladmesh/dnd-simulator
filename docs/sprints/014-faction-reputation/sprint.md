@@ -87,11 +87,27 @@ Audit-driven cleanup of files sprint 014 will heavily modify. Reduces friction a
 2. [Auto-Hostility Combat Initiation](tasks/phase3-task2-auto-hostility.md)
 3. [Reputation in Awareness, Perception & Frontend](tasks/phase3-task3-awareness-perception-frontend.md)
 
+## Phase 4: Bug Fixes — Starting Equipment, Dead-Mover, Brain Spam
+
+Три бага, обнаруженных в E2E sprint 013 и подтверждённых в phase 3 close.
+
+- **Starting equipment не экипируется как Item.** Игрок создаётся с правильным AC (броня/щит как статы), но `equipped_weapon: null`, `inventory: []`. В бою бьёт кулаками. `starting_equipment()` возвращает рефы, `create_player` не резолвит их в реальные Item + equip.
+- **Dead-mover round processing.** После убийства NPC round loop продолжает вызывать мёртвого (3x "Мёртвые существа не могут действовать" в логе игрока). OA-краш пофикшен в phase 2, но цикл обработки ходов не пропускает мёртвых.
+- **RuleBrain movement spam.** RuleBrain после исчерпания movement продолжает запрашивать move_to (3+ failed attempts за ход). Засоряет лог бесполезными строками.
+
+**Верифицируем:** Unit tests — created character has equipped weapon/armor/shield items. Dead creature skipped in round loop. RuleBrain stops requesting move after movement exhausted. Integration — combat uses real weapon, no dead-mover warnings.
+
+**Tasks:**
+
+1. [Starting Equipment as Real Items](tasks/phase4-task1-starting-equipment.md)
+2. [Skip Dead Creatures in Round Loop](tasks/phase4-task2-dead-mover-skip.md)
+3. [RuleBrain Movement Budget Check](tasks/phase4-task3-brain-movement-spam.md)
+
 ---
 
 ## Status
 
-**Current:** Phase 3 complete (2026-04-10). All phases done. Ready for audit.
+**Current:** Phase 4 added (2026-04-10). Ready for task breakdown.
 
 ## Decisions
 
