@@ -44,4 +44,14 @@ Also check `run_peaceful_turn()` for the same pattern — if a creature can die 
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added `if not creature.is_alive: break` at the top of the `while True` loop in `run_combat_turn()`.
+This catches creatures killed mid-turn by reactions (opportunity attacks) before the next brain call.
+The `run_peaceful_turn()` loop doesn't need the same guard — peaceful turns break on any failed action,
+and there's no reaction mechanism in peaceful mode.
+
+Two tests added: one for mid-turn death (brain never called again), one confirming the outer round loop
+already skips dead creatures.

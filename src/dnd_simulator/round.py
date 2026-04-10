@@ -326,6 +326,9 @@ class Round:
         consecutive_failures = 0
 
         while True:
+            if not creature.is_alive:
+                break
+
             awareness = self._build_combat_awareness(creature, ctx, time, query_fn)
             events = self._entities.get_perceived_events(creature)
 
