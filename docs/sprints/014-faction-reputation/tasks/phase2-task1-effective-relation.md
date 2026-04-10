@@ -49,4 +49,8 @@ Scenarios for `effective_relation`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward implementation. `reputation` field added to `Creature` (sparse dict, default empty). `rules/reputation.py` has two pure functions: `reputation_to_relation` (threshold lookup) and `effective_relation` (personal rep override → faction fallback). No callers yet — task 2 wires combat_sides, task 3 wires awareness. No old tests broken — the new field has a default so all existing Creature instantiations are unaffected.
