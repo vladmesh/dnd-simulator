@@ -20,6 +20,7 @@ from dnd_simulator.rules.handlers.attack_resolution import (
     roll_attack_dice,
 )
 from dnd_simulator.rules.modifiers import attack_modifiers
+from dnd_simulator.rules.reputation import effective_relation
 from dnd_simulator.rules.sneak_attack import check_sneak_attack, find_adjacent_ally
 from dnd_simulator.rules.weapons import get_weapon_attack
 
@@ -84,7 +85,7 @@ class CombatManager:
         )
         if query_fn is not None:
 
-            def get_relation(a: str, b: str) -> FactionRelation:
+            def get_faction_relation(a: str, b: str) -> FactionRelation:
                 answer = query_fn(
                     "politics",
                     Query(question=QueryType.FACTION_RELATION, params={"a": a, "b": b}),
@@ -92,7 +93,10 @@ class CombatManager:
                 assert isinstance(answer.value, FactionRelation)
                 return answer.value
 
-            combat.sides, combat.entity_to_side = build_combat_sides(creatures, get_relation)
+            def get_creature_relation(a: Creature, b: Creature) -> FactionRelation:
+                return effective_relation(a, b, get_faction_relation)
+
+            combat.sides, combat.entity_to_side = build_combat_sides(creatures, get_creature_relation)
 
         self._combats[location_id] = combat
         self._attack_this_round[location_id] = False

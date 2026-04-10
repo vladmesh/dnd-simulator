@@ -45,4 +45,14 @@ Scenarios (extend existing `test_combat_sides.py`):
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Rewrote `build_combat_sides` from faction-level to creature-level algorithm. Key changes:
+
+- `CreatureRelationFn = Callable[[Creature, Creature], FactionRelation]` replaces `RelationFn` (renamed to `FactionRelationFn`, still used by `effective_relation`).
+- Algorithm processes creatures individually instead of grouping by faction_id first. For each creature, checks mutual FRIENDLY with all members of existing sides — both directions must be FRIENDLY. Any non-FRIENDLY in either direction → skip that side.
+- Added same-faction shortcut to `effective_relation`: `a.faction_id == b.faction_id` returns FRIENDLY by default (before faction callback). This is needed because the new algorithm no longer pre-groups by faction_id. Personal rep still overrides (exile pattern works).
+- `combat_manager.py` now wraps `effective_relation` + politics query into a `CreatureRelationFn` callback.
+- 5 new tests: exile, personal friendship (one-sided), mutual personal friendship, asymmetric rep, mixed 5-creature scenario. All 9 existing tests pass with the new callback (backward compat).

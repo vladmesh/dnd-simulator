@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.models import FactionRelation
-from dnd_simulator.rules.combat_sides import RelationFn
+from dnd_simulator.rules.combat_sides import FactionRelationFn
 
 FRIENDLY_THRESHOLD = 75
 HOSTILE_THRESHOLD = 25
@@ -25,14 +25,15 @@ def reputation_to_relation(rep: int) -> FactionRelation:
 def effective_relation(
     a: Creature,
     b: Creature,
-    get_faction_relation: RelationFn,
+    get_faction_relation: FactionRelationFn,
 ) -> FactionRelation:
     """Determine how creature A relates to creature B.
 
     Priority:
     1. If either creature has no faction — NEUTRAL.
     2. If A has a personal reputation entry for B's faction — apply thresholds.
-    3. Otherwise — fall back to faction-to-faction relation.
+    3. Same faction with no personal override — FRIENDLY.
+    4. Otherwise — fall back to faction-to-faction relation.
     """
     if not a.faction_id or not b.faction_id:
         return FactionRelation.NEUTRAL
@@ -40,5 +41,8 @@ def effective_relation(
     personal_rep = a.reputation.get(b.faction_id)
     if personal_rep is not None:
         return reputation_to_relation(personal_rep)
+
+    if a.faction_id == b.faction_id:
+        return FactionRelation.FRIENDLY
 
     return get_faction_relation(a.faction_id, b.faction_id)
