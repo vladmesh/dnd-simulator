@@ -70,7 +70,7 @@ Audit-driven cleanup of files sprint 014 will heavily modify. Reduces friction a
 2. [CombatSides Uses effective_relation](tasks/phase2-task2-combat-sides-effective-relation.md)
 3. [Awareness + Serialization for Reputation](tasks/phase2-task3-awareness-serialization.md)
 
-## Phase 3: Reputation Dynamics + Auto-hostility
+## Phase 3: Reputation Dynamics + Auto-hostility ✓
 
 Репутация начинает двигаться от действий.
 
@@ -91,7 +91,7 @@ Audit-driven cleanup of files sprint 014 will heavily modify. Reduces friction a
 
 ## Status
 
-**Current:** Phase 3 tasks generated (2026-04-10). Ready to start task 1.
+**Current:** Phase 3 complete (2026-04-10). All phases done. Ready for audit.
 
 ## Decisions
 

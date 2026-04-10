@@ -1,0 +1,12 @@
+test_arena:
+  name: Test Arena
+  latitude: 40.0
+  longitude: 0.0
+  elevation: 50
+  terrain: plains
+  water_proximity: 0.0
+  connections: []
+  battle_map:
+    width: 3
+    height: 3
+    walls: []

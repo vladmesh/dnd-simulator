@@ -78,7 +78,7 @@ def _ensure_combat(sock: ws_lib.WebSocket, turn: dict[str, Any], target_id: str)
     if turn["mode"] == "combat":
         return turn
     ws_send_action(sock, "attack", target_id=target_id)
-    for _ in range(30):
+    for _ in range(80):
         msg = ws_recv(sock)
         if msg["type"] == "turn" and msg.get("mode") == "combat":
             return msg

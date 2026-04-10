@@ -1,0 +1,9 @@
+hero_faction:
+  name: Heroes
+  relations:
+    neutral_faction: neutral
+
+neutral_faction:
+  name: Neutrals
+  relations:
+    hero_faction: neutral

@@ -1,0 +1,28 @@
+weak_neutral:
+  name: Weak Neutral
+  start_location: test_floor
+  role: commoner
+  race: human
+  class: commoner
+  faction: neutral_faction
+  hp: 1
+  ac: 5
+  speed: 30
+  ability_scores:
+    str: 6
+    dex: 6
+    con: 6
+    int: 6
+    wis: 6
+    cha: 6
+  personality: 'You do nothing. End your turn immediately.'
+  items:
+  - name: Stick
+    type: weapon
+    weapon_id: club
+    category: simple
+    attack_name: stick hit
+    damage:
+    - dice: 1d4
+      type: bludgeoning
+    ability: str
