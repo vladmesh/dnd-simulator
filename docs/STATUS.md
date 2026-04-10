@@ -4,7 +4,20 @@
 
 ## Current Sprint
 
-No active sprint.
+**Sprint:** 015-paladin-smite
+**Goal:** Paladin class с Divine Smite, spell slots как reusable resource system, multi-damage weapons и breakdown в UI.
+**Started:** 2026-04-11
+**Phase:** Planning (COMPLETE) — 2026-04-11
+
+Ready for Phase 1 task generation.
+
+### Phases
+
+1. Spell Slots as ResourcePool
+2. Paladin Class Foundation
+3. Divine Smite
+4. Multi-Damage Weapons + UI Breakdown
+5. Smite + Magic Weapon Combo + Polish
 
 ## Sprint History
 
