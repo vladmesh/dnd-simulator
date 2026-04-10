@@ -411,6 +411,21 @@ def _perceive_squad_dematerialized(event: Event, observer: Character, get_entity
     return _("{name} moves on, disappearing into the distance").format(name=name)
 
 
+def _perceive_reputation_change(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    d = event.data
+    entity_id = str(d["entity_id"])
+    faction_name = str(d.get("faction_name", d["faction_id"]))
+    old_rep = d["old_rep"]
+    new_rep = d["new_rep"]
+
+    if entity_id == observer.id:
+        return _("Your reputation with {faction} changed ({old} → {new})").format(
+            faction=faction_name, old=old_rep, new=new_rep
+        )
+    desc = _describe(observer, entity_id, get_entity)
+    return _("{entity}'s reputation with {faction} changed").format(entity=desc, faction=faction_name)
+
+
 # ---------------------------------------------------------------------------
 # Dispatch table: EventType → handler
 # ---------------------------------------------------------------------------
@@ -441,6 +456,7 @@ _DISPATCH: dict[EventType, _PerceiveHandler] = {
     EventType.SQUAD_COMBAT: _perceive_squad_combat,
     EventType.SQUAD_MATERIALIZED: _perceive_squad_materialized,
     EventType.SQUAD_DEMATERIALIZED: _perceive_squad_dematerialized,
+    EventType.REPUTATION_CHANGED: _perceive_reputation_change,
 }
 
 

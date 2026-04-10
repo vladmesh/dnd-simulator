@@ -248,6 +248,7 @@ class AwarenessBuilder:
             desc = creature.perceive(e) if isinstance(creature, Character) and isinstance(e, Entity) else e.name
             is_wounded = isinstance(e, Creature) and e.current_hp < e.max_hp // 2
             is_hostile = self.check_faction_hostility(creature, e, query_fn)
+            relation = self._resolve_relation(creature, e, query_fn)
             # Structured fields for inspect card — all populated from AwarenessBuilder
             name = e.name
             race = ""
@@ -273,6 +274,7 @@ class AwarenessBuilder:
                     role=role,
                     faction_id=faction_id,
                     faction_name=faction_name,
+                    relation=relation,
                     npc_description=npc_description,
                     is_merchant=is_merchant,
                 )
@@ -298,6 +300,35 @@ class AwarenessBuilder:
             return str(answer.value) if answer.value else ""
         except (KeyError, ValueError, LayerError):
             return ""
+
+    def _resolve_relation(self, observer: Entity, other: Entity, query_fn: QueryFn | None) -> str:
+        """Resolve the relation string between observer and other entity."""
+        if not observer.faction_id or not other.faction_id:
+            return FactionRelation.NEUTRAL.value
+        if query_fn is None:
+            return FactionRelation.NEUTRAL.value
+
+        try:
+
+            def get_faction_relation(a: str, b: str) -> FactionRelation:
+                answer = query_fn(
+                    "politics",
+                    Query(question=QueryType.FACTION_RELATION, params={"a": a, "b": b}),
+                )
+                if isinstance(answer.value, FactionRelation):
+                    return answer.value
+                return FactionRelation.NEUTRAL
+
+            if isinstance(observer, Creature) and isinstance(other, Creature):
+                relation = effective_relation(observer, other, get_faction_relation)
+            else:
+                if observer.faction_id == other.faction_id:
+                    return FactionRelation.FRIENDLY.value
+                relation = get_faction_relation(observer.faction_id, other.faction_id)
+
+            return relation.value
+        except (KeyError, ValueError, LayerError):
+            return FactionRelation.NEUTRAL.value
 
     def check_faction_hostility(self, observer: Entity, other: Entity, query_fn: QueryFn | None) -> bool:
         """Check if two entities are hostile based on effective relation (reputation + faction)."""

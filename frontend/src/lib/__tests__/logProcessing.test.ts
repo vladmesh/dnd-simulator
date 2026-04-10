@@ -89,6 +89,7 @@ describe("EVENT_ICONS", () => {
     "squad_materialized",
     "squad_dematerialized",
     "round_start",
+    "reputation_changed",
     "custom",
   ]
 
@@ -144,6 +145,7 @@ describe("EVENT_COLORS", () => {
       "squad_materialized",
       "squad_dematerialized",
       "round_start",
+      "reputation_changed",
       "custom",
     ]
 

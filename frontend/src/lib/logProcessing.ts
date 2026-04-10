@@ -81,6 +81,7 @@ export const EVENT_ICONS: Record<EventType, string> = {
   squad_materialized: "eye",
   squad_dematerialized: "eye-off",
   round_start: "swords",
+  reputation_changed: "shield-alert",
   custom: "scroll",
 }
 
@@ -112,6 +113,7 @@ export const EVENT_COLORS: Record<EventType, string> = {
   squad_materialized: "text-yellow-400",
   squad_dematerialized: "text-muted-foreground",
   round_start: "text-orange-400 font-bold",
+  reputation_changed: "text-yellow-400",
   custom: "text-foreground",
 }
 

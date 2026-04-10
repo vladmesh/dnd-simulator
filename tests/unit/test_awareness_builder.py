@@ -807,6 +807,68 @@ class TestNearbyEntityFactionName:
         assert nearby[0].faction_name == ""
 
 
+class TestNearbyEntityRelation:
+    """NearbyEntity includes relation string from effective_relation."""
+
+    def test_nearby_entity_shows_hostile_relation(self) -> None:
+        """Observer sees a bandit. Awareness shows faction_name and relation: 'hostile'."""
+        observer = Character(id="p1", name="Hero", location_id="road", faction_id="kingdom")
+        bandit = Character(id="b1", name="Bandit", location_id="road", faction_id="bandits")
+        layer = EntitiesLayer([observer, bandit])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            if target == "politics" and query.question == QueryType.FACTION_NAME:
+                if query.params["faction_id"] == "bandits":
+                    return Answer(value="Bandits")
+                return Answer(value=None)
+            if target == "politics" and query.question == QueryType.FACTION_RELATION:
+                return Answer(value=FactionRelation.HOSTILE)
+            return Answer(value=None)
+
+        nearby = layer.build_nearby_entities(observer, hour=12, query_fn=query_fn)
+        assert len(nearby) == 1
+        assert nearby[0].faction_name == "Bandits"
+        assert nearby[0].relation == "hostile"
+
+    def test_relation_reflects_personal_reputation_override(self) -> None:
+        """Observer has personal rep 90 with bandits → relation 'friendly' despite faction hostility."""
+        observer = Character(
+            id="p1",
+            name="Hero",
+            location_id="road",
+            faction_id="kingdom",
+            reputation={"bandits": 90},
+        )
+        bandit = Character(id="b1", name="Bandit", location_id="road", faction_id="bandits")
+        layer = EntitiesLayer([observer, bandit])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            if target == "politics" and query.question == QueryType.FACTION_NAME:
+                return Answer(value="Bandits")
+            if target == "politics" and query.question == QueryType.FACTION_RELATION:
+                # Faction-level is hostile, but personal rep overrides
+                return Answer(value=FactionRelation.HOSTILE)
+            return Answer(value=None)
+
+        nearby = layer.build_nearby_entities(observer, hour=12, query_fn=query_fn)
+        assert len(nearby) == 1
+        assert nearby[0].relation == "friendly"
+
+    def test_factionless_creature_shows_neutral_relation(self) -> None:
+        """Creature without faction shows empty faction_name and 'neutral' relation."""
+        observer = Character(id="p1", name="Hero", location_id="road", faction_id="kingdom")
+        wanderer = Character(id="w1", name="Wanderer", location_id="road")
+        layer = EntitiesLayer([observer, wanderer])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            return Answer(value=None)
+
+        nearby = layer.build_nearby_entities(observer, hour=12, query_fn=query_fn)
+        assert len(nearby) == 1
+        assert nearby[0].faction_name == ""
+        assert nearby[0].relation == "neutral"
+
+
 class TestFactionHostilityEdgeCases:
     """Edge cases for faction hostility checks."""
 

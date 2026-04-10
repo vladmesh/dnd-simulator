@@ -50,4 +50,11 @@ Three connected pieces that make reputation visible to brains and players:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- NearbyEntity already had `faction_name`; added `relation: str = ""` field.
+- Added `_resolve_relation()` to AwarenessBuilder — mirrors `check_faction_hostility()` logic but returns the FactionRelation value string instead of bool. Factionless entities get "neutral".
+- Perception handler uses `d.get("faction_name", d["faction_id"])` fallback since combat_manager emits `faction_id` but not `faction_name` in reputation events.
+- Frontend: added `reputation_changed` to EventType union, EVENT_ICONS (shield-alert), EVENT_COLORS (text-yellow-400), and both test arrays.

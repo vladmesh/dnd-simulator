@@ -13,7 +13,7 @@
 0. **Refactor — Prep for Faction Work** (COMPLETE) — 2026-04-10
 1. **Combat Sides + OA Fix** (COMPLETE) — 2026-04-10
 2. **Personal Reputation + effective_relation** (COMPLETE) — 2026-04-10
-3. **Reputation Dynamics + Auto-hostility** (task 2 done, task 3 pending) — 2026-04-10
+3. **Reputation Dynamics + Auto-hostility** (task 3 done) — 2026-04-10
 
 ## Sprint History
 

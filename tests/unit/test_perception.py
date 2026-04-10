@@ -637,3 +637,53 @@ class TestPerceptionDispatchAndFailFast:
         )
         with pytest.raises(KeyError, match="critical"):
             perceive_event(event, observer, _get_entity_fn(observer))
+
+
+class TestPerceiveReputationChanged:
+    """REPUTATION_CHANGED event produces readable descriptions."""
+
+    def test_reputation_change_self_observer(self) -> None:
+        """Observer whose reputation changed sees 'Your reputation with X decreased (80 → 60).'"""
+        observer = Character(id="player", name="Hero", location_id="r1")
+        faction_entity = Character(id="bandit", name="Bandit", location_id="r1", faction_id="bandits")
+        event = Event(
+            event_type=EventType.REPUTATION_CHANGED,
+            source_layer="entities",
+            data={
+                "entity_id": "player",
+                "faction_id": "bandits",
+                "faction_name": "Bandits",
+                "old_rep": 80,
+                "new_rep": 60,
+                "delta": -20,
+                "reason": "kill",
+            },
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer, faction_entity))
+        assert "reputation" in result.lower()
+        assert "Bandits" in result
+        assert "80" in result
+        assert "60" in result
+
+    def test_reputation_change_other_observer(self) -> None:
+        """Non-involved observer sees a different, less detailed message."""
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        actor = Character(id="player", name="Hero", location_id="r1", race=Race.ELF)
+        event = Event(
+            event_type=EventType.REPUTATION_CHANGED,
+            source_layer="entities",
+            data={
+                "entity_id": "player",
+                "faction_id": "bandits",
+                "faction_name": "Bandits",
+                "old_rep": 80,
+                "new_rep": 60,
+                "delta": -20,
+                "reason": "kill",
+            },
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer, actor))
+        assert "reputation" in result.lower()
+        assert "Bandits" in result
+        # Should reference the actor, not "you"
+        assert "elf" in result.lower()
