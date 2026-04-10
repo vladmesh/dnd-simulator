@@ -20,7 +20,12 @@ from dnd_simulator.rules.handlers.attack_resolution import (
     roll_attack_dice,
 )
 from dnd_simulator.rules.modifiers import attack_modifiers
-from dnd_simulator.rules.reputation import BASE_KILL_REPUTATION_DELTA, apply_reputation_drop, effective_relation
+from dnd_simulator.rules.reputation import (
+    BASE_KILL_REPUTATION_DELTA,
+    apply_reputation_drop,
+    default_rep_for_faction,
+    effective_relation,
+)
 from dnd_simulator.rules.sneak_attack import check_sneak_attack, find_adjacent_ally
 from dnd_simulator.rules.weapons import get_weapon_attack
 
@@ -340,7 +345,7 @@ class CombatManager:
             Event(event_type=EventType.ENTITY_ATTACK, source_layer="entities", data=log_data)
         )
 
-        return self._handle_death(attacker, target, target_id, result)
+        return self._handle_death(attacker, target, target_id, result, query_fn)
 
     def _is_faction_friendly(self, attacker: Creature, candidate_id: str, query_fn: QueryFn | None) -> bool:
         """Check if candidate is FRIENDLY to attacker via PoliticsLayer faction relation."""
@@ -355,7 +360,14 @@ class CombatManager:
         )
         return answer.value == FactionRelation.FRIENDLY
 
-    def _handle_death(self, attacker: Creature, target: Creature, target_id: str, result: AttackResult) -> ActionResult:
+    def _handle_death(
+        self,
+        attacker: Creature,
+        target: Creature,
+        target_id: str,
+        result: AttackResult,
+        query_fn: QueryFn | None = None,
+    ) -> ActionResult:
         """Handle target death, reputation drop, and combat end."""
         if not result.hit or target.is_alive:
             return ActionResult(success=True)
@@ -371,8 +383,31 @@ class CombatManager:
         self._location_log[target.location_id].append(death_event)
         events.append(death_event)
 
-        old_rep = attacker.reputation.get(target.faction_id, 100) if target.faction_id else 0
-        delta = apply_reputation_drop(attacker, target, BASE_KILL_REPUTATION_DELTA)
+        # Build faction relation lookup for proper initial rep calculation
+        get_faction_relation = None
+        if query_fn is not None:
+
+            def get_faction_relation(a: str, b: str) -> FactionRelation:
+                answer = query_fn(
+                    "politics",
+                    Query(question=QueryType.FACTION_RELATION, params={"a": a, "b": b}),
+                )
+                if isinstance(answer.value, FactionRelation):
+                    return answer.value
+                return FactionRelation.NEUTRAL
+
+        # Compute old rep before mutation
+        if target.faction_id:
+            if target.faction_id in attacker.reputation:
+                old_rep = attacker.reputation[target.faction_id]
+            elif get_faction_relation is not None:
+                old_rep = default_rep_for_faction(attacker, target.faction_id, get_faction_relation)
+            else:
+                old_rep = 100
+        else:
+            old_rep = 0
+
+        delta = apply_reputation_drop(attacker, target, BASE_KILL_REPUTATION_DELTA, get_faction_relation)
         if delta > 0:
             rep_event = Event(
                 event_type=EventType.REPUTATION_CHANGED,

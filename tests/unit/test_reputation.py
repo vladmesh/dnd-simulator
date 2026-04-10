@@ -10,6 +10,7 @@ from dnd_simulator.rules.reputation import (
     HOSTILE_THRESHOLD,
     apply_reputation_drop,
     compute_kill_reputation_delta,
+    default_rep_for_faction,
     effective_relation,
     reputation_to_relation,
 )
@@ -161,15 +162,41 @@ class TestComputeKillReputationDelta:
 
 
 class TestApplyReputationDrop:
-    def test_normal_kill_drops_reputation(self) -> None:
-        """Killing a normal bandit drops killer's rep with bandits by base_delta."""
+    def test_normal_kill_drops_reputation_no_relation_fn(self) -> None:
+        """Without faction relation fn, falls back to 100 (backward compat)."""
         killer = _make_creature("k", "kingdom")
         victim = _make_creature("v", "bandits")
         delta = apply_reputation_drop(killer, victim, BASE_KILL_REPUTATION_DELTA)
         assert delta == BASE_KILL_REPUTATION_DELTA
-        # Killer starts with no personal rep → defaults to faction relation.
-        # After drop: 100 (default) - 20 = 80.
+        # Without get_faction_relation: defaults to 100 (legacy behavior).
         assert killer.reputation["bandits"] == 100 - BASE_KILL_REPUTATION_DELTA
+
+    def test_hostile_faction_kill_no_drop(self) -> None:
+        """Killing a member of a hostile faction: initial rep = 0, delta clamped to 0."""
+        killer = _make_creature("k", "kingdom")
+        victim = _make_creature("v", "goblins")
+        get_rel = _relation_map(("kingdom", "goblins", FactionRelation.HOSTILE))
+        delta = apply_reputation_drop(killer, victim, BASE_KILL_REPUTATION_DELTA, get_rel)
+        assert delta == 0
+        assert killer.reputation["goblins"] == 0
+
+    def test_friendly_faction_kill_full_drop(self) -> None:
+        """Killing a member of a friendly faction: initial rep = 100, full drop."""
+        killer = _make_creature("k", "kingdom")
+        victim = _make_creature("v", "allies")
+        get_rel = _relation_map(("kingdom", "allies", FactionRelation.FRIENDLY))
+        delta = apply_reputation_drop(killer, victim, BASE_KILL_REPUTATION_DELTA, get_rel)
+        assert delta == BASE_KILL_REPUTATION_DELTA
+        assert killer.reputation["allies"] == 80
+
+    def test_neutral_faction_kill_partial_drop(self) -> None:
+        """Killing a member of a neutral faction: initial rep = 50."""
+        killer = _make_creature("k", "kingdom")
+        victim = _make_creature("v", "merchants")
+        get_rel = _relation_map()  # unspecified = NEUTRAL
+        delta = apply_reputation_drop(killer, victim, BASE_KILL_REPUTATION_DELTA, get_rel)
+        assert delta == BASE_KILL_REPUTATION_DELTA
+        assert killer.reputation["merchants"] == 30
 
     def test_outcast_kill_no_change(self) -> None:
         """Killing an outcast (0 rep with own faction) → no rep change."""
@@ -179,14 +206,24 @@ class TestApplyReputationDrop:
         assert delta == 0
         assert "bandits" not in killer.reputation
 
-    def test_repeated_kills_accumulate(self) -> None:
-        """Two kills stack: 100→80→60."""
+    def test_repeated_kills_friendly_faction(self) -> None:
+        """Two kills of friendly faction stack: 100→80→60."""
         killer = _make_creature("k", "kingdom")
+        v1 = _make_creature("v1", "allies")
+        v2 = _make_creature("v2", "allies")
+        get_rel = _relation_map(("kingdom", "allies", FactionRelation.FRIENDLY))
+        apply_reputation_drop(killer, v1, 20, get_rel)
+        apply_reputation_drop(killer, v2, 20, get_rel)
+        assert killer.reputation["allies"] == 60
+
+    def test_repeated_kills_accumulate_from_personal_rep(self) -> None:
+        """Once personal rep exists, subsequent kills use it (not faction default)."""
+        killer = _make_creature("k", "kingdom", reputation={"bandits": 80})
         v1 = _make_creature("v1", "bandits")
         v2 = _make_creature("v2", "bandits")
         apply_reputation_drop(killer, v1, 20)
         apply_reputation_drop(killer, v2, 20)
-        assert killer.reputation["bandits"] == 60
+        assert killer.reputation["bandits"] == 40
 
     def test_reputation_floors_at_zero(self) -> None:
         """Rep can't go below 0 even with massive delta."""
@@ -208,6 +245,34 @@ class TestApplyReputationDrop:
         """Killing a member of your own faction drops rep with your own faction."""
         killer = _make_creature("k", "bandits")
         victim = _make_creature("v", "bandits")
-        delta = apply_reputation_drop(killer, victim, 20)
+        get_rel = _relation_map()
+        delta = apply_reputation_drop(killer, victim, 20, get_rel)
         assert delta == 20
         assert killer.reputation["bandits"] == 80
+
+
+class TestDefaultRepForFaction:
+    def test_hostile_faction_zero(self) -> None:
+        killer = _make_creature("k", "kingdom")
+        get_rel = _relation_map(("kingdom", "goblins", FactionRelation.HOSTILE))
+        assert default_rep_for_faction(killer, "goblins", get_rel) == 0
+
+    def test_neutral_faction_fifty(self) -> None:
+        killer = _make_creature("k", "kingdom")
+        get_rel = _relation_map()  # default NEUTRAL
+        assert default_rep_for_faction(killer, "merchants", get_rel) == 50
+
+    def test_friendly_faction_hundred(self) -> None:
+        killer = _make_creature("k", "kingdom")
+        get_rel = _relation_map(("kingdom", "allies", FactionRelation.FRIENDLY))
+        assert default_rep_for_faction(killer, "allies", get_rel) == 100
+
+    def test_same_faction_hundred(self) -> None:
+        killer = _make_creature("k", "kingdom")
+        get_rel = _relation_map()
+        assert default_rep_for_faction(killer, "kingdom", get_rel) == 100
+
+    def test_no_killer_faction_fifty(self) -> None:
+        killer = _make_creature("k", "")
+        get_rel = _relation_map()
+        assert default_rep_for_faction(killer, "goblins", get_rel) == 50
