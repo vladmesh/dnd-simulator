@@ -47,7 +47,7 @@ src/dnd_simulator/
 │       ├── query_handler.py      — QueryHandler (layer query dispatch)
 │       └── perception.py         — event perception and visibility filtering
 ├── master/        — DM orchestrator (LLM-powered)
-├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation, conditions, weapons, modifiers, proficiency, sneak attack, reactions, resources, character creation, action providers, abstract combat, physics, economics
+├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation, conditions, weapons, modifiers, proficiency, sneak attack, reactions, reputation, combat_sides, resources, character creation, action providers, abstract combat, physics, economics
 │   └── handlers/  — per-action-type execution (combat, movement, equipment, items, trade, reactions)
 ├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, MemorySummarizer
 ├── i18n.py        — gettext internationalization, per-session language via contextvars
@@ -167,7 +167,7 @@ Calendar: 30 days/month, 12 months/year.
 
 ```
 Entity (id, name, location_id, active, on_tick)
-└── Creature (ability_scores, HP, AC, in_combat, is_dodging, is_disengaging, wake_at_seconds, brain, turn_budget, combat_position, equipped_armor, equipped_shield, resource_pools, execute_action)
+└── Creature (ability_scores, HP, AC, in_combat, is_dodging, is_disengaging, wake_at_seconds, brain, turn_budget, combat_position, equipped_armor, equipped_shield, resource_pools, faction_id, reputation, execute_action)
     └── Character (race, class, alignment, gold, appearance, class_features, perceive_by_id, get_npc_data)
         ├── PlayerCharacter (interactive I/O, overrides take_turn directly)
         └── Npc (role, personality, schedule, memory: NpcMemory, ai_type — brain assigned by content_loader/adapter)
@@ -189,7 +189,7 @@ NPCs carry structured memory via `NpcMemory` (tags, recent, inner_state, current
 
 Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defined in `core/combat.py`). No separate combat layer — it's a mode within entities.
 
-**Entry:** First attack in a location → `roll_initiative()` for all active creatures → `CombatState` created → all creatures in location get `in_combat=True`.
+**Entry:** First attack in a location → `roll_initiative()` for all active creatures → `CombatState` created with `CombatSides` → all creatures in location get `in_combat=True`. `build_combat_sides()` (`rules/combat_sides.py`) assigns creatures to sides based on `effective_relation()` (`rules/reputation.py`): mutually FRIENDLY creatures merge into one side, HOSTILE creatures go to separate sides. `forced_opponents` (from attack handler) ensures attacker and target are always on different sides. Factionless creatures each get their own side.
 
 **Turn order:** Initiative = d20 + DEX modifier, tiebreaker by DEX score. Order is fixed for the entire combat. Game loop iterates combatants in this order.
 

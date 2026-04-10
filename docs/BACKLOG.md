@@ -52,7 +52,7 @@
 
 - [x] `god-class-entities` — ~~EntitiesLayer 1215 строк~~ FIXED Sprint 005: extracted awareness_builder, activation_manager, query_handler, combat_manager, perception
 - [ ] **should** `god-class-game-service` — GameService 836 строк, 43 метода. Продолжить выделение commands_*.py модулей
-- [ ] **should** `god-class-politics` — PoliticsLayer 609 строк. Выделить подсистемы
+- [x] `god-class-politics` — ~~PoliticsLayer 609 строк~~ FIXED Sprint 014 phase 0: split into diplomacy.py, warfare.py, economy.py submodules
 - [x] `test-gaps-critical` — ~~rules/action_handlers.py без unit-тестов~~ FIXED Sprint 005: action_provider, awareness_builder, brain_factory, world isolation tests
 - [x] `test-gaps` — ~~Нет тестов: action_provider, awareness, world, brain_factory~~ FIXED Sprint 005 (commands_*, session, store remain)
 - [x] `rules-imports-layers` — ~~rules/trade.py импортирует из layers/~~ FIXED Sprint 005: merchant protocol extracted to core
@@ -86,7 +86,7 @@
 - [ ] **should** `brain-type-enum` — ai_type == "rule_based" строковые сравнения. Добавить BrainType(StrEnum)
 - [ ] **should** `layer-source-string-cmp` — game_service.py L535,595,611,626 source == "library" вместо LayerSource.LIBRARY enum
 - [x] `long-func-run-combat-turn` — ~~round.py run_combat_turn 132 строки~~ FIXED Sprint 012 phase 4: extracted _prepare_combat_turn() + _build_combat_awareness()
-- [ ] **should** `long-func-choose-combat-action` — core/brain.py _choose_combat_action 114 строк. Break into per-action helpers
+- [x] `long-func-choose-combat-action` — ~~core/brain.py _choose_combat_action 114 строк~~ FIXED Sprint 014 phase 0: decomposed into _CombatContext + per-action helpers
 - [ ] **should** `round-growing` — round.py 612 строк. Extract combat-turn and awareness-building into helpers
 - [ ] **should** `perception-fail-fast` — layers/entities/perception.py 54x .get() с silent defaults. Маскирует отсутствие данных в событиях
 - [ ] **could** `test-bare-status-codes` — test_api.py, test_trade_ws.py используют bare 200/404 вместо HTTPStatus

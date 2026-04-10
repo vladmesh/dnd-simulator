@@ -95,6 +95,10 @@ Structured dice pipeline (DiceResult, D20Result, reroll_below для GWF). Battl
 Экран создания персонажа из "впиши любые цифры" → D&D-подобный flow. Phase 1: HP формула (max hit die + CON mod), point buy валидация (27 очков, 8-15), starting equipment по классу. Phase 2: backend derive stats + API, frontend CharacterForm с point buy UI (+/− кнопками, preview HP/AC/gold), Fighting Style selector для Fighter. Phase 3: Guard monster template для Kingdom Patrol, integration tests squad materialization. GWF fighter получает greatsword вместо longsword+shield. Crit dice отделены от base dice для корректного GWF reroll.
 → [план спринта](sprints/013-char-creation/sprint.md)
 
+### Sprint 014 — Faction Relations & Reputation (фазы 0-4)
+Бои с правильными сторонами из faction relations. CombatSides — граф отношений при старте боя: FRIENDLY → одна сторона, HOSTILE → разные, forced_opponents для атак. Personal reputation: числовой `reputation: dict[str, int]` на Creature (sparse, fallback на faction defaults). `effective_relation(A, B)` — единая функция: personal rep → thresholds (75+ FRIENDLY, 25-74 NEUTRAL, <25 HOSTILE) → faction fallback. Kill reputation drop (omniscient, масштабируется по репутации жертвы). Auto-hostility: атака NPC вне боя → бой с правильными сторонами. Phase 0 refactor: PoliticsLayer split (diplomacy/warfare/economy), CombatManager split, Brain decompose. Phase 4 bugfixes: starting equipment → реальные Item + equip, skip dead creatures в round loop, RuleBrain movement budget check.
+→ [план спринта](sprints/014-faction-reputation/sprint.md)
+
 ## Planned
 
 ### Level 2 — Расходуемые ресурсы

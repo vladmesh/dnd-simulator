@@ -41,7 +41,7 @@ Layered LLM-powered text RPG simulator built on a **layer stack** pattern. Each 
 ### Layer Stack (order = dependency direction, lower layers know nothing about upper ones)
 
 1. **Geography** (`layers/geography/`) — terrain, coordinates, weather, day/night cycle. Ticks every call.
-2. **Politics** (`layers/politics/`) — nations, diplomacy, warfare, economy. Ticks every 30 in-game days.
+2. **Politics** (`layers/politics/`) — nations, diplomacy, warfare, economy, faction relations. Ticks every 30 in-game days. Split into submodules: `diplomacy.py`, `warfare.py`, `economy.py`.
 3. **Settlements** (`layers/settlements/`) — towns, population, prosperity, harvests. Ticks every 30 in-game days.
 4. **Ecology** (`layers/ecology/`) — squad movement, abstract world simulation. Ticks every hour.
 5. **Entities** (`layers/entities/`) — all tracked creatures: player, NPCs, named monsters. Tick is a no-op; the Round orchestrator drives all creature turns.
@@ -58,7 +58,7 @@ service/           — GameService, ActionDispatcher, BrainFactory, command modu
   ↓
 adapters/          — FastAPI REST + WebSocket API
 
-rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, resources, character creation (point buy, HP, starting equipment), action providers, handlers/ package (no deps)
+rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, resources, character creation (point buy, HP, starting equipment), action providers, handlers/ package, reputation, combat_sides (no deps)
 llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
 storage/           — SaveStore interface, JsonFileStore
 content_loader/    — loads worlds, nations, settlements, NPCs, player from YAML; Pydantic content schemas, JSON Schema generation, entity CRUD, manifest resolver, library catalog, world assembly, catalog loader (monsters/items)
@@ -113,6 +113,14 @@ Centralized derived stat computation (`core/modifiers.py` data types, `rules/mod
 ### Activation & Fast-Forward
 
 Proximity-based activation: `EntitiesLayer.update_activation(time)` runs at the start of each round. Players without `wake_at_seconds` are anchors — creatures at an anchor's location become active, all others go dormant. Creatures in combat stay active regardless. `wait` action sets `creature.wake_at_seconds` and marks it dormant. When no active creatures exist, `Round.run_loop()` fast-forwards time to the nearest `wake_at`, then re-checks activation. Content requires explicit locations — no auto-generation from regions.
+
+### Faction Relations, Reputation & Combat Sides
+
+`faction_id` on Creature = origin (immutable). `reputation: dict[str, int]` = sparse personal reputation per-faction (default from faction-to-faction relations). `effective_relation(A, B)` (`rules/reputation.py`) — single source of truth: personal rep if set → thresholds (75+ FRIENDLY, 25-74 NEUTRAL, <25 HOSTILE), else same faction → FRIENDLY, else faction-to-faction fallback. `FactionRelation` enum (HOSTILE/NEUTRAL/FRIENDLY) in `core/models.py`.
+
+`CombatSides` (`rules/combat_sides.py`) — `build_combat_sides(creatures, get_relation, forced_opponents)` assigns creatures to sides at combat start. Greedy: creatures join a side only if mutually FRIENDLY with all members, skip sides with forced opponents. Factionless creatures each get their own side. `forced_opponents` set from attack handler ensures attacker and target are always on different sides regardless of faction relations. Sides frozen for the duration of combat.
+
+Kill reputation drop (`rules/reputation.py`): omniscient, delta scaled by victim's reputation with their own faction (killing an outcast ≈ 0 drop). Auto-hostility: attacking NPC outside combat starts combat with correct sides via `forced_opponents`.
 
 ## Code Style
 

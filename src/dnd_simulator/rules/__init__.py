@@ -17,6 +17,8 @@ Stateless calculations that can be used by any layer or the Master:
 - resources: resource pool management (has_resource, use_resource, reset)
 - character_creation: point buy validation, HP formula (max hit die + CON mod), starting equipment by class
 - reactions: OA trigger detection (find_oa_triggers)
+- reputation: effective_relation (personal rep → thresholds → faction fallback), kill reputation drop
+- combat_sides: build_combat_sides with relation callback, forced_opponents for attack-initiated combat
 - movement: grid distance (D&D 5e diagonal rule), move toward/away/direction with wall collision
 - geography: temperature, daylight, travel time, distance calculations
 - politics: warfare, trade, stability, diplomacy formulas
