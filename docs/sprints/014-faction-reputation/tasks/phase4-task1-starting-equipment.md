@@ -37,4 +37,29 @@ However, in E2E the combat awareness shows "fists". The gap is somewhere between
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Root cause: two bugs in the save/load cycle that together strip ALL equipment from players.
+
+**Bug 1 — `to_full_save_data()` (player.py):** Equipped items were serialized into
+top-level keys (`equipped_weapon`, `equipped_armor`, etc.) but NOT included in the
+`items` list. When `parse_player()` restored from save data, it only read `items`
+(which contained only inventory), so all equipment slots came back as None.
+
+**Bug 2 — `load_state()` (entities/layer.py):** The player branch used `continue`
+after `parse_player`, skipping the equipment restoration loop at lines 550-553.
+NPCs didn't have this bug — they fell through to the restoration code. Changed
+player path to match the NPC pattern: set `entity = parse_player(edata)` and
+fall through.
+
+**Fix:** `to_full_save_data` now builds a unified `items` list containing both
+inventory AND equipped items (with `equipped: True`). The `load_state` player
+branch now falls through to restore equipment from top-level keys as well (belt
+and suspenders).
+
+AC was correct because `create_player` computes `effective_ac()` at creation and
+stores it as a static `ac` field. The weapon loss only surfaced when `get_weapon_attack()`
+checked `creature.equipped_weapon` at combat time — by which point a save/load
+cycle had cleared it.

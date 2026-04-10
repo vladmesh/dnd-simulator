@@ -14,7 +14,7 @@
 1. **Combat Sides + OA Fix** (COMPLETE) — 2026-04-10
 2. **Personal Reputation + effective_relation** (COMPLETE) — 2026-04-10
 3. **Reputation Dynamics + Auto-hostility** (COMPLETE) — 2026-04-10
-4. **Bug Fixes — Starting Equipment, Dead-Mover, Brain Spam** — 2026-04-10
+4. **Bug Fixes — Starting Equipment, Dead-Mover, Brain Spam** (task 1 done, task 2 pending) — 2026-04-10
 
 ## Sprint History
 

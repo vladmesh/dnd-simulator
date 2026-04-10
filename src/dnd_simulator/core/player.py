@@ -94,12 +94,18 @@ class PlayerCharacter(Character):
             "start_location": self.location_id,
             "current_hp": self.current_hp,
         }
-        if self.inventory:
-            data["items"] = [_serialize_item(item) for item in self.inventory]
+        # Build unified items list: inventory + equipped items.
+        # Equipped items get "equipped": true so parse_player can re-equip them.
+        all_items: list[dict[str, Any]] = [_serialize_item(item) for item in self.inventory]
         for field_name in _EQUIPMENT_FIELDS:
             item = getattr(self, field_name)
             if item is not None:
-                data[field_name] = _serialize_item(item)
+                d = _serialize_item(item)
+                d["equipped"] = True
+                all_items.append(d)
+                data[field_name] = d
+        if all_items:
+            data["items"] = all_items
         return data
 
     def load_save_data(self, data: dict[str, Any]) -> None:

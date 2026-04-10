@@ -494,10 +494,10 @@ class EntitiesLayer(Layer):
             if entity is None:
                 entity_type = edata.get("entity_type")
                 if entity_type == "player":
-                    player = parse_player(edata)
-                    player.current_hp = int(edata.get("current_hp", player.max_hp))
-                    self.add_entity(player)
-                    continue
+                    entity = parse_player(edata)
+                    entity.current_hp = int(edata.get("current_hp", entity.max_hp))
+                    self.add_entity(entity)
+                    # Fall through to restore equipment and other mutable state
                 if entity_type == "npc":
                     from dnd_simulator.content_loader import parse_npc
 
