@@ -51,10 +51,23 @@ There must be an E2E report in `docs/e2e-reports/` dated AFTER the audit. The re
 #### 2e. Integration tests pass
 
 ```bash
-make test-integration
+make test-integration 2>&1 | tee /tmp/integration-test-output.txt
 ```
 
-**Blocker if:** any test fails.
+**ANY failure is a hard blocker — no exceptions.** This includes tests unrelated to the sprint, pre-existing failures, and flaky tests. A failing test means something is wrong, and we fix it before closing.
+
+If tests fail:
+
+1. **Read from file.** Analyze `/tmp/integration-test-output.txt` — never re-run just to see different output.
+2. **Full investigation.** For each failing test: read the traceback, the test code, and the production code. Determine root cause.
+3. **Fix on the spot.** Whether the failure is from our changes or pre-existing — fix it:
+   - Flaky tests: find the race condition, make the test deterministic. "It passes sometimes" is not acceptable.
+   - Pre-existing bugs: fix the bug or fix the test if the test is wrong.
+   - Our regressions: fix the code.
+4. **Re-run until all green.** Repeat until 0 failures.
+5. **If a fix is non-trivial (>15 min) or unclear** — stop, report to the user with full diagnosis, and block the sprint.
+
+**Blocker if:** any test fails and cannot be fixed.
 
 ### 3. If blocked
 
@@ -83,6 +96,8 @@ Do NOT commit or push when serious blockers remain.
 #### 4a. Update docs
 
 Run `/update-docs full` — full deep review, not incremental. A sprint accumulates changes across many phases; incremental mode would only see commits since the last mid-sprint run and miss earlier changes.
+
+**CRITICAL: If `/update-docs` launches background subagents (for parallel research), you MUST wait for ALL of them to complete and review their findings BEFORE proceeding to step 4b.** Do not commit or push while subagents are still running — their results may reveal doc gaps that need fixing. After all agents return, review each agent's findings, apply any missed updates, and only then continue.
 
 #### 4b. Fill in sprint results
 

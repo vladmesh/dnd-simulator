@@ -16,7 +16,8 @@ Defines the core abstractions that everything else builds on:
 - ResourcePool, RestType — trackable per-creature resources (Second Wind, spell slots)
 - ActionDef, CostOverride, CostType, CombatMode — centralized action metadata registry
 - Brain ABC, RuleBrain, PlayerBrain — strategy pattern for creature decision-making
-- CombatState — tracks initiative order, round number, and auto-exit counter per location
+- FactionRelation — HOSTILE, NEUTRAL, FRIENDLY enum for creature/faction relations
+- CombatState — tracks initiative order, round number, auto-exit counter, combat sides per location
 - BattleMap, Position, Wall — 2D combat grid with entity positions, wall collision, random placement
 - Location, LocationEdge, LocationGraph — flat navigation graph mapping locations to regions/settlements
 - PeacefulAwareness, CombatAwareness, PerceivedEvent — structured awareness data passed to Brain.choose_action
