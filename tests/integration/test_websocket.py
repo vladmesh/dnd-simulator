@@ -314,24 +314,28 @@ class TestMoveTo:
         ws_base, sid, pid = ws_move_arena
         sock = ws_connect(ws_base, sid, pid)
         try:
-            # Wait for initial peaceful turn (skip non-turn messages)
+            # Wait for initial turn — may be peaceful or combat (hostile factions auto-start combat)
             msg = None
-            for _ in range(10):
+            for _ in range(20):
                 msg = ws_recv(sock)
                 if msg["type"] == "turn":
                     break
             assert msg is not None and msg["type"] == "turn", f"Never got initial turn, last: {msg}"
 
-            # Attack to start combat
-            ws_send_action(sock, "attack", target_id="dummy")
+            if msg.get("mode") != "combat":
+                # Peaceful turn — attack to start combat
+                ws_send_action(sock, "attack", target_id="dummy")
 
             # Wait for a combat turn (ours)
             combat_turn = None
-            for _ in range(20):
-                msg = ws_recv(sock)
-                if msg["type"] == "turn" and msg.get("mode") == "combat":
-                    combat_turn = msg
-                    break
+            if msg.get("mode") == "combat":
+                combat_turn = msg
+            else:
+                for _ in range(30):
+                    msg = ws_recv(sock)
+                    if msg["type"] == "turn" and msg.get("mode") == "combat":
+                        combat_turn = msg
+                        break
             assert combat_turn is not None, "Never got a combat turn"
 
             # Read our current position from awareness

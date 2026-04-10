@@ -130,4 +130,8 @@ Audit-driven cleanup of files sprint 014 will heavily modify. Reduces friction a
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-04-10
+
+Combat sides from faction relations — враги и союзники определяются автоматически по `effective_relation()`, OA не срабатывает между союзниками. Personal reputation (sparse dict per creature), kill reputation drop с масштабированием по статусу жертвы, auto-hostility при атаке мирных NPC. Phase 0 refactor: PoliticsLayer split (diplomacy/warfare/economy), CombatManager split, Brain decompose, perception fail-fast. Phase 4 bugfixes: starting equipment as real Items, dead creature skip in round loop, RuleBrain movement budget check. 5 phases, ~40 unit tests added, integration tests stabilized.
+
+**Deferred:** Witness-based reputation, typed crimes, settlement consequences, friendly fire, mid-combat side switching, reputation decay.

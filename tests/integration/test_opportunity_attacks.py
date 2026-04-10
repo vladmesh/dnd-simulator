@@ -378,10 +378,13 @@ class TestOAKillsMover:
 
                 ws_send_action(sock, "move_to", x=target[0], y=target[1])
 
-                # Collect all events (might not get a turn if dead)
+                # Collect all events (might not get a turn if dead — timeout is OK)
                 all_events: list[dict[str, Any]] = []
                 for _ in range(60):
-                    msg = ws_recv(sock)
+                    try:
+                        msg = ws_recv(sock)
+                    except ws_lib.WebSocketTimeoutException:
+                        break  # dead player won't get more messages
                     if msg["type"] in ("action_result", "round_result"):
                         all_events.extend(msg.get("events", []))
                     if msg["type"] == "turn":

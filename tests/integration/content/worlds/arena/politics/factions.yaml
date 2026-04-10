@@ -1,0 +1,9 @@
+gladiator:
+  name: Gladiators
+  relations:
+    challenger: neutral
+
+challenger:
+  name: Challengers
+  relations:
+    gladiator: neutral

@@ -1,6 +1,7 @@
 name: Blood Arena
 description: >
   A gladiatorial arena with walls. Four fighters, no allies. Last one standing wins.
+default_player_faction: challenger
 
 layers:
   geography:

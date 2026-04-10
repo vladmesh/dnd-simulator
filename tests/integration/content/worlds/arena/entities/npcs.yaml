@@ -4,6 +4,7 @@ razor:
   role: gladiator
   race: dragonborn
   class: barbarian
+  faction: gladiator
   hp: 35
   ac: 13
   ability_scores:
@@ -37,6 +38,7 @@ shadow:
   role: gladiator
   race: elf
   class: rogue
+  faction: gladiator
   hp: 20
   ac: 15
   ability_scores:
@@ -76,6 +78,7 @@ iron:
   role: gladiator
   race: dwarf
   class: fighter
+  faction: gladiator
   class_features:
     fighting_style: defense
   hp: 40
@@ -125,6 +128,7 @@ paladin:
   race: human
   class: paladin
   ai: rule_based
+  faction: gladiator
   hp: 30
   ac: 16
   ability_scores:

@@ -4,22 +4,13 @@
 
 ## Current Sprint
 
-**Sprint:** 014-faction-reputation
-**Goal:** Combat sides from faction relations, personal reputation per-faction with auto-hostility thresholds, friendly OA fix.
-**Started:** 2026-04-09
-
-### Phases
-
-0. **Refactor — Prep for Faction Work** (COMPLETE) — 2026-04-10
-1. **Combat Sides + OA Fix** (COMPLETE) — 2026-04-10
-2. **Personal Reputation + effective_relation** (COMPLETE) — 2026-04-10
-3. **Reputation Dynamics + Auto-hostility** (COMPLETE) — 2026-04-10
-4. **Bug Fixes — Starting Equipment, Dead-Mover, Brain Spam** (COMPLETE) — 2026-04-10
+No active sprint.
 
 ## Sprint History
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 014-faction-reputation | Combat sides from faction relations, personal reputation, auto-hostility, friendly OA fix | 2026-04-09 | 2026-04-10 |
 | 013-char-creation | Character creation overhaul — point buy, derived HP/AC, starting equipment, Fighter/Rogue only | 2026-04-01 | 2026-04-09 |
 | 012-reactions-oa | D&D 5e reactions — opportunity attacks, Disengage, Brain.choose_reaction, reaction prompt UI | 2026-03-30 | 2026-03-31 |
 | 011-class-mechanics-l1 | Structured dice, weapon/armor properties, GWF, Cunning Action choice, SA faction, SRD catalogs | 2026-03-28 | 2026-03-30 |

@@ -64,6 +64,15 @@ def _give_rapier(api_url: str, sid: str, pid: str) -> None:
     ).raise_for_status()
 
 
+def _boost_hp(api_url: str, sid: str, pid: str, hp: int = 100) -> None:
+    """Boost creature HP so it survives combat long enough for testing."""
+    requests.patch(
+        f"{api_url}/sessions/{sid}/creatures/{pid}",
+        json={"current_hp": hp, "max_hp": hp},
+        timeout=10,
+    ).raise_for_status()
+
+
 def _get_turn(sock: ws_lib.WebSocket, max_msgs: int = 20) -> dict[str, Any]:
     """Receive messages until a turn message arrives."""
     for _ in range(max_msgs):
@@ -104,6 +113,7 @@ class TestCunningActionCostMode:
         """Rogue's combat turn includes cost_options for dash and disengage."""
         sid, pid = _create_session(api_url, player_api_url, "arena", "arena_floor", "rogue")
         try:
+            _boost_hp(api_url, sid, pid)
             sock = ws_connect(ws_base_url, sid, pid)
             try:
                 turn = _get_turn(sock)
@@ -136,6 +146,7 @@ class TestCunningActionCostMode:
         """Rogue sends dash with cost_mode=bonus_action — bonus_action consumed, action remains."""
         sid, pid = _create_session(api_url, player_api_url, "arena", "arena_floor", "rogue")
         try:
+            _boost_hp(api_url, sid, pid)
             sock = ws_connect(ws_base_url, sid, pid)
             try:
                 turn = _get_turn(sock)
@@ -158,6 +169,7 @@ class TestCunningActionCostMode:
         """Fighter's dash does NOT have cost_options (no Cunning Action)."""
         sid, pid = _create_session(api_url, player_api_url, "arena", "arena_floor", "fighter")
         try:
+            _boost_hp(api_url, sid, pid)
             sock = ws_connect(ws_base_url, sid, pid)
             try:
                 turn = _get_turn(sock)
@@ -178,6 +190,7 @@ class TestCunningActionCostMode:
         """Fighter sending dash with cost_mode=bonus_action gets an error."""
         sid, pid = _create_session(api_url, player_api_url, "arena", "arena_floor", "fighter")
         try:
+            _boost_hp(api_url, sid, pid)
             sock = ws_connect(ws_base_url, sid, pid)
             try:
                 turn = _get_turn(sock)
@@ -222,6 +235,7 @@ class TestSneakAttackFactionCheck:
         """Rogue can equip a finesse rapier via the full REST + WS pipeline."""
         sid, pid = _create_session(api_url, player_api_url, "arena", "arena_floor", "rogue")
         _give_rapier(api_url, sid, pid)
+        _boost_hp(api_url, sid, pid)
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
