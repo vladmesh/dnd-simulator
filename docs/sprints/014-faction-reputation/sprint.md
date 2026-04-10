@@ -87,7 +87,7 @@ Audit-driven cleanup of files sprint 014 will heavily modify. Reduces friction a
 2. [Auto-Hostility Combat Initiation](tasks/phase3-task2-auto-hostility.md)
 3. [Reputation in Awareness, Perception & Frontend](tasks/phase3-task3-awareness-perception-frontend.md)
 
-## Phase 4: Bug Fixes — Starting Equipment, Dead-Mover, Brain Spam
+## Phase 4: Bug Fixes — Starting Equipment, Dead-Mover, Brain Spam ✓
 
 Три бага, обнаруженных в E2E sprint 013 и подтверждённых в phase 3 close.
 
@@ -107,7 +107,7 @@ Audit-driven cleanup of files sprint 014 will heavily modify. Reduces friction a
 
 ## Status
 
-**Current:** Phase 4 tasks generated (2026-04-10). Ready to start task 1.
+**Current:** All phases complete (2026-04-10). Ready for audit.
 
 ## Decisions
 
