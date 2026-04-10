@@ -115,9 +115,9 @@ class RuleBrain(Brain):
         awareness: PeacefulAwareness | CombatAwareness,
         events: list[PerceivedEvent],
     ) -> Action:
-        # If budget has no actions left, end the turn.
+        # If all budget resources are exhausted, end the turn.
         budget = awareness.turn_budget
-        if budget is not None and budget.actions <= 0:
+        if budget is not None and budget.turn_over:
             return END_TURN
 
         if isinstance(awareness, CombatAwareness):
@@ -266,6 +266,9 @@ class RuleBrain(Brain):
 
     @staticmethod
     def _try_potion(ctx: _CombatContext) -> Action | None:
+        budget = ctx.awareness.turn_budget
+        if (budget.actions if budget else 0) <= 0:
+            return None
         awareness = ctx.awareness
         if ctx.hp_ratio >= POTION_HP_THRESHOLD:
             return None
@@ -281,7 +284,7 @@ class RuleBrain(Brain):
         creature = ctx.creature
         awareness = ctx.awareness
         budget = awareness.turn_budget
-        if not creature.is_disengaging or (budget.movement_remaining if budget else 0) <= 0:
+        if not creature.is_disengaging or (budget.movement_remaining if budget else 0) < 5:
             return None
         nearest_hostile = min((e for e in awareness.nearby if e.is_hostile), key=lambda e: e.distance_ft, default=None)
         if nearest_hostile is None:
@@ -291,6 +294,9 @@ class RuleBrain(Brain):
 
     @staticmethod
     def _try_flee(ctx: _CombatContext) -> Action | None:
+        budget = ctx.awareness.turn_budget
+        if (budget.actions if budget else 0) <= 0:
+            return None
         nearest_dist = min(e.distance_ft for e in ctx.awareness.nearby)
         if ctx.hp_ratio < ctx.flee_threshold and nearest_dist > ctx.primary_reach:
             logger.info("rule_flee", hp_pct=round(ctx.hp_ratio * 100))
@@ -309,12 +315,18 @@ class RuleBrain(Brain):
 
     @staticmethod
     def _try_flee_fallback(ctx: _CombatContext) -> Action | None:
+        budget = ctx.awareness.turn_budget
+        if (budget.actions if budget else 0) <= 0:
+            return None
         if ctx.hp_ratio < ctx.flee_threshold:
             logger.info("rule_flee", hp_pct=round(ctx.hp_ratio * 100))
             return Action(name=ActionType.FLEE)
         return None
 
     def _try_attack(self, ctx: _CombatContext) -> Action | None:
+        budget = ctx.awareness.turn_budget
+        if (budget.actions if budget else 0) <= 0:
+            return None
         if ctx.target is None:
             return None
         dist = ctx.target.distance_ft
@@ -333,7 +345,7 @@ class RuleBrain(Brain):
             return None
         budget = ctx.awareness.turn_budget
         movement_left = budget.movement_remaining if budget else 0
-        if movement_left > 0:
+        if movement_left >= 5:
             logger.info("rule_move_toward", target=ctx.target.id, distance_ft=ctx.target.distance_ft)
             return self.move_toward_target(ctx.target, ctx.awareness)
         return None

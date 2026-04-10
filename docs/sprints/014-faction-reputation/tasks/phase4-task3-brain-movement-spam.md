@@ -30,12 +30,30 @@ Also verify that `_try_advance` and `_try_dash` guards are tight — they should
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] NPC turns produce 0 "action_failed" logs for movement when budget is exhausted
-- [ ] NPC still moves correctly when budget allows
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] NPC turns produce 0 "action_failed" logs for movement when budget is exhausted
+- [x] NPC still moves correctly when budget allows
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Root cause: two separate budget issues in RuleBrain.
+
+1. **Movement under-check**: `_try_advance` checked `movement_left > 0` but a MOVE step costs 5ft.
+   After diagonal movement (5/10/5 rule), budget can end at 1-4ft remaining. Brain would return MOVE,
+   dispatcher would reject (budget insufficient), repeat 3x → consecutive_failures break.
+   Fix: changed to `movement_left >= 5`.
+
+2. **Early exit too aggressive**: `choose_action` had `if budget.actions <= 0: return END_TURN` which
+   prevented post-attack movement (D&D 5e split movement). Changed to `budget.turn_over` which only
+   ends when ALL resources (actions, bonus, movement) are exhausted.
+
+3. **Action-costing rules lacked budget checks**: With the early exit relaxed, `_try_attack`,
+   `_try_potion`, `_try_flee`, `_try_flee_fallback` needed their own `budget.actions > 0` guards
+   to avoid requesting actions the dispatcher would reject. `_try_disengage` and `_try_dash` already
+   had these checks. Also tightened `_try_retreat` movement check to `>= 5`.

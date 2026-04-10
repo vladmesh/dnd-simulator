@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.awareness import CombatAwareness, CombatEntity, NearbyEntity, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import RuleBrain
 from dnd_simulator.core.character import (
@@ -670,3 +671,83 @@ class TestRuleBrainTacticalDisengage:
         brain = RuleBrain()
         action = brain.choose_reaction(npc, trigger, options)
         assert action.name == "opportunity_attack"
+
+
+class TestRuleBrainMovementBudget:
+    """RuleBrain must not request MOVE when movement budget is insufficient."""
+
+    def test_no_move_when_movement_under_step_cost(self) -> None:
+        """NPC with movement_remaining < 5 (step cost) should not return MOVE.
+
+        After diagonal movement, budget can end up at 1-4 ft. The brain should
+        not request a 5ft MOVE that the dispatcher would reject.
+        """
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20, speed=30)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=200, height=200)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("e1", Position(10, 80))  # far away
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
+        assert awareness.turn_budget is not None
+        awareness.turn_budget.movement_remaining = 3  # less than 5ft step cost
+        brain = RuleBrain()
+        action = brain.choose_action(npc, awareness, [])
+        # Should dash (has actions) or end turn — NOT move
+        assert action.name != ActionType.MOVE
+
+    def test_no_attack_when_no_actions_remaining(self) -> None:
+        """NPC with 0 actions left should not return ATTACK even if target is in reach.
+
+        After the early exit is relaxed to allow post-attack movement,
+        _try_attack must check the action budget itself.
+        """
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20, speed=30)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("e1", Position(10, 15))  # 5ft — in reach
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
+        assert awareness.turn_budget is not None
+        awareness.turn_budget.actions = 0
+        awareness.turn_budget.movement_remaining = 15  # still has movement
+        brain = RuleBrain()
+        action = brain.choose_action(npc, awareness, [])
+        # Should NOT attack (no actions) — should end turn or move
+        assert action.name != ActionType.ATTACK
+
+    def test_post_attack_movement_allowed(self) -> None:
+        """NPC with 0 actions but remaining movement should still be able to move.
+
+        D&D 5e allows split movement: move → attack → move remainder.
+        The brain should not end the turn just because actions are exhausted.
+        """
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20, speed=30)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=200, height=200)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("e1", Position(10, 80))  # far — out of reach
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
+        assert awareness.turn_budget is not None
+        awareness.turn_budget.actions = 0
+        awareness.turn_budget.bonus_actions = 0
+        awareness.turn_budget.movement_remaining = 15  # still has movement
+        brain = RuleBrain()
+        action = brain.choose_action(npc, awareness, [])
+        # Should move toward target — not end turn
+        assert action.name == ActionType.MOVE
+
+    def test_end_turn_when_all_budget_exhausted(self) -> None:
+        """NPC with no actions, no bonus, no movement → END_TURN."""
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20, speed=30)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=200, height=200)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("e1", Position(10, 80))
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
+        assert awareness.turn_budget is not None
+        awareness.turn_budget.actions = 0
+        awareness.turn_budget.bonus_actions = 0
+        awareness.turn_budget.movement_remaining = 0
+        brain = RuleBrain()
+        action = brain.choose_action(npc, awareness, [])
+        assert action.name == ActionType.END_TURN
