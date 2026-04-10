@@ -343,6 +343,8 @@ class RuleBrain(Brain):
     def _try_advance(self, ctx: _CombatContext) -> Action | None:
         if ctx.target is None:
             return None
+        if ctx.target.distance_ft <= ctx.primary_reach:
+            return None
         budget = ctx.awareness.turn_budget
         movement_left = budget.movement_remaining if budget else 0
         if movement_left >= 5:
