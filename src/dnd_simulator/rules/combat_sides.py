@@ -18,6 +18,7 @@ CreatureRelationFn = Callable[[Creature, Creature], FactionRelation]
 def build_combat_sides(
     creatures: list[Creature],
     get_relation: CreatureRelationFn,
+    forced_opponents: set[tuple[str, str]] | None = None,
 ) -> tuple[dict[int, set[str]], dict[str, int]]:
     """Build combat sides from creatures and their pairwise relations.
 
@@ -27,7 +28,12 @@ def build_combat_sides(
     3. For each creature, check existing sides. To join a side, the creature
        must be mutually FRIENDLY with ALL members (both directions checked).
        Any HOSTILE in either direction → skip that side.
+       Also skip sides containing a forced opponent.
     4. If no side matches, create a new one.
+
+    ``forced_opponents`` is a set of (id_a, id_b) pairs that must end up on
+    different sides regardless of faction relations. Used when an attack
+    triggers combat — attacker and target are always opponents.
 
     Returns (sides, entity_to_side):
       sides: side_index → set of entity IDs
@@ -35,6 +41,13 @@ def build_combat_sides(
     """
     if not creatures:
         return {}, {}
+
+    # Build a fast lookup: entity_id → set of entity_ids it must not share a side with
+    opponent_of: dict[str, set[str]] = {}
+    if forced_opponents:
+        for a, b in forced_opponents:
+            opponent_of.setdefault(a, set()).add(b)
+            opponent_of.setdefault(b, set()).add(a)
 
     creature_by_id: dict[str, Creature] = {c.id: c for c in creatures}
     sides: dict[int, set[str]] = {}
@@ -49,7 +62,11 @@ def build_combat_sides(
             continue
 
         target_side: int | None = None
+        my_opponents = opponent_of.get(creature.id, set())
         for side_idx, members in sides.items():
+            # Skip sides that contain a forced opponent
+            if my_opponents & members:
+                continue
             all_friendly = True
             for member_id in members:
                 member = creature_by_id[member_id]

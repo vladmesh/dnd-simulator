@@ -42,4 +42,16 @@ Scenarios in a new `tests/unit/test_auto_hostility.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added `forced_opponents` parameter to `build_combat_sides()` — a set of (id, id) pairs that must
+end up on different sides. Internally builds a bidirectional lookup so the greedy algorithm skips
+sides containing a forced opponent before checking FRIENDLY relations.
+
+`CombatManager.start_combat()` accepts and forwards the parameter. `resolve_attack()` passes
+`{(attacker_id, target_id)}` when initiating combat from an out-of-combat attack.
+
+12 new tests: 7 pure-function tests for `build_combat_sides` with forced_opponents, 5 integration
+tests through `CombatManager.resolve_attack`. No old tests modified.

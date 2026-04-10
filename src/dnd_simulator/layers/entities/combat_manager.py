@@ -57,7 +57,12 @@ class CombatManager:
         """Get combat state for a location, or None if no active combat."""
         return self._combats.get(location_id)
 
-    def start_combat(self, location_id: str, query_fn: QueryFn | None = None) -> CombatState | None:
+    def start_combat(
+        self,
+        location_id: str,
+        query_fn: QueryFn | None = None,
+        forced_opponents: set[tuple[str, str]] | None = None,
+    ) -> CombatState | None:
         """Roll initiative, create battle map, build combat sides, and start combat at a location."""
         creatures = self._active_creatures_at_location(location_id)
         if len(creatures) < 2:
@@ -96,7 +101,9 @@ class CombatManager:
             def get_creature_relation(a: Creature, b: Creature) -> FactionRelation:
                 return effective_relation(a, b, get_faction_relation)
 
-            combat.sides, combat.entity_to_side = build_combat_sides(creatures, get_creature_relation)
+            combat.sides, combat.entity_to_side = build_combat_sides(
+                creatures, get_creature_relation, forced_opponents=forced_opponents
+            )
 
         self._combats[location_id] = combat
         self._attack_this_round[location_id] = False
@@ -250,7 +257,11 @@ class CombatManager:
             return ActionResult(success=False, error=_("Target '{id}' not found.").format(id=target_id))
 
         if attacker.location_id not in self._combats:
-            self.start_combat(attacker.location_id, query_fn)
+            self.start_combat(
+                attacker.location_id,
+                query_fn,
+                forced_opponents={(attacker_id, target_id)},
+            )
         self._attack_this_round[attacker.location_id] = True
 
         attack = get_weapon_attack(attacker)
