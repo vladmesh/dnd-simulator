@@ -48,4 +48,8 @@ Test the pure function directly. Separately, test that `_handle_death` calls it 
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented as planned. Pure functions `compute_kill_reputation_delta` and `apply_reputation_drop` in `rules/reputation.py`. Default own-faction rep is 100, so most creatures take full penalty. `_handle_death` now receives the attacker to compute and emit `REPUTATION_CHANGED` events. 11 new tests cover the pure functions (delta scaling, outcast, floor at 0, own-faction kill). All 1867 existing tests pass unchanged.

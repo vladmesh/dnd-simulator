@@ -20,7 +20,7 @@ from dnd_simulator.rules.handlers.attack_resolution import (
     roll_attack_dice,
 )
 from dnd_simulator.rules.modifiers import attack_modifiers
-from dnd_simulator.rules.reputation import effective_relation
+from dnd_simulator.rules.reputation import BASE_KILL_REPUTATION_DELTA, apply_reputation_drop, effective_relation
 from dnd_simulator.rules.sneak_attack import check_sneak_attack, find_adjacent_ally
 from dnd_simulator.rules.weapons import get_weapon_attack
 
@@ -329,7 +329,7 @@ class CombatManager:
             Event(event_type=EventType.ENTITY_ATTACK, source_layer="entities", data=log_data)
         )
 
-        return self._handle_death(target, target_id, result)
+        return self._handle_death(attacker, target, target_id, result)
 
     def _is_faction_friendly(self, attacker: Creature, candidate_id: str, query_fn: QueryFn | None) -> bool:
         """Check if candidate is FRIENDLY to attacker via PoliticsLayer faction relation."""
@@ -344,19 +344,42 @@ class CombatManager:
         )
         return answer.value == FactionRelation.FRIENDLY
 
-    def _handle_death(self, target: Creature, target_id: str, result: AttackResult) -> ActionResult:
-        """Handle target death and combat end if the attack killed the target."""
+    def _handle_death(self, attacker: Creature, target: Creature, target_id: str, result: AttackResult) -> ActionResult:
+        """Handle target death, reputation drop, and combat end."""
         if not result.hit or target.is_alive:
             return ActionResult(success=True)
         target.in_combat = False
+
+        events: list[Event] = []
+
         death_event = Event(
             event_type=EventType.ENTITY_DIED,
             source_layer="entities",
             data={"entity_id": target_id},
         )
         self._location_log[target.location_id].append(death_event)
+        events.append(death_event)
+
+        old_rep = attacker.reputation.get(target.faction_id, 100) if target.faction_id else 0
+        delta = apply_reputation_drop(attacker, target, BASE_KILL_REPUTATION_DELTA)
+        if delta > 0:
+            rep_event = Event(
+                event_type=EventType.REPUTATION_CHANGED,
+                source_layer="entities",
+                data={
+                    "entity_id": attacker.id,
+                    "faction_id": target.faction_id,
+                    "old_rep": old_rep,
+                    "new_rep": old_rep - delta,
+                    "delta": -delta,
+                    "reason": "kill",
+                },
+            )
+            self._location_log[target.location_id].append(rep_event)
+            events.append(rep_event)
+
         self._remove_from_combat(target.location_id, target_id)
-        return ActionResult(success=True, events=[death_event])
+        return ActionResult(success=True, events=events)
 
     def get_combats_state(self) -> dict[str, object]:
         """Serialize all active combats."""

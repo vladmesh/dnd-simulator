@@ -117,6 +117,7 @@ class EventType(Enum):
     SQUAD_DEMATERIALIZED = "squad_dematerialized"
     ROUND_START = "round_start"
     OPPORTUNITY_ATTACK = "opportunity_attack"
+    REPUTATION_CHANGED = "reputation_changed"
     CUSTOM = "custom"
 
 
