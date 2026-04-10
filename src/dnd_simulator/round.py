@@ -391,6 +391,9 @@ class Round:
         )
 
         while True:
+            if not creature.is_alive:
+                break
+
             available = self._dispatcher.get_available_actions(creature, ctx)
             awareness = replace(
                 self._entities.build_peaceful_awareness(creature, time, query_fn),
