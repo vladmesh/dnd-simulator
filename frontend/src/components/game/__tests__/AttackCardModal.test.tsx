@@ -205,6 +205,112 @@ describe("AttackCardModal", () => {
     expect(screen.getByTestId("die-d8")).toHaveTextContent("5")
   })
 
+  it("applies damage-type color to component card border/background", () => {
+    render(
+      <AttackCardModal
+        data={makeCardData({
+          damageComponents: [
+            {
+              source: "weapon",
+              dice: "1d6",
+              dice_detail: [{ sides: 6, result: 4 }],
+              amount: 4,
+              type: "fire",
+            },
+          ],
+        })}
+        open
+        onOpenChange={vi.fn()}
+      />,
+    )
+    const section = screen.getByTestId("damage-section")
+    // The component card should have fire-colored styling (orange), not generic border-border/20
+    const card = section.querySelector("[data-testid='damage-component-card']")!
+    expect(card).toBeInTheDocument()
+    expect(card.className).toMatch(/orange/)
+    expect(card.className).not.toMatch(/border-border/)
+  })
+
+  it("shows different colors for different damage types in multi-damage", () => {
+    render(
+      <AttackCardModal
+        data={makeCardData({
+          damageComponents: [
+            {
+              source: "weapon",
+              dice: "1d8",
+              dice_detail: [{ sides: 8, result: 5 }],
+              amount: 5,
+              type: "slashing",
+            },
+            {
+              source: "weapon",
+              dice: "1d6",
+              dice_detail: [{ sides: 6, result: 3 }],
+              amount: 3,
+              type: "fire",
+            },
+          ],
+        })}
+        open
+        onOpenChange={vi.fn()}
+      />,
+    )
+    const cards = screen.getAllByTestId("damage-component-card")
+    expect(cards.length).toBe(2)
+    // Slashing = red, fire = orange — different classes
+    expect(cards[0].className).toMatch(/red/)
+    expect(cards[1].className).toMatch(/orange/)
+    expect(cards[0].className).not.toBe(cards[1].className)
+  })
+
+  it("keeps sky-blue styling for crit components over damage type", () => {
+    render(
+      <AttackCardModal
+        data={makeCardData({
+          damageComponents: [
+            {
+              source: "weapon_crit",
+              dice: "1d6",
+              dice_detail: [{ sides: 6, result: 4 }],
+              amount: 4,
+              type: "fire",
+            },
+          ],
+        })}
+        open
+        onOpenChange={vi.fn()}
+      />,
+    )
+    const card = screen.getByTestId("damage-component-card")
+    // Crit styling takes priority — sky colors, NOT orange
+    expect(card.className).toMatch(/sky/)
+    expect(card.className).not.toMatch(/orange/)
+  })
+
+  it("falls back to default styling for unknown damage type", () => {
+    render(
+      <AttackCardModal
+        data={makeCardData({
+          damageComponents: [
+            {
+              source: "weapon",
+              dice: "1d8",
+              dice_detail: [{ sides: 8, result: 5 }],
+              amount: 5,
+              type: "unknown_magic",
+            },
+          ],
+        })}
+        open
+        onOpenChange={vi.fn()}
+      />,
+    )
+    const card = screen.getByTestId("damage-component-card")
+    // Falls back to default muted styling
+    expect(card.className).toMatch(/border-border/)
+  })
+
   it("calls onOpenChange(false) when close button is clicked", async () => {
     const user = userEvent.setup()
     const onOpenChange = vi.fn()

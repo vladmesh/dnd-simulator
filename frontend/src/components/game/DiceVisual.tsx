@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 // Damage type → color mapping
 // ---------------------------------------------------------------------------
 
-const DAMAGE_TYPE_COLORS: Record<string, string> = {
+export const DAMAGE_TYPE_COLORS: Record<string, string> = {
   slashing: "border-red-500/60 bg-red-950/40 text-red-300",
   bludgeoning: "border-orange-500/60 bg-orange-950/40 text-orange-300",
   piercing: "border-gray-400/60 bg-gray-900/40 text-gray-300",

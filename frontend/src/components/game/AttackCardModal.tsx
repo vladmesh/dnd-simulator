@@ -6,7 +6,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
-import { DieVisual } from "./DiceVisual"
+import { DieVisual, DAMAGE_TYPE_COLORS } from "./DiceVisual"
 import type { AttackRollData, DamageComponentData, DieRollData } from "@/types/game"
 import { Swords } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -231,8 +231,26 @@ function DamageSection({
 }
 
 // ---------------------------------------------------------------------------
-// Single damage component
+// Card-level damage type colors (softer than die-level colors)
 // ---------------------------------------------------------------------------
+
+const DAMAGE_CARD_COLORS: Record<string, string> = {
+  slashing: "border-red-500/30 bg-red-950/15",
+  bludgeoning: "border-orange-500/30 bg-orange-950/15",
+  piercing: "border-gray-400/30 bg-gray-900/15",
+  fire: "border-orange-400/30 bg-orange-950/15",
+  cold: "border-blue-400/30 bg-blue-950/15",
+  lightning: "border-yellow-400/30 bg-yellow-950/15",
+  thunder: "border-purple-400/30 bg-purple-950/15",
+  poison: "border-green-500/30 bg-green-950/15",
+  acid: "border-lime-500/30 bg-lime-950/15",
+  necrotic: "border-violet-500/30 bg-violet-950/15",
+  radiant: "border-amber-300/30 bg-amber-950/15",
+  force: "border-indigo-400/30 bg-indigo-950/15",
+  psychic: "border-pink-400/30 bg-pink-950/15",
+}
+
+const DEFAULT_CARD_COLOR = "border-border/20 bg-muted/30"
 
 // ---------------------------------------------------------------------------
 // Extract AttackCardData from raw event data
@@ -283,12 +301,14 @@ function DamageComponentRow({
   // GWF reroll reason: only on base weapon dice that have rerolls
   const gwfLabel = isWeaponBase ? t("game:gwf_short") : undefined
 
+  const cardColor = isCritComponent
+    ? "border-sky-400/40 bg-sky-950/20"
+    : (DAMAGE_CARD_COLORS[component.type] ?? DEFAULT_CARD_COLOR)
+
   return (
-    <div className={cn(
+    <div data-testid="damage-component-card" className={cn(
       "space-y-1 rounded border p-2",
-      isCritComponent
-        ? "border-sky-400/40 bg-sky-950/20"
-        : "border-border/20 bg-muted/30",
+      cardColor,
     )}>
       <div className="flex items-center justify-between text-xs">
         <span className={cn(

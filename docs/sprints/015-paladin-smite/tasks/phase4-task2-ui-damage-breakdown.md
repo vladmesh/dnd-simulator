@@ -42,4 +42,8 @@ Key files:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Exported `DAMAGE_TYPE_COLORS` from `DiceVisual.tsx`. Created a softer `DAMAGE_CARD_COLORS` map in `AttackCardModal.tsx` (30% border opacity, 15% background vs 60%/40% for dice) — cards wrap multiple dice so need subtler coloring. Crit cards keep sky-blue priority. Unknown damage types fall back to generic `border-border/20 bg-muted/30`. Added `data-testid="damage-component-card"` for testability. 4 new tests, all 205 frontend tests pass. Playwright MCP was unavailable for visual verification — needs manual visual check with a flaming longsword attack.
