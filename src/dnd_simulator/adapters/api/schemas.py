@@ -177,6 +177,11 @@ class PlayerStatusResponse(BaseModel):
     ability_scores: dict[str, int]
 
 
+class SetupConfigResponse(BaseModel):
+    starting_gold: int
+    point_buy_budget: int
+
+
 class WorldStateResponse(BaseModel):
     session_id: str
     time: str

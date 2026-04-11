@@ -347,6 +347,9 @@ const master = {
 // --- Player API ---
 
 const player = {
+  getSetupConfig: () =>
+    get<{ starting_gold: number; point_buy_budget: number }>("/api/player/setup-config"),
+
   createCharacter: (sessionId: string, data: CreatePlayerRequest) =>
     post<PlayerStatusResponse>(
       `/api/player/sessions/${sessionId}/character`,

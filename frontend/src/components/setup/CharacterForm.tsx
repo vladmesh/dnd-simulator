@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { api } from "@/transport/apiClient"
 import { Button } from "@/components/ui/button"
@@ -22,7 +22,7 @@ const FIGHTING_STYLES = ["defense", "dueling", "great_weapon_fighting"] as const
 const POINT_BUY_COSTS: Record<number, number> = {
   8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9,
 }
-const POINT_BUY_BUDGET = 27
+// POINT_BUY_BUDGET is dynamically fetched
 
 // Hit die per class
 const HIT_DICE: Record<string, number> = { fighter: 10, rogue: 8, paladin: 10 }
@@ -35,7 +35,7 @@ const STARTING_EQUIPMENT: Record<string, string[]> = {
   paladin: ["Chain Mail", "Longsword", "Shield"],
 }
 
-const STARTING_GOLD = 100
+// STARTING_GOLD is dynamically fetched
 
 function abilityModifier(score: number): number {
   return Math.floor((score - 10) / 2)
@@ -84,6 +84,16 @@ export function CharacterForm({ sessionId, onCreated }: Props) {
   const [serverError, setServerError] = useState<string | null>(null)
   const [submitAttempted, setSubmitAttempted] = useState(false)
 
+  const [startingGold, setStartingGold] = useState(100)
+  const [pointBuyBudget, setPointBuyBudget] = useState(27)
+
+  useEffect(() => {
+    api.player.getSetupConfig().then((cfg) => {
+      setStartingGold(cfg.starting_gold)
+      setPointBuyBudget(cfg.point_buy_budget)
+    }).catch((e) => console.error("Failed to fetch setup config:", e))
+  }, [])
+
   const [name, setName] = useState("Adventurer")
   const [race, setRace] = useState<string>("human")
   const [charClass, setCharClass] = useState<string>("fighter")
@@ -93,7 +103,7 @@ export function CharacterForm({ sessionId, onCreated }: Props) {
     str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10,
   })
 
-  const remaining = POINT_BUY_BUDGET - totalPointCost(scores)
+  const remaining = pointBuyBudget - totalPointCost(scores)
 
   const canIncrement = (ab: AbilityName): boolean => {
     if (scores[ab] >= 15) return false
@@ -225,7 +235,7 @@ export function CharacterForm({ sessionId, onCreated }: Props) {
       <fieldset>
         <legend className="mb-2 text-sm font-medium">{t("setup:ability_scores")}</legend>
         <div className="mb-2 text-sm">
-          {t("setup:remaining_points")}: <span data-testid="remaining-points">{remaining}</span> / {POINT_BUY_BUDGET}
+          {t("setup:remaining_points")}: <span data-testid="remaining-points">{remaining}</span> / {pointBuyBudget}
         </div>
         <div className="grid grid-cols-3 gap-4 sm:grid-cols-6">
           {ABILITY_NAMES.map((ab) => {
@@ -276,7 +286,7 @@ export function CharacterForm({ sessionId, onCreated }: Props) {
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div>HP: <span data-testid="preview-hp">{hp}</span></div>
           <div>AC: <span data-testid="preview-ac">{ac}</span></div>
-          <div>{t("setup:field_gold")}: <span data-testid="preview-gold">{STARTING_GOLD}</span></div>
+          <div>{t("setup:field_gold")}: <span data-testid="preview-gold">{startingGold}</span></div>
         </div>
         <div data-testid="preview-equipment" className="text-sm">
           {t("setup:starting_equipment")}: {equipment.join(", ")}
