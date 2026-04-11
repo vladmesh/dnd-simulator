@@ -16,7 +16,7 @@ ResourcePool уже существует как структура (`core/resour
 
 ---
 
-## Phase 1: Spell Slots as ResourcePool
+## Phase 1: Spell Slots as ResourcePool ✓
 
 ResourcePool перестаёт быть мёртвым кодом. Spell slots создаются, тратятся, восстанавливаются при Long Rest. Second Wind (Fighter) уже подключен к ResourcePool — добавляем rest actions для recovery. Action provider не показывает действие если pool пуст.
 
@@ -71,7 +71,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** Phase 1 complete. Ready for Phase 2 task generation.
 
 ## Decisions
 

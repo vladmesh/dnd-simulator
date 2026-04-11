@@ -7,7 +7,9 @@
 **Sprint:** 015-paladin-smite
 **Goal:** Paladin class с Divine Smite, spell slots как reusable resource system, multi-damage weapons и breakdown в UI.
 **Started:** 2026-04-11
-**Phase:** 1 — Spell Slots as ResourcePool (all tasks done) — 2026-04-11
+**Phase:** 1 — Spell Slots as ResourcePool (COMPLETE) — 2026-04-11
+
+Ready for Phase 2 task generation.
 
 ### Phases
 
