@@ -50,4 +50,13 @@ Scenarios for `tests/unit/test_spell_slots.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward implementation. Added three pure functions to `rules/resources.py`:
+- `spell_slot_pool_id(level)` — canonical naming
+- `build_spell_slot_pools(slot_table)` — creates ResourcePool list from `{level: count}` dict
+- `get_available_spell_slots(creature)` — scans pools by prefix, returns non-exhausted slots
+
+Wired into `build_class_resource_pools()` in `content_loader/creatures.py` via `_SPELL_SLOT_TABLES` dict — currently empty, Phase 2 adds Paladin entry. No existing tests modified.

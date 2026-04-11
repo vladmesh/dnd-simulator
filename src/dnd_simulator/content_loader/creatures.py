@@ -30,6 +30,7 @@ from dnd_simulator.core.class_features import ClassFeatures, FighterFeatures, Fi
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.layers.entities.models import Npc, NpcMemory, resolve_schedule
+from dnd_simulator.rules.resources import build_spell_slot_pools
 
 # ---------------------------------------------------------------------------
 # Shared converters
@@ -91,14 +92,22 @@ def parse_class_features(char_class: CharClass, data: dict[str, Any]) -> list[Cl
     return features
 
 
+_SPELL_SLOT_TABLES: dict[CharClass, dict[int, int]] = {
+    # Paladin L1 slots will be added in Phase 2
+}
+
+
 def build_class_resource_pools(char_class: CharClass) -> list[ResourcePool]:
     """Create default resource pools for a class.
 
     Fighter: second_wind (1/short rest).
+    Casters: spell slot pools from slot table (long rest).
     """
     pools: list[ResourcePool] = []
     if char_class == CharClass.FIGHTER:
         pools.append(ResourcePool(id="second_wind", max_uses=1, current_uses=1, reset_on=RestType.SHORT_REST))
+    if char_class in _SPELL_SLOT_TABLES:
+        pools.extend(build_spell_slot_pools(_SPELL_SLOT_TABLES[char_class]))
     return pools
 
 
