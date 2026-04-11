@@ -1,29 +1,28 @@
 # Code Audit
 
-> **Date**: 2026-04-09
-> **Scope**: full (post Sprint 013)
+> **Date**: 2026-04-12
+> **Scope**: full (post Sprint 015)
 
 ## Summary
 - Dead code: 1 issue
-- Code smells: 8 issues
+- Code smells: 7 issues
 - Security: 6 issues
 - Architecture violations: 4 issues
-- Convention violations: 8 issues
+- Convention violations: 7 issues
 - Layer contract: 0 issues
-- Test gaps: 8 issues
+- Test gaps: 7 issues
 - Vision drift: 0 issues
 
 ## Dead Code
 
-All 8 dead-code items from the previous audit (2026-03-31) have been removed. No new dead code introduced in sprint 013.
+Sprint 015 wired `reset_resources()` (now used in `rules/handlers/rest.py` for long/short rest actions). No new dead code introduced.
 
 **Backlog** (tested but unwired — future mechanics):
 
 | File | Function | Notes |
 |------|----------|-------|
-| `rules/reactions.py:15` | `can_opportunity_attack()` | Duplicates eligibility checks inline in `find_oa_triggers()`. 0 prod callers. Consider removing or having `find_oa_triggers` call it. |
+| `rules/reactions.py:15` | `can_opportunity_attack()` | Duplicates eligibility checks inline in `find_oa_triggers()`. 0 prod callers. |
 | `rules/conditions.py:27` | `prone_stand_cost()` | Only called in tests. Wire when prone mechanic lands. |
-| `rules/resources.py:32` | `reset_resources()` | 12 test refs, 0 prod. Wire with rest mechanics. |
 | `rules/movement.py:201` | `walk_path()` | 12 test refs, 0 prod. Budget-aware path walking. |
 | `core/turn_budget.py:58` | `refund()` | 1 test ref, 0 prod. |
 | `core/player.py:73` | `to_save_data()` | 1 test ref, 0 prod. |
@@ -35,12 +34,11 @@ All 8 dead-code items from the previous audit (2026-03-31) have been removed. No
 | File | Issue | Suggestion |
 |------|-------|------------|
 | `service/game_service.py` (936 lines, 44+ methods) | God class mixing session mgmt, content CRUD, catalog CRUD, entity CRUD | Split into focused service classes by domain |
-| `layers/politics/layer.py` (615 lines) | Large layer implementation | Extract sub-components (diplomacy, warfare, economy) |
-| `round.py` (612 lines) | Round orchestrator doing too much | Extract combat-turn and awareness-building into helpers |
-| `layers/entities/combat_manager.py` (604 lines) | Large combat module | Consider splitting initiative/damage/state transitions |
+| `round.py` (622 lines) | Round orchestrator with `run_combat_turn` (69 lines) and `run_peaceful_turn` (68 lines) | Extract combat-turn and awareness-building into helpers |
+| `layers/entities/layer.py` (597 lines) | Large layer delegating to 5 sub-managers | Acceptable given decomposition, but monitor |
 | `adapters/api/routes_master.py` (560 lines, 40+ routes) | Oversized route module | Split by domain (sessions, creatures, world editing, saves) |
-| `perception.py` (54 `.get()` calls with silent defaults) | Systematic fail-fast violation — masks missing event data with `""`, `0`, `"?"` | Use `data["key"]` — crash on missing keys |
-| `core/brain.py:165` | `RuleBrain._choose_combat_action` is 131 lines of if/elif chain | Decompose into strategy sub-methods or decision table |
+| `core/action_defs.py` (538 lines) | Large action registry — grew with paladin/smite/rest actions | Registry pattern is fine, but consider data-driven YAML format |
+| `service/session.py` (517 lines) | Session + GameSession + player brain callback logic | Extract player brain callbacks to own module |
 | `frontend/src/components/master/SchemaForm.tsx` (488 lines) | Large component with inline sub-components | Extract `ArrayOfObjectsField` and field renderers |
 
 ## Security
@@ -60,7 +58,7 @@ All 8 dead-code items from the previous audit (2026-03-31) have been removed. No
 |-----------|-----------|-----------|----------|
 | `adapters/api/routes_master.py:290-334` | Thick adapter: `get_session_state()` orchestrates 8+ layer queries inline | Single `service.get_world_state(session_id)` call | medium |
 | `round.py:31` | `Round` directly imports `EntitiesLayer` (service → layer coupling) | Interact via World/Layer interface | medium |
-| `adapters/api/routes_player.py:12-13` | Imports `Ability`, `PlayerCharacter` from core for response building | Build response dict in service layer | low |
+| `adapters/api/routes_player.py:13-16` | Imports `Ability`, `PlayerCharacter` from core and `POINT_BUY_BUDGET`, `STARTING_GOLD` from rules | Expose setup config through service layer | low |
 | `llm/brain.py:49`, `llm/summarizer.py:10` | Imports layer-specific models (`Npc`, `NpcMemory`) | Pass data through interface, not concrete layer type | low |
 
 ## Convention Violations
@@ -73,12 +71,11 @@ All 8 dead-code items from the previous audit (2026-03-31) have been removed. No
 | `layers/settlements/models.py:17` | `Settlement` — mutable dataclass | Frozen or justify mutation |
 | `tests/unit/test_api.py`, `tests/unit/test_trade_ws.py` | Bare `200`/`404` instead of `HTTPStatus` | Use `HTTPStatus.OK` etc. |
 | `rules/proficiency.py:33-34` | Hardcoded weapon name strings (`"rapier"`, `"shortsword"`) | Use enum or catalog reference |
-| `layers/entities/perception.py:29-31` | Hardcoded weapon names duplicated from YAML catalogs | Reference catalog data |
 | `content_loader/`, `service/game_service.py` | 31+ `.get()` with silent defaults at data boundaries | Fail fast on missing keys; use `data["key"]` |
 
 ## Layer Contract
 
-All 5 layers (Geography, Politics, Settlements, Ecology, Entities) implement the full Layer ABC: `name`, `tick_interval`, `tick`, `handle_event`, `query`, `get_state`, `load_state`. **No issues.**
+All 5 layers (Geography, Politics, Settlements, Ecology, Entities) implement the full Layer ABC. **No issues.**
 
 ## Test Gaps
 
@@ -91,7 +88,6 @@ All 5 layers (Geography, Politics, Settlements, Ecology, Entities) implement the
 | `rules/reactions.py` | `test_rules_reactions.py` | missing |
 | `service/commands_politics.py` | integration/unit test | missing — 0 test references |
 | `service/commands_time.py` | integration/unit test | missing — 0 test references |
-| `service/commands_save.py` | dedicated unit test | missing — only integration coverage via REST |
 
 **Frontend:** `clearRefCache` in `frontend/src/components/master/RefSelect.tsx:64` — exported but never imported. Dead export.
 
@@ -99,10 +95,10 @@ WS tests cover basic flow (10 tests) but miss: reaction prompt flow, combat-spec
 
 ## Vision Drift
 
-No drift detected. Sprint 013 (character creation overhaul) aligns with all invariants:
-- Classic mode works without LLM — point buy and HP formulas are pure rule functions
+No drift detected. Sprint 015 (Paladin & Divine Smite) aligns with all invariants:
+- Classic mode works without LLM — divine smite, spell slots, and rest actions are pure rule functions; RuleBrain handles smite decisions
 - Single global round — no changes to round structure
 - Layers independent — no new cross-layer coupling
 - Master controls through endpoints only
-- Brain swappable at runtime — character creation doesn't touch brain logic
-- Content is data — starting equipment defined in rules, resolved from YAML catalogs
+- Brain swappable at runtime — smite choice routed through `Brain.choose_reaction` pattern; both RuleBrain and LlmBrain handle it
+- Content is data — paladin features defined via `PaladinFeatures` dataclass + YAML catalogs
