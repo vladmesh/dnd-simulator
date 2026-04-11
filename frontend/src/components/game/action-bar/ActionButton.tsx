@@ -9,7 +9,8 @@ import { SayAction } from "./SayAction"
 
 interface ActionButtonProps {
   action: ActionInfo
-  enemies: CombatAwareness["nearby"]
+  nearby: CombatAwareness["nearby"]
+  selfId?: string
   disabled: boolean
   budget: TurnBudget | undefined
   openDropdown: string | null
@@ -25,7 +26,7 @@ function costLabel(t: (key: string) => string, costType: string): string {
   return result === key ? costType.replace("_", " ") : result
 }
 
-export function ActionButton({ action, enemies, disabled, budget, openDropdown, setOpenDropdown, sendAction, t }: ActionButtonProps) {
+export function ActionButton({ action, nearby, selfId, disabled, budget, openDropdown, setOpenDropdown, sendAction, t }: ActionButtonProps) {
   const { name } = action
   const costOptions = action.cost_options
   const hasCostChoice = costOptions != null && costOptions.length > 1
@@ -37,7 +38,8 @@ export function ActionButton({ action, enemies, disabled, budget, openDropdown, 
       <CostChoiceButton
         action={action}
         costOptions={costOptions}
-        enemies={enemies}
+        nearby={nearby}
+        selfId={selfId}
         disabled={disabled}
         budget={budget}
         openDropdown={openDropdown}
@@ -48,11 +50,11 @@ export function ActionButton({ action, enemies, disabled, budget, openDropdown, 
     )
   }
 
-  return <CoreActionButton action={action} enemies={enemies} disabled={disabled} budget={budget} openDropdown={openDropdown} setOpenDropdown={setOpenDropdown} sendAction={sendAction} t={t} />
+  return <CoreActionButton action={action} nearby={nearby} selfId={selfId} disabled={disabled} budget={budget} openDropdown={openDropdown} setOpenDropdown={setOpenDropdown} sendAction={sendAction} t={t} />
 }
 
 /** Standard action button — no cost choice. */
-function CoreActionButton({ action, enemies, disabled, budget, openDropdown, setOpenDropdown, sendAction, t }: ActionButtonProps) {
+function CoreActionButton({ action, nearby, selfId, disabled, budget, openDropdown, setOpenDropdown, sendAction, t }: ActionButtonProps) {
   const { name } = action
   const costType = action.cost_type
   const depleted = isCostDepleted(costType, budget)
@@ -61,13 +63,36 @@ function CoreActionButton({ action, enemies, disabled, budget, openDropdown, set
   if (costType) dataAttrs["data-cost-type"] = costType
   if (depleted) dataAttrs["data-depleted"] = ""
 
-  // Has target_id param → target dropdown
-  if (hasParam(action, "target_id") && enemies.length > 0) {
+  // target_mode === "single" → target dropdown with scope filtering
+  if (action.target_mode === "single" && nearby.length > 0) {
     return (
       <TargetDropdown
         name={name}
         description={action.description}
-        enemies={enemies}
+        nearby={nearby}
+        scope={action.target_scope ?? "hostile"}
+        selfId={selfId}
+        disabled={disabled}
+        openDropdown={openDropdown}
+        setOpenDropdown={setOpenDropdown}
+        sendAction={sendAction}
+        t={t}
+        costType={costType}
+        depleted={depleted}
+        costClass={costClass}
+      />
+    )
+  }
+
+  // Fallback: legacy hasParam check for target_id (actions without target_mode set)
+  if (action.target_mode == null && hasParam(action, "target_id") && nearby.length > 0) {
+    return (
+      <TargetDropdown
+        name={name}
+        description={action.description}
+        nearby={nearby}
+        scope="hostile"
+        selfId={selfId}
         disabled={disabled}
         openDropdown={openDropdown}
         setOpenDropdown={setOpenDropdown}
@@ -81,12 +106,12 @@ function CoreActionButton({ action, enemies, disabled, budget, openDropdown, set
   }
 
   // Has toward/away_from/direction params → directional dropdown
-  if ((hasParam(action, "toward") || hasParam(action, "direction")) && enemies.length > 0) {
+  if ((hasParam(action, "toward") || hasParam(action, "direction")) && nearby.length > 0) {
     return (
       <DirectionalDropdown
         name={name}
         description={action.description}
-        enemies={enemies}
+        enemies={nearby}
         disabled={disabled}
         openDropdown={openDropdown}
         setOpenDropdown={setOpenDropdown}

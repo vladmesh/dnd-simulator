@@ -139,6 +139,8 @@ export interface ActionInfo {
   cost_type?: string
   params: ActionParamInfo[]
   cost_options?: CostOption[]
+  target_mode?: string
+  target_scope?: string
 }
 
 export interface MerchantInfo {

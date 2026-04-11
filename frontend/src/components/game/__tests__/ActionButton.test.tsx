@@ -27,8 +27,9 @@ function makeAction(
   name: string,
   costType = "action",
   params: { name: string; type: string; required: boolean }[] = [],
+  opts: { target_mode?: string; target_scope?: string } = {},
 ): ActionInfo {
-  return { name, description: `${name} desc`, params, cost_type: costType }
+  return { name, description: `${name} desc`, params, cost_type: costType, ...opts }
 }
 
 function setCombatState(
@@ -137,13 +138,13 @@ describe("ActionButton — simple actions", () => {
 })
 
 describe("ActionButton — target selection", () => {
-  it("renders target dropdown for attack with enemies", () => {
+  it("renders target dropdown for attack with target_mode single", () => {
     setCombatState(
-      [makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }])],
+      [makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }], { target_mode: "single", target_scope: "hostile" })],
       fullBudget,
       [
-        { id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N" },
-        { id: "goblin_2", description: "Goblin 2", distance_ft: 15, direction: "S" },
+        { id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N", is_hostile: true },
+        { id: "goblin_2", description: "Goblin 2", distance_ft: 15, direction: "S", is_hostile: true },
       ],
     )
 
@@ -167,6 +168,165 @@ describe("ActionButton — target selection", () => {
     fireEvent.click(screen.getByTitle("dash desc"))
     const dropdown = container.querySelector(".absolute.bottom-full")
     expect(dropdown).toBeTruthy()
+  })
+})
+
+describe("ActionButton — target scope filtering", () => {
+  it("HOSTILE scope filters to hostile targets only", () => {
+    setCombatState(
+      [makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }], { target_mode: "single", target_scope: "hostile" })],
+      fullBudget,
+      [
+        { id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N", is_hostile: true },
+        { id: "ally_1", description: "Friendly Guard", distance_ft: 10, direction: "S", is_hostile: false },
+      ],
+    )
+
+    render(<ActionBar />)
+    fireEvent.click(screen.getByTitle("attack desc"))
+    // Only 1 hostile target after filtering → auto-sends directly
+    expect(wsClient.send).toHaveBeenCalledWith({
+      type: "action",
+      name: "attack",
+      params: { target_id: "goblin_1" },
+    })
+  })
+
+  it("ALLY scope shows allies and self, hides hostiles", () => {
+    // Set player in store so self_id is available
+    useGameStore.setState({
+      player: {
+        player_id: "player_1",
+        name: "Hero",
+        race: "human",
+        char_class: "paladin",
+        level: 1,
+        alignment: "lawful_good",
+        hp: 20,
+        max_hp: 20,
+        ac: 16,
+        gold: 10,
+        location_id: "loc1",
+        ability_scores: { str: 16, dex: 10, con: 14, int: 8, wis: 12, cha: 14 },
+      },
+    })
+
+    setCombatState(
+      [makeAction("lay_on_hands", "action", [{ name: "target_id", type: "string", required: true }], { target_mode: "single", target_scope: "ally" })],
+      fullBudget,
+      [
+        { id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N", is_hostile: true },
+        { id: "ally_1", description: "Friendly Guard", distance_ft: 10, direction: "S", is_hostile: false },
+      ],
+    )
+
+    const { container } = render(<ActionBar />)
+    fireEvent.click(screen.getByTitle("lay_on_hands desc"))
+    const dropdown = container.querySelector(".absolute.bottom-full")
+    expect(dropdown).toBeTruthy()
+    const options = dropdown!.querySelectorAll("button")
+    // Should show: Self (player_1) + ally_1 = 2 options
+    expect(options.length).toBe(2)
+    // Should NOT contain goblin
+    const texts = Array.from(options).map((b) => b.textContent)
+    expect(texts.some((t) => t?.includes("goblin_1"))).toBe(false)
+  })
+
+  it("ANY scope shows everyone including self", () => {
+    useGameStore.setState({
+      player: {
+        player_id: "player_1",
+        name: "Hero",
+        race: "human",
+        char_class: "paladin",
+        level: 1,
+        alignment: "lawful_good",
+        hp: 20,
+        max_hp: 20,
+        ac: 16,
+        gold: 10,
+        location_id: "loc1",
+        ability_scores: { str: 16, dex: 10, con: 14, int: 8, wis: 12, cha: 14 },
+      },
+    })
+
+    setCombatState(
+      [makeAction("some_action", "action", [{ name: "target_id", type: "string", required: true }], { target_mode: "single", target_scope: "any" })],
+      fullBudget,
+      [
+        { id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N", is_hostile: true },
+        { id: "ally_1", description: "Friendly Guard", distance_ft: 10, direction: "S", is_hostile: false },
+      ],
+    )
+
+    const { container } = render(<ActionBar />)
+    fireEvent.click(screen.getByTitle("some_action desc"))
+    const dropdown = container.querySelector(".absolute.bottom-full")
+    expect(dropdown).toBeTruthy()
+    const options = dropdown!.querySelectorAll("button")
+    // Should show: Self + goblin_1 + ally_1 = 3 options
+    expect(options.length).toBe(3)
+  })
+
+  it("Self entry sends correct target_id", () => {
+    useGameStore.setState({
+      player: {
+        player_id: "player_1",
+        name: "Hero",
+        race: "human",
+        char_class: "paladin",
+        level: 1,
+        alignment: "lawful_good",
+        hp: 20,
+        max_hp: 20,
+        ac: 16,
+        gold: 10,
+        location_id: "loc1",
+        ability_scores: { str: 16, dex: 10, con: 14, int: 8, wis: 12, cha: 14 },
+      },
+    })
+
+    setCombatState(
+      [makeAction("lay_on_hands", "action", [{ name: "target_id", type: "string", required: true }], { target_mode: "single", target_scope: "ally" })],
+      fullBudget,
+      [
+        { id: "ally_1", description: "Friendly Guard", distance_ft: 10, direction: "S", is_hostile: false },
+      ],
+    )
+
+    const { container } = render(<ActionBar />)
+    fireEvent.click(screen.getByTitle("lay_on_hands desc"))
+    const dropdown = container.querySelector(".absolute.bottom-full")
+    expect(dropdown).toBeTruthy()
+    const options = dropdown!.querySelectorAll("button")
+    // Find the Self option and click it
+    const selfOption = Array.from(options).find((b) => b.textContent?.includes("Self") || b.textContent?.includes("Себя"))
+    expect(selfOption).toBeTruthy()
+    fireEvent.click(selfOption!)
+
+    expect(wsClient.send).toHaveBeenCalledWith({
+      type: "action",
+      name: "lay_on_hands",
+      params: { target_id: "player_1" },
+    })
+  })
+
+  it("target_mode none renders simple button (no dropdown)", () => {
+    setCombatState(
+      [makeAction("dodge", "action", [], { target_mode: "none" }), makeAction("end_turn", "free")],
+      fullBudget,
+      [{ id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N", is_hostile: true }],
+    )
+
+    render(<ActionBar />)
+    const btn = screen.getByTitle("dodge desc")
+    fireEvent.click(btn)
+    // Should send directly, no dropdown
+    expect(wsClient.send).toHaveBeenCalledWith({
+      type: "action",
+      name: "dodge",
+      params: undefined,
+    })
   })
 })
 

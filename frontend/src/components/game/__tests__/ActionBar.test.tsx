@@ -27,8 +27,9 @@ function makeAction(
   name: string,
   costType = "action",
   params: { name: string; type: string; required: boolean }[] = [],
+  opts: { target_mode?: string; target_scope?: string } = {},
 ): ActionInfo {
-  return { name, description: `${name} desc`, params, cost_type: costType }
+  return { name, description: `${name} desc`, params, cost_type: costType, ...opts }
 }
 
 function setCombatState(
@@ -93,7 +94,7 @@ describe("ActionBar — cost-type styling", () => {
   it("renders core combat buttons with data-cost-type attribute", () => {
     setCombatState(
       [
-        makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }]),
+        makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }], { target_mode: "single", target_scope: "hostile" }),
         makeAction("dodge", "action"),
         makeAction("dash", "action"),
         makeAction("disengage", "action"),
@@ -115,7 +116,7 @@ describe("ActionBar — cost-type styling", () => {
       [
         makeAction("end_turn", "free"),
         makeAction("dodge", "action"),
-        makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }]),
+        makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }], { target_mode: "single", target_scope: "hostile" }),
       ],
       fullBudget,
     )
@@ -170,9 +171,9 @@ describe("ActionBar — cost-type styling", () => {
 
   it("attack with single enemy sends action directly", () => {
     setCombatState(
-      [makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }])],
+      [makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }], { target_mode: "single", target_scope: "hostile" })],
       fullBudget,
-      [{ id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N" }],
+      [{ id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N", is_hostile: true }],
     )
 
     render(<ActionBar />)
@@ -187,11 +188,11 @@ describe("ActionBar — cost-type styling", () => {
 
   it("attack with multiple enemies shows target dropdown", () => {
     setCombatState(
-      [makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }])],
+      [makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }], { target_mode: "single", target_scope: "hostile" })],
       fullBudget,
       [
-        { id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N" },
-        { id: "goblin_2", description: "Goblin 2", distance_ft: 15, direction: "S" },
+        { id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N", is_hostile: true },
+        { id: "goblin_2", description: "Goblin 2", distance_ft: 15, direction: "S", is_hostile: true },
       ],
     )
 
@@ -374,13 +375,13 @@ describe("ActionBar — drawer interactions", () => {
   it("opening a drawer closes any open core dropdown", () => {
     setCombatState(
       [
-        makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }]),
+        makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }], { target_mode: "single", target_scope: "hostile" }),
         makeAction("use_item", "action", [{ name: "item_id", type: "string", required: true }]),
       ],
       fullBudget,
       [
-        { id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N" },
-        { id: "goblin_2", description: "Goblin 2", distance_ft: 15, direction: "S" },
+        { id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N", is_hostile: true },
+        { id: "goblin_2", description: "Goblin 2", distance_ft: 15, direction: "S", is_hostile: true },
       ],
       potions,
     )

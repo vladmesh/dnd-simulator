@@ -56,4 +56,14 @@ Update the frontend to use `target_mode` and `target_scope` from the backend ins
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `ActionInfo` type extended with `target_mode` and `target_scope` optional fields.
+- `ActionBar` now passes `nearby` (full list) and `selfId` (from player store) instead of pre-filtered `enemies`.
+- `ActionButton` routes by `action.target_mode === "single"` instead of `hasParam("target_id")`. Legacy `hasParam` fallback kept for safety when `target_mode` is absent.
+- `TargetDropdown` rebuilt: accepts `scope` and `selfId` props, uses `buildTargets()` to filter nearby by scope and prepend Self entry for ally/any scopes.
+- Added `game:target_self` i18n key (en: "Self", ru: "Себя").
+- Existing ActionBar/ActionButton tests updated to include `target_mode`/`target_scope` and `is_hostile` on nearby entities — intentional contract change since backend always sends these fields now.
+- 6 new tests for scope filtering (hostile filters, ally shows self + allies, any shows all, self sends correct ID, none mode renders simple button).

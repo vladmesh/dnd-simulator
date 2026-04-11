@@ -45,7 +45,9 @@ export function ActionBar() {
   const availableItems = awareness?.available_items ?? []
 
   const isCombat = mode === "combat" && awareness && "self_hp" in awareness
-  const enemies = isCombat ? (awareness as CombatAwareness).nearby : []
+  const nearby = isCombat ? (awareness as CombatAwareness).nearby : []
+  const player = useGameStore((s) => s.player)
+  const selfId = player?.player_id
 
   const groups = categorizeActions(available)
 
@@ -60,7 +62,8 @@ export function ActionBar() {
   const hasDrawers = showConsumableDrawer || showClassFeatureDrawer || showInventoryDrawer
 
   const actionButtonProps = {
-    enemies,
+    nearby,
+    selfId,
     disabled: waitingForAction,
     budget,
     openDropdown,

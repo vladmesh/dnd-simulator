@@ -5,6 +5,7 @@
   "wounded": "(ранен)",
   "attack": "Атаковать",
   "attack_target": "Атаковать {{target}}",
+  "target_self": "Себя",
   "talk": "Говорить",
   "inspect": "Осмотреть",
   "location": "Локация",

@@ -5,6 +5,7 @@
   "wounded": "(wounded)",
   "attack": "Attack",
   "attack_target": "Attack {{target}}",
+  "target_self": "Self",
   "talk": "Talk",
   "inspect": "Inspect",
   "location": "Location",
