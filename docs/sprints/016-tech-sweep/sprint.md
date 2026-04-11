@@ -20,9 +20,10 @@
 
 **Tasks:**
 
-1. [Fix class_features lost on save/load (AC Defense bug)](tasks/phase1-task1-class-features-save-load.md)
-2. [Fix action bar display issues (raw names, cost labels, drawer clarity)](tasks/phase1-task2-action-bar-display.md)
-3. [Second Wind perception formatter + battle map content configs](tasks/phase1-task3-second-wind-log-battlemap.md)
+1. [Fix class_features lost on save/load (AC Defense bug)](tasks/phase1-task1-class-features-save-load.md) ✓
+2. [Fix 26 pre-existing frontend test failures](tasks/phase1-task2-frontend-test-mocks.md)
+3. [Fix action bar display issues (raw names, cost labels, drawer clarity)](tasks/phase1-task3-action-bar-display.md)
+4. [Second Wind perception formatter + battle map content configs](tasks/phase1-task4-second-wind-log-battlemap.md)
 
 ## Phase 2: Adapter & Routes
 
