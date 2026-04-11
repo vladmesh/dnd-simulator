@@ -74,11 +74,70 @@ Smite как модификатор атаки: при попадании — п
 1. [Resource Pools in Awareness + Spell Slot UI](tasks/phase5-task1-spell-slot-ui.md)
 2. [Paladin Combo Integration Test](tasks/phase5-task2-paladin-combo-integration.md)
 
+## Phase 6: Action Target Scope
+
+Явная типизация целей для всех экшенов. Сейчас `ActionDef.targeted: bool` — бинарный флаг, фронтенд всех называет `enemies` и показывает один список `nearby` (без self). Это ломает Lay on Hands (нельзя выбрать себя) и не масштабируется на будущие заклинания.
+
+Две ортогональные оси: **TargetMode** (как выбираем цель) × **TargetScope** (кого можно выбрать).
+
+**TargetMode enum:**
+- `NONE` — нет цели-существа (equip, say, wait, buy/sell, end_turn)
+- `SELF` — цель = кастер, неявно (dodge, dash, disengage, second_wind, flee, rest, bless)
+- `SINGLE` — выбрать 1 существо (attack, lay_on_hands)
+- `MULTI` — выбрать N существ (future: scorching ray, magic missile)
+- `POINT` — клик на карту x,y (future: fireball)
+- `DIRECTION` — выбрать направление (future: burning hands, lightning bolt)
+
+**TargetScope enum** (только для SINGLE/MULTI):
+- `HOSTILE` — враги
+- `ALLY` — союзники + self
+- `ANY` — все + self
+
+**ActionDef changes:** `target_mode: TargetMode`, `target_scope: TargetScope`, `max_targets: int`. Property `targeted` = `mode not in (NONE, SELF)`. Поле `targeted: bool` удаляется.
+
+**Маппинг текущих экшенов:**
+
+| Action | Mode | Scope |
+|---|---|---|
+| Attack, Opportunity Attack | SINGLE | HOSTILE |
+| Lay on Hands | SINGLE | ALLY |
+| Dodge, Dash, Disengage, Flee | SELF | — |
+| Second Wind, Long/Short Rest, Bless | SELF | — |
+| Equip/Unequip (все), Say, Wait, Buy/Sell, Idle, End Turn, Skip, Use Item | NONE | — |
+| Move, Move To | NONE | — (свой UI) |
+
+**Backend:** validation.py проверяет scope (hostile target must be is_hostile, ally must be !is_hostile or self). Awareness builder — без изменений, `nearby` остаётся как есть.
+
+**Frontend:** ActionInfo получает `target_mode` + `target_scope`. Роутинг по mode вместо `hasParam("target_id")`. Для ALLY/ANY — фронт добавляет "Себя" в список. Переменная `enemies` → `nearby`.
+
+**Верифицируем:** Unit tests — validation отклоняет hostile target для ALLY scope и наоборот. E2E — Lay on Hands показывает "Себя" + союзников, Attack показывает только врагов.
+
+**Tasks:**
+
+1. [TargetMode/TargetScope Enums + Validation](tasks/phase6-task1-target-enums-validation.md)
+2. [Frontend Target Scope Routing](tasks/phase6-task2-frontend-target-scope.md)
+
+## Phase 7: Smite UI + Level 1 Spell Slot
+
+Паладин level 1 не имеет spell slots (по RAW они появляются на level 2). Пока нет системы левелинга — даём 1 spell slot на level 1 как временное решение, чтобы smite был тестируемым. Переделаем когда появится левелинг.
+
+Фронтенд не имеет UI для smite — `smite_slot_level` есть как опциональный параметр ATTACK, но нет способа его задать. Добавляем выбор при атаке: после выбора цели, если есть spell slots, показываем варианты "Attack" / "Attack + Smite (slot 1)" / "Attack + Smite (slot 2)".
+
+**Backend:**
+- `build_class_resource_pools`: Paladin level 1 получает 1 spell slot (level 1). Временно, до системы левелинга.
+- Остальной бэкенд (validate_smite, build_smite_damage, combat_manager, RuleBrain) уже полностью рабочий — менять не надо.
+
+**Frontend:**
+- При клике Attack на цель — если у игрока есть spell slots, показать вложенный выбор: "Attack" (без smite) и "Attack + Smite (slot N)" для каждого доступного уровня слотов. Если слотов нет — обычная атака без промежуточного шага.
+- Отправка: `sendAction("attack", { target_id, smite_slot_level })` или без smite_slot_level.
+
+**Верифицируем:** E2E — Paladin level 1 имеет spell slot, при атаке видит опцию Smite, атака со smite добавляет radiant damage и тратит слот. Без smite — обычная атака.
+
 ---
 
 ## Status
 
-**Current:** Phase 5 COMPLETE (2026-04-11). All phases complete. Ready for audit.
+**Current:** Phase 6 IN PROGRESS (2026-04-11). Tasks generated, ready to start task 1.
 
 ## Decisions
 
