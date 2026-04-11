@@ -7,7 +7,7 @@
 **Sprint:** 015-paladin-smite
 **Goal:** Paladin class с Divine Smite, spell slots как reusable resource system, multi-damage weapons и breakdown в UI.
 **Started:** 2026-04-11
-**Phase:** 3 — Divine Smite (all tasks done) — 2026-04-11
+**Phase:** 3 — Divine Smite (COMPLETE) — 2026-04-11
 
 ### Phases
 

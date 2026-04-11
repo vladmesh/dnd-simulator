@@ -39,7 +39,7 @@ ResourcePool перестаёт быть мёртвым кодом. Spell slots 
 2. [Lay on Hands Action](tasks/phase2-task2-lay-on-hands.md)
 ~~3. [Divine Sense Action](tasks/phase2-task3-divine-sense.md)~~ — deferred, see backlog `divine-sense`
 
-## Phase 3: Divine Smite
+## Phase 3: Divine Smite ✓
 
 Smite как модификатор атаки: при попадании — потратить spell slot → +2d8 radiant (slot 1). Реализуем для level 1 Paladin — один уровень слотов. Масштабирование по уровням слотов (slot 2 → +3d8) и бонус vs undead/fiend — в бэклоге (`divine-smite-scaling`), когда будет система уровней. `extra_damage` в `resolve_attack` уже принимает дополнительные компоненты — smite добавляет `DamageComponent(dice="2d8", type=DamageType.RADIANT)`.
 
@@ -76,7 +76,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 2 complete. Ready for Phase 3 task generation.
+**Current:** Phase 3 complete. Ready for Phase 4 task generation.
 
 ## Decisions
 

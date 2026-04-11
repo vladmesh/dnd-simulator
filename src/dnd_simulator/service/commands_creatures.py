@@ -97,6 +97,21 @@ class CreatureCommands(GameServiceProtocol):
             else:
                 entity.conditions = {Condition(str(c)): None for c in raw}
 
+        # Resource pools — add or replace by id
+        if "resource_pools" in updates:
+            from dnd_simulator.core.resource import ResourcePool, RestType
+
+            for pool_data in updates["resource_pools"]:
+                pool = ResourcePool(
+                    id=str(pool_data["id"]),
+                    max_uses=int(pool_data["max_uses"]),
+                    current_uses=int(pool_data["current_uses"]),
+                    reset_on=RestType(str(pool_data["reset_on"])),
+                )
+                # Replace existing pool with same id, or append
+                entity.resource_pools = [p for p in entity.resource_pools if p.id != pool.id]
+                entity.resource_pools.append(pool)
+
         # Character-level fields
         if isinstance(entity, Character) and "gold" in updates:
             entity.gold = int(updates["gold"])

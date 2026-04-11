@@ -53,6 +53,8 @@ class PatchCreatureRequest(BaseModel):
     conditions: list[str] | None = None  # D&D 5e condition names
     # Character-level
     gold: int | None = Field(default=None, ge=0)
+    # Resource pools (add/replace pools by id)
+    resource_pools: list[dict[str, object]] | None = None
     # NPC-level
     personality: str | None = None
 
