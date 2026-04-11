@@ -117,7 +117,7 @@ Smite как модификатор атаки: при попадании — п
 1. [TargetMode/TargetScope Enums + Validation](tasks/phase6-task1-target-enums-validation.md)
 2. [Frontend Target Scope Routing](tasks/phase6-task2-frontend-target-scope.md)
 
-## Phase 7: Smite UI + Level 1 Spell Slot
+## Phase 7: Smite UI + Level 1 Spell Slot ✓
 
 Паладин level 1 не имеет spell slots (по RAW они появляются на level 2). Пока нет системы левелинга — даём 1 spell slot на level 1 как временное решение, чтобы smite был тестируемым. Переделаем когда появится левелинг.
 
