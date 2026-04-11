@@ -101,6 +101,7 @@ class EventType(Enum):
     ENTITY_USE_ITEM = "entity_use_item"
     ENTITY_BLESS = "entity_bless"
     ENTITY_SECOND_WIND = "entity_second_wind"
+    ENTITY_LAY_ON_HANDS = "entity_lay_on_hands"
     ENTITY_EQUIP = "entity_equip"
     ENTITY_UNEQUIP = "entity_unequip"
     ENTITY_BUY = "entity_buy"

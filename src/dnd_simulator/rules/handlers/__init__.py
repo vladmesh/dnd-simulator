@@ -20,6 +20,7 @@ from dnd_simulator.rules.handlers.equipment import (
 from dnd_simulator.rules.handlers.items import (
     handle_bless,
     handle_idle,
+    handle_lay_on_hands,
     handle_say,
     handle_second_wind,
     handle_use_item,
@@ -52,6 +53,7 @@ __all__ = [
     "handle_equip_shield",
     "handle_flee",
     "handle_idle",
+    "handle_lay_on_hands",
     "handle_long_rest",
     "handle_move",
     "handle_move_to",

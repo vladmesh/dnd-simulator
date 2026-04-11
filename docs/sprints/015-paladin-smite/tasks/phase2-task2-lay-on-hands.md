@@ -65,4 +65,10 @@ After tests are red:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Handler placed in `rules/handlers/items.py` alongside Second Wind — same pattern: class check, resource pool, heal, emit event.
+- Used `Creature as CreatureType` alias for runtime import inside handler (module-level `Creature` is TYPE_CHECKING-only).
+- Test fixtures for Fighter include `second_wind` pool because `ClassFeatureActionProvider` unconditionally calls `has_resource("second_wind")` for Fighters — bare Fighters without the pool would crash the provider. Not a bug in production (all Fighters have pools), just a test fixture concern.

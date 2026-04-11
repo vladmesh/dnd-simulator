@@ -99,6 +99,12 @@ class ClassFeatureActionProvider:
             if validate_action(creature, probe, ctx) is None:
                 result.append(ActionType.SECOND_WIND)
 
+        # Paladin: Lay on Hands (requires resource pool)
+        if creature.char_class == CharClass.PALADIN and has_resource(creature, "lay_on_hands"):
+            probe = Action(name=ActionType.LAY_ON_HANDS)
+            if validate_action(creature, probe, ctx) is None:
+                result.append(ActionType.LAY_ON_HANDS)
+
         return result
 
 

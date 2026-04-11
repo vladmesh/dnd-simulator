@@ -427,6 +427,24 @@ _reg(
 
 _reg(
     ActionDef(
+        action_type=ActionType.LAY_ON_HANDS,
+        description=N_("Lay on Hands: spend HP from your healing pool to heal a creature."),
+        cost_type=CostType.ACTION,
+        targeted=True,
+        provider_managed=True,
+        params=(
+            ParamDef("target_id", "string", N_("ID of creature to heal (omit for self)")),
+            ParamDef("amount", "integer", N_("HP to spend from pool"), required=True),
+        ),
+        llm_hint=(
+            "Lay on Hands: spend points from your divine healing pool to restore HP. "
+            "Touch range — self or adjacent creature. Choose how many points to spend (1 to pool remaining)."
+        ),
+    )
+)
+
+_reg(
+    ActionDef(
         action_type=ActionType.LONG_REST,
         description=N_("Take a long rest: heal to full, restore all resources. Takes 8 hours."),
         cost_type=CostType.FREE,

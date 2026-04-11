@@ -102,6 +102,64 @@ def handle_use_item(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Actio
     return ActionResult(success=False, error=f"Cannot use item of type '{item.item_type}' — try equipping it instead")
 
 
+def handle_lay_on_hands(
+    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
+) -> ActionResult:
+    """Lay on Hands: Paladin spends pool HP to heal self or a touched creature."""
+    from dnd_simulator.core.character import Character, CharClass
+    from dnd_simulator.core.character import Creature as CreatureType
+    from dnd_simulator.rules.resources import use_resource
+
+    if not isinstance(actor, Character) or actor.char_class != CharClass.PALADIN:
+        return ActionResult(success=False, error="Only Paladins can use Lay on Hands")
+
+    amount = int(str(action.params["amount"]))
+    if amount < 1:
+        return ActionResult(success=False, error="Amount must be at least 1")
+
+    # Check pool has enough
+    pool = next((p for p in actor.resource_pools if p.id == "lay_on_hands"), None)
+    if pool is None:
+        return ActionResult(success=False, error="No lay_on_hands pool")
+    if pool.current_uses < amount:
+        return ActionResult(
+            success=False,
+            error=f"Insufficient pool: {pool.current_uses} remaining, need {amount}",
+        )
+
+    # Resolve target
+    target_id = action.params.get("target_id")
+    if target_id is not None:
+        target_id = str(target_id)
+        if ctx.get_entity is None:
+            return ActionResult(success=False, error="Cannot resolve target")
+        target_entity = ctx.get_entity(target_id)
+        if target_entity is None or not isinstance(target_entity, CreatureType):
+            return ActionResult(success=False, error=f"Target '{target_id}' not found")
+        target = target_entity
+    else:
+        target = actor
+
+    # Spend pool and heal
+    use_resource(actor, "lay_on_hands", amount=amount)
+    healed = target.heal(amount)
+
+    logger.info("lay_on_hands", target=target.id, amount=amount, healed=healed)
+    emit_fn(
+        Event(
+            event_type=EventType.ENTITY_LAY_ON_HANDS,
+            source_layer="entities",
+            data={
+                "entity_id": actor.id,
+                "target_id": target.id,
+                "amount": amount,
+                "healed": healed,
+            },
+        )
+    )
+    return ActionResult()
+
+
 _BLESS_DURATION_ROUNDS = 3
 
 
