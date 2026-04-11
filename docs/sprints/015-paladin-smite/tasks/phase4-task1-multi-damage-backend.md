@@ -53,4 +53,8 @@ Key files already working:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All 11 tests pass immediately — the multi-damage infrastructure was already fully functional across the entire chain (WeaponDef → resolve_attack → build_damage_components → perception). This task validated the existing code rather than implementing new behavior. Created 2 magic weapon catalog entries (flaming longsword, frost dagger) as reusable content. The "bug" in build_damage_components line 89 (flat bonus type from first component) is confirmed correct per D&D 5e rules.

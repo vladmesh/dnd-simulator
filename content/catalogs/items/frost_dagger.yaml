@@ -1,0 +1,15 @@
+name: Frost Dagger
+type: weapon
+weapon_id: frost_dagger
+category: simple
+attack_name: frost stab
+damage:
+  - dice: "1d4"
+    type: piercing
+  - dice: "1d4"
+    type: cold
+ability: dex
+modifier: 1
+is_magic: true
+is_finesse: true
+is_light: true
