@@ -74,7 +74,7 @@ Smite как модификатор атаки: при попадании — п
 1. [Resource Pools in Awareness + Spell Slot UI](tasks/phase5-task1-spell-slot-ui.md)
 2. [Paladin Combo Integration Test](tasks/phase5-task2-paladin-combo-integration.md)
 
-## Phase 6: Action Target Scope
+## Phase 6: Action Target Scope ✓
 
 Явная типизация целей для всех экшенов. Сейчас `ActionDef.targeted: bool` — бинарный флаг, фронтенд всех называет `enemies` и показывает один список `nearby` (без self). Это ломает Lay on Hands (нельзя выбрать себя) и не масштабируется на будущие заклинания.
 
@@ -137,7 +137,7 @@ Smite как модификатор атаки: при попадании — п
 
 ## Status
 
-**Current:** Phase 6 IN PROGRESS (2026-04-11). Tasks generated, ready to start task 1.
+**Current:** Phase 7 PLANNED (2026-04-11). Phase 6 complete.
 
 ## Decisions
 

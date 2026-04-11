@@ -6,7 +6,6 @@ import { BudgetDisplay } from "./BudgetDisplay"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { categorizeActions } from "@/lib/actionCategories"
-import type { CombatAwareness } from "@/types/game"
 import { getActionLabel } from "./action-bar/utils"
 import { ActionButton } from "./action-bar/ActionButton"
 import { ConsumableDrawer } from "./action-bar/ConsumableDrawer"
@@ -20,6 +19,7 @@ export function ActionBar() {
   const budget = useGameStore((s) => s.budget)
   const mode = useGameStore((s) => s.mode)
   const awareness = useGameStore((s) => s.awareness)
+  const player = useGameStore((s) => s.player)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 
   const sendAction = useCallback((name: string, params?: Record<string, unknown>) => {
@@ -45,8 +45,7 @@ export function ActionBar() {
   const availableItems = awareness?.available_items ?? []
 
   const isCombat = mode === "combat" && awareness && "self_hp" in awareness
-  const nearby = isCombat ? (awareness as CombatAwareness).nearby : []
-  const player = useGameStore((s) => s.player)
+  const nearby = awareness?.nearby ?? []
   const selfId = player?.player_id
 
   const groups = categorizeActions(available)

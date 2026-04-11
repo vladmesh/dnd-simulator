@@ -788,6 +788,120 @@ class TestDivineSmite:
             requests.delete(f"{api}/sessions/{sid}", timeout=15)
 
 
+# ── Target Scope ─────────────────────────────────────────────────────
+
+
+class TestTargetScope:
+    """Phase 6: target_mode/target_scope in available_actions, scope validation."""
+
+    def test_turn_actions_include_target_mode_and_scope(self, ws_arena: tuple[str, str, str]) -> None:
+        """Every action in a turn message carries target_mode and target_scope."""
+        ws_base, sid, pid = ws_arena
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            msg = ws_recv(sock)
+            assert msg["type"] == "turn"
+            actions = msg["awareness"]["available_actions"]
+            assert len(actions) > 0
+
+            for action in actions:
+                assert "target_mode" in action, f"action '{action['name']}' missing target_mode"
+                assert "target_scope" in action, f"action '{action['name']}' missing target_scope"
+        finally:
+            sock.close()
+
+    def test_attack_action_has_hostile_scope(self, ws_arena: tuple[str, str, str]) -> None:
+        """Attack action should have target_mode=single, target_scope=hostile."""
+        ws_base, sid, pid = ws_arena
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            msg = ws_recv(sock)
+            assert msg["type"] == "turn"
+            actions = msg["awareness"]["available_actions"]
+            attack = next((a for a in actions if a["name"] == "attack"), None)
+            assert attack is not None, "attack action not found in available_actions"
+            assert attack["target_mode"] == "single"
+            assert attack["target_scope"] == "hostile"
+        finally:
+            sock.close()
+
+    def test_lay_on_hands_has_ally_scope(self, _urls: tuple[str, str, str]) -> None:
+        """Paladin's lay_on_hands should have target_mode=single, target_scope=ally."""
+        api, player_api, ws_base = _urls
+        resp = requests.post(f"{api}/sessions", json={"world_name": "arena", "lang": "en"}, timeout=10)
+        resp.raise_for_status()
+        sid = resp.json()["session_id"]
+
+        try:
+            resp = requests.post(
+                f"{player_api}/sessions/{sid}/character",
+                json={
+                    "name": "Scope Paladin",
+                    "race": "human",
+                    "char_class": "paladin",
+                    "alignment": "lawful_good",
+                    "start_location": "arena_floor",
+                    "ability_scores": {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 10, "cha": 14},
+                },
+                timeout=10,
+            )
+            resp.raise_for_status()
+            pid = resp.json()["player_id"]
+
+            # Damage paladin so lay_on_hands appears (provider hides it at full HP)
+            requests.patch(
+                f"{api}/sessions/{sid}/creatures/{pid}",
+                json={"current_hp": 5},
+                timeout=5,
+            ).raise_for_status()
+
+            sock = ws_connect(ws_base, sid, pid)
+            try:
+                msg = ws_recv(sock)
+                assert msg["type"] == "turn"
+                actions = msg["awareness"]["available_actions"]
+                loh = next((a for a in actions if a["name"] == "lay_on_hands"), None)
+                assert loh is not None, f"lay_on_hands not in actions: {[a['name'] for a in actions]}"
+                assert loh["target_mode"] == "single"
+                assert loh["target_scope"] == "ally"
+            finally:
+                sock.close()
+        finally:
+            requests.delete(f"{api}/sessions/{sid}", timeout=10)
+
+    def test_self_actions_have_self_mode(self, ws_arena: tuple[str, str, str]) -> None:
+        """Dodge/dash/disengage should have target_mode=self."""
+        ws_base, sid, pid = ws_arena
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            msg = ws_recv(sock)
+            assert msg["type"] == "turn"
+            actions = {a["name"]: a for a in msg["awareness"]["available_actions"]}
+            for name in ("dodge", "dash", "disengage"):
+                if name in actions:
+                    assert actions[name]["target_mode"] == "self", (
+                        f"{name} expected target_mode=self, got {actions[name]['target_mode']}"
+                    )
+        finally:
+            sock.close()
+
+    def test_none_mode_actions(self, ws_arena: tuple[str, str, str]) -> None:
+        """Equip/say/wait/end_turn should have target_mode=none."""
+        ws_base, sid, pid = ws_arena
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            msg = ws_recv(sock)
+            assert msg["type"] == "turn"
+            actions = {a["name"]: a for a in msg["awareness"]["available_actions"]}
+            for name in ("end_turn",):
+                if name in actions:
+                    assert actions[name]["target_mode"] == "none", (
+                        f"{name} expected target_mode=none, got {actions[name]['target_mode']}"
+                    )
+        finally:
+            sock.close()
+
+
 # ── Error handling ────────────────────────────────────────────────────
 
 
