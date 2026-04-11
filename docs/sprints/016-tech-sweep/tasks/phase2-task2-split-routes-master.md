@@ -57,4 +57,14 @@ Delete `routes_master.py` after the split. Update `app.py` to import the two new
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Split `routes_master.py` (521 lines, 32 routes) into:
+- `routes_world.py` (247 lines, 14 routes) — tag `world-management`
+- `routes_session.py` (285 lines, 18 routes) — tag `session`
+
+Both keep the `/api/master` prefix so no API paths changed, and the `I18nMiddleware` regex in `app.py` still matches session paths. Helpers `_format_time` and `_get_session` moved to `routes_session.py` (only session routes use them; no need for a shared helpers module).
+
+Added `TestWorldManagement` class in `tests/integration/test_rest_api.py` with 4 smoke tests: list library templates, get manifest, get world template, 404 on nonexistent world. All 134 integration tests pass; `make lint`/`make typecheck`/`make test-unit` green.

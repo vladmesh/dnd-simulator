@@ -15,8 +15,9 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from dnd_simulator.adapters.api.deps import get_service, set_service
 from dnd_simulator.adapters.api.routes_content import content_router
-from dnd_simulator.adapters.api.routes_master import router as master_router
 from dnd_simulator.adapters.api.routes_player import router as player_router
+from dnd_simulator.adapters.api.routes_session import router as session_router
+from dnd_simulator.adapters.api.routes_world import router as world_router
 from dnd_simulator.adapters.api.routes_ws import router as ws_router
 from dnd_simulator.i18n import set_language
 from dnd_simulator.llm.client import LlmClient
@@ -87,7 +88,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(master_router)
+app.include_router(world_router)
+app.include_router(session_router)
 app.include_router(content_router)
 app.include_router(player_router)
 app.include_router(ws_router)

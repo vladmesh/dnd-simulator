@@ -80,6 +80,42 @@ class TestWorldListing:
         assert "sneak_test" in world_ids
 
 
+# ── World management ──────────────────────────────────────────────────
+
+
+class TestWorldManagement:
+    """Smoke coverage for world-management endpoints — ensures router wiring is intact."""
+
+    def test_list_library_templates(self, api_url: str) -> None:
+        resp = requests.get(f"{api_url}/library/geography", timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+        templates = resp.json()
+        assert isinstance(templates, list)
+        # Every entry has the expected shape.
+        for t in templates:
+            assert "slug" in t
+            assert "name" in t
+            assert t["layer_type"] == "geography"
+
+    def test_get_world_manifest(self, api_url: str) -> None:
+        resp = requests.get(f"{api_url}/worlds/arena/manifest", timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+        data = resp.json()
+        assert data["world_id"] == "arena"
+        assert isinstance(data["layers"], list)
+        assert len(data["layers"]) > 0
+
+    def test_get_world_template(self, api_url: str) -> None:
+        resp = requests.get(f"{api_url}/worlds/arena", timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+        data = resp.json()
+        assert isinstance(data, dict)
+
+    def test_get_nonexistent_world_404(self, api_url: str) -> None:
+        resp = requests.get(f"{api_url}/worlds/does_not_exist/manifest", timeout=5)
+        assert resp.status_code == HTTPStatus.NOT_FOUND
+
+
 # ── Player ────────────────────────────────────────────────────────────
 
 
