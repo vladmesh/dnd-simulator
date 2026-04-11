@@ -133,6 +133,11 @@ Smite как модификатор атаки: при попадании — п
 
 **Верифицируем:** E2E — Paladin level 1 имеет spell slot, при атаке видит опцию Smite, атака со smite добавляет radiant damage и тратит слот. Без smite — обычная атака.
 
+**Tasks:**
+
+1. [Level 1 Paladin Spell Slot (Temporary)](tasks/phase7-task1-level1-spell-slot.md)
+2. [Smite Choice UI in Attack Flow](tasks/phase7-task2-smite-choice-ui.md)
+
 ---
 
 ## Status
