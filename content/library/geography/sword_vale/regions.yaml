@@ -7,6 +7,9 @@ silverport:
   elevation: 5
   terrain: coast
   water_proximity: 0.9
+  battle_map:
+    width: 40
+    height: 40
   connections:
   - target: highfield
     direction: e
@@ -21,6 +24,9 @@ highfield:
   elevation: 150
   terrain: plains
   water_proximity: 0.1
+  battle_map:
+    width: 80
+    height: 80
   connections:
   - target: silverport
     direction: w
@@ -53,6 +59,9 @@ iron_peaks:
   elevation: 2800
   terrain: mountains
   water_proximity: 0.0
+  battle_map:
+    width: 50
+    height: 50
   connections:
   - target: highfield
     direction: s
@@ -67,6 +76,9 @@ frostholm:
   elevation: 800
   terrain: tundra
   water_proximity: 0.05
+  battle_map:
+    width: 70
+    height: 70
   connections:
   - target: iron_peaks
     direction: s
@@ -79,6 +91,9 @@ bogmire:
   elevation: 20
   terrain: swamp
   water_proximity: 0.7
+  battle_map:
+    width: 50
+    height: 50
   connections:
   - target: highfield
     direction: w
@@ -93,6 +108,9 @@ dustmere:
   elevation: 400
   terrain: desert
   water_proximity: 0.0
+  battle_map:
+    width: 80
+    height: 80
   connections:
   - target: bogmire
     direction: n

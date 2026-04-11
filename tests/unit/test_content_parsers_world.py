@@ -18,6 +18,7 @@ from dnd_simulator.content_loader.schemas import (
     SettlementContent,
 )
 from dnd_simulator.content_loader.world import (
+    load_battle_maps,
     load_locations,
     load_nations,
     load_settlements,
@@ -332,3 +333,29 @@ class TestStartGameIntegration:
         assert session.world is not None
         # All 5 layers present
         assert len(session.world.layers) == 5
+
+
+# ---------------------------------------------------------------------------
+# 9. Battle map configs from regions.yaml
+# ---------------------------------------------------------------------------
+
+
+class TestBattleMapsFromRegions:
+    """Load sword_vale regions → verify battle_map configs are present."""
+
+    def test_load_battle_maps_returns_nonempty(self) -> None:
+        battle_maps = load_battle_maps(GEOGRAPHY_PATH)
+        assert len(battle_maps) >= 2, "Expected at least 2 regions with battle_map configs"
+
+    def test_battle_map_dimensions(self) -> None:
+        battle_maps = load_battle_maps(GEOGRAPHY_PATH)
+        for _region_id, bm in battle_maps.items():
+            assert bm.width > 0
+            assert bm.height > 0
+
+    def test_town_maps_smaller_than_wilderness(self) -> None:
+        battle_maps = load_battle_maps(GEOGRAPHY_PATH)
+        # Silverport (coast/town) should have a tighter map than open plains
+        assert "silverport" in battle_maps
+        assert "highfield" in battle_maps
+        assert battle_maps["silverport"].width <= battle_maps["highfield"].width

@@ -48,4 +48,10 @@ Fix: add `battle_map` configs to `sword_vale/regions.yaml` with sensible per-reg
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+**A) Second Wind perception formatter:** Added `_perceive_second_wind()` to `perception.py` following the `_perceive_bless` pattern — first/third person messages with healed HP amount. Added dispatch entry for `EventType.ENTITY_SECOND_WIND`. Added Russian translations to `.po` file.
+
+**B) Battle map configs:** Added `battle_map` sections to 6 of 7 sword_vale regions (greenwood omitted — forest at default 60x60). Silverport 40x40 (tight port town), Highfield/Dustmere 80x80 (open terrain), Iron Peaks/Bogmire 50x50 (constrained terrain), Frostholm 70x70 (tundra).

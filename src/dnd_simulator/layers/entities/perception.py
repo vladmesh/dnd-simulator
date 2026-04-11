@@ -298,6 +298,16 @@ def _perceive_bless(event: Event, observer: Character, get_entity: GetEntityFn) 
     return _("{entity} invokes a blessing (+d4 to attack rolls for {n} rounds)").format(entity=desc, n=duration)
 
 
+def _perceive_second_wind(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    d = event.data
+    entity_id = str(d["entity_id"])
+    healed = d["healed"]
+    if entity_id == observer.id:
+        return _("You catch your breath, regaining {hp} HP").format(hp=healed)
+    desc = _describe(observer, entity_id, get_entity)
+    return _("{entity} catches their breath, regaining {hp} HP").format(entity=desc, hp=healed)
+
+
 def _perceive_equip(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     d = event.data
     entity_id = str(d["entity_id"])
@@ -444,6 +454,7 @@ _DISPATCH: dict[EventType, _PerceiveHandler] = {
     EventType.ENTITY_DASH: _perceive_dash,
     EventType.ENTITY_USE_ITEM: _perceive_use_item,
     EventType.ENTITY_BLESS: _perceive_bless,
+    EventType.ENTITY_SECOND_WIND: _perceive_second_wind,
     EventType.ENTITY_EQUIP: _perceive_equip,
     EventType.ENTITY_UNEQUIP: _perceive_unequip,
     EventType.ENTITY_BUY: _perceive_buy,

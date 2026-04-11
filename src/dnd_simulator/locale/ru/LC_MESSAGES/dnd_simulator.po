@@ -323,6 +323,13 @@ msgstr "Ты призываешь благословение (+d4 к броск�
 msgid "{entity} invokes a blessing (+d4 to attack rolls for {n} rounds)"
 msgstr "{entity} призывает благословение (+d4 к броскам атаки на {n} раундов)"
 
+#: Second Wind
+msgid "You catch your breath, regaining {hp} HP"
+msgstr "Ты переводишь дух и восстанавливаешь {hp} ОЗ"
+
+msgid "{entity} catches their breath, regaining {hp} HP"
+msgstr "{entity} переводит дух и восстанавливает {hp} ОЗ"
+
 #: Equip / Unequip
 msgid "You equip {weapon}"
 msgstr "Ты экипируешь {weapon}"

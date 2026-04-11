@@ -281,6 +281,31 @@ class TestPerceiveDodgeFlee:
         assert "flee" in result
 
 
+class TestPerceiveSecondWind:
+    def test_perceive_second_wind_self(self) -> None:
+        observer = Character(id="p1", name="Hero", location_id="r1")
+        event = Event(
+            event_type=EventType.ENTITY_SECOND_WIND,
+            source_layer="entities",
+            data={"entity_id": "p1", "healed": 5, "dice_detail": [{"sides": 10, "result": 3}]},
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer))
+        assert "5" in result
+        assert "you" in result.lower()
+
+    def test_perceive_second_wind_other(self) -> None:
+        observer = Character(id="p1", name="Hero", location_id="r1")
+        npc = Character(id="n1", name="Guard", location_id="r1", race=Race.DWARF)
+        event = Event(
+            event_type=EventType.ENTITY_SECOND_WIND,
+            source_layer="entities",
+            data={"entity_id": "n1", "healed": 8, "dice_detail": [{"sides": 10, "result": 6}]},
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer, npc))
+        assert "8" in result
+        assert "dwarf" in result.lower()
+
+
 # --- Combat mode switching ---
 
 
