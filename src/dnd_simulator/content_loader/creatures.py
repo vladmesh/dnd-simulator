@@ -26,7 +26,13 @@ from dnd_simulator.core.character import (
     DamageComponent,
     DamageType,
 )
-from dnd_simulator.core.class_features import ClassFeatures, FighterFeatures, FightingStyle, RogueFeatures
+from dnd_simulator.core.class_features import (
+    ClassFeatures,
+    FighterFeatures,
+    FightingStyle,
+    PaladinFeatures,
+    RogueFeatures,
+)
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.layers.entities.models import Npc, NpcMemory, resolve_schedule
@@ -89,25 +95,46 @@ def parse_class_features(char_class: CharClass, data: dict[str, Any]) -> list[Cl
         sneak_dice = int(cf_data.get("sneak_attack_dice", 1))
         features.append(RogueFeatures(sneak_attack_dice=sneak_dice))
 
+    if char_class == CharClass.PALADIN:
+        style_raw = cf_data.get("fighting_style")
+        style = FightingStyle(style_raw) if style_raw else None
+        features.append(PaladinFeatures(fighting_style=style))
+
     return features
 
 
-_SPELL_SLOT_TABLES: dict[CharClass, dict[int, int]] = {
-    # Paladin L1 slots will be added in Phase 2
+_SPELL_SLOT_TABLES: dict[CharClass, dict[int, dict[int, int]]] = {
+    # Paladin half-caster: spellcasting starts at level 2
+    CharClass.PALADIN: {
+        2: {1: 2},
+        3: {1: 3},
+        4: {1: 3},
+        5: {1: 4, 2: 2},
+    },
 }
 
 
-def build_class_resource_pools(char_class: CharClass) -> list[ResourcePool]:
-    """Create default resource pools for a class.
+def build_class_resource_pools(char_class: CharClass, level: int = 1) -> list[ResourcePool]:
+    """Create default resource pools for a class at a given level.
 
     Fighter: second_wind (1/short rest).
-    Casters: spell slot pools from slot table (long rest).
+    Paladin: lay_on_hands (5 * level, long rest) + spell slots (half-caster table).
     """
     pools: list[ResourcePool] = []
     if char_class == CharClass.FIGHTER:
         pools.append(ResourcePool(id="second_wind", max_uses=1, current_uses=1, reset_on=RestType.SHORT_REST))
+    if char_class == CharClass.PALADIN:
+        loh_max = 5 * level
+        pools.append(
+            ResourcePool(id="lay_on_hands", max_uses=loh_max, current_uses=loh_max, reset_on=RestType.LONG_REST)
+        )
     if char_class in _SPELL_SLOT_TABLES:
-        pools.extend(build_spell_slot_pools(_SPELL_SLOT_TABLES[char_class]))
+        level_table = _SPELL_SLOT_TABLES[char_class]
+        # Find the highest level entry <= creature level
+        applicable_levels = [lv for lv in level_table if lv <= level]
+        if applicable_levels:
+            slot_table = level_table[max(applicable_levels)]
+            pools.extend(build_spell_slot_pools(slot_table))
     return pools
 
 
@@ -153,6 +180,7 @@ def _to_npc(
         faction_id=model.faction,
         race=model.race,
         char_class=model.char_class,
+        level=model.level,
         role=model.role,
         personality=resolve_text(model.personality, lang) if model.personality else "",
         description=resolve_text(model.description, lang) if model.description else "",
@@ -175,7 +203,7 @@ def _to_npc(
         equipped_feet=equipped["equipped_feet"],
         equipped_ring=equipped["equipped_ring"],
         class_features=parse_class_features(model.char_class, raw_data),
-        resource_pools=build_class_resource_pools(model.char_class),
+        resource_pools=build_class_resource_pools(model.char_class, level=model.level),
         combat_position=tuple(model.combat_position) if model.combat_position else None,  # type: ignore[arg-type]
         reputation=dict(model.reputation),
     )
@@ -265,7 +293,7 @@ def _to_player(
         equipped_feet=equipped["equipped_feet"],
         equipped_ring=equipped["equipped_ring"],
         class_features=parse_class_features(model.char_class, raw_data),
-        resource_pools=build_class_resource_pools(model.char_class),
+        resource_pools=build_class_resource_pools(model.char_class, level=model.level),
         combat_position=tuple(model.combat_position) if model.combat_position else None,  # type: ignore[arg-type]
         reputation=dict(model.reputation),
     )

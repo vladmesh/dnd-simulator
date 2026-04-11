@@ -10,10 +10,10 @@ import math
 from dnd_simulator.core.character import Ability, CharClass
 from dnd_simulator.core.class_features import FightingStyle
 
-# Hit die size per class (only Fighter and Rogue implemented).
 HIT_DICE: dict[CharClass, int] = {
     CharClass.FIGHTER: 10,
     CharClass.ROGUE: 8,
+    CharClass.PALADIN: 10,
 }
 
 
@@ -83,6 +83,7 @@ STARTING_GOLD = 100
 _STARTING_EQUIPMENT: dict[CharClass, list[str]] = {
     CharClass.FIGHTER: ["chain_mail", "longsword", "shield"],
     CharClass.ROGUE: ["leather", "rapier", "shortbow", "dagger"],
+    CharClass.PALADIN: ["chain_mail", "longsword", "shield"],
 }
 
 # GWF fighters get a greatsword instead of longsword + shield.

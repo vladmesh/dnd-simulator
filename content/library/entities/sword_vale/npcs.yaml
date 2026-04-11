@@ -216,3 +216,47 @@ lira:
       equipped: true
     - ref: studded_leather
       equipped: true
+
+aldwyn:
+  name:
+    en: Brother Aldwyn
+    ru: Брат Олдвин
+  start_location: silverport_city_barracks
+  settlement_id: silverport_city
+  faction: kingdom
+  role: guard
+  ai: rule_based
+  class: paladin
+  level: 2
+  hp: 18
+  ac: 16
+  ability_scores:
+    str: 16
+    dex: 10
+    con: 14
+    int: 8
+    wis: 12
+    cha: 14
+  class_features:
+    fighting_style: defense
+  description:
+    en: A broad-shouldered man in polished chainmail with a sunburst pendant, standing watch at the temple entrance.
+    ru: Широкоплечий мужчина в начищенной кольчуге с кулоном-солнцем, стоящий на страже у входа в храм.
+  personality:
+    en: >
+      Devout and compassionate. Serves as the temple's protector
+      and healer. Believes in redemption and second chances.
+      Speaks calmly but firmly. Will heal the wounded regardless
+      of faction, but will not tolerate violence in the temple.
+    ru: >
+      Набожный и сострадательный. Служит защитником и целителем
+      при храме. Верит в искупление и второй шанс.
+      Говорит спокойно, но твёрдо. Исцелит раненого независимо
+      от фракции, но не потерпит насилия в храме.
+  items:
+    - ref: longsword
+      equipped: true
+    - ref: chain_mail
+      equipped: true
+    - ref: shield
+      equipped: true

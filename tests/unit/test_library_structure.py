@@ -30,7 +30,7 @@ SWORD_VALE_COUNTS = {
     "locations": 32,
     "nations": 3,
     "factions": 5,
-    "npcs": 6,
+    "npcs": 7,
     "settlements": 10,
     "squads": 3,
     "monster_templates": 4,

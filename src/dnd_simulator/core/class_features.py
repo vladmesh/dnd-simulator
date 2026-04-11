@@ -45,5 +45,13 @@ class RogueFeatures:
     cost_overrides: tuple[CostOverride, ...] = field(default=_CUNNING_ACTION_OVERRIDES)
 
 
+@dataclass(frozen=True)
+class PaladinFeatures:
+    """Paladin class features (level 1+)."""
+
+    fighting_style: FightingStyle | None = None
+    cost_overrides: tuple[CostOverride, ...] = ()
+
+
 # Union of all class feature types — extend as new classes are implemented.
-ClassFeatures = FighterFeatures | RogueFeatures
+ClassFeatures = FighterFeatures | RogueFeatures | PaladinFeatures

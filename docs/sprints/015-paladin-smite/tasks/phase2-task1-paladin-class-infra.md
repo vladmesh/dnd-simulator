@@ -58,4 +58,12 @@ After tests are red:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Added `level` field to `NpcContent` schema (was missing, only `PlayerContent` had it). NPCs now pass level to resource pool creation.
+- `_to_npc()` now passes `level=model.level` to the Npc constructor (was defaulting to 1).
+- Changed `_SPELL_SLOT_TABLES` structure from `dict[CharClass, dict[int, int]]` to `dict[CharClass, dict[int, dict[int, int]]]` — keyed by class → character level → {slot_level: count}. This supports the half-caster progression where different character levels unlock different slot configurations.
+- `use_resource()` error message changed from "exhausted" to "insufficient uses" — more informative for variable-amount spending. Updated old test match pattern.
+- Updated NPC count in `test_library_structure.py` (6 → 7) and `test_manifest_game_service.py` (6 → 7) for new Paladin NPC.

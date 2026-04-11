@@ -313,6 +313,7 @@ class NpcContent(BaseModel):
     name: LocalizedText
     race: Race = Race.HUMAN
     char_class: CharClass = Field(CharClass.COMMONER, alias="class")
+    level: int = 1
     role: NpcRole = NpcRole.COMMONER
     start_location: str = ""
     settlement_id: str = ""

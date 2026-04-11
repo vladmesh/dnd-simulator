@@ -80,7 +80,7 @@ class TestUseResource:
 
     def test_use_exhausted_raises(self) -> None:
         creature = _creature(ResourcePool("second_wind", 1, 0, RestType.SHORT_REST))
-        with pytest.raises(ValueError, match="exhausted"):
+        with pytest.raises(ValueError, match="insufficient uses"):
             use_resource(creature, "second_wind")
 
     def test_use_missing_pool_raises(self) -> None:

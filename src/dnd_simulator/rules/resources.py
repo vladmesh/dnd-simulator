@@ -51,13 +51,18 @@ def has_resource(creature: Creature, pool_id: str) -> bool:
     raise KeyError(f"No resource pool '{pool_id}' on {creature.id}")
 
 
-def use_resource(creature: Creature, pool_id: str) -> None:
-    """Consume 1 use of the named resource. Raises if empty or missing."""
+def use_resource(creature: Creature, pool_id: str, *, amount: int = 1) -> None:
+    """Consume *amount* uses of the named resource. Raises if empty, missing, or insufficient."""
+    if amount < 1:
+        raise ValueError(f"amount must be >= 1, got {amount}")
     for pool in creature.resource_pools:
         if pool.id == pool_id:
-            if pool.current_uses <= 0:
-                raise ValueError(f"Resource '{pool_id}' on {creature.id} is exhausted (0/{pool.max_uses})")
-            pool.current_uses -= 1
+            if pool.current_uses < amount:
+                raise ValueError(
+                    f"Resource '{pool_id}' on {creature.id} has insufficient uses "
+                    f"({pool.current_uses}/{pool.max_uses}, need {amount})"
+                )
+            pool.current_uses -= amount
             return
     raise KeyError(f"No resource pool '{pool_id}' on {creature.id}")
 
