@@ -1,18 +1,24 @@
 import { useTranslation } from "react-i18next"
 import { Sparkles } from "lucide-react"
 import { ActionDrawer } from "./ActionDrawer"
-import { getActionLabel } from "./utils"
-import type { ActionInfo } from "@/types/game"
+import { ActionButton } from "./ActionButton"
+import type { ActionInfo, CombatAwareness, TurnBudget, ResourcePoolInfo } from "@/types/game"
 
 interface ClassFeatureDrawerProps {
   actions: ActionInfo[]
   isOpen: boolean
   onToggle: () => void
   disabled: boolean
+  nearby: CombatAwareness["nearby"]
+  selfId?: string
+  budget: TurnBudget | undefined
+  openDropdown: string | null
+  setOpenDropdown: (v: string | null) => void
   sendAction: (name: string, params?: Record<string, unknown>) => void
+  spellSlots?: ResourcePoolInfo[]
 }
 
-export function ClassFeatureDrawer({ actions, isOpen, onToggle, disabled, sendAction }: ClassFeatureDrawerProps) {
+export function ClassFeatureDrawer({ actions, isOpen, onToggle, disabled, nearby, selfId, budget, openDropdown, setOpenDropdown, sendAction, spellSlots }: ClassFeatureDrawerProps) {
   const { t } = useTranslation(["game"])
 
   return (
@@ -23,23 +29,22 @@ export function ClassFeatureDrawer({ actions, isOpen, onToggle, disabled, sendAc
       isOpen={isOpen}
       onToggle={onToggle}
       disabled={disabled}
+      title={t("game:drawer_class_features", "Class Features")}
     >
       {actions.map((action) => (
-        <button
+        <ActionButton
           key={action.name}
-          className="flex w-full flex-col gap-0.5 rounded px-3 py-1.5 text-left text-xs hover:bg-accent"
-          onClick={() => sendAction(action.name)}
-        >
-          <span className="flex items-center gap-2 font-medium">
-            {getActionLabel(t, action.name)}
-            {action.cost_type && (
-              <span className="rounded bg-muted px-1 text-[10px] text-muted-foreground">
-                {action.cost_type}
-              </span>
-            )}
-          </span>
-          <span className="text-muted-foreground">{action.description}</span>
-        </button>
+          action={action}
+          nearby={nearby}
+          selfId={selfId}
+          disabled={disabled}
+          budget={budget}
+          openDropdown={openDropdown}
+          setOpenDropdown={setOpenDropdown}
+          sendAction={sendAction}
+          t={t}
+          spellSlots={spellSlots}
+        />
       ))}
     </ActionDrawer>
   )

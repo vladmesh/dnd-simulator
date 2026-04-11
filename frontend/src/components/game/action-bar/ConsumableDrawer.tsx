@@ -22,7 +22,7 @@ export function ConsumableDrawer({ items, isOpen, onToggle, disabled, sendAction
       isOpen={isOpen}
       onToggle={onToggle}
       disabled={disabled}
-      title={t("game:consumables_tooltip", "Consumable items")}
+      title={t("game:drawer_consumables", "Consumable Items")}
     >
       {items.map((item) => (
         <button

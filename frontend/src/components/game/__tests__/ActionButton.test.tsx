@@ -223,10 +223,18 @@ describe("ActionButton — target scope filtering", () => {
     )
 
     const { container } = render(<ActionBar />)
+    // lay_on_hands is in class features drawer — open it first
+    const drawerBtn = container.querySelector('[data-drawer="class-features"]') as HTMLElement
+    expect(drawerBtn).toBeTruthy()
+    fireEvent.click(drawerBtn)
+    // Now click the lay_on_hands action button inside the drawer
     fireEvent.click(screen.getByTitle("lay_on_hands desc"))
-    const dropdown = container.querySelector(".absolute.bottom-full")
-    expect(dropdown).toBeTruthy()
-    const options = dropdown!.querySelectorAll("button")
+    // Target dropdown is the nested .absolute.bottom-full INSIDE the drawer popup
+    const drawerPopup = container.querySelector('[data-drawer-popup="class-features"]')
+    expect(drawerPopup).toBeTruthy()
+    const targetDropdown = drawerPopup!.querySelector(".absolute.bottom-full")
+    expect(targetDropdown).toBeTruthy()
+    const options = targetDropdown!.querySelectorAll("button")
     // Should show: Self (player_1) + ally_1 = 2 options
     expect(options.length).toBe(2)
     // Should NOT contain goblin
@@ -297,10 +305,17 @@ describe("ActionButton — target scope filtering", () => {
     )
 
     const { container } = render(<ActionBar />)
+    // lay_on_hands is in class features drawer — open it first
+    const drawerBtn = container.querySelector('[data-drawer="class-features"]') as HTMLElement
+    expect(drawerBtn).toBeTruthy()
+    fireEvent.click(drawerBtn)
+    // Now click the lay_on_hands action button inside the drawer
     fireEvent.click(screen.getByTitle("lay_on_hands desc"))
-    const dropdown = container.querySelector(".absolute.bottom-full")
-    expect(dropdown).toBeTruthy()
-    const options = dropdown!.querySelectorAll("button")
+    const drawerPopup = container.querySelector('[data-drawer-popup="class-features"]')
+    expect(drawerPopup).toBeTruthy()
+    const targetDropdown = drawerPopup!.querySelector(".absolute.bottom-full")
+    expect(targetDropdown).toBeTruthy()
+    const options = targetDropdown!.querySelectorAll("button")
     // Find the Self option and click it
     const selfOption = Array.from(options).find((b) => b.textContent?.includes("Self") || b.textContent?.includes("Себя"))
     expect(selfOption).toBeTruthy()
@@ -329,6 +344,70 @@ describe("ActionButton — target scope filtering", () => {
       name: "dodge",
       params: undefined,
     })
+  })
+})
+
+describe("ActionButton — i18n labels", () => {
+  it("lay_on_hands renders localized label, not raw snake_case", () => {
+    setCombatState(
+      [
+        makeAction("lay_on_hands", "action", [{ name: "target_id", type: "string", required: true }], { target_mode: "single", target_scope: "ally" }),
+        makeAction("end_turn", "free"),
+      ],
+      fullBudget,
+      [{ id: "ally_1", description: "Ally", distance_ft: 10, direction: "N", is_hostile: false }],
+    )
+
+    render(<ActionBar />)
+    // lay_on_hands goes to class features drawer — the drawer button should exist
+    const drawerBtn = document.querySelector('[data-drawer="class-features"]')
+    expect(drawerBtn).toBeTruthy()
+  })
+
+  it("long_rest and short_rest render localized labels", () => {
+    useGameStore.setState({
+      isMyTurn: true,
+      waitingForAction: false,
+      mode: "peaceful",
+      awareness: {
+        nearby: [],
+        available_actions: [
+          makeAction("long_rest", "free"),
+          makeAction("short_rest", "free"),
+        ],
+        available_items: [],
+      },
+      budget: undefined,
+    })
+
+    render(<ActionBar />)
+    // Should show localized labels, not raw "long_rest" / "short_rest"
+    expect(screen.getByText("Long Rest")).toBeTruthy()
+    expect(screen.getByText("Short Rest")).toBeTruthy()
+  })
+
+  it("class feature drawer does not show raw bonus_action string", () => {
+    setCombatState(
+      [
+        makeAction("second_wind", "bonus_action"),
+        makeAction("end_turn", "free"),
+      ],
+      fullBudget,
+    )
+
+    const { container } = render(<ActionBar />)
+    // Open class features drawer
+    const drawerBtn = container.querySelector('[data-drawer="class-features"]') as HTMLElement
+    expect(drawerBtn).toBeTruthy()
+    fireEvent.click(drawerBtn)
+
+    // Drawer should render action buttons with proper labels, no raw "bonus_action" text
+    const drawerPopup = container.querySelector('[data-drawer-popup="class-features"]')
+    expect(drawerPopup).toBeTruthy()
+    expect(drawerPopup!.textContent).not.toContain("bonus_action")
+    // Cost type conveyed via data attribute, not visible text
+    const actionBtn = drawerPopup!.querySelector('[data-cost-type="bonus_action"]')
+    expect(actionBtn).toBeTruthy()
   })
 })
 

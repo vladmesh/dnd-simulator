@@ -59,6 +59,9 @@ export function ActionBar() {
   const showConsumableDrawer = groups.consumables.length > 0 && consumableItems.length > 0
   const showClassFeatureDrawer = groups.classFeatures.length > 0
   const showInventoryDrawer = isCombat && groups.inventory.length > 0
+  // Drawer stays open when a child action's sub-dropdown (target, smite) is active
+  const classFeatureNames = new Set(groups.classFeatures.map((a) => a.name))
+  const isClassFeatureChildOpen = openDropdown != null && (classFeatureNames.has(openDropdown) || classFeatureNames.has(openDropdown.replace("-smite", "")))
   const hasDrawers = showConsumableDrawer || showClassFeatureDrawer || showInventoryDrawer
 
   const actionButtonProps = {
@@ -107,10 +110,16 @@ export function ActionBar() {
         {showClassFeatureDrawer && (
           <ClassFeatureDrawer
             actions={groups.classFeatures}
-            isOpen={openDropdown === "drawer:class-features"}
-            onToggle={() => setOpenDropdown(openDropdown === "drawer:class-features" ? null : "drawer:class-features")}
+            isOpen={openDropdown === "drawer:class-features" || isClassFeatureChildOpen}
+            onToggle={() => setOpenDropdown(openDropdown === "drawer:class-features" || isClassFeatureChildOpen ? null : "drawer:class-features")}
             disabled={waitingForAction}
+            nearby={nearby}
+            selfId={selfId}
+            budget={budget}
+            openDropdown={openDropdown}
+            setOpenDropdown={setOpenDropdown}
             sendAction={sendAction}
+            spellSlots={spellSlots}
           />
         )}
 

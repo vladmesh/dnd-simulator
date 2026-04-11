@@ -75,6 +75,14 @@ describe("ConsumableDrawer", () => {
 
 describe("ClassFeatureDrawer", () => {
   const features = [makeAction("second_wind", "bonus_action")]
+  const defaultDrawerProps = {
+    nearby: [] as { id: string; distance_ft?: number; is_hostile?: boolean }[],
+    selfId: undefined,
+    budget: undefined,
+    openDropdown: null as string | null,
+    setOpenDropdown: vi.fn(),
+    spellSlots: undefined,
+  }
 
   it("renders feature count", () => {
     const { container } = render(
@@ -84,6 +92,7 @@ describe("ClassFeatureDrawer", () => {
         onToggle={vi.fn()}
         disabled={false}
         sendAction={vi.fn()}
+        {...defaultDrawerProps}
       />,
     )
     const btn = container.querySelector("[data-drawer='class-features']")
@@ -100,6 +109,7 @@ describe("ClassFeatureDrawer", () => {
         onToggle={vi.fn()}
         disabled={false}
         sendAction={sendAction}
+        {...defaultDrawerProps}
       />,
     )
     const popup = container.querySelector("[data-drawer-popup='class-features']")
@@ -108,7 +118,7 @@ describe("ClassFeatureDrawer", () => {
     expect(sendAction).toHaveBeenCalledWith("second_wind")
   })
 
-  it("shows cost badge for bonus_action features", () => {
+  it("does not show raw bonus_action text — cost type conveyed via data attribute", () => {
     const { container } = render(
       <ClassFeatureDrawer
         actions={features}
@@ -116,10 +126,15 @@ describe("ClassFeatureDrawer", () => {
         onToggle={vi.fn()}
         disabled={false}
         sendAction={vi.fn()}
+        {...defaultDrawerProps}
       />,
     )
     const popup = container.querySelector("[data-drawer-popup='class-features']")
-    expect(popup!.textContent).toContain("bonus_action")
+    // Raw "bonus_action" should not appear as visible text
+    expect(popup!.textContent).not.toContain("bonus_action")
+    // Cost type conveyed via data attribute on the action button
+    const actionBtn = popup!.querySelector('[data-cost-type="bonus_action"]')
+    expect(actionBtn).toBeTruthy()
   })
 })
 

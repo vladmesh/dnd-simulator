@@ -24,6 +24,7 @@ export function InventoryDrawer({ actions, items, isOpen, onToggle, disabled, se
       isOpen={isOpen}
       onToggle={onToggle}
       disabled={disabled}
+      title={t("game:drawer_inventory", "Inventory")}
     >
       {actions.map((action) => {
         // For equip actions with weapon_id param, show weapon options

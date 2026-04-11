@@ -147,13 +147,16 @@ describe("ActionBar — cost-type styling", () => {
     )
 
     const { container } = render(<ActionBar />)
-    // Class features go to drawer; open it and check cost type badge
+    // Class features go to drawer; open it and check cost type via data attribute
     const drawerBtn = container.querySelector("[data-drawer='class-features']") as HTMLElement
     expect(drawerBtn).toBeTruthy()
     fireEvent.click(drawerBtn)
     const popup = container.querySelector("[data-drawer-popup='class-features']")
     expect(popup).toBeTruthy()
-    expect(popup!.textContent).toContain("bonus_action")
+    // Cost type conveyed via data attribute, not raw text
+    expect(popup!.textContent).not.toContain("bonus_action")
+    const actionBtn = popup!.querySelector('[data-cost-type="bonus_action"]')
+    expect(actionBtn).toBeTruthy()
   })
 
   it("depleted action-cost buttons show depleted styling", () => {

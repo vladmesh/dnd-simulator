@@ -84,6 +84,19 @@ describe("categorizeActions", () => {
     expect(groups.core.map((a) => a.name)).toContain("attack")
   })
 
+  it("categorizes lay_on_hands as class feature", () => {
+    const actions: ActionInfo[] = [
+      makeAction("lay_on_hands", "action", [{ name: "target_id", type: "string", required: true }]),
+      makeAction("second_wind", "bonus_action"),
+      makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }]),
+    ]
+
+    const groups = categorizeActions(actions)
+    expect(groups.classFeatures.map((a) => a.name)).toContain("lay_on_hands")
+    expect(groups.classFeatures.map((a) => a.name)).toContain("second_wind")
+    expect(groups.other.map((a) => a.name)).not.toContain("lay_on_hands")
+  })
+
   it("includes flee in core actions", () => {
     const actions: ActionInfo[] = [
       makeAction("flee", "action"),

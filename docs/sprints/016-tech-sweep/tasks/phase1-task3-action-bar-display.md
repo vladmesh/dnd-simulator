@@ -59,4 +59,18 @@ No unit tests for i18n key presence — verify manually via E2E. But write a qui
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Four fixes applied:
+
+**1. Missing i18n keys:** Added `lay_on_hands`, `long_rest`, `short_rest` action labels and `cost_action`, `cost_bonus_action`, `cost_reaction`, `cost_movement`, `cost_free` cost type labels to both en/ru game.json. Also added `drawer_class_features`, `drawer_inventory`, `drawer_consumables` for drawer tooltips.
+
+**2. `lay_on_hands` categorization:** Added to `CLASS_FEATURE_ACTIONS` set in `actionCategories.ts`. Now appears in class features drawer instead of main bar.
+
+**3. ClassFeatureDrawer upgraded to use ActionButton:** The old drawer rendered plain `<button>` elements that called `sendAction(name)` directly — no target selection, no cost styling. Replaced with `ActionButton` components so targeted actions like `lay_on_hands` (ally scope) get proper target dropdowns inside the drawer. Added logic in `ActionBar` to keep the drawer open while a child action's sub-dropdown (target selection, smite) is active.
+
+**4. Drawer tooltips:** Added `title` prop to ClassFeatureDrawer and InventoryDrawer (ConsumableDrawer already had one). All three drawers now show descriptive tooltips on hover.
+
+**Old tests modified:** Three tests across ActionBar.test.tsx, ActionButton.test.tsx, and drawers.test.tsx were updated because they asserted raw `bonus_action` text in the drawer popup — that text no longer appears since ActionButton uses `data-cost-type` attribute instead of visible text. Two ally-scope tests updated to open the class features drawer before clicking `lay_on_hands`.

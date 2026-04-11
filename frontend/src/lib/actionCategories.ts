@@ -2,7 +2,7 @@ import type { ActionInfo } from "@/types/game"
 
 const CORE_ACTIONS = new Set(["attack", "dodge", "dash", "disengage", "flee"])
 const CONSUMABLE_ACTIONS = new Set(["use_item"])
-const CLASS_FEATURE_ACTIONS = new Set(["second_wind", "bless"])
+const CLASS_FEATURE_ACTIONS = new Set(["second_wind", "bless", "lay_on_hands"])
 const INVENTORY_ACTIONS = new Set([
   "equip", "unequip",
   "equip_armor", "unequip_armor",
