@@ -73,4 +73,13 @@ MULTI, POINT, DIRECTION deferred — not needed by any current action.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `TargetMode` (NONE/SELF/SINGLE) and `TargetScope` (HOSTILE/ALLY/ANY) enums added to `core/action_defs.py`.
+- `ActionDef.targeted` is now a property (`target_mode == SINGLE`), fully backwards-compatible.
+- All 20+ action registrations updated with correct mode/scope.
+- `check_target_scope` added to validation pipeline — uses combat sides when available, falls back to faction comparison, passes through when hostility is undetermined (no factions, no sides).
+- Serialization in `service/session.py` sends `target_mode` and `target_scope` to frontend.
+- Existing dispatcher tests passed without modification — scope check is permissive when no combat sides or factions exist.

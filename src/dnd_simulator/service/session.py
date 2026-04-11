@@ -85,6 +85,8 @@ def _awareness_to_dict(
             "description": _(ad.description),
             "cost_type": ad.cost_type.value,
             "params": [{"name": p.name, "type": p.param_type, "required": p.required} for p in ad.params],
+            "target_mode": ad.target_mode.value,
+            "target_scope": ad.target_scope.value,
         }
         # Include cost options if creature has overrides for this action
         action_overrides = [ov for ov in overrides if ov.action_type == a]

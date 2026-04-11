@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from dnd_simulator.core.action import Action, ActionType
-from dnd_simulator.core.action_defs import CombatMode, get_action_def
+from dnd_simulator.core.action_defs import CombatMode, TargetMode, TargetScope, get_action_def
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.actions import action_cost
 
@@ -119,7 +119,7 @@ def check_budget(actor: Creature, action: Action, ctx: ActionContext) -> Validat
 
 def check_target_valid(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
     """For targeted actions: target must exist, be a Creature, be alive, be at same location."""
-    if not get_action_def(action.name).targeted:
+    if get_action_def(action.name).target_mode != TargetMode.SINGLE:
         return None
 
     target_id = action.params.get("target_id") if action.params else None
@@ -208,6 +208,68 @@ def check_reach(actor: Creature, action: Action, ctx: ActionContext) -> Validati
     return None
 
 
+def check_target_scope(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
+    """For SINGLE-target actions: target must match the action's scope (hostile/ally/any)."""
+    ad = get_action_def(action.name)
+    if ad.target_mode != TargetMode.SINGLE:
+        return None
+
+    target_id = action.params.get("target_id") if action.params else None
+    if not target_id:
+        return None  # probe mode
+
+    target_id = str(target_id)
+
+    # Self-targeting always allowed for ALLY and ANY scopes
+    if target_id == actor.id:
+        if ad.target_scope == TargetScope.HOSTILE:
+            return ValidationError(
+                "WRONG_TARGET_SCOPE",
+                _("Cannot target yourself with '{action}'.").format(action=action.name),
+            )
+        return None
+
+    if ctx.get_entity is None:
+        return None
+
+    from dnd_simulator.core.character import Creature as CreatureType
+
+    target = ctx.get_entity(target_id)
+    if not isinstance(target, CreatureType):
+        return None  # check_target_valid handles missing/non-creature targets
+
+    # Determine hostility via combat sides
+    from dnd_simulator.rules.combat_sides import are_allies
+
+    is_hostile: bool | None = None
+    if (
+        ctx.combat_state
+        and ctx.combat_state.entity_to_side
+        and actor.id in ctx.combat_state.entity_to_side
+        and target_id in ctx.combat_state.entity_to_side
+    ):
+        is_hostile = not are_allies(ctx.combat_state, actor.id, target_id)
+
+    if is_hostile is None:
+        # Fallback to faction comparison — if either has no faction, can't determine
+        if not actor.faction_id or not target.faction_id:
+            return None  # unknown relation, let it through
+        is_hostile = actor.faction_id != target.faction_id
+
+    if ad.target_scope == TargetScope.HOSTILE and not is_hostile:
+        return ValidationError(
+            "WRONG_TARGET_SCOPE",
+            _("'{action}' can only target hostile creatures.").format(action=action.name),
+        )
+    if ad.target_scope == TargetScope.ALLY and is_hostile:
+        return ValidationError(
+            "WRONG_TARGET_SCOPE",
+            _("'{action}' can only target allies.").format(action=action.name),
+        )
+    # TargetScope.ANY — always passes
+    return None
+
+
 _CHECKS = [
     check_actor_alive,
     check_actor_active,
@@ -216,5 +278,6 @@ _CHECKS = [
     check_budget,
     check_has_item,
     check_target_valid,
+    check_target_scope,
     check_reach,
 ]

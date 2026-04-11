@@ -28,6 +28,18 @@ class CombatMode(StrEnum):
     PEACEFUL_ONLY = "peaceful_only"
 
 
+class TargetMode(StrEnum):
+    NONE = "none"  # no creature target (equip, say, wait, etc.)
+    SELF = "self"  # target = caster, implicit (dodge, dash, second_wind)
+    SINGLE = "single"  # pick 1 creature (attack, lay_on_hands)
+
+
+class TargetScope(StrEnum):
+    HOSTILE = "hostile"  # enemies only
+    ALLY = "ally"  # allies + self
+    ANY = "any"  # everyone + self
+
+
 @dataclass(frozen=True)
 class ParamDef:
     """Definition of a single action parameter."""
@@ -61,10 +73,16 @@ class ActionDef:
     combat_mode: CombatMode = CombatMode.ANY
     params: tuple[ParamDef, ...] = ()
     llm_hint: str = ""  # overrides description for LLM tool schema
-    targeted: bool = False  # requires target_id validation
+    target_mode: TargetMode = TargetMode.NONE
+    target_scope: TargetScope = TargetScope.HOSTILE
     ends_peaceful_turn: bool = False
     internal: bool = False  # END_TURN, SKIP — excluded from LLM/frontend
     provider_managed: bool = False  # excluded from BaseActionProvider probing
+
+    @property
+    def targeted(self) -> bool:
+        """Backwards-compatible: True when action requires a creature target."""
+        return self.target_mode == TargetMode.SINGLE
 
 
 # ---------------------------------------------------------------------------
@@ -116,7 +134,8 @@ _reg(
         action_type=ActionType.ATTACK,
         description=N_("Attack a target with your equipped weapon or fists."),
         cost_type=CostType.ACTION,
-        targeted=True,
+        target_mode=TargetMode.SINGLE,
+        target_scope=TargetScope.HOSTILE,
         ends_peaceful_turn=True,
         params=(
             ParamDef("target_id", "string", N_("ID of the target entity"), required=True),
@@ -141,6 +160,7 @@ _reg(
         description=N_("Take a defensive stance. Attacks against you have disadvantage until your next turn."),
         cost_type=CostType.ACTION,
         combat_mode=CombatMode.COMBAT_ONLY,
+        target_mode=TargetMode.SELF,
         ends_peaceful_turn=True,
         params=(ParamDef("description", "string", N_("Flavor text")),),
     )
@@ -152,6 +172,7 @@ _reg(
         description=N_("Try to escape from combat."),
         cost_type=CostType.ACTION,
         combat_mode=CombatMode.COMBAT_ONLY,
+        target_mode=TargetMode.SELF,
         ends_peaceful_turn=True,
         params=(ParamDef("description", "string", N_("Flavor text")),),
     )
@@ -200,6 +221,7 @@ _reg(
         description=N_("Sprint: move up to double your speed. Costs 1 action."),
         cost_type=CostType.ACTION,
         combat_mode=CombatMode.COMBAT_ONLY,
+        target_mode=TargetMode.SELF,
         ends_peaceful_turn=True,
         params=(
             ParamDef("toward", "string", N_("ID of entity to dash toward")),
@@ -221,6 +243,7 @@ _reg(
         description=N_("Your movement doesn't provoke opportunity attacks this turn."),
         cost_type=CostType.ACTION,
         combat_mode=CombatMode.COMBAT_ONLY,
+        target_mode=TargetMode.SELF,
         ends_peaceful_turn=True,
         params=(ParamDef("cost_mode", "string", N_("Cost variant: action or bonus_action")),),
         llm_hint=(
@@ -261,6 +284,7 @@ _reg(
         action_type=ActionType.BLESS,
         description=N_("Invoke a blessing. Grants +d4 to attack rolls for several rounds."),
         cost_type=CostType.BONUS_ACTION,
+        target_mode=TargetMode.SELF,
         provider_managed=True,
         llm_hint=(
             "Invoke a blessing from your weapon. Costs a bonus action. "
@@ -395,6 +419,7 @@ _reg(
         action_type=ActionType.SECOND_WIND,
         description=N_("Heal yourself for 1d10 + fighter level HP. Once per short rest."),
         cost_type=CostType.BONUS_ACTION,
+        target_mode=TargetMode.SELF,
         provider_managed=True,
         llm_hint=(
             "Second Wind: heal yourself for 1d10 + your fighter level HP. Costs a bonus action. Once per short rest."
@@ -437,7 +462,8 @@ _reg(
         action_type=ActionType.LAY_ON_HANDS,
         description=N_("Lay on Hands: spend HP from your healing pool to heal a creature."),
         cost_type=CostType.ACTION,
-        targeted=True,
+        target_mode=TargetMode.SINGLE,
+        target_scope=TargetScope.ALLY,
         provider_managed=True,
         params=(
             ParamDef("target_id", "string", N_("ID of creature to heal (omit for self)")),
@@ -456,6 +482,7 @@ _reg(
         description=N_("Take a long rest: heal to full, restore all resources. Takes 8 hours."),
         cost_type=CostType.FREE,
         combat_mode=CombatMode.PEACEFUL_ONLY,
+        target_mode=TargetMode.SELF,
         ends_peaceful_turn=True,
         llm_hint=(
             "Long rest: heal to full HP, restore all resource pools (spell slots, Second Wind, etc.). "
@@ -470,6 +497,7 @@ _reg(
         description=N_("Take a short rest: restore short-rest resources. Takes 1 hour."),
         cost_type=CostType.FREE,
         combat_mode=CombatMode.PEACEFUL_ONLY,
+        target_mode=TargetMode.SELF,
         ends_peaceful_turn=True,
         llm_hint=(
             "Short rest: restore short-rest resources (e.g. Second Wind). "
@@ -484,7 +512,8 @@ _reg(
         description=N_("Make a melee attack as a reaction when a creature leaves your reach."),
         cost_type=CostType.REACTION,
         combat_mode=CombatMode.COMBAT_ONLY,
-        targeted=True,
+        target_mode=TargetMode.SINGLE,
+        target_scope=TargetScope.HOSTILE,
         internal=True,  # not offered by providers — triggered by movement only
         params=(ParamDef("target_id", "string", N_("Target creature ID"), required=True),),
     )
