@@ -39,4 +39,8 @@ The method should return a dict (or typed structure) that the route maps to `Wor
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward extraction. The `get_world_state()` method moved into `WorldStateCommands` mixin following the existing pattern (CreatureCommands, etc.). Route body is now 4 lines: validate session exists (for 404), call service, return model. Time formatting moved into the service method since it's part of the state payload. The route still calls `_get_session()` first to preserve the ValueError→404 conversion at the adapter boundary.

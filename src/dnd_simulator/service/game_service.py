@@ -51,6 +51,7 @@ from .commands_creatures import CreatureCommands
 from .commands_politics import PoliticsCommands
 from .commands_save import SaveCommands
 from .commands_time import TimeCommands
+from .commands_world_state import WorldStateCommands
 from .session import GameSession
 
 DEFAULT_CONTENT_DIR = Path(__file__).resolve().parents[3] / "content"
@@ -63,6 +64,7 @@ class GameService(
     PoliticsCommands,
     SaveCommands,
     TimeCommands,
+    WorldStateCommands,
 ):
     """Session management, world templates, hot controls. No turn execution."""
 
