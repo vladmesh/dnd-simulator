@@ -45,9 +45,12 @@ Smite как модификатор атаки: при попадании — п
 
 **Верифицируем:** Unit tests — smite добавляет radiant damage, тратит slot 1, нет слотов → smite недоступен. Frontend — damage log показывает "2d8 radiant (smite)" отдельной строкой.
 
+**Design:** Smite is an optional `smite_slot_level` param on the attack action, not a separate ActionType. Brain declares intent when choosing attack; slot spent only on hit.
+
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Divine Smite Rules & Attack Param](tasks/phase3-task1-smite-rules.md)
+2. [Divine Smite Combat Integration & Brain Support](tasks/phase3-task2-smite-combat-integration.md)
 
 ## Phase 4: Multi-Damage Weapons + UI Breakdown
 
