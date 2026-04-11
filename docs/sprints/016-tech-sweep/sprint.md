@@ -33,13 +33,19 @@
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Extract get_session_state() to GameService](tasks/phase2-task1-extract-session-state.md)
+2. [Split routes_master.py into routes_world + routes_session](tasks/phase2-task2-split-routes-master.md)
 
 ## Phase 3: Core Boundaries
 
-Три нарушения зависимостей. round.py → EntitiesLayer прямой импорт — через World/Layer interface. core/brain.py lazy-imports rules/ — RuleBrain в rules/ или inject. llm/ imports Npc/NpcMemory из layers — Protocol или pass data.
+Три нарушения зависимостей + 1 рефакторинг модификаторов.
 
-**Верифицируем:** `grep -rn "from.*layers" src/dnd_simulator/round.py src/dnd_simulator/core/brain.py src/dnd_simulator/llm/` → пусто. mypy + tests pass.
+1. round.py → EntitiesLayer прямой импорт — через World/Layer interface.
+2. core/brain.py lazy-imports rules/ — RuleBrain в rules/ или inject.
+3. llm/ imports Npc/NpcMemory из layers — Protocol или pass data.
+4. Fighting style modifiers scattered: `rules/modifiers.py` вручную проверяет каждый ClassFeatures (FighterFeatures, PaladinFeatures) для Defense/Dueling/GWF. Добавление нового класса (Ranger) требует правки modifiers.py — забудешь и будет баг (уже было с Paladin Defense AC). Решение: `ClassFeatures.collect_modifiers(creature) → list[Modifier]` — каждый класс декларирует свои модификаторы сам, `collect_self_modifiers()` итерирует `creature.class_features` без знания о конкретных типах. Shared logic (`_fighting_style_modifiers`) пишется один раз.
+
+**Верифицируем:** `grep -rn "from.*layers" src/dnd_simulator/round.py src/dnd_simulator/core/brain.py src/dnd_simulator/llm/` → пусто. `grep -rn "get_feature(FighterFeatures)" src/dnd_simulator/rules/modifiers.py` → пусто. mypy + tests pass.
 
 **Tasks:**
 
@@ -59,7 +65,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 1 closed (2026-04-12). Ready for Phase 2 task generation.
+**Current:** Phase 2 (Adapter & Routes) — tasks generated 2026-04-12. Ready to start task 1.
 
 ## Decisions
 
