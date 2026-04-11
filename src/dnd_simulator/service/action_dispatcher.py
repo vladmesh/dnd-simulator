@@ -44,12 +44,14 @@ from dnd_simulator.rules.handlers import (
     handle_equip_shield,
     handle_flee,
     handle_idle,
+    handle_long_rest,
     handle_move,
     handle_move_to,
     handle_opportunity_attack,
     handle_say,
     handle_second_wind,
     handle_sell,
+    handle_short_rest,
     handle_unequip,
     handle_unequip_armor,
     handle_unequip_feet,
@@ -176,6 +178,8 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.register(ActionType.SECOND_WIND, handle_second_wind)
     dispatcher.register(ActionType.BUY, handle_buy)
     dispatcher.register(ActionType.SELL, handle_sell)
+    dispatcher.register(ActionType.LONG_REST, handle_long_rest)
+    dispatcher.register(ActionType.SHORT_REST, handle_short_rest)
     dispatcher.register(ActionType.OPPORTUNITY_ATTACK, handle_opportunity_attack)
 
     # Register providers — base types exclude provider-managed actions

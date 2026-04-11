@@ -51,4 +51,8 @@ Scenarios for `tests/unit/test_rest.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward implementation. Added LONG_REST and SHORT_REST to ActionType, registered ActionDefs as PEACEFUL_ONLY with ends_peaceful_turn=True, created `rules/handlers/rest.py` with handlers following the same dormant/wake_at pattern as `handle_wait`. Registered handlers in dispatcher — they flow through BaseActionProvider automatically since they're not provider_managed. No old tests broken.

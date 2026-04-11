@@ -32,6 +32,7 @@ from dnd_simulator.rules.handlers.movement import (
     handle_wait,
 )
 from dnd_simulator.rules.handlers.reactions import handle_opportunity_attack
+from dnd_simulator.rules.handlers.rest import handle_long_rest, handle_short_rest
 from dnd_simulator.rules.handlers.trade import handle_buy, handle_sell
 
 __all__ = [
@@ -51,12 +52,14 @@ __all__ = [
     "handle_equip_shield",
     "handle_flee",
     "handle_idle",
+    "handle_long_rest",
     "handle_move",
     "handle_move_to",
     "handle_opportunity_attack",
     "handle_say",
     "handle_second_wind",
     "handle_sell",
+    "handle_short_rest",
     "handle_unequip",
     "handle_unequip_armor",
     "handle_unequip_feet",

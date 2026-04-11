@@ -427,6 +427,34 @@ _reg(
 
 _reg(
     ActionDef(
+        action_type=ActionType.LONG_REST,
+        description=N_("Take a long rest: heal to full, restore all resources. Takes 8 hours."),
+        cost_type=CostType.FREE,
+        combat_mode=CombatMode.PEACEFUL_ONLY,
+        ends_peaceful_turn=True,
+        llm_hint=(
+            "Long rest: heal to full HP, restore all resource pools (spell slots, Second Wind, etc.). "
+            "Takes 8 hours. Only available outside combat."
+        ),
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.SHORT_REST,
+        description=N_("Take a short rest: restore short-rest resources. Takes 1 hour."),
+        cost_type=CostType.FREE,
+        combat_mode=CombatMode.PEACEFUL_ONLY,
+        ends_peaceful_turn=True,
+        llm_hint=(
+            "Short rest: restore short-rest resources (e.g. Second Wind). "
+            "Does NOT heal HP or restore spell slots. Takes 1 hour. Only available outside combat."
+        ),
+    )
+)
+
+_reg(
+    ActionDef(
         action_type=ActionType.OPPORTUNITY_ATTACK,
         description=N_("Make a melee attack as a reaction when a creature leaves your reach."),
         cost_type=CostType.REACTION,
