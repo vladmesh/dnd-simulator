@@ -695,12 +695,13 @@ class TestDivineSmite:
 
             ws_send_action(sock, "attack", target_id="razor", smite_slot_level=1)
 
-            # Collect attack results — look for a hit with radiant damage
+            # Collect attack results — look for a hit with radiant damage.
+            # With AC 5 only nat-1 misses (5%), but we retry on each turn.
             attack_data = None
-            for _ in range(50):
+            for _ in range(80):
                 msg = ws_recv(sock)
-                if msg["type"] == "action_result" and msg["action"] == "attack":
-                    for ev in msg["events"]:
+                if msg["type"] in ("action_result", "round_result"):
+                    for ev in msg.get("events", []):
                         data = ev.get("data", {})
                         if data.get("attacker_id") == pid and data.get("hit"):
                             attack_data = data

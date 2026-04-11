@@ -1,0 +1,12 @@
+name: Flaming Longsword
+type: weapon
+weapon_id: flaming_longsword
+category: martial
+attack_name: flaming slash
+damage:
+  - dice: "1d8"
+    type: slashing
+  - dice: "1d6"
+    type: fire
+modifier: 1
+is_magic: true

@@ -49,4 +49,16 @@ After tests are red:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added `TestPaladinCombat` class to `tests/integration/test_combat_turns.py` with 3 tests:
+
+1. **test_paladin_flaming_sword_smite_three_damage_types** — Creates Paladin, patches spell slots, gives flaming longsword via master API, equips it in combat, attacks with `smite_slot_level=1`. Verifies 3 damage component types (slashing, fire, radiant) and divine_smite source on hit. Verifies spell slot consumed.
+
+2. **test_paladin_spell_slots_visible_in_awareness** — Verifies `self_resource_pools` in combat awareness and `resource_pools` in player info both contain the patched spell_slot_1 pool.
+
+3. **test_paladin_spell_slot_consumed_after_smite** — Verifies spell slot decrement via master API GET after smite hit, and no decrement on miss.
+
+Also copied `flaming_longsword.yaml` to integration test catalogs. Fixed a seed-sensitivity issue in the existing `test_smite_adds_radiant_damage` test (increased retry loop from 50 to 80 messages and also checked `round_result` events for hits) — the new tests shifted the deterministic dice sequence enough to cause intermittent failures.

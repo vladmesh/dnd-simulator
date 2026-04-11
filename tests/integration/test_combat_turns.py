@@ -1,4 +1,4 @@
-"""Integration tests: Full Fighter & Rogue combat turns through the live API.
+"""Integration tests: Full Fighter, Rogue & Paladin combat turns through the live API.
 
 Tests run against a live backend in docker compose with:
 - DND_DICE_SEED=42 (deterministic rolls)
@@ -376,6 +376,213 @@ class TestMixedCombatFactionSneakAttack:
                     assert "sneak_attack" not in damage_sources, (
                         f"Fighter should NOT get sneak attack, but got sources: {damage_sources}"
                     )
+            finally:
+                sock.close()
+        finally:
+            requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+
+
+# ── Test: Paladin Combo — Flaming Longsword + Divine Smite ─────────────
+
+
+class TestPaladinCombat:
+    """Paladin with flaming longsword + Divine Smite: 3 damage types, spell slot consumed."""
+
+    def test_paladin_flaming_sword_smite_three_damage_types(
+        self, api_url: str, player_api_url: str, ws_base_url: str
+    ) -> None:
+        """Paladin attacks with flaming longsword + smite → 3 damage types on hit.
+
+        Flaming longsword = 1d8 slashing + 1d6 fire.
+        Divine Smite (slot 1) = 2d8 radiant.
+        On hit: damage_components has weapon(slashing), weapon(fire), divine_smite(radiant).
+        Spell slot consumed only on hit.
+        """
+        sid, pid = _create_session(
+            api_url,
+            player_api_url,
+            "paladin",
+            ability_scores={"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 10, "cha": 14},
+        )
+        try:
+            sock = ws_connect(ws_base_url, sid, pid)
+            try:
+                # Inject spell slots (level 1 Paladin doesn't have them naturally)
+                requests.patch(
+                    f"{api_url}/sessions/{sid}/creatures/{pid}",
+                    json={
+                        "resource_pools": [
+                            {"id": "spell_slot_1", "max_uses": 2, "current_uses": 2, "reset_on": "long_rest"},
+                        ],
+                    },
+                    timeout=10,
+                ).raise_for_status()
+
+                # Give flaming longsword (goes to inventory since Paladin already has longsword)
+                give_resp = requests.post(
+                    f"{api_url}/sessions/{sid}/creatures/{pid}/items",
+                    json={
+                        "name": "Flaming Longsword",
+                        "type": "weapon",
+                        "weapon_id": "flaming_longsword",
+                        "category": "martial",
+                        "attack_name": "flaming slash",
+                        "damage": [
+                            {"dice": "1d8", "type": "slashing"},
+                            {"dice": "1d6", "type": "fire"},
+                        ],
+                        "modifier": 1,
+                        "is_magic": True,
+                    },
+                    timeout=10,
+                )
+                give_resp.raise_for_status()
+                flaming_id = give_resp.json()["item_id"]
+
+                turn = _get_turn(sock)
+                turn = _ensure_combat(sock, turn, "target_dummy")
+
+                # Equip flaming longsword (replaces starting longsword)
+                ws_send_action(sock, "equip", weapon_id=flaming_id)
+                turn = _get_turn(sock)
+
+                # Verify flaming longsword equipped
+                equipped = turn["player"]["equipped"]
+                weapon = next((e for e in equipped if e["slot"] == "weapon"), None)
+                assert weapon is not None, "Should have weapon equipped"
+                assert "flaming" in weapon["name"].lower(), (
+                    f"Expected flaming longsword equipped, got: {weapon['name']}"
+                )
+
+                # Attack with Divine Smite (slot level 1)
+                ws_send_action(sock, "attack", target_id="target_dummy", smite_slot_level=1)
+                events, _ = _collect_events_until_turn(sock)
+
+                attack_event = _find_event(events, "entity_attack")
+                assert attack_event is not None, (
+                    f"Expected entity_attack event, got: {[e.get('event_type') for e in events]}"
+                )
+
+                attack_data = attack_event["data"]
+                if attack_data["hit"]:
+                    # Verify 3 damage types
+                    components = attack_data["damage_components"]
+                    sources = [d["source"] for d in components]
+                    types = [d["type"] for d in components]
+
+                    assert "weapon" in sources, f"Expected weapon damage source, got sources: {sources}"
+                    assert "divine_smite" in sources, f"Expected divine_smite source, got sources: {sources}"
+                    assert "slashing" in types, f"Expected slashing damage type, got types: {types}"
+                    assert "fire" in types, f"Expected fire damage type, got types: {types}"
+                    assert "radiant" in types, f"Expected radiant damage type, got types: {types}"
+                    assert len(components) >= 3, (
+                        f"Expected at least 3 damage components, got {len(components)}: {components}"
+                    )
+                    assert attack_data["damage"] > 0
+
+                    # Spell slot consumed on hit
+                    creature = _get_creature(api_url, sid, pid)
+                    pools = {p["id"]: p for p in creature["resource_pools"]}
+                    assert pools["spell_slot_1"]["current_uses"] == 1, (
+                        f"Spell slot should be consumed (2→1), got: {pools['spell_slot_1']['current_uses']}"
+                    )
+            finally:
+                sock.close()
+        finally:
+            requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+
+    def test_paladin_spell_slots_visible_in_awareness(
+        self, api_url: str, player_api_url: str, ws_base_url: str
+    ) -> None:
+        """Spell slots appear in combat awareness self_resource_pools."""
+        sid, pid = _create_session(
+            api_url,
+            player_api_url,
+            "paladin",
+            ability_scores={"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 10, "cha": 14},
+        )
+        try:
+            sock = ws_connect(ws_base_url, sid, pid)
+            try:
+                # Inject spell slots
+                requests.patch(
+                    f"{api_url}/sessions/{sid}/creatures/{pid}",
+                    json={
+                        "resource_pools": [
+                            {"id": "spell_slot_1", "max_uses": 2, "current_uses": 2, "reset_on": "long_rest"},
+                        ],
+                    },
+                    timeout=10,
+                ).raise_for_status()
+
+                turn = _get_turn(sock)
+                turn = _ensure_combat(sock, turn, "target_dummy")
+
+                # Check awareness for spell slots
+                awareness_pools = turn["awareness"].get("self_resource_pools", [])
+                pool_ids = {p["id"] for p in awareness_pools}
+                assert "spell_slot_1" in pool_ids, f"Expected spell_slot_1 in awareness resource pools, got: {pool_ids}"
+
+                slot_pool = next(p for p in awareness_pools if p["id"] == "spell_slot_1")
+                assert slot_pool["max_uses"] == 2
+                assert slot_pool["current_uses"] == 2
+
+                # Also check player info has resource_pools
+                player_pools = {p["id"]: p for p in turn["player"].get("resource_pools", [])}
+                assert "spell_slot_1" in player_pools, (
+                    f"Expected spell_slot_1 in player resource_pools, got: {list(player_pools)}"
+                )
+            finally:
+                sock.close()
+        finally:
+            requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+
+    def test_paladin_spell_slot_consumed_after_smite(self, api_url: str, player_api_url: str, ws_base_url: str) -> None:
+        """After a smite hit, spell slot is consumed (verified via master API)."""
+        sid, pid = _create_session(
+            api_url,
+            player_api_url,
+            "paladin",
+            ability_scores={"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 10, "cha": 14},
+        )
+        try:
+            sock = ws_connect(ws_base_url, sid, pid)
+            try:
+                # Inject spell slots
+                requests.patch(
+                    f"{api_url}/sessions/{sid}/creatures/{pid}",
+                    json={
+                        "resource_pools": [
+                            {"id": "spell_slot_1", "max_uses": 2, "current_uses": 2, "reset_on": "long_rest"},
+                        ],
+                    },
+                    timeout=10,
+                ).raise_for_status()
+
+                # Verify initial state
+                creature = _get_creature(api_url, sid, pid)
+                pools = {p["id"]: p for p in creature["resource_pools"]}
+                assert pools["spell_slot_1"]["current_uses"] == 2
+
+                turn = _get_turn(sock)
+                turn = _ensure_combat(sock, turn, "target_dummy")
+
+                # Attack with smite (using starting longsword — single damage type is fine)
+                ws_send_action(sock, "attack", target_id="target_dummy", smite_slot_level=1)
+                events, _ = _collect_events_until_turn(sock)
+
+                attack_event = _find_event(events, "entity_attack")
+                assert attack_event is not None
+
+                # Verify slot consumed on hit (or preserved on miss)
+                creature2 = _get_creature(api_url, sid, pid)
+                pools2 = {p["id"]: p for p in creature2["resource_pools"]}
+                if attack_event["data"]["hit"]:
+                    assert pools2["spell_slot_1"]["current_uses"] == 1, (
+                        f"Spell slot should be 1 after hit+smite, got: {pools2['spell_slot_1']['current_uses']}"
+                    )
+                else:
+                    assert pools2["spell_slot_1"]["current_uses"] == 2, "Spell slot should NOT be consumed on miss"
             finally:
                 sock.close()
         finally:
