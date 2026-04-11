@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { MerchantView } from "./TradePanel"
 import { Sword, MessageCircle, ShoppingBag, Send } from "lucide-react"
+import { SmiteChoice, getSpellSlots } from "./SmiteChoice"
 
 interface NpcInspectModalProps {
   entity: NearbyEntity | CombatEntity | null
@@ -36,6 +37,7 @@ export function NpcInspectModal({ entity, open, onClose, isCombat }: NpcInspectM
   const isMyTurn = useGameStore((s) => s.isMyTurn)
   const [showTrade, setShowTrade] = useState(false)
   const [talkText, setTalkText] = useState("")
+  const [showSmite, setShowSmite] = useState(false)
 
   if (!entity) return null
 
@@ -52,7 +54,15 @@ export function NpcInspectModal({ entity, open, onClose, isCombat }: NpcInspectM
   const raceKey = nearby?.race ? `game:race_${nearby.race.toLowerCase()}` : ""
   const roleKey = nearby?.role ? `game:role_${nearby.role.toLowerCase()}` : ""
 
+  const spellSlots = isCombat && awareness && "self_resource_pools" in awareness
+    ? getSpellSlots(awareness.self_resource_pools ?? [])
+    : []
+
   const handleAttack = () => {
+    if (spellSlots.length > 0) {
+      setShowSmite(true)
+      return
+    }
     sendAction("attack", { target_id: entity.id })
     onClose()
   }
@@ -68,6 +78,7 @@ export function NpcInspectModal({ entity, open, onClose, isCombat }: NpcInspectM
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       setShowTrade(false)
+      setShowSmite(false)
       setTalkText("")
       onClose()
     }
@@ -165,6 +176,21 @@ export function NpcInspectModal({ entity, open, onClose, isCombat }: NpcInspectM
                 </Button>
               )}
             </div>
+          )}
+
+          {/* Smite choice */}
+          {showSmite && (
+            <SmiteChoice
+              slots={spellSlots}
+              onChoice={(slotLevel) => {
+                const params: Record<string, unknown> = { target_id: entity.id }
+                if (slotLevel != null) params.smite_slot_level = slotLevel
+                sendAction("attack", params)
+                setShowSmite(false)
+                onClose()
+              }}
+              onCancel={() => setShowSmite(false)}
+            />
           )}
 
           {/* Talk input */}

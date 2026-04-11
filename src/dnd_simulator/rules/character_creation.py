@@ -77,7 +77,7 @@ def validate_point_buy(scores: dict[Ability, int]) -> None:
         raise ValueError(f"Point buy cost {total_cost} exceeds budget of {POINT_BUY_BUDGET}")
 
 
-STARTING_GOLD = 100
+STARTING_GOLD = 1000
 
 # Starting equipment per class — item catalog ref IDs.
 _STARTING_EQUIPMENT: dict[CharClass, list[str]] = {

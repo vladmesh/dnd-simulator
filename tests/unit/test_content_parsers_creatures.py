@@ -56,7 +56,7 @@ class TestNpcFullRoundTrip:
             "hp": 30,
             "ac": 18,
             "speed": 30,
-            "gold": 100,
+            "gold": 1000,
             "ai": "rule_based",
             "ability_scores": {"str": 16, "dex": 12, "con": 14, "int": 10, "wis": 13, "cha": 11},
             "attacks": [

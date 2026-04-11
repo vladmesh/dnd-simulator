@@ -228,7 +228,7 @@ class TestFullConstruction:
             faction="guild",
             hp=25,
             ac=15,
-            gold=100,
+            gold=1000,
             attacks=[{"name": "Dagger", "damage": [{"dice": "1d4", "type": "piercing"}]}],
             items=[],
             ability_scores={"str": 8, "dex": 18, "con": 12, "int": 14, "wis": 10, "cha": 13},

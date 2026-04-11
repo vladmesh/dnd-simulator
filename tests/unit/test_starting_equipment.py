@@ -35,7 +35,7 @@ def _create_fighter(item_catalog: dict[str, ItemContent]) -> PlayerCharacter:
         "alignment": "true_neutral",
         "hp": 12,
         "ac": 10,
-        "gold": 100,
+        "gold": 1000,
         "ability_scores": {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 12, "cha": 8},
         "items": [
             {"ref": "chain_mail", "equipped": True},

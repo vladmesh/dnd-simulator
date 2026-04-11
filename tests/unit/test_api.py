@@ -365,7 +365,7 @@ class TestPlayerCharacterCreation:
         assert data["name"] == "Thrain"
         assert data["race"] == "dwarf"
         assert data["max_hp"] == 12  # d10 + CON 14 (+2)
-        assert data["gold"] == 100
+        assert data["gold"] == 1000
         assert data["location_id"] == "silverport_city_tavern"
 
     def test_create_character_default_region(self, tmp_path: object) -> None:

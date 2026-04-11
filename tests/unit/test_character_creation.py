@@ -222,5 +222,5 @@ class TestStartingEquipment:
 
 
 class TestStartingGold:
-    def test_starting_gold_is_100(self) -> None:
-        assert STARTING_GOLD == 100
+    def test_starting_gold_is_1000(self) -> None:
+        assert STARTING_GOLD == 1000

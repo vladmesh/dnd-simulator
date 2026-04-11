@@ -503,7 +503,7 @@ class TestInventoryEquipment:
         try:
             msg = ws_recv(sock)
             assert msg["type"] == "turn"
-            assert msg["player"]["gold"] == 100
+            assert msg["player"]["gold"] == 1000
         finally:
             sock.close()
 

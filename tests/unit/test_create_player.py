@@ -62,7 +62,7 @@ class TestFighterCreation:
         assert data["max_hp"] == 12
         assert data["hp"] == 12  # current_hp == max_hp at creation
 
-    def test_fighter_gold_is_100(self, tmp_path: Path) -> None:
+    def test_fighter_gold_is_1000(self, tmp_path: Path) -> None:
         client = _make_client(tmp_path)
         sid = _create_session(client)
         resp = client.post(
@@ -76,7 +76,7 @@ class TestFighterCreation:
             },
         )
         assert resp.status_code == HTTPStatus.OK
-        assert resp.json()["gold"] == 100
+        assert resp.json()["gold"] == 1000
 
     def test_fighter_ac_chain_mail_shield_defense(self, tmp_path: Path) -> None:
         """Fighter with Defense style: chain mail (16) + shield (+2) + Defense (+1) = 19."""
@@ -182,7 +182,7 @@ class TestRogueCreation:
         assert resp.status_code == HTTPStatus.OK
         assert resp.json()["ac"] == 13
 
-    def test_rogue_gold_is_100(self, tmp_path: Path) -> None:
+    def test_rogue_gold_is_1000(self, tmp_path: Path) -> None:
         client = _make_client(tmp_path)
         sid = _create_session(client)
         resp = client.post(
@@ -195,7 +195,7 @@ class TestRogueCreation:
             },
         )
         assert resp.status_code == HTTPStatus.OK
-        assert resp.json()["gold"] == 100
+        assert resp.json()["gold"] == 1000
 
 
 class TestValidation:

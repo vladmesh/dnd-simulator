@@ -79,7 +79,7 @@ class TestEntityHierarchy:
             alignment=Alignment.CHAOTIC_GOOD,
             max_hp=28,
             current_hp=28,
-            gold=100,
+            gold=1000,
         )
         assert c.race == Race.TIEFLING
         assert c.char_class == CharClass.FIGHTER
