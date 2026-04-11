@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { ChevronDown } from "lucide-react"
-import type { ActionInfo, CombatAwareness, CostOption } from "@/types/game"
+import type { ActionInfo, CombatAwareness, CostOption, ResourcePoolInfo } from "@/types/game"
 import type { TurnBudget } from "@/types/game"
 import { hasParam, getActionLabel, isCostDepleted, getButtonVariant, getCostTypeClass } from "./utils"
 import { TargetDropdown } from "./TargetDropdown"
@@ -17,6 +17,7 @@ interface ActionButtonProps {
   setOpenDropdown: (v: string | null) => void
   sendAction: (name: string, params?: Record<string, unknown>) => void
   t: (key: string, opts?: Record<string, unknown>) => string
+  spellSlots?: ResourcePoolInfo[]
 }
 
 /** Label for a cost type (action / bonus_action). */
@@ -26,7 +27,7 @@ function costLabel(t: (key: string) => string, costType: string): string {
   return result === key ? costType.replace("_", " ") : result
 }
 
-export function ActionButton({ action, nearby, selfId, disabled, budget, openDropdown, setOpenDropdown, sendAction, t }: ActionButtonProps) {
+export function ActionButton({ action, nearby, selfId, disabled, budget, openDropdown, setOpenDropdown, sendAction, t, spellSlots }: ActionButtonProps) {
   const { name } = action
   const costOptions = action.cost_options
   const hasCostChoice = costOptions != null && costOptions.length > 1
@@ -50,11 +51,11 @@ export function ActionButton({ action, nearby, selfId, disabled, budget, openDro
     )
   }
 
-  return <CoreActionButton action={action} nearby={nearby} selfId={selfId} disabled={disabled} budget={budget} openDropdown={openDropdown} setOpenDropdown={setOpenDropdown} sendAction={sendAction} t={t} />
+  return <CoreActionButton action={action} nearby={nearby} selfId={selfId} disabled={disabled} budget={budget} openDropdown={openDropdown} setOpenDropdown={setOpenDropdown} sendAction={sendAction} t={t} spellSlots={spellSlots} />
 }
 
 /** Standard action button — no cost choice. */
-function CoreActionButton({ action, nearby, selfId, disabled, budget, openDropdown, setOpenDropdown, sendAction, t }: ActionButtonProps) {
+function CoreActionButton({ action, nearby, selfId, disabled, budget, openDropdown, setOpenDropdown, sendAction, t, spellSlots }: ActionButtonProps) {
   const { name } = action
   const costType = action.cost_type
   const depleted = isCostDepleted(costType, budget)
@@ -80,6 +81,7 @@ function CoreActionButton({ action, nearby, selfId, disabled, budget, openDropdo
         costType={costType}
         depleted={depleted}
         costClass={costClass}
+        spellSlots={spellSlots}
       />
     )
   }

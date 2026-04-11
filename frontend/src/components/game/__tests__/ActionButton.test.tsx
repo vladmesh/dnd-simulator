@@ -16,7 +16,7 @@ vi.mock("@/transport/wsClient", () => ({
 
 import { useGameStore } from "@/store/gameStore"
 import { ActionBar } from "../ActionBar"
-import type { ActionInfo, CombatAwareness, TurnBudget } from "@/types/game"
+import type { ActionInfo, CombatAwareness, TurnBudget, ResourcePoolInfo } from "@/types/game"
 import { wsClient } from "@/transport/wsClient"
 
 // ---------------------------------------------------------------------------
@@ -36,6 +36,7 @@ function setCombatState(
   actions: ActionInfo[],
   budget: TurnBudget,
   nearby: CombatAwareness["nearby"] = [],
+  resourcePools?: ResourcePoolInfo[],
 ) {
   const awareness: CombatAwareness = {
     self_hp: 20,
@@ -49,6 +50,7 @@ function setCombatState(
     round_number: 1,
     available_actions: actions,
     available_items: [],
+    self_resource_pools: resourcePools,
   }
 
   useGameStore.setState({
@@ -327,6 +329,151 @@ describe("ActionButton — target scope filtering", () => {
       name: "dodge",
       params: undefined,
     })
+  })
+})
+
+describe("ActionButton — smite choice", () => {
+  const attackAction = makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }], { target_mode: "single", target_scope: "hostile" })
+  const spellSlots: ResourcePoolInfo[] = [
+    { id: "spell_slot_1", max_uses: 2, current_uses: 1 },
+  ]
+
+  it("attack with spell slots shows smite choice after target selection", () => {
+    setCombatState(
+      [attackAction],
+      fullBudget,
+      [{ id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N", is_hostile: true }],
+      spellSlots,
+    )
+
+    const { container } = render(<ActionBar />)
+    fireEvent.click(screen.getByTitle("attack desc"))
+    // Single target → auto-selects target, but should show smite choice instead of sending
+    expect(wsClient.send).not.toHaveBeenCalled()
+    // Smite choice panel should be visible
+    const smitePanel = container.querySelector("[data-testid='smite-choice']")
+    expect(smitePanel).toBeTruthy()
+  })
+
+  it("attack without spell slots sends action immediately (no smite choice)", () => {
+    setCombatState(
+      [attackAction],
+      fullBudget,
+      [{ id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N", is_hostile: true }],
+      // no resource pools
+    )
+
+    render(<ActionBar />)
+    fireEvent.click(screen.getByTitle("attack desc"))
+    // Single target → auto-sends directly, no intermediate step
+    expect(wsClient.send).toHaveBeenCalledWith({
+      type: "action",
+      name: "attack",
+      params: { target_id: "goblin_1" },
+    })
+  })
+
+  it("selecting 'Attack + Smite' sends smite_slot_level param", () => {
+    setCombatState(
+      [attackAction],
+      fullBudget,
+      [{ id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N", is_hostile: true }],
+      spellSlots,
+    )
+
+    const { container } = render(<ActionBar />)
+    fireEvent.click(screen.getByTitle("attack desc"))
+    // Smite choice should be visible
+    const smitePanel = container.querySelector("[data-testid='smite-choice']")
+    expect(smitePanel).toBeTruthy()
+    // Click the smite option
+    const smiteOption = Array.from(smitePanel!.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("Smite") || b.textContent?.includes("Кара"),
+    )
+    expect(smiteOption).toBeTruthy()
+    fireEvent.click(smiteOption!)
+
+    expect(wsClient.send).toHaveBeenCalledWith({
+      type: "action",
+      name: "attack",
+      params: { target_id: "goblin_1", smite_slot_level: 1 },
+    })
+  })
+
+  it("selecting 'Attack' (no smite) sends without smite_slot_level", () => {
+    setCombatState(
+      [attackAction],
+      fullBudget,
+      [{ id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N", is_hostile: true }],
+      spellSlots,
+    )
+
+    const { container } = render(<ActionBar />)
+    fireEvent.click(screen.getByTitle("attack desc"))
+    const smitePanel = container.querySelector("[data-testid='smite-choice']")
+    expect(smitePanel).toBeTruthy()
+    // Click the normal attack option (without smite)
+    const normalOption = Array.from(smitePanel!.querySelectorAll("button")).find((b) => {
+      const text = b.textContent ?? ""
+      return (text.includes("Attack") || text.includes("Атака")) && !text.includes("Smite") && !text.includes("Кара")
+    })
+    expect(normalOption).toBeTruthy()
+    fireEvent.click(normalOption!)
+
+    expect(wsClient.send).toHaveBeenCalledWith({
+      type: "action",
+      name: "attack",
+      params: { target_id: "goblin_1" },
+    })
+  })
+
+  it("depleted spell slots are shown but disabled", () => {
+    const depletedSlots: ResourcePoolInfo[] = [
+      { id: "spell_slot_1", max_uses: 2, current_uses: 0 },
+    ]
+
+    setCombatState(
+      [attackAction],
+      fullBudget,
+      [{ id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N", is_hostile: true }],
+      depletedSlots,
+    )
+
+    const { container } = render(<ActionBar />)
+    fireEvent.click(screen.getByTitle("attack desc"))
+    const smitePanel = container.querySelector("[data-testid='smite-choice']")
+    expect(smitePanel).toBeTruthy()
+    // The smite option should be disabled
+    const smiteOption = Array.from(smitePanel!.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("Smite") || b.textContent?.includes("Кара"),
+    )
+    expect(smiteOption).toBeTruthy()
+    expect(smiteOption!.disabled).toBe(true)
+  })
+
+  it("smite choice works with multiple targets (dropdown then smite)", () => {
+    setCombatState(
+      [attackAction],
+      fullBudget,
+      [
+        { id: "goblin_1", description: "Goblin", distance_ft: 10, direction: "N", is_hostile: true },
+        { id: "goblin_2", description: "Goblin 2", distance_ft: 15, direction: "S", is_hostile: true },
+      ],
+      spellSlots,
+    )
+
+    const { container } = render(<ActionBar />)
+    // Open target dropdown
+    fireEvent.click(screen.getByTitle("attack desc"))
+    const targetDropdown = container.querySelector(".absolute.bottom-full")
+    expect(targetDropdown).toBeTruthy()
+    // Select a target
+    const targetOptions = targetDropdown!.querySelectorAll("button")
+    fireEvent.click(targetOptions[0]) // click goblin_1
+    // Should NOT send yet — smite choice should appear
+    expect(wsClient.send).not.toHaveBeenCalled()
+    const smitePanel = container.querySelector("[data-testid='smite-choice']")
+    expect(smitePanel).toBeTruthy()
   })
 })
 

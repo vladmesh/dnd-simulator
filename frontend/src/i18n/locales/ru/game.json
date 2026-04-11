@@ -132,5 +132,8 @@
   "dmg_force": "силовой",
   "dmg_psychic": "психический",
   "spell_slots": "Ячейки заклинаний",
-  "spell_slot_level": "Ур{{level}}"
+  "spell_slot_level": "Ур{{level}}",
+  "smite_attack_normal": "Атака",
+  "smite_attack_with_smite": "Атака + Кара (ячейка {{level}})",
+  "smite_attack_with_smite_depleted": "Кара (ячейка {{level}}) — нет зарядов"
 }

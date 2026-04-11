@@ -40,4 +40,15 @@ The `smite_slot_level` param already exists on the attack ActionDef and flows th
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented smite choice as a two-step flow in TargetDropdown:
+1. Player clicks attack → selects target (single auto-select or multi dropdown)
+2. If spell slots exist with `spell_slot_*` IDs → show intermediate smite choice panel (`data-testid="smite-choice"`) with "Attack" (normal) and "Attack + Smite (slot N)" per slot level
+3. If no spell slots → send attack immediately (unchanged behavior)
+
+Data flow: `awareness.self_resource_pools` → ActionBar reads it → passes as `spellSlots` prop → ActionButton → TargetDropdown. Only attack actions with `spell_slot_*` pools trigger the smite choice. Depleted slots (current_uses === 0) are shown greyed out and disabled.
+
+No old tests modified — all 16 existing ActionButton tests pass unchanged. Added 5 new smite choice tests.

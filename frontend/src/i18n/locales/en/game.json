@@ -132,5 +132,8 @@
   "dmg_force": "force",
   "dmg_psychic": "psychic",
   "spell_slots": "Spell Slots",
-  "spell_slot_level": "Lv{{level}}"
+  "spell_slot_level": "Lv{{level}}",
+  "smite_attack_normal": "Attack",
+  "smite_attack_with_smite": "Attack + Smite (slot {{level}})",
+  "smite_attack_with_smite_depleted": "Smite (slot {{level}}) — no charges"
 }

@@ -47,6 +47,7 @@ export function ActionBar() {
   const isCombat = mode === "combat" && awareness && "self_hp" in awareness
   const nearby = awareness?.nearby ?? []
   const selfId = player?.player_id
+  const spellSlots = isCombat && "self_resource_pools" in awareness ? awareness.self_resource_pools : undefined
 
   const groups = categorizeActions(available)
 
@@ -69,6 +70,7 @@ export function ActionBar() {
     setOpenDropdown,
     sendAction,
     t,
+    spellSlots,
   }
 
   return (
