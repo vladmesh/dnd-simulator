@@ -63,7 +63,7 @@ Smite как модификатор атаки: при попадании — п
 1. [Multi-Damage Weapon Catalog & Backend Tests](tasks/phase4-task1-multi-damage-backend.md)
 2. [UI Damage Type Breakdown Polish](tasks/phase4-task2-ui-damage-breakdown.md)
 
-## Phase 5: Smite + Magic Weapon Combo + Polish
+## Phase 5: Smite + Magic Weapon Combo + Polish ✓
 
 Полный combo: Paladin с flaming longsword + smite → 1d8 slashing + 1d6 fire + 2d8 radiant. Три типа урона, все красиво отображаются. RuleBrain для Paladin: когда смайтить (crit → always, low HP → yes). Frontend: spell slot display на Character panel. Integration test: полный бой Paladin vs enemy.
 
@@ -78,7 +78,7 @@ Smite как модификатор атаки: при попадании — п
 
 ## Status
 
-**Current:** Phase 5 tasks generated. Ready to start task 1.
+**Current:** Phase 5 COMPLETE (2026-04-11). All phases complete. Ready for audit.
 
 ## Decisions
 

@@ -60,8 +60,9 @@ class PatchCreatureRequest(BaseModel):
 
 
 class GiveItemRequest(BaseModel):
-    name: str
-    type: str  # "potion", "weapon", "armor", "shield"
+    name: str | None = None
+    type: str | None = None  # "potion", "weapon", "armor", "shield"
+    ref: str | None = None  # catalog reference (e.g. "flaming_longsword")
     price: int | None = None
     # Potion fields
     heal_dice: str | None = None

@@ -79,6 +79,7 @@ def build_damage_components(
                 "type": dr.type.value,
             }
         )
+    primary_type = result.damage[0].type.value if result.damage else "bludgeoning"
     for dbc in damage_components:
         components.append(
             {
@@ -86,7 +87,7 @@ def build_damage_components(
                 "dice": "",
                 "dice_detail": [],
                 "amount": dbc.value,
-                "type": result.damage[0].type.value,
+                "type": primary_type,
             }
         )
     return components

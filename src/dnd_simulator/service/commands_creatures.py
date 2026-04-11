@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.conditions import Condition
@@ -135,7 +136,8 @@ class CreatureCommands(GameServiceProtocol):
 
     def give_item(self, session_id: str, entity_id: str, item_data: dict[str, Any]) -> dict[str, str]:
         """Give an item to a creature. Auto-equips weapon if creature has none equipped."""
-        from dnd_simulator.content_loader import parse_equipped_weapon, parse_items
+        from dnd_simulator.content_loader import load_catalog, parse_equipped_weapon, parse_items
+        from dnd_simulator.content_loader.schemas import ItemContent
         from dnd_simulator.core.character import Creature
 
         session = self._get_session(session_id)
@@ -143,7 +145,10 @@ class CreatureCommands(GameServiceProtocol):
         if entity is None or not isinstance(entity, Creature):
             raise ValueError(f"Creature '{entity_id}' not found")
 
-        items = parse_items([item_data])
+        content_dir: Path = self._content_dir  # type: ignore[attr-defined]
+        item_catalog_dir = content_dir / "catalogs" / "items"
+        item_catalog = load_catalog(item_catalog_dir, ItemContent) if item_catalog_dir.exists() else {}
+        items = parse_items([item_data], item_catalog=item_catalog)
         item = items[0]
         entity.inventory.append(item)
 
