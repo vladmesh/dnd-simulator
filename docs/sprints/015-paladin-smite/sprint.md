@@ -35,7 +35,9 @@ ResourcePool перестаёт быть мёртвым кодом. Spell slots 
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Paladin Class Infrastructure](tasks/phase2-task1-paladin-class-infra.md)
+2. [Lay on Hands Action](tasks/phase2-task2-lay-on-hands.md)
+3. [Divine Sense Action](tasks/phase2-task3-divine-sense.md)
 
 ## Phase 3: Divine Smite
 
