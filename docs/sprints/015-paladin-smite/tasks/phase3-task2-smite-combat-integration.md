@@ -51,4 +51,8 @@ Changes:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Smite integration follows the sneak attack pattern closely: extra_damage tuple extended before resolve_attack, slot consumed after hit confirmed. RuleBrain always smites at lowest available slot level in melee — simple heuristic, works well for L2 Paladin with only 1st-level slots. More sophisticated strategies (crit-only smite, slot conservation) deferred to future work. Perception _format_damage already handles multi-source damage correctly — "divine_smite" renders with no changes needed.

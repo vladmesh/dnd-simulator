@@ -13,6 +13,7 @@ from dnd_simulator.i18n import _
 from dnd_simulator.layers.entities.combat_serialization import deserialize_combats, serialize_combats
 from dnd_simulator.rules.combat import AttackResult, resolve_attack, roll_initiative
 from dnd_simulator.rules.combat_sides import are_allies, build_combat_sides
+from dnd_simulator.rules.divine_smite import build_smite_damage, validate_smite
 from dnd_simulator.rules.handlers.attack_resolution import (
     build_attack_event,
     build_damage_components,
@@ -26,6 +27,7 @@ from dnd_simulator.rules.reputation import (
     default_rep_for_faction,
     effective_relation,
 )
+from dnd_simulator.rules.resources import spell_slot_pool_id, use_resource
 from dnd_simulator.rules.sneak_attack import check_sneak_attack, find_adjacent_ally
 from dnd_simulator.rules.weapons import get_weapon_attack
 
@@ -298,6 +300,16 @@ class CombatManager:
             ally_adjacent=ally_adjacent,
         )
 
+        # Divine Smite: validate before attack, add damage, spend slot only on hit.
+        smite_slot_level: int | None = None
+        raw_smite = event.data.get("smite_slot_level")
+        if raw_smite is not None:
+            smite_slot_level = int(str(raw_smite))
+            smite_error = validate_smite(attacker, smite_slot_level)
+            if smite_error is not None:
+                return ActionResult(success=False, error=smite_error)
+            extra_damage = (*extra_damage, build_smite_damage(smite_slot_level))
+
         logger.info(
             "attack_roll",
             attacker=attacker.name,
@@ -340,6 +352,8 @@ class CombatManager:
                     if ed.source == "sneak_attack":
                         self._sneak_attack_used.add(attacker_id)
                         break
+            if smite_slot_level is not None:
+                use_resource(attacker, spell_slot_pool_id(smite_slot_level))
 
         self._location_log[attacker.location_id].append(
             Event(event_type=EventType.ENTITY_ATTACK, source_layer="entities", data=log_data)

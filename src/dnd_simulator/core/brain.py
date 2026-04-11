@@ -337,8 +337,27 @@ class RuleBrain(Brain):
                 distance_ft=dist,
                 ranged=ctx.is_ranged,
             )
-            return Action(name=ActionType.ATTACK, params={"target_id": ctx.target.id})
+            params: dict[str, object] = {"target_id": ctx.target.id}
+            # Divine Smite: always smite in melee when spell slots available.
+            if not ctx.is_ranged:
+                smite_level = self._pick_smite_level(ctx.creature)
+                if smite_level is not None:
+                    params["smite_slot_level"] = smite_level
+            return Action(name=ActionType.ATTACK, params=params)
         return None
+
+    @staticmethod
+    def _pick_smite_level(creature: Creature) -> int | None:
+        """Return lowest available spell slot level for Divine Smite, or None."""
+        from dnd_simulator.core.character import Character, CharClass
+        from dnd_simulator.rules.resources import get_available_spell_slots
+
+        if not isinstance(creature, Character) or creature.char_class != CharClass.PALADIN:
+            return None
+        slots = get_available_spell_slots(creature)
+        if not slots:
+            return None
+        return min(slots)
 
     def _try_advance(self, ctx: _CombatContext) -> Action | None:
         if ctx.target is None:
