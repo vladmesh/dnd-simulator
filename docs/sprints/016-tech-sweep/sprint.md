@@ -12,7 +12,7 @@
 
 ---
 
-## Phase 1: Bug Sweep
+## Phase 1: Bug Sweep ✓
 
 Все баги из E2E 2026-04-12 + backlog. AC в бою (Defense style не применяется в combat resolution), фантомная кнопка "3" на Fighter action bar, raw snake_case имена экшенов (`long_rest`, `lay_on_hands`), raw `bonus_action` в тултипе, missing frontend formatter для `entity_second_wind`, battle map configs из regions.yaml не подключены.
 
@@ -21,9 +21,9 @@
 **Tasks:**
 
 1. [Fix class_features lost on save/load (AC Defense bug)](tasks/phase1-task1-class-features-save-load.md) ✓
-2. [Fix 26 pre-existing frontend test failures](tasks/phase1-task2-frontend-test-mocks.md)
-3. [Fix action bar display issues (raw names, cost labels, drawer clarity)](tasks/phase1-task3-action-bar-display.md)
-4. [Second Wind perception formatter + battle map content configs](tasks/phase1-task4-second-wind-log-battlemap.md)
+2. [Fix 26 pre-existing frontend test failures](tasks/phase1-task2-frontend-test-mocks.md) ✓
+3. [Fix action bar display issues (raw names, cost labels, drawer clarity)](tasks/phase1-task3-action-bar-display.md) ✓
+4. [Second Wind perception formatter + battle map content configs](tasks/phase1-task4-second-wind-log-battlemap.md) ✓
 
 ## Phase 2: Adapter & Routes
 
@@ -59,7 +59,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 1 tasks generated (2026-04-12). Ready to start task 1.
+**Current:** Phase 1 closed (2026-04-12). Ready for Phase 2 task generation.
 
 ## Decisions
 

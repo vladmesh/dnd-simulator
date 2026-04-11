@@ -682,6 +682,10 @@ class TestDivineSmite:
             timeout=5,
         ).raise_for_status()
 
+        # Remove other NPCs to keep rounds short (only player + razor).
+        for npc_id in ("shadow", "iron", "paladin"):
+            requests.delete(f"{api}/sessions/{sid}/creatures/{npc_id}", timeout=5)
+
         yield ws_base, sid, pid
         requests.delete(f"{api}/sessions/{sid}", timeout=15)
 

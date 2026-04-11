@@ -14,6 +14,7 @@ from dnd_simulator.core.character import Ability
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.character_creation import POINT_BUY_BUDGET, STARTING_GOLD
+from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.service.game_service import GameService
 from dnd_simulator.service.session import GameSession
 
@@ -74,7 +75,7 @@ def _player_status(p: PlayerCharacter) -> PlayerStatusResponse:
         alignment=p.alignment.value,
         hp=p.current_hp,
         max_hp=p.max_hp,
-        ac=p.ac,
+        ac=effective_ac(p),
         gold=p.gold,
         location_id=p.location_id,
         appearance=p.appearance,

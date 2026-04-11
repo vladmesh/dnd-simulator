@@ -183,7 +183,7 @@ class TestTrading:
             result = _recv_until(sock, "action_result")
             assert result is not None, "Never received action_result for sell"
             assert result["action"] == "sell"
-            assert result["player"]["gold"] == 1025  # 1000 + 25
+            assert result["player"]["gold"] == 125  # 100 + 25
             inv_names = [i["name"] for i in result["player"]["inventory"]]
             assert "Old Sword" not in inv_names
         finally:

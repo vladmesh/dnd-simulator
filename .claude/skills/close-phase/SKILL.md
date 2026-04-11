@@ -33,10 +33,24 @@ Read `docs/STATUS.md` to find the active sprint and current phase. Then read the
 Run the existing integration tests:
 
 ```bash
-make test-integration
+make test-integration 2>&1 | tee /tmp/integration-test-output.txt
 ```
 
-If they fail — analyze and fix. Same contract logic as in `/implement`: understand why they fail before changing anything.
+**ANY failure is a hard blocker — no exceptions.** This includes tests unrelated to the current phase, pre-existing failures, and flaky tests. A failing test means something is wrong, and we fix it before moving on.
+
+#### If tests fail:
+
+1. **Redirect output to file, read from file.** Never re-run just to see different output — read `/tmp/integration-test-output.txt`.
+2. **Full investigation.** For each failing test:
+   - Read the full traceback and understand what the test expects vs what happened.
+   - Read the test code and the production code it exercises.
+   - Determine root cause: is it a real bug, a race condition, a timing issue, a test that needs updating?
+3. **Fix on the spot.** Whether the failure is from our changes or pre-existing — fix it. This includes:
+   - Flaky tests: find the race condition and make the test deterministic (increase timeouts, add retries with backoff, fix the underlying race). "It passes sometimes" is not acceptable.
+   - Pre-existing bugs: fix the bug or fix the test if the test is wrong.
+   - Our regressions: fix the code.
+4. **Re-run until all green.** After fixes, re-run the full suite. Repeat until 0 failures.
+5. **If a fix is non-trivial (>15 min) or unclear** — stop, report to the user with full diagnosis, and block the phase. Do NOT skip the test or mark it as known-flaky.
 
 Then review what the phase added and determine if new integration tests are needed. If the phase introduced:
 
