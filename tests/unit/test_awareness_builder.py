@@ -869,6 +869,97 @@ class TestNearbyEntityRelation:
         assert nearby[0].relation == "neutral"
 
 
+class TestCombatAwarenessResourcePools:
+    """Combat awareness includes creature's resource pools (spell slots, etc.)."""
+
+    def test_awareness_includes_resource_pools(self) -> None:
+        """Level 2 Paladin with spell_slot_1 pool (2 uses) — awareness shows the pool."""
+        from dnd_simulator.core.awareness import ResourcePoolInfo
+        from dnd_simulator.core.resource import ResourcePool, RestType
+
+        player = Character(
+            id="p1",
+            name="Paladin",
+            location_id="arena",
+            in_combat=True,
+            max_hp=18,
+            current_hp=18,
+            attacks=(_SWORD,),
+            resource_pools=[
+                ResourcePool(id="spell_slot_1", max_uses=2, current_uses=2, reset_on=RestType.LONG_REST),
+            ],
+        )
+
+        layer = EntitiesLayer([player])
+        battle_map = BattleMap(width=60, height=60)
+        battle_map.set_position("p1", Position(10, 10))
+        combat = CombatState(location_id="arena", turn_order=["p1"], battle_map=battle_map)
+        layer._combat._combats["arena"] = combat
+
+        awareness = layer.build_combat_awareness(player)
+        assert len(awareness.self_resource_pools) == 1
+        pool = awareness.self_resource_pools[0]
+        assert isinstance(pool, ResourcePoolInfo)
+        assert pool.id == "spell_slot_1"
+        assert pool.max_uses == 2
+        assert pool.current_uses == 2
+
+    def test_awareness_reflects_spent_slots(self) -> None:
+        """Spell slot pool with 1 of 2 uses remaining — awareness reflects current_uses=1."""
+        from dnd_simulator.core.resource import ResourcePool, RestType
+
+        player = Character(
+            id="p1",
+            name="Paladin",
+            location_id="arena",
+            in_combat=True,
+            max_hp=18,
+            current_hp=18,
+            attacks=(_SWORD,),
+            resource_pools=[
+                ResourcePool(id="spell_slot_1", max_uses=2, current_uses=1, reset_on=RestType.LONG_REST),
+            ],
+        )
+
+        layer = EntitiesLayer([player])
+        battle_map = BattleMap(width=60, height=60)
+        battle_map.set_position("p1", Position(10, 10))
+        combat = CombatState(location_id="arena", turn_order=["p1"], battle_map=battle_map)
+        layer._combat._combats["arena"] = combat
+
+        awareness = layer.build_combat_awareness(player)
+        assert len(awareness.self_resource_pools) == 1
+        assert awareness.self_resource_pools[0].current_uses == 1
+
+    def test_awareness_multiple_resource_pools(self) -> None:
+        """Creature with lay_on_hands + spell_slot_1 — both appear in awareness."""
+        from dnd_simulator.core.resource import ResourcePool, RestType
+
+        player = Character(
+            id="p1",
+            name="Paladin",
+            location_id="arena",
+            in_combat=True,
+            max_hp=18,
+            current_hp=18,
+            attacks=(_SWORD,),
+            resource_pools=[
+                ResourcePool(id="lay_on_hands", max_uses=10, current_uses=10, reset_on=RestType.LONG_REST),
+                ResourcePool(id="spell_slot_1", max_uses=2, current_uses=2, reset_on=RestType.LONG_REST),
+            ],
+        )
+
+        layer = EntitiesLayer([player])
+        battle_map = BattleMap(width=60, height=60)
+        battle_map.set_position("p1", Position(10, 10))
+        combat = CombatState(location_id="arena", turn_order=["p1"], battle_map=battle_map)
+        layer._combat._combats["arena"] = combat
+
+        awareness = layer.build_combat_awareness(player)
+        pool_ids = {p.id for p in awareness.self_resource_pools}
+        assert pool_ids == {"lay_on_hands", "spell_slot_1"}
+
+
 class TestFactionHostilityEdgeCases:
     """Edge cases for faction hostility checks."""
 

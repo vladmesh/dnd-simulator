@@ -166,6 +166,12 @@ export interface PeacefulAwareness {
   merchants?: MerchantInfo[]
 }
 
+export interface ResourcePoolInfo {
+  id: string
+  max_uses: number
+  current_uses: number
+}
+
 export interface CombatAwareness {
   self_hp: number
   self_max_hp: number
@@ -188,6 +194,7 @@ export interface CombatAwareness {
   available_items?: ItemInfo[]
   reachable?: number[][]
   is_disengaging?: boolean
+  self_resource_pools?: ResourcePoolInfo[]
 }
 
 export type Awareness = PeacefulAwareness | CombatAwareness
@@ -255,6 +262,7 @@ export interface PlayerStatus {
   ability_scores: AbilityScores
   equipped?: EquippedInfo[]
   inventory?: ItemInfo[]
+  resource_pools?: ResourcePoolInfo[]
 }
 
 // --- Actions ---

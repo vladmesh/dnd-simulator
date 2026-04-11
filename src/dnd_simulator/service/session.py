@@ -68,6 +68,10 @@ def _awareness_to_dict(
         d["self_conditions"] = sorted(c.value for c in awareness.self_conditions)
         for i, nearby_entry in enumerate(awareness.nearby):
             d["nearby"][i]["conditions"] = sorted(c.value for c in nearby_entry.conditions)
+        # tuple[ResourcePoolInfo, ...] → list[dict] for JSON serialization
+        d["self_resource_pools"] = [
+            {"id": p.id, "max_uses": p.max_uses, "current_uses": p.current_uses} for p in awareness.self_resource_pools
+        ]
 
     # Build structured action info with descriptions, params, and cost options
     overrides = collect_cost_overrides(creature) if creature else []
@@ -170,6 +174,9 @@ def _player_to_dict(player: PlayerCharacter) -> dict[str, Any]:
         },
         "equipped": equipped,
         "inventory": inventory,
+        "resource_pools": [
+            {"id": p.id, "max_uses": p.max_uses, "current_uses": p.current_uses} for p in player.resource_pools
+        ],
     }
 
 

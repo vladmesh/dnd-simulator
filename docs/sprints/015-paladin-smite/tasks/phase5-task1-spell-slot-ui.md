@@ -44,4 +44,10 @@ After tests are red:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added `ResourcePoolInfo` frozen dataclass to `core/awareness.py` and `self_resource_pools` field to `CombatAwareness`. AwarenessBuilder populates it from `creature.resource_pools`. `_awareness_to_dict` explicitly serializes to list of dicts (dataclasses.asdict converts tuples-of-dataclasses to tuples-of-dicts, not lists). `_player_to_dict` now includes `resource_pools` for dashboard display outside combat.
+
+Frontend: `ResourcePoolInfo` TS interface, `self_resource_pools` on `CombatAwareness`, `resource_pools` on `PlayerStatus`. CombatPanel renders spell slot pools as filled/empty amber circles per level. Only spell_slot_* pools displayed (not lay_on_hands etc — those are actions, not visual resource displays).

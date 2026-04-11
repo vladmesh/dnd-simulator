@@ -129,5 +129,7 @@
   "dmg_necrotic": "necrotic",
   "dmg_radiant": "radiant",
   "dmg_force": "force",
-  "dmg_psychic": "psychic"
+  "dmg_psychic": "psychic",
+  "spell_slots": "Spell Slots",
+  "spell_slot_level": "Lv{{level}}"
 }

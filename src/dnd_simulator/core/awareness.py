@@ -89,6 +89,15 @@ def describe_item(item: Item) -> str:
 
 
 @dataclass(frozen=True)
+class ResourcePoolInfo:
+    """A resource pool as seen in awareness — lightweight view for brains/UI."""
+
+    id: str
+    max_uses: int
+    current_uses: int
+
+
+@dataclass(frozen=True)
 class CombatEntity:
     """An entity visible in combat — includes distance, direction, and grid position."""
 
@@ -162,6 +171,7 @@ class CombatAwareness:
     equipped: list[EquippedInfo] = field(default_factory=list)
     reachable: frozenset[tuple[int, int]] = field(default_factory=frozenset)
     is_disengaging: bool = False
+    self_resource_pools: tuple[ResourcePoolInfo, ...] = ()
 
 
 @dataclass(frozen=True)

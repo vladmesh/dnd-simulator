@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from dnd_simulator.core.action import ActionType
-from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness
+from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, ResourcePoolInfo
 from dnd_simulator.core.character import Ability, AbilityScores, Attack, Character, DamageComponent, DamageType
 from dnd_simulator.core.class_features import RogueFeatures
-from dnd_simulator.service.session import _awareness_to_dict
+from dnd_simulator.service.session import _awareness_to_dict, _player_to_dict
 
 _SWORD = Attack(
     name="longsword",
@@ -123,3 +123,70 @@ class TestActionInfoCostType:
         assert "end_turn" not in names
         assert "skip" not in names
         assert "say" in names
+
+
+class TestAwarenessResourcePoolSerialization:
+    """Resource pools in awareness are serialized to JSON-compatible dicts."""
+
+    def test_combat_awareness_resource_pools_serialized(self) -> None:
+        """CombatAwareness with resource pools → dict has self_resource_pools list."""
+        awareness = _combat(
+            self_resource_pools=(
+                ResourcePoolInfo(id="spell_slot_1", max_uses=2, current_uses=1),
+                ResourcePoolInfo(id="lay_on_hands", max_uses=10, current_uses=10),
+            ),
+        )
+        result = _awareness_to_dict(awareness)
+        pools = result["self_resource_pools"]
+        assert isinstance(pools, list)
+        assert len(pools) == 2
+        by_id = {p["id"]: p for p in pools}
+        assert by_id["spell_slot_1"]["max_uses"] == 2
+        assert by_id["spell_slot_1"]["current_uses"] == 1
+        assert by_id["lay_on_hands"]["max_uses"] == 10
+
+    def test_empty_resource_pools_serialized_as_empty_list(self) -> None:
+        """CombatAwareness with no resource pools → self_resource_pools is empty list."""
+        awareness = _combat()
+        result = _awareness_to_dict(awareness)
+        assert result["self_resource_pools"] == []
+
+
+class TestPlayerToDictResourcePools:
+    """_player_to_dict includes resource pools from the player character."""
+
+    def test_player_dict_has_resource_pools(self) -> None:
+        """PlayerCharacter with spell slots → player dict has resource_pools key."""
+        from dnd_simulator.core.player import PlayerCharacter
+        from dnd_simulator.core.resource import ResourcePool, RestType
+
+        player = PlayerCharacter(
+            id="p1",
+            name="Paladin",
+            location_id="arena",
+            ability_scores=_scores(STR=16, CHA=14),
+            resource_pools=[
+                ResourcePool(id="spell_slot_1", max_uses=2, current_uses=2, reset_on=RestType.LONG_REST),
+                ResourcePool(id="lay_on_hands", max_uses=10, current_uses=7, reset_on=RestType.LONG_REST),
+            ],
+        )
+        result = _player_to_dict(player)
+        assert "resource_pools" in result
+        pools = result["resource_pools"]
+        assert len(pools) == 2
+        by_id = {p["id"]: p for p in pools}
+        assert by_id["spell_slot_1"]["current_uses"] == 2
+        assert by_id["lay_on_hands"]["current_uses"] == 7
+
+    def test_player_dict_empty_pools_when_no_resources(self) -> None:
+        """PlayerCharacter with no resource pools → resource_pools is empty list."""
+        from dnd_simulator.core.player import PlayerCharacter
+
+        player = PlayerCharacter(
+            id="p1",
+            name="Fighter",
+            location_id="arena",
+            ability_scores=_scores(STR=16),
+        )
+        result = _player_to_dict(player)
+        assert result["resource_pools"] == []

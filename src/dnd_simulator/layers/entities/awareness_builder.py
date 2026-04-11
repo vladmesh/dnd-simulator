@@ -11,6 +11,7 @@ from dnd_simulator.core.awareness import (
     CombatEntity,
     NearbyEntity,
     PeacefulAwareness,
+    ResourcePoolInfo,
 )
 from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.models import Event, FactionRelation, Query, QueryType
@@ -206,6 +207,10 @@ class AwarenessBuilder:
                 {"x1": w.x1, "y1": w.y1, "x2": w.x2, "y2": w.y2} for w in combat.battle_map._inner_walls
             ]
 
+        resource_pools = tuple(
+            ResourcePoolInfo(id=p.id, max_uses=p.max_uses, current_uses=p.current_uses) for p in creature.resource_pools
+        )
+
         return CombatAwareness(
             self_hp=creature.current_hp,
             self_max_hp=creature.max_hp,
@@ -224,6 +229,7 @@ class AwarenessBuilder:
             battle_map_walls=battle_map_walls,
             self_conditions=frozenset(creature.conditions),
             is_disengaging=creature.is_disengaging,
+            self_resource_pools=resource_pools,
         )
 
     def build_nearby_entities(

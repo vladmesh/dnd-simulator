@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 import { useGameStore } from "@/store/gameStore"
-import type { CombatAwareness } from "@/types/game"
+import type { CombatAwareness, ResourcePoolInfo } from "@/types/game"
 
 export function CombatPanel() {
   const { t } = useTranslation(["game"])
@@ -11,6 +11,9 @@ export function CombatPanel() {
 
   const hpPct = combat.self_max_hp > 0 ? (combat.self_hp / combat.self_max_hp) * 100 : 0
   const hpColor = hpPct > 50 ? "bg-green-500" : hpPct > 25 ? "bg-yellow-500" : "bg-red-500"
+
+  // Filter spell slot pools (id starts with "spell_slot_")
+  const spellSlots = (combat.self_resource_pools ?? []).filter((p) => p.id.startsWith("spell_slot_"))
 
   return (
     <div className="space-y-3">
@@ -53,6 +56,39 @@ export function CombatPanel() {
         <p className="text-muted-foreground">
           {t("game:weapon_display", { name: combat.self_weapon, damage: combat.self_weapon_damage })}
         </p>
+      </div>
+
+      {/* Spell slots */}
+      {spellSlots.length > 0 && (
+        <div className="space-y-1 rounded border border-border p-2 text-xs">
+          <p className="font-medium">{t("game:spell_slots")}</p>
+          {spellSlots.map((pool) => (
+            <SpellSlotRow key={pool.id} pool={pool} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SpellSlotRow({ pool }: { pool: ResourcePoolInfo }) {
+  const { t } = useTranslation(["game"])
+  const level = pool.id.replace("spell_slot_", "")
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-8 text-muted-foreground">{t("game:spell_slot_level", { level })}</span>
+      <div className="flex gap-0.5">
+        {Array.from({ length: pool.max_uses }, (_, i) => (
+          <div
+            key={i}
+            className={`h-3 w-3 rounded-full border ${
+              i < pool.current_uses
+                ? "border-amber-400 bg-amber-400"
+                : "border-muted-foreground/40 bg-transparent"
+            }`}
+          />
+        ))}
       </div>
     </div>
   )

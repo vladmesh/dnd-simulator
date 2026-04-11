@@ -129,5 +129,7 @@
   "dmg_necrotic": "некротический",
   "dmg_radiant": "излучение",
   "dmg_force": "силовой",
-  "dmg_psychic": "психический"
+  "dmg_psychic": "психический",
+  "spell_slots": "Ячейки заклинаний",
+  "spell_slot_level": "Ур{{level}}"
 }
