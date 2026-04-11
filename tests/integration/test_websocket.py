@@ -664,7 +664,7 @@ class TestDivineSmite:
         resp.raise_for_status()
         pid = resp.json()["player_id"]
 
-        # Level 1 Paladin has no spell slots — grant via PATCH
+        # Level 1 Paladin has no spell slots — grant via PATCH.
         requests.patch(
             f"{api}/sessions/{sid}/creatures/{pid}",
             json={
@@ -672,6 +672,13 @@ class TestDivineSmite:
                     {"id": "spell_slot_1", "max_uses": 2, "current_uses": 2, "reset_on": "long_rest"},
                 ]
             },
+            timeout=5,
+        ).raise_for_status()
+
+        # Lower razor's AC so paladin reliably hits (AC 5 vs +4 attack = hit on 1+)
+        requests.patch(
+            f"{api}/sessions/{sid}/creatures/razor",
+            json={"ac": 5},
             timeout=5,
         ).raise_for_status()
 
@@ -690,7 +697,7 @@ class TestDivineSmite:
 
             # Collect attack results — look for a hit with radiant damage
             attack_data = None
-            for _ in range(20):
+            for _ in range(50):
                 msg = ws_recv(sock)
                 if msg["type"] == "action_result" and msg["action"] == "attack":
                     for ev in msg["events"]:

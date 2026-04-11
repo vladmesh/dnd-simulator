@@ -52,7 +52,7 @@ Smite как модификатор атаки: при попадании — п
 1. [Divine Smite Rules & Attack Param](tasks/phase3-task1-smite-rules.md)
 2. [Divine Smite Combat Integration & Brain Support](tasks/phase3-task2-smite-combat-integration.md)
 
-## Phase 4: Multi-Damage Weapons + UI Breakdown
+## Phase 4: Multi-Damage Weapons + UI Breakdown ✓
 
 Оружие с несколькими типами урона (flaming longsword = 1d8 slashing + 1d6 fire). WeaponDef уже поддерживает `tuple[DamageComponent, ...]` — контент + вся цепочка (resolve_attack → perception → frontend) корректно рендерит 2-3 компонента. Frontend: damage breakdown card с иконкой/цветом типа, dice roll details. Каталог: 2-3 magic weapons.
 
@@ -77,7 +77,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 4 tasks generated. Ready to start task 1.
+**Current:** Phase 4 complete. Ready for Phase 5 task generation.
 
 ## Decisions
 
