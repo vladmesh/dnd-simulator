@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from dnd_simulator.core.character import Character
+from dnd_simulator.core.class_features import FighterFeatures, PaladinFeatures, RogueFeatures
 from dnd_simulator.core.items import Item
 
 
@@ -106,6 +107,17 @@ class PlayerCharacter(Character):
                 data[field_name] = d
         if all_items:
             data["items"] = all_items
+        # Serialize class_features so parse_class_features() can reconstruct them.
+        cf: dict[str, Any] = {}
+        for feat in self.class_features:
+            if isinstance(feat, FighterFeatures):
+                cf["fighting_style"] = feat.fighting_style.value
+            elif isinstance(feat, RogueFeatures):
+                cf["sneak_attack_dice"] = feat.sneak_attack_dice
+            elif isinstance(feat, PaladinFeatures) and feat.fighting_style is not None:
+                cf["fighting_style"] = feat.fighting_style.value
+        if cf:
+            data["class_features"] = cf
         return data
 
     def load_save_data(self, data: dict[str, Any]) -> None:

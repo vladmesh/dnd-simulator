@@ -12,8 +12,10 @@ from typing import Any
 from dnd_simulator.content_loader import parse_player
 from dnd_simulator.content_loader.items import deserialize_item
 from dnd_simulator.content_loader.schemas import ItemContent
+from dnd_simulator.core.class_features import FighterFeatures, FightingStyle, PaladinFeatures, RogueFeatures
 from dnd_simulator.core.items import ItemType
 from dnd_simulator.core.player import _EQUIPMENT_FIELDS, PlayerCharacter, _serialize_item
+from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.rules.weapons import get_weapon_attack
 
 
@@ -43,6 +45,47 @@ def _create_fighter(item_catalog: dict[str, ItemContent]) -> PlayerCharacter:
             {"ref": "shield", "equipped": True},
         ],
         "class_features": {"fighting_style": "defense"},
+    }
+    return parse_player(parse_data, item_catalog=item_catalog)
+
+
+def _create_rogue(item_catalog: dict[str, ItemContent]) -> PlayerCharacter:
+    """Create a standard rogue with starting equipment via parse_player."""
+    parse_data: dict[str, Any] = {
+        "name": "Test Rogue",
+        "race": "human",
+        "class": "rogue",
+        "level": 1,
+        "alignment": "true_neutral",
+        "hp": 10,
+        "ac": 10,
+        "gold": 1000,
+        "ability_scores": {"str": 8, "dex": 15, "con": 14, "int": 10, "wis": 12, "cha": 8},
+        "items": [
+            {"ref": "leather", "equipped": True},
+            {"ref": "rapier", "equipped": True},
+        ],
+    }
+    return parse_player(parse_data, item_catalog=item_catalog)
+
+
+def _create_paladin(item_catalog: dict[str, ItemContent]) -> PlayerCharacter:
+    """Create a standard paladin with starting equipment via parse_player."""
+    parse_data: dict[str, Any] = {
+        "name": "Test Paladin",
+        "race": "human",
+        "class": "paladin",
+        "level": 1,
+        "alignment": "lawful_good",
+        "hp": 12,
+        "ac": 10,
+        "gold": 1000,
+        "ability_scores": {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 12, "cha": 8},
+        "items": [
+            {"ref": "chain_mail", "equipped": True},
+            {"ref": "longsword", "equipped": True},
+            {"ref": "shield", "equipped": True},
+        ],
     }
     return parse_player(parse_data, item_catalog=item_catalog)
 
@@ -188,3 +231,75 @@ class TestEntitiesLayerSaveRestore:
 
         attack = get_weapon_attack(restored)
         assert attack.name == "longsword slash", f"Expected 'longsword slash', got '{attack.name}'"
+
+
+class TestClassFeaturesSaveRestore:
+    """class_features must survive to_full_save_data → parse_player round-trip."""
+
+    def test_fighter_defense_style_survives_round_trip(self) -> None:
+        """Fighter Defense fighting style must persist through save/load."""
+        catalog = _load_item_catalog()
+        player = _create_fighter(catalog)
+
+        # Verify original
+        fighter_feat = player.get_feature(FighterFeatures)
+        assert fighter_feat is not None
+        assert fighter_feat.fighting_style == FightingStyle.DEFENSE
+
+        # Save → load
+        save_data = player.to_full_save_data()
+        restored = parse_player(save_data, item_catalog=catalog)
+
+        # Must survive
+        restored_feat = restored.get_feature(FighterFeatures)
+        assert restored_feat is not None, "FighterFeatures lost after save/restore"
+        assert restored_feat.fighting_style == FightingStyle.DEFENSE
+
+    def test_rogue_sneak_attack_survives_round_trip(self) -> None:
+        """Rogue sneak attack dice count must persist through save/load."""
+        catalog = _load_item_catalog()
+        player = _create_rogue(catalog)
+
+        rogue_feat = player.get_feature(RogueFeatures)
+        assert rogue_feat is not None
+        assert rogue_feat.sneak_attack_dice == 1
+
+        save_data = player.to_full_save_data()
+        restored = parse_player(save_data, item_catalog=catalog)
+
+        restored_feat = restored.get_feature(RogueFeatures)
+        assert restored_feat is not None, "RogueFeatures lost after save/restore"
+        assert restored_feat.sneak_attack_dice == 1
+
+    def test_paladin_features_survive_round_trip(self) -> None:
+        """Paladin features (no fighting style at L1) must persist through save/load."""
+        catalog = _load_item_catalog()
+        player = _create_paladin(catalog)
+
+        paladin_feat = player.get_feature(PaladinFeatures)
+        assert paladin_feat is not None
+
+        save_data = player.to_full_save_data()
+        restored = parse_player(save_data, item_catalog=catalog)
+
+        restored_feat = restored.get_feature(PaladinFeatures)
+        assert restored_feat is not None, "PaladinFeatures lost after save/restore"
+        assert restored_feat.fighting_style is None  # Paladin L1 has no style
+
+    def test_fighter_defense_ac_survives_round_trip(self) -> None:
+        """Fighter with Defense + Chain Mail + Shield must have AC 19 after save/load.
+
+        Chain Mail (base 16) + Shield (+2) + Defense (+1) = 19.
+        """
+        catalog = _load_item_catalog()
+        player = _create_fighter(catalog)
+
+        assert effective_ac(player) == 19, f"Original AC wrong: {effective_ac(player)}"
+
+        save_data = player.to_full_save_data()
+        restored = parse_player(save_data, item_catalog=catalog)
+
+        assert effective_ac(restored) == 19, (
+            f"AC dropped to {effective_ac(restored)} after save/restore — "
+            f"Defense style lost? class_features: {restored.class_features}"
+        )

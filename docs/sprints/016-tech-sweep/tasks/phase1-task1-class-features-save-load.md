@@ -40,4 +40,10 @@ Also fix the quick-fix from E2E (`routes_player.py:77`): verify it's using `effe
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Root cause confirmed: `to_full_save_data()` didn't serialize `class_features`. Added serialization that produces the same dict format `parse_class_features()` expects. Fix is 10 lines in `core/player.py`.
+
+The 26 pre-existing frontend test failures (from commit 22f2063 — `getSetupConfig` mock missing) are NOT related to this change.
