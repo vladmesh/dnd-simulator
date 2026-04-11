@@ -71,13 +71,14 @@ Smite как модификатор атаки: при попадании — п
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Resource Pools in Awareness + Spell Slot UI](tasks/phase5-task1-spell-slot-ui.md)
+2. [Paladin Combo Integration Test](tasks/phase5-task2-paladin-combo-integration.md)
 
 ---
 
 ## Status
 
-**Current:** Phase 4 complete. Ready for Phase 5 task generation.
+**Current:** Phase 5 tasks generated. Ready to start task 1.
 
 ## Decisions
 
