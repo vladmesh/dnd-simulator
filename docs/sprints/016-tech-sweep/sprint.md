@@ -20,7 +20,9 @@
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Fix class_features lost on save/load (AC Defense bug)](tasks/phase1-task1-class-features-save-load.md)
+2. [Fix action bar display issues (raw names, cost labels, drawer clarity)](tasks/phase1-task2-action-bar-display.md)
+3. [Second Wind perception formatter + battle map content configs](tasks/phase1-task3-second-wind-log-battlemap.md)
 
 ## Phase 2: Adapter & Routes
 
@@ -56,7 +58,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** Phase 1 tasks generated (2026-04-12). Ready to start task 1.
 
 ## Decisions
 
