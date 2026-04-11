@@ -4,12 +4,19 @@
 
 ## Current Sprint
 
-**Sprint:** 015-paladin-smite
-**Goal:** Paladin class с Divine Smite, spell slots как reusable resource system, multi-damage weapons и breakdown в UI.
-**Started:** 2026-04-11
-**Phase:** 7 — Smite UI + Level 1 Spell Slot (COMPLETE) — 2026-04-11
+**Sprint:** 016-tech-sweep
+**Goal:** Fix 6 E2E/backlog bugs, resolve 5 architecture violations, add 3 enums + harden fail-fast across codebase.
+**Started:** 2026-04-12
+**Phase:** Planning (COMPLETE) — 2026-04-12
 
-All phases complete. Ready for audit.
+Ready for Phase 1 task generation.
+
+### Phases
+
+1. Bug Sweep
+2. Adapter & Routes
+3. Core Boundaries
+4. Enums & Fail-Fast
 
 ### Phases
 
