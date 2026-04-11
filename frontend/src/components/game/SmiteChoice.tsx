@@ -7,12 +7,12 @@ function parseSlotLevel(id: string): number | null {
   return match ? parseInt(match[1], 10) : null
 }
 
-/** Get spell slots from resource pools (only spell_slot_* pools with remaining uses). */
+/** Get spell slots from resource pools (all spell_slot_* pools, including depleted). */
 export function getSpellSlots(pools: ResourcePoolInfo[]): { level: number; pool: ResourcePoolInfo }[] {
   const result: { level: number; pool: ResourcePoolInfo }[] = []
   for (const pool of pools) {
     const level = parseSlotLevel(pool.id)
-    if (level != null && pool.current_uses > 0) {
+    if (level != null) {
       result.push({ level, pool })
     }
   }
@@ -40,12 +40,13 @@ export function SmiteChoice({ onChoice, onCancel, slots }: SmiteChoiceProps) {
       >
         {t("smite_attack_normal")}
       </button>
-      {slots
-        .filter(({ pool }) => pool.current_uses > 0)
-        .map(({ level, pool }) => (
+      {slots.map(({ level, pool }) => {
+        const depleted = pool.current_uses <= 0
+        return (
           <button
             key={level}
-            className="w-full rounded px-2 py-1 text-left text-xs hover:bg-accent"
+            className={`w-full rounded px-2 py-1 text-left text-xs ${depleted ? "opacity-50 cursor-not-allowed" : "hover:bg-accent"}`}
+            disabled={depleted}
             onClick={() => onChoice(level)}
           >
             {t("smite_attack_with_smite", { level })}
@@ -53,7 +54,8 @@ export function SmiteChoice({ onChoice, onCancel, slots }: SmiteChoiceProps) {
               ({pool.current_uses}/{pool.max_uses})
             </span>
           </button>
-        ))}
+        )
+      })}
       <button
         className="mt-1 w-full rounded px-2 py-1 text-left text-xs text-muted-foreground hover:bg-accent"
         onClick={onCancel}

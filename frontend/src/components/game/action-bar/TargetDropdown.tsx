@@ -128,12 +128,13 @@ export function TargetDropdown({ name, description, nearby, scope, selfId, disab
           >
             {t("game:smite_attack_normal")}
           </button>
-          {slots
-            .filter(({ pool }) => pool.current_uses > 0)
-            .map(({ level, pool }) => (
+          {slots.map(({ level, pool }) => {
+            const depleted = pool.current_uses <= 0
+            return (
               <button
                 key={level}
-                className="w-full rounded px-2 py-1 text-left text-xs hover:bg-accent"
+                className={`w-full rounded px-2 py-1 text-left text-xs ${depleted ? "opacity-50 cursor-not-allowed" : "hover:bg-accent"}`}
+                disabled={depleted}
                 onClick={() => handleSmiteChoice(level)}
               >
                 {t("game:smite_attack_with_smite", { level })}
@@ -141,7 +142,8 @@ export function TargetDropdown({ name, description, nearby, scope, selfId, disab
                   ({pool.current_uses}/{pool.max_uses})
                 </span>
               </button>
-            ))}
+            )
+          })}
         </div>
       </div>
     )

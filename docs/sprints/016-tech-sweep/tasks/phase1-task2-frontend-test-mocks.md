@@ -57,4 +57,14 @@ In `SmiteChoice.tsx`: change `getSpellSlots()` to not filter by current_uses. In
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Three fixes applied:
+
+**A) CharacterForm mock (25 tests):** Added `getSetupConfig` mock returning `{ starting_gold: 100, point_buy_budget: 27 }` to both `CharacterForm.test.tsx` and `SetupScreen.test.tsx`. The SetupScreen test also needed the mock because it renders CharacterForm which calls `getSetupConfig` in useEffect.
+
+**B) "does not include level, hp, ac, gold in payload" test:** This test was already broken (crashed on missing mock before reaching submit). After fixing the mock, it failed because it submits a fighter without selecting a fighting style — form validation blocks the submit. Added `selectOptions("defense")` before clicking submit.
+
+**C) Depleted spell slots (1 test):** `getSpellSlots()` in `SmiteChoice.tsx` filtered out pools with `current_uses === 0`, so depleted slots never reached the UI. Removed the filter — now all spell slot pools are returned. Updated both `SmiteChoice` component and `TargetDropdown` inline smite panel to render depleted slots with `disabled` attribute and `opacity-50` styling instead of hiding them.

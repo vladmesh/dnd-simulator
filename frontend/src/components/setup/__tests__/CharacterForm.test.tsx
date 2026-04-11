@@ -8,6 +8,10 @@ import { api } from "@/transport/apiClient"
 vi.mock("@/transport/apiClient", () => ({
   api: {
     player: {
+      getSetupConfig: vi.fn().mockResolvedValue({
+        starting_gold: 100,
+        point_buy_budget: 27,
+      }),
       createCharacter: vi.fn(),
     },
   },
@@ -324,6 +328,7 @@ describe("CharacterForm — Submission", () => {
     })
 
     const { user } = setup()
+    await user.selectOptions(screen.getByTestId("fighting-style-select"), "defense")
     await user.click(screen.getByRole("button", { name: /create character/i }))
 
     await waitFor(() => {

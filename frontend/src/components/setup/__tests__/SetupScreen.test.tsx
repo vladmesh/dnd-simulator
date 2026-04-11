@@ -12,6 +12,13 @@ vi.mock("@/transport/apiClient", () => ({
       getWorlds: vi.fn(),
       createSession: vi.fn(),
     },
+    player: {
+      getSetupConfig: vi.fn().mockResolvedValue({
+        starting_gold: 100,
+        point_buy_budget: 27,
+      }),
+      createCharacter: vi.fn(),
+    },
   },
 }))
 
