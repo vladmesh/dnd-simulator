@@ -18,9 +18,11 @@ def _paladin(*, level: int = 2, slot_uses: int | None = None) -> Character:
     pools: list[ResourcePool] = [
         ResourcePool("lay_on_hands", 5 * level, 5 * level, RestType.LONG_REST),
     ]
-    if level >= 2:
-        uses = slot_uses if slot_uses is not None else 2
-        pools.append(ResourcePool(spell_slot_pool_id(1), max_uses=2, current_uses=uses, reset_on=RestType.LONG_REST))
+    default_max = 1 if level == 1 else 2
+    uses = slot_uses if slot_uses is not None else default_max
+    pools.append(
+        ResourcePool(spell_slot_pool_id(1), max_uses=default_max, current_uses=uses, reset_on=RestType.LONG_REST)
+    )
     return Character(
         id="paladin",
         name="Paladin",
@@ -113,8 +115,7 @@ class TestValidateSmite:
         assert error is not None
         assert "slot" in error.lower()
 
-    def test_level_1_paladin_no_spell_slots_returns_error(self) -> None:
-        """Level 1 Paladin has no spell slots at all."""
+    def test_level_1_paladin_can_smite(self) -> None:
+        """Level 1 Paladin has 1 spell slot — smite is valid."""
         paladin = _paladin(level=1)
-        error = validate_smite(paladin, slot_level=1)
-        assert error is not None
+        assert validate_smite(paladin, slot_level=1) is None

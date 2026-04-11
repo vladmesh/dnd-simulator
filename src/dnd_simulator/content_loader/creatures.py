@@ -104,8 +104,10 @@ def parse_class_features(char_class: CharClass, data: dict[str, Any]) -> list[Cl
 
 
 _SPELL_SLOT_TABLES: dict[CharClass, dict[int, dict[int, int]]] = {
-    # Paladin half-caster: spellcasting starts at level 2
+    # Paladin half-caster: RAW starts at level 2, but level 1 gets 1 slot
+    # TEMPORARY until leveling system exists (sprint 015)
     CharClass.PALADIN: {
+        1: {1: 1},
         2: {1: 2},
         3: {1: 3},
         4: {1: 3},

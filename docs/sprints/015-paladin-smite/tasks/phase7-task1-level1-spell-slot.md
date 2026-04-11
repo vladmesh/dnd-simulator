@@ -29,4 +29,8 @@ Give Paladin level 1 a single spell slot (level 1) as a temporary measure until 
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Trivial change: added `1: {1: 1}` to Paladin spell slot table. Updated test_paladin_infra to expect 1 slot at level 1 instead of 0. Updated test_divine_smite helper to give level 1 paladins a slot (matching new production behavior) and changed `test_level_1_paladin_no_spell_slots_returns_error` → `test_level_1_paladin_can_smite`.

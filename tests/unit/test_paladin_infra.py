@@ -82,11 +82,13 @@ class TestPaladinResourcePools:
         loh = next(p for p in pools if p.id == "lay_on_hands")
         assert loh.max_uses == 15
 
-    def test_level1_no_spell_slots(self) -> None:
-        """Paladin level 1: half-caster, no spell slots yet."""
+    def test_level1_one_spell_slot(self) -> None:
+        """Paladin level 1: 1 first-level spell slot (temporary until leveling exists)."""
         pools = build_class_resource_pools(CharClass.PALADIN, level=1)
-        spell_pools = [p for p in pools if p.id.startswith("spell_slot_")]
-        assert spell_pools == []
+        slot1 = next(p for p in pools if p.id == "spell_slot_1")
+        assert slot1.max_uses == 1
+        assert slot1.current_uses == 1
+        assert slot1.reset_on == RestType.LONG_REST
 
     def test_level2_spell_slots(self) -> None:
         """Paladin level 2: 2 first-level spell slots."""
