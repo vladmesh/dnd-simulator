@@ -116,13 +116,14 @@ describe("CharacterForm — Point Buy", () => {
 describe("CharacterForm — Class Restrictions", () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it("only shows Fighter and Rogue as class options", () => {
+  it("shows Fighter, Rogue and Paladin as class options", () => {
     setup()
     const classSelect = screen.getByTestId("class-select")
     const options = classSelect.querySelectorAll("option")
-    expect(options).toHaveLength(2)
+    expect(options).toHaveLength(3)
     expect(options[0]).toHaveValue("fighter")
     expect(options[1]).toHaveValue("rogue")
+    expect(options[2]).toHaveValue("paladin")
   })
 })
 

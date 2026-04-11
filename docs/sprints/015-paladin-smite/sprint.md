@@ -27,7 +27,7 @@ ResourcePool перестаёт быть мёртвым кодом. Spell slots 
 1. [Long Rest & Short Rest Actions](tasks/phase1-task1-rest-actions.md)
 2. [Spell Slot Pool Infrastructure](tasks/phase1-task2-spell-slot-pools.md)
 
-## Phase 2: Paladin Class Foundation
+## Phase 2: Paladin Class Foundation ✓
 
 `PaladinFeatures` в class_features, proficiency (all armor, shields, simple+martial weapons), Lay on Hands (heal, pool = 5×level, action cost), Divine Sense (bonus action, detect nearby creature types). Paladin в character creation (point buy, starting equipment). YAML контент: Paladin NPC в Sword Vale.
 
@@ -37,13 +37,13 @@ ResourcePool перестаёт быть мёртвым кодом. Spell slots 
 
 1. [Paladin Class Infrastructure](tasks/phase2-task1-paladin-class-infra.md)
 2. [Lay on Hands Action](tasks/phase2-task2-lay-on-hands.md)
-3. [Divine Sense Action](tasks/phase2-task3-divine-sense.md)
+~~3. [Divine Sense Action](tasks/phase2-task3-divine-sense.md)~~ — deferred, see backlog `divine-sense`
 
 ## Phase 3: Divine Smite
 
-Smite как модификатор атаки: при попадании — потратить spell slot → +2d8 radiant (slot 1), +3d8 (slot 2), +1d8 vs undead/fiend. Выбор слота через UI. `extra_damage` в `resolve_attack` уже принимает дополнительные компоненты — smite добавляет `DamageComponent(dice="2d8", type=DamageType.RADIANT)`.
+Smite как модификатор атаки: при попадании — потратить spell slot → +2d8 radiant (slot 1). Реализуем для level 1 Paladin — один уровень слотов. Масштабирование по уровням слотов (slot 2 → +3d8) и бонус vs undead/fiend — в бэклоге (`divine-smite-scaling`), когда будет система уровней. `extra_damage` в `resolve_attack` уже принимает дополнительные компоненты — smite добавляет `DamageComponent(dice="2d8", type=DamageType.RADIANT)`.
 
-**Верифицируем:** Unit tests — smite добавляет radiant damage, тратит slot, выбор уровня слота масштабирует урон, нет слотов → smite недоступен. Frontend — damage log показывает "2d8 radiant (smite)" отдельной строкой.
+**Верифицируем:** Unit tests — smite добавляет radiant damage, тратит slot 1, нет слотов → smite недоступен. Frontend — damage log показывает "2d8 radiant (smite)" отдельной строкой.
 
 **Tasks:**
 
@@ -73,7 +73,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 1 complete. Ready for Phase 2 task generation.
+**Current:** Phase 2 complete. Ready for Phase 3 task generation.
 
 ## Decisions
 

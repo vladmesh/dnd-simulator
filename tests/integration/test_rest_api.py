@@ -105,6 +105,66 @@ class TestPlayer:
         assert status["ability_scores"]["str"] == 15
 
 
+# ── Paladin player creation ──────────────────────────────────────────
+
+
+class TestPaladinPlayer:
+    """Phase 2: Paladin class — character creation via API."""
+
+    def test_create_paladin_player(self, api_url: str, player_api_url: str) -> None:
+        """Create a Paladin player — verify HP, AC, class, starting equipment."""
+        # Create a fresh session
+        resp = requests.post(f"{api_url}/sessions", json={"world_name": "arena", "lang": "en"}, timeout=10)
+        resp.raise_for_status()
+        sid = resp.json()["session_id"]
+
+        try:
+            resp = requests.post(
+                f"{player_api_url}/sessions/{sid}/character",
+                json={
+                    "name": "Sir Test",
+                    "race": "human",
+                    "char_class": "paladin",
+                    "alignment": "lawful_good",
+                    "start_location": "arena_floor",
+                    "ability_scores": {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 10, "cha": 14},
+                },
+                timeout=10,
+            )
+            assert resp.status_code == HTTPStatus.OK
+            data = resp.json()
+            assert data["char_class"] == "paladin"
+
+            # GET status — verify derived stats
+            resp = requests.get(f"{player_api_url}/sessions/{sid}/status", timeout=5)
+            assert resp.status_code == HTTPStatus.OK
+            status = resp.json()
+            # Paladin L1: d10 + CON 14 (+2) = 12
+            assert status["hp"] == 12
+            # Chain mail (16) + shield (+2) = 18
+            assert status["ac"] == 18
+            assert status["char_class"] == "paladin"
+        finally:
+            requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+
+    def test_paladin_npc_has_resource_pools(self, api_url: str, arena_session: str) -> None:
+        """Paladin NPC loaded from YAML has lay_on_hands resource pool."""
+        resp = requests.get(f"{api_url}/sessions/{arena_session}/creatures/paladin", timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+        data = resp.json()
+        assert data["char_class"] == "paladin"
+
+        pools = data["resource_pools"]
+        pool_ids = [p["id"] for p in pools]
+        assert "lay_on_hands" in pool_ids
+
+        loh = next(p for p in pools if p["id"] == "lay_on_hands")
+        # Level 1 Paladin: 5 * 1 = 5
+        assert loh["max_uses"] == 5
+        assert loh["current_uses"] == 5
+        assert loh["reset_on"] == "long_rest"
+
+
 # ── Creatures (hot controls) ─────────────────────────────────────────
 
 

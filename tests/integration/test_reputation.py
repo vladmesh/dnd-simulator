@@ -141,4 +141,4 @@ class TestKillReputationDrop:
             finally:
                 sock.close()
         finally:
-            requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+            requests.delete(f"{api_url}/sessions/{sid}", timeout=15)

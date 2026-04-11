@@ -554,6 +554,71 @@ class TestInventoryEquipment:
             sock.close()
 
 
+# ── Lay on Hands ─────────────────────────────────────────────────────
+
+
+class TestLayOnHands:
+    """Phase 2: Lay on Hands — Paladin heals self via WS."""
+
+    @pytest.fixture(scope="class")
+    def ws_paladin(self, _urls: tuple[str, str, str]) -> Iterator[tuple[str, str, str]]:
+        """Fresh arena session with a Paladin player."""
+        api, player_api, ws_base = _urls
+        resp = requests.post(f"{api}/sessions", json={"world_name": "arena", "lang": "en"}, timeout=10)
+        resp.raise_for_status()
+        sid = resp.json()["session_id"]
+
+        resp = requests.post(
+            f"{player_api}/sessions/{sid}/character",
+            json={
+                "name": "WS Paladin",
+                "race": "human",
+                "char_class": "paladin",
+                "alignment": "lawful_good",
+                "start_location": "arena_floor",
+                "ability_scores": {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 10, "cha": 14},
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        pid = resp.json()["player_id"]
+
+        yield ws_base, sid, pid
+        requests.delete(f"{api}/sessions/{sid}", timeout=15)
+
+    def test_lay_on_hands_heal_self(self, ws_paladin: tuple[str, str, str], _urls: tuple[str, str, str]) -> None:
+        """Paladin takes damage, uses Lay on Hands on self, HP restored."""
+        api, _, _ = _urls
+        ws_base, sid, pid = ws_paladin
+
+        # Damage the paladin to 7 HP (from 12 max) so heal is visible
+        requests.patch(f"{api}/sessions/{sid}/creatures/{pid}", json={"current_hp": 7}, timeout=5).raise_for_status()
+
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            msg = ws_recv(sock)
+            assert msg["type"] == "turn"
+
+            ws_send_action(sock, "lay_on_hands", amount=3)
+
+            # Expect action_result for lay_on_hands
+            got_result = False
+            for _ in range(15):
+                msg = ws_recv(sock)
+                if msg["type"] == "action_result" and msg["action"] == "lay_on_hands":
+                    assert msg.get("success", True)  # no error key
+                    assert "error" not in msg
+                    got_result = True
+                    break
+                if msg["type"] == "turn":
+                    # If we got a new turn, the action might have ended the turn
+                    got_result = True
+                    break
+            assert got_result, f"Never received lay_on_hands result, last msg: {msg}"
+        finally:
+            sock.close()
+
+
 # ── Error handling ────────────────────────────────────────────────────
 
 

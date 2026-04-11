@@ -15,8 +15,11 @@
 - [ ] **should** `key-npcs` — Ключевые NPC (антагонист, компаньон): глубокая память, реакция на мировые события, персональные цели
 - [ ] **should** `npc-wandering` — Динамические маршруты NPC между поселениями (сейчас только статичные расписания)
 - [ ] **should** `npc-death-on-war` — NPC гибнут/исчезают при захвате поселения, войне
+- [ ] **should** `divine-sense` — Divine Sense (Paladin): detect celestial/fiend/undead. Требует `CreatureType` enum на Creature, creature_type в каталогах монстров, resource pool (1 + CHA mod / long rest)
+- [ ] **should** `divine-smite-scaling` — Divine Smite масштабирование: slot 2 → +3d8, +1d8 vs undead/fiend. Когда будет система уровней и `CreatureType`
 - [ ] **should** `combat-reassess` — NPC переоценивает стратегию при смене ситуации (союзник упал, новый враг появился)
 - [ ] **should** `versatile-weapons` — Versatile weapon property: переключение одноручный/двуручный хват, разный урон (longsword 1d8/1d10, warhammer 1d8/1d10, quarterstaff 1d6/1d8). WeaponDef.versatile_damage, автовыбор хвата по наличию щита
+- [ ] **should** `hit-dice-short-rest` — Hit Dice spending на коротком отдыхе: ResourcePool(hit_dice, max=level, reset_on=LONG_REST), игрок выбирает сколько тратить, за каждую кость roll(class_hit_die)+CON_mod HP. Long rest восстанавливает max(1, level//2) костей (partial reset). Нужен PlayerBrain callback для выбора количества + UI
 - [ ] **could** `conversation-costs-time` — Каждая реплика разговора тратит 6 секунд игрового времени (частично)
 
 ## World Simulation
@@ -136,7 +139,7 @@
 - [x] `dead-check-reactions` — ~~stubbed~~ FIXED Sprint 012: wired into round loop
 - [ ] `dead-is-daylight` — rules/geography.py:172, tested but unused in prod. Wire into geography layer or remove
 - [ ] `dead-prone-stand-cost` — rules/conditions.py:27, tested but never integrated into movement handler
-- [ ] `dead-reset-resources` — rules/resources.py:32, 12 test refs, 0 prod. Wire with rest mechanics
+- [x] `dead-reset-resources` — ~~rules/resources.py, 12 test refs, 0 prod~~ FIXED Sprint 015 phase 1: wired into rest handlers
 - [ ] `dead-walk-path` — rules/movement.py:201, 12 test refs, 0 prod. Budget-aware path walking
 - [ ] `dead-to-save-data` — core/player.py:73, 1 test ref, 0 prod
 

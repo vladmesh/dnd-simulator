@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 
 const RACES = ["human", "elf", "dwarf", "halfling", "gnome", "half_orc", "half_elf", "tiefling", "dragonborn"] as const
-const CLASSES = ["fighter", "rogue"] as const
+const CLASSES = ["fighter", "rogue", "paladin"] as const
 const ALIGNMENTS = [
   "lawful_good", "neutral_good", "chaotic_good",
   "lawful_neutral", "true_neutral", "chaotic_neutral",
@@ -25,13 +25,14 @@ const POINT_BUY_COSTS: Record<number, number> = {
 const POINT_BUY_BUDGET = 27
 
 // Hit die per class
-const HIT_DICE: Record<string, number> = { fighter: 10, rogue: 8 }
+const HIT_DICE: Record<string, number> = { fighter: 10, rogue: 8, paladin: 10 }
 
 // Starting equipment display
 const STARTING_EQUIPMENT: Record<string, string[]> = {
   fighter: ["Chain Mail", "Longsword", "Shield"],
   fighter_gwf: ["Chain Mail", "Greatsword"],
   rogue: ["Leather Armor", "Rapier", "Shortbow", "Dagger"],
+  paladin: ["Chain Mail", "Longsword", "Shield"],
 }
 
 const STARTING_GOLD = 100
@@ -58,6 +59,10 @@ function previewAc(charClass: string, dexScore: number, fightingStyle: string): 
     // Chain mail (16) + shield (+2) + defense (+1 if selected)
     const base = 16 + 2
     return fightingStyle === "defense" ? base + 1 : base
+  }
+  if (charClass === "paladin") {
+    // Chain mail (16) + shield (+2)
+    return 18
   }
   // Rogue: leather (11) + DEX mod (no cap for light armor)
   return 11 + abilityModifier(dexScore)

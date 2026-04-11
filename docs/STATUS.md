@@ -7,7 +7,7 @@
 **Sprint:** 015-paladin-smite
 **Goal:** Paladin class с Divine Smite, spell slots как reusable resource system, multi-damage weapons и breakdown в UI.
 **Started:** 2026-04-11
-**Phase:** 2 — Paladin Class Foundation (task 2 done, task 3 pending) — 2026-04-11
+**Phase:** 2 — Paladin Class Foundation (COMPLETE) — 2026-04-11. Ready for Phase 3 task generation.
 
 ### Phases
 

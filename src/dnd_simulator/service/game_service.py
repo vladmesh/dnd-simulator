@@ -778,9 +778,9 @@ class GameService(
             char_class = CharClass(char_class_raw)
         except ValueError as e:
             raise ValueError(f"Unknown class: {char_class_raw}") from e
-        supported_classes = {CharClass.FIGHTER, CharClass.ROGUE}
+        supported_classes = {CharClass.FIGHTER, CharClass.ROGUE, CharClass.PALADIN}
         if char_class not in supported_classes:
-            raise ValueError(f"Class '{char_class_raw}' is not supported. Choose from: fighter, rogue")
+            raise ValueError(f"Class '{char_class_raw}' is not supported. Choose from: fighter, rogue, paladin")
 
         # --- Validate ability scores ---
         raw_scores = player_data.get("ability_scores", {})
@@ -793,8 +793,8 @@ class GameService(
         # --- Validate fighting style ---
         fighting_style_raw = player_data.get("fighting_style")
         if fighting_style_raw is not None:
-            if char_class != CharClass.FIGHTER:
-                raise ValueError("Fighting style is only available for fighters")
+            if char_class not in {CharClass.FIGHTER, CharClass.PALADIN}:
+                raise ValueError("Fighting style is only available for fighters and paladins")
             try:
                 FightingStyle(fighting_style_raw)
             except ValueError as e:
