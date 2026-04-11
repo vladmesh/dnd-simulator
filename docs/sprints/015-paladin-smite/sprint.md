@@ -60,7 +60,8 @@ Smite как модификатор атаки: при попадании — п
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Multi-Damage Weapon Catalog & Backend Tests](tasks/phase4-task1-multi-damage-backend.md)
+2. [UI Damage Type Breakdown Polish](tasks/phase4-task2-ui-damage-breakdown.md)
 
 ## Phase 5: Smite + Magic Weapon Combo + Polish
 
@@ -76,7 +77,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 3 complete. Ready for Phase 4 task generation.
+**Current:** Phase 4 tasks generated. Ready to start task 1.
 
 ## Decisions
 
