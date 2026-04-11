@@ -82,6 +82,7 @@ export function CharacterForm({ sessionId, onCreated }: Props) {
   const { t } = useTranslation(["setup", "common"])
   const [submitting, setSubmitting] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
+  const [submitAttempted, setSubmitAttempted] = useState(false)
 
   const [name, setName] = useState("Adventurer")
   const [race, setRace] = useState<string>("human")
@@ -114,6 +115,7 @@ export function CharacterForm({ sessionId, onCreated }: Props) {
 
   const handleClassChange = (newClass: string) => {
     setCharClass(newClass)
+    setSubmitAttempted(false)
     if (newClass !== "fighter") {
       setFightingStyle("")
     }
@@ -121,6 +123,11 @@ export function CharacterForm({ sessionId, onCreated }: Props) {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitAttempted(true)
+    if (charClass === "fighter" && !fightingStyle) {
+      return
+    }
+
     setSubmitting(true)
     setServerError(null)
     try {
@@ -134,7 +141,7 @@ export function CharacterForm({ sessionId, onCreated }: Props) {
       if (charClass === "fighter" && fightingStyle) {
         payload.fighting_style = fightingStyle
       }
-      const result = await api.player.createCharacter(sessionId, payload as Parameters<typeof api.player.createCharacter>[1])
+      const result = await api.player.createCharacter(sessionId, payload as unknown as Parameters<typeof api.player.createCharacter>[1])
       onCreated(result.player_id)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : t("setup:create_character_error")
@@ -196,10 +203,17 @@ export function CharacterForm({ sessionId, onCreated }: Props) {
           <select
             data-testid="fighting-style-select"
             value={fightingStyle}
-            onChange={(e) => setFightingStyle(e.target.value)}
-            className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-sm text-foreground"
+            onChange={(e) => {
+              setFightingStyle(e.target.value)
+              if (e.target.value) setSubmitAttempted(false)
+            }}
+            className={`h-8 w-full rounded-lg border bg-background px-2.5 text-sm text-foreground ${
+              submitAttempted && !fightingStyle 
+                ? "border-destructive ring-1 ring-destructive" 
+                : "border-input"
+            }`}
           >
-            <option value="">{t("setup:fighting_style_none")}</option>
+            <option value="" disabled>{t("setup:fighting_style_none")}</option>
             {FIGHTING_STYLES.map((s) => (
               <option key={s} value={s}>{t(`setup:fighting_style_${s}`)}</option>
             ))}
