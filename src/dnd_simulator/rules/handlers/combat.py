@@ -21,14 +21,17 @@ logger = structlog.get_logger(domain="action")
 def handle_attack(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
     """Attack: emit attack event. CombatManager resolves via handle_event."""
     logger.info("attack", target=str(action.params["target_id"]))
+    data: dict[str, object] = {
+        "attacker_id": actor.id,
+        "target_id": action.params["target_id"],
+    }
+    if "smite_slot_level" in action.params:
+        data["smite_slot_level"] = int(str(action.params["smite_slot_level"]))
     return emit_fn(
         Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data={
-                "attacker_id": actor.id,
-                "target_id": action.params["target_id"],
-            },
+            data=data,
         )
     )
 

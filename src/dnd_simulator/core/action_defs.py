@@ -121,9 +121,16 @@ _reg(
         params=(
             ParamDef("target_id", "string", N_("ID of the target entity"), required=True),
             ParamDef("description", "string", N_("Flavor text for the attack")),
+            ParamDef(
+                "smite_slot_level",
+                "integer",
+                N_("Spell slot level to spend on Divine Smite (Paladin only, adds radiant damage on hit)"),
+            ),
         ),
         llm_hint=(
-            "Attack a target with your equipped weapon (or fists if unarmed). Target must be within weapon reach."
+            "Attack a target with your equipped weapon (or fists if unarmed). Target must be within weapon reach. "
+            "Paladins can add smite_slot_level (integer) to spend a spell slot on Divine Smite — "
+            "adds 2d8 radiant damage on hit (slot spent only if you hit)."
         ),
     )
 )

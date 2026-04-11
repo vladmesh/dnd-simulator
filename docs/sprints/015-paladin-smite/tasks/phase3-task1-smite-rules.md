@@ -46,4 +46,8 @@ Changes:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward implementation following the sneak_attack.py pattern. `validate_smite` returns error string (not raises) to match the pattern used by combat_manager for graceful error handling. Level 1 Paladin correctly has no spell slots (half-caster table starts at level 2), so smite validation rejects them. Attack handler forwards `smite_slot_level` only when present in params — no overhead for non-smite attacks.
