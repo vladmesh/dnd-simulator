@@ -18,13 +18,14 @@ ResourcePool уже существует как структура (`core/resour
 
 ## Phase 1: Spell Slots as ResourcePool
 
-ResourcePool перестаёт быть мёртвым кодом. Spell slots создаются, тратятся, восстанавливаются при Long Rest. Second Wind (Fighter) тоже подключается к ResourcePool. Action provider не показывает действие если pool пуст.
+ResourcePool перестаёт быть мёртвым кодом. Spell slots создаются, тратятся, восстанавливаются при Long Rest. Second Wind (Fighter) уже подключен к ResourcePool — добавляем rest actions для recovery. Action provider не показывает действие если pool пуст.
 
 **Верифицируем:** Unit tests — создать creature с spell slots, потратить, проверить current_uses, rest → восстановились. Second Wind тратит pool. Action provider не показывает действие если pool пуст.
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Long Rest & Short Rest Actions](tasks/phase1-task1-rest-actions.md)
+2. [Spell Slot Pool Infrastructure](tasks/phase1-task2-spell-slot-pools.md)
 
 ## Phase 2: Paladin Class Foundation
 
