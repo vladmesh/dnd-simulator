@@ -25,7 +25,7 @@
 3. [Fix action bar display issues (raw names, cost labels, drawer clarity)](tasks/phase1-task3-action-bar-display.md) ✓
 4. [Second Wind perception formatter + battle map content configs](tasks/phase1-task4-second-wind-log-battlemap.md) ✓
 
-## Phase 2: Adapter & Routes
+## Phase 2: Adapter & Routes ✓
 
 Оба касаются routes_master.py. Вынос `get_session_state()` в GameService (thick adapter → thin). Split routes_master.py на 2-3 модуля: session-control, content-editing, world-management.
 
@@ -33,8 +33,10 @@
 
 **Tasks:**
 
-1. [Extract get_session_state() to GameService](tasks/phase2-task1-extract-session-state.md)
-2. [Split routes_master.py into routes_world + routes_session](tasks/phase2-task2-split-routes-master.md)
+1. [Extract get_session_state() to GameService](tasks/phase2-task1-extract-session-state.md) ✓
+2. [Split routes_master.py into routes_world + routes_session](tasks/phase2-task2-split-routes-master.md) ✓
+
+**E2E:** [phase2-report.md](e2e/phase2-report.md) — 134/134 integration tests, UI smoke pass, no blockers.
 
 ## Phase 3: Core Boundaries
 
@@ -65,7 +67,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 2 (Adapter & Routes) — tasks generated 2026-04-12. Ready to start task 1.
+**Current:** Phase 2 COMPLETE 2026-04-12. Ready for Phase 3 (Core Boundaries) task generation.
 
 ## Decisions
 

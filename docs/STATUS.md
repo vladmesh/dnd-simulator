@@ -7,7 +7,9 @@
 **Sprint:** 016-tech-sweep
 **Goal:** Fix 6 E2E/backlog bugs, resolve 5 architecture violations, add 3 enums + harden fail-fast across codebase.
 **Started:** 2026-04-12
-**Phase:** 2 — Adapter & Routes (all tasks done — ready to close) — 2026-04-12
+**Phase:** 2 — Adapter & Routes (COMPLETE) — 2026-04-12
+
+Ready for Phase 3 (Core Boundaries) task generation.
 
 ### Phases
 
