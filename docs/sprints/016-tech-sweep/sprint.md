@@ -60,19 +60,23 @@
 
 ## Phase 4: Enums & Fail-Fast
 
-EntityType(StrEnum) — убрать "player"/"npc"/"creature" строковые сравнения. BrainType(StrEnum) — убрать `ai_type == "rule_based"`. LayerSource enum — убрать `source == "library"`. Perception 54x .get() → fail-fast. Silent failures: movement ValueError pass → error, autosave suppress → log. Test bare status codes → HTTPStatus. Attack dispatch без `target_id` крашит в `rules/handlers/combat.py:23` (logger до валидации) — валидировать на входе в dispatcher (fail-fast с понятным сообщением), найдено E2E phase 3 2026-04-13.
+EntityType(StrEnum) — убрать "player"/"npc"/"creature" строковые сравнения. BrainType(StrEnum) — убрать `ai_type == "rule_based"`. Attack dispatch без `target_id` крашит в `rules/handlers/combat.py:23` — валидировать на входе в dispatcher. Autosave suppress(Exception) → log+continue. Бáрные `200` в test_ws.py → HTTPStatus.
+
+**Scope clarifications (2026-04-13):** LayerSource enum уже в коде. Perception 54x .get() оказалось 7 с безопасными дефолтами — skip. Silent movement ValueError не найден — skip.
 
 **Верифицируем:** grep для удалённых паттернов → пусто. mypy + tests pass.
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [EntityType(StrEnum) — replace "player"/"npc"/"creature" literals](tasks/phase4-task1-entity-type-enum.md)
+2. [BrainType(StrEnum) — typed ai_type field + factory dispatch](tasks/phase4-task2-brain-type-enum.md)
+3. [Fail-Fast Cleanup — attack target_id, autosave log, test HTTPStatus](tasks/phase4-task3-fail-fast-cleanup.md)
 
 ---
 
 ## Status
 
-**Current:** Phase 3 complete 2026-04-13. Ready for Phase 4 (Enums & Fail-Fast) task generation.
+**Current:** Phase 4 (Enums & Fail-Fast) tasks generated 2026-04-13. Ready to start task 1.
 
 ## Decisions
 

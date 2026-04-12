@@ -7,9 +7,9 @@
 **Sprint:** 016-tech-sweep
 **Goal:** Fix 6 E2E/backlog bugs, resolve 5 architecture violations, add 3 enums + harden fail-fast across codebase.
 **Started:** 2026-04-12
-**Phase:** 3 — Core Boundaries (COMPLETE) — 2026-04-13
+**Phase:** 4 — Enums & Fail-Fast (tasks generated) — 2026-04-13
 
-Ready for Phase 4 task generation.
+Ready to start task 1.
 
 ### Phases
 
