@@ -11,6 +11,8 @@
 
 All phases complete. Ready for audit.
 
+**Audit:** Triaged 2026-04-13. Quick-fix: 1 applied (`_CombatContext` frozen). Sprint-relevant: 3 high-impact deferred (god-class game_service, any-to-object sweep, CORS+auth). Backlog: 4 new items added.
+
 ### Phases
 
 1. Bug Sweep

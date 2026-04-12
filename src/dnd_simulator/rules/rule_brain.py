@@ -35,7 +35,7 @@ SCARED_FLEE_HP_THRESHOLD = 0.25
 SCARED_DODGE_HP_THRESHOLD = 0.35
 
 
-@dataclass
+@dataclass(frozen=True)
 class _CombatContext:
     """Shared state for RuleBrain decision helpers within a single turn."""
 

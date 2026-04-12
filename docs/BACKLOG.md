@@ -91,6 +91,7 @@
 - [x] `long-func-run-combat-turn` — ~~round.py run_combat_turn 132 строки~~ FIXED Sprint 012 phase 4: extracted _prepare_combat_turn() + _build_combat_awareness()
 - [x] `long-func-choose-combat-action` — ~~core/brain.py _choose_combat_action 114 строк~~ FIXED Sprint 014 phase 0: decomposed into _CombatContext + per-action helpers
 - [ ] **should** `round-growing` — round.py 612 строк. Extract combat-turn and awareness-building into helpers
+- [ ] **could** `action-defs-growing` — core/action_defs.py 541 строка. Рассмотреть data-driven YAML формат для action registry
 - [ ] **should** `perception-fail-fast` — layers/entities/perception.py 54x .get() с silent defaults. Маскирует отсутствие данных в событиях
 - [ ] **could** `test-bare-status-codes` — test_api.py, test_trade_ws.py используют bare 200/404 вместо HTTPStatus
 - [ ] **should** `long-func-start-round` — service/session.py start_round 103 строки. Extract closures into named methods
@@ -142,6 +143,7 @@
 - [x] `dead-reset-resources` — ~~rules/resources.py, 12 test refs, 0 prod~~ FIXED Sprint 015 phase 1: wired into rest handlers
 - [ ] `dead-walk-path` — rules/movement.py:201, 12 test refs, 0 prod. Budget-aware path walking
 - [ ] `dead-to-save-data` — core/player.py:73, 1 test ref, 0 prod
+- [ ] `dead-can-opportunity-attack` — rules/reactions.py:15, 0 prod callers, дублирует inline check в find_oa_triggers()
 
 ## Test Gaps (from audit 2026-03-29)
 
@@ -164,3 +166,5 @@
 - [x] `test-gap-handlers-reactions` — ~~rules/handlers/reactions.py без unit-тестов~~ FIXED Sprint 012 phase 4: 5 tests in test_handlers_reactions.py
 - [ ] **should** `test-gap-commands-politics` — service/commands_politics.py 0 test references
 - [ ] **should** `test-gap-commands-time` — service/commands_time.py 0 test references
+- [ ] **should** `test-gap-fighting-style` — rules/fighting_style.py без выделенных unit-тестов (indirect через test_second_wind, test_create_player)
+- [ ] **could** `test-gap-ws-malformed-json` — WS handler не тестируется на невалидный JSON (только unknown message type)
