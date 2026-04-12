@@ -47,4 +47,11 @@ Simpler alternative if `ActionDef` already has a `params` field: enforce at disp
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Dispatcher now checks `ActionDef.params` for declared required params before `validate_action`. No new `required_params` field needed — existing `ParamDef.required` already encodes it. Raises `ValueError` (not `ActionResult.error`) to match the task's fail-fast intent: a missing required param is a protocol/UI bug, not a gameplay outcome.
+- `handle_attack` kept `params["target_id"]` lookup (now guaranteed by dispatcher) — no KeyError path to remove beyond what was already implicit.
+- `autosave_all_sessions` uses `logger.exception("autosave_failed", session_id=sid)` — preserves per-session isolation while surfacing failures. Added a `structlog` logger at module level.
+- Autosave test uses `structlog.testing.capture_logs()` against a minimal `SaveCommands` subclass harness; no full GameService needed.

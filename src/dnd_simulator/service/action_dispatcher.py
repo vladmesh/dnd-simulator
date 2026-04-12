@@ -110,8 +110,15 @@ class ActionDispatcher:
         """Validate all preconditions → execute handler → consume budget.
 
         Raises KeyError if action has no registered handler (programming error).
+        Raises ValueError if a required param declared in ActionDef is missing.
         """
-        # 1. Full validation chain (alive, active, mode, budget, item, target, reach)
+        # 1. Required-param check (fail fast before validation/handler).
+        action_def = get_action_def(action.name)
+        for p in action_def.params:
+            if p.required and p.name not in action.params:
+                raise ValueError(f"Action {action.name} missing required param: {p.name}")
+
+        # 2. Full validation chain (alive, active, mode, budget, item, target, reach)
         error = validate_action(actor, action, ctx)
         if error:
             return ActionResult(success=False, error=error.message)

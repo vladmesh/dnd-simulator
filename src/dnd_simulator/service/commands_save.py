@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-import contextlib
 from typing import Any
+
+import structlog
 
 from dnd_simulator.service.base import GameServiceProtocol
 from dnd_simulator.service.session import GameSession
+
+logger = structlog.get_logger(domain="save")
 
 
 class SaveCommands(GameServiceProtocol):
@@ -35,11 +38,13 @@ class SaveCommands(GameServiceProtocol):
         self._store.save(f"session_{session_id}", data, world=session.world_name)
 
     def autosave_all_sessions(self) -> None:
-        """Autosave all active sessions."""
+        """Autosave all active sessions. One failing session does not block the others."""
         sessions: dict[str, GameSession] = self._sessions
         for sid in list(sessions):
-            with contextlib.suppress(Exception):
+            try:
                 self.autosave_session(sid)
+            except Exception:
+                logger.exception("autosave_failed", session_id=sid)
 
     def load_game(self, session_id: str, name: str) -> None:
         """Load game state into session."""

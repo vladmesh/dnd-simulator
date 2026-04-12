@@ -134,6 +134,19 @@ class TestDispatchBasic:
         result = d.dispatch(_creature(), Action(name=ActionType.DODGE), _PEACEFUL, _noop_emit)
         assert not result.success
 
+    def test_attack_without_target_id_raises_value_error(self) -> None:
+        """Missing required param → ValueError mentioning the param, not KeyError."""
+        d = create_dispatcher(_WORLD)
+        actor = _creature()
+        _setup_entities(actor, _target())
+        budget = TurnBudget()
+        ctx = _combat_ctx(budget)
+        before = (budget.actions, budget.bonus_actions, budget.movement_remaining)
+        with pytest.raises(ValueError, match="target_id"):
+            d.dispatch(actor, Action(name=ActionType.ATTACK, params={}), ctx, _noop_emit)
+        # Budget untouched — error means no mutation.
+        assert (budget.actions, budget.bonus_actions, budget.movement_remaining) == before
+
 
 # ---------------------------------------------------------------------------
 # dispatch: budget enforcement
