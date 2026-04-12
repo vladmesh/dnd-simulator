@@ -294,4 +294,24 @@
 
 ### 13.3 Auto-hostility
 - Атаковать мирного NPC вне боя
-- **Ожидание:** автоматически начинается бой, NPC и его союзники (по effective_relation) на противоположной стороне
+- **Ожидание:** автоматически начинается бой, NPC и его союзники (по effective_relation) на противоположной стороне. HOSTILE scope валидация не должна блокировать attack до старта боя.
+
+---
+
+## 14. Paladin & Spell Slots
+
+### 14.1 Paladin character creation
+- Создать Paladin, выбрать Fighting Style
+- **Ожидание:** starting equipment содержит Chain Mail + Shield + Longsword (или греатмечь для GWF); preview HP использует d10 hit die; Lay on Hands pool = 5 × level; level 1 spell slot присутствует в ресурсах
+
+### 14.2 Lay on Hands
+- В бою/вне боя использовать Lay on Hands на союзника или на себя, выбрать количество HP
+- **Ожидание:** HP цели увеличилось (clamp до max HP), пул Lay on Hands уменьшился на использованное количество; лог событие `entity_lay_on_hands`
+
+### 14.3 Divine Smite
+- Paladin атакует melee, попадает, в UI появляется выбор Smite
+- **Ожидание:** при согласии тратится spell slot, урон в логе показывает radiant component (+2d8 базово, +1d8 на уровень слота); breakdown по damage types виден
+
+### 14.4 Target scope validation
+- Попытаться использовать Lay on Hands на враждебного NPC (ally scope), attack на союзника (hostile scope)
+- **Ожидание:** действие отклонено с понятным сообщением; UI не показывает target, запрещённый scope-ом

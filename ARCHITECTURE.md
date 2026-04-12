@@ -33,7 +33,7 @@ Every layer implements the same interface:
 
 ```
 src/dnd_simulator/
-├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/Action, LocationGraph, Condition, Item/WeaponDef/ArmorDef, Modifier, ClassFeatures, ResourcePool, ActionDef, Squad
+├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/BrainType/Action, CreatureHost protocol, LocationGraph, Condition, Item/WeaponDef/ArmorDef, Modifier, ClassFeatures, ResourcePool, ActionDef/TargetMode/TargetScope, EntityKind, NpcMemory, Squad
 ├── layers/        — concrete layer implementations
 │   ├── geography/ — physical world simulation
 │   ├── politics/  — factions and diplomacy
@@ -47,13 +47,19 @@ src/dnd_simulator/
 │       ├── query_handler.py      — QueryHandler (layer query dispatch)
 │       └── perception.py         — event perception and visibility filtering
 ├── master/        — DM orchestrator (LLM-powered)
-├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation, conditions, weapons, modifiers, proficiency, sneak attack, reactions, reputation, combat_sides, resources, character creation, action providers, abstract combat, physics, economics
-│   └── handlers/  — per-action-type execution (combat, movement, equipment, items, trade, reactions)
-├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, MemorySummarizer
+├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation (+ target scope), conditions, weapons, modifiers, proficiency, sneak attack, divine smite, fighting style, reactions, reputation, combat_sides, resources, character creation, action providers, abstract combat, physics, economics, RuleBrain (utility scoring)
+│   └── handlers/  — per-action-type execution (combat, attack_resolution, movement, equipment, items, rest, trade, reactions)
+├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, MemorySummarizer (layer-agnostic: only depends on core/ and rules/)
 ├── i18n.py        — gettext internationalization, per-session language via contextvars
 ├── adapters/      — transport layer
-│   └── api/       — FastAPI REST + WebSocket adapter (master + player routes, WS game loop, i18n middleware)
-│                    also serves legacy debug UI (static/) and React SPA build
+│   └── api/       — FastAPI REST + WebSocket adapter
+│                    routes_session.py (sessions, spawn, patch, time advance),
+│                    routes_world.py (world/library, layers, fork/delete),
+│                    routes_player.py (player actions, awareness),
+│                    routes_content.py (CRUD + schemas),
+│                    routes_ws.py (WebSocket loop),
+│                    app.py / deps.py / schemas.py
+│                    also serves React SPA build
 ├── content_loader/ — loads content from YAML directory format; locations must be explicit
 │   ├── schemas.py    — Pydantic content models (RegionContent, NpcContent, etc.) — source of truth for validation
 │   ├── schema_gen.py — JSON Schema generation from Pydantic models, enum injection, layer-refs resolution
@@ -72,10 +78,9 @@ src/dnd_simulator/
 │   ├── game_service.py — session management, command routing, creature hot controls
 │   ├── session.py      — GameSession: world ref, player lookup via entities layer, autosave
 │   ├── action_dispatcher.py — validate → route → execute (single entry point for all actions)
-│   ├── brain_factory.py     — creates Brain instances from ai_type strings
+│   ├── brain_factory.py     — creates Brain instances from BrainType
 │   ├── base.py              — ServiceMixin Protocol base for command modules
-│   ├── commands_combat.py, commands_creatures.py, commands_politics.py, ...
-│   └── commands_save.py, commands_time.py, commands_world.py
+│   └── commands_creatures.py, commands_politics.py, commands_save.py, commands_time.py, commands_world_state.py
 └── round.py       — Round orchestrator: multi-action turn loop with budget enforcement
 
 content/           — authored game data (YAML)
@@ -167,7 +172,7 @@ Calendar: 30 days/month, 12 months/year.
 
 ```
 Entity (id, name, location_id, active, on_tick)
-└── Creature (ability_scores, HP, AC, in_combat, is_dodging, is_disengaging, wake_at_seconds, brain, turn_budget, combat_position, equipped_armor, equipped_shield, resource_pools, faction_id, reputation, execute_action)
+└── Creature (ability_scores, HP, AC, in_combat, is_dodging, is_disengaging, wake_at_seconds, brain, turn_budget, combat_position, equipped_weapon, equipped_armor, equipped_shield, equipped_head, equipped_feet, equipped_ring, resource_pools, faction_id, reputation, squad_id, execute_action)
     └── Character (race, class, alignment, gold, appearance, class_features, perceive_by_id, get_npc_data)
         ├── PlayerCharacter (interactive I/O, overrides take_turn directly)
         └── Npc (role, personality, schedule, memory: NpcMemory, ai_type — brain assigned by content_loader/adapter)
@@ -216,11 +221,13 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 
 ## Class Features & Resources
 
-Composition-based class mechanics (`core/class_features.py`). Each D&D class gets a frozen dataclass: `FighterFeatures` (fighting style, cost overrides), `RogueFeatures` (sneak attack dice). `Character.class_features: list[ClassFeatures]` — multiclass gets multiple entries. `get_feature(FeatureType)` retrieves by type. No logic in feature dataclasses — pure data consumed by `rules/`.
+Composition-based class mechanics (`core/class_features.py`). Each D&D class gets a frozen dataclass: `FighterFeatures` (fighting style, cost overrides), `RogueFeatures` (sneak attack dice), `PaladinFeatures` (fighting style, cost overrides). Each feature carries its own `collect_self_modifiers(creature)` and `collect_attack_modifiers(creature, *, melee)` — classes declare their own modifiers, and `rules/modifiers.py` iterates `creature.class_features` without knowing concrete subtypes (shared logic like fighting-style modifiers lives in `rules/fighting_style.py`). `Character.class_features: list[ClassFeatures]` — multiclass gets multiple entries. `get_feature(FeatureType)` retrieves by type.
 
-**Fighter L1:** Fighting Style (Defense: +1 AC via modifier pipeline; Dueling: +2 melee damage via modifier pipeline). Second Wind (bonus action, 1d10+level heal, 1/short rest via ResourcePool).
+**Fighter L1:** Fighting Style (Defense: +1 AC; Dueling: +2 melee damage; GWF: reroll 1s/2s — all via modifier pipeline). Second Wind (bonus action, 1d10+level heal, 1/short rest via ResourcePool).
 
 **Rogue L1:** Sneak Attack (+Nd6 when advantage or ally adjacent to target, finesse/ranged only, once per turn — tracked by CombatManager). Cunning Action (Dash/Disengage as bonus action via `CostOverride`). Pure functions in `rules/sneak_attack.py`.
+
+**Paladin L1-L2:** Fighting Style. Lay on Hands (pool of hp = 5 × level, LONG_REST). Divine Smite (`rules/divine_smite.py`: spend a spell slot after a melee hit to add +2d8 radiant, +1d8 per slot level beyond 1). Level 1 spell slot via ResourcePool, resets on LONG_REST.
 
 **Resource pools** (`core/resource.py`): `ResourcePool(id, max_uses, current_uses, reset_on: RestType)` on `Creature.resource_pools`. SHORT_REST / LONG_REST reset triggers. Pure management functions in `rules/resources.py`.
 
@@ -246,7 +253,7 @@ Structured logging via `structlog` (`logging_config.py`, `logging_file_dispatch.
 
 - **Layers depend down, never up.** Geography knows nothing about NPCs. Enforced at runtime via `query_fn`/`emit_fn` callbacks injected by World — layers can only query layers below them by index.
 - **Rules are pure functions.** No state, no side effects, easy to test.
-- **Brain is a strategy.** `Creature.brain` decouples decision-making from entity type. `RuleBrain` (utility scoring + canned dialogue) needs no LLM; `LlmBrain` wraps an `LlmClient`; `PlayerBrain` uses queue + callback for interactive input. Brains are swappable at runtime (LOD).
+- **Brain is a strategy.** `Creature.brain` decouples decision-making from entity type. `RuleBrain` (utility scoring + canned dialogue, lives in `rules/rule_brain.py`) needs no LLM; `LlmBrain` wraps an `LlmClient`; `PlayerBrain` uses queue + callback for interactive input. `BrainType(StrEnum)` is the persisted discriminator. Brains are swappable at runtime (LOD). `core/` never imports concrete brain implementations: `core/brain.py` owns the ABC + PlayerBrain, `rules/` owns RuleBrain, `llm/` owns LlmBrain.
 - **LLM is injected, not hardcoded.** `LlmBrain` receives an `LlmClient`; rule-based NPCs use no LLM at all.
 - **Content is data, not code.** Worlds are composed from reusable library templates (1 template = 1 layer). Each world has a `manifest.yaml` referencing library templates or custom layers. ContentLoader resolves manifests and parses YAML into runtime objects. Fork (copy to custom) enables per-world customization.
 - **Transport is a thin adapter.** The game works the same whether accessed via terminal, HTTP, or Telegram. REST API (FastAPI) is the primary adapter for frontend.

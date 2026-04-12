@@ -58,7 +58,7 @@ service/           — GameService, ActionDispatcher, BrainFactory, command modu
   ↓
 adapters/          — FastAPI REST + WebSocket API
 
-rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, resources, character creation (point buy, HP, starting equipment), action providers, handlers/ package, reputation, combat_sides (no deps)
+rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, divine smite, fighting style, resources, character creation (point buy, HP, starting equipment), action providers, handlers/ package, reputation, combat_sides, rule_brain (no deps)
 llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
 storage/           — SaveStore interface, JsonFileStore
 content_loader/    — loads worlds, nations, settlements, NPCs, player from YAML; Pydantic content schemas, JSON Schema generation, entity CRUD, manifest resolver, library catalog, world assembly, catalog loader (monsters/items)
@@ -70,7 +70,7 @@ frontend/          — React + TypeScript SPA (Vite, shadcn/ui, Zustand)
 
 - **Layers depend down, never up.** Geography never imports from NPCs. Enforced at runtime: `query_fn` and `emit_fn` callbacks injected by World validate direction — layers can only query layers below them.
 - **Rules are pure functions** in `rules/` — no state, no I/O.
-- **Brain is a strategy** — `Creature.brain` field holds a `Brain` (RuleBrain or LlmBrain), decoupling AI from entity type.
+- **Brain is a strategy** — `Creature.brain` field holds a `Brain` (RuleBrain, LlmBrain, PlayerBrain), decoupling AI from entity type. `BrainType(StrEnum)` in `core/brain.py` is the persisted discriminator; `RuleBrain` lives in `rules/rule_brain.py` so `core/` never imports concrete brains.
 - **LLM is injected** — `LlmBrain` wraps an `LlmClient`; rule-based NPCs use `RuleBrain` with zero LLM calls.
 - **Content is data** — worlds, NPCs, quests defined in YAML under `content/`. Library templates in `content/library/{layer_type}/{slug}/` with `metadata.yaml`. Worlds in `content/worlds/{id}/manifest.yaml` referencing library templates or custom layers. Fork (copy to custom) for editing.
 - **Transport is thin** — adapters only translate I/O, all logic lives in `GameService`.
@@ -100,11 +100,11 @@ Items (`core/items.py`) — `Item` with `ItemType` (WEAPON, POTION, ARMOR, SHIEL
 
 ### Class Features & Resources
 
-Composition-based class mechanics (`core/class_features.py`). Each D&D class gets a frozen dataclass (`FighterFeatures`, `RogueFeatures`). `Character.class_features: list[ClassFeatures]` — multiclass gets multiple entries. `get_feature(FeatureType)` retrieves by type. Features define class-specific data consumed by `rules/`: Fighting Styles (Defense +1 AC, Dueling +2 damage) via modifier pipeline, Sneak Attack dice count, Cunning Action cost overrides (Dash/Disengage as bonus action).
+Composition-based class mechanics (`core/class_features.py`). Each D&D class gets a frozen dataclass (`FighterFeatures`, `RogueFeatures`, `PaladinFeatures`) with its own `collect_self_modifiers()` and `collect_attack_modifiers(melee=)` — classes declare their own modifiers; `rules/modifiers.py` iterates `creature.class_features` without knowing concrete types. `Character.class_features: list[ClassFeatures]` — multiclass gets multiple entries. `get_feature(FeatureType)` retrieves by type. Covers Fighting Styles (Defense +1 AC, Dueling +2 damage, GWF reroll), Sneak Attack dice, Cunning Action cost overrides (Dash/Disengage as bonus action), Divine Smite (`rules/divine_smite.py`).
 
-Resource pools (`core/resource.py`) — `ResourcePool(id, max_uses, current_uses, reset_on)` on `Creature.resource_pools`. `RestType` (SHORT_REST, LONG_REST) controls when pools reset. Used for Second Wind (1/short rest), future spell slots. Pure functions in `rules/resources.py`.
+Resource pools (`core/resource.py`) — `ResourcePool(id, max_uses, current_uses, reset_on)` on `Creature.resource_pools`. `RestType` (SHORT_REST, LONG_REST) controls when pools reset. Used for Second Wind (1/short rest), Paladin Lay on Hands (LONG_REST), Paladin spell slots (Level 1). Pure functions in `rules/resources.py`.
 
-Action definitions (`core/action_defs.py`) — centralized `ActionDef` registry: cost, params, combat mode, flags per `ActionType`. `CostOverride` allows class features to change action costs (e.g. Cunning Action makes Dash a bonus action).
+Action definitions (`core/action_defs.py`) — centralized `ActionDef` registry: cost, params, combat mode, flags, `TargetMode` (NONE/SELF/SINGLE) and `TargetScope` (HOSTILE/ALLY/ANY) per `ActionType`. `CostOverride` allows class features to change action costs (e.g. Cunning Action makes Dash a bonus action). Target scope is enforced in `rules/validation.py` with an explicit exception: HOSTILE-scope attacks outside active combat skip the faction check so the attack handler can auto-start combat via `forced_opponents`.
 
 ### Modifier Pipeline
 
