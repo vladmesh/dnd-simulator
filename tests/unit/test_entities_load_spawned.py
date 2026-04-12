@@ -15,9 +15,10 @@ from dnd_simulator.core.character import (
 )
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.items import Item, ItemType
+from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
-from dnd_simulator.layers.entities.models import Npc, NpcMemory
+from dnd_simulator.layers.entities.models import Npc
 
 
 def _template_npc() -> Npc:

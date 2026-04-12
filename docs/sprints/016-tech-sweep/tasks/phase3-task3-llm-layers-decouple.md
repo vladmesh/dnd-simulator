@@ -43,4 +43,12 @@ Two violations where `llm/` reaches into `layers/entities/models.py`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Moved `NpcMemory` to `core/npc_memory.py` (pure dataclass, no layer deps). Removed from `layers/entities/models.py`; no re-export — every import site updated to the canonical core path (content_loader/creatures, layers/entities/layer, summarizer, 4 test modules).
+- Added `ScheduledNpc` `Protocol` with `@runtime_checkable` in `llm/brain.py`. Replaced `isinstance(creature, NpcModel)` with Protocol `isinstance` check; dropped the `Npc` import. Activity `.value` access now guarded via `hasattr` since the Protocol return type is `object` (avoids leaking `NpcActivity` enum into core/llm).
+- Added architecture test `TestLlmDoesNotImportLayers` in `test_core_boundaries.py` scanning every `.py` under `llm/` for `from dnd_simulator.layers` / `import dnd_simulator.layers` — matches the grep acceptance check and guards against regressions.
+- Added `test_llm_brain.py::test_scheduled_activity_reaches_prompt_builder` that spies on `build_npc_system_prompt` and asserts `npc_data["activity"]` equals the scheduled `NpcActivity.WORKING.value`, exercising the new Protocol path end-to-end without an `Npc` import in `llm/`.
+- Full `make check` green (2051 backend, 220 frontend).

@@ -7,42 +7,9 @@ from enum import Enum
 from typing import Any
 
 from dnd_simulator.core.character import Character, NpcRole
+from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.core.tags import NpcTag, has_tag
 from dnd_simulator.i18n import _
-
-
-@dataclass
-class NpcMemory:
-    """Structured memory for an NPC — readable by both LLM and RuleBrain.
-
-    Fields:
-        tags: structured emotional/relational tags (e.g. "angry", "hates:orc_chief")
-        recent: summarized recent events
-        inner_state: current emotional/mental state
-        current_conversation: summary of ongoing conversation
-    """
-
-    tags: list[str] = field(default_factory=list)
-    recent: str = ""
-    inner_state: str = ""
-    current_conversation: str = ""
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "tags": list(self.tags),
-            "recent": self.recent,
-            "inner_state": self.inner_state,
-            "current_conversation": self.current_conversation,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> NpcMemory:
-        return cls(
-            tags=list(data.get("tags", [])),
-            recent=str(data.get("recent", "")),
-            inner_state=str(data.get("inner_state", "")),
-            current_conversation=str(data.get("current_conversation", "")),
-        )
 
 
 class NpcActivity(Enum):

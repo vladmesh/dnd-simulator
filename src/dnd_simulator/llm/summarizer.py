@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from dnd_simulator.layers.entities.models import NpcMemory
+from dnd_simulator.core.npc_memory import NpcMemory
 
 if TYPE_CHECKING:
     from dnd_simulator.llm.client import LlmClient

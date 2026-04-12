@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 import structlog
 
@@ -21,6 +21,18 @@ if TYPE_CHECKING:
 logger = structlog.get_logger(domain="llm.brain")
 
 _MAX_RETRIES = 3
+
+
+@runtime_checkable
+class ScheduledNpc(Protocol):
+    """Structural type for creatures with a daily schedule.
+
+    LlmBrain uses this to fetch the current activity/location for prompts
+    without importing concrete Npc from layers/. Any object exposing
+    `scheduled_activity(hour)` satisfies the Protocol.
+    """
+
+    def scheduled_activity(self, hour: int) -> object: ...
 
 
 class LlmBrain(Brain):
@@ -45,11 +57,10 @@ class LlmBrain(Brain):
 
         npc_data = creature.get_npc_data()
 
-        # Enrich NPC data with schedule-dependent fields
-        from dnd_simulator.layers.entities.models import Npc as NpcModel
-
-        if isinstance(creature, NpcModel) and isinstance(awareness, PeacefulAwareness):
-            npc_data["activity"] = creature.scheduled_activity(awareness.hour).value
+        # Enrich NPC data with schedule-dependent fields via Protocol (no layer import).
+        if isinstance(creature, ScheduledNpc) and isinstance(awareness, PeacefulAwareness):
+            activity = creature.scheduled_activity(awareness.hour)
+            npc_data["activity"] = activity.value if hasattr(activity, "value") else str(activity)
             npc_data["location_label"] = awareness.location_name
         else:
             npc_data.setdefault("activity", "idle")

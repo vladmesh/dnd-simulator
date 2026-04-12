@@ -13,7 +13,8 @@ from dnd_simulator.core.character import (
 )
 from dnd_simulator.core.combat import BattleMap, Position
 from dnd_simulator.core.models import EventType
-from dnd_simulator.layers.entities.models import Npc, NpcMemory
+from dnd_simulator.core.npc_memory import NpcMemory
+from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.rules.movement import direction_label, grid_distance
 from dnd_simulator.rules.rule_brain import RuleBrain
 

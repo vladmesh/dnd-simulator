@@ -66,3 +66,19 @@ class TestCreatureHostProtocol:
         world = World(layers=[], time=GameDateTime(year=1, month=1, day=1))
         with pytest.raises(RuntimeError, match="CreatureHost"):
             _ = world.creature_host
+
+
+class TestLlmDoesNotImportLayers:
+    """llm/ must not import from layers/ — use core types and Protocols instead."""
+
+    def test_llm_module_has_no_layer_imports(self) -> None:
+        llm_dir = SRC / "llm"
+        offenders: list[str] = []
+        for py in llm_dir.rglob("*.py"):
+            for lineno, line in enumerate(py.read_text(encoding="utf-8").splitlines(), start=1):
+                stripped = line.strip()
+                if stripped.startswith("#"):
+                    continue
+                if "from dnd_simulator.layers" in stripped or "import dnd_simulator.layers" in stripped:
+                    offenders.append(f"{py.relative_to(SRC)}:{lineno}: {stripped}")
+        assert not offenders, "llm/ must not depend on layers/:\n" + "\n".join(offenders)

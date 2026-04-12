@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock
 
-from dnd_simulator.layers.entities.models import NpcMemory
+from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.llm.summarizer import RECENT_LIMIT, MemorySummarizer
 
 

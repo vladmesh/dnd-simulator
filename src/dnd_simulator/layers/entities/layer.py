@@ -19,10 +19,11 @@ from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
+from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.layers.entities.activation_manager import ActivationManager
 from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder
 from dnd_simulator.layers.entities.combat_manager import CombatManager
-from dnd_simulator.layers.entities.models import Npc, NpcMemory
+from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.layers.entities.query_handler import QueryHandler
 

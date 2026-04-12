@@ -6,11 +6,11 @@ import pytest
 
 from dnd_simulator.core.character import Creature, Entity, NpcRole
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query, QueryType, TimeDelta
+from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import (
     Npc,
-    NpcMemory,
     hour_in_range,
     resolve_schedule,
 )

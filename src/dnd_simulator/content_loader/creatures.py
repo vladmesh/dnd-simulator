@@ -33,9 +33,10 @@ from dnd_simulator.core.class_features import (
     PaladinFeatures,
     RogueFeatures,
 )
+from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.resource import ResourcePool, RestType
-from dnd_simulator.layers.entities.models import Npc, NpcMemory, resolve_schedule
+from dnd_simulator.layers.entities.models import Npc, resolve_schedule
 from dnd_simulator.rules.resources import build_spell_slot_pools
 
 # ---------------------------------------------------------------------------
