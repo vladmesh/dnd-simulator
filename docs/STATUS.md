@@ -4,7 +4,18 @@
 
 ## Current Sprint
 
-No active sprint.
+**Sprint:** 017-xp-leveling
+**Goal:** Ввести XP (за убийства по CR) и систему уровней с level-up модалкой; исправить уровни Paladin (FS/slots/smite на L2), добавить L2 для всех трёх классов.
+**Started:** 2026-04-13
+**Phase:** Planning (COMPLETE) — 2026-04-13
+
+Ready for Phase 1 task generation.
+
+### Phases
+
+1. XP & Leveling Core — механика опыта и уровней, без UI и классовых фич
+2. Level-up mechanics + Paladin L2 fix — backend level-up, переезд Paladin FS/slots/smite на L2, Fighter Action Surge, Rogue L2 HP
+3. Level-up UI + E2E — React модалка с классовыми выборами, полный цикл через Playwright
 
 ## Sprint History
 
