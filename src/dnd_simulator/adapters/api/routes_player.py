@@ -87,4 +87,7 @@ def _player_status(p: PlayerCharacter) -> PlayerStatusResponse:
             "wis": scores[Ability.WIS],
             "cha": scores[Ability.CHA],
         },
+        resource_pools=[
+            {"id": pool.id, "max_uses": pool.max_uses, "current_uses": pool.current_uses} for pool in p.resource_pools
+        ],
     )

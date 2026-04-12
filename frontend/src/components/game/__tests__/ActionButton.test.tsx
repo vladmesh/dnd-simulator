@@ -302,6 +302,7 @@ describe("ActionButton — target scope filtering", () => {
       [
         { id: "ally_1", description: "Friendly Guard", distance_ft: 10, direction: "S", is_hostile: false },
       ],
+      [{ id: "lay_on_hands", max_uses: 5, current_uses: 5 }],
     )
 
     const { container } = render(<ActionBar />)
@@ -316,15 +317,22 @@ describe("ActionButton — target scope filtering", () => {
     const targetDropdown = drawerPopup!.querySelector(".absolute.bottom-full")
     expect(targetDropdown).toBeTruthy()
     const options = targetDropdown!.querySelectorAll("button")
-    // Find the Self option and click it
+    // Find the Self option and click it — opens amount picker
     const selfOption = Array.from(options).find((b) => b.textContent?.includes("Self") || b.textContent?.includes("Себя"))
     expect(selfOption).toBeTruthy()
     fireEvent.click(selfOption!)
 
+    // Amount picker appears — slider defaults to 1, click confirm
+    const amountPanel = document.querySelector('[data-testid="lay-on-hands-amount"]')
+    expect(amountPanel).toBeTruthy()
+    const confirmBtn = amountPanel!.querySelector('[data-testid="lay-on-hands-confirm"]') as HTMLElement
+    expect(confirmBtn).toBeTruthy()
+    fireEvent.click(confirmBtn)
+
     expect(wsClient.send).toHaveBeenCalledWith({
       type: "action",
       name: "lay_on_hands",
-      params: { target_id: "player_1" },
+      params: { target_id: "player_1", amount: 1 },
     })
   })
 

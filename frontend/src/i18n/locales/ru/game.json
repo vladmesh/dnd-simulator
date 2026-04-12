@@ -30,6 +30,8 @@
   "bless": "Благословение",
   "second_wind": "Второе дыхание",
   "lay_on_hands": "Наложение рук",
+  "lay_on_hands_pool": "Пул: {{current}}/{{max}} ОЗ",
+  "lay_on_hands_heal": "Вылечить {{amount}} ОЗ",
   "long_rest": "Длинный отдых",
   "short_rest": "Короткий отдых",
   "use_item": "Предмет",

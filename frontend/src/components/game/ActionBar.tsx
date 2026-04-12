@@ -47,7 +47,9 @@ export function ActionBar() {
   const isCombat = mode === "combat" && awareness && "self_hp" in awareness
   const nearby = awareness?.nearby ?? []
   const selfId = player?.player_id
-  const spellSlots = isCombat && "self_resource_pools" in awareness ? awareness.self_resource_pools : undefined
+  const spellSlots =
+    (isCombat && "self_resource_pools" in awareness ? awareness.self_resource_pools : undefined) ??
+    player?.resource_pools
 
   const groups = categorizeActions(available)
 
@@ -61,7 +63,8 @@ export function ActionBar() {
   const showInventoryDrawer = isCombat && groups.inventory.length > 0
   // Drawer stays open when a child action's sub-dropdown (target, smite) is active
   const classFeatureNames = new Set(groups.classFeatures.map((a) => a.name))
-  const isClassFeatureChildOpen = openDropdown != null && (classFeatureNames.has(openDropdown) || classFeatureNames.has(openDropdown.replace("-smite", "")))
+  const stripChildSuffix = (key: string) => key.replace(/-(smite|amount)$/, "")
+  const isClassFeatureChildOpen = openDropdown != null && (classFeatureNames.has(openDropdown) || classFeatureNames.has(stripChildSuffix(openDropdown)))
   const hasDrawers = showConsumableDrawer || showClassFeatureDrawer || showInventoryDrawer
 
   const actionButtonProps = {

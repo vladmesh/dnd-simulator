@@ -70,6 +70,23 @@ def check_actor_active(actor: Creature, action: Action, ctx: ActionContext) -> V
     return None
 
 
+def check_required_params(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
+    """All ParamDef entries with required=True must be present in action.params.
+
+    Empty params dict is treated as a probe (availability check) and skipped —
+    real dispatches always carry at least one param.
+    """
+    if not action.params:
+        return None
+    for p in get_action_def(action.name).params:
+        if p.required and p.name not in action.params:
+            return ValidationError(
+                "MISSING_REQUIRED_PARAM",
+                _("'{action}' requires parameter '{param}'.").format(action=action.name, param=p.name),
+            )
+    return None
+
+
 def check_action_mode(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
     """Combat-only actions outside combat and vice versa."""
     d = get_action_def(action.name)
@@ -169,6 +186,33 @@ def check_has_item(actor: Creature, action: Action, ctx: ActionContext) -> Valid
             _("Item '{id}' not in inventory.").format(id=item_id),
         )
 
+    return None
+
+
+def check_target_not_full_hp(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
+    """Lay on Hands: refuse when the target is already at full HP."""
+    if action.name != ActionType.LAY_ON_HANDS:
+        return None
+    if not action.params:
+        return None  # probe
+
+    from dnd_simulator.core.character import Creature as CreatureType
+
+    target_id = action.params.get("target_id") if action.params else None
+    if target_id and ctx.get_entity is not None:
+        target_entity = ctx.get_entity(str(target_id))
+        target: Creature | None = target_entity if isinstance(target_entity, CreatureType) else None
+    else:
+        target = actor
+
+    if target is None:
+        return None  # other checks will catch missing target
+
+    if target.current_hp >= target.max_hp:
+        return ValidationError(
+            "TARGET_FULL_HP",
+            _("Target is already at full HP."),
+        )
     return None
 
 
@@ -273,11 +317,13 @@ def check_target_scope(actor: Creature, action: Action, ctx: ActionContext) -> V
 _CHECKS = [
     check_actor_alive,
     check_actor_active,
+    check_required_params,
     check_action_mode,
     check_cost_mode,
     check_budget,
     check_has_item,
     check_target_valid,
     check_target_scope,
+    check_target_not_full_hp,
     check_reach,
 ]

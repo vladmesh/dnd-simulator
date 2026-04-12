@@ -175,6 +175,7 @@ class PlayerStatusResponse(BaseModel):
     location_id: str
     appearance: str
     ability_scores: dict[str, int]
+    resource_pools: list[dict[str, object]] = Field(default_factory=list)
 
 
 class SetupConfigResponse(BaseModel):

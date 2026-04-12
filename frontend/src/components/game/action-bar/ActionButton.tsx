@@ -64,14 +64,17 @@ function CoreActionButton({ action, nearby, selfId, disabled, budget, openDropdo
   if (costType) dataAttrs["data-cost-type"] = costType
   if (depleted) dataAttrs["data-depleted"] = ""
 
-  // target_mode === "single" → target dropdown with scope filtering
-  if (action.target_mode === "single" && nearby.length > 0) {
+  // target_mode === "single" → target dropdown with scope filtering.
+  // Render even with empty nearby when scope includes self (ally/any), so self-target works.
+  const scope = action.target_scope ?? "hostile"
+  const selfTargetable = scope === "ally" || scope === "any"
+  if (action.target_mode === "single" && (nearby.length > 0 || selfTargetable)) {
     return (
       <TargetDropdown
         name={name}
         description={action.description}
         nearby={nearby}
-        scope={action.target_scope ?? "hostile"}
+        scope={scope}
         selfId={selfId}
         disabled={disabled}
         openDropdown={openDropdown}

@@ -134,14 +134,14 @@ class TestLayOnHandsHealAlly:
 
 class TestLayOnHandsEdgeCases:
     def test_overheal_clamps(self) -> None:
-        """Target at 18/20 HP, amount=10. Heals only 2, pool still decrements by 10."""
+        """Target at 18/20 HP, amount=10. Heals 2, pool decrements by only 2 (no waste)."""
         paladin = _paladin(current_hp=18, max_hp=20, level=3, pool_uses=15)
         action = Action(name=ActionType.LAY_ON_HANDS, params={"amount": 10})
         result = handle_lay_on_hands(paladin, action, _noop_emit, _ctx(), None)  # type: ignore[arg-type]
         assert result.success
         assert paladin.current_hp == 20
         pool = next(p for p in paladin.resource_pools if p.id == "lay_on_hands")
-        assert pool.current_uses == 5
+        assert pool.current_uses == 13
 
     def test_pool_exhausted(self) -> None:
         """Pool at 0 → error."""

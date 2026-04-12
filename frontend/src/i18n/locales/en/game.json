@@ -30,6 +30,8 @@
   "bless": "Bless",
   "second_wind": "Second Wind",
   "lay_on_hands": "Lay on Hands",
+  "lay_on_hands_pool": "Pool: {{current}}/{{max}} HP",
+  "lay_on_hands_heal": "Heal {{amount}} HP",
   "long_rest": "Long Rest",
   "short_rest": "Short Rest",
   "use_item": "Use Item",

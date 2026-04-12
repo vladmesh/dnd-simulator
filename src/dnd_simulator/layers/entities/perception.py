@@ -308,6 +308,33 @@ def _perceive_second_wind(event: Event, observer: Character, get_entity: GetEnti
     return _("{entity} catches their breath, regaining {hp} HP").format(entity=desc, hp=healed)
 
 
+def _perceive_lay_on_hands(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    d = event.data
+    entity_id = str(d["entity_id"])
+    target_id = str(d["target_id"])
+    healed = d["healed"]
+    pool_before = d["pool_before"]
+    pool_after = d["pool_after"]
+
+    self_acting = entity_id == observer.id
+    self_target = target_id == observer.id
+
+    if self_acting and self_target:
+        return _("You lay hands on yourself, restoring {hp} HP (pool {before}→{after})").format(
+            hp=healed, before=pool_before, after=pool_after
+        )
+    if self_acting:
+        tdesc = _describe(observer, target_id, get_entity)
+        return _("You lay hands on {target}, restoring {hp} HP (pool {before}→{after})").format(
+            target=tdesc, hp=healed, before=pool_before, after=pool_after
+        )
+    edesc = _describe(observer, entity_id, get_entity)
+    if self_target:
+        return _("{entity} lays hands on you, restoring {hp} HP").format(entity=edesc, hp=healed)
+    tdesc = _describe(observer, target_id, get_entity)
+    return _("{entity} lays hands on {target}, restoring {hp} HP").format(entity=edesc, target=tdesc, hp=healed)
+
+
 def _perceive_equip(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     d = event.data
     entity_id = str(d["entity_id"])
@@ -455,6 +482,7 @@ _DISPATCH: dict[EventType, _PerceiveHandler] = {
     EventType.ENTITY_USE_ITEM: _perceive_use_item,
     EventType.ENTITY_BLESS: _perceive_bless,
     EventType.ENTITY_SECOND_WIND: _perceive_second_wind,
+    EventType.ENTITY_LAY_ON_HANDS: _perceive_lay_on_hands,
     EventType.ENTITY_EQUIP: _perceive_equip,
     EventType.ENTITY_UNEQUIP: _perceive_unequip,
     EventType.ENTITY_BUY: _perceive_buy,

@@ -140,11 +140,26 @@ def handle_lay_on_hands(
     else:
         target = actor
 
-    # Spend pool and heal
-    use_resource(actor, "lay_on_hands", amount=amount)
-    healed = target.heal(amount)
+    # Clamp amount to what the target actually needs — don't waste pool on overheal
+    hp_missing = target.max_hp - target.current_hp
+    effective = min(amount, hp_missing)
 
-    logger.info("lay_on_hands", target=target.id, amount=amount, healed=healed)
+    pool = next(p for p in actor.resource_pools if p.id == "lay_on_hands")
+    pool_before = pool.current_uses
+    hp_before = target.current_hp
+
+    use_resource(actor, "lay_on_hands", amount=effective)
+    healed = target.heal(effective)
+
+    logger.info(
+        "lay_on_hands",
+        target=target.id,
+        requested=amount,
+        spent=effective,
+        healed=healed,
+        pool_before=pool_before,
+        pool_after=pool.current_uses,
+    )
     emit_fn(
         Event(
             event_type=EventType.ENTITY_LAY_ON_HANDS,
@@ -152,8 +167,14 @@ def handle_lay_on_hands(
             data={
                 "entity_id": actor.id,
                 "target_id": target.id,
-                "amount": amount,
+                "requested": amount,
+                "spent": effective,
                 "healed": healed,
+                "pool_before": pool_before,
+                "pool_after": pool.current_uses,
+                "hp_before": hp_before,
+                "hp_after": target.current_hp,
+                "hp_max": target.max_hp,
             },
         )
     )
