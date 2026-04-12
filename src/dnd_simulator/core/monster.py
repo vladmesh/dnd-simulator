@@ -24,6 +24,8 @@ class MonsterTemplate:
 
     def spawn(self, location_id: str, instance_id: str) -> Creature:
         """Create a temporary Creature from this template."""
+        from dnd_simulator.rules.leveling import xp_for_cr
+
         return Creature(
             id=instance_id,
             name=self.name,
@@ -36,6 +38,7 @@ class MonsterTemplate:
             ac=self.ac,
             speed=self.speed,
             attacks=self.attacks,
+            xp_value=xp_for_cr(self.cr),
         )
 
 

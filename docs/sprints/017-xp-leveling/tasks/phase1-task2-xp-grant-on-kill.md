@@ -72,4 +72,13 @@ Unit-тест `tests/unit/test_combat_manager_xp.py` можно добавить
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Added `Creature.xp_value` (default 0) and `Character.experience` / `level_up_available` (defaults 0/False).
+- `MonsterTemplate.spawn()` uses a lazy import for `rules/leveling.xp_for_cr` to match the existing core→rules pattern (`class_features.py` does the same for `fighting_style`).
+- `_handle_death` grants XP only when attacker is Character and target.xp_value > 0. Uses `can_level_up()` to set flag. Emits `EventType.XP_GAINED` with `entity_id`, `amount`, `new_total`, `source_entity_id`, `level_up_available`.
+- `PlayerCharacter.to_save_data` / `load_save_data` now roundtrip experience + level_up_available.
+- Chose unit test in `tests/unit/test_xp_grant_on_kill.py` over integration (task allowed either) — drives `_handle_death` directly, matches pattern of `test_wire_sides_combat.py`. 7 tests, no integration-test runtime cost.
+- `make check` green: 2093 backend + 220 frontend.

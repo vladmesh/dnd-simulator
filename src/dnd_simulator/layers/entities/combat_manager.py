@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import structlog
 
-from dnd_simulator.core.character import Creature, Entity
+from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import ActionResult, Event, EventType, FactionRelation, Query, QueryFn, QueryType
@@ -20,6 +20,7 @@ from dnd_simulator.rules.handlers.attack_resolution import (
     resolve_combat_move,
     roll_attack_dice,
 )
+from dnd_simulator.rules.leveling import can_level_up
 from dnd_simulator.rules.modifiers import attack_modifiers
 from dnd_simulator.rules.reputation import (
     BASE_KILL_REPUTATION_DELTA,
@@ -437,6 +438,24 @@ class CombatManager:
             )
             self._location_log[target.location_id].append(rep_event)
             events.append(rep_event)
+
+        # XP grant on kill (Character attackers only, skip zero-value targets like other Characters)
+        if isinstance(attacker, Character) and target.xp_value > 0:
+            attacker.experience += target.xp_value
+            attacker.level_up_available = can_level_up(attacker.experience, attacker.level)
+            xp_event = Event(
+                event_type=EventType.XP_GAINED,
+                source_layer="entities",
+                data={
+                    "entity_id": attacker.id,
+                    "amount": target.xp_value,
+                    "new_total": attacker.experience,
+                    "source_entity_id": target_id,
+                    "level_up_available": attacker.level_up_available,
+                },
+            )
+            self._location_log[target.location_id].append(xp_event)
+            events.append(xp_event)
 
         self._remove_from_combat(target.location_id, target_id)
         return ActionResult(success=True, events=events)

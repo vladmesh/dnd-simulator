@@ -77,6 +77,8 @@ class PlayerCharacter(Character):
             "location_id": self.location_id,
             "current_hp": self.current_hp,
             "gold": self.gold,
+            "experience": self.experience,
+            "level_up_available": self.level_up_available,
         }
 
     def to_full_save_data(self) -> dict[str, Any]:
@@ -127,6 +129,8 @@ class PlayerCharacter(Character):
         self.location_id = str(data.get("location_id", data.get("region_id", self.location_id)))
         self.current_hp = int(data.get("current_hp", self.current_hp))
         self.gold = int(data.get("gold", self.gold))
+        self.experience = int(data.get("experience", self.experience))
+        self.level_up_available = bool(data.get("level_up_available", self.level_up_available))
         items_data = data.get("items")
         if isinstance(items_data, list):
             self.inventory = [deserialize_item(d) for d in items_data]

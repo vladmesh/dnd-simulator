@@ -230,6 +230,7 @@ class Creature(Entity):
     equipped_ring: Item | None = None
     resource_pools: list[ResourcePool] = field(default_factory=list)
     reputation: dict[str, int] = field(default_factory=dict)  # sparse: faction_id → rep score
+    xp_value: int = 0  # XP awarded to Character attacker on kill (0 for most creatures, set from CR for monsters)
     squad_id: str | None = None  # which squad this creature belongs to (if materialized)
     wake_at_seconds: int | None = None  # absolute game-time seconds; None = not waiting
     combat_position: tuple[int, int] | None = None  # fixed starting position on battle map (x, y in feet)
@@ -271,6 +272,8 @@ class Character(Creature):
     alignment: Alignment = Alignment.TRUE_NEUTRAL
     appearance: str = ""
     gold: int = 0
+    experience: int = 0
+    level_up_available: bool = False
     class_features: list[ClassFeatures] = field(default_factory=list)
 
     def get_feature(self, feature_type: type[_F]) -> _F | None:
