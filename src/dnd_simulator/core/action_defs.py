@@ -260,7 +260,10 @@ _reg(
         cost_type=CostType.FREE,
         combat_mode=CombatMode.PEACEFUL_ONLY,
         ends_peaceful_turn=True,
-        params=(ParamDef("hours", "integer", N_("How many hours to wait"), required=True),),
+        params=(
+            ParamDef("hours", "integer", N_("How many hours to wait (default: 1)")),
+            ParamDef("travel_to", "string", N_("Location ID to travel to instead of waiting in place")),
+        ),
         llm_hint="Wait and do nothing for a period of time. Useful when nothing is happening.",
     )
 )

@@ -58,7 +58,7 @@
 
 **E2E:** [phase3-report.md](e2e/phase3-report.md) — 134/134 integration tests, combat/AC/reputation pipeline verified via UI, no blockers. One pre-existing backlog item (combat.py KeyError on targetless attack click).
 
-## Phase 4: Enums & Fail-Fast
+## Phase 4: Enums & Fail-Fast ✓
 
 EntityType(StrEnum) — убрать "player"/"npc"/"creature" строковые сравнения. BrainType(StrEnum) — убрать `ai_type == "rule_based"`. Attack dispatch без `target_id` крашит в `rules/handlers/combat.py:23` — валидировать на входе в dispatcher. Autosave suppress(Exception) → log+continue. Бáрные `200` в test_ws.py → HTTPStatus.
 
@@ -68,15 +68,17 @@ EntityType(StrEnum) — убрать "player"/"npc"/"creature" строковы�
 
 **Tasks:**
 
-1. [EntityType(StrEnum) — replace "player"/"npc"/"creature" literals](tasks/phase4-task1-entity-type-enum.md)
-2. [BrainType(StrEnum) — typed ai_type field + factory dispatch](tasks/phase4-task2-brain-type-enum.md)
-3. [Fail-Fast Cleanup — attack target_id, autosave log, test HTTPStatus](tasks/phase4-task3-fail-fast-cleanup.md)
+1. [EntityType(StrEnum) — replace "player"/"npc"/"creature" literals](tasks/phase4-task1-entity-type-enum.md) ✓
+2. [BrainType(StrEnum) — typed ai_type field + factory dispatch](tasks/phase4-task2-brain-type-enum.md) ✓
+3. [Fail-Fast Cleanup — attack target_id, autosave log, test HTTPStatus](tasks/phase4-task3-fail-fast-cleanup.md) ✓
+
+**E2E:** [phase4-report.md](e2e/phase4-report.md) — 134/134 integration tests green, UI smoke (character creation, wait, combat kill) passes. One dispatcher-level declaration fix discovered during close: `WAIT.hours` was wrongly declared `required=True` but handler defaults to 1; corrected to optional and added `travel_to` ParamDef.
 
 ---
 
 ## Status
 
-**Current:** Phase 4 (Enums & Fail-Fast) tasks generated 2026-04-13. Ready to start task 1.
+**Current:** All phases complete (2026-04-13). Ready for audit.
 
 ## Decisions
 
