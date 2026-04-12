@@ -9,11 +9,12 @@ import threading
 from unittest.mock import MagicMock
 
 from dnd_simulator.core.action import Action, ActionType
-from dnd_simulator.core.brain import Brain, PlayerBrain, RuleBrain
+from dnd_simulator.core.brain import Brain, PlayerBrain
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
 from dnd_simulator.llm.brain import LlmBrain
 from dnd_simulator.llm.tools import get_reaction_tools
+from dnd_simulator.rules.rule_brain import RuleBrain
 
 # ---------------------------------------------------------------------------
 # Helpers

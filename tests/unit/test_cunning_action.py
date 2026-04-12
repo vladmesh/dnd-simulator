@@ -226,7 +226,7 @@ class TestRuleBrainCunningAction:
     def test_rogue_dashes_as_bonus_action(self) -> None:
         """Rogue RuleBrain should Dash with cost_mode=bonus_action to save the action."""
         from dnd_simulator.core.awareness import CombatAwareness, CombatEntity
-        from dnd_simulator.core.brain import RuleBrain
+        from dnd_simulator.rules.rule_brain import RuleBrain
 
         rogue = _rogue()
         rogue.attacks = ()  # ensure no equipped weapon attack
@@ -262,7 +262,7 @@ class TestRuleBrainCunningAction:
     def test_fighter_dashes_without_cost_mode(self) -> None:
         """Fighter RuleBrain dashes normally — no cost_mode param."""
         from dnd_simulator.core.awareness import CombatAwareness, CombatEntity
-        from dnd_simulator.core.brain import RuleBrain
+        from dnd_simulator.rules.rule_brain import RuleBrain
 
         fighter = _fighter()
 

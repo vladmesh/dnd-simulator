@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import structlog
 
-from dnd_simulator.core.brain import Brain, RuleBrain
+from dnd_simulator.core.brain import Brain
 from dnd_simulator.llm.client import LlmClient
+from dnd_simulator.rules.rule_brain import RuleBrain
 
 logger = structlog.get_logger(domain="brain")
 

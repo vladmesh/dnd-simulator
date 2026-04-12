@@ -176,7 +176,7 @@ class ActivationManager:
 
     def _roll_encounters(self, location_id: str, query_fn: QueryFn | None = None) -> None:
         """Roll each encounter entry for a location and spawn monsters."""
-        from dnd_simulator.core.brain import RuleBrain
+        from dnd_simulator.rules.rule_brain import RuleBrain
 
         entries = self._encounter_tables[location_id]
         spawned_names: list[str] = []
@@ -258,8 +258,8 @@ class ActivationManager:
         emit_fn: EmitFn | None,
     ) -> None:
         """Materialize squads at active locations, dematerialize squads that left."""
-        from dnd_simulator.core.brain import RuleBrain
         from dnd_simulator.core.world import LayerError
+        from dnd_simulator.rules.rule_brain import RuleBrain
 
         squads_at_active: dict[str, dict[str, Any]] = {}
         for loc in active_locations:

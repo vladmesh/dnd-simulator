@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.awareness import CombatAwareness, CombatEntity, NearbyEntity, PeacefulAwareness, PerceivedEvent
-from dnd_simulator.core.brain import RuleBrain
 from dnd_simulator.core.character import (
     Ability,
     Attack,
@@ -16,6 +15,7 @@ from dnd_simulator.core.combat import BattleMap, Position
 from dnd_simulator.core.models import EventType
 from dnd_simulator.layers.entities.models import Npc, NpcMemory
 from dnd_simulator.rules.movement import direction_label, grid_distance
+from dnd_simulator.rules.rule_brain import RuleBrain
 
 _SWORD = Attack(
     name="longsword",
@@ -464,7 +464,7 @@ class TestRuleBrainDecisionRules:
 
     def test_threshold_constants_exist(self) -> None:
         """Named threshold constants should be importable from brain module."""
-        from dnd_simulator.core.brain import (
+        from dnd_simulator.rules.rule_brain import (
             DODGE_HP_THRESHOLD,
             FLEE_HP_THRESHOLD,
             POTION_HP_THRESHOLD,
@@ -652,8 +652,7 @@ class TestRuleBrainTacticalDisengage:
     def test_choose_reaction_still_returns_oa(self) -> None:
         """RuleBrain.choose_reaction returns opportunity_attack for LEAVING_REACH trigger."""
         from dnd_simulator.core.action import ActionType
-        from dnd_simulator.core.brain import ReactionOption
-        from dnd_simulator.core.reactions import ReactionTrigger, TriggerType
+        from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
 
         npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         trigger = ReactionTrigger(

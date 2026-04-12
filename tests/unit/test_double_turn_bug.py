@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dnd_simulator.core.action import END_TURN, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
-from dnd_simulator.core.brain import Brain, RuleBrain
+from dnd_simulator.core.brain import Brain
 from dnd_simulator.core.character import Ability, Attack, Creature, DamageComponent, DamageType
 from dnd_simulator.core.location import Location, LocationGraph
 from dnd_simulator.core.models import GameDateTime
@@ -21,6 +21,7 @@ from dnd_simulator.layers.geography.models import Region, TerrainType
 from dnd_simulator.layers.politics.layer import PoliticsLayer
 from dnd_simulator.layers.settlements.layer import SettlementsLayer
 from dnd_simulator.round import Round
+from dnd_simulator.rules.rule_brain import RuleBrain
 from dnd_simulator.service.action_dispatcher import ActionDispatcher
 
 # ---------------------------------------------------------------------------

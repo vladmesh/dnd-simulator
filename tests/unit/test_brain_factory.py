@@ -6,9 +6,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dnd_simulator.core.brain import RuleBrain
 from dnd_simulator.llm.brain import LlmBrain
 from dnd_simulator.llm.client import LlmClient
+from dnd_simulator.rules.rule_brain import RuleBrain
 from dnd_simulator.service.brain_factory import BrainFactory
 
 

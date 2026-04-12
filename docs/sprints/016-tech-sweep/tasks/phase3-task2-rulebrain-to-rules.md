@@ -39,4 +39,14 @@ Rationale: `rules/` already imports from `core/` freely; `RuleBrain` is strategy
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Moved `RuleBrain` + `_CombatContext` + threshold constants + static `move_toward_target` helper from `core/brain.py` to new `rules/rule_brain.py`. All 5 previously-lazy imports from `rules/*` are now top-level.
+- `move_toward_target` was on the `Brain` ABC as a helper but was only ever called by `RuleBrain`. Moved it down with its only caller — removes the last lazy `from dnd_simulator.rules.movement` import from `core/brain.py`. ABC is now clean.
+- `core/brain.py` now contains only `Brain` ABC + `PlayerBrain` + callback types. This matches the existing split where `LlmBrain` lives in `llm/` — each concrete brain lives next to its dependencies.
+- `ReactionOption` used to be transitively re-exported from `core.brain`; test_rule_brain.py was importing it from there. Fixed to import directly from `core.reactions`.
+- Threshold constants (`FLEE_HP_THRESHOLD`, etc.) moved to `rules/rule_brain.py`; test_rule_brain.py updated to import from the new location.
+- Call-sites updated: `service/brain_factory.py`, `layers/entities/activation_manager.py` (2 sites), 7 test files.
+- Added `tests/unit/test_rule_brain_location.py` with 5 tests: architecture assertions (no rules imports in core/brain.py, RuleBrain not defined there, importable from rules.rule_brain) + combat integration smoke (attack in reach, retreat while disengaging).

@@ -9,11 +9,11 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from dnd_simulator.core.action import Action, ActionType
-from dnd_simulator.core.brain import RuleBrain
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
 from dnd_simulator.core.turn_budget import TurnBudget
+from dnd_simulator.rules.rule_brain import RuleBrain
 from dnd_simulator.rules.validation import ActionContext
 
 # ---------------------------------------------------------------------------

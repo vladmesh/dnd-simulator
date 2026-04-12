@@ -10,7 +10,6 @@ from collections import defaultdict
 
 from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.awareness import CombatAwareness, CombatEntity
-from dnd_simulator.core.brain import RuleBrain
 from dnd_simulator.core.character import (
     Ability,
     AbilityScores,
@@ -28,6 +27,7 @@ from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.layers.entities.combat_manager import CombatManager
 from dnd_simulator.rules.resources import spell_slot_pool_id
+from dnd_simulator.rules.rule_brain import RuleBrain
 
 _LONGSWORD = WeaponDef(
     weapon_id="longsword",
