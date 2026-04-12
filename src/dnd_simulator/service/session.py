@@ -15,14 +15,14 @@ from dnd_simulator.core.action_defs import get_action_def
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import PlayerBrain
 from dnd_simulator.core.character import Ability, Creature
+from dnd_simulator.core.creature_host import CreatureHost
 from dnd_simulator.core.models import Query, QueryType
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.i18n import _
-from dnd_simulator.layers.entities.layer import EntitiesLayer
-from dnd_simulator.round import Round, get_entities_layer
+from dnd_simulator.round import Round
 from dnd_simulator.rules.actions import collect_cost_overrides
 from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.service.action_dispatcher import create_dispatcher
@@ -213,11 +213,11 @@ def _location_data(world: World, location_id: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def resolve_abstract_move(action: Action, player: Creature, entities_layer: EntitiesLayer) -> Action:
+def resolve_abstract_move(action: Action, player: Creature, creature_host: CreatureHost) -> Action:
     """Translate toward/away_from into concrete direction + ft for a move action."""
     from dnd_simulator.rules.movement import calculate_away_direction, calculate_direction
 
-    combat = entities_layer._combat.get_combat(player.location_id)
+    combat = creature_host.get_combat(player.location_id)
     if not combat:
         return action
 
@@ -353,12 +353,12 @@ class GameSession:
         msg_type: str,
         player: PlayerCharacter,
         game_round: Round,
-        entities_layer: EntitiesLayer,
+        creature_host: CreatureHost,
     ) -> dict[str, Any]:
         """Build the common state dict shared by on_turn, on_action, and on_round_end."""
         perceived = game_round.get_perceived_events(player)
         query_fn = self.world._make_query_fn("entities")
-        awareness = entities_layer.build_awareness(player, self.world.time, query_fn)
+        awareness = creature_host.build_awareness(player, self.world.time, query_fn)
         return {
             "type": msg_type,
             "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
@@ -388,7 +388,7 @@ class GameSession:
             brain = PlayerBrain()
             self._player_brain = brain
 
-            entities_layer = get_entities_layer(self.world)
+            creature_host = self.world.creature_host
 
             # Wire on_turn: fires when Round calls brain.choose_action for the player
             # Uses awareness from Round (which includes merchants, etc.) — not _build_round_state
@@ -425,12 +425,12 @@ class GameSession:
             player.brain = brain
 
             dispatcher = create_dispatcher(self.world)
-            game_round = Round(self.world, entities_layer, dispatcher=dispatcher)
+            game_round = Round(self.world, creature_host, dispatcher=dispatcher)
 
             # Wire on_action: fires after each action by any creature
             def on_action(creature: Creature, action: Action, budget: TurnBudget | None, error: str) -> None:
                 self._last_turn_msg = None  # turn is being processed
-                msg = self._build_round_state("action_result", player, game_round, entities_layer)
+                msg = self._build_round_state("action_result", player, game_round, creature_host)
                 msg["actor"] = creature.id
                 msg["action"] = action.name
                 if error:
@@ -443,7 +443,7 @@ class GameSession:
 
             # Wire on_round_end: fires after each complete round
             def on_round_end(result: object) -> None:
-                msg = self._build_round_state("round_result", player, game_round, entities_layer)
+                msg = self._build_round_state("round_result", player, game_round, creature_host)
                 self._fire("on_round_result", msg)
 
             game_round.set_on_round_end(on_round_end)
@@ -501,8 +501,8 @@ class GameSession:
         if action.name == ActionType.MOVE and ("toward" in action.params or "away_from" in action.params):
             player = self.get_player()
             if player is not None:
-                entities_layer = get_entities_layer(self.world)
-                action = resolve_abstract_move(action, player, entities_layer)
+                creature_host = self.world.creature_host
+                action = resolve_abstract_move(action, player, creature_host)
 
         brain.submit_action(action)
 

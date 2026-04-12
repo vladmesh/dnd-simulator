@@ -25,11 +25,11 @@ from dnd_simulator.core.awareness import (
 )
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.combat import CombatState, Position
+from dnd_simulator.core.creature_host import CreatureHost
 from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType, GameDateTime, QueryFn, TimeDelta
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
-from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.rules.actions import (
     ends_peaceful_turn,
     get_num_actions,
@@ -57,14 +57,6 @@ class RoundResult:
     should_stop: bool = False
 
 
-def get_entities_layer(world: World) -> EntitiesLayer:
-    """Find the entities layer in the world."""
-    for layer in world.layers:
-        if isinstance(layer, EntitiesLayer):
-            return layer
-    raise RuntimeError("World has no EntitiesLayer")
-
-
 class Round:
     """Orchestrates one game round: all active creatures act, then time advances.
 
@@ -75,11 +67,11 @@ class Round:
     def __init__(
         self,
         world: World,
-        entities_layer: EntitiesLayer | None = None,
+        creature_host: CreatureHost | None = None,
         dispatcher: ActionDispatcher | None = None,
     ) -> None:
         self._world = world
-        self._entities = entities_layer or get_entities_layer(world)
+        self._host = creature_host or world.creature_host
         if dispatcher is None:
             from dnd_simulator.service.action_dispatcher import create_dispatcher
 
@@ -161,7 +153,7 @@ class Round:
         """Build merchant info for creatures at the same location."""
         hour = self._world.time.hour
         result: list[MerchantInfo] = []
-        for npc in self._entities.get_merchants_at(creature.location_id, hour):
+        for npc in self._host.get_merchants_at(creature.location_id, hour):
             items = [
                 ItemInfo(
                     id=item.id,
@@ -187,8 +179,8 @@ class Round:
         return self._dispatcher.dispatch(creature, action, ctx, emit_fn)
 
     def get_perceived_events(self, creature: Creature) -> list[PerceivedEvent]:
-        """Return perceived events for a creature (delegates to EntitiesLayer)."""
-        return self._entities.get_perceived_events(creature)
+        """Return perceived events for a creature (delegates to CreatureHost)."""
+        return self._host.get_perceived_events(creature)
 
     def run_creature_turn(
         self,
@@ -217,7 +209,7 @@ class Round:
 
         Returns an ActionContext if the creature can act, or None if the turn is skipped.
         """
-        self._entities.reset_combat_turn_state(creature.id)
+        self._host.reset_combat_turn_state(creature.id)
 
         expired = tick_conditions(creature.conditions)
         if expired:
@@ -259,13 +251,13 @@ class Round:
         )
         creature.is_disengaging = False
 
-        combat_state = self._entities.get_combat(creature.location_id)
+        combat_state = self._host.get_combat(creature.location_id)
         return ActionContext(
             is_combat=True,
             current_turn_entity_id=creature.id,
             turn_budget=creature.turn_budget,
             combat_state=combat_state,
-            get_entity=self._entities.get_entity,
+            get_entity=self._host.get_entity,
         )
 
     def _build_combat_awareness(
@@ -280,7 +272,7 @@ class Round:
         available = self._dispatcher.get_available_actions(creature, ctx)
         reachable = self._compute_reachable(creature, ctx.combat_state, creature.turn_budget)
         awareness = replace(
-            self._entities.build_awareness(creature, time, query_fn),
+            self._host.build_awareness(creature, time, query_fn),
             turn_budget=creature.turn_budget,
             available_actions=available,
             available_items=self._build_available_items(creature, available),
@@ -330,7 +322,7 @@ class Round:
                 break
 
             awareness = self._build_combat_awareness(creature, ctx, time, query_fn)
-            events = self._entities.get_perceived_events(creature)
+            events = self._host.get_perceived_events(creature)
 
             action = creature.brain.choose_action(creature, awareness, events)
 
@@ -341,7 +333,7 @@ class Round:
             if action.name == ActionType.MOVE and ("toward" in action.params or "away_from" in action.params):
                 from dnd_simulator.service.session import resolve_abstract_move
 
-                action = resolve_abstract_move(action, creature, self._entities)
+                action = resolve_abstract_move(action, creature, self._host)
 
             result = self._execute_action(creature, action, ctx, emit_fn)
 
@@ -387,7 +379,7 @@ class Round:
         ctx = ActionContext(
             is_combat=False,
             current_turn_entity_id=creature.id,
-            get_entity=self._entities.get_entity,
+            get_entity=self._host.get_entity,
         )
 
         while True:
@@ -396,13 +388,13 @@ class Round:
 
             available = self._dispatcher.get_available_actions(creature, ctx)
             awareness = replace(
-                self._entities.build_peaceful_awareness(creature, time, query_fn),
+                self._host.build_peaceful_awareness(creature, time, query_fn),
                 available_actions=available,
                 available_items=self._build_available_items(creature, available),
                 equipped=self._build_equipped(creature),
                 merchants=self._build_merchants(creature),
             )
-            events = self._entities.get_perceived_events(creature)
+            events = self._host.get_perceived_events(creature)
 
             logger.debug(
                 "peaceful_awareness",
@@ -461,13 +453,13 @@ class Round:
             if action.name == ActionType.SKIP:
                 continue
 
-            combat_state = self._entities.get_combat(creature.location_id)
+            combat_state = self._host.get_combat(creature.location_id)
             ctx = ActionContext(
                 is_combat=True,
                 current_turn_entity_id=creature.id,
                 turn_budget=creature.turn_budget,
                 combat_state=combat_state,
-                get_entity=self._entities.get_entity,
+                get_entity=self._host.get_entity,
             )
             result = self._execute_action(creature, action, ctx, _emit)
             if result.success:
@@ -526,31 +518,31 @@ class Round:
         time = self._world.time
 
         # Activate creatures near players, dormify the rest, materialize squads
-        self._entities.update_activation(time, query_fn=query_fn, emit_fn=emit_fn)
+        self._host.update_activation(time, query_fn=query_fn, emit_fn=emit_fn)
 
-        active_count = len(self._entities.get_active_creatures())
-        combat_locations = list(self._entities.get_combat_locations())
+        active_count = len(self._host.get_active_creatures())
+        combat_locations = list(self._host.get_combat_locations())
         logger.info(
             "round_start", game_time=str(time), active_creatures=active_count, combat_locations=len(combat_locations)
         )
 
         # Combat rounds: iterate by initiative order per location
-        for location_id in list(self._entities.get_combat_locations()):
-            combat = self._entities.get_combat(location_id)
+        for location_id in list(self._host.get_combat_locations()):
+            combat = self._host.get_combat(location_id)
             if not combat:
                 continue
-            self._entities.log_round_start(location_id, combat.round_number)
+            self._host.log_round_start(location_id, combat.round_number)
             for entity_id in list(combat.turn_order):
-                entity = self._entities.get_entity(entity_id)
+                entity = self._host.get_entity(entity_id)
                 if isinstance(entity, Creature) and entity.is_alive and entity.active and entity.in_combat:
                     entity.is_dodging = False  # dodge lasts until start of next turn
                     entity.is_disengaging = False
                     self.run_creature_turn(entity, time, query_fn, emit_fn)
             # End of round — check for combat exit
-            self._entities.end_combat_round(location_id)
+            self._host.end_combat_round(location_id)
 
         # Peaceful turns: creatures not in combat
-        for creature in self._entities.get_active_creatures():
+        for creature in self._host.get_active_creatures():
             if creature.in_combat or not creature.is_alive or not creature.active:
                 continue
             self.run_creature_turn(creature, time, query_fn, emit_fn)
@@ -565,7 +557,7 @@ class Round:
         """Update activation with materialization support."""
         qfn = self._world._make_query_fn("entities")
         efn = self._world._make_emit_fn("entities")
-        self._entities.update_activation(self._world.time, query_fn=qfn, emit_fn=efn)
+        self._host.update_activation(self._world.time, query_fn=qfn, emit_fn=efn)
 
     def run_loop(self, max_rounds: int | None = None) -> None:
         """Run rounds until no active creatures remain or stop() is called."""
@@ -573,7 +565,7 @@ class Round:
         while not self._stop_flag:
             # Update activation before checking — resolves stale state from previous round
             self._activate()
-            active = self._entities.get_active_creatures()
+            active = self._host.get_active_creatures()
             logger.debug(
                 "loop_check",
                 active_count=len(active),
@@ -600,7 +592,7 @@ class Round:
         Returns True if time was advanced (loop should continue), False if
         there's nobody to wake up (loop should exit).
         """
-        nearest_wake = self._entities.get_nearest_wake_time()
+        nearest_wake = self._host.get_nearest_wake_time()
 
         if nearest_wake is None:
             return False

@@ -84,7 +84,7 @@ def _make_round_with_creature(creature: Creature) -> Round:
     world._make_query_fn.return_value = MagicMock()
     world._make_emit_fn.return_value = MagicMock()
 
-    return Round(world=world, entities_layer=entities)
+    return Round(world=world, creature_host=entities)
 
 
 # ---------------------------------------------------------------------------

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from dnd_simulator.core.creature_host import CreatureHost
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, EmitFn, Event, GameDateTime, Query, QueryFn, TimeDelta
 
@@ -37,6 +38,14 @@ class World:
     @property
     def layers(self) -> list[Layer]:
         return list(self._layers)
+
+    @property
+    def creature_host(self) -> CreatureHost:
+        """Return the registered CreatureHost (entities layer). Fail-fast if missing."""
+        for layer in self._layers:
+            if isinstance(layer, CreatureHost):
+                return layer
+        raise RuntimeError("World has no CreatureHost — entities layer must be registered")
 
     def advance_time(self, delta: TimeDelta) -> list[Event]:
         """Advance world time. Only ticks layers whose tick_interval has elapsed."""

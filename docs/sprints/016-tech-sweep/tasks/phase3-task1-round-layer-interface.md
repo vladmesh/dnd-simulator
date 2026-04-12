@@ -41,4 +41,15 @@ Alternative considered: expand `Layer.query()` with enum-keyed queries for all 1
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Created `core/creature_host.py` with `CreatureHost` Protocol (@runtime_checkable). 13 methods covering everything `round.py` needs.
+- `World.creature_host` property iterates layers, returns first that `isinstance(CreatureHost)`. Fail-fast RuntimeError if none registered.
+- `round.py`: dropped `EntitiesLayer` import, renamed `self._entities → self._host`, renamed `Round.__init__` param `entities_layer → creature_host`. Removed helper `get_entities_layer()` entirely (nobody else used it).
+- Ripple effect: `service/session.py` also imported `EntitiesLayer` and `get_entities_layer`. Switched it to `world.creature_host` / `CreatureHost` — cleaner, fewer imports.
+- `resolve_abstract_move(..., entities_layer: EntitiesLayer)` had a private-attribute access `entities_layer._combat.get_combat()`; switched to public `.get_combat()` and typed the param as `CreatureHost`.
+- Protocol return type for `get_merchants_at` is `list[Character]` (not `Creature`) because round.py reads `.gold` which lives on Character. NPCs are always Characters in practice.
+- Tests touched: `test_check_reactions.py` (monkeypatched `_entities → _host`), `test_turn_budget_on_creature.py` (kwarg rename). Added new `test_core_boundaries.py` with 5 arch guards.
+- All 2044 unit tests + 220 frontend tests green; mypy clean.

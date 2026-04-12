@@ -65,7 +65,7 @@ def _make_round(creatures: list[Creature]) -> object:
 
     r = Round.__new__(Round)
     r._world = world
-    r._entities = entities
+    r._host = entities
     r._dispatcher = dispatcher
     r._on_action = None
     return r
