@@ -24,7 +24,9 @@
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Pure leveling rules](tasks/phase1-task1-leveling-rules.md) — `rules/leveling.py`: XP-by-CR + level thresholds + unit tests
+2. [Wire XP to creatures and grant on kill](tasks/phase1-task2-xp-grant-on-kill.md) — поля на моделях, начисление в `_handle_death`, save/load
+3. [Expose XP in player state](tasks/phase1-task3-xp-in-state.md) — payload (experience, level_up_available, xp_to_next) через REST/WS + frontend типы
 
 ## Phase 2: Level-up mechanics + Paladin L2 fix
 
