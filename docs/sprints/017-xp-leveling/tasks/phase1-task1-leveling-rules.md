@@ -102,4 +102,8 @@ def can_level_up(xp: int, current_level: int) -> bool:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implementation matches the task plan exactly. `xp_for_cr` coerces input via `float()` so integer CRs (e.g. `1`, `5`) look up correctly against float keys. 17 unit tests, all GREEN. `make check` passes (2086 backend + 220 frontend).
