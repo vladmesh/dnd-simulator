@@ -60,7 +60,7 @@
 
 ## Phase 4: Enums & Fail-Fast
 
-EntityType(StrEnum) — убрать "player"/"npc"/"creature" строковые сравнения. BrainType(StrEnum) — убрать `ai_type == "rule_based"`. LayerSource enum — убрать `source == "library"`. Perception 54x .get() → fail-fast. Silent failures: movement ValueError pass → error, autosave suppress → log. Test bare status codes → HTTPStatus.
+EntityType(StrEnum) — убрать "player"/"npc"/"creature" строковые сравнения. BrainType(StrEnum) — убрать `ai_type == "rule_based"`. LayerSource enum — убрать `source == "library"`. Perception 54x .get() → fail-fast. Silent failures: movement ValueError pass → error, autosave suppress → log. Test bare status codes → HTTPStatus. Attack dispatch без `target_id` крашит в `rules/handlers/combat.py:23` (logger до валидации) — валидировать на входе в dispatcher (fail-fast с понятным сообщением), найдено E2E phase 3 2026-04-13.
 
 **Верифицируем:** grep для удалённых паттернов → пусто. mypy + tests pass.
 
