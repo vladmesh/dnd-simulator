@@ -18,7 +18,7 @@
 
 ### 1.4 Character creation — point buy
 - На экране создания: проверить что есть +/- кнопки для ability scores, счётчик оставшихся очков (27), preview HP/AC/Gold, текст Starting Equipment
-- **Ожидание:** point buy корректный (15→9pts, остаток обновляется), + disabled при 15, - disabled при 8. Preview: Fighter L1 CON 14 → HP 12, Chain Mail + Shield + Defense → AC 19, Gold 100
+- **Ожидание:** point buy корректный (15→9pts, остаток обновляется), + disabled при 15, - disabled при 8. Preview: Fighter L1 CON 14 → HP 12, Chain Mail + Shield + Defense → AC 19, Gold > 0 (значение из starting_equipment)
 
 ### 1.5 Character creation — class-specific UI
 - Выбрать Fighter → появляется Fighting Style selector (Defense/Dueling/GWF). Выбрать Rogue → selector исчезает. Starting equipment меняется.

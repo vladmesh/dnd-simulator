@@ -295,6 +295,11 @@ def check_target_scope(actor: Creature, action: Action, ctx: ActionContext) -> V
         is_hostile = not are_allies(ctx.combat_state, actor.id, target_id)
 
     if is_hostile is None:
+        # Outside active combat, a HOSTILE-scope attack is itself the act of
+        # becoming hostile — let resolve_attack auto-start combat via
+        # forced_opponents. Scope enforcement is only meaningful once sides exist.
+        if ctx.combat_state is None and ad.target_scope == TargetScope.HOSTILE:
+            return None
         # Fallback to faction comparison — if either has no faction, can't determine
         if not actor.faction_id or not target.faction_id:
             return None  # unknown relation, let it through

@@ -205,6 +205,19 @@ class TestCheckTargetScope:
         ctx = ActionContext(is_combat=True, current_turn_entity_id="paladin")
         assert check_target_scope(actor, action, ctx) is None
 
+    def test_attack_same_faction_outside_combat_passes(self) -> None:
+        """HOSTILE scope on same-faction target outside combat → allowed (auto-hostility in resolver)."""
+        actor = _creature("player", faction="kingdom")
+        target = _creature("npc", faction="kingdom")
+        action = Action(name=ActionType.ATTACK, params={"target_id": "npc"})
+        ctx = ActionContext(
+            is_combat=False,
+            current_turn_entity_id="player",
+            combat_state=None,
+            get_entity=lambda eid: {"player": actor, "npc": target}[eid],
+        )
+        assert check_target_scope(actor, action, ctx) is None
+
     def test_non_single_mode_skipped(self) -> None:
         """Actions with target_mode != SINGLE skip scope check entirely."""
         actor = _creature("paladin")
