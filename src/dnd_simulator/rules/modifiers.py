@@ -9,7 +9,6 @@ Replaces ad-hoc stat computation scattered across combat_manager, conditions.py,
 from __future__ import annotations
 
 from dnd_simulator.core.character import Ability, Character, Creature
-from dnd_simulator.core.class_features import FighterFeatures, FightingStyle, PaladinFeatures
 from dnd_simulator.core.conditions import Condition, ConditionsMap
 from dnd_simulator.core.modifiers import AttackModifiers, Modifier, ModifierOp, RollComponent, StatType
 from dnd_simulator.rules.proficiency import (
@@ -97,12 +96,9 @@ def collect_self_modifiers(creature: Creature) -> list[Modifier]:
         ):
             mods.append(Modifier(StatType.ATTACK_ROLL, ModifierOp.DISADVANTAGE, source="non_proficient_shield"))
 
-        # Fighting Style: Defense — +1 AC while wearing armor (PHB p.72)
-        fighter = creature.get_feature(FighterFeatures)
-        paladin = creature.get_feature(PaladinFeatures)
-        fighting_style = (fighter and fighter.fighting_style) or (paladin and paladin.fighting_style)
-        if fighting_style == FightingStyle.DEFENSE and creature.equipped_armor:
-            mods.append(Modifier(StatType.AC, ModifierOp.ADD, value=1, source="fighting_style_defense"))
+        # Class-feature-driven modifiers (fighting styles, etc.)
+        for feature in creature.class_features:
+            mods.extend(feature.collect_self_modifiers(creature))
 
     # Accessory modifiers (head, feet, ring)
     for slot_field in ("equipped_head", "equipped_feet", "equipped_ring"):
@@ -282,21 +278,14 @@ def attack_modifiers(attacker: Creature, target: Creature, *, melee: bool) -> At
     if ability_mod:
         dmg_components.append(RollComponent(source=ability_source, value=ability_mod))
 
-    # Fighting Style Dueling (+2 damage with one-handed melee, no other weapon)
-    # D&D 5e PHB p.72: "wielding a melee weapon in one hand and no other weapons"
-    # We have a single weapon slot, so "no other weapons" is always true.
+    # Class-feature-driven attack contributions (fighting styles, etc.)
     gwf_reroll = False
-    if isinstance(attacker, Character) and melee:
-        fighter = attacker.get_feature(FighterFeatures)
-        paladin_f = attacker.get_feature(PaladinFeatures)
-        fighting_style = (fighter and fighter.fighting_style) or (paladin_f and paladin_f.fighting_style)
-        if fighting_style:
-            weapon = attacker.equipped_weapon
-            weapon_def = weapon.weapon_def if weapon else None
-            if fighting_style == FightingStyle.DUELING and weapon and (not weapon_def or not weapon_def.is_two_handed):
-                dmg_bonus += 2
-                dmg_components.append(RollComponent(source="dueling", value=2))
-            elif fighting_style == FightingStyle.GREAT_WEAPON_FIGHTING and weapon_def and weapon_def.is_two_handed:
+    if isinstance(attacker, Character):
+        for feature in attacker.class_features:
+            contribution = feature.collect_attack_modifiers(attacker, melee=melee)
+            dmg_bonus += contribution.damage_bonus
+            dmg_components.extend(contribution.damage_components)
+            if contribution.gwf_reroll:
                 gwf_reroll = True
 
     # Dice bonuses (Bless +1d4, etc.) — unresolved, rolled later by combat_manager

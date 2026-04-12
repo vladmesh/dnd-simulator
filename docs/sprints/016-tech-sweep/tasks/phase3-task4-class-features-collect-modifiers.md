@@ -60,4 +60,13 @@ Where `AttackContribution` carries damage bonus + roll components + flags like `
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Added `AttackContribution` dataclass in `core/modifiers.py` carrying `damage_bonus`, `damage_components`, `gwf_reroll`.
+- Added `collect_self_modifiers(creature)` + `collect_attack_modifiers(creature, *, melee)` methods on `FighterFeatures`, `RogueFeatures`, `PaladinFeatures`.
+- Shared fighting-style logic lives in `rules/fighting_style.py` (`self_modifiers_for_style`, `attack_contribution_for_style`). Fighter and Paladin methods both delegate; Rogue returns empty.
+- `rules/modifiers.py` no longer imports `FighterFeatures`/`PaladinFeatures`/`FightingStyle` — it just iterates `creature.class_features` and calls the protocol methods.
+- `core/class_features.py` uses lazy imports for the `rules/fighting_style` helpers to avoid a core→rules module-level dependency while still centralizing the logic.
+- Added 7 product tests (Paladin Defense/Dueling/None, Rogue no fighting-style contribution, architecture test that rules/modifiers.py doesn't reference feature subclasses). All 92 tests in test_modifiers.py and full `make check` green (2057 backend + 220 frontend).

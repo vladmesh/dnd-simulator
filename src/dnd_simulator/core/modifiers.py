@@ -58,6 +58,15 @@ class RollComponent:
 
 
 @dataclass(frozen=True)
+class AttackContribution:
+    """A class feature's contribution to an attack roll (damage side)."""
+
+    damage_bonus: int = 0
+    damage_components: tuple[RollComponent, ...] = ()
+    gwf_reroll: bool = False
+
+
+@dataclass(frozen=True)
 class AttackModifiers:
     """Pre-computed attack parameters for combat_manager.resolve_attack()."""
 

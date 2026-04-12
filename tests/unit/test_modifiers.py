@@ -12,7 +12,7 @@ from dnd_simulator.core.character import (
     DamageType,
     Race,
 )
-from dnd_simulator.core.class_features import FighterFeatures, FightingStyle
+from dnd_simulator.core.class_features import FighterFeatures, FightingStyle, PaladinFeatures, RogueFeatures
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.items import ArmorCategory, ArmorDef, Item, ItemType, WeaponCategory, WeaponDef
 from dnd_simulator.core.modifiers import Modifier, ModifierOp, StatType
@@ -649,3 +649,91 @@ class TestGWFModifier:
         target = _creature()
         result = attack_modifiers(fighter, target, melee=True)
         assert result.gwf_reroll is False
+
+
+# ---------------------------------------------------------------------------
+# Class-feature-driven modifiers: Paladin / Rogue
+# ---------------------------------------------------------------------------
+
+
+def _paladin(
+    fighting_style: FightingStyle | None,
+    *,
+    strength: int = 14,
+    dexterity: int = 10,
+) -> Character:
+    return Character(
+        id="paladin",
+        name="Paladin",
+        location_id="loc",
+        max_hp=20,
+        current_hp=20,
+        ac=10,
+        ability_scores=AbilityScores(scores={**AbilityScores().scores, Ability.STR: strength, Ability.DEX: dexterity}),
+        race=Race.HUMAN,
+        char_class=CharClass.PALADIN,
+        class_features=[PaladinFeatures(fighting_style=fighting_style)],
+    )
+
+
+def _rogue(*, strength: int = 14, dexterity: int = 14) -> Character:
+    return Character(
+        id="rogue",
+        name="Rogue",
+        location_id="loc",
+        max_hp=16,
+        current_hp=16,
+        ac=10,
+        ability_scores=AbilityScores(scores={**AbilityScores().scores, Ability.STR: strength, Ability.DEX: dexterity}),
+        race=Race.HUMAN,
+        char_class=CharClass.ROGUE,
+        class_features=[RogueFeatures()],
+    )
+
+
+class TestPaladinFightingStyle:
+    def test_paladin_defense_style_gives_plus_1_ac_in_armor(self) -> None:
+        paladin = _paladin(FightingStyle.DEFENSE, dexterity=10)
+        paladin.equipped_armor = _armor_item(_CHAIN_MAIL)
+        # chain mail 16 + 0 DEX + 1 defense = 17
+        assert effective_ac(paladin) == 17
+
+    def test_paladin_dueling_style_adds_2_damage(self) -> None:
+        paladin = _paladin(FightingStyle.DUELING, strength=14)
+        paladin.equipped_weapon = _sword_item()
+        target = _creature()
+        result = attack_modifiers(paladin, target, melee=True)
+        assert result.damage_bonus == 4  # 2 ability + 2 dueling
+
+    def test_paladin_without_fighting_style_has_no_bonus(self) -> None:
+        paladin = _paladin(None, dexterity=10)
+        paladin.equipped_armor = _armor_item(_CHAIN_MAIL)
+        # chain mail 16, no fighting style bonus
+        assert effective_ac(paladin) == 16
+
+
+class TestRogueNoFightingStyleContribution:
+    def test_rogue_self_mods_have_no_fighting_style_source(self) -> None:
+        rogue = _rogue()
+        rogue.equipped_armor = _armor_item(_STUDDED_LEATHER)
+        mods = collect_self_modifiers(rogue)
+        assert not any(m.source.startswith("fighting_style_") for m in mods)
+
+    def test_rogue_attack_has_no_dueling_damage(self) -> None:
+        rogue = _rogue(dexterity=14)
+        rogue.equipped_weapon = _sword_item()
+        target = _creature()
+        result = attack_modifiers(rogue, target, melee=True)
+        assert result.damage_bonus == 2  # dex only, no dueling
+        assert result.gwf_reroll is False
+
+
+class TestArchitectureNoHardcodedFeatureDispatch:
+    def test_modifiers_py_does_not_reference_feature_subclasses(self) -> None:
+        from pathlib import Path
+
+        import dnd_simulator.rules.modifiers as mod
+
+        source = Path(mod.__file__).read_text()
+        assert "FighterFeatures" not in source, "rules/modifiers.py must not reference FighterFeatures"
+        assert "PaladinFeatures" not in source, "rules/modifiers.py must not reference PaladinFeatures"
