@@ -2,8 +2,22 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any
+
+
+class EntityKind(StrEnum):
+    """Runtime entity discriminator for save/load and query filtering.
+
+    Distinct from content_loader.EntityType (which enumerates YAML content kinds).
+    PLAYER / NPC / CREATURE are used in EntitiesLayer save data; PLAYER / NPC / MONSTER
+    are used by the detail/query API surface.
+    """
+
+    PLAYER = "player"
+    NPC = "npc"
+    CREATURE = "creature"
+    MONSTER = "monster"
 
 
 class TerrainType(Enum):

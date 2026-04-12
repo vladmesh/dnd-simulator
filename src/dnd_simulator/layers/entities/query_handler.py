@@ -6,7 +6,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, ClassVar
 
 from dnd_simulator.core.character import Character, Creature, Entity
-from dnd_simulator.core.models import Answer, Query, QueryType
+from dnd_simulator.core.models import Answer, EntityKind, Query, QueryType
 from dnd_simulator.layers.entities.models import Npc, activity_flavor
 from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.rules.modifiers import effective_ac
@@ -84,7 +84,8 @@ class QueryHandler:
     def _query_all_creatures(self, params: dict[str, object]) -> Answer:
         from dnd_simulator.core.player import PlayerCharacter
 
-        filter_type = params.get("entity_type")
+        raw_filter = params.get("entity_type")
+        filter_kind = EntityKind(str(raw_filter)) if raw_filter else None
         filter_location = params.get("location_id")
         filter_active = params.get("active")
         result = []
@@ -95,11 +96,11 @@ class QueryHandler:
                 continue
             if filter_location and e.location_id != filter_location:
                 continue
-            if filter_type == "player" and not isinstance(e, PlayerCharacter):
+            if filter_kind is EntityKind.PLAYER and not isinstance(e, PlayerCharacter):
                 continue
-            if filter_type == "npc" and not isinstance(e, Npc):
+            if filter_kind is EntityKind.NPC and not isinstance(e, Npc):
                 continue
-            if filter_type == "monster" and (isinstance(e, (PlayerCharacter, Npc))):
+            if filter_kind is EntityKind.MONSTER and isinstance(e, (PlayerCharacter, Npc)):
                 continue
             result.append(self._entity_detail(e))
         return Answer(value=result)
@@ -277,11 +278,11 @@ class QueryHandler:
                 }
             )
         if isinstance(entity, PlayerCharacter):
-            base["entity_type"] = "player"
+            base["entity_type"] = EntityKind.PLAYER.value
         elif isinstance(entity, Npc):
             base.update(
                 {
-                    "entity_type": "npc",
+                    "entity_type": EntityKind.NPC.value,
                     "role": entity.role.value,
                     "personality": entity.personality,
                     "settlement_id": entity.settlement_id,
@@ -290,7 +291,7 @@ class QueryHandler:
                 }
             )
         elif isinstance(entity, Creature):
-            base["entity_type"] = "monster"
+            base["entity_type"] = EntityKind.MONSTER.value
         return base
 
     def _npc_detail(self, npc: Npc) -> dict[str, object]:

@@ -17,7 +17,7 @@ from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.layer import Layer
-from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
+from dnd_simulator.core.models import ActionResult, Answer, EntityKind, Event, EventType, Query
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.layers.entities.activation_manager import ActivationManager
@@ -449,10 +449,10 @@ class EntitiesLayer(Layer):
                         for pool in e.resource_pools
                     ]
             if isinstance(e, PlayerCharacter):
-                data["entity_type"] = "player"
+                data["entity_type"] = EntityKind.PLAYER.value
                 data.update(e.to_full_save_data())
             elif isinstance(e, Npc):
-                data["entity_type"] = "npc"
+                data["entity_type"] = EntityKind.NPC.value
                 data.update(
                     {
                         "current_hp": e.current_hp,
@@ -471,7 +471,7 @@ class EntitiesLayer(Layer):
                     }
                 )
             elif isinstance(e, Creature):
-                data["entity_type"] = "creature"
+                data["entity_type"] = EntityKind.CREATURE.value
                 data["current_hp"] = e.current_hp
             entities[eid] = data
         combats = self._combat.get_combats_state()
@@ -494,19 +494,19 @@ class EntitiesLayer(Layer):
 
             # Recreate missing entities from save data (spawned at runtime or player)
             if entity is None:
-                entity_type = edata.get("entity_type")
-                if entity_type == "player":
+                entity_kind = EntityKind(edata["entity_type"])
+                if entity_kind is EntityKind.PLAYER:
                     entity = parse_player(edata)
                     entity.current_hp = int(edata.get("current_hp", entity.max_hp))
                     self.add_entity(entity)
                     # Fall through to restore equipment and other mutable state
-                if entity_type == "npc":
+                elif entity_kind is EntityKind.NPC:
                     from dnd_simulator.content_loader import parse_npc
 
                     entity = parse_npc(str(eid), edata)
                     self.add_entity(entity)
                     # Fall through to mutable state restoration below
-                elif entity_type == "creature":
+                elif entity_kind is EntityKind.CREATURE:
                     from dnd_simulator.content_loader import parse_ability_scores, parse_attacks
 
                     entity = Creature(
@@ -523,7 +523,7 @@ class EntitiesLayer(Layer):
                     self.add_entity(entity)
                     # Fall through to mutable state restoration below
                 else:
-                    continue
+                    raise ValueError(f"Cannot reconstruct entity '{eid}' from save: {entity_kind} not supported here")
 
             if entity:
                 entity.active = bool(edata.get("active", True))

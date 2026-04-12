@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.models import Query, QueryType
+from dnd_simulator.core.models import EntityKind, Query, QueryType
 from dnd_simulator.service.base import GameServiceProtocol
 
 if TYPE_CHECKING:
@@ -182,9 +182,9 @@ class CreatureCommands(GameServiceProtocol):
 
 def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) -> Entity:
     """Create the right entity type based on entity_type field."""
-    entity_type = str(data.get("entity_type", "npc"))
+    entity_kind = EntityKind(data.get("entity_type", EntityKind.NPC.value))
 
-    if entity_type == "npc":
+    if entity_kind is EntityKind.NPC:
         from dnd_simulator.content_loader import parse_npc
 
         return parse_npc(str(data["id"]), data, known_locations=known_locations)

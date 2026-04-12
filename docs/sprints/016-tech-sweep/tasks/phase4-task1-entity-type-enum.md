@@ -42,4 +42,14 @@ Frontend not in scope — API surface still returns strings (StrEnum serializes 
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Named the runtime enum `EntityKind` (not `EntityType`) to avoid collision with existing `content_loader.crud.EntityType` (YAML content kinds). Both concepts are legitimate and distinct — runtime discriminator vs content catalog — so renaming either would be worse than picking a new name.
+
+4 members: PLAYER, NPC, CREATURE, MONSTER. Save data uses CREATURE for generic runtime creatures; API detail/query surface uses MONSTER for "Creature that isn't Player or Npc". Didn't unify — would force a save format migration for no real win.
+
+Fail-fast added at `EntitiesLayer.load_state`: `EntityKind(edata["entity_type"])` raises on unknown, and the previous `else: continue` silent skip now raises (impossible state via save, but no point papering over it). Query filter uses `EntityKind(str(raw))` with mypy-narrowing cast since `params` is `dict[str, object]`.
+
+Frontend untouched — API surface still returns string values (StrEnum serializes cleanly).
