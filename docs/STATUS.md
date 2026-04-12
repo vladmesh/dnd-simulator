@@ -4,36 +4,14 @@
 
 ## Current Sprint
 
-**Sprint:** 016-tech-sweep
-**Goal:** Fix 6 E2E/backlog bugs, resolve 5 architecture violations, add 3 enums + harden fail-fast across codebase.
-**Started:** 2026-04-12
-**Phase:** 4 — Enums & Fail-Fast (COMPLETE) — 2026-04-13
-
-All phases complete. Ready for audit.
-
-**Audit:** Triaged 2026-04-13. Quick-fix: 1 applied (`_CombatContext` frozen). Sprint-relevant: 3 high-impact deferred (god-class game_service, any-to-object sweep, CORS+auth). Backlog: 4 new items added.
-
-### Phases
-
-1. Bug Sweep
-2. Adapter & Routes
-3. Core Boundaries
-4. Enums & Fail-Fast
-
-### Phases
-
-1. Spell Slots as ResourcePool ✓
-2. Paladin Class Foundation ✓
-3. Divine Smite ✓
-4. Multi-Damage Weapons + UI Breakdown ✓
-5. Smite + Magic Weapon Combo + Polish ✓
-6. Action Target Scope ✓
-7. Smite UI + Level 1 Spell Slot ✓
+No active sprint.
 
 ## Sprint History
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 016-tech-sweep | Fix E2E/backlog bugs, resolve architecture violations, add enums + harden fail-fast | 2026-04-12 | 2026-04-13 |
+| 015-paladin-spell-slots | Paladin L1-L2: spell slots as ResourcePool, Divine Smite, Lay on Hands, multi-damage weapons, target scope enums | 2026-04-10 | 2026-04-12 |
 | 014-faction-reputation | Combat sides from faction relations, personal reputation, auto-hostility, friendly OA fix | 2026-04-09 | 2026-04-10 |
 | 013-char-creation | Character creation overhaul — point buy, derived HP/AC, starting equipment, Fighter/Rogue only | 2026-04-01 | 2026-04-09 |
 | 012-reactions-oa | D&D 5e reactions — opportunity attacks, Disengage, Brain.choose_reaction, reaction prompt UI | 2026-03-30 | 2026-03-31 |

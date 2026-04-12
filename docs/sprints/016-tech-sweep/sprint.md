@@ -90,4 +90,22 @@ _(заполняется по ходу спринта)_
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-04-13
+
+Техспринт: 4 фазы, 28 коммитов, 118 файлов, +4302/−1344.
+
+**Bug sweep (Phase 1):** class_features теряются при save/load (AC Defense), 26 frontend тестов, action bar (i18n имена действий, cost labels, drawer tooltips), Second Wind perception formatter, battle map configs из regions.yaml.
+
+**Adapter & routes (Phase 2):** `routes_master.py` (god-file) распилен на `routes_session.py` + `routes_world.py`. `get_session_state()` извлечён из adapter в service layer (`commands_world_state.py`).
+
+**Core boundaries (Phase 3):** (1) `CreatureHost` protocol в `core/creature_host.py` развязал `round.py` от `EntitiesLayer`. (2) `RuleBrain` переехал в `rules/rule_brain.py` — `core/brain.py` больше не знает про конкретные брэйны. (3) `llm/` не импортирует из `layers/`: `NpcMemory` переехал в `core/`, LlmBrain использует `ScheduledNpc` Protocol (TYPE_CHECKING). (4) `ClassFeatures.collect_self_modifiers/collect_attack_modifiers` — каждый класс сам декларирует модификаторы, `rules/modifiers.py` больше не перечисляет `FighterFeatures/PaladinFeatures` руками.
+
+**Enums & fail-fast (Phase 4):** `EntityKind(StrEnum)` + `BrainType(StrEnum)` вместо строковых сравнений. Attack без `target_id` крашится на уровне dispatcher (`rules/validation.py`), а не в handler. Autosave ошибки логируются, а не молча глотаются. Бóльшая часть бар `200`/`404` в тестах → `HTTPStatus`. Scope-clarification: `LayerSource` enum уже был в коде, perception `.get()` оказались безопасными дефолтами (skip), silent movement ValueError не найден (skip).
+
+**Audit:** 32 issues, triage 2026-04-13. Quick-fix: `_CombatContext` frozen. В backlog: 4 новых айтема (любая→object sweep, god-класс GameService, CORS+auth, test gaps).
+
+**Post-audit E2E:** 2026-04-13 — 0 blockers. Обнаружен minor: auto-hostility блокировалась `check_target_scope` (sprint 015 scope validation не знала о forced_opponents). Исправлено в commit 2dd0a04 — HOSTILE scope без active combat пропускает faction check.
+
+**Tests:** 134/134 integration green.
+
+**Deferred:** any→object sweep, god-класс GameService split, CORS+auth hardening — в backlog для будущих техспринтов.
