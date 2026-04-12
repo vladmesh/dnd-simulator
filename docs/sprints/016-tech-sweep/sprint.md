@@ -38,7 +38,7 @@
 
 **E2E:** [phase2-report.md](e2e/phase2-report.md) — 134/134 integration tests, UI smoke pass, no blockers.
 
-## Phase 3: Core Boundaries
+## Phase 3: Core Boundaries ✓
 
 Три нарушения зависимостей + 1 рефакторинг модификаторов.
 
@@ -51,10 +51,12 @@
 
 **Tasks:**
 
-1. [Decouple round.py from EntitiesLayer via Layer interface](tasks/phase3-task1-round-layer-interface.md)
-2. [Move RuleBrain to rules/ (remove lazy rules imports from core/brain.py)](tasks/phase3-task2-rulebrain-to-rules.md)
-3. [Remove llm/ → layers/ dependency (move NpcMemory, Protocol for Npc)](tasks/phase3-task3-llm-layers-decouple.md)
-4. [ClassFeatures.collect_modifiers() — push fighting style logic into classes](tasks/phase3-task4-class-features-collect-modifiers.md)
+1. [Decouple round.py from EntitiesLayer via Layer interface](tasks/phase3-task1-round-layer-interface.md) ✓
+2. [Move RuleBrain to rules/ (remove lazy rules imports from core/brain.py)](tasks/phase3-task2-rulebrain-to-rules.md) ✓
+3. [Remove llm/ → layers/ dependency (move NpcMemory, Protocol for Npc)](tasks/phase3-task3-llm-layers-decouple.md) ✓
+4. [ClassFeatures.collect_modifiers() — push fighting style logic into classes](tasks/phase3-task4-class-features-collect-modifiers.md) ✓
+
+**E2E:** [phase3-report.md](e2e/phase3-report.md) — 134/134 integration tests, combat/AC/reputation pipeline verified via UI, no blockers. One pre-existing backlog item (combat.py KeyError on targetless attack click).
 
 ## Phase 4: Enums & Fail-Fast
 
@@ -70,7 +72,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 3 (Core Boundaries) tasks generated 2026-04-12. Ready to start task 1.
+**Current:** Phase 3 complete 2026-04-13. Ready for Phase 4 (Enums & Fail-Fast) task generation.
 
 ## Decisions
 
