@@ -51,7 +51,10 @@
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Decouple round.py from EntitiesLayer via Layer interface](tasks/phase3-task1-round-layer-interface.md)
+2. [Move RuleBrain to rules/ (remove lazy rules imports from core/brain.py)](tasks/phase3-task2-rulebrain-to-rules.md)
+3. [Remove llm/ → layers/ dependency (move NpcMemory, Protocol for Npc)](tasks/phase3-task3-llm-layers-decouple.md)
+4. [ClassFeatures.collect_modifiers() — push fighting style logic into classes](tasks/phase3-task4-class-features-collect-modifiers.md)
 
 ## Phase 4: Enums & Fail-Fast
 
@@ -67,7 +70,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 2 COMPLETE 2026-04-12. Ready for Phase 3 (Core Boundaries) task generation.
+**Current:** Phase 3 (Core Boundaries) tasks generated 2026-04-12. Ready to start task 1.
 
 ## Decisions
 
