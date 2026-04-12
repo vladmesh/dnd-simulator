@@ -16,6 +16,7 @@ from typing import Annotated, Any
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 
+from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.character import (
     Ability,
     Alignment,
@@ -324,7 +325,7 @@ class NpcContent(BaseModel):
     ac: int = 10
     speed: int = 30
     gold: int = 0
-    ai: str = "rule_based"
+    ai: BrainType = BrainType.RULE_BASED
     attacks: list[AttackContent] = []
     items: list[ItemContent] = []
     ability_scores: CoercedAbilityScores = AbilityScoresContent()

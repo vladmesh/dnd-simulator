@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import EntityKind, Query, QueryType
 from dnd_simulator.service.base import GameServiceProtocol
@@ -64,7 +65,7 @@ class CreatureCommands(GameServiceProtocol):
         if isinstance(entity, Npc):
             entity.brain = self._brain_factory.create(entity.ai_type)
         elif isinstance(entity, Creature):
-            entity.brain = self._brain_factory.create(str(data.get("ai", "rule_based")))
+            entity.brain = self._brain_factory.create(BrainType(data.get("ai", BrainType.RULE_BASED.value)))
         self._get_entities_layer(session).add_entity(entity)
         return entity
 
@@ -163,7 +164,7 @@ class CreatureCommands(GameServiceProtocol):
 
     # -- Brain --
 
-    def set_creature_brain(self, session_id: str, entity_id: str, brain_type: str, model: str = "") -> str:
+    def set_creature_brain(self, session_id: str, entity_id: str, brain_type: BrainType, model: str = "") -> str:
         """Switch creature brain (rule_based or llm). Returns actual brain type set."""
         from dnd_simulator.core.character import Creature
         from dnd_simulator.layers.entities.models import Npc
@@ -174,10 +175,10 @@ class CreatureCommands(GameServiceProtocol):
         if entity is None or not isinstance(entity, Creature):
             raise ValueError(f"Creature '{entity_id}' not found")
         entity.brain = self._brain_factory.create(brain_type)
-        actual_type = "llm" if isinstance(entity.brain, LlmBrain) else "rule_based"
+        actual_type = BrainType.LLM if isinstance(entity.brain, LlmBrain) else BrainType.RULE_BASED
         if isinstance(entity, Npc):
             entity.ai_type = actual_type
-        return actual_type
+        return actual_type.value
 
 
 def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) -> Entity:

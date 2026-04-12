@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.character import Character, NpcRole
 from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.core.tags import NpcTag, has_tag
@@ -45,7 +46,7 @@ class Npc(Character):
     schedule: list[ScheduleEntry] = field(default_factory=list)
     location_override: str | None = None
     memory: NpcMemory = field(default_factory=NpcMemory)
-    ai_type: str = "rule_based"
+    ai_type: BrainType = BrainType.RULE_BASED
 
     def scheduled_location(self, hour: int) -> str:
         """Compute where this NPC should be at a given hour, from schedule."""

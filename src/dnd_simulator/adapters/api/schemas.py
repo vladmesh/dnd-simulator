@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from dnd_simulator.core.brain import BrainType
+
 # -- Requests --
 
 
@@ -40,7 +42,7 @@ class SpawnCreatureRequest(BaseModel):
     role: str | None = None
     personality: str | None = None
     settlement_id: str | None = None
-    ai: str = "rule_based"
+    ai: BrainType = BrainType.RULE_BASED
 
 
 class PatchCreatureRequest(BaseModel):
@@ -87,7 +89,7 @@ class GiveItemRequest(BaseModel):
 
 
 class SetBrainRequest(BaseModel):
-    type: str  # "rule_based" or "llm"
+    type: BrainType
     model: str = ""
 
 

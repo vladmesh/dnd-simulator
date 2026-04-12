@@ -10,6 +10,7 @@ from __future__ import annotations
 import queue
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from dnd_simulator.core.action import SKIP, Action
@@ -31,6 +32,17 @@ OnReactionCallback = Callable[
     ["Creature", "ReactionTrigger", "list[ReactionOption]"],
     None,
 ]
+
+
+class BrainType(StrEnum):
+    """Runtime discriminator for brain implementations.
+
+    On-disk YAML and save data carry the raw string value; loaders wrap via
+    ``BrainType(value)`` which fails fast on unknown inputs.
+    """
+
+    RULE_BASED = "rule_based"
+    LLM = "llm"
 
 
 class Brain(ABC):

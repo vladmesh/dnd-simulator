@@ -13,6 +13,7 @@ from dnd_simulator.core.awareness import (
     PeacefulAwareness,
     PerceivedEvent,
 )
+from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
@@ -582,7 +583,7 @@ class EntitiesLayer(Layer):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
                     ai_type = edata.get("ai_type")
                     if isinstance(ai_type, str):
-                        entity.ai_type = ai_type
+                        entity.ai_type = BrainType(ai_type)
                     override = edata.get("location_override")
                     entity.location_override = str(override) if override else None
                     memory_data = edata.get("memory")

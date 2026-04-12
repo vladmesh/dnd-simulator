@@ -186,7 +186,7 @@ class TestPaladinNpcParsing:
             "start_location": "temple",
             "faction": "kingdom",
             "role": "guard",
-            "ai": "rule",
+            "ai": "rule_based",
             "class": "paladin",
             "level": 2,
             "hp": 18,

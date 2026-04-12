@@ -41,4 +41,13 @@ YAML / save data still carries the strings `"rule_based"` / `"llm"`. Parsing pat
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `BrainType(StrEnum)` added to `core/brain.py`.
+- Typed `Npc.ai_type`, `NpcContent.ai`, `BrainFactory.create`, `SetBrainRequest.type`, `SpawnCreatureRequest.ai` as `BrainType`.
+- `BrainFactory.create` rewritten with `match` on the enum; dropped the "Unknown ai_type" branch — `BrainType(value)` (or Pydantic's enum validation) fails fast at parse/load time instead.
+- Save/load path in `EntitiesLayer.load_state` wraps the restored string via `BrainType(...)`.
+- Pre-existing test `test_paladin_infra.py` passed `"ai": "rule"` — a silent typo the old `str` field accepted. Fixed to `"rule_based"`; this is exactly the fail-fast the task targeted.
+- StrEnum means on-disk JSON format is unchanged (`"rule_based"` / `"llm"` strings), so save compatibility is preserved.

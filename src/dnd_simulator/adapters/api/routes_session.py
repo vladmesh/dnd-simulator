@@ -19,6 +19,7 @@ from dnd_simulator.adapters.api.schemas import (
     SpawnCreatureRequest,
     WorldStateResponse,
 )
+from dnd_simulator.core.brain import BrainType
 from dnd_simulator.i18n import _
 from dnd_simulator.service.game_service import GameService
 from dnd_simulator.service.session import GameSession
@@ -153,7 +154,7 @@ def set_brain(session_id: str, entity_id: str, body: SetBrainRequest) -> SetBrai
         actual_type = service.set_creature_brain(session_id, entity_id, body.type, body.model)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    warning = "no_llm_key" if body.type == "llm" and actual_type != "llm" else None
+    warning = "no_llm_key" if body.type is BrainType.LLM and actual_type != BrainType.LLM.value else None
     return SetBrainResponse(
         message=_("Creature {} brain set to {}").format(entity_id, actual_type),
         brain_type=actual_type,

@@ -32,6 +32,7 @@ from dnd_simulator.content_loader.library import (
     list_compatible_templates,
     list_templates,
 )
+from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.character import Entity
 from dnd_simulator.core.location import LocationGraph
 from dnd_simulator.core.models import GameDateTime, TimeDelta
@@ -750,7 +751,7 @@ class GameService(
             if isinstance(entity, Npc):
                 entity.brain = self._brain_factory.create(entity.ai_type)
             elif isinstance(entity, Creature) and entity.brain is None:
-                entity.brain = self._brain_factory.create("rule_based")
+                entity.brain = self._brain_factory.create(BrainType.RULE_BASED)
 
     # -- Player --
 

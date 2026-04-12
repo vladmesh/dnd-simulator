@@ -9,13 +9,14 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.character import Creature, NpcRole
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.service.brain_factory import BrainFactory
 
 
-def _make_npc(npc_id: str = "guard", ai_type: str = "rule_based", **kwargs: object) -> Npc:
+def _make_npc(npc_id: str = "guard", ai_type: BrainType = BrainType.RULE_BASED, **kwargs: object) -> Npc:
     defaults = {
         "id": npc_id,
         "name": npc_id.title(),
@@ -33,19 +34,19 @@ class TestBrainSwitchPreservedAfterLoad:
     def test_ai_type_change_reflected_in_brain_after_load(self) -> None:
         """Switch NPC ai_type from rule_based to llm, save, load on fresh layer,
         reassign brains — brain should match the saved ai_type, not the template default."""
-        npc = _make_npc(ai_type="rule_based")
+        npc = _make_npc(ai_type=BrainType.RULE_BASED)
         factory = BrainFactory(llm=None)
-        npc.brain = factory.create("rule_based")
+        npc.brain = factory.create(BrainType.RULE_BASED)
 
         # Switch ai_type (simulating PUT /creatures/:id/brain)
-        npc.ai_type = "llm"
+        npc.ai_type = BrainType.LLM
 
         layer = EntitiesLayer(entities=[npc])
         state = layer.get_state()
 
         # Fresh layer with template NPC (default ai_type)
-        fresh_npc = _make_npc(ai_type="rule_based")
-        fresh_npc.brain = factory.create("rule_based")
+        fresh_npc = _make_npc(ai_type=BrainType.RULE_BASED)
+        fresh_npc.brain = factory.create(BrainType.RULE_BASED)
         fresh_layer = EntitiesLayer(entities=[fresh_npc])
         fresh_layer.load_state(state)
 
@@ -70,7 +71,7 @@ class TestSpawnedCreatureGetsBrainAfterLoad:
     def test_spawned_npc_gets_brain_after_reassignment(self) -> None:
         """Spawned NPC recreated from save data has brain=None until reassignment."""
         template_npc = _make_npc("template_guard")
-        spawned_npc = _make_npc("spawned_goblin", ai_type="rule_based")
+        spawned_npc = _make_npc("spawned_goblin", ai_type=BrainType.RULE_BASED)
 
         layer = EntitiesLayer(entities=[template_npc, spawned_npc])
         state = layer.get_state()
@@ -120,7 +121,7 @@ class TestSpawnedCreatureGetsBrainAfterLoad:
         factory = BrainFactory(llm=None)
         for entity in fresh_layer._entities.values():
             if isinstance(entity, Creature) and entity.brain is None:
-                ai_type = entity.ai_type if isinstance(entity, Npc) else "rule_based"
+                ai_type = entity.ai_type if isinstance(entity, Npc) else BrainType.RULE_BASED
                 entity.brain = factory.create(ai_type)
 
         assert wolf.brain is not None
@@ -129,7 +130,7 @@ class TestSpawnedCreatureGetsBrainAfterLoad:
 class TestBrainReassignmentIdempotent:
     def test_double_reassignment_is_safe(self) -> None:
         """Calling brain reassignment twice doesn't break anything."""
-        npc = _make_npc(ai_type="rule_based")
+        npc = _make_npc(ai_type=BrainType.RULE_BASED)
         factory = BrainFactory(llm=None)
 
         layer = EntitiesLayer(entities=[npc])
@@ -147,11 +148,11 @@ class TestBrainReassignmentIdempotent:
 class TestBrainFactoryCallsTracked:
     def test_factory_called_with_saved_ai_type_not_template(self) -> None:
         """Verify the factory is called with the ai_type from save data, not the template default."""
-        npc = _make_npc(ai_type="llm")  # saved as llm
+        npc = _make_npc(ai_type=BrainType.LLM)  # saved as llm
         layer = EntitiesLayer(entities=[npc])
         state = layer.get_state()
 
-        fresh_npc = _make_npc(ai_type="rule_based")  # template default
+        fresh_npc = _make_npc(ai_type=BrainType.RULE_BASED)  # template default
         fresh_layer = EntitiesLayer(entities=[fresh_npc])
         fresh_layer.load_state(state)
 
@@ -164,4 +165,4 @@ class TestBrainFactoryCallsTracked:
                 entity.brain = factory.create(entity.ai_type)
 
         # Factory must have been called with "llm" (from save), not "rule_based" (template)
-        mock_create.assert_called_once_with("llm")
+        mock_create.assert_called_once_with(BrainType.LLM)
