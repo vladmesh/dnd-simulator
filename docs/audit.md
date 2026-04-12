@@ -1,104 +1,112 @@
 # Code Audit
 
-> **Date**: 2026-04-12
-> **Scope**: full (post Sprint 015)
+> **Date**: 2026-04-13
+> **Scope**: full (post Sprint 016)
 
 ## Summary
-- Dead code: 1 issue
-- Code smells: 7 issues
-- Security: 6 issues
-- Architecture violations: 4 issues
-- Convention violations: 7 issues
+- Dead code: 7 issues (all carry-forward from previous audit — none new)
+- Code smells: 5 issues
+- Security: 5 issues
+- Architecture violations: 2 issues
+- Convention violations: 5 issues
 - Layer contract: 0 issues
-- Test gaps: 7 issues
+- Test gaps: 8 issues
 - Vision drift: 0 issues
+
+**Total: 32 issues**
 
 ## Dead Code
 
-Sprint 015 wired `reset_resources()` (now used in `rules/handlers/rest.py` for long/short rest actions). No new dead code introduced.
+Sprint 016 introduced no new dead code. All items below are carry-forward from the previous audit.
 
-**Backlog** (tested but unwired — future mechanics):
+| File | Function | Action |
+|------|----------|--------|
+| `rules/reactions.py:15` | `can_opportunity_attack()` — 0 prod callers, duplicates inline check in `find_oa_triggers()` | remove or consolidate |
+| `rules/conditions.py:27` | `prone_stand_cost()` — only called in tests, prone mechanic not yet wired | backlog (wire with prone) |
+| `rules/movement.py:201` | `walk_path()` — 12 test refs, 0 prod callers; budget-aware path walking | backlog (wire with move_to) |
+| `core/turn_budget.py:58` | `refund()` — 1 test ref, 0 prod | backlog |
+| `core/player.py:73` | `to_save_data()` — 1 test ref, 0 prod | backlog |
+| `rules/geography.py:172` | `is_daylight()` — 5 test refs, 0 prod; day/night cycle not wired | backlog |
+| `core/models.py:189` | `TimeDelta.from_days()` — 7 test refs, 0 prod; harmless convenience | ignore |
 
-| File | Function | Notes |
-|------|----------|-------|
-| `rules/reactions.py:15` | `can_opportunity_attack()` | Duplicates eligibility checks inline in `find_oa_triggers()`. 0 prod callers. |
-| `rules/conditions.py:27` | `prone_stand_cost()` | Only called in tests. Wire when prone mechanic lands. |
-| `rules/movement.py:201` | `walk_path()` | 12 test refs, 0 prod. Budget-aware path walking. |
-| `core/turn_budget.py:58` | `refund()` | 1 test ref, 0 prod. |
-| `core/player.py:73` | `to_save_data()` | 1 test ref, 0 prod. |
-| `rules/geography.py:172` | `is_daylight()` | 5 test refs, 0 prod. Day/night cycle. |
-| `core/models.py:189` | `TimeDelta.from_days()` | 7 test refs, 0 prod. Harmless convenience. |
+**Frontend dead export** (carry-forward):
+
+| File | Issue | Action |
+|------|-------|--------|
+| `frontend/src/components/master/RefSelect.tsx:64` | `clearRefCache` exported but never imported | remove export |
 
 ## Code Smells
 
+Sprint 016 split `routes_master.py` into `routes_session.py` + `routes_world.py`. The god-class smell in `game_service.py` and the oversized `round.py` persist.
+
 | File | Issue | Suggestion |
 |------|-------|------------|
-| `service/game_service.py` (936 lines, 44+ methods) | God class mixing session mgmt, content CRUD, catalog CRUD, entity CRUD | Split into focused service classes by domain |
-| `round.py` (622 lines) | Round orchestrator with `run_combat_turn` (69 lines) and `run_peaceful_turn` (68 lines) | Extract combat-turn and awareness-building into helpers |
-| `layers/entities/layer.py` (597 lines) | Large layer delegating to 5 sub-managers | Acceptable given decomposition, but monitor |
-| `adapters/api/routes_master.py` (560 lines, 40+ routes) | Oversized route module | Split by domain (sessions, creatures, world editing, saves) |
-| `core/action_defs.py` (538 lines) | Large action registry — grew with paladin/smite/rest actions | Registry pattern is fine, but consider data-driven YAML format |
-| `service/session.py` (517 lines) | Session + GameSession + player brain callback logic | Extract player brain callbacks to own module |
-| `frontend/src/components/master/SchemaForm.tsx` (488 lines) | Large component with inline sub-components | Extract `ArrayOfObjectsField` and field renderers |
+| `service/game_service.py` (939 lines, 44+ methods) | God class mixing session mgmt, content CRUD, catalog CRUD, entity CRUD, player creation | Split into domain-focused service objects per sprint 017+ |
+| `round.py` (614 lines) | `run_combat_turn` (~70 lines) and `run_peaceful_turn` (~70 lines) still long | Extract combat-turn and awareness-building into helpers |
+| `layers/entities/layer.py` (600 lines) | Large layer delegating to 5 sub-managers | Acceptable given decomposition; monitor for growth |
+| `core/action_defs.py` (541 lines) | Large action registry — grew with paladin/smite/rest | Consider data-driven YAML format long term |
+| `service/session.py` (517 lines) | Session + GameSession + PlayerBrain callback logic | Extract player brain callbacks to own module |
 
 ## Security
 
 | File:Line | Issue | Severity |
 |-----------|-------|----------|
-| `adapters/api/app.py:85-89` | CORS wildcard `allow_origins=["*"]` — any site can make cross-origin requests | medium |
-| All API endpoints | Zero authentication on REST and WebSocket — session_id (8-char hex) is the only guard | medium |
-| `adapters/api/routes_ws.py:90-95` | WS origin check disabled by default (`WS_ALLOWED_ORIGINS` defaults to empty) | low |
-| `llm/brain.py`, `llm/prompts.py` | Player speech flows unsanitized into LLM prompts — no injection mitigation (blast radius limited: tool-call-only output) | low |
-| `service/game_service.py:81` | `world_name` from request used in path construction without regex guard at call site | low |
-| `adapters/api/routes_ws.py:164` | WS `params` dict passed without schema validation to action handlers | low |
+| `adapters/api/app.py:86-89` | CORS wildcard `allow_origins=["*"]` — any origin can make cross-origin requests to the API | medium |
+| All API endpoints | Zero authentication — session_id (8-char hex) is the only guard against session hijacking | medium |
+| `adapters/api/routes_ws.py:91` | WS origin check disabled by default; `WS_ALLOWED_ORIGINS` env var must be set manually | low |
+| `llm/brain.py`, `llm/prompts.py` | Player `say` text flows unsanitized into LLM prompts — no explicit injection mitigation (blast radius limited: tool-call-only output schema) | low |
+| `adapters/api/routes_ws.py:163-164` | WS `params` dict passed without schema validation to action handlers — malformed params could trigger handler-level errors | low |
 
 ## Architecture Violations
 
+Sprint 016 closed two violations from the previous audit:
+- `round.py` now uses `CreatureHost` protocol instead of importing `EntitiesLayer` directly.
+- `llm/` no longer imports from `layers/`.
+
+Two violations remain:
+
 | File:Line | Violation | Should Be | Severity |
 |-----------|-----------|-----------|----------|
-| `adapters/api/routes_master.py:290-334` | Thick adapter: `get_session_state()` orchestrates 8+ layer queries inline | Single `service.get_world_state(session_id)` call | medium |
-| `round.py:31` | `Round` directly imports `EntitiesLayer` (service → layer coupling) | Interact via World/Layer interface | medium |
-| `adapters/api/routes_player.py:13-16` | Imports `Ability`, `PlayerCharacter` from core and `POINT_BUY_BUDGET`, `STARTING_GOLD` from rules | Expose setup config through service layer | low |
-| `llm/brain.py:49`, `llm/summarizer.py:10` | Imports layer-specific models (`Npc`, `NpcMemory`) | Pass data through interface, not concrete layer type | low |
+| `adapters/api/routes_player.py:16-17` | Route imports `POINT_BUY_BUDGET`, `STARTING_GOLD` from `rules/character_creation` and calls `effective_ac()` from `rules/modifiers` directly | Expose via `GameService.get_setup_config()` and `GameService.get_player_status()`; adapters should not call rule functions | low |
+| `adapters/api/routes_player.py:14` | Route imports `PlayerCharacter` from `core.player` to type the internal `_player_status` helper | Move `_player_status` into service layer | low |
 
 ## Convention Violations
 
 | File:Line | Violation | Rule |
 |-----------|-----------|------|
-| 30 files across codebase | `Any` in type annotations (30 files import `Any`) | Use `object` not `Any` (CLAUDE.md) for state dicts |
-| `layers/geography/models.py:35` | `Region` — `@dataclass` without `frozen=True` | Frozen for pure data models |
-| `layers/politics/models.py:29,38` | `Leader`, `Nation` — mutable dataclass | Frozen or justify mutation |
-| `layers/settlements/models.py:17` | `Settlement` — mutable dataclass | Frozen or justify mutation |
-| `tests/unit/test_api.py`, `tests/unit/test_trade_ws.py` | Bare `200`/`404` instead of `HTTPStatus` | Use `HTTPStatus.OK` etc. |
-| `rules/proficiency.py:33-34` | Hardcoded weapon name strings (`"rapier"`, `"shortsword"`) | Use enum or catalog reference |
-| `content_loader/`, `service/game_service.py` | 31+ `.get()` with silent defaults at data boundaries | Fail fast on missing keys; use `data["key"]` |
+| 30+ files across codebase | `dict[str, Any]` used in `Event.data`, `Query.params`, `Action.params`, serialization helpers in `core/` and `service/` | CLAUDE.md: use `object` not `Any` in state dicts |
+| `layers/geography/models.py:35` | `Region` — `@dataclass` without `frozen=True` | Pure data models should be frozen |
+| `layers/politics/models.py:29,38` | `Leader`, `Nation` — `@dataclass` without `frozen=True`; mutations happen in `warfare.py` / `economy.py` | Justify mutability or use explicit `replace()`-style update pattern |
+| `layers/settlements/models.py:17` | `Settlement` — `@dataclass` without `frozen=True`; mutated by layer tick | Same as above |
+| `rules/rule_brain.py:38` | `_CombatContext` — `@dataclass` without `frozen=True`; used as turn-scoped value object | Should be `frozen=True` — no mutation needed |
 
 ## Layer Contract
 
-All 5 layers (Geography, Politics, Settlements, Ecology, Entities) implement the full Layer ABC. **No issues.**
+All 5 layers (Geography, Politics, Settlements, Ecology, Entities) implement the full Layer ABC (`name`, `tick_interval`, `tick`, `handle_event`, `query`, `get_state`, `load_state`). **No issues.**
 
 ## Test Gaps
 
 | Source File | Expected Test | Status |
 |-------------|---------------|--------|
-| `rules/weapons.py` | `test_rules_weapons.py` | missing (indirect coverage via other tests) |
-| `rules/handlers/equipment.py` | `test_handlers_equipment.py` | missing (covered by `test_action_dispatcher.py` — 15 tests) |
-| `rules/handlers/items.py` | `test_handlers_items.py` | missing (covered by `test_second_wind.py`, `test_breakdown_pipeline.py`) |
-| `rules/action_provider.py` | `test_rules_action_provider.py` | missing |
-| `rules/reactions.py` | `test_rules_reactions.py` | missing |
-| `service/commands_politics.py` | integration/unit test | missing — 0 test references |
-| `service/commands_time.py` | integration/unit test | missing — 0 test references |
+| `rules/weapons.py` | `tests/unit/test_rules_weapons.py` | missing — indirect coverage only via `test_attack_resolution.py` |
+| `rules/action_provider.py` | `tests/unit/test_rules_action_provider.py` | missing — isolated test exists but in `test_action_provider_isolated.py`, no direct module test |
+| `rules/fighting_style.py` | `tests/unit/test_rules_fighting_style.py` | missing — only tested via `test_second_wind.py` and `test_create_player.py` |
+| `rules/geography.py` | `tests/unit/test_rules_geography.py` | missing — `is_daylight()` covered by `test_geography_formulas.py` but module has no dedicated test |
+| `rules/politics.py` | `tests/unit/test_rules_politics.py` | missing — covered via layer tests only |
+| `rules/settlements.py` | `tests/unit/test_rules_settlements.py` | missing — covered via layer tests only |
+| `service/commands_time.py` | any unit test | missing — 0 direct test references |
+| `tests/unit/test_ws.py` | WS malformed JSON scenario | missing — `test_unknown_message_type` exists but no test for malformed JSON (non-parseable text sent over WS) |
 
-**Frontend:** `clearRefCache` in `frontend/src/components/master/RefSelect.tsx:64` — exported but never imported. Dead export.
-
-WS tests cover basic flow (10 tests) but miss: reaction prompt flow, combat-specific messages, reconnection/error handling, multi-client scenarios.
+**WS test gaps:** Current `test_ws.py` covers 6 scenarios (invalid session, no player, end-turn, action+end-turn, unknown type, query type rejected). Missing: malformed JSON, disconnect during active game loop, reaction prompt flow.
 
 ## Vision Drift
 
-No drift detected. Sprint 015 (Paladin & Divine Smite) aligns with all invariants:
-- Classic mode works without LLM — divine smite, spell slots, and rest actions are pure rule functions; RuleBrain handles smite decisions
-- Single global round — no changes to round structure
-- Layers independent — no new cross-layer coupling
-- Master controls through endpoints only
-- Brain swappable at runtime — smite choice routed through `Brain.choose_reaction` pattern; both RuleBrain and LlmBrain handle it
-- Content is data — paladin features defined via `PaladinFeatures` dataclass + YAML catalogs
+Sprint 016 tech-sweep changes:
+
+- **EntityKind StrEnum**: runtime discriminator for entity type — aligns with "content is data" principle, no drift.
+- **BrainType StrEnum**: replaces hardcoded string comparisons — aligns with "brain is swappable" and enum conventions. No drift.
+- **CreatureHost protocol**: decouples `round.py` from `EntitiesLayer` — improves layer independence. No drift.
+- **llm/ decoupled from layers/**: removes upward dependency — correct direction. No drift.
+- **Fail-fast cleanup**: removes silent defaults — aligns with project conventions. No drift.
+
+**No vision drift detected.**
