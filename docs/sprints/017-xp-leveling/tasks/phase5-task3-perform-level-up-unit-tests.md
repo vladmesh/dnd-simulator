@@ -35,4 +35,8 @@ Pure test file. No production changes unless a test surfaces a real bug.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added `tests/unit/test_rules_perform_level_up.py` with 9 tests across 5 classes: Fighter L1→L2 (no-style, HP delta applied to wounded current_hp, style-passed rejection), Rogue L1→L2 (no pools), Paladin L1→L2 (Defense, Dueling, missing-style rejection), no-level-up-available, and LoH resource pool merge (current_uses preserved, max grows 5→10). Tests are regression pins for existing behavior — all pass against current `perform_level_up.py` (same pattern as task 1). Full `make check` green (2167 py + 238 fe).
