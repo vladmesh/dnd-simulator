@@ -53,6 +53,21 @@ Frontend level-up модалка. Пингуется из состояния (`l
 
 ---
 
+## Phase 4: E2E follow-up bug sweep
+
+Багрепорт по итогам phase 3 E2E. Каждый таск — детальное расследование причины + исправление наилучшим архитектурным способом (не косметика, не «закостылять чтобы тест прошёл»). Перед фиксом — RCA в developer notes таска. Phase закроется только после того, как E2E phase 3 переигрывается без шероховатостей из списка.
+
+**Tasks:**
+
+1. [RuleBrain убегает у безоружных мобов](tasks/phase4-task1-rulebrain-flees.md) — `xp_dummy` дашит прочь от боя при низком WIS, ломает детерминизм арены. Расследовать триггер в RuleBrain → выбрать политику (stand-and-fight для определённого role / faction / brain hint, либо явный `combat_stance` на Creature).
+2. [Координаты battle map vs combat_position](tasks/phase4-task2-battlemap-coords.md) — игрок в YAML на `[5,5]`, отрисовывается как `cell-11-7`. Найти где переворачивается/смещается ось, унифицировать систему координат, описать инвариант в комментарии и тесте.
+3. [Per-location battle_map size в YAML](tasks/phase4-task3-battlemap-size.md) — арена описана 3×3, движок берёт `DEFAULT_BATTLE_MAP_SIZE`. Расширить geography schema на `battle_map: {width, height, walls?}` per-location (или per-region с явным маппингом), удалить `DEFAULT_BATTLE_MAP_SIZE` fallback в локациях, где это критично для теста.
+4. [Combat sidebar — stale HP после level-up](tasks/phase4-task4-combat-sidebar-stale-hp.md) — top-bar HP обновляется сразу, `PlayerStats` в combat-сайдбаре держит старое значение до конца раунда. Найти источник (Zustand selector / WS turn payload / отдельный кеш) и починить так, чтобы оба компонента читали из одного места.
+5. [Cancel level-up modal — поведение](tasks/phase4-task5-levelup-cancel.md) — кнопка Cancel есть, но контракт не задокументирован и не покрыт тестом. Определить семантику (закрыть и оставить `level_up_available=true`? повторно показать при следующем `turn`?), реализовать, добавить unit + E2E.
+6. [Двойная Attack-кнопка в a11y-снапшоте](tasks/phase4-task6-attack-button-a11y.md) — DOM содержит две кнопки с одинаковым accessible name «Attack» (anchor + первый item submenu). Минор, но мешает скрин-ридерам и Playwright-селекторам. Выбрать корректный паттерн (role=menu / aria-haspopup), починить.
+
+---
+
 ## Status
 
 **Current:** Planning complete. Ready to generate Phase 1 tasks.
