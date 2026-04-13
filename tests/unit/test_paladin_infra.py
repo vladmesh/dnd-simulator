@@ -82,13 +82,11 @@ class TestPaladinResourcePools:
         loh = next(p for p in pools if p.id == "lay_on_hands")
         assert loh.max_uses == 15
 
-    def test_level1_one_spell_slot(self) -> None:
-        """Paladin level 1: 1 first-level spell slot (temporary until leveling exists)."""
+    def test_level1_has_no_spell_slots(self) -> None:
+        """Paladin level 1: PHB-correct — no spell slots until L2."""
         pools = build_class_resource_pools(CharClass.PALADIN, level=1)
-        slot1 = next(p for p in pools if p.id == "spell_slot_1")
-        assert slot1.max_uses == 1
-        assert slot1.current_uses == 1
-        assert slot1.reset_on == RestType.LONG_REST
+        assert [p.id for p in pools] == ["lay_on_hands"]
+        assert not any(p.id.startswith("spell_slot_") for p in pools)
 
     def test_level2_spell_slots(self) -> None:
         """Paladin level 2: 2 first-level spell slots."""
@@ -104,6 +102,42 @@ class TestPaladinResourcePools:
         sw = next(p for p in pools if p.id == "second_wind")
         assert sw.max_uses == 1
         assert sw.reset_on == RestType.SHORT_REST
+
+
+class TestFighterResourcePools:
+    def test_level1_only_second_wind(self) -> None:
+        pools = build_class_resource_pools(CharClass.FIGHTER, level=1)
+        assert [p.id for p in pools] == ["second_wind"]
+
+    def test_level2_adds_action_surge(self) -> None:
+        pools = build_class_resource_pools(CharClass.FIGHTER, level=2)
+        ids = [p.id for p in pools]
+        assert "second_wind" in ids
+        assert "action_surge" in ids
+        surge = next(p for p in pools if p.id == "action_surge")
+        assert surge.max_uses == 1
+        assert surge.current_uses == 1
+        assert surge.reset_on == RestType.SHORT_REST
+
+
+class TestRogueResourcePools:
+    def test_rogue_level1_no_pools(self) -> None:
+        assert build_class_resource_pools(CharClass.ROGUE, level=1) == []
+
+    def test_rogue_level2_no_pools(self) -> None:
+        assert build_class_resource_pools(CharClass.ROGUE, level=2) == []
+
+
+class TestPaladinLevel2SlotsAndLoh:
+    def test_level2_has_loh_and_slots(self) -> None:
+        pools = build_class_resource_pools(CharClass.PALADIN, level=2)
+        ids = {p.id for p in pools}
+        assert ids == {"lay_on_hands", "spell_slot_1"}
+        loh = next(p for p in pools if p.id == "lay_on_hands")
+        assert loh.max_uses == 10  # 5 * 2
+        slot = next(p for p in pools if p.id == "spell_slot_1")
+        assert slot.max_uses == 2
+        assert slot.current_uses == 2
 
 
 # ---------------------------------------------------------------------------

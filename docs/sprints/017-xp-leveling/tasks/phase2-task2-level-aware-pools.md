@@ -70,4 +70,14 @@ Product-level scenarios — prefer integration-style where cheap, unit where pur
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Removed L1 entry from `_SPELL_SLOT_TABLES[PALADIN]` and the sprint-015 TODO comment; L2 keeps `{1: 2}`.
+- Added Fighter L2+ `action_surge` pool (1 use, SHORT_REST) in `build_class_resource_pools`.
+- Rogue already returned `[]` (no branch) — covered by new test.
+- Kept action_surge id as a literal string to match the existing `second_wind` pattern.
+- Updated `test_level1_one_spell_slot` → `test_level1_has_no_spell_slots` in `test_paladin_infra.py`.
+- `_paladin(level=1)` in `test_divine_smite.py` still builds a pool directly (not via `build_class_resource_pools`), so it's unaffected. `validate_smite` already blocks L1 regardless of slot presence.
+- `test_divine_smite_combat.py`, WS smite integration tests, arena YAML paladin: unaffected — none depended on L1 auto-granting a slot.

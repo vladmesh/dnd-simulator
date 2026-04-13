@@ -105,10 +105,7 @@ def parse_class_features(char_class: CharClass, data: dict[str, Any], level: int
 
 
 _SPELL_SLOT_TABLES: dict[CharClass, dict[int, dict[int, int]]] = {
-    # Paladin half-caster: RAW starts at level 2, but level 1 gets 1 slot
-    # TEMPORARY until leveling system exists (sprint 015)
     CharClass.PALADIN: {
-        1: {1: 1},
         2: {1: 2},
         3: {1: 3},
         4: {1: 3},
@@ -120,12 +117,14 @@ _SPELL_SLOT_TABLES: dict[CharClass, dict[int, dict[int, int]]] = {
 def build_class_resource_pools(char_class: CharClass, level: int = 1) -> list[ResourcePool]:
     """Create default resource pools for a class at a given level.
 
-    Fighter: second_wind (1/short rest).
-    Paladin: lay_on_hands (5 * level, long rest) + spell slots (half-caster table).
+    Fighter L1: second_wind. Fighter L2+: + action_surge.
+    Paladin L1: lay_on_hands only. Paladin L2+: + spell slots (half-caster table).
     """
     pools: list[ResourcePool] = []
     if char_class == CharClass.FIGHTER:
         pools.append(ResourcePool(id="second_wind", max_uses=1, current_uses=1, reset_on=RestType.SHORT_REST))
+        if level >= 2:
+            pools.append(ResourcePool(id="action_surge", max_uses=1, current_uses=1, reset_on=RestType.SHORT_REST))
     if char_class == CharClass.PALADIN:
         loh_max = 5 * level
         pools.append(
