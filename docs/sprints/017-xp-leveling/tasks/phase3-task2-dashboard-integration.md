@@ -44,4 +44,11 @@ Mock `apiClient.levelUp`. Use the existing test harness for `gameStore` (see `dr
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Auto-open uses the React "previous-state during render" pattern (ref + setState in render body) instead of useEffect. ESLint's `react-hooks/set-state-in-effect` flagged the original useEffect approach; this is the official recommended alternative.
+- `PlayerStats` now subscribes to `sessionId` via the store directly — no prop drilling.
+- Test isolation note: when the dialog is open, base-ui marks the rest of the page `aria-hidden`/`inert`, so the level-up button is not findable by `getByRole` while the modal is up. The auto-open test asserts the button visibility *after* closing the modal.
+- Added `levelup_button` translation key to en/ru `game.json`.

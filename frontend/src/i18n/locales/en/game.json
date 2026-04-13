@@ -160,6 +160,7 @@
   "levelup_fighter_action_surge": "Unlocks Action Surge (1/short rest)",
   "levelup_paladin_spell_slot": "Gains 2 Level 1 spell slots",
   "levelup_rogue_proficiency": "Proficiency bonus improves",
+  "levelup_button": "Level up",
   "levelup_confirm": "Confirm",
   "levelup_error_generic": "Failed to apply level-up. Please retry."
 }

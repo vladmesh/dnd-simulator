@@ -1,13 +1,27 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useGameStore } from "@/store/gameStore"
-import { ChevronDown, ChevronRight, Shield, Coins } from "lucide-react"
+import { ChevronDown, ChevronRight, Shield, Coins, ArrowUp } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { InventoryPanel } from "./InventoryPanel"
+import { LevelUpModal } from "./LevelUpModal"
 
 export function PlayerStats() {
   const { t } = useTranslation(["game", "common"])
   const player = useGameStore((s) => s.player)
+  const sessionId = useGameStore((s) => s.sessionId)
+  const updatePlayer = useGameStore((s) => s.updatePlayer)
   const [expanded, setExpanded] = useState(true)
+  const [levelUpOpen, setLevelUpOpen] = useState(false)
+  const prevFlagRef = useRef(false)
+
+  const levelUpAvailable = player?.level_up_available ?? false
+  if (prevFlagRef.current !== levelUpAvailable) {
+    prevFlagRef.current = levelUpAvailable
+    if (levelUpAvailable) {
+      setLevelUpOpen(true)
+    }
+  }
 
   if (!player) return null
 
@@ -22,10 +36,23 @@ export function PlayerStats() {
       </button>
       {expanded && (
         <div className="space-y-2 text-xs">
-          <div className="text-sm">
-            {t(`game:race_${player.race}`, { defaultValue: player.race })}{" "}
-            {t(`game:class_${player.char_class}`, { defaultValue: player.char_class })}{" "}
-            L{player.level}
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm">
+              {t(`game:race_${player.race}`, { defaultValue: player.race })}{" "}
+              {t(`game:class_${player.char_class}`, { defaultValue: player.char_class })}{" "}
+              L{player.level}
+            </div>
+            {levelUpAvailable && (
+              <Button
+                size="sm"
+                variant="default"
+                className="h-6 gap-1 px-2 text-xs"
+                onClick={() => setLevelUpOpen(true)}
+              >
+                <ArrowUp className="size-3" />
+                {t("game:levelup_button")}
+              </Button>
+            )}
           </div>
           <div className="flex gap-3">
             <span className="flex items-center gap-1">
@@ -48,6 +75,16 @@ export function PlayerStats() {
       )}
       <div className="border-t border-border" />
       <InventoryPanel />
+      <LevelUpModal
+        open={levelUpOpen}
+        player={player}
+        sessionId={sessionId ?? undefined}
+        onClose={() => setLevelUpOpen(false)}
+        onSuccess={(updated) => {
+          updatePlayer(updated)
+          setLevelUpOpen(false)
+        }}
+      />
     </div>
   )
 }
