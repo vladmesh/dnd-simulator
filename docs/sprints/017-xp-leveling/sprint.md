@@ -18,7 +18,7 @@
 
 **Ссылки:** [Sprint 015](../015-paladin-spell-slots/sprint.md), [Sprint 011](../011-class-mechanics-l1/sprint.md), [BACKLOG: divine-sense, divine-smite-scaling](../../BACKLOG.md)
 
-## Phase 1: XP & Leveling Core
+## Phase 1: XP & Leveling Core ✓
 
 Фундамент опыта и уровней на бэке. `experience: int` на Character, XP-by-CR таблица (стандарт D&D 5e Monster Manual), XP threshold таблица для уровней (PHB p.15), начисление XP при kill (интеграция в combat-side kill detection, omniscient как и reputation drop), детект "ready to level up" флагом на Character. Никакого UI и переноса фич классов в этой фазе — только механика и точки интеграции. Верификация: integration-тест — бой, убил монстра известного CR, `experience` и `level_up_available` корректны.
 

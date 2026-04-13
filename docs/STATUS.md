@@ -7,9 +7,9 @@
 **Sprint:** 017-xp-leveling
 **Goal:** Ввести XP (за убийства по CR) и систему уровней с level-up модалкой; исправить уровни Paladin (FS/slots/smite на L2), добавить L2 для всех трёх классов.
 **Started:** 2026-04-13
-**Phase:** 1 — XP & Leveling Core (all tasks done) — 2026-04-13
+**Phase:** 1 — XP & Leveling Core (COMPLETE) — 2026-04-13
 
-Task 3 done: XP fields in player state payload (REST + WS + frontend types).
+Ready for Phase 2 task generation. Integration 137/137 green, E2E passed (see `docs/sprints/017-xp-leveling/e2e/phase1-report.md`).
 
 ### Phases
 
