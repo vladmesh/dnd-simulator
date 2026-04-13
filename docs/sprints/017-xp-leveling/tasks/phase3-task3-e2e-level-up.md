@@ -1,4 +1,4 @@
-# Task: E2E — full level-up cycle
+# Task: E2E — dedicated level-up world + full cycle
 
 **Date:** 2026-04-13
 **Sprint:** 017-xp-leveling
@@ -6,43 +6,66 @@
 
 ## Description
 
-Add a Playwright E2E scenario covering the full XP → level-up → features-applied loop and register it in the regression playbook.
+Build a dedicated test world under `content/worlds/level_up_test/` (or similar slug) that deterministically exercises the full level-up loop, then run a Playwright E2E against it.
 
-Scenario (Paladin, highest payoff since it exercises the only real choice):
+### World design
 
-1. New session, create Paladin L1 with a CR ≥ 1/2 opponent within reach.
-2. Kill the opponent — XP crosses 300 threshold.
-3. `level_up_available` flag appears, modal auto-opens.
-4. Player selects Fighting Style = Dueling, confirms.
-5. Post-confirm: level 2 shown in `PlayerStats`, HP max increased, Divine Smite action available (spell slot pool appears), +2 damage with one-handed weapon (Dueling) is visible on attack breakdown in a subsequent hit.
+- **Player:** Paladin L1, placed adjacent to the test monster. Starting equipment: one-handed weapon (so Dueling fighting style is observable) + shield, not two-handed.
+- **Monster:** bespoke creature with `xp_reward` (or CR) set so that **one kill** lifts the player from level 1 straight over the L2 threshold (300 XP). Intentional overshoot is fine — the point is to land on L2 in a single hit without multi-fight setup. Keep HP low so the fight is 1-2 rounds. Faction: hostile.
+- **Second monster:** another hostile adjacent after the first is dead, used for the *post-level-up* sanity fight. This one must survive long enough for the player to demonstrate new mechanics:
+  - Spell slot pool visible and spendable (Divine Smite on a hit).
+  - Dueling +2 damage present in the attack breakdown.
+  - HP bump from level-up visible on the character panel.
+- Tiny map (3×3 or so), everything in one location to avoid movement/activation distractions.
 
-Also cover the no-choice class:
+### E2E scenario (Playwright)
 
-6. Secondary check (can be combined or separate scenario): Fighter L1 kills enough XP → modal auto-opens with no dropdown → confirm → Action Surge action becomes available in the action bar.
+1. Start session, select the `level_up_test` world, create Paladin with a simple stat array (point buy helper if needed).
+2. Attack the first monster until it dies. Confirm XP goes from 0 → ≥ 300, `level_up_available` becomes true.
+3. Level-up modal auto-opens. Verify:
+   - Title shows "Level 2".
+   - Fighting-style dropdown is present with three options.
+   - Confirm is disabled until an option is picked.
+4. Pick **Dueling**, confirm.
+5. Assert post-level-up state in `PlayerStats` and action bar:
+   - Level = 2, HP max increased.
+   - Spell slot resource pool visible with at least 1 slot.
+   - Divine Smite is now an available action.
+6. **Second fight:** attack the second monster. On a hit:
+   - Attack breakdown shows +2 damage from Dueling fighting style.
+   - Use Divine Smite once — slot decrements, damage log reflects smite dice.
+7. End fight. Scenario passes only if all assertions above hold.
+
+### Secondary: Fighter Action Surge check
+
+Optional companion scenario (same world can host a Fighter-variant manifest or add a toggle): Fighter L1 kills the first monster → modal opens with no dropdown → confirm → `action_surge` action appears in the bar and is usable. Only add if the primary scenario is green and there's time.
 
 ## Tests First
 
-No unit tests — this is a Playwright integration scenario against a live stack.
+No unit tests. Pre-flight checks before writing the Playwright script:
 
-Before writing the scenario:
+- World loads via content_loader without validation errors (run `uv run python -c "from dnd_simulator.content_loader.world_assembly import load_world; load_world('level_up_test')"` or similar sanity).
+- XP award from the test monster lands on L2 (quick integration test in `tests/integration/` or manual Swagger hit is fine — document which).
 
-- Ensure Phase 3 tasks 1 & 2 are merged so the modal actually exists.
-- Prepare a deterministic world/content fixture so XP math is reproducible (player starts already close to 300 XP threshold, or opponent CR is chosen to cross in one kill — preferred: CR 1/2 goblin gives 100 XP, so player starts at 201).
+Only after both are confirmed, write the Playwright scenario.
 
 ## Implementation
 
-- Follow `docs/e2e-playbook.md` conventions. Use existing session-setup helpers from previous sprints' E2E (e.g. sprint 015 Paladin smite E2E under `docs/sprints/015-paladin-spell-slots/`).
-- Add playbook entry: **3.5 Level-up after kill** (Russian, matching existing style) describing the Paladin scenario and the Fighter quick-check.
-- Run scenario via `/e2e` or manual `make frontend` + Playwright. Store report in `docs/e2e-reports/017-phase3-level-up-<date>.md`.
-- If discrepancies are found between modal behavior and backend (e.g. pool not appearing after level up), raise as blockers — do NOT patch silently.
+- New: `content/worlds/level_up_test/manifest.yaml` + layer files (copy structure from `content/worlds/test_vale/`). Keep it minimal — one region, one settlement, one location.
+- New: `content/worlds/level_up_test/entities/monsters.yaml` (or reuse catalog `ref:`) with the high-XP mob. If no existing monster fits, add a one-off entry with hand-tuned `xp_reward`.
+- Playbook update: add **3.5 Level-up full cycle** to `docs/e2e-playbook.md` (Russian, matching existing style) naming the world and expected assertions.
+- Scenario report → `docs/e2e-reports/017-phase3-level-up-<date>.md`.
+- Use Playwright MCP per project rule (hard blocker — if MCP isn't available, stop and restart session; do not skip).
 
 ## Acceptance Criteria
 
-- [ ] Playbook updated with new scenario 3.5
-- [ ] Scenario executed end-to-end via Playwright MCP with full debug trace
-- [ ] Report written to `docs/e2e-reports/`
-- [ ] All existing regression scenarios still pass (no regressions from Phase 3 UI changes)
-- [ ] If blockers surface, they are logged in the report and docs/STATUS.md before the phase is considered done
+- [ ] `content/worlds/level_up_test/` loads cleanly (sanity-check logged)
+- [ ] Single kill in that world crosses the L2 XP threshold
+- [ ] Playbook scenario 3.5 added
+- [ ] Playwright scenario executed end-to-end with full debug; report written
+- [ ] All primary assertions above (modal content, post-level state, second-fight mechanics) verified
+- [ ] Existing regression scenarios in the playbook still green
+- [ ] Any discrepancy logged as blocker in the report — no silent patches
 
 ## Status
 

@@ -49,7 +49,7 @@ Frontend level-up модалка. Пингуется из состояния (`l
 
 1. [LevelUpModal + API client](tasks/phase3-task1-level-up-modal.md) — компонент, класс-условная форма, `apiClient.levelUp`, unit-тесты
 2. [Dashboard integration](tasks/phase3-task2-dashboard-integration.md) — кнопка в `PlayerStats`, авто-открытие, sync Zustand
-3. [E2E full cycle](tasks/phase3-task3-e2e-level-up.md) — Playwright: kill → modal → choice → features visible + Fighter Action Surge check
+3. [E2E full cycle](tasks/phase3-task3-e2e-level-up.md) — отдельный тест-мир `level_up_test`, high-XP моб → modal → Dueling → второй бой (Smite + Dueling бонус)
 
 ---
 
