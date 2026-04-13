@@ -69,4 +69,15 @@ Only after both are confirmed, write the Playwright scenario.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Built the world as a single `arena_floor` location (3×3 conceptually, actual battle map is the default 13×13 — sufficient for the scenario). Player and both hostile NPCs are placed via `combat_position` at session start, no master-spawn scripting needed.
+- Had to extend `NpcContent` with `xp_value: int = 0` (and propagate through `_to_npc`). NPCs previously always granted 0 XP — only monster templates rolled XP from CR. Cleanest fix: a single optional field, default 0, no breakage for existing worlds.
+- Player point-buy ceiling is 27. First payload attempt (`STR 15 / CON 14 / CHA 15`) cost 29 and was rejected — confirmed via REST. Final spread (`STR 15 / CON 14 / CHA 14`) is what the playbook documents.
+- The scenario was driven through Playwright MCP against the live `make serve` + `make frontend` stack. Player creation went via REST (avoids a long ability-score click loop in the wizard); world selection, combat, level-up modal, and Smite were all driven through the UI.
+- Damage breakdown line confirmed both Dueling and Divine Smite simultaneously: `1d8 рубящий + 2d8 divine_smite + +2 str + +2 дуэлянт = 18`. Slot 1 decremented 2 → 1 in the same swing.
+- Pre-flight script (`uv run python -c "..."` against `start_game` with `level_up_test`) used as the sanity check instead of writing a new integration test — phase 1 unit tests already cover `xp_for_cr` and the level threshold; phase 2 integration covers the level-up endpoint. Adding a third near-duplicate test would be redundant.
+- E2E report at `docs/e2e-reports/017-phase3-level-up-2026-04-13.md`, screenshot at `docs/sprints/017-xp-leveling/e2e/level_up_post_smite.png`. Playbook scenario 3.5 added.
+- Optional Fighter Action Surge companion scenario was skipped (not in primary AC, the time was better spent on the Paladin path documentation).

@@ -1,0 +1,10 @@
+arena:
+  name:
+    en: Arena
+    ru: Арена
+  latitude: 0.0
+  longitude: 0.0
+  elevation: 0
+  terrain: plains
+  water_proximity: 0.0
+  connections: []

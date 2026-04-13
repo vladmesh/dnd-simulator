@@ -1,0 +1,55 @@
+xp_dummy:
+  name:
+    en: XP Dummy
+    ru: XP-манекен
+  start_location: arena_floor
+  faction: monsters
+  role: commoner
+  hp: 3
+  ac: 8
+  speed: 30
+  ai: rule_based
+  xp_value: 500
+  combat_position: [6, 5]
+  ability_scores: {str: 8, dex: 8, con: 8, int: 3, wis: 8, cha: 3}
+  attacks:
+    - name: flail
+      ability: str
+      damage:
+        - dice: "1d4"
+          type: bludgeoning
+      reach: 5
+  description:
+    en: A straw-stuffed training dummy animated just enough to count as a kill. Drops massive XP.
+    ru: Тренировочный манекен, оживлённый ровно настолько, чтобы засчитаться как убийство. Даёт гору XP.
+  personality:
+    en: Swings wildly, collapses fast.
+    ru: Машет невпопад, падает быстро.
+
+practice_thug:
+  name:
+    en: Practice Thug
+    ru: Тренировочный головорез
+  start_location: arena_floor
+  faction: monsters
+  role: commoner
+  hp: 18
+  ac: 13
+  speed: 30
+  ai: rule_based
+  xp_value: 100
+  combat_position: [4, 5]
+  ability_scores: {str: 12, dex: 10, con: 12, int: 8, wis: 8, cha: 8}
+  attacks:
+    - name: club
+      ability: str
+      damage:
+        - dice: "1d6"
+          type: bludgeoning
+      reach: 5
+  description:
+    en: Hired body for the post-level-up sanity fight. Sturdy enough to demonstrate Dueling and Divine Smite.
+    ru: Наёмный громила для пост-level-up проверки. Достаточно крепкий, чтобы показать Dueling и Divine Smite.
+  personality:
+    en: Stands ground, swings on turn.
+    ru: Стоит на месте, бьёт в свой ход.

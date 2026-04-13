@@ -68,6 +68,15 @@
 - Убить врага (или несколько раундов)
 - **Ожидание:** entity_died в логе, combat_ended, sidebar возвращается в peaceful
 
+### 3.5 Level-up full cycle (Paladin L1 → L2)
+- Мир `level_up_test`, создать Paladin L1 (например STR 15 / CON 14 / CHA 14), `start_location: arena_floor`, `combat_position: [5,5]`
+- Атаковать `xp_dummy` (xp_value=500, hp=3) — один удар через L2 порог
+- **Ожидание:** XP ≥ 300, `level_up_available=true`, авто-открывается level-up модалка с заголовком «Level up to L2», dropdown Fighting Style (Defense / Dueling / Great Weapon Fighting), Confirm disabled до выбора
+- Выбрать Dueling, нажать Confirm
+- **Ожидание:** level=2, max_hp 12 → 20, появился пул `spell_slot_1` (2/2), `lay_on_hands` max 5 → 10
+- Завершить ход, на следующем раунде атаковать `practice_thug` опцией «Attack + Smite (slot 1)»
+- **Ожидание:** в damage breakdown: `1d8 + 2d8 divine_smite + +2 str + +2 дуэлянт`, `spell_slot_1` уменьшается до 1/2, бой завершается
+
 ---
 
 ## 4. Class Features

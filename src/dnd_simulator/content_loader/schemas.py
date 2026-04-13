@@ -333,6 +333,7 @@ class NpcContent(BaseModel):
     combat_position: list[int] | None = None
     reputation: dict[str, int] = {}
     memory: NpcMemoryContent | None = None
+    xp_value: int = 0
 
 
 class PlayerContent(BaseModel):

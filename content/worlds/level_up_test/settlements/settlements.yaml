@@ -1,0 +1,9 @@
+arena_town:
+  name:
+    en: Arena Compound
+    ru: Арена
+  region: arena
+  type: town
+  population: 10
+  prosperity: 10
+  defenses: 10

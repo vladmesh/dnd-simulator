@@ -171,6 +171,7 @@ def _to_npc(
         resource_pools=build_class_resource_pools(model.char_class, level=model.level),
         combat_position=tuple(model.combat_position) if model.combat_position else None,  # type: ignore[arg-type]
         reputation=dict(model.reputation),
+        xp_value=model.xp_value,
     )
 
 

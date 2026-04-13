@@ -1,0 +1,10 @@
+arena_floor:
+  name:
+    en: Arena Floor
+    ru: Арена
+  region: arena
+  settlement: arena_town
+  description:
+    en: A tiny 3x3 sandstone ring used to stage level-up drills.
+    ru: Крошечное 3x3 песчаное кольцо для тренировок уровней.
+  neighbors: []

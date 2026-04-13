@@ -1,0 +1,14 @@
+free_militia:
+  name:
+    en: Free Militia
+    ru: Свободная Милиция
+  regions: [arena]
+  wealth: 10
+  military: 10
+  stability: 50
+  leader:
+    name:
+      en: Drill Master Kaer
+      ru: Инструктор Каэр
+    age: 40
+    trait: militarist
