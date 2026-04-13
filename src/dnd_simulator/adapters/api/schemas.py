@@ -55,6 +55,8 @@ class PatchCreatureRequest(BaseModel):
     conditions: list[str] | None = None  # D&D 5e condition names
     # Character-level
     gold: int | None = Field(default=None, ge=0)
+    level: int | None = Field(default=None, ge=1, le=20)
+    experience: int | None = Field(default=None, ge=0)
     # Creature-level XP award on kill (0 for most non-monster creatures)
     xp_value: int | None = Field(default=None, ge=0)
     # Resource pools (add/replace pools by id)
@@ -145,6 +147,16 @@ class AdvanceTimeRequest(BaseModel):
 
 class SetLangRequest(BaseModel):
     lang: str
+
+
+class LevelUpRequest(BaseModel):
+    """Player level-up request. Class-specific options go here.
+
+    ``fighting_style`` is required when a class gains a Fighting Style at the
+    new level (Paladin L1→L2). For other classes/levels it must be omitted.
+    """
+
+    fighting_style: str | None = None
 
 
 # -- Responses --

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from dnd_simulator.core.character import CharClass
 from dnd_simulator.core.resource import ResourcePool, RestType
 
 if TYPE_CHECKING:
@@ -31,6 +32,41 @@ def build_spell_slot_pools(slot_table: dict[int, int]) -> list[ResourcePool]:
         )
         for level, count in sorted(slot_table.items())
     ]
+
+
+_SPELL_SLOT_TABLES: dict[CharClass, dict[int, dict[int, int]]] = {
+    CharClass.PALADIN: {
+        2: {1: 2},
+        3: {1: 3},
+        4: {1: 3},
+        5: {1: 4, 2: 2},
+    },
+}
+
+
+def build_class_resource_pools(char_class: CharClass, level: int = 1) -> list[ResourcePool]:
+    """Create default resource pools for a class at a given level.
+
+    Fighter L1: second_wind. Fighter L2+: + action_surge.
+    Paladin L1: lay_on_hands only. Paladin L2+: + spell slots (half-caster table).
+    """
+    pools: list[ResourcePool] = []
+    if char_class == CharClass.FIGHTER:
+        pools.append(ResourcePool(id="second_wind", max_uses=1, current_uses=1, reset_on=RestType.SHORT_REST))
+        if level >= 2:
+            pools.append(ResourcePool(id="action_surge", max_uses=1, current_uses=1, reset_on=RestType.SHORT_REST))
+    if char_class == CharClass.PALADIN:
+        loh_max = 5 * level
+        pools.append(
+            ResourcePool(id="lay_on_hands", max_uses=loh_max, current_uses=loh_max, reset_on=RestType.LONG_REST)
+        )
+    if char_class in _SPELL_SLOT_TABLES:
+        level_table = _SPELL_SLOT_TABLES[char_class]
+        applicable_levels = [lv for lv in level_table if lv <= level]
+        if applicable_levels:
+            slot_table = level_table[max(applicable_levels)]
+            pools.extend(build_spell_slot_pools(slot_table))
+    return pools
 
 
 def get_available_spell_slots(creature: Creature) -> dict[int, int]:

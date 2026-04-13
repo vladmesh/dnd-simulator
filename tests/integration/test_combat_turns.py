@@ -407,10 +407,11 @@ class TestPaladinCombat:
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
-                # Inject spell slots (level 1 Paladin doesn't have them naturally)
+                # Promote to level 2 and inject spell slots (Divine Smite gated at L2)
                 requests.patch(
                     f"{api_url}/sessions/{sid}/creatures/{pid}",
                     json={
+                        "level": 2,
                         "resource_pools": [
                             {"id": "spell_slot_1", "max_uses": 2, "current_uses": 2, "reset_on": "long_rest"},
                         ],
@@ -548,10 +549,11 @@ class TestPaladinCombat:
         try:
             sock = ws_connect(ws_base_url, sid, pid)
             try:
-                # Inject spell slots
+                # Promote to L2 and inject spell slots
                 requests.patch(
                     f"{api_url}/sessions/{sid}/creatures/{pid}",
                     json={
+                        "level": 2,
                         "resource_pools": [
                             {"id": "spell_slot_1", "max_uses": 2, "current_uses": 2, "reset_on": "long_rest"},
                         ],

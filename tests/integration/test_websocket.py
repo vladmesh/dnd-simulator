@@ -664,13 +664,14 @@ class TestDivineSmite:
         resp.raise_for_status()
         pid = resp.json()["player_id"]
 
-        # Level 1 Paladin has no spell slots — grant via PATCH.
+        # Promote to L2 (Divine Smite gated at L2) and grant spell slots.
         requests.patch(
             f"{api}/sessions/{sid}/creatures/{pid}",
             json={
+                "level": 2,
                 "resource_pools": [
                     {"id": "spell_slot_1", "max_uses": 2, "current_uses": 2, "reset_on": "long_rest"},
-                ]
+                ],
             },
             timeout=5,
         ).raise_for_status()

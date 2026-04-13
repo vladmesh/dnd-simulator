@@ -2,7 +2,6 @@
 
 from dnd_simulator.content_loader.catalogs import load_catalog
 from dnd_simulator.content_loader.creatures import (
-    build_class_resource_pools,
     load_npcs,
     parse_ability_scores,
     parse_attacks,
@@ -52,7 +51,6 @@ __all__ = [
     "LayerType",
     "TemplateInfo",
     "_load_section",
-    "build_class_resource_pools",
     "deserialize_item",
     "extract_all_equipped",
     "extract_region_adjacency",

@@ -9,7 +9,6 @@ from __future__ import annotations
 import pytest
 
 from dnd_simulator.content_loader.creatures import (
-    build_class_resource_pools,
     parse_class_features,
     parse_npc,
 )
@@ -21,7 +20,7 @@ from dnd_simulator.core.class_features import (
 )
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.rules.character_creation import HIT_DICE, calculate_max_hp, starting_equipment
-from dnd_simulator.rules.resources import use_resource
+from dnd_simulator.rules.resources import build_class_resource_pools, use_resource
 
 # ---------------------------------------------------------------------------
 # PaladinFeatures dataclass

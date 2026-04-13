@@ -7,15 +7,18 @@ from fastapi import APIRouter, HTTPException
 from dnd_simulator.adapters.api.deps import get_service
 from dnd_simulator.adapters.api.schemas import (
     CreatePlayerRequest,
+    LevelUpRequest,
     PlayerStatusResponse,
     SetupConfigResponse,
 )
 from dnd_simulator.core.character import Ability
+from dnd_simulator.core.class_features import FightingStyle
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.character_creation import POINT_BUY_BUDGET, STARTING_GOLD
 from dnd_simulator.rules.leveling import xp_to_next_level
 from dnd_simulator.rules.modifiers import effective_ac
+from dnd_simulator.rules.perform_level_up import perform_level_up
 from dnd_simulator.service.game_service import GameService
 from dnd_simulator.service.session import GameSession
 
@@ -52,6 +55,25 @@ def get_status(session_id: str) -> PlayerStatusResponse:
     p = session.get_player()
     if not p:
         raise HTTPException(status_code=404, detail=_("No player in this session"))
+    return _player_status(p)
+
+
+@router.post("/sessions/{session_id}/level-up", response_model=PlayerStatusResponse)
+def level_up(session_id: str, body: LevelUpRequest) -> PlayerStatusResponse:
+    """Apply a pending level-up to the player character."""
+    service = get_service()
+    session = _get_session(service, session_id)
+    p = session.get_player()
+    if not p:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=_("No player in this session"))
+    try:
+        style = FightingStyle(body.fighting_style) if body.fighting_style is not None else None
+    except ValueError as e:
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e)) from e
+    try:
+        perform_level_up(p, fighting_style=style)
+    except ValueError as e:
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e)) from e
     return _player_status(p)
 
 

@@ -117,8 +117,16 @@ class CreatureCommands(GameServiceProtocol):
                 entity.resource_pools.append(pool)
 
         # Character-level fields
-        if isinstance(entity, Character) and "gold" in updates:
-            entity.gold = int(updates["gold"])
+        if isinstance(entity, Character):
+            if "gold" in updates:
+                entity.gold = int(updates["gold"])
+            if "level" in updates:
+                entity.level = int(updates["level"])
+            if "experience" in updates:
+                from dnd_simulator.rules.leveling import can_level_up
+
+                entity.experience = int(updates["experience"])
+                entity.level_up_available = can_level_up(entity.experience, entity.level)
 
         # NPC-level fields
         if isinstance(entity, Npc) and "personality" in updates:

@@ -89,4 +89,31 @@ Product-level integration (over live stack, `tests/integration/`):
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Added `rules/perform_level_up.py`: pure mutation on `Character` — validates the
+  level-up flag + fighting_style, recomputes `max_hp`, heals by delta, rebuilds
+  class features at the new level, merges resource pools preserving
+  `current_uses` for pools that already existed.
+- Moved `build_class_resource_pools` from `content_loader/creatures.py` to
+  `rules/resources.py`; having rules/ call into content_loader would invert the
+  layer direction. `content_loader/creatures.py`, `content_loader/__init__.py`,
+  and `tests/unit/test_paladin_infra.py` updated to import from the new home.
+- REST endpoint `POST /api/player/sessions/{sid}/level-up` with
+  `LevelUpRequest(fighting_style: str | None)`; responds with
+  `PlayerStatusResponse`. `ValueError` → 400.
+- Extended `PatchCreatureRequest` + `commands_creatures.patch_creature` with
+  `level` and `experience` fields: pure DM/test affordance — setting
+  `experience` also recomputes `level_up_available`. Used in the new tests to
+  skip the kill-a-dummy dance (fast and deterministic), and to fix three
+  pre-existing Paladin integration tests (`test_paladin_flaming_sword_smite_three_damage_types`,
+  `test_paladin_spell_slot_consumed_after_smite`, `test_smite_adds_radiant_damage`)
+  that were broken by phase 2 task 1 gating smite at L2 — they now PATCH
+  `level: 2` before attacking.
+- Dropped legacy `saves/*` (sword_vale + test_vale session snapshots); kept
+  `.gitkeep`. Sprint 017 skips migration per the sprint decisions.
+- Integration tests in `tests/integration/test_level_up.py` cover all six
+  acceptance criteria: Fighter L1→L2 full flow, Paladin required FS, Rogue HP
+  only, flag consumed on second call, current_hp heals by delta.
