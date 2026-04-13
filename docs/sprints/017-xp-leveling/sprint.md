@@ -28,7 +28,7 @@
 2. [Wire XP to creatures and grant on kill](tasks/phase1-task2-xp-grant-on-kill.md) — поля на моделях, начисление в `_handle_death`, save/load
 3. [Expose XP in player state](tasks/phase1-task3-xp-in-state.md) — payload (experience, level_up_available, xp_to_next) через REST/WS + frontend типы
 
-## Phase 2: Level-up mechanics + Paladin L2 fix
+## Phase 2: Level-up mechanics + Paladin L2 fix ✓
 
 Backend-операция level-up: метод применяет классовые фичи по целевому уровню, расходует флаг `level_up_available`. Переезд Paladin L1→L2: Fighting Style, Divine Smite, spell slots становятся доступны только при level ≥ 2; L1 Paladin остаётся только с Lay on Hands. Добавляются Fighter L2 Action Surge (новый ResourcePool + action, bonus extra action, reset on short rest) и Rogue L2 (только HP + proficiency; Cunning Action уже на L1). `PaladinFeatures` / `FighterFeatures` становятся уровнево-зависимыми: `collect_*_modifiers` и pools фильтруются по текущему level. Сохранения чистим (drop legacy saves). Верификация: integration-тесты — Paladin L1 не может smite; level up до L2 → smite доступен; Fighter L2 может activate action surge; short rest восстанавливает.
 
