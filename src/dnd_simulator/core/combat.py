@@ -158,7 +158,9 @@ class BattleMap:
         Tries to keep at least *min_spacing* feet between entities.
         Falls back to any free cell if spacing can't be satisfied.
         """
-        r = rng or random.Random()
+        from dnd_simulator.rules.dice import get_global_rng
+
+        r = rng if rng is not None else get_global_rng()
         # All valid 5-ft-aligned positions (exclude perimeter — walls block movement there)
         all_cells = [Position(x, y) for x in range(5, self.width, 5) for y in range(5, self.height, 5)]
         r.shuffle(all_cells)

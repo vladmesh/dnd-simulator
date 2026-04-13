@@ -68,7 +68,7 @@ Frontend level-up модалка. Пингуется из состояния (`l
 
 ---
 
-## Phase 5: Post-audit cleanup
+## Phase 5: Post-audit cleanup ✓
 
 Триаж audit 2026-04-13 выявил 5 sprint-relevant пунктов в коде, который трогал sprint 017 (leveling/XP). Делаем дедикейтед фазой, чтобы не тащить долг в backlog и не накапливать нарушения чистоты `rules/` пока контекст ещё свежий.
 
@@ -82,7 +82,7 @@ Frontend level-up модалка. Пингуется из состояния (`l
 
 ## Status
 
-**Current:** Phase 5 pending — post-audit cleanup of sprint-relevant items. Phases 1-4 complete (2026-04-13).
+**Current:** All phases complete (2026-04-13). Ready for sprint close.
 
 ## Decisions
 

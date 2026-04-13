@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from dnd_simulator.core.character import Ability, Attack, Creature, DamageType
 from dnd_simulator.core.rolls import DiceResult
 from dnd_simulator.rules.checks import CheckResult, attack_roll
-from dnd_simulator.rules.dice import roll, roll_d20
+from dnd_simulator.rules.dice import get_global_rng, roll, roll_d20
 
 
 @dataclass(frozen=True)
@@ -163,7 +163,7 @@ def roll_initiative(
     Ties broken by higher DEX score, then random tiebreaker.
     Returns creatures sorted from highest to lowest initiative.
     """
-    r = rng or random.Random()
+    r = rng if rng is not None else get_global_rng()
     rolls: list[tuple[Creature, int, int, int]] = []
     for c in creatures:
         d20_result = roll_d20(rng=r)
