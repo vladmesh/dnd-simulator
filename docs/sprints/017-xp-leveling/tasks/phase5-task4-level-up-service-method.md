@@ -48,4 +48,12 @@ Then update existing integration tests for `/level-up` if any exist; adapter tes
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added `service/dto.py` with `PlayerStatusData` + `ResourcePoolView` frozen dataclasses. Added `GameService.level_up_player(session_id, fighting_style)` and `GameService.player_status(session_id, player_id=None)` — the `player_id` parameter handles the multi-player-per-session edge case (`test_api.py::test_create_multiple_players` regressed briefly when the create endpoint used default `get_player()` which returns the first player, not the newly-created one).
+
+Rewrote `routes_player.py`: dropped imports of `perform_level_up`, `xp_to_next_level`, `effective_ac`, `PlayerCharacter`, `Ability`. The adapter now only parses requests, delegates to service, and maps DTOs → response schemas (+ ValueError → 404/400 based on message content — imperfect but matches the pre-existing pattern used elsewhere). `STARTING_GOLD`/`POINT_BUY_BUDGET` kept as direct imports per task description (constants, not rule functions).
+
+Full `make check` green (2174 py + 238 fe). 7 new unit tests in `test_game_service_player.py`.

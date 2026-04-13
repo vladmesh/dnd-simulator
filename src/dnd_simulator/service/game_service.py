@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from dnd_simulator.content_loader.crud import EntityType as ContentEntityType
+    from dnd_simulator.core.class_features import FightingStyle
+    from dnd_simulator.service.dto import PlayerStatusData
 
 import structlog
 
@@ -868,6 +870,72 @@ class GameService(
         with contextlib.suppress(Exception):
             self.autosave_session(session_id)
         return player
+
+    def level_up_player(
+        self,
+        session_id: str,
+        fighting_style: FightingStyle | None,
+    ) -> PlayerCharacter:
+        """Apply a pending level-up to the session's player character.
+
+        Mutates the PlayerCharacter in place and returns the same instance.
+        Raises ValueError if there is no player, no pending level-up, or the
+        fighting_style argument is incompatible with the class/level transition.
+        """
+        from dnd_simulator.rules.perform_level_up import perform_level_up
+
+        session = self._get_session(session_id)
+        player = session.get_player()
+        if player is None:
+            raise ValueError("No player in this session")
+        perform_level_up(player, fighting_style=fighting_style)
+        return player
+
+    def player_status(self, session_id: str, player_id: str | None = None) -> PlayerStatusData:
+        """Return a player's full status snapshot.
+
+        All derived fields (AC from equipment+modifiers, XP to next level) are
+        already computed. When ``player_id`` is None, returns the first player
+        in the session. Raises ValueError if no matching player exists.
+        """
+        from dnd_simulator.core.character import Ability
+        from dnd_simulator.rules.leveling import xp_to_next_level
+        from dnd_simulator.service.dto import PlayerStatusData, ResourcePoolView
+
+        session = self._get_session(session_id)
+        player = session.get_player(player_id) if player_id else session.get_player()
+        if player is None:
+            raise ValueError("No player in this session")
+        scores = player.ability_scores
+        return PlayerStatusData(
+            player_id=player.id,
+            name=player.name,
+            race=player.race.value,
+            char_class=player.char_class.value,
+            level=player.level,
+            experience=player.experience,
+            level_up_available=player.level_up_available,
+            xp_to_next_level=xp_to_next_level(player.experience),
+            alignment=player.alignment.value,
+            hp=player.current_hp,
+            max_hp=player.max_hp,
+            ac=effective_ac(player),
+            gold=player.gold,
+            location_id=player.location_id,
+            appearance=player.appearance,
+            ability_scores={
+                "str": scores[Ability.STR],
+                "dex": scores[Ability.DEX],
+                "con": scores[Ability.CON],
+                "int": scores[Ability.INT],
+                "wis": scores[Ability.WIS],
+                "cha": scores[Ability.CHA],
+            },
+            resource_pools=[
+                ResourcePoolView(id=p.id, max_uses=p.max_uses, current_uses=p.current_uses)
+                for p in player.resource_pools
+            ],
+        )
 
     def _get_session(self, session_id: str) -> GameSession:
         if session_id not in self._sessions:

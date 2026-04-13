@@ -11,16 +11,9 @@ from dnd_simulator.adapters.api.schemas import (
     PlayerStatusResponse,
     SetupConfigResponse,
 )
-from dnd_simulator.core.character import Ability
 from dnd_simulator.core.class_features import FightingStyle
-from dnd_simulator.core.player import PlayerCharacter
-from dnd_simulator.i18n import _
 from dnd_simulator.rules.character_creation import POINT_BUY_BUDGET, STARTING_GOLD
-from dnd_simulator.rules.leveling import xp_to_next_level
-from dnd_simulator.rules.modifiers import effective_ac
-from dnd_simulator.rules.perform_level_up import perform_level_up
-from dnd_simulator.service.game_service import GameService
-from dnd_simulator.service.session import GameSession
+from dnd_simulator.service.dto import PlayerStatusData
 
 router = APIRouter(prefix="/api/player", tags=["player"])
 
@@ -44,76 +37,57 @@ def create_character(session_id: str, body: CreatePlayerRequest) -> PlayerStatus
         player = service.create_player(session_id, data)
     except ValueError as e:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e)) from e
-    return _player_status(player)
+    return _to_response(service.player_status(session_id, player_id=player.id))
 
 
 @router.get("/sessions/{session_id}/status", response_model=PlayerStatusResponse)
 def get_status(session_id: str) -> PlayerStatusResponse:
     """Player's own character info."""
     service = get_service()
-    session = _get_session(service, session_id)
-    p = session.get_player()
-    if not p:
-        raise HTTPException(status_code=404, detail=_("No player in this session"))
-    return _player_status(p)
+    try:
+        status = service.player_status(session_id)
+    except ValueError as e:
+        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
+    return _to_response(status)
 
 
 @router.post("/sessions/{session_id}/level-up", response_model=PlayerStatusResponse)
 def level_up(session_id: str, body: LevelUpRequest) -> PlayerStatusResponse:
     """Apply a pending level-up to the player character."""
     service = get_service()
-    session = _get_session(service, session_id)
-    p = session.get_player()
-    if not p:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=_("No player in this session"))
     try:
         style = FightingStyle(body.fighting_style) if body.fighting_style is not None else None
     except ValueError as e:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e)) from e
     try:
-        perform_level_up(p, fighting_style=style)
+        service.level_up_player(session_id, fighting_style=style)
     except ValueError as e:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e)) from e
-    return _player_status(p)
+        msg = str(e)
+        is_missing = "No player" in msg or "not found" in msg
+        status_code = HTTPStatus.NOT_FOUND if is_missing else HTTPStatus.BAD_REQUEST
+        raise HTTPException(status_code=status_code, detail=str(e)) from e
+    return _to_response(service.player_status(session_id))
 
 
-# -- Helpers --
-
-
-def _get_session(service: GameService, session_id: str) -> GameSession:
-    try:
-        return service.get_session(session_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
-
-
-def _player_status(p: PlayerCharacter) -> PlayerStatusResponse:
-    scores = p.ability_scores
+def _to_response(data: PlayerStatusData) -> PlayerStatusResponse:
     return PlayerStatusResponse(
-        player_id=p.id,
-        name=p.name,
-        race=p.race.value,
-        char_class=p.char_class.value,
-        level=p.level,
-        experience=p.experience,
-        level_up_available=p.level_up_available,
-        xp_to_next_level=xp_to_next_level(p.experience),
-        alignment=p.alignment.value,
-        hp=p.current_hp,
-        max_hp=p.max_hp,
-        ac=effective_ac(p),
-        gold=p.gold,
-        location_id=p.location_id,
-        appearance=p.appearance,
-        ability_scores={
-            "str": scores[Ability.STR],
-            "dex": scores[Ability.DEX],
-            "con": scores[Ability.CON],
-            "int": scores[Ability.INT],
-            "wis": scores[Ability.WIS],
-            "cha": scores[Ability.CHA],
-        },
+        player_id=data.player_id,
+        name=data.name,
+        race=data.race,
+        char_class=data.char_class,
+        level=data.level,
+        experience=data.experience,
+        level_up_available=data.level_up_available,
+        xp_to_next_level=data.xp_to_next_level,
+        alignment=data.alignment,
+        hp=data.hp,
+        max_hp=data.max_hp,
+        ac=data.ac,
+        gold=data.gold,
+        location_id=data.location_id,
+        appearance=data.appearance,
+        ability_scores=data.ability_scores,
         resource_pools=[
-            {"id": pool.id, "max_uses": pool.max_uses, "current_uses": pool.current_uses} for pool in p.resource_pools
+            {"id": p.id, "max_uses": p.max_uses, "current_uses": p.current_uses} for p in data.resource_pools
         ],
     )
