@@ -53,4 +53,64 @@ Choose one and justify.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+### Trace of the two data sources
+
+- `Header.tsx:22` reads `player` from Zustand (`useGameStore((s) => s.player)`).
+  `player.hp` / `player.max_hp` get updated synchronously by
+  `LevelUpModal → handleConfirm → onSuccess(updated) → updatePlayer(updated)`
+  (`PlayerStats.tsx:82`), so the top HP bar refreshes immediately on Confirm.
+- `CombatPanel.tsx:7` previously read `awareness` only, using `combat.self_hp /
+  self_max_hp / self_ac / self_resource_pools` (`CombatPanel.tsx:12, 16, 40,
+  44`). Awareness is only rewritten by WS messages — `onTurn`, `onActionResult`,
+  `onRoundResult` in `turnSlice.ts:65/85/108`. The level-up REST response does
+  NOT push a new `turn` event, so `awareness.self_hp` stayed 12/12 until the
+  next round.
+
+Two components, two sources of truth — classic split state. `Header` won the
+race because it subscribes to the slice that the REST response mutates.
+
+### Fix
+
+`CombatPanel` now reads `hp`, `max_hp`, `ac`, and `resource_pools` from
+`player` (canonical source), keeping `awareness` only for combat-scoped,
+perceived data (`self_speed`, `self_weapon`, `self_weapon_damage`,
+`self_conditions`, `round_number`). The "combat mode" check still uses
+`"self_hp" in awareness` as the discriminator — that contract stays. Added an
+early return when `player` is null (defensive; combat panel shouldn't render
+without an authenticated player anyway).
+
+### Backend redundancy
+
+`CombatAwareness.self_hp / self_max_hp / self_ac / self_resource_pools` are now
+dead weight from the frontend's perspective. Not removing them here — they're
+still used by `BudgetDisplay`, `BattleMap`, `TargetDropdown`, `Perception`,
+`NpcInspectModal`, `ActionBar`, and the `"self_hp" in awareness` discriminator
+leaks into many files. A clean fix would:
+1. Introduce an explicit `mode: "combat"` flag on awareness to replace the
+   structural `"self_hp" in awareness` discriminator.
+2. Drop the redundant self_* fields from `CombatAwareness` (backend + types).
+3. Refactor all consumers to read self stats from `player`.
+
+Candidate backlog item — too broad for this bug-sweep phase.
+
+### Tests
+
+- New `CombatPanel.test.tsx` (3 tests):
+  - HP/max_hp/AC render from `player`, not stale `awareness.self_*`.
+  - Updating `player` in isolation (level-up scenario with no WS event)
+    re-renders the panel — this is the regression test for the reported bug.
+  - Spell slots render from `player.resource_pools` (paladin L2 spell slot
+    appears without waiting for next `turn`).
+- Updated `BattleMapInspect.test.tsx` — added `player` to the store fixture
+  since `CombatPanel` now requires it. No behavior change.
+
+### Acceptance verification
+
+- Top bar and combat sidebar both subscribe to `player` for HP → stay in sync.
+- `make check` green: ruff + mypy + 2134 unit tests + 236 frontend tests + tsc.
+- E2E regression (phase 3 scenario) not re-run in this task — covered by unit
+  test #2 which directly simulates the bug's state transition.

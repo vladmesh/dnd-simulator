@@ -5,15 +5,20 @@ import type { CombatAwareness, ResourcePoolInfo } from "@/types/game"
 export function CombatPanel() {
   const { t } = useTranslation(["game"])
   const awareness = useGameStore((s) => s.awareness)
+  const player = useGameStore((s) => s.player)
 
-  if (!awareness || !("self_hp" in awareness)) return null
+  if (!awareness || !("self_hp" in awareness) || !player) return null
   const combat = awareness as CombatAwareness
 
-  const hpPct = combat.self_max_hp > 0 ? (combat.self_hp / combat.self_max_hp) * 100 : 0
+  // HP, AC, and resource_pools live on `player` — single canonical source that
+  // refreshes on level-up REST response, not only on next WS turn snapshot.
+  const hp = player.hp
+  const maxHp = player.max_hp
+  const ac = player.ac
+  const hpPct = maxHp > 0 ? (hp / maxHp) * 100 : 0
   const hpColor = hpPct > 50 ? "bg-green-500" : hpPct > 25 ? "bg-yellow-500" : "bg-red-500"
 
-  // Filter spell slot pools (id starts with "spell_slot_")
-  const spellSlots = (combat.self_resource_pools ?? []).filter((p) => p.id.startsWith("spell_slot_"))
+  const spellSlots = (player.resource_pools ?? []).filter((p) => p.id.startsWith("spell_slot_"))
 
   return (
     <div className="space-y-3">
@@ -37,11 +42,11 @@ export function CombatPanel() {
             style={{ width: `${hpPct}%` }}
           />
           <span className="absolute inset-0 flex items-center justify-center text-[10px] font-medium">
-            {t("game:hp_display", { hp: combat.self_hp, max: combat.self_max_hp })}
+            {t("game:hp_display", { hp, max: maxHp })}
           </span>
         </div>
         <div className="flex flex-wrap gap-x-3 text-muted-foreground">
-          <span>{t("game:ac_display", { n: combat.self_ac })}</span>
+          <span>{t("game:ac_display", { n: ac })}</span>
           <span>{t("game:speed_display", { n: combat.self_speed })}</span>
         </div>
         {combat.self_conditions && combat.self_conditions.length > 0 && (

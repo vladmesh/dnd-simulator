@@ -6,7 +6,7 @@ import { useGameStore } from "@/store/gameStore"
 import { BattleMap } from "../BattleMap"
 import { CombatPanel } from "../CombatPanel"
 import { NpcInspectModal } from "../NpcInspectModal"
-import type { CombatAwareness, CombatEntity, NearbyEntity } from "@/types/game"
+import type { CombatAwareness, CombatEntity, NearbyEntity, PlayerStatus } from "@/types/game"
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -43,10 +43,30 @@ const combatAwareness: CombatAwareness = {
 // Setup
 // ---------------------------------------------------------------------------
 
+const player: PlayerStatus = {
+  player_id: "p1",
+  name: "Hero",
+  race: "human",
+  char_class: "fighter",
+  level: 1,
+  experience: 0,
+  level_up_available: false,
+  xp_to_next_level: 300,
+  alignment: "neutral",
+  hp: 20,
+  max_hp: 20,
+  ac: 15,
+  gold: 0,
+  location_id: "town",
+  ability_scores: { str: 16, dex: 14, con: 14, int: 10, wis: 10, cha: 8 },
+  resource_pools: [],
+}
+
 beforeEach(() => {
   useGameStore.setState({
     mode: "combat",
     awareness: combatAwareness,
+    player,
     isMyTurn: true,
     waitingForAction: false,
     budget: { actions: 1, bonus_actions: 1, movement_remaining: 30, reaction: 1 },
