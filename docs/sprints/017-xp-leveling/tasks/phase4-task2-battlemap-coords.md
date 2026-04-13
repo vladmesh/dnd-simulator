@@ -56,4 +56,58 @@ Identify the **single** transform that breaks the invariant. Don't compensate do
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+### Trace (YAML → render)
+
+Backend convention is already canonical and consistent:
+- `core/character.py:236` — `combat_position: tuple[int, int] | None` with comment "x, y in feet".
+- `core/combat.py` — `Position(x, y)` is feet, not cell indices.
+- `content_loader/creatures.py:172,263` — passes YAML values straight through to `Position`.
+- `layers/entities/combat_manager.py:87-88` — `battle_map.set_position(c.id, Position(c.combat_position[0], c.combat_position[1]))`. No flip, no offset.
+- `rules/movement.py:28` — `grid_distance` divides by 5 (feet → squares).
+- `layers/entities/awareness_builder.py:221-222` — `self_x = my_pos.x`, so WS payload carries feet.
+- `frontend/src/components/game/BattleMap.tsx:103-104` — `pCol = self_x / 5`, `pRow = self_y / 5`. Direct 1:1 mapping.
+
+**No transform is broken.** The phase-3 E2E symptom (player at `cell-11-7` with
+`combat_position: [5, 5]`) cannot reproduce through the code pipeline: feet `(5, 5)`
+renders as `cell-1-1`. The `cell-11-7` observation in the report is either (a) a
+transcription error in the report, or (b) the player was placed by `place_randomly`
+because the REST payload didn't carry `combat_position`. Either way: **not a code bug**.
+
+The real error was in the NEW `level_up_test` content: the author wrote
+`combat_position: [6, 5]`, `[4, 5]` *intending grid cells* but the engine treats
+them as feet. 4 and 6 aren't multiples of 5, so the three creatures ended up stacked
+at non-grid-aligned coords, which `grid_distance` rounds to 0 ft apart — the reported
+`Attack xp_dummy(5ft)` was a false-positive artifact of this silent misuse.
+
+### Fix
+
+1. `content_loader/schemas.py`: added `_validate_combat_position` pydantic validator
+   on both `NpcContent` and `PlayerContent`. Rejects non-length-2, negative, and
+   non-multiple-of-5 values. Fails fast with a message pointing at the
+   feet-vs-cells distinction. Covers the fail-fast project rule.
+2. `core/combat.py`: full docstring on `Position` with ASCII diagram pinning the
+   convention (units = feet, y grows north, origin bottom-left, `col = x // 5`).
+3. `content/worlds/level_up_test/entities/npcs.yaml`: migrated to feet —
+   `[6, 5] → [30, 25]`, `[4, 5] → [20, 25]`. Player fixture in the next E2E must
+   use feet too (e.g. `[25, 25]` instead of `[5, 5]`).
+4. Tests:
+   - `TestNpcValidationErrors` — 5 new validator tests (non-5-multiple, wrong length,
+     negative, valid, player-side).
+   - `test_combat_position_round_trip_to_battle_map` — YAML `[15, 20]` / `[25, 30]`
+     → `battle_map.positions[id] == Position(15, 20)` / `Position(25, 30)`.
+   - Frontend: `BattleMapInspect.test.tsx` — new test pins feet `(25, 30)` → `cell-5-6`,
+     feet `(15, 20)` → `cell-3-4`.
+
+### Deviations from task plan
+
+- Did **not** change YAML schema to `{x: int, y: int}` dict — list form already
+  works everywhere, unambiguous now that validator enforces the unit. Dict migration
+  would be pure churn.
+- Did **not** change frontend render pipeline — trace showed it was already correct.
+- `place_randomly` fallback for player (when REST payload omits `combat_position`) is
+  out of scope; if that's what actually happened in phase 3, the bug is in the E2E
+  script, not the code. A dedicated regression would belong in a separate task.

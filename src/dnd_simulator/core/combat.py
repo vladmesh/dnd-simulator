@@ -10,7 +10,33 @@ from dnd_simulator.i18n import _
 
 @dataclass(frozen=True)
 class Position:
-    """A point on the battle grid, in feet (multiples of 5)."""
+    """A point on the battle grid, in feet (multiples of 5).
+
+    Canonical coord convention (single source of truth for the whole stack):
+
+    - Units: **feet** (D&D 5e grid is 5 ft per cell).
+    - Axes: ``x`` = horizontal, ``y`` = vertical.
+    - Origin: ``(0, 0)`` is the bottom-left corner; ``y`` grows north / up.
+    - Grid-cell mapping: ``cell_col = x // 5``, ``cell_row = y // 5``.
+
+    Diagram (60 ft by 60 ft map, cells 5 ft each)::
+
+        y=60  +---+---+---+--  ...  --+
+              |   |   |   |           |  row 11 (top)
+        y=55  +---+---+---+--  ...  --+
+                        ...
+        y=10  +---+---+---+--  ...  --+
+              |   |   |   |           |  row 1
+        y=5   +---+---+---+--  ...  --+
+              |   |   |   |           |  row 0 (bottom)
+        y=0   +---+---+---+--  ...  --+
+             x=0 x=5 x=10             x=60
+
+    YAML ``combat_position: [25, 30]`` means ``x=25 ft, y=30 ft`` → cell (col=5, row=6).
+    The frontend renders ``cell-{col}-{row}`` where ``col = self_x / 5`` and
+    ``row = self_y / 5`` — a direct 1:1 mapping, no axis flips or offsets.
+    Content validator in ``content_loader/schemas.py`` enforces multiples of 5.
+    """
 
     x: int
     y: int

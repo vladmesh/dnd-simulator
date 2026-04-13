@@ -10,7 +10,7 @@ xp_dummy:
   speed: 30
   ai: rule_based
   xp_value: 500
-  combat_position: [6, 5]
+  combat_position: [30, 25]
   ability_scores: {str: 8, dex: 8, con: 8, int: 3, wis: 8, cha: 3}
   attacks:
     - name: flail
@@ -38,7 +38,7 @@ practice_thug:
   speed: 30
   ai: rule_based
   xp_value: 100
-  combat_position: [4, 5]
+  combat_position: [20, 25]
   ability_scores: {str: 12, dex: 10, con: 12, int: 8, wis: 8, cha: 8}
   attacks:
     - name: club

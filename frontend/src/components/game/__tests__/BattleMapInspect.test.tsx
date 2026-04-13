@@ -90,6 +90,29 @@ describe("BattleMap — click-to-inspect", () => {
     const enemyCell = screen.getByTestId("cell-1-0")
     expect(enemyCell.className).toContain("cursor-pointer")
   })
+
+  it("pins coord convention: feet → cell via x/5, y/5 (no flip, no offset)", () => {
+    // Pin the canonical invariant: backend sends positions in feet; frontend
+    // renders `cell-{col}-{row}` with col=x/5 and row=y/5. No axis flip.
+    useGameStore.setState({
+      mode: "combat",
+      awareness: {
+        ...combatAwareness,
+        self_x: 25,
+        self_y: 30,
+        battle_map_width: 60,
+        battle_map_height: 60,
+        nearby: [{ ...enemy, x: 15, y: 20 }],
+      },
+      isMyTurn: false,
+      waitingForAction: false,
+    })
+    render(<BattleMap />)
+    // Player at feet (25, 30) → cell-5-6
+    expect(screen.getByTestId("cell-5-6")).toBeInTheDocument()
+    // Enemy at feet (15, 20) → cell-3-4
+    expect(screen.getByTestId("cell-3-4")).toBeInTheDocument()
+  })
 })
 
 // ---------------------------------------------------------------------------

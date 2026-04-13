@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
 
 from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.character import (
@@ -306,6 +306,29 @@ class SquadContent(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+def _validate_combat_position(value: list[int] | None) -> list[int] | None:
+    """Canonical combat_position = (x, y) in FEET on the battle grid.
+
+    Grid cells are 5 ft by 5 ft (D&D 5e). Values must be non-negative multiples of 5.
+    A frequent authoring mistake is using cell indices (e.g. ``[5, 5]`` meaning
+    "cell (5,5)") where the engine expects feet (``[25, 25]``). Fail fast to prevent
+    silently misplaced creatures.
+    """
+    if value is None:
+        return None
+    if len(value) != 2:
+        raise ValueError(f"combat_position must be [x, y] with 2 values in feet, got {value!r}")
+    for v in value:
+        if v < 0:
+            raise ValueError(f"combat_position values must be non-negative (feet), got {value!r}")
+        if v % 5 != 0:
+            raise ValueError(
+                f"combat_position values must be multiples of 5 (feet, not cell indices), got {value!r}. "
+                f"For cell (col, row), pass [col*5, row*5]."
+            )
+    return value
+
+
 class NpcContent(BaseModel):
     """An NPC definition from YAML."""
 
@@ -335,6 +358,8 @@ class NpcContent(BaseModel):
     memory: NpcMemoryContent | None = None
     xp_value: int = 0
 
+    _validate_combat_position = field_validator("combat_position")(_validate_combat_position)
+
 
 class PlayerContent(BaseModel):
     """A player character definition from YAML."""
@@ -361,3 +386,5 @@ class PlayerContent(BaseModel):
     class_features: dict[str, Any] = {}
     combat_position: list[int] | None = None
     reputation: dict[str, int] = {}
+
+    _validate_combat_position = field_validator("combat_position")(_validate_combat_position)

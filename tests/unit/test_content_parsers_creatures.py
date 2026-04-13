@@ -362,6 +362,74 @@ class TestNpcValidationErrors:
         with pytest.raises(ValidationError):
             NpcContent.model_validate(npc_data)
 
+    def test_combat_position_non_multiple_of_five_raises(self) -> None:
+        """Per canonical coord convention, combat_position is in feet (multiples of 5).
+        Values like [6, 5] — a common author mistake (using cell indices) — must fail fast.
+        """
+        npc_data = {"name": {"en": "Misplaced"}, "combat_position": [6, 5]}
+        with pytest.raises(ValidationError):
+            NpcContent.model_validate(npc_data)
+
+    def test_combat_position_wrong_length_raises(self) -> None:
+        npc_data = {"name": {"en": "Misplaced"}, "combat_position": [10]}
+        with pytest.raises(ValidationError):
+            NpcContent.model_validate(npc_data)
+
+    def test_combat_position_negative_raises(self) -> None:
+        npc_data = {"name": {"en": "Misplaced"}, "combat_position": [-5, 10]}
+        with pytest.raises(ValidationError):
+            NpcContent.model_validate(npc_data)
+
+    def test_combat_position_valid_feet_ok(self) -> None:
+        npc_data = {"name": {"en": "OK"}, "combat_position": [25, 30]}
+        model = NpcContent.model_validate(npc_data)
+        assert model.combat_position == [25, 30]
+
+    def test_player_combat_position_non_multiple_of_five_raises(self) -> None:
+        pdata = {"name": {"en": "Bad"}, "combat_position": [5, 5, 0]}
+        with pytest.raises(ValidationError):
+            PlayerContent.model_validate(pdata)
+
+    def test_combat_position_round_trip_to_battle_map(self) -> None:
+        """YAML combat_position in feet must land at the same Position on the battle map
+        after start_combat. Pins the canonical (x, y in feet) convention.
+        """
+        from collections import defaultdict
+
+        from dnd_simulator.content_loader.creatures import _to_npc, parse_player
+        from dnd_simulator.core.combat import Position
+        from dnd_simulator.core.models import Event
+        from dnd_simulator.layers.entities.combat_manager import CombatManager
+
+        npc_data = {
+            "name": {"en": "Pinner"},
+            "start_location": "arena",
+            "combat_position": [15, 20],
+            "faction": "monsters",
+            "attacks": [{"name": "fist", "ability": "str", "damage": [{"dice": "1d4", "type": "bludgeoning"}]}],
+        }
+        npc_model = NpcContent.model_validate(npc_data)
+        npc = _to_npc("pinner", npc_model, "en")
+        npc.location_id = "arena"
+
+        pdata = {
+            "name": {"en": "Hero"},
+            "start_location": "arena",
+            "combat_position": [25, 30],
+        }
+        player = parse_player(pdata)
+        player.location_id = "arena"
+        player.faction_id = "kingdom"
+
+        entities: dict[str, object] = {npc.id: npc, player.id: player}
+        log: dict[str, list[Event]] = defaultdict(list)
+        cm = CombatManager(entities, log)  # type: ignore[arg-type]
+        combat = cm.start_combat("arena")
+        assert combat is not None
+
+        assert combat.battle_map.positions[npc.id] == Position(15, 20)
+        assert combat.battle_map.positions[player.id] == Position(25, 30)
+
 
 # ---------------------------------------------------------------------------
 # 7. Validation error on bad item type
