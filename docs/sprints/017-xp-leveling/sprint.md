@@ -34,7 +34,10 @@ Backend-операция level-up: метод применяет классов�
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Level-aware class features](tasks/phase2-task1-level-aware-features.md) — `level` field on features, gate Paladin FS/smite at L2
+2. [Level-aware resource pools](tasks/phase2-task2-level-aware-pools.md) — Paladin L1 no slots, Fighter L2 gets `action_surge` pool
+3. [Action Surge action + handler](tasks/phase2-task3-action-surge.md) — Fighter L2 bonus action grants extra Action
+4. [Level-up operation + endpoint](tasks/phase2-task4-level-up-operation.md) — `perform_level_up` + `POST /level-up`, drop legacy saves
 
 ## Phase 3: Level-up UI + E2E
 
