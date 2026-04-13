@@ -37,7 +37,7 @@ from dnd_simulator.layers.settlements.models import SettlementType
 # ---------------------------------------------------------------------------
 
 
-def _coerce_localized_text(v: Any) -> dict[str, str]:
+def _coerce_localized_text(v: object) -> dict[str, str]:
     """Accept plain string or dict; always return dict."""
     if isinstance(v, dict):
         return v
@@ -93,7 +93,7 @@ class NpcMemoryContent(BaseModel):
     current_conversation: str = ""
 
 
-def _coerce_ability_scores(v: Any) -> AbilityScoresContent:
+def _coerce_ability_scores(v: object) -> AbilityScoresContent:
     """Accept raw dict or AbilityScoresContent; always return AbilityScoresContent."""
     if isinstance(v, AbilityScoresContent):
         return v
@@ -209,7 +209,7 @@ class BattleMapContent(BaseModel):
             if not (0 <= y1 <= self.height and 0 <= y2 <= self.height):
                 raise ValueError(f"wall y out of grid 0..{self.height}: {w}")
 
-    def model_post_init(self, _context: Any) -> None:
+    def model_post_init(self, _context: object) -> None:
         self.validate_walls_within()
 
 
@@ -337,7 +337,7 @@ class SquadContent(BaseModel):
     members: list[str] = []
     tick_interval: int = 3600
 
-    def model_post_init(self, __context: Any) -> None:
+    def model_post_init(self, __context: object) -> None:
         if self.max_strength is None:
             object.__setattr__(self, "max_strength", self.strength)
 

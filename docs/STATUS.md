@@ -7,7 +7,7 @@
 **Sprint:** 017-xp-leveling
 **Goal:** Ввести XP (за убийства по CR) и систему уровней с level-up модалкой; исправить уровни Paladin (FS/slots/smite на L2), добавить L2 для всех трёх классов.
 **Started:** 2026-04-13
-**Phase:** 5 — Post-audit cleanup (task 4 done, task 5 pending) — 2026-04-13
+**Phase:** 5 — Post-audit cleanup (all 5 tasks done, ready to close) — 2026-04-13
 
 **Audit:** Triaged 2026-04-13. Quick-fix: 0 (both stale carry-forward — already removed). Sprint-relevant: 5 → phase 5 refactor. Backlog: 6 new items added (TurnBudget/ResourcePool mutability, schemas.py `Any`, WS test gaps).
 

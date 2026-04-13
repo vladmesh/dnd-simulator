@@ -39,4 +39,8 @@ If Pydantic complains about `model_post_init` signature mismatch (it requires `A
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Replaced `Any` with `object` at all four target sites (lines 40, 96, 212, 340): both `BeforeValidator` callbacks and both `model_post_init` methods. Pydantic accepts `object` for `model_post_init` without complaint. `from typing import Any` import kept — still needed by out-of-scope uses at lines 152, 396, 427 (`modifiers`, `class_features` dicts, which hold heterogeneous content and weren't listed in task scope). `make check` green (2174 py + 238 fe), no mypy regressions.
