@@ -41,11 +41,15 @@ Backend-операция level-up: метод применяет классов�
 
 ## Phase 3: Level-up UI + E2E
 
-Frontend level-up модалка. Пингуется из состояния (`level_up_available: true` в player/character payload), всплывает кнопкой / автоматически после боя. Для каждого класса — schema-driven форма с классовыми выборами: Fighter L2 (пока без выбора — просто подтверждение), Rogue L2 (без выбора), Paladin L2 (Fighting Style dropdown — Defense/Dueling/GWF). Показывается прирост HP, новые ресурсы (Action Surge slot, spell slots). По submit — API call, обновление панели персонажа. E2E через Playwright: полный цикл (kill → XP tick → modal → choice → features applied → visible в Character panel).
+Frontend level-up модалка. Пингуется из состояния (`level_up_available: true` в player/character payload), всплывает кнопкой / автоматически после боя. Для каждого класса — класс-условная форма с выборами: Fighter L2 (без выбора — подтверждение), Rogue L2 (без выбора), Paladin L2 (Fighting Style dropdown — Defense/Dueling/GWF). Показывается прирост HP, новые ресурсы (Action Surge slot, spell slots). По submit — API call, обновление панели персонажа. E2E через Playwright: полный цикл (kill → XP tick → modal → choice → features applied → visible в Character panel).
+
+**Решение по scope:** отказались от "schema-driven" формы — `SchemaForm` избыточен для единственного enum dropdown. Используем plain class-switched `LevelUpModal` (паттерн как у `SmiteChoice`). `SchemaForm` остаётся зарезервирован для content editor до тех пор, пока у level-up не появятся богатые выборы (ASI/feats на L4).
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [LevelUpModal + API client](tasks/phase3-task1-level-up-modal.md) — компонент, класс-условная форма, `apiClient.levelUp`, unit-тесты
+2. [Dashboard integration](tasks/phase3-task2-dashboard-integration.md) — кнопка в `PlayerStats`, авто-открытие, sync Zustand
+3. [E2E full cycle](tasks/phase3-task3-e2e-level-up.md) — Playwright: kill → modal → choice → features visible + Fighter Action Surge check
 
 ---
 
