@@ -17,6 +17,7 @@ from dnd_simulator.content_loader import (
     load_battle_maps,
     load_catalog,
     load_factions,
+    load_location_battle_maps,
     load_locations,
     load_monsters,
     load_nations,
@@ -141,12 +142,17 @@ class GameService(
         for squad in squads.values():
             squad.member_crs = [monster_templates[tid].cr for tid in squad.member_templates]
         ecology_layer = EcologyLayer(squads=list(squads.values()), location_graph=location_graph)
-        # Load battle maps from geography and remap region_id → location_id
+        # Load battle maps from geography. Region-level declarations apply to
+        # every location in that region (default); per-location declarations
+        # override the region default.
         region_battle_maps = load_battle_maps(layer_paths["geography"])
+        location_battle_maps = load_location_battle_maps(layer_paths["geography"])
         battle_map_configs = {}
         for loc in locations:
             if loc.region_id in region_battle_maps:
                 battle_map_configs[loc.id] = region_battle_maps[loc.region_id]
+            if loc.id in location_battle_maps:
+                battle_map_configs[loc.id] = location_battle_maps[loc.id]
 
         entities_layer = EntitiesLayer(
             entities=entities,

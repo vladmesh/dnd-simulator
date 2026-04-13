@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from dnd_simulator.content_loader.schemas import (
+    BattleMapContent,
     LocationContent,
     NationContent,
     RegionContent,
@@ -150,24 +151,45 @@ def load_settlements(path: Path, lang: str = "en") -> list[Settlement]:
     return settlements
 
 
+def _battle_map_from_content(bm: BattleMapContent) -> BattleMap:
+    walls = [Wall(x1=w[0], y1=w[1], x2=w[2], y2=w[3]) for w in bm.walls]
+    return BattleMap(width=bm.width, height=bm.height, walls=walls)
+
+
 def load_battle_maps(path: Path) -> dict[str, BattleMap]:
-    """Load per-region battle map configs (size + walls) from a world directory."""
+    """Load per-region battle map configs (size + walls) from a geography directory."""
     regions_data = _load_section(path, "regions")
 
     result: dict[str, BattleMap] = {}
     for region_id, rdata in regions_data.items():
-        bm_data = rdata.get("battle_map")
-        if not bm_data:
+        bm_raw = rdata.get("battle_map")
+        if not bm_raw:
             continue
-        walls: list[Wall] = []
-        for w in bm_data.get("walls", []):
-            walls.append(Wall(x1=int(w[0]), y1=int(w[1]), x2=int(w[2]), y2=int(w[3])))
-        result[str(region_id)] = BattleMap(
-            width=int(bm_data.get("width", 60)),
-            height=int(bm_data.get("height", 60)),
-            walls=walls,
-        )
+        bm = BattleMapContent.model_validate(bm_raw)
+        result[str(region_id)] = _battle_map_from_content(bm)
 
+    return result
+
+
+def load_location_battle_maps(path: Path) -> dict[str, BattleMap]:
+    """Load per-location battle map overrides from a geography directory.
+
+    Returns `{location_id: BattleMap}` for locations that declare their own
+    `battle_map` block. Location overrides win over the region default
+    (merge is done by the caller).
+    """
+    loc_path = path / "locations.yaml"
+    if not loc_path.exists():
+        return {}
+    data = _read_yaml(loc_path) or {}
+
+    result: dict[str, BattleMap] = {}
+    for loc_id, ldata in data.items():
+        bm_raw = ldata.get("battle_map")
+        if not bm_raw:
+            continue
+        bm = BattleMapContent.model_validate(bm_raw)
+        result[str(loc_id)] = _battle_map_from_content(bm)
     return result
 
 

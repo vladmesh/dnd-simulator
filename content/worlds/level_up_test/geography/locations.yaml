@@ -5,6 +5,9 @@ arena_floor:
   region: arena
   settlement: arena_town
   description:
-    en: A tiny 3x3 sandstone ring used to stage level-up drills.
-    ru: Крошечное 3x3 песчаное кольцо для тренировок уровней.
+    en: A tiny 5x5 sandstone ring used to stage level-up drills.
+    ru: Крошечное 5x5 песчаное кольцо для тренировок уровней.
   neighbors: []
+  battle_map:
+    width: 5
+    height: 5

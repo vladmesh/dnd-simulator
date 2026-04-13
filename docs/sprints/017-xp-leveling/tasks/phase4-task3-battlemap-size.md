@@ -61,4 +61,29 @@ Pick one, justify in writing.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+**Investigation:**
+- Existing loader `load_battle_maps` (in `content_loader/world.py`) read `regions.yaml[*].battle_map` as raw dict, building `BattleMap(width, height, walls)`. `RegionContent.battle_map` was typed as `dict[str, Any] | None` — no schema validation.
+- Only caller was `service/game_service.py`: `region_battle_maps[loc.region_id] → battle_map_configs[loc.id]`. `EntitiesLayer/CombatManager` uses `battle_map_configs[location_id]`; if absent → `DEFAULT_BATTLE_MAP_SIZE = 60`.
+- Why region-scoped first? Sprint 006/007 history — regions = terrain templates, locations = instances; region-level maps covered the common case (all locations in a region share terrain).
+- Fallback kept (not hard-error) — breaking every existing world that doesn't declare a map is out of scope; task explicitly calls this out.
+
+**Chosen direction:** "Per-location override file" (option 1 in task). Location `battle_map` block is optional; region default still works; location wins when both are set. Additive, no existing world breaks.
+
+**Changes:**
+- Added `BattleMapContent` Pydantic model in `content_loader/schemas.py` — `width`/`height` bounded `[2, 100]` (raised from task's "~50" because existing `sword_vale` regions use 70/80 and rescoping region sizes is out of this task), walls validated as 4-int lists with endpoints within the grid via `model_post_init`.
+- `RegionContent.battle_map` and new `LocationContent.battle_map` both use `BattleMapContent | None`.
+- `content_loader/world.py`: factored `_battle_map_from_content` helper. Added `load_location_battle_maps(path) → dict[location_id, BattleMap]`. Exported from `content_loader/__init__.py`.
+- `service/game_service.py`: merge order is region default first, location override second.
+- `content/worlds/level_up_test/geography/locations.yaml`: `arena_floor` now declares `battle_map: {width: 5, height: 5}` (task asked for ≤7×7; 5×5 fits the three positions).
+- `content/worlds/level_up_test/entities/npcs.yaml`: NPC `combat_position` values `[30,25]` / `[20,25]` rescaled to `[15,10]` / `[20,10]` (outside the new 5×5 / 25ft grid otherwise).
+
+**Tests added** (`tests/unit/test_content_parsers_world.py`):
+- `TestPerLocationBattleMaps` — 3 tests: loader round-trip, merge-order simulation, regression on `level_up_test/arena_floor`.
+- `TestBattleMapSchemaValidation` — 4 tests: width min/max, wall shape, wall bounds.
+- `TestBattleMapsFromRegions` (existing) still passes — region-level maps intact.
+
+`make check` green (2134 unit tests + lint + mypy + frontend 233 tests + tsc).

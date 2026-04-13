@@ -173,6 +173,38 @@ class NeighborContent(BaseModel):
     distance: int
 
 
+class BattleMapContent(BaseModel):
+    """Battle map geometry for a region or location.
+
+    Walls are axis-aligned segments encoded as [x1, y1, x2, y2] with both
+    endpoints inside the grid.
+    """
+
+    width: int = Field(ge=2, le=100)
+    height: int = Field(ge=2, le=100)
+    walls: list[list[int]] = []
+
+    @field_validator("walls")
+    @classmethod
+    def _walls_shape(cls, v: list[list[int]]) -> list[list[int]]:
+        for w in v:
+            if len(w) != 4:
+                raise ValueError(f"wall must have 4 ints [x1,y1,x2,y2], got {w}")
+        return v
+
+    def validate_walls_within(self) -> None:
+        """Verify each wall's endpoints are within the grid. Call after construction."""
+        for w in self.walls:
+            x1, y1, x2, y2 = w
+            if not (0 <= x1 <= self.width and 0 <= x2 <= self.width):
+                raise ValueError(f"wall x out of grid 0..{self.width}: {w}")
+            if not (0 <= y1 <= self.height and 0 <= y2 <= self.height):
+                raise ValueError(f"wall y out of grid 0..{self.height}: {w}")
+
+    def model_post_init(self, _context: Any) -> None:
+        self.validate_walls_within()
+
+
 class RegionContent(BaseModel):
     """A geographic region from YAML."""
 
@@ -183,7 +215,7 @@ class RegionContent(BaseModel):
     terrain: TerrainType
     water_proximity: float = 0.0
     connections: list[ConnectionContent] = []
-    battle_map: dict[str, Any] | None = None
+    battle_map: BattleMapContent | None = None
 
 
 class LocationContent(BaseModel):
@@ -194,6 +226,7 @@ class LocationContent(BaseModel):
     settlement: str = ""
     description: LocalizedText = {}
     neighbors: list[NeighborContent] = []
+    battle_map: BattleMapContent | None = None
 
 
 # ---------------------------------------------------------------------------

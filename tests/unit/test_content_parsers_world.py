@@ -19,6 +19,7 @@ from dnd_simulator.content_loader.schemas import (
 )
 from dnd_simulator.content_loader.world import (
     load_battle_maps,
+    load_location_battle_maps,
     load_locations,
     load_nations,
     load_settlements,
@@ -359,3 +360,92 @@ class TestBattleMapsFromRegions:
         assert "silverport" in battle_maps
         assert "highfield" in battle_maps
         assert battle_maps["silverport"].width <= battle_maps["highfield"].width
+
+
+class TestPerLocationBattleMaps:
+    """Location-level `battle_map` overrides region default."""
+
+    def test_load_location_battle_maps_reads_per_location(self, tmp_path: Path) -> None:
+        (tmp_path / "regions.yaml").write_text(
+            "arena:\n"
+            "  name: {en: Arena}\n"
+            "  latitude: 0\n"
+            "  longitude: 0\n"
+            "  elevation: 0\n"
+            "  terrain: plains\n"
+            "  battle_map: {width: 40, height: 40}\n"
+        )
+        (tmp_path / "locations.yaml").write_text(
+            "small_ring:\n"
+            "  name: {en: Small Ring}\n"
+            "  region: arena\n"
+            "  battle_map: {width: 5, height: 5}\n"
+            "open_plains:\n"
+            "  name: {en: Open Plains}\n"
+            "  region: arena\n"
+        )
+        region_maps = load_battle_maps(tmp_path)
+        loc_maps = load_location_battle_maps(tmp_path)
+        assert region_maps["arena"].width == 40
+        assert loc_maps["small_ring"].width == 5
+        assert "open_plains" not in loc_maps
+
+    def test_location_override_wins_over_region_default(self, tmp_path: Path) -> None:
+        """Game service merges: region default first, location override second."""
+        (tmp_path / "regions.yaml").write_text(
+            "arena:\n"
+            "  name: {en: Arena}\n"
+            "  latitude: 0\n"
+            "  longitude: 0\n"
+            "  elevation: 0\n"
+            "  terrain: plains\n"
+            "  battle_map: {width: 40, height: 40}\n"
+        )
+        (tmp_path / "locations.yaml").write_text(
+            "small_ring:\n  name: {en: Small Ring}\n  region: arena\n  battle_map: {width: 5, height: 5}\n"
+        )
+        region_maps = load_battle_maps(tmp_path)
+        loc_maps = load_location_battle_maps(tmp_path)
+        merged: dict[str, object] = {}
+        # Simulate game_service.py merge order
+        if "arena" in region_maps:
+            merged["small_ring"] = region_maps["arena"]
+        if "small_ring" in loc_maps:
+            merged["small_ring"] = loc_maps["small_ring"]
+        assert merged["small_ring"].width == 5  # type: ignore[union-attr]
+
+    def test_level_up_test_world_has_5x5_arena(self) -> None:
+        """Regression: level_up_test/arena_floor declares 5x5 battle_map."""
+        path = Path("content/worlds/level_up_test/geography")
+        loc_maps = load_location_battle_maps(path)
+        assert "arena_floor" in loc_maps
+        assert loc_maps["arena_floor"].width == 5
+        assert loc_maps["arena_floor"].height == 5
+
+
+class TestBattleMapSchemaValidation:
+    """Schema bounds and wall sanity checks."""
+
+    def test_width_below_min_rejected(self) -> None:
+        from dnd_simulator.content_loader.schemas import BattleMapContent
+
+        with pytest.raises(ValidationError):
+            BattleMapContent(width=1, height=10)
+
+    def test_width_above_max_rejected(self) -> None:
+        from dnd_simulator.content_loader.schemas import BattleMapContent
+
+        with pytest.raises(ValidationError):
+            BattleMapContent(width=999, height=10)
+
+    def test_wall_must_have_four_ints(self) -> None:
+        from dnd_simulator.content_loader.schemas import BattleMapContent
+
+        with pytest.raises(ValidationError):
+            BattleMapContent(width=10, height=10, walls=[[0, 0, 5]])
+
+    def test_wall_outside_grid_rejected(self) -> None:
+        from dnd_simulator.content_loader.schemas import BattleMapContent
+
+        with pytest.raises(ValueError):
+            BattleMapContent(width=10, height=10, walls=[[0, 0, 20, 0]])
