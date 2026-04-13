@@ -30,6 +30,17 @@ uv run pytest tests/unit/test_character.py::TestPerceive::test_perceive_characte
 uv run pytest --cov=src/dnd_simulator
 ```
 
+## Running tests — ALWAYS log to a file
+
+Never run `make test`, `make test-unit`, `make test-integration`, or `make check` without redirecting output to a file. Reruns to re-read different sections of the same output cost minutes each and are forbidden.
+
+```bash
+make test-integration 2>&1 | tee /tmp/integration.log
+make check 2>&1 | tee /tmp/check.log
+```
+
+Then use the Read tool on the log file to inspect any section. If nothing changed, don't rerun — re-read the saved log.
+
 ## Product Vision
 
 See [docs/VISION.md](docs/VISION.md) for product vision and [docs/ROADMAP.md](docs/ROADMAP.md) for current status and plans.

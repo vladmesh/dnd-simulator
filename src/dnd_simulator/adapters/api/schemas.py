@@ -55,6 +55,8 @@ class PatchCreatureRequest(BaseModel):
     conditions: list[str] | None = None  # D&D 5e condition names
     # Character-level
     gold: int | None = Field(default=None, ge=0)
+    # Creature-level XP award on kill (0 for most non-monster creatures)
+    xp_value: int | None = Field(default=None, ge=0)
     # Resource pools (add/replace pools by id)
     resource_pools: list[dict[str, object]] | None = None
     # NPC-level
@@ -169,6 +171,9 @@ class PlayerStatusResponse(BaseModel):
     race: str
     char_class: str
     level: int
+    experience: int
+    level_up_available: bool
+    xp_to_next_level: int
     alignment: str
     hp: int
     max_hp: int

@@ -92,6 +92,8 @@ class CreatureCommands(GameServiceProtocol):
             entity.ac = int(updates["ac"])
         if "location_id" in updates:
             entity.location_id = str(updates["location_id"])
+        if "xp_value" in updates:
+            entity.xp_value = int(updates["xp_value"])
         if "conditions" in updates:
             raw = updates["conditions"]
             if isinstance(raw, dict):

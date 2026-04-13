@@ -131,6 +131,9 @@ export interface PlayerStatusResponse {
   race: string
   char_class: string
   level: number
+  experience: number
+  level_up_available: boolean
+  xp_to_next_level: number
   alignment: string
   hp: number
   max_hp: number

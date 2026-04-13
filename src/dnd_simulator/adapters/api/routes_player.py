@@ -14,6 +14,7 @@ from dnd_simulator.core.character import Ability
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.character_creation import POINT_BUY_BUDGET, STARTING_GOLD
+from dnd_simulator.rules.leveling import xp_to_next_level
 from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.service.game_service import GameService
 from dnd_simulator.service.session import GameSession
@@ -72,6 +73,9 @@ def _player_status(p: PlayerCharacter) -> PlayerStatusResponse:
         race=p.race.value,
         char_class=p.char_class.value,
         level=p.level,
+        experience=p.experience,
+        level_up_available=p.level_up_available,
+        xp_to_next_level=xp_to_next_level(p.experience),
         alignment=p.alignment.value,
         hp=p.current_hp,
         max_hp=p.max_hp,

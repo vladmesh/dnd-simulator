@@ -48,4 +48,13 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Added `experience`, `level_up_available`, `xp_to_next_level` to `session._player_to_dict` (turn/round WS payload) and to `PlayerStatusResponse` + `routes_player._player_status` (REST).
+- `xp_to_next_level` computed server-side via `rules/leveling.xp_to_next_level` (no duplication on frontend).
+- Frontend types: extended `PlayerStatusResponse` (api.ts) and `PlayerStatus` (game.ts) with the three fields. Updated GameScreen test literal.
+- Added `xp_value` to `PatchCreatureRequest` + `commands_creatures.patch_creature` — needed to set a testable XP bounty on arbitrary creatures in integration tests (combat_test world's `target_dummy` is a Character with `xp_value=0` by default).
+- Integration test gotcha: when all WS listeners disconnect, `GameService._on_session_empty` evicts the session from memory and the next REST call triggers an autosave round-trip. The post-kill status GET must happen BEFORE `sock.close()`, otherwise the session is rebuilt from disk (which doesn't currently preserve XP grant timing cleanly). Tests keep socket open for REST check.
+- Also removed allied NPC before combat so kill credit goes to the player (otherwise the ally gets the XP).

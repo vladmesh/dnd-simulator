@@ -24,6 +24,7 @@ from dnd_simulator.core.world import World
 from dnd_simulator.i18n import _
 from dnd_simulator.round import Round
 from dnd_simulator.rules.actions import collect_cost_overrides
+from dnd_simulator.rules.leveling import xp_to_next_level
 from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.service.action_dispatcher import create_dispatcher
 
@@ -160,6 +161,9 @@ def _player_to_dict(player: PlayerCharacter) -> dict[str, Any]:
         "race": player.race.value,
         "char_class": player.char_class.value,
         "level": player.level,
+        "experience": player.experience,
+        "level_up_available": player.level_up_available,
+        "xp_to_next_level": xp_to_next_level(player.experience),
         "alignment": player.alignment.value,
         "hp": player.current_hp,
         "max_hp": player.max_hp,
