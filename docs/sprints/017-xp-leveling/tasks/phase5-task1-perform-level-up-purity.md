@@ -38,4 +38,8 @@ These tests pin the in-place contract so a future "refactor to return new" doesn
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Went with option B as the task recommended. Updated module docstring and function docstring on `perform_level_up` to explicitly note the in-place contract and why `rules/` purity is waived here. Added `tests/unit/test_rules_perform_level_up_purity.py` with three regression pins (returns None + mutates same instance, flag cleared, second call raises). Tests passed immediately — they are regression pins for the current contract, not failing specs awaiting implementation; the task acceptance criterion anticipated this ("Implementation makes tests GREEN (docstring update only)"). Full `make check` passed (2138 py + 238 fe).

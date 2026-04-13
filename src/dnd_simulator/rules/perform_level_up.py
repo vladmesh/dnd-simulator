@@ -1,8 +1,15 @@
 """Level-up operation: apply the next level to a Character.
 
-Pure(-ish) mutation on the Character dataclass: recomputes max_hp, rebuilds
-class feature entries at the new level, merges resource pools (preserving
+Mutates the Character dataclass in place: recomputes max_hp, rebuilds class
+feature entries at the new level, merges resource pools (preserving
 current_uses for existing pools), and clears the level_up_available flag.
+
+This is an explicit exception to the ``rules/`` purity rule — level-up is
+the canonical mutation entry-point for class progression. Character is
+already a mutable dataclass (HP, equipment, conditions all mutate during
+play), so returning a new instance would be inconsistent with how the rest
+of the game treats creature state. The in-place contract is pinned by
+``tests/unit/test_rules_perform_level_up_purity.py``.
 
 Validation lives here too — caller supplies class-specific choices via the
 ``fighting_style`` kwarg.
@@ -26,7 +33,11 @@ from dnd_simulator.rules.resources import build_class_resource_pools
 
 
 def perform_level_up(character: Character, *, fighting_style: FightingStyle | None) -> None:
-    """Apply the next level to ``character``.
+    """Apply the next level to ``character`` in place.
+
+    Mutates the passed instance — callers keep the same ``Character`` object.
+    Returns ``None``. This is the only mutation entry-point for level-up;
+    see the module docstring for why ``rules/`` purity is waived here.
 
     Raises ``ValueError`` if ``level_up_available`` is False or the
     ``fighting_style`` argument is incompatible with the class/level transition.
