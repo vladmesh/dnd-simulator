@@ -68,9 +68,21 @@ Frontend level-up модалка. Пингуется из состояния (`l
 
 ---
 
+## Phase 5: Post-audit cleanup
+
+Триаж audit 2026-04-13 выявил 5 sprint-relevant пунктов в коде, который трогал sprint 017 (leveling/XP). Делаем дедикейтед фазой, чтобы не тащить долг в backlog и не накапливать нарушения чистоты `rules/` пока контекст ещё свежий.
+
+**Tasks:**
+
+1. [perform_level_up purity](tasks/phase5-task1-perform-level-up-purity.md) — переписать на `replace()`-pattern или явно задокументировать как stateful op + покрыть инвариантом
+2. [Leveling unit tests](tasks/phase5-task2-leveling-unit-tests.md) — изолированные unit-тесты для `rules/leveling.py` (XP-by-CR, thresholds, edge cases)
+3. [perform_level_up unit tests](tasks/phase5-task3-perform-level-up-unit-tests.md) — изолированные unit-тесты для каждого class-path level-up
+4. [Level-up via GameService](tasks/phase5-task4-level-up-service-method.md) — `routes_player.py` перестать звать `perform_level_up`/`xp_to_next_level`/`effective_ac` напрямую из rules; добавить методы в GameService
+5. [schemas.py Any → object/typed](tasks/phase5-task5-schemas-any-cleanup.md) — заменить 5 уз `Any` в `content_loader/schemas.py` на `object` или конкретные типы где возможно
+
 ## Status
 
-**Current:** Phase 4 complete (2026-04-13). All 4 phases closed. Ready for audit.
+**Current:** Phase 5 pending — post-audit cleanup of sprint-relevant items. Phases 1-4 complete (2026-04-13).
 
 ## Decisions
 

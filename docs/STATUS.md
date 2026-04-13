@@ -7,9 +7,9 @@
 **Sprint:** 017-xp-leveling
 **Goal:** Ввести XP (за убийства по CR) и систему уровней с level-up модалкой; исправить уровни Paladin (FS/slots/smite на L2), добавить L2 для всех трёх классов.
 **Started:** 2026-04-13
-**Phase:** 4 — E2E follow-up bug sweep (COMPLETE) — 2026-04-13
+**Phase:** 5 — Post-audit cleanup (PENDING tasks) — 2026-04-13
 
-All 4 phases complete. Ready for audit.
+**Audit:** Triaged 2026-04-13. Quick-fix: 0 (both stale carry-forward — already removed). Sprint-relevant: 5 → phase 5 refactor. Backlog: 6 new items added (TurnBudget/ResourcePool mutability, schemas.py `Any`, WS test gaps).
 
 ### Phases
 
@@ -17,6 +17,7 @@ All 4 phases complete. Ready for audit.
 2. Level-up mechanics + Paladin L2 fix — backend level-up, переезд Paladin FS/slots/smite на L2, Fighter Action Surge, Rogue L2 HP
 3. Level-up UI + E2E — React модалка с классовыми выборами, полный цикл через Playwright
 4. E2E follow-up bug sweep — 6 багов из phase-3 E2E, каждый с RCA + архитектурным фиксом
+5. Post-audit cleanup — sprint-relevant долг из audit 2026-04-13 (purity, unit tests, GameService bypass, Any types)
 
 ## Sprint History
 

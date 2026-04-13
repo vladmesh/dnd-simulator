@@ -168,3 +168,12 @@
 - [ ] **should** `test-gap-commands-time` — service/commands_time.py 0 test references
 - [ ] **should** `test-gap-fighting-style` — rules/fighting_style.py без выделенных unit-тестов (indirect через test_second_wind, test_create_player)
 - [ ] **could** `test-gap-ws-malformed-json` — WS handler не тестируется на невалидный JSON (только unknown message type)
+
+## From audit 2026-04-13 (post Sprint 017)
+
+- [ ] **could** `mutable-turn-budget` — `core/turn_budget.py:18` TurnBudget — `@dataclass` без `frozen=True`. Per-turn value object, мутируется decrement-ом actions. Документировать как stateful или перейти на `replace()`
+- [ ] **could** `mutable-resource-pool` — `core/resource.py:16` ResourcePool — `@dataclass` без `frozen=True`. Текущие use-cases мутируют `current_uses`. Документировать или frozen + replace
+- [ ] **could** `schemas-any-types` — `content_loader/schemas.py` — 5 уз `Any` в валидаторах и `model_post_init`. Pydantic-контекст приемлем, но не идеален; заменить на `object` или конкретные типы где можно
+- [ ] **could** `test-gap-ws-disconnect` — нет теста disconnect во время активного game loop
+- [ ] **could** `test-gap-ws-reaction-prompts` — reaction prompt flow по WS не покрыт
+- [ ] **could** `test-gap-ws-concurrent-messages` — concurrent message handling по WS не тестируется
