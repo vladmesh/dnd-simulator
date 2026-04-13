@@ -7,7 +7,7 @@
 **Sprint:** 017-xp-leveling
 **Goal:** Ввести XP (за убийства по CR) и систему уровней с level-up модалкой; исправить уровни Paladin (FS/slots/smite на L2), добавить L2 для всех трёх классов.
 **Started:** 2026-04-13
-**Phase:** 4 — E2E follow-up bug sweep (tasks 1–4 done, task 5 pending) — 2026-04-13
+**Phase:** 4 — E2E follow-up bug sweep (tasks 1–5 done, task 6 pending) — 2026-04-13
 
 Phases 1–3 complete. Phase 4 added in response to phase-3 E2E findings: 6 tasks, each requiring an RCA before fix.
 

@@ -57,4 +57,23 @@ Pick the policy in writing (recommend: **Cancel = defer, suppress auto-open unti
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+**Contract decision:** Cancel = defer. Modal closes, `level_up_available` stays true, manual "Level Up" button remains visible in `PlayerStats`. Auto-open is suppressed until either (a) a `combat_ended` event is processed or (b) the user clicks the manual button. Rationale: "mistake choosing Dueling" is still supported — user can reopen anytime via the manual button — while simultaneously not spamming the modal on every `turn`/`round_result` while `level_up_available` is still true.
+
+**Previous behavior** used a `prevFlagRef` in `PlayerStats` that auto-opened once on `false → true` transition and relied on component-local state. It did suppress re-open on subsequent updates with the same flag, but:
+  - It was implicit — no documented contract.
+  - After a Cancel, the modal would never re-auto-open, even after another combat cycle, unless `level_up_available` toggled off → on (which doesn't happen mid-sprint since the server doesn't clear the flag until the player actually levels up).
+
+**Implementation:**
+- Added `levelUpDismissed: boolean` (+ `setLevelUpDismissed`) to `playerSlice`. UI-only; not on `PlayerStatus` domain object.
+- `turnSlice`: `onTurn` / `onActionResult` / `onRoundResult` now inspect the event list; any `combat_ended` event clears the dismiss flag.
+- `PlayerStats`: modal open is now **derived** — `levelUpAvailable && !levelUpDismissed`. Cancel sets dismiss=true, Confirm success clears it, manual button click clears it. This removed the ref+useEffect dance and sidesteps the `react-hooks/set-state-in-effect` lint rule.
+
+**Tests:**
+- Updated `PlayerStats.test.tsx`: existing "no auto-reopen on same flag" now asserts `levelUpDismissed=true` post-Cancel. Added new test: combat_ended event fed through `onRoundResult` clears the flag and auto-reopens the modal.
+- E2E playbook scenario 3.5 extended with the Cancel → manual reopen → Confirm sub-flow.
+
+**Verified:** `make test-frontend typecheck-frontend` green (237 tests). `make test-unit` green (2134 tests). Backend lint/typecheck green. Frontend lint baseline unchanged (24 pre-existing errors on main, no new ones from this change).

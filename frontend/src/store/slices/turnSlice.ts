@@ -4,6 +4,7 @@ import type {
   GameMode,
   LocationData,
   PeacefulAwareness,
+  PerceivedEvent,
   ReactionPrompt,
   TurnBudget,
 } from "@/types/game"
@@ -50,7 +51,14 @@ export const createTurnSlice: StateCreator<
   [],
   [],
   TurnSlice
-> = (set, get) => ({
+> = (set, get) => {
+  const clearDismissIfCombatEnded = (events: PerceivedEvent[]) => {
+    if (events.some((e) => e.event_type === "combat_ended")) {
+      get().setLevelUpDismissed(false)
+    }
+  }
+
+  return {
   mode: "peaceful",
   awareness: null,
   location: null,
@@ -65,6 +73,7 @@ export const createTurnSlice: StateCreator<
   onTurn: (msg) => {
     get().updatePlayer(msg.player)
     get().appendEvents(msg.events)
+    clearDismissIfCombatEnded(msg.events)
     const updates: Partial<TurnSlice> = {
       mode: msg.mode,
       awareness: msg.awareness,
@@ -89,6 +98,7 @@ export const createTurnSlice: StateCreator<
       events.push({ description: msg.error, event_type: "action_error" })
     }
     get().appendEvents(events)
+    clearDismissIfCombatEnded(events)
     const updates: Partial<TurnSlice> = {
       mode: msg.mode,
       awareness: msg.awareness,
@@ -108,6 +118,7 @@ export const createTurnSlice: StateCreator<
   onRoundResult: (msg) => {
     get().updatePlayer(msg.player)
     get().appendEvents(msg.events)
+    clearDismissIfCombatEnded(msg.events)
     const updates: Partial<TurnSlice> = {
       mode: msg.mode,
       awareness: msg.awareness,
@@ -151,4 +162,5 @@ export const createTurnSlice: StateCreator<
   setWaitingForAction: (waiting) => {
     set({ waitingForAction: waiting })
   },
-})
+  }
+}

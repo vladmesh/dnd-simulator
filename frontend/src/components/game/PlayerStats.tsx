@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useGameStore } from "@/store/gameStore"
 import { ChevronDown, ChevronRight, Shield, Coins, ArrowUp } from "lucide-react"
@@ -11,17 +11,12 @@ export function PlayerStats() {
   const player = useGameStore((s) => s.player)
   const sessionId = useGameStore((s) => s.sessionId)
   const updatePlayer = useGameStore((s) => s.updatePlayer)
+  const levelUpDismissed = useGameStore((s) => s.levelUpDismissed)
+  const setLevelUpDismissed = useGameStore((s) => s.setLevelUpDismissed)
   const [expanded, setExpanded] = useState(true)
-  const [levelUpOpen, setLevelUpOpen] = useState(false)
-  const prevFlagRef = useRef(false)
 
   const levelUpAvailable = player?.level_up_available ?? false
-  if (prevFlagRef.current !== levelUpAvailable) {
-    prevFlagRef.current = levelUpAvailable
-    if (levelUpAvailable) {
-      setLevelUpOpen(true)
-    }
-  }
+  const levelUpOpen = levelUpAvailable && !levelUpDismissed
 
   if (!player) return null
 
@@ -47,7 +42,7 @@ export function PlayerStats() {
                 size="sm"
                 variant="default"
                 className="h-6 gap-1 px-2 text-xs"
-                onClick={() => setLevelUpOpen(true)}
+                onClick={() => setLevelUpDismissed(false)}
               >
                 <ArrowUp className="size-3" />
                 {t("game:levelup_button")}
@@ -79,10 +74,10 @@ export function PlayerStats() {
         open={levelUpOpen}
         player={player}
         sessionId={sessionId ?? undefined}
-        onClose={() => setLevelUpOpen(false)}
+        onClose={() => setLevelUpDismissed(true)}
         onSuccess={(updated) => {
           updatePlayer(updated)
-          setLevelUpOpen(false)
+          setLevelUpDismissed(false)
         }}
       />
     </div>

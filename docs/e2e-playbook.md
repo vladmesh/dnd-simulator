@@ -72,6 +72,10 @@
 - Мир `level_up_test`, создать Paladin L1 (например STR 15 / CON 14 / CHA 14), `start_location: arena_floor`, `combat_position: [5,5]`
 - Атаковать `xp_dummy` (xp_value=500, hp=3) — один удар через L2 порог
 - **Ожидание:** XP ≥ 300, `level_up_available=true`, авто-открывается level-up модалка с заголовком «Level up to L2», dropdown Fighting Style (Defense / Dueling / Great Weapon Fighting), Confirm disabled до выбора
+- Нажать Cancel
+- **Ожидание:** модалка закрывается, `level_up_available` остаётся true, в sidebar виден ручной «Level Up» button, на последующих `turn`/`round_result` событиях модалка сама НЕ переоткрывается
+- Нажать ручной «Level Up» button
+- **Ожидание:** модалка снова открывается с теми же опциями
 - Выбрать Dueling, нажать Confirm
 - **Ожидание:** level=2, max_hp 12 → 20, появился пул `spell_slot_1` (2/2), `lay_on_hands` max 5 → 10
 - Завершить ход, на следующем раунде атаковать `practice_thug` опцией «Attack + Smite (slot 1)»

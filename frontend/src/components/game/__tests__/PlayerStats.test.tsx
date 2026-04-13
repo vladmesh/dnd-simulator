@@ -5,7 +5,8 @@ import "@/i18n"
 import { PlayerStats } from "../PlayerStats"
 import { useGameStore } from "@/store/gameStore"
 import { api, ApiError } from "@/transport/apiClient"
-import type { PlayerStatus } from "@/types/game"
+import type { Awareness, PlayerStatus } from "@/types/game"
+import type { RoundResultMessage } from "@/types/ws"
 
 vi.mock("@/transport/apiClient", async () => {
   const actual = await vi.importActual<typeof import("@/transport/apiClient")>(
@@ -45,7 +46,7 @@ function makePlayer(overrides?: Partial<PlayerStatus>): PlayerStatus {
 
 beforeEach(() => {
   levelUpMock.mockReset()
-  useGameStore.setState({ player: null, sessionId: "s1" })
+  useGameStore.setState({ player: null, sessionId: "s1", levelUpDismissed: false })
 })
 
 describe("PlayerStats — level-up integration", () => {
@@ -86,6 +87,38 @@ describe("PlayerStats — level-up integration", () => {
       })
     })
     expect(screen.queryByTestId("level-up-modal")).not.toBeInTheDocument()
+    expect(useGameStore.getState().levelUpDismissed).toBe(true)
+  })
+
+  it("combat_ended event clears dismiss flag and auto-reopens the modal", async () => {
+    useGameStore.setState({
+      player: makePlayer({ level_up_available: true }),
+      levelUpDismissed: true,
+    })
+    render(<PlayerStats />)
+    expect(screen.queryByTestId("level-up-modal")).not.toBeInTheDocument()
+
+    act(() => {
+      useGameStore.getState().onRoundResult({
+        type: "round_result",
+        player: makePlayer({ level_up_available: true }),
+        mode: "peaceful",
+        awareness: {
+          hour: 12,
+          day: 1,
+          month: 1,
+          year: 1000,
+          location_id: "town",
+          nearby: [],
+          turn_budget: null,
+        } as unknown as Awareness,
+        location: null,
+        events: [{ description: "Combat ended", event_type: "combat_ended" }],
+      } as unknown as RoundResultMessage)
+    })
+
+    expect(useGameStore.getState().levelUpDismissed).toBe(false)
+    expect(screen.getByTestId("level-up-modal")).toBeInTheDocument()
   })
 
   it("clicking level-up button after manual close reopens the modal", async () => {
