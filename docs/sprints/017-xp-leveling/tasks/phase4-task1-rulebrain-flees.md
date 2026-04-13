@@ -66,4 +66,71 @@ Whatever the chosen direction, follow project rules:
 
 ## Status
 
-`pending`
+`done` — RCA concluded no bug in RuleBrain; three invariant regression tests added as guards. Re-investigate after phase 4 task 2 if e2e symptom persists.
+
+## Developer Notes
+
+### RCA (RuleBrain decision trace for xp_dummy)
+
+Faithful replica of xp_dummy as a unit test (low WIS 8, AC 8, HP 3/3, no equipped weapon,
+inline `attacks: [flail reach=5]`, adjacent hostile at 5 ft) was added to
+`tests/unit/test_rule_brain.py::TestRuleBrainXpDummyRegression`. All three tests pass
+**green without any code change**:
+
+1. `test_rule_brain_low_wis_no_weapon_attacks_adjacent_hostile` → ATTACK
+2. `test_rule_brain_in_reach_with_melee_attack_does_not_dash` → ATTACK (invariant)
+3. `test_rule_brain_existing_flee_path_still_works` → FLEE (regression guard)
+
+Rule order trace for xp_dummy inputs (`rules/rule_brain.py:135-145`):
+
+- `_try_equip` — skipped (inventory empty, no weapon to equip)
+- `_try_potion` — skipped (HP 100%, above `POTION_HP_THRESHOLD`)
+- `_try_retreat` — skipped (`is_disengaging=False`)
+- `_try_flee` / `_try_disengage` / `_try_flee_fallback` — skipped (HP 100%, above thresholds)
+- `_try_attack` — **fires**: `distance_ft (5) <= primary_reach (5)` and `actions > 0` →
+  returns `Action(ATTACK, target_id=player)`
+
+`primary_reach = get_weapon_attack(creature).reach` correctly falls back to
+`creature.attacks[0].reach = 5` via `rules/weapons.py:38` when no weapon is equipped.
+There is no "flee on low WIS" branch, no "kite without weapon" branch, no target scoring
+that punishes adjacency. The four rules above `_try_attack` all gate on HP ratio or
+`is_disengaging`; none trigger for a full-HP non-disengaging creature.
+
+### Conclusion
+
+**RuleBrain is not the bug.** Given inputs matching the xp_dummy YAML, RuleBrain
+chooses ATTACK. The e2e symptom (`XP Dummy moved (30 ft)` + dash + 10 ft) must
+originate upstream of RuleBrain — one of:
+
+- **Position mismatch at combat start** (phase 4 task 2 — coord flip/offset). If the
+  BattleMap actually placed dummy far from player (despite the action picker reporting
+  5 ft from the *player's* viewpoint via a different code path), `_try_advance` and
+  `_try_dash` are the expected choices. The logged `move 30ft → dash → move 10ft`
+  sequence is exactly what `_try_advance`+`_try_dash` produce for an out-of-reach target.
+- **CombatAwareness construction** — possibility that `distance_ft` on nearby is computed
+  from stale / pre-placement positions. Worth a look as part of task 2.
+- **Initiative vs positioning order** — dummy acts before anyone has been positioned
+  from `combat_position`. (Unlikely — `start_combat` sets positions before initiative
+  runs.)
+
+### Proposed path
+
+1. **Do not modify RuleBrain.** No evidence of a bug at this layer.
+2. **Keep** the three regression tests — they pin the desired invariant ("adjacent melee
+   hostile + actions + full HP ⇒ ATTACK, never DASH/MOVE") so any future regression
+   elsewhere that degrades awareness inputs will be caught via higher-level integration.
+3. **Run task 2 (battlemap coords) first.** Its fix likely removes the phase-3 e2e symptom
+   outright. After task 2, re-run the level-up e2e; if dummy still dashes, reopen this
+   task with the new trace.
+4. If user disagrees and wants a defensive RuleBrain change anyway, the surgical option
+   from the task brief is: keep current ordering (it already prefers ATTACK in reach),
+   possibly add a hard guard in `_try_dash` that refuses to dash when any hostile target
+   is within `primary_reach`. But that is belt-and-suspenders against a bug that the
+   unit tests cannot currently reproduce.
+
+### Stop point
+
+Stopped per implement.md step 4 ("tests too weak or feature already exists — re-evaluate
+the task"). Reporting findings and asking user whether to (a) close this task as
+no-op + invariant tests, (b) proceed with defensive `_try_dash` guard, or (c) hold until
+task 2 is done and re-investigate.

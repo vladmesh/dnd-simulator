@@ -673,6 +673,100 @@ class TestRuleBrainTacticalDisengage:
         assert action.name == "opportunity_attack"
 
 
+class TestRuleBrainXpDummyRegression:
+    """Regression: xp_dummy-shaped creature (low WIS, no equipped weapon, full HP,
+    adjacent hostile) must ATTACK on its first turn — not Dash away.
+
+    See sprint 017 phase 4 task 1.
+    """
+
+    @staticmethod
+    def _flail() -> Attack:
+        return Attack(
+            name="flail",
+            ability=Ability.STR,
+            damage=(DamageComponent("1d4", DamageType.BLUDGEONING),),
+            reach=5,
+        )
+
+    def test_rule_brain_low_wis_no_weapon_attacks_adjacent_hostile(self) -> None:
+        """Replica of xp_dummy: HP 3/3, AC 8, WIS 8, inline attack, no equipped weapon,
+        hostile player adjacent. Must choose ATTACK, not DASH/MOVE."""
+        from dnd_simulator.core.character import AbilityScores
+
+        dummy = Npc(
+            id="xp_dummy",
+            name="XP Dummy",
+            location_id="arena",
+            role=NpcRole.COMMONER,
+            attacks=(self._flail(),),
+            max_hp=3,
+            current_hp=3,
+            ac=8,
+            speed=30,
+            faction_id="monsters",
+            ability_scores=AbilityScores(
+                scores={
+                    Ability.STR: 8,
+                    Ability.DEX: 8,
+                    Ability.CON: 8,
+                    Ability.INT: 3,
+                    Ability.WIS: 8,
+                    Ability.CHA: 3,
+                }
+            ),
+        )
+        player = Npc(
+            id="player",
+            name="Player",
+            location_id="arena",
+            attacks=(_SWORD,),
+            max_hp=20,
+            current_hp=20,
+        )
+        bm = BattleMap(width=20, height=20)
+        bm.set_position("xp_dummy", Position(6, 5))
+        bm.set_position("player", Position(5, 5))
+        awareness = _build_combat_awareness(dummy, [dummy, player], bm)
+        brain = RuleBrain()
+        action = brain.choose_action(dummy, awareness, [])
+        assert action.name == ActionType.ATTACK
+        assert action.params["target_id"] == "player"
+
+    def test_rule_brain_in_reach_with_melee_attack_does_not_dash(self) -> None:
+        """Invariant: if the only hostile is in reach and we have a melee attack and
+        actions left, we must never choose DASH."""
+        npc = Npc(
+            id="n1",
+            name="Brute",
+            location_id="arena",
+            attacks=(self._flail(),),
+            max_hp=10,
+            current_hp=10,
+            speed=30,
+        )
+        enemy = Npc(id="e1", name="Enemy", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=20, height=20)
+        bm.set_position("n1", Position(5, 5))
+        bm.set_position("e1", Position(6, 5))  # adjacent
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
+        brain = RuleBrain()
+        action = brain.choose_action(npc, awareness, [])
+        assert action.name != ActionType.DASH
+
+    def test_rule_brain_existing_flee_path_still_works(self) -> None:
+        """Regression: critically wounded NPC with enemy out of reach still FLEES."""
+        npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=100, current_hp=10)
+        enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
+        bm = BattleMap(width=60, height=60)
+        bm.set_position("n1", Position(10, 10))
+        bm.set_position("e1", Position(10, 40))  # 30 ft — out of reach
+        awareness = _build_combat_awareness(npc, [npc, enemy], bm)
+        brain = RuleBrain()
+        action = brain.choose_action(npc, awareness, [])
+        assert action.name == ActionType.FLEE
+
+
 class TestRuleBrainMovementBudget:
     """RuleBrain must not request MOVE when movement budget is insufficient."""
 
