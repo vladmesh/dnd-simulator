@@ -69,7 +69,7 @@ class TestPlayerStateXpInitial:
             assert data["level_up_available"] is False
             assert data["xp_to_next_level"] == 300
         finally:
-            requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+            requests.delete(f"{api_url}/sessions/{sid}", timeout=10)
 
     def test_ws_turn_player_has_xp_fields(self, api_url: str, player_api_url: str, ws_base_url: str) -> None:
         sid, pid = _create_session(api_url, player_api_url)
@@ -85,7 +85,7 @@ class TestPlayerStateXpInitial:
             finally:
                 sock.close()
         finally:
-            requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+            requests.delete(f"{api_url}/sessions/{sid}", timeout=10)
 
 
 class TestPlayerStateXpAfterKill:
@@ -143,4 +143,4 @@ class TestPlayerStateXpAfterKill:
             assert data["level_up_available"] is False
             assert data["xp_to_next_level"] == 250
         finally:
-            requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+            requests.delete(f"{api_url}/sessions/{sid}", timeout=10)

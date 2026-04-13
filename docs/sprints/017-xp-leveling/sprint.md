@@ -39,7 +39,7 @@ Backend-операция level-up: метод применяет классов�
 3. [Action Surge action + handler](tasks/phase2-task3-action-surge.md) — Fighter L2 bonus action grants extra Action
 4. [Level-up operation + endpoint](tasks/phase2-task4-level-up-operation.md) — `perform_level_up` + `POST /level-up`, drop legacy saves
 
-## Phase 3: Level-up UI + E2E
+## Phase 3: Level-up UI + E2E ✓
 
 Frontend level-up модалка. Пингуется из состояния (`level_up_available: true` в player/character payload), всплывает кнопкой / автоматически после боя. Для каждого класса — класс-условная форма с выборами: Fighter L2 (без выбора — подтверждение), Rogue L2 (без выбора), Paladin L2 (Fighting Style dropdown — Defense/Dueling/GWF). Показывается прирост HP, новые ресурсы (Action Surge slot, spell slots). По submit — API call, обновление панели персонажа. E2E через Playwright: полный цикл (kill → XP tick → modal → choice → features applied → visible в Character panel).
 
