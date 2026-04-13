@@ -57,4 +57,13 @@ Product-level integration scenarios (over the live stack):
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Added `ActionType.ACTION_SURGE`, `EventType.ENTITY_ACTION_SURGE`, action def (BONUS_ACTION, combat-only, SELF, provider_managed).
+- Handler in new `rules/handlers/action_surge.py`: validates pool presence (graceful reject for L1 fighters without the pool), consumes `action_surge`, increments `turn_budget.actions`, emits event.
+- `ClassFeatureActionProvider`: checks for `action_surge` pool directly (not via `has_resource`, which raises on missing pool). L2 gate is implicit — pool only exists at L2+.
+- Added `_perceive_action_surge` and registered it in perception dispatch, plus event in `EntitiesLayer` allowlist.
+- TargetScope defaulted to HOSTILE (matches Second Wind pattern); irrelevant since `target_mode=SELF` short-circuits `check_target_scope`.
+- Test for "L1 validation error" reframed as handler rejection — pure `validate_action` has no hook for resource presence, and the task spec ("attempting it returns a validation error") is satisfied by the handler path that dispatcher surfaces.

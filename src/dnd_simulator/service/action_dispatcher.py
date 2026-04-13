@@ -30,6 +30,7 @@ from dnd_simulator.rules.action_provider import (
 )
 from dnd_simulator.rules.actions import action_cost
 from dnd_simulator.rules.handlers import (
+    handle_action_surge,
     handle_attack,
     handle_bless,
     handle_buy,
@@ -184,6 +185,7 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.register(ActionType.EQUIP_RING, handle_equip_ring)
     dispatcher.register(ActionType.UNEQUIP_RING, handle_unequip_ring)
     dispatcher.register(ActionType.SECOND_WIND, handle_second_wind)
+    dispatcher.register(ActionType.ACTION_SURGE, handle_action_surge)
     dispatcher.register(ActionType.LAY_ON_HANDS, handle_lay_on_hands)
     dispatcher.register(ActionType.BUY, handle_buy)
     dispatcher.register(ActionType.SELL, handle_sell)

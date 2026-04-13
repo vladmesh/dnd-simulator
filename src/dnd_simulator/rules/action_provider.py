@@ -99,6 +99,14 @@ class ClassFeatureActionProvider:
             if validate_action(creature, probe, ctx) is None:
                 result.append(ActionType.SECOND_WIND)
 
+        # Fighter L2+: Action Surge (pool only exists at L2+, so L1 is gated implicitly)
+        if creature.char_class == CharClass.FIGHTER and any(
+            p.id == "action_surge" and p.current_uses > 0 for p in creature.resource_pools
+        ):
+            probe = Action(name=ActionType.ACTION_SURGE)
+            if validate_action(creature, probe, ctx) is None:
+                result.append(ActionType.ACTION_SURGE)
+
         # Paladin: Lay on Hands (requires resource pool)
         if creature.char_class == CharClass.PALADIN and has_resource(creature, "lay_on_hands"):
             probe = Action(name=ActionType.LAY_ON_HANDS)

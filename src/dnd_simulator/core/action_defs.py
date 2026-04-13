@@ -432,6 +432,18 @@ _reg(
 
 _reg(
     ActionDef(
+        action_type=ActionType.ACTION_SURGE,
+        description=N_("Gain one additional Action this turn. Once per short rest."),
+        cost_type=CostType.BONUS_ACTION,
+        combat_mode=CombatMode.COMBAT_ONLY,
+        target_mode=TargetMode.SELF,
+        provider_managed=True,
+        llm_hint=("Action Surge: spend a bonus action to gain one additional Action this turn. Once per short rest."),
+    )
+)
+
+_reg(
+    ActionDef(
         action_type=ActionType.BUY,
         description=N_("Buy an item from a merchant."),
         cost_type=CostType.FREE,

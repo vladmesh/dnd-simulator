@@ -34,6 +34,7 @@ class ActionType(StrEnum):
     MOVE_TO = "move_to"
     DISENGAGE = "disengage"
     SECOND_WIND = "second_wind"
+    ACTION_SURGE = "action_surge"
     BUY = "buy"
     SELL = "sell"
     OPPORTUNITY_ATTACK = "opportunity_attack"

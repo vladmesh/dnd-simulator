@@ -1,5 +1,6 @@
 """Action handlers package — re-exports all public handlers."""
 
+from dnd_simulator.rules.handlers.action_surge import handle_action_surge
 from dnd_simulator.rules.handlers.combat import handle_attack, handle_dodge, handle_flee
 from dnd_simulator.rules.handlers.equipment import (
     SLOT_CONFIGS,
@@ -39,6 +40,7 @@ from dnd_simulator.rules.handlers.trade import handle_buy, handle_sell
 __all__ = [
     "SLOT_CONFIGS",
     "SlotConfig",
+    "handle_action_surge",
     "handle_attack",
     "handle_bless",
     "handle_buy",

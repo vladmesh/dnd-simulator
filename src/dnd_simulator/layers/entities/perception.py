@@ -308,6 +308,15 @@ def _perceive_second_wind(event: Event, observer: Character, get_entity: GetEnti
     return _("{entity} catches their breath, regaining {hp} HP").format(entity=desc, hp=healed)
 
 
+def _perceive_action_surge(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    d = event.data
+    entity_id = str(d["entity_id"])
+    if entity_id == observer.id:
+        return _("You surge with energy, gaining an extra action")
+    desc = _describe(observer, entity_id, get_entity)
+    return _("{entity} surges with energy, gaining an extra action").format(entity=desc)
+
+
 def _perceive_lay_on_hands(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     d = event.data
     entity_id = str(d["entity_id"])
@@ -482,6 +491,7 @@ _DISPATCH: dict[EventType, _PerceiveHandler] = {
     EventType.ENTITY_USE_ITEM: _perceive_use_item,
     EventType.ENTITY_BLESS: _perceive_bless,
     EventType.ENTITY_SECOND_WIND: _perceive_second_wind,
+    EventType.ENTITY_ACTION_SURGE: _perceive_action_surge,
     EventType.ENTITY_LAY_ON_HANDS: _perceive_lay_on_hands,
     EventType.ENTITY_EQUIP: _perceive_equip,
     EventType.ENTITY_UNEQUIP: _perceive_unequip,

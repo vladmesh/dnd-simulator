@@ -49,6 +49,7 @@ _LOGGED_EVENTS = {
     EventType.ENTITY_EQUIP,
     EventType.ENTITY_UNEQUIP,
     EventType.ENTITY_SECOND_WIND,
+    EventType.ENTITY_ACTION_SURGE,
     EventType.ENTITY_LAY_ON_HANDS,
     EventType.OPPORTUNITY_ATTACK,
     EventType.COMBAT_STARTED,
