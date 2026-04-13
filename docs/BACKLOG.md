@@ -173,7 +173,7 @@
 
 - [ ] **could** `mutable-turn-budget` — `core/turn_budget.py:18` TurnBudget — `@dataclass` без `frozen=True`. Per-turn value object, мутируется decrement-ом actions. Документировать как stateful или перейти на `replace()`
 - [ ] **could** `mutable-resource-pool` — `core/resource.py:16` ResourcePool — `@dataclass` без `frozen=True`. Текущие use-cases мутируют `current_uses`. Документировать или frozen + replace
-- [ ] **could** `schemas-any-types` — `content_loader/schemas.py` — 5 уз `Any` в валидаторах и `model_post_init`. Pydantic-контекст приемлем, но не идеален; заменить на `object` или конкретные типы где можно
+- [x] `schemas-any-types` — ~~`content_loader/schemas.py` — 5 уз `Any` в валидаторах и `model_post_init`~~ FIXED Sprint 017 phase 5 task 5: replaced with `object` at validator/post_init sites
 - [ ] **could** `test-gap-ws-disconnect` — нет теста disconnect во время активного game loop
 - [ ] **could** `test-gap-ws-reaction-prompts` — reaction prompt flow по WS не покрыт
 - [ ] **could** `test-gap-ws-concurrent-messages` — concurrent message handling по WS не тестируется

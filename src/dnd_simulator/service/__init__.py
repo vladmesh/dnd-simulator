@@ -5,6 +5,7 @@
 - ActionDispatcher: validate → handler → budget consume pipeline
 - BrainFactory: creates Brain instances from ai_type string
 - commands_*: domain-specific command modules (politics, time, save, entities)
+- dto: typed DTOs returned by service methods (PlayerStatusData, ResourcePoolView)
 """
 
 from dnd_simulator.service.game_service import GameService

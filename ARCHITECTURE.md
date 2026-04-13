@@ -47,7 +47,7 @@ src/dnd_simulator/
 │       ├── query_handler.py      — QueryHandler (layer query dispatch)
 │       └── perception.py         — event perception and visibility filtering
 ├── master/        — DM orchestrator (LLM-powered)
-├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation (+ target scope), conditions, weapons, modifiers, proficiency, sneak attack, divine smite, fighting style, reactions, reputation, combat_sides, resources, character creation, action providers, abstract combat, physics, economics, RuleBrain (utility scoring)
+├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation (+ target scope), conditions, weapons, modifiers, proficiency, sneak attack, divine smite, fighting style, reactions, reputation, combat_sides, resources, character creation, leveling (XP/thresholds/perform_level_up), action providers, abstract combat, physics, economics, RuleBrain (utility scoring)
 │   └── handlers/  — per-action-type execution (combat, attack_resolution, movement, equipment, items, rest, trade, reactions)
 ├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, MemorySummarizer (layer-agnostic: only depends on core/ and rules/)
 ├── i18n.py        — gettext internationalization, per-session language via contextvars
@@ -80,6 +80,7 @@ src/dnd_simulator/
 │   ├── action_dispatcher.py — validate → route → execute (single entry point for all actions)
 │   ├── brain_factory.py     — creates Brain instances from BrainType
 │   ├── base.py              — ServiceMixin Protocol base for command modules
+│   ├── dto.py               — typed DTOs returned by service methods (PlayerStatusData, ResourcePoolView)
 │   └── commands_creatures.py, commands_politics.py, commands_save.py, commands_time.py, commands_world_state.py
 └── round.py       — Round orchestrator: multi-action turn loop with budget enforcement
 
@@ -172,8 +173,8 @@ Calendar: 30 days/month, 12 months/year.
 
 ```
 Entity (id, name, location_id, active, on_tick)
-└── Creature (ability_scores, HP, AC, in_combat, is_dodging, is_disengaging, wake_at_seconds, brain, turn_budget, combat_position, equipped_weapon, equipped_armor, equipped_shield, equipped_head, equipped_feet, equipped_ring, resource_pools, faction_id, reputation, squad_id, execute_action)
-    └── Character (race, class, alignment, gold, appearance, class_features, perceive_by_id, get_npc_data)
+└── Creature (ability_scores, HP, AC, in_combat, is_dodging, is_disengaging, wake_at_seconds, brain, turn_budget, combat_position, equipped_weapon, equipped_armor, equipped_shield, equipped_head, equipped_feet, equipped_ring, resource_pools, faction_id, reputation, squad_id, xp_value, execute_action)
+    └── Character (race, class, alignment, gold, appearance, class_features, level, experience, level_up_available, perceive_by_id, get_npc_data)
         ├── PlayerCharacter (interactive I/O, overrides take_turn directly)
         └── Npc (role, personality, schedule, memory: NpcMemory, ai_type — brain assigned by content_loader/adapter)
 ```
@@ -227,11 +228,27 @@ Composition-based class mechanics (`core/class_features.py`). Each D&D class get
 
 **Rogue L1:** Sneak Attack (+Nd6 when advantage or ally adjacent to target, finesse/ranged only, once per turn — tracked by CombatManager). Cunning Action (Dash/Disengage as bonus action via `CostOverride`). Pure functions in `rules/sneak_attack.py`.
 
-**Paladin L1-L2:** Fighting Style. Lay on Hands (pool of hp = 5 × level, LONG_REST). Divine Smite (`rules/divine_smite.py`: spend a spell slot after a melee hit to add +2d8 radiant, +1d8 per slot level beyond 1). Level 1 spell slot via ResourcePool, resets on LONG_REST.
+**Fighter L2:** Action Surge — bonus action grants an extra Action for this turn (pool of 1 use, SHORT_REST). Handler in `rules/handlers/combat.py` increments `turn_budget.actions`.
+
+**Rogue L2:** +1 hit die → max HP bump; no new active feature (Cunning Action already at L1, diverges from PHB — documented).
+
+**Paladin L1:** Lay on Hands only (pool of hp = 5 × level, LONG_REST).
+
+**Paladin L2:** Fighting Style. Divine Smite (`rules/divine_smite.py`: spend a spell slot after a melee hit to add +2d8 radiant, +1d8 per slot level beyond 1). Level 1 spell slot via ResourcePool (reset on LONG_REST). Class-feature `collect_*_modifiers` methods gate on `creature.level >= required_level`, so L1 Paladin cannot use Fighting Style or Smite.
 
 **Resource pools** (`core/resource.py`): `ResourcePool(id, max_uses, current_uses, reset_on: RestType)` on `Creature.resource_pools`. SHORT_REST / LONG_REST reset triggers. Pure management functions in `rules/resources.py`.
 
 **Action definitions** (`core/action_defs.py`): centralized `ActionDef` registry mapping each `ActionType` to its cost, params, combat mode, and flags. `CostOverride` lets class features change action costs. Consumers (LLM tools, frontend, validation) read from this registry.
+
+## XP & Leveling
+
+Pure functions in `rules/leveling.py`: `xp_for_kill(cr)` (D&D 5e Monster Manual table, CR 0→10 XP … CR 30→155k), `level_for_xp(xp)` / `xp_to_next_level(xp)` (PHB thresholds, L1=0, L2=300, L3=900, …), `can_level_up(xp, level)`.
+
+**Grant on kill:** `CombatManager.resolve_attack` emits `XP_GAINED` and increments `Character.experience` for Character-class attackers when the target has non-zero `xp_value`. XP is omniscient (like reputation drops) — not perception-gated. Sets `Character.level_up_available` when crossing a threshold.
+
+**Level-up operation:** `perform_level_up(character, fighting_style=None)` mutates the character in-place: bumps `level`, adds hit-die-average HP, unlocks class-specific features (Fighter Action Surge pool, Paladin L2 Fighting Style/Smite/spell slot, Rogue HP only). It is stateful by design (pinned by unit-test invariant) and reachable only through `GameService.level_up_player(session_id, fighting_style)` — adapters translate HTTP to the service call and never import the rule directly. The companion `GameService.player_status(session_id, player_id=None)` returns a typed `PlayerStatusData` DTO (`service/dto.py`) with derived fields (`xp_to_next_level`, `effective_ac`, resource pools), which `routes_player._player_status` then maps to the REST response.
+
+**Transport:** `POST /api/player/sessions/{id}/level-up` (with optional `fighting_style` for Paladin L2) drives the modal. Player state payload (REST + WS) carries `experience`, `level`, `level_up_available`, `xp_to_next_level`. Frontend shows a Level Up button on the Character panel; `LevelUpModal` is class-switched (Fighter/Rogue confirm only, Paladin picks Fighting Style).
 
 ## Modifier Pipeline
 

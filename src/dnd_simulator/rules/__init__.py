@@ -16,6 +16,7 @@ Stateless calculations that can be used by any layer or the Master:
 - sneak_attack: Rogue sneak attack eligibility and dice count (pure functions)
 - resources: resource pool management (has_resource, use_resource, reset)
 - character_creation: point buy validation, HP formula (max hit die + CON mod), starting equipment by class
+- leveling: XP-by-CR table, PHB thresholds, can_level_up, perform_level_up (stateful; applies class-specific L2 deltas)
 - reactions: OA trigger detection (find_oa_triggers)
 - reputation: effective_relation (personal rep → thresholds → faction fallback), kill reputation drop
 - combat_sides: build_combat_sides with relation callback, forced_opponents for attack-initiated combat
