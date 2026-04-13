@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from dnd_simulator.core.character import DamageType
+from dnd_simulator.i18n import _
 from dnd_simulator.rules.combat import ExtraDamage
 from dnd_simulator.rules.resources import spell_slot_pool_id
 
@@ -37,6 +38,9 @@ def validate_smite(creature: Creature, slot_level: int) -> str | None:
 
     if not isinstance(creature, Character) or creature.char_class != CharClass.PALADIN:
         return "Only a Paladin can use Divine Smite."
+
+    if creature.level < 2:
+        return _("Divine Smite requires Paladin level 2.")
 
     pool_id = spell_slot_pool_id(slot_level)
     for pool in creature.resource_pools:

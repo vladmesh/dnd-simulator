@@ -33,7 +33,7 @@ def _paladin(*, level: int = 2, slot_uses: int | None = None) -> Character:
         race=Race.HUMAN,
         char_class=CharClass.PALADIN,
         level=level,
-        class_features=[PaladinFeatures()],
+        class_features=[PaladinFeatures(level=level)],
         resource_pools=pools,
     )
 
@@ -115,7 +115,9 @@ class TestValidateSmite:
         assert error is not None
         assert "slot" in error.lower()
 
-    def test_level_1_paladin_can_smite(self) -> None:
-        """Level 1 Paladin has 1 spell slot — smite is valid."""
+    def test_level_1_paladin_cannot_smite(self) -> None:
+        """Level 1 Paladin is below Divine Smite threshold (PHB: L2+)."""
         paladin = _paladin(level=1)
-        assert validate_smite(paladin, slot_level=1) is None
+        error = validate_smite(paladin, slot_level=1)
+        assert error is not None
+        assert "level 2" in error.lower()

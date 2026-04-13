@@ -69,4 +69,12 @@ Product-level scenarios in `tests/unit/`:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Added `level: int = 1` field to `FighterFeatures`, `RogueFeatures`, `PaladinFeatures`.
+- `PaladinFeatures.collect_self_modifiers` / `collect_attack_modifiers` short-circuit to empty results when `level < 2` (Fighting Style gated at L2 per PHB).
+- `validate_smite` now rejects Paladins with `level < 2` before the slot lookup, returning a translatable message via `_()` — L1 Paladin keeps a spell slot (a temporary sprint-015 crutch) but cannot smite.
+- `parse_class_features` grew a `level` parameter; both `_to_npc` and `_to_player` now forward `model.level` so features reflect the character's level at load time.
+- Updated existing Paladin test helpers in `test_divine_smite.py`, `test_divine_smite_combat.py`, and `test_modifiers.py` to pass explicit `level=` to `PaladinFeatures` (L2 where the test assumes FS/smite behaviour). Inverted `test_level_1_paladin_can_smite` → `test_level_1_paladin_cannot_smite`, which now asserts the L1 rejection message.

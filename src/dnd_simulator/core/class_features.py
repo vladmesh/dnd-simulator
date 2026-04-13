@@ -51,9 +51,10 @@ def _empty_attack_contribution() -> AttackContribution:
 
 @dataclass(frozen=True)
 class FighterFeatures:
-    """Fighter class features (level 1)."""
+    """Fighter class features (level 1+)."""
 
     fighting_style: FightingStyle
+    level: int = 1
     cost_overrides: tuple[CostOverride, ...] = ()
 
     def collect_self_modifiers(self, creature: Creature) -> list[Modifier]:
@@ -75,6 +76,7 @@ class RogueFeatures:
     """Rogue class features (level 1+)."""
 
     sneak_attack_dice: int = 1  # number of d6; grows every odd level
+    level: int = 1
     cost_overrides: tuple[CostOverride, ...] = field(default=_CUNNING_ACTION_OVERRIDES)
 
     def collect_self_modifiers(self, creature: Creature) -> list[Modifier]:
@@ -86,15 +88,23 @@ class RogueFeatures:
 
 @dataclass(frozen=True)
 class PaladinFeatures:
-    """Paladin class features (level 1+)."""
+    """Paladin class features (level 1+).
+
+    Fighting Style and Divine Smite are gated at level >= 2 (PHB p.84).
+    """
 
     fighting_style: FightingStyle | None = None
+    level: int = 1
     cost_overrides: tuple[CostOverride, ...] = ()
 
     def collect_self_modifiers(self, creature: Creature) -> list[Modifier]:
+        if self.level < 2:
+            return []
         return _fighting_style_self_modifiers(self.fighting_style, creature)
 
     def collect_attack_modifiers(self, creature: Creature, *, melee: bool) -> AttackContribution:
+        if self.level < 2:
+            return _empty_attack_contribution()
         return _fighting_style_attack_contribution(self.fighting_style, creature, melee=melee)
 
 

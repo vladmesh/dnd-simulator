@@ -672,7 +672,7 @@ def _paladin(
         ability_scores=AbilityScores(scores={**AbilityScores().scores, Ability.STR: strength, Ability.DEX: dexterity}),
         race=Race.HUMAN,
         char_class=CharClass.PALADIN,
-        class_features=[PaladinFeatures(fighting_style=fighting_style)],
+        class_features=[PaladinFeatures(fighting_style=fighting_style, level=2)],
     )
 
 

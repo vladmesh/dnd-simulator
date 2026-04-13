@@ -71,7 +71,7 @@ def _to_ability_scores(model: NpcContent | PlayerContent) -> AbilityScores:
     )
 
 
-def parse_class_features(char_class: CharClass, data: dict[str, Any]) -> list[ClassFeatures]:
+def parse_class_features(char_class: CharClass, data: dict[str, Any], level: int = 1) -> list[ClassFeatures]:
     """Build class features list from YAML ``class_features`` block + class type.
 
     Fighter YAML example::
@@ -88,18 +88,18 @@ def parse_class_features(char_class: CharClass, data: dict[str, Any]) -> list[Cl
     if char_class == CharClass.FIGHTER:
         style_raw = cf_data.get("fighting_style")
         if style_raw:
-            features.append(FighterFeatures(fighting_style=FightingStyle(style_raw)))
+            features.append(FighterFeatures(fighting_style=FightingStyle(style_raw), level=level))
         elif cf_data:
             raise ValueError("Fighter class_features block requires 'fighting_style' key")
 
     if char_class == CharClass.ROGUE:
         sneak_dice = int(cf_data.get("sneak_attack_dice", 1))
-        features.append(RogueFeatures(sneak_attack_dice=sneak_dice))
+        features.append(RogueFeatures(sneak_attack_dice=sneak_dice, level=level))
 
     if char_class == CharClass.PALADIN:
         style_raw = cf_data.get("fighting_style")
         style = FightingStyle(style_raw) if style_raw else None
-        features.append(PaladinFeatures(fighting_style=style))
+        features.append(PaladinFeatures(fighting_style=style, level=level))
 
     return features
 
@@ -205,7 +205,7 @@ def _to_npc(
         equipped_head=equipped["equipped_head"],
         equipped_feet=equipped["equipped_feet"],
         equipped_ring=equipped["equipped_ring"],
-        class_features=parse_class_features(model.char_class, raw_data),
+        class_features=parse_class_features(model.char_class, raw_data, level=model.level),
         resource_pools=build_class_resource_pools(model.char_class, level=model.level),
         combat_position=tuple(model.combat_position) if model.combat_position else None,  # type: ignore[arg-type]
         reputation=dict(model.reputation),
@@ -295,7 +295,7 @@ def _to_player(
         equipped_head=equipped["equipped_head"],
         equipped_feet=equipped["equipped_feet"],
         equipped_ring=equipped["equipped_ring"],
-        class_features=parse_class_features(model.char_class, raw_data),
+        class_features=parse_class_features(model.char_class, raw_data, level=model.level),
         resource_pools=build_class_resource_pools(model.char_class, level=model.level),
         combat_position=tuple(model.combat_position) if model.combat_position else None,  # type: ignore[arg-type]
         reputation=dict(model.reputation),

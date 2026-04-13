@@ -61,7 +61,7 @@ def _paladin(
         race=Race.HUMAN,
         char_class=CharClass.PALADIN,
         level=level,
-        class_features=[PaladinFeatures()],
+        class_features=[PaladinFeatures(level=level)],
         resource_pools=pools,
         ability_scores=AbilityScores(
             {Ability.STR: 16, Ability.DEX: 10, Ability.CON: 14, Ability.INT: 10, Ability.WIS: 12, Ability.CHA: 14}
