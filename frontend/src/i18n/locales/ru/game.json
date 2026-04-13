@@ -148,5 +148,18 @@
   "cost_free": "Бесплатно",
   "smite_attack_normal": "Атака",
   "smite_attack_with_smite": "Атака + Кара (ячейка {{level}})",
-  "smite_attack_with_smite_depleted": "Кара (ячейка {{level}}) — нет зарядов"
+  "smite_attack_with_smite_depleted": "Кара (ячейка {{level}}) — нет зарядов",
+  "levelup_title": "Повышение до {{level}} уровня",
+  "levelup_current_to_next": "Уровень {{current}} → {{next}}",
+  "levelup_hp_gain": "Макс. HP +{{delta}}",
+  "levelup_fighting_style_label": "Боевой стиль",
+  "levelup_fighting_style_placeholder": "— Выберите —",
+  "levelup_fighting_style_defense": "Защита",
+  "levelup_fighting_style_dueling": "Дуэлянт",
+  "levelup_fighting_style_great_weapon_fighting": "Двуручный бой",
+  "levelup_fighter_action_surge": "Открывает Всплеск действий (1/короткий отдых)",
+  "levelup_paladin_spell_slot": "Получает 2 ячейки заклинаний 1 уровня",
+  "levelup_rogue_proficiency": "Бонус мастерства увеличен",
+  "levelup_confirm": "Подтвердить",
+  "levelup_error_generic": "Не удалось повысить уровень. Повторите."
 }

@@ -55,4 +55,11 @@ Mock `apiClient.levelUp`. Build `PlayerStatus` fixtures for each class (L1 with 
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `apiClient.levelUp` returns `PlayerStatus` (from `types/game.ts`) rather than `PlayerStatusResponse` (api.ts) so the store/WS consumer shape matches without an adapter. Backend response is a structural superset — no runtime issue.
+- Modal submits `{}` for Fighter/Rogue (no `fighting_style` key) to avoid sending an empty string the backend would reject when decoding `FightingStyle`.
+- HP delta is approximated on the client from class hit-die average + CON mod (Fighter/Paladin d10 → 6, Rogue d8 → 5). Good enough for a pre-confirmation preview; backend remains the source of truth.
+- No store wiring / auto-open — that belongs to phase3-task2.

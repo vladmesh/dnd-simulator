@@ -295,3 +295,9 @@ export interface Action {
   name: ActionName
   params?: Record<string, unknown>
 }
+
+// --- Level-up ---
+
+export interface LevelUpRequest {
+  fighting_style?: string
+}

@@ -1,3 +1,4 @@
+import type { LevelUpRequest, PlayerStatus } from "@/types/game"
 import type {
   AdvanceTimeRequest,
   AssembleWorldRequest,
@@ -358,6 +359,9 @@ const player = {
 
   getStatus: (sessionId: string) =>
     get<PlayerStatusResponse>(`/api/player/sessions/${sessionId}/status`),
+
+  levelUp: (sessionId: string, body: LevelUpRequest) =>
+    post<PlayerStatus>(`/api/player/sessions/${sessionId}/level-up`, body),
 }
 
 // --- Health ---

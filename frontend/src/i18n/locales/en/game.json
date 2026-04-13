@@ -148,5 +148,18 @@
   "cost_free": "Free",
   "smite_attack_normal": "Attack",
   "smite_attack_with_smite": "Attack + Smite (slot {{level}})",
-  "smite_attack_with_smite_depleted": "Smite (slot {{level}}) — no charges"
+  "smite_attack_with_smite_depleted": "Smite (slot {{level}}) — no charges",
+  "levelup_title": "Level up to L{{level}}",
+  "levelup_current_to_next": "Level {{current}} → {{next}}",
+  "levelup_hp_gain": "Max HP +{{delta}}",
+  "levelup_fighting_style_label": "Fighting Style",
+  "levelup_fighting_style_placeholder": "— Select —",
+  "levelup_fighting_style_defense": "Defense",
+  "levelup_fighting_style_dueling": "Dueling",
+  "levelup_fighting_style_great_weapon_fighting": "Great Weapon Fighting",
+  "levelup_fighter_action_surge": "Unlocks Action Surge (1/short rest)",
+  "levelup_paladin_spell_slot": "Gains 2 Level 1 spell slots",
+  "levelup_rogue_proficiency": "Proficiency bonus improves",
+  "levelup_confirm": "Confirm",
+  "levelup_error_generic": "Failed to apply level-up. Please retry."
 }
