@@ -57,4 +57,32 @@ In Developer Notes, document:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+**RCA.** The submenu that appears after clicking the single-target anchor had three nested buttons all starting with "Attack":
+
+1. anchor `<Button>Attack</Button>` (always present, `title="Attack a target ..."`)
+2. smite-panel normal `<button>Attack</button>` — from `smite_attack_normal` = "Attack"
+3. smite-panel with-smite `<button>Attack + Smite (slot 1) (2/2)</button>`
+
+Two of those (`1` and `2`) shared accessible name "Attack", making `getByRole('button', { name: 'Attack' })` ambiguous and forcing the phase-3 E2E to do `document.querySelectorAll('button')[16]`. The bare "Attack" label in the smite panel predates the target-aware wording used elsewhere (`attack_target` already embeds the target name via i18n).
+
+**Chosen ARIA pattern.** Disclosure-style menu.
+
+- Anchor buttons that open a submenu now get `aria-haspopup="menu"` + `aria-expanded={open}`; when there is only a single target, the anchor acts as a direct action button (no popup) and omits both attributes.
+- Popup containers get `role="menu"` with `aria-label` carrying the contextual description (action description for target dropdown, target-scoped "Attack {target}" for the smite panel).
+- Submenu items get `role="menuitem"`.
+- Disambiguation is done in the label text itself rather than leaning on the `aria-label` of the container: `smite_attack_normal` and `smite_attack_with_smite` now embed `{{target}}`, matching the existing `attack_target` pattern in the target dropdown. Rationale: label text is what both screen readers and test locators see without having to traverse ARIA relationships, and i18n already had the hook via interpolation. No keyboard-arrow navigation added — the submenu items are real `<button>` elements, so Tab works today; arrow-key navigation is a nice-to-have and can be added as a separate, generic a11y pass over the dropdown family. Keeping the scope small for this bug-sweep phase.
+
+**Changes.**
+
+- `i18n/locales/{en,ru}/game.json`: both `smite_attack_normal` and `smite_attack_with_smite` now include `{{target}}`.
+- `SmiteChoice.tsx`: required `targetName` prop; translations call with `{ target: targetName }`; container + items carry menu/menuitem roles.
+- `action-bar/TargetDropdown.tsx`: anchor gets `aria-haspopup`/`aria-expanded` when multi-target; target dropdown and smite panel both render with `role="menu"` + `role="menuitem"`; smite panel labels use target id.
+- `NpcInspectModal.tsx`, `Perception.tsx`: pass `targetName={entity.id}` into `<SmiteChoice>`.
+- `ActionBar.test.tsx`: new test pins the invariant "no two submenu buttons share an accessible name" in a single-target Paladin-with-slots scenario.
+- `docs/e2e-playbook.md`: step 3.5 now selects the smite item via `getByRole('menuitem', { name: /Attack practice_thug \+ Smite \(slot 1\)/ })` instead of relying on a positional click.
+
+**`make check` status.** The frontend vitest suite is green (238 tests). TypeScript is clean. Backend untouched. Lint (`make lint-frontend`) has 26 pre-existing errors on `main` at `00d5c5c` — verified via `git stash && make lint-frontend` against the same baseline — none of them are in files this task modified. Fixing them (setState-in-effect across master forms, react-refresh on shadcn primitives, an unused `enemies` prop in `ActionButton.tsx`) is clearly out of scope for a submenu-label fix and belongs in a dedicated lint-cleanup task; flagging it explicitly rather than folding it silently into this commit.

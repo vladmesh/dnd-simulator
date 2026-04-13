@@ -148,6 +148,8 @@ export function TargetDropdown({ name, description, nearby, scope, selfId, disab
           title={description}
           className={costClass}
           {...dataAttrs}
+          aria-haspopup="menu"
+          aria-expanded={true}
           onClick={() => {
             setSmiteTargetId(null)
             setOpenDropdown(null)
@@ -158,24 +160,28 @@ export function TargetDropdown({ name, description, nearby, scope, selfId, disab
         </Button>
         <div
           className="absolute bottom-full left-0 z-10 mb-1 min-w-[200px] rounded border border-border bg-popover p-1 shadow-md"
+          role="menu"
+          aria-label={t("game:smite_attack_normal", { target: smiteTargetId })}
           data-testid="smite-choice"
         >
           <button
+            role="menuitem"
             className="w-full rounded px-2 py-1 text-left text-xs hover:bg-accent"
             onClick={() => handleSmiteChoice(null)}
           >
-            {t("game:smite_attack_normal")}
+            {t("game:smite_attack_normal", { target: smiteTargetId })}
           </button>
           {slots.map(({ level, pool }) => {
             const depleted = pool.current_uses <= 0
             return (
               <button
                 key={level}
+                role="menuitem"
                 className={`w-full rounded px-2 py-1 text-left text-xs ${depleted ? "opacity-50 cursor-not-allowed" : "hover:bg-accent"}`}
                 disabled={depleted}
                 onClick={() => handleSmiteChoice(level)}
               >
-                {t("game:smite_attack_with_smite", { level })}
+                {t("game:smite_attack_with_smite", { level, target: smiteTargetId })}
                 <span className="ml-1 text-muted-foreground">
                   ({pool.current_uses}/{pool.max_uses})
                 </span>
@@ -187,6 +193,8 @@ export function TargetDropdown({ name, description, nearby, scope, selfId, disab
     )
   }
 
+  const hasMenu = targets.length > 1
+  const isOpen = openDropdown === name && hasMenu
   return (
     <div className="relative">
       <Button
@@ -196,6 +204,8 @@ export function TargetDropdown({ name, description, nearby, scope, selfId, disab
         title={description}
         className={costClass}
         {...dataAttrs}
+        aria-haspopup={hasMenu ? "menu" : undefined}
+        aria-expanded={hasMenu ? isOpen : undefined}
         onClick={() => {
           if (targets.length === 1) {
             handleTargetSelected(targets[0].id)
@@ -205,13 +215,18 @@ export function TargetDropdown({ name, description, nearby, scope, selfId, disab
         }}
       >
         {getActionLabel(t, name)}
-        {targets.length > 1 && <ChevronDown className="ml-1 size-3" />}
+        {hasMenu && <ChevronDown className="ml-1 size-3" />}
       </Button>
-      {openDropdown === name && targets.length > 1 && (
-        <div className="absolute bottom-full left-0 z-10 mb-1 min-w-[160px] rounded border border-border bg-popover p-1 shadow-md">
+      {isOpen && (
+        <div
+          className="absolute bottom-full left-0 z-10 mb-1 min-w-[160px] rounded border border-border bg-popover p-1 shadow-md"
+          role="menu"
+          aria-label={description}
+        >
           {targets.map((entry) => (
             <button
               key={entry.id}
+              role="menuitem"
               className="w-full rounded px-2 py-1 text-left text-xs hover:bg-accent"
               onClick={() => handleTargetSelected(entry.id)}
             >

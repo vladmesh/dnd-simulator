@@ -94,6 +94,7 @@ export function Perception() {
               {smiteTarget === entity.id && (
                 <SmiteChoice
                   slots={spellSlots}
+                  targetName={entity.id}
                   onChoice={(slotLevel) => {
                     const params: Record<string, unknown> = { target_id: entity.id }
                     if (slotLevel != null) params.smite_slot_level = slotLevel

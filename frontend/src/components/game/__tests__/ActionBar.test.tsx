@@ -189,6 +189,56 @@ describe("ActionBar — cost-type styling", () => {
     })
   })
 
+  it("attack submenu buttons have unique accessible names (no duplicate 'Attack')", () => {
+    // Paladin-like setup: single hostile target with smite option available.
+    // Previously the smite panel rendered a bare "Attack" button which
+    // collided with the anchor "Attack" button in the accessibility tree.
+    const awareness: CombatAwareness = {
+      self_hp: 20,
+      self_max_hp: 20,
+      self_ac: 15,
+      self_speed: 30,
+      self_weapon: "Longsword",
+      self_weapon_damage: "1d8",
+      self_conditions: [],
+      nearby: [{ id: "practice_thug", description: "Thug", distance_ft: 5, direction: "N", is_hostile: true }],
+      round_number: 1,
+      available_actions: [
+        makeAction(
+          "attack",
+          "action",
+          [{ name: "target_id", type: "string", required: true }],
+          { target_mode: "single", target_scope: "hostile" },
+        ),
+      ],
+      available_items: [],
+      self_resource_pools: [
+        { id: "spell_slot_1", max_uses: 2, current_uses: 2, reset_on: "long_rest" },
+      ],
+    }
+    useGameStore.setState({
+      isMyTurn: true,
+      waitingForAction: false,
+      mode: "combat",
+      awareness,
+      budget: fullBudget,
+    })
+
+    render(<ActionBar />)
+    // Click anchor to open smite panel (single target → goes straight to smite choice)
+    fireEvent.click(screen.getByTitle("attack desc"))
+
+    // All visible buttons must have unique accessible names.
+    const buttons = screen.getAllByRole("button")
+    const names = buttons.map((b) => (b.textContent || "").trim()).filter((n) => n.length > 0)
+    const duplicates = names.filter((n, i) => names.indexOf(n) !== i)
+    expect(duplicates).toEqual([])
+
+    // The smite panel items must include the target name.
+    expect(screen.getByRole("menuitem", { name: /Attack practice_thug$/ })).toBeTruthy()
+    expect(screen.getByRole("menuitem", { name: /Attack practice_thug \+ Smite \(slot 1\)/ })).toBeTruthy()
+  })
+
   it("attack with multiple enemies shows target dropdown", () => {
     setCombatState(
       [makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }], { target_mode: "single", target_scope: "hostile" })],

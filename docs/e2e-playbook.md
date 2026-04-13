@@ -78,7 +78,7 @@
 - **Ожидание:** модалка снова открывается с теми же опциями
 - Выбрать Dueling, нажать Confirm
 - **Ожидание:** level=2, max_hp 12 → 20, появился пул `spell_slot_1` (2/2), `lay_on_hands` max 5 → 10
-- Завершить ход, на следующем раунде атаковать `practice_thug` опцией «Attack + Smite (slot 1)»
+- Завершить ход, на следующем раунде атаковать `practice_thug` опцией `getByRole('menuitem', { name: /Attack practice_thug \+ Smite \(slot 1\)/ })`
 - **Ожидание:** в damage breakdown: `1d8 + 2d8 divine_smite + +2 str + +2 дуэлянт`, `spell_slot_1` уменьшается до 1/2, бой завершается
 
 ---
