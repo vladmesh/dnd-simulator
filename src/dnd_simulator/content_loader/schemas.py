@@ -176,13 +176,21 @@ class NeighborContent(BaseModel):
 class BattleMapContent(BaseModel):
     """Battle map geometry for a region or location.
 
-    Walls are axis-aligned segments encoded as [x1, y1, x2, y2] with both
-    endpoints inside the grid.
+    width and height are in feet (1 cell = 5 feet); both must be multiples
+    of 5 to align the grid. Walls are axis-aligned segments encoded as
+    [x1, y1, x2, y2] with both endpoints inside the grid.
     """
 
-    width: int = Field(ge=2, le=100)
-    height: int = Field(ge=2, le=100)
+    width: int = Field(ge=10, le=500)
+    height: int = Field(ge=10, le=500)
     walls: list[list[int]] = []
+
+    @field_validator("width", "height")
+    @classmethod
+    def _multiple_of_five(cls, v: int) -> int:
+        if v % 5 != 0:
+            raise ValueError(f"battle_map width/height must be a multiple of 5 (feet); got {v}")
+        return v
 
     @field_validator("walls")
     @classmethod

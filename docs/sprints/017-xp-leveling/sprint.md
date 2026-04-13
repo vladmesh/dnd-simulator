@@ -53,7 +53,7 @@ Frontend level-up модалка. Пингуется из состояния (`l
 
 ---
 
-## Phase 4: E2E follow-up bug sweep
+## Phase 4: E2E follow-up bug sweep ✓
 
 Багрепорт по итогам phase 3 E2E. Каждый таск — детальное расследование причины + исправление наилучшим архитектурным способом (не косметика, не «закостылять чтобы тест прошёл»). Перед фиксом — RCA в developer notes таска. Phase закроется только после того, как E2E phase 3 переигрывается без шероховатостей из списка.
 
@@ -70,7 +70,7 @@ Frontend level-up модалка. Пингуется из состояния (`l
 
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** Phase 4 complete (2026-04-13). All 4 phases closed. Ready for audit.
 
 ## Decisions
 

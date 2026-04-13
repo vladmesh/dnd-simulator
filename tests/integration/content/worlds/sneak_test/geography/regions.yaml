@@ -7,6 +7,6 @@ test_arena:
   water_proximity: 0.0
   connections: []
   battle_map:
-    width: 3
-    height: 3
+    width: 15
+    height: 15
     walls: []
