@@ -4,27 +4,13 @@
 
 ## Current Sprint
 
-**Sprint:** 017-xp-leveling
-**Goal:** Ввести XP (за убийства по CR) и систему уровней с level-up модалкой; исправить уровни Paladin (FS/slots/smite на L2), добавить L2 для всех трёх классов.
-**Started:** 2026-04-13
-**Phase:** 5 — Post-audit cleanup (COMPLETE) — 2026-04-13
-
-All phases complete. Ready for audit.
-
-**Audit:** Triaged 2026-04-13. Quick-fix: 0 (both stale carry-forward — already removed). Sprint-relevant: 5 → phase 5 refactor. Backlog: 6 new items added (TurnBudget/ResourcePool mutability, schemas.py `Any`, WS test gaps).
-
-### Phases
-
-1. XP & Leveling Core — механика опыта и уровней, без UI и классовых фич
-2. Level-up mechanics + Paladin L2 fix — backend level-up, переезд Paladin FS/slots/smite на L2, Fighter Action Surge, Rogue L2 HP
-3. Level-up UI + E2E — React модалка с классовыми выборами, полный цикл через Playwright
-4. E2E follow-up bug sweep — 6 багов из phase-3 E2E, каждый с RCA + архитектурным фиксом
-5. Post-audit cleanup — sprint-relevant долг из audit 2026-04-13 (purity, unit tests, GameService bypass, Any types)
+No active sprint.
 
 ## Sprint History
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 017-xp-leveling | XP-by-CR и система уровней, level-up модалка; Paladin L1→L2 fix, Fighter Action Surge, Rogue L2 HP | 2026-04-13 | 2026-04-13 |
 | 016-tech-sweep | Fix E2E/backlog bugs, resolve architecture violations, add enums + harden fail-fast | 2026-04-12 | 2026-04-13 |
 | 015-paladin-spell-slots | Paladin L1-L2: spell slots as ResourcePool, Divine Smite, Lay on Hands, multi-damage weapons, target scope enums | 2026-04-10 | 2026-04-12 |
 | 014-faction-reputation | Combat sides from faction relations, personal reputation, auto-hostility, friendly OA fix | 2026-04-09 | 2026-04-10 |
