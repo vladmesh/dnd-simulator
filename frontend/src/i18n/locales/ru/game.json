@@ -161,6 +161,6 @@
   "levelup_paladin_spell_slot": "Получает 2 ячейки заклинаний 1 уровня",
   "levelup_rogue_proficiency": "Бонус мастерства увеличен",
   "levelup_button": "Повысить уровень",
-  "levelup_confirm": "Подтвердить",
+  "levelup_confirm": "ОК",
   "levelup_error_generic": "Не удалось повысить уровень. Повторите."
 }

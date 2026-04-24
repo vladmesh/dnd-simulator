@@ -457,6 +457,18 @@ def _perceive_squad_dematerialized(event: Event, observer: Character, get_entity
     return _("{name} moves on, disappearing into the distance").format(name=name)
 
 
+def _perceive_xp_gained(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    d = event.data
+    entity_id = str(d["entity_id"])
+    amount = d["amount"]
+    source_id = str(d["source_entity_id"])
+    source = _describe(observer, source_id, get_entity)
+    if entity_id == observer.id:
+        return _("You gain {amount} XP for defeating {source}").format(amount=amount, source=source)
+    desc = _describe(observer, entity_id, get_entity)
+    return _("{entity} gains {amount} XP for defeating {source}").format(entity=desc, amount=amount, source=source)
+
+
 def _perceive_reputation_change(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     d = event.data
     entity_id = str(d["entity_id"])
@@ -506,6 +518,7 @@ _DISPATCH: dict[EventType, _PerceiveHandler] = {
     EventType.SQUAD_MATERIALIZED: _perceive_squad_materialized,
     EventType.SQUAD_DEMATERIALIZED: _perceive_squad_dematerialized,
     EventType.REPUTATION_CHANGED: _perceive_reputation_change,
+    EventType.XP_GAINED: _perceive_xp_gained,
 }
 
 

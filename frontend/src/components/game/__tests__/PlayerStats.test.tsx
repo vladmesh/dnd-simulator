@@ -73,7 +73,7 @@ describe("PlayerStats — level-up integration", () => {
     expect(screen.getByTestId("level-up-modal")).toBeInTheDocument()
 
     const user = userEvent.setup()
-    await user.click(screen.getByRole("button", { name: /cancel/i }))
+    await user.keyboard("{Escape}")
     expect(screen.queryByTestId("level-up-modal")).not.toBeInTheDocument()
     // After modal closes, the level-up button stays available for manual reopen.
     expect(
@@ -131,7 +131,7 @@ describe("PlayerStats — level-up integration", () => {
     })
 
     const user = userEvent.setup()
-    await user.click(screen.getByRole("button", { name: /cancel/i }))
+    await user.keyboard("{Escape}")
     expect(screen.queryByTestId("level-up-modal")).not.toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: /level up/i }))
@@ -151,7 +151,7 @@ describe("PlayerStats — level-up integration", () => {
 
     const user = userEvent.setup()
     render(<PlayerStats />)
-    await user.click(screen.getByRole("button", { name: /confirm/i }))
+    await user.click(screen.getByRole("button", { name: /^ok$/i }))
 
     await vi.waitFor(() => {
       expect(useGameStore.getState().player?.level).toBe(2)
@@ -174,7 +174,7 @@ describe("PlayerStats — level-up integration", () => {
 
     const user = userEvent.setup()
     render(<PlayerStats />)
-    await user.click(screen.getByRole("button", { name: /confirm/i }))
+    await user.click(screen.getByRole("button", { name: /^ok$/i }))
 
     expect(await screen.findByTestId("level-up-error")).toBeInTheDocument()
     expect(screen.getByTestId("level-up-modal")).toBeInTheDocument()

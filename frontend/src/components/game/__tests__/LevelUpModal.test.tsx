@@ -79,7 +79,7 @@ describe("LevelUpModal", () => {
     expect(options).toContain("dueling")
     expect(options).toContain("great_weapon_fighting")
 
-    const confirm = screen.getByRole("button", { name: /confirm/i })
+    const confirm = screen.getByRole("button", { name: /^ok$/i })
     expect(confirm).toBeDisabled()
 
     await user.selectOptions(select, "dueling")
@@ -96,7 +96,7 @@ describe("LevelUpModal", () => {
       />,
     )
     expect(screen.queryByLabelText(/fighting style/i)).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /confirm/i })).toBeEnabled()
+    expect(screen.getByRole("button", { name: /^ok$/i })).toBeEnabled()
     expect(screen.getByText(/action surge/i)).toBeInTheDocument()
   })
 
@@ -110,7 +110,7 @@ describe("LevelUpModal", () => {
       />,
     )
     expect(screen.queryByLabelText(/fighting style/i)).not.toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /confirm/i })).toBeEnabled()
+    expect(screen.getByRole("button", { name: /^ok$/i })).toBeEnabled()
     expect(screen.getByTestId("hp-gain")).toBeInTheDocument()
   })
 
@@ -131,7 +131,7 @@ describe("LevelUpModal", () => {
     )
 
     await user.selectOptions(screen.getByLabelText(/fighting style/i), "dueling")
-    await user.click(screen.getByRole("button", { name: /confirm/i }))
+    await user.click(screen.getByRole("button", { name: /^ok$/i }))
 
     expect(levelUpMock).toHaveBeenCalledTimes(1)
     expect(levelUpMock).toHaveBeenCalledWith("s1", { fighting_style: "dueling" })
@@ -154,7 +154,7 @@ describe("LevelUpModal", () => {
       />,
     )
 
-    await user.click(screen.getByRole("button", { name: /confirm/i }))
+    await user.click(screen.getByRole("button", { name: /^ok$/i }))
 
     expect(levelUpMock).toHaveBeenCalledTimes(1)
     const body = levelUpMock.mock.calls[0][1]
@@ -176,29 +176,26 @@ describe("LevelUpModal", () => {
       />,
     )
 
-    const confirm = screen.getByRole("button", { name: /confirm/i })
+    const confirm = screen.getByRole("button", { name: /^ok$/i })
     await user.click(confirm)
 
     expect(await screen.findByTestId("level-up-error")).toBeInTheDocument()
     expect(confirm).toBeEnabled()
   })
 
-  it("Cancel fires onClose and does not call the API", async () => {
-    const user = userEvent.setup()
-    const onClose = vi.fn()
-
+  it("has no Cancel button — single OK button only", () => {
     render(
       <LevelUpModal
         open
         sessionId="s1"
         player={makePlayer({ char_class: "fighter" })}
-        onClose={onClose}
+        onClose={vi.fn()}
         onSuccess={vi.fn()}
       />,
     )
 
-    await user.click(screen.getByRole("button", { name: /cancel/i }))
-    expect(onClose).toHaveBeenCalled()
-    expect(levelUpMock).not.toHaveBeenCalled()
+    expect(screen.queryByRole("button", { name: /cancel/i })).not.toBeInTheDocument()
+    const buttons = screen.getAllByRole("button").filter((b) => b.textContent?.trim() === "OK")
+    expect(buttons).toHaveLength(1)
   })
 })

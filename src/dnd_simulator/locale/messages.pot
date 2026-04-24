@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-03-28 14:09+0200\n"
+"POT-Creation-Date: 2026-04-24 19:05+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -15,222 +15,213 @@ msgstr ""
 "Generated-By: pygettext.py 1.5\n"
 
 
-#: src/dnd_simulator/adapters/api/routes_master.py:99
-#: src/dnd_simulator/adapters/api/routes_master.py:122
-msgid "World '{}' already exists"
-msgstr ""
-
-#: src/dnd_simulator/adapters/api/routes_master.py:169
-msgid "World '{}' deleted"
-msgstr ""
-
-#: src/dnd_simulator/adapters/api/routes_master.py:179
-#: src/dnd_simulator/adapters/api/routes_master.py:189
-msgid "World '{}' not found"
-msgstr ""
-
-#: src/dnd_simulator/adapters/api/routes_master.py:237
-msgid "File '{}' updated"
-msgstr ""
-
-#: src/dnd_simulator/adapters/api/routes_master.py:250
-msgid "Layer '{}' scaffolded in world '{}'"
-msgstr ""
-
-#: src/dnd_simulator/adapters/api/routes_master.py:263
-msgid "Layer '{}' forked to custom in world '{}'"
-msgstr ""
-
-#: src/dnd_simulator/adapters/api/routes_master.py:345
+#: src/dnd_simulator/adapters/api/routes_session.py:71
 msgid "Session {} deleted"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:393
-#: src/dnd_simulator/adapters/api/routes_master.py:448
-#: src/dnd_simulator/adapters/api/routes_master.py:462
+#: src/dnd_simulator/adapters/api/routes_session.py:119
+#: src/dnd_simulator/adapters/api/routes_session.py:174
+#: src/dnd_simulator/adapters/api/routes_session.py:188
 msgid "No fields to update"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:398
+#: src/dnd_simulator/adapters/api/routes_session.py:124
 msgid "Creature {} updated"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:409
+#: src/dnd_simulator/adapters/api/routes_session.py:135
 msgid "Creature {} removed"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:433
+#: src/dnd_simulator/adapters/api/routes_session.py:159
 msgid "Creature {} brain set to {}"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:453
+#: src/dnd_simulator/adapters/api/routes_session.py:179
 msgid "Nation {} updated"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:467
+#: src/dnd_simulator/adapters/api/routes_session.py:193
 msgid "Settlement {} updated"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:481
+#: src/dnd_simulator/adapters/api/routes_session.py:207
 msgid "Advanced {}h."
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:483
+#: src/dnd_simulator/adapters/api/routes_session.py:209
 msgid "Events:"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:496
+#: src/dnd_simulator/adapters/api/routes_session.py:222
 msgid "Language set to '{}'"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:519
+#: src/dnd_simulator/adapters/api/routes_session.py:245
 msgid "Saved as '{}'"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:532
+#: src/dnd_simulator/adapters/api/routes_session.py:258
 msgid "Loaded '{}'"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_master.py:545
+#: src/dnd_simulator/adapters/api/routes_session.py:271
 msgid "Deleted '{}'"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_player.py:39
-#: src/dnd_simulator/service/game_service.py:761
-msgid "No player in this session"
+#: src/dnd_simulator/adapters/api/routes_world.py:83
+#: src/dnd_simulator/adapters/api/routes_world.py:106
+msgid "World '{}' already exists"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:104
+#: src/dnd_simulator/adapters/api/routes_world.py:153
+msgid "World '{}' deleted"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_world.py:163
+#: src/dnd_simulator/adapters/api/routes_world.py:173
+msgid "World '{}' not found"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_world.py:221
+msgid "File '{}' updated"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_world.py:234
+msgid "Layer '{}' scaffolded in world '{}'"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_world.py:247
+msgid "Layer '{}' forked to custom in world '{}'"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_ws.py:107
 msgid "Session '{}' not found"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:110
+#: src/dnd_simulator/adapters/api/routes_ws.py:113
 msgid "No player in session"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:146
+#: src/dnd_simulator/adapters/api/routes_ws.py:149
 msgid "Rate limited, slow down"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:153
+#: src/dnd_simulator/adapters/api/routes_ws.py:156
 msgid "Invalid JSON"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:164
+#: src/dnd_simulator/adapters/api/routes_ws.py:167
 msgid "Unknown action: {}"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:168
+#: src/dnd_simulator/adapters/api/routes_ws.py:177
+msgid "Unknown reaction: {}"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_ws.py:181
 msgid "Unknown message type: {}"
 msgstr ""
 
-#: src/dnd_simulator/core/character.py:309
-#: src/dnd_simulator/core/character.py:317
+#: src/dnd_simulator/core/character.py:314
+#: src/dnd_simulator/core/character.py:322
 msgid "looks wounded"
 msgstr ""
 
-#: src/dnd_simulator/core/combat.py:162
+#: src/dnd_simulator/core/combat.py:190
 msgid "Arena bounded by walls: {w}x{h} ft"
 msgstr ""
 
-#: src/dnd_simulator/core/combat.py:167
+#: src/dnd_simulator/core/combat.py:195
 msgid "vertical wall x={x} from y={y1} to y={y2}"
 msgstr ""
 
-#: src/dnd_simulator/core/combat.py:173
+#: src/dnd_simulator/core/combat.py:201
 msgid "horizontal wall y={y} from x={x1} to x={x2}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/combat_manager.py:204
+#: src/dnd_simulator/layers/entities/combat_manager.py:248
 msgid "Creature '{id}' not found."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/combat_manager.py:208
+#: src/dnd_simulator/layers/entities/combat_manager.py:251
 msgid "No active combat for movement."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/combat_manager.py:213
-msgid "Creature not on the battle map."
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/combat_manager.py:227
-msgid "Cannot move there — blocked."
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/combat_manager.py:258
+#: src/dnd_simulator/layers/entities/combat_manager.py:261
 msgid "Attacker '{id}' not found."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/combat_manager.py:262
-#: src/dnd_simulator/rules/validation.py:116
+#: src/dnd_simulator/layers/entities/combat_manager.py:265
+#: src/dnd_simulator/rules/validation.py:155
 msgid "Target '{id}' not found."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:159
+#: src/dnd_simulator/layers/entities/models.py:127
 msgid "Need something forged?"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:160
+#: src/dnd_simulator/layers/entities/models.py:128
 msgid "Hm? Oh, I'm off duty."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:162
+#: src/dnd_simulator/layers/entities/models.py:130
 msgid "What'll it be?"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:163
+#: src/dnd_simulator/layers/entities/models.py:131
 msgid "Kitchen's closed. Come back later."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:165
+#: src/dnd_simulator/layers/entities/models.py:133
 msgid "Move along, citizen."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:166
+#: src/dnd_simulator/layers/entities/models.py:134
 msgid "Quiet night, eh?"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:168
+#: src/dnd_simulator/layers/entities/models.py:136
 msgid "Looking to buy something?"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:169
+#: src/dnd_simulator/layers/entities/models.py:137
 msgid "Shop's closed. Try tomorrow."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:171
+#: src/dnd_simulator/layers/entities/models.py:139
 msgid "Can't talk, crops won't tend themselves."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:172
+#: src/dnd_simulator/layers/entities/models.py:140
 msgid "Fine evening, isn't it?"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:176
+#: src/dnd_simulator/layers/entities/models.py:144
 msgid "I'm busy."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:177
+#: src/dnd_simulator/layers/entities/models.py:145
 msgid "Hm?"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:178
+#: src/dnd_simulator/layers/entities/models.py:146
 msgid "Zzz..."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:183
+#: src/dnd_simulator/layers/entities/models.py:151
 msgid "Leave me alone!"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:184
+#: src/dnd_simulator/layers/entities/models.py:152
 msgid "Shh... Something's not right."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:185
+#: src/dnd_simulator/layers/entities/models.py:153
 msgid "I... I can't talk right now."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/models.py:186
+#: src/dnd_simulator/layers/entities/models.py:154
 msgid "What do you want?"
 msgstr ""
 
@@ -303,7 +294,7 @@ msgid "weapon"
 msgstr ""
 
 #: src/dnd_simulator/layers/entities/perception.py:26
-#: src/dnd_simulator/layers/entities/perception.py:136
+#: src/dnd_simulator/layers/entities/perception.py:86
 msgid "AC"
 msgstr ""
 
@@ -367,251 +358,324 @@ msgstr ""
 msgid "an item"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:74
-msgid "— Round {n} —"
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:78
-msgid "Combat ended."
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:89
-msgid "Something happened ({type})"
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:96
+#: src/dnd_simulator/layers/entities/perception.py:42
 msgid "someone"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:98
+#: src/dnd_simulator/layers/entities/perception.py:44
 msgid "you"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:110
+#: src/dnd_simulator/layers/entities/perception.py:60
 msgid "You say: \"{text}\""
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:111
+#: src/dnd_simulator/layers/entities/perception.py:61
 msgid "{speaker} says: \"{text}\""
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:122
+#: src/dnd_simulator/layers/entities/perception.py:72
 msgid "adv "
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:124
+#: src/dnd_simulator/layers/entities/perception.py:74
 msgid "disadv "
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:157
+#: src/dnd_simulator/layers/entities/perception.py:107
 msgid ", CRIT! {damage} damage{detail}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:158
+#: src/dnd_simulator/layers/entities/perception.py:108
 msgid ", {damage} damage{detail}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:178
+#: src/dnd_simulator/layers/entities/perception.py:126
+msgid " (opportunity attack)"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:130
 msgid ", miss"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:184
+#: src/dnd_simulator/layers/entities/perception.py:136
 msgid ", {damage} damage"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:189
-msgid "You attack {target}{weapon}{roll}{outcome}"
+#: src/dnd_simulator/layers/entities/perception.py:141
+msgid "You attack {target}{weapon}{oa}{roll}{outcome}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:193
-msgid "{attacker} attacks you{weapon}{roll}{outcome}"
+#: src/dnd_simulator/layers/entities/perception.py:145
+msgid "{attacker} attacks you{weapon}{oa}{roll}{outcome}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:196
-msgid "{attacker} attacks {target}{weapon}{roll}{outcome}"
+#: src/dnd_simulator/layers/entities/perception.py:148
+msgid "{attacker} attacks {target}{weapon}{oa}{roll}{outcome}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:206
+#: src/dnd_simulator/layers/entities/perception.py:156
+msgid "You disengage"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:158
+msgid "{entity} disengages"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:172
+msgid "You seize the opening against {target}!"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:174
+msgid "{attacker} seizes the opening against you!"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:175
+msgid "{attacker} seizes the opening against {target}!"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:181
 msgid "You die"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:208
+#: src/dnd_simulator/layers/entities/perception.py:183
 msgid "{entity} dies"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:218
+#: src/dnd_simulator/layers/entities/perception.py:192
 msgid "You take a defensive stance{desc}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:220
+#: src/dnd_simulator/layers/entities/perception.py:194
 msgid "{entity} takes a defensive stance{desc}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:230
+#: src/dnd_simulator/layers/entities/perception.py:203
 msgid "You try to flee{desc}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:232
+#: src/dnd_simulator/layers/entities/perception.py:205
 msgid "{entity} tries to flee{desc}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:256
+#: src/dnd_simulator/layers/entities/perception.py:229
 msgid "You move {direction} ({distance} ft){desc}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:260
+#: src/dnd_simulator/layers/entities/perception.py:233
 msgid "{entity} moves {direction} ({distance} ft){desc}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:269
+#: src/dnd_simulator/layers/entities/perception.py:242
 msgid "You dash (+{ft} ft movement)"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:271
+#: src/dnd_simulator/layers/entities/perception.py:244
 msgid "{entity} dashes (+{ft} ft movement)"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:280
+#: src/dnd_simulator/layers/entities/perception.py:254
 msgid "You use {item} (healed {hp} HP)"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:282
+#: src/dnd_simulator/layers/entities/perception.py:256
 msgid "{entity} uses {item} (healed {hp} HP)"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:291
+#: src/dnd_simulator/layers/entities/perception.py:265
 msgid "You look around but see no one matching '{id}'."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:293
+#: src/dnd_simulator/layers/entities/perception.py:267
 msgid "You inspect {desc}."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:296
+#: src/dnd_simulator/layers/entities/perception.py:270
 msgid "They look badly wounded."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:298
+#: src/dnd_simulator/layers/entities/perception.py:272
 msgid "They have minor injuries."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:300
+#: src/dnd_simulator/layers/entities/perception.py:274
 msgid "They look healthy."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:311
+#: src/dnd_simulator/layers/entities/perception.py:286
 msgid "You can't act ({conditions}) — turn skipped"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:313
+#: src/dnd_simulator/layers/entities/perception.py:288
 msgid "{entity} can't act ({conditions}) — turn skipped"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:320
+#: src/dnd_simulator/layers/entities/perception.py:296
 msgid "You invoke a blessing (+d4 to attack rolls for {n} rounds)"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:322
+#: src/dnd_simulator/layers/entities/perception.py:298
 msgid "{entity} invokes a blessing (+d4 to attack rolls for {n} rounds)"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:329
+#: src/dnd_simulator/layers/entities/perception.py:306
+msgid "You catch your breath, regaining {hp} HP"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:308
+msgid "{entity} catches their breath, regaining {hp} HP"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:315
+msgid "You surge with energy, gaining an extra action"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:317
+msgid "{entity} surges with energy, gaining an extra action"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:332
+msgid "You lay hands on yourself, restoring {hp} HP (pool {before}→{after})"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:337
+msgid "You lay hands on {target}, restoring {hp} HP (pool {before}→{after})"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:342
+msgid "{entity} lays hands on you, restoring {hp} HP"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:344
+msgid "{entity} lays hands on {target}, restoring {hp} HP"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:352
 msgid "You equip {weapon}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:331
+#: src/dnd_simulator/layers/entities/perception.py:354
 msgid "{entity} equips {weapon}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:338
+#: src/dnd_simulator/layers/entities/perception.py:362
 msgid "You put away {weapon}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:340
+#: src/dnd_simulator/layers/entities/perception.py:364
 msgid "{entity} puts away {weapon}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:351
+#: src/dnd_simulator/layers/entities/perception.py:376
 msgid "You buy {item} from {merchant} for {price} gold"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:355
+#: src/dnd_simulator/layers/entities/perception.py:380
 msgid "{buyer} buys {item} from {merchant} for {price} gold"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:368
+#: src/dnd_simulator/layers/entities/perception.py:394
 msgid "You sell {item} to {merchant} for {price} gold"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:372
+#: src/dnd_simulator/layers/entities/perception.py:398
 msgid "{seller} sells {item} to {merchant} for {price} gold"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:380
+#: src/dnd_simulator/layers/entities/perception.py:407
 msgid "Combat started! Initiative order: {order}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:387
-#: src/dnd_simulator/layers/entities/perception.py:402
-#: src/dnd_simulator/layers/entities/perception.py:411
-#: src/dnd_simulator/layers/entities/perception.py:417
-msgid "A group"
+#: src/dnd_simulator/layers/entities/perception.py:412
+msgid "— Round {n} —"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:393
+#: src/dnd_simulator/layers/entities/perception.py:416
+msgid "Combat ended."
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:430
 msgid "{name} passes through"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:395
+#: src/dnd_simulator/layers/entities/perception.py:432
 msgid "{name} arrives"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:397
+#: src/dnd_simulator/layers/entities/perception.py:434
 msgid "{name} departs"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:398
+#: src/dnd_simulator/layers/entities/perception.py:435
 msgid "{name} is on the move"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:403
-msgid "another group"
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:406
+#: src/dnd_simulator/layers/entities/perception.py:444
 msgid "{winner} destroyed {loser}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:407
+#: src/dnd_simulator/layers/entities/perception.py:445
 msgid "{winner} defeated {loser}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:413
+#: src/dnd_simulator/layers/entities/perception.py:452
 msgid "{name} appears — {count} creatures materialize"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:418
+#: src/dnd_simulator/layers/entities/perception.py:457
 msgid "{name} moves on, disappearing into the distance"
 msgstr ""
 
-#: src/dnd_simulator/llm/brain.py:63
+#: src/dnd_simulator/layers/entities/perception.py:467
+msgid "You gain {amount} XP for defeating {source}"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:469
+msgid "{entity} gains {amount} XP for defeating {source}"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:482
+msgid "Your reputation with {faction} changed ({old} → {new})"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:486
+msgid "{entity}'s reputation with {faction} changed"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:541
+msgid "Something happened ({type})"
+msgstr ""
+
+#: src/dnd_simulator/layers/geography/layer.py:95
+msgid "Weather in {region} changed from {old} to {new}"
+msgstr ""
+
+#: src/dnd_simulator/llm/brain.py:75
 msgid "You must choose an action: attack, move, dash, dodge, flee, or idle."
 msgstr ""
 
-#: src/dnd_simulator/llm/brain.py:70
+#: src/dnd_simulator/llm/brain.py:82
 msgid "You must choose an action: say, attack, or idle."
 msgstr ""
 
-#: src/dnd_simulator/llm/brain.py:78
+#: src/dnd_simulator/llm/brain.py:90
 msgid "Your turn. Choose an action."
 msgstr ""
 
-#: src/dnd_simulator/llm/brain.py:81
+#: src/dnd_simulator/llm/brain.py:93
 msgid ""
 "What happened since your last turn:\n"
 "{events}\n"
 "\n"
 "Your turn. Choose an action."
+msgstr ""
+
+#: src/dnd_simulator/llm/brain.py:126
+msgid "A creature is {trigger_type}. You can react or skip."
+msgstr ""
+
+#: src/dnd_simulator/llm/brain.py:130
+msgid "You are an NPC deciding whether to use your reaction."
 msgstr ""
 
 #: src/dnd_simulator/llm/prompts.py:31
@@ -746,40 +810,52 @@ msgstr ""
 msgid "Round {num}."
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:45
-#: src/dnd_simulator/rules/movement.py:58
+#: src/dnd_simulator/rules/divine_smite.py:43
+msgid "Divine Smite requires Paladin level 2."
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/attack_resolution.py:125
+msgid "Creature not on the battle map."
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/attack_resolution.py:139
+msgid "Cannot move there — blocked."
+msgstr ""
+
+#: src/dnd_simulator/rules/movement.py:46
+#: src/dnd_simulator/rules/movement.py:59
 msgid "here"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:49
+#: src/dnd_simulator/rules/movement.py:50
 msgid "to the north"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:50
+#: src/dnd_simulator/rules/movement.py:51
 msgid "to the south"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:51
+#: src/dnd_simulator/rules/movement.py:52
 msgid "to the east"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:52
+#: src/dnd_simulator/rules/movement.py:53
 msgid "to the west"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:53
+#: src/dnd_simulator/rules/movement.py:54
 msgid "to the northeast"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:54
+#: src/dnd_simulator/rules/movement.py:55
 msgid "to the northwest"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:55
+#: src/dnd_simulator/rules/movement.py:56
 msgid "to the southeast"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:56
+#: src/dnd_simulator/rules/movement.py:57
 msgid "to the southwest"
 msgstr ""
 
@@ -811,39 +887,63 @@ msgstr ""
 msgid "Merchant doesn't have enough gold (need {price}, have {gold})"
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:58
+#: src/dnd_simulator/rules/validation.py:62
 msgid "Dead creatures cannot act"
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:65
+#: src/dnd_simulator/rules/validation.py:69
 msgid "Dormant creatures cannot act"
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:75
+#: src/dnd_simulator/rules/validation.py:85
+msgid "'{action}' requires parameter '{param}'."
+msgstr ""
+
+#: src/dnd_simulator/rules/validation.py:96
 msgid "'{action}' is not available in combat"
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:80
+#: src/dnd_simulator/rules/validation.py:101
 msgid "'{action}' is not available outside combat"
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:93
+#: src/dnd_simulator/rules/validation.py:120
+msgid "No cost override '{mode}' available for '{action}'"
+msgstr ""
+
+#: src/dnd_simulator/rules/validation.py:132
 msgid "Insufficient budget for '{action}'"
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:122
+#: src/dnd_simulator/rules/validation.py:161
 msgid "Target '{id}' is already dead."
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:128
+#: src/dnd_simulator/rules/validation.py:167
 msgid "Target '{id}' is not in this region."
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:147
+#: src/dnd_simulator/rules/validation.py:186
 msgid "Item '{id}' not in inventory."
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:183
+#: src/dnd_simulator/rules/validation.py:214
+msgid "Target is already at full HP."
+msgstr ""
+
+#: src/dnd_simulator/rules/validation.py:249
 msgid "Target too far ({dist} ft, reach {reach} ft)."
+msgstr ""
+
+#: src/dnd_simulator/rules/validation.py:272
+msgid "Cannot target yourself with '{action}'."
+msgstr ""
+
+#: src/dnd_simulator/rules/validation.py:311
+msgid "'{action}' can only target hostile creatures."
+msgstr ""
+
+#: src/dnd_simulator/rules/validation.py:316
+msgid "'{action}' can only target allies."
 msgstr ""
 

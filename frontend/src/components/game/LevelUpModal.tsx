@@ -37,7 +37,7 @@ export function LevelUpModal({
   onClose,
   onSuccess,
 }: LevelUpModalProps) {
-  const { t } = useTranslation(["game", "common"])
+  const { t } = useTranslation("game")
   const [style, setStyle] = useState<FightingStyle | "">("")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -129,9 +129,6 @@ export function LevelUpModal({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            {t("common:cancel")}
-          </Button>
           <Button
             onClick={handleConfirm}
             disabled={!canConfirm}

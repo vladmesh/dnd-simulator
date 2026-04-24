@@ -939,3 +939,10 @@ msgstr "метель"
 
 msgid "fog"
 msgstr "туман"
+
+#: XP gained
+msgid "You gain {amount} XP for defeating {source}"
+msgstr "Ты получаешь {amount} опыта за победу над {source}"
+
+msgid "{entity} gains {amount} XP for defeating {source}"
+msgstr "{entity} получает {amount} опыта за победу над {source}"
