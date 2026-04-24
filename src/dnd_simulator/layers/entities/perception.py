@@ -272,6 +272,9 @@ def _perceive_inspect(event: Event, observer: Character, get_entity: GetEntityFn
             parts.append(_("They have minor injuries."))
         else:
             parts.append(_("They look healthy."))
+        if target.conditions:
+            cond_list = ", ".join(_(c.value) for c in sorted(target.conditions, key=lambda c: c.value))
+            parts.append(_("Conditions: {list}.").format(list=cond_list))
     return " ".join(parts)
 
 

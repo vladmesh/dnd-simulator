@@ -90,4 +90,6 @@ def _to_response(data: PlayerStatusData) -> PlayerStatusResponse:
         resource_pools=[
             {"id": p.id, "max_uses": p.max_uses, "current_uses": p.current_uses} for p in data.resource_pools
         ],
+        equipped=data.equipped,
+        inventory=data.inventory,
     )

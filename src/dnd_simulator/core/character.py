@@ -297,31 +297,15 @@ class Character(Creature):
 
         Characters from the same settlement know each other by name.
         Strangers are described by race + appearance.
-        Visible conditions are appended.
+        Health status and conditions are surfaced through the inspect action,
+        not baked into the name — keeps event logs readable.
         """
         if isinstance(target, Character):
-            known = self._knows_by_name(target)
-            parts: list[str] = []
-            if known:
-                parts.append(target.name)
-            else:
-                race_label = _(target.race.value.replace("_", " "))
-                parts.append(race_label)
-                if target.appearance:
-                    parts.append(target.appearance)
-            # Wound status
-            if target.current_hp < target.max_hp // 2:
-                parts.append(_("looks wounded"))
-            # Visible conditions
-            if target.conditions:
-                parts.extend(_(c.value) for c in sorted(target.conditions, key=lambda c: c.value))
-            return ", ".join(parts)
-        if isinstance(target, Creature):
-            parts = [target.name]
-            if target.current_hp < target.max_hp // 2:
-                parts.append(_("looks wounded"))
-            if target.conditions:
-                parts.extend(_(c.value) for c in sorted(target.conditions, key=lambda c: c.value))
+            if self._knows_by_name(target):
+                return target.name
+            parts: list[str] = [_(target.race.value.replace("_", " "))]
+            if target.appearance:
+                parts.append(target.appearance)
             return ", ".join(parts)
         return target.name
 

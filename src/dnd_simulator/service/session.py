@@ -134,16 +134,19 @@ def _reaction_to_dict(trigger: ReactionTrigger, options: list[ReactionOption]) -
     }
 
 
-def _player_to_dict(player: PlayerCharacter) -> dict[str, Any]:
-    from dnd_simulator.core.awareness import describe_item
-    from dnd_simulator.round import Round
-
-    scores = player.ability_scores
-    equipped = [
+def build_equipped_payload(player: PlayerCharacter) -> list[dict[str, str]]:
+    """Build the equipped-items list for player payloads (WS + REST share this shape)."""
+    return [
         {"slot": e.slot.value, "item_id": e.item_id, "name": e.name, "description": e.description}
         for e in Round._build_equipped(player)
     ]
-    inventory = []
+
+
+def build_inventory_payload(player: PlayerCharacter) -> list[dict[str, object]]:
+    """Build the inventory list for player payloads (WS + REST share this shape)."""
+    from dnd_simulator.core.awareness import describe_item
+
+    inventory: list[dict[str, object]] = []
     for item in player.inventory:
         entry: dict[str, object] = {
             "id": item.id,
@@ -155,6 +158,13 @@ def _player_to_dict(player: PlayerCharacter) -> dict[str, Any]:
         if item.accessory_def is not None:
             entry["slot"] = item.accessory_def.slot.value
         inventory.append(entry)
+    return inventory
+
+
+def _player_to_dict(player: PlayerCharacter) -> dict[str, Any]:
+    scores = player.ability_scores
+    equipped = build_equipped_payload(player)
+    inventory = build_inventory_payload(player)
     return {
         "player_id": player.id,
         "name": player.name,

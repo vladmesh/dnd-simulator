@@ -136,6 +136,21 @@ class TestPlayerStatus:
         pool_ids = [p.id for p in data.resource_pools]
         assert "second_wind" in pool_ids
 
+    def test_fighter_l1_equipped_and_inventory_exposed(self, tmp_path: Path) -> None:
+        """REST PlayerStatus must include equipped+inventory so the level-up response
+        doesn't wipe the character sheet's weapon slot on the frontend."""
+        service = _make_service(tmp_path)
+        sid = _new_session_with_fighter(service)
+
+        data = service.player_status(sid)
+
+        slots = {entry["slot"] for entry in data.equipped}
+        assert "weapon" in slots
+        assert "armor" in slots
+        weapon = next(entry for entry in data.equipped if entry["slot"] == "weapon")
+        assert weapon["name"]  # non-empty name
+        assert weapon["item_id"]
+
     def test_no_player_in_session_raises(self, tmp_path: Path) -> None:
         service = _make_service(tmp_path)
         sid = service.start_game(world_name="sword_vale").session_id

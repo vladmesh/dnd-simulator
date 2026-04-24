@@ -157,7 +157,8 @@ class TestPerceive:
         assert "dwarf" in result
         assert "braided red beard" in result
 
-    def test_perceive_wounded(self) -> None:
+    def test_perceive_omits_wounded_status(self) -> None:
+        """Wound status belongs on the inspect action, not in perceive() — keeps logs clean."""
         observer = Character(id="obs", name="Observer", location_id="r1")
         target = Character(
             id="tgt",
@@ -166,20 +167,21 @@ class TestPerceive:
             max_hp=20,
             current_hp=5,
         )
-        result = observer.perceive(target)
-        assert "wounded" in result
+        assert "wounded" not in observer.perceive(target)
 
-    def test_perceive_healthy_no_wound(self) -> None:
+    def test_perceive_omits_conditions(self) -> None:
+        from dnd_simulator.core.conditions import Condition
+
         observer = Character(id="obs", name="Observer", location_id="r1")
         target = Character(
             id="tgt",
             name="Target",
             location_id="r1",
-            max_hp=20,
-            current_hp=20,
+            race=Race.TIEFLING,
+            conditions={Condition.PRONE: None},
         )
         result = observer.perceive(target)
-        assert "wounded" not in result
+        assert "prone" not in result
 
     def test_perceive_entity_returns_name(self) -> None:
         observer = Character(id="obs", name="Observer", location_id="r1")
@@ -190,16 +192,12 @@ class TestPerceive:
     def test_perceive_creature_shows_name(self) -> None:
         observer = Character(id="obs", name="Observer", location_id="r1")
         target = Creature(id="wolf", name="Grey Wolf", location_id="r1", max_hp=11, current_hp=11)
-        result = observer.perceive(target)
-        assert "Grey Wolf" in result
-        assert "wounded" not in result
+        assert observer.perceive(target) == "Grey Wolf"
 
-    def test_perceive_creature_wounded(self) -> None:
+    def test_perceive_creature_wounded_still_bare_name(self) -> None:
         observer = Character(id="obs", name="Observer", location_id="r1")
         target = Creature(id="wolf", name="Grey Wolf", location_id="r1", max_hp=11, current_hp=3)
-        result = observer.perceive(target)
-        assert "Grey Wolf" in result
-        assert "wounded" in result
+        assert observer.perceive(target) == "Grey Wolf"
 
     def test_perceive_half_orc_label(self) -> None:
         observer = Character(id="obs", name="Observer", location_id="r1")

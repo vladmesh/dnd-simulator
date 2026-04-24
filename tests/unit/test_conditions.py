@@ -130,7 +130,8 @@ class TestCreatureConditions:
         assert Condition.BLESSED in c.conditions
         assert c.conditions[Condition.BLESSED] == 3
 
-    def test_conditions_in_perceive(self) -> None:
+    def test_perceive_omits_conditions(self) -> None:
+        """perceive() no longer leaks conditions into event logs — they're shown on inspect instead."""
         observer = Character(
             id="obs",
             name="Observer",
@@ -145,8 +146,8 @@ class TestCreatureConditions:
             conditions={Condition.PRONE: None, Condition.STUNNED: None},
         )
         desc = observer.perceive(target)
-        assert "prone" in desc
-        assert "stunned" in desc
+        assert "prone" not in desc
+        assert "stunned" not in desc
 
 
 # ---------------------------------------------------------------------------

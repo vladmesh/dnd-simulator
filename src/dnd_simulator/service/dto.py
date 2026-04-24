@@ -39,3 +39,5 @@ class PlayerStatusData:
     appearance: str
     ability_scores: dict[str, int]
     resource_pools: list[ResourcePoolView] = field(default_factory=list)
+    equipped: list[dict[str, str]] = field(default_factory=list)
+    inventory: list[dict[str, object]] = field(default_factory=list)

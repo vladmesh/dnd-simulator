@@ -83,10 +83,14 @@ export function GameScreen() {
       {/* Dashboard panels — 3 columns, with overlay container */}
       <div className="relative min-h-0 flex-1">
         <div className="grid h-full grid-cols-1 gap-px border-b border-border bg-border lg:grid-cols-3">
-          {/* Left column: Nearby+Trade (peaceful) or CombatPanel (combat) */}
+          {/* Left column: Nearby+Trade (peaceful) or CombatPanel+Enemies (combat) */}
           <div className="overflow-y-auto bg-background p-3">
             {isCombat ? (
-              <CombatPanel />
+              <>
+                <CombatPanel />
+                <div className="my-3 border-t border-border" />
+                <Perception />
+              </>
             ) : (
               <>
                 <Perception />

@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useGameStore } from "@/store/gameStore"
 import { wsClient } from "@/transport/wsClient"
-import type { NearbyEntity } from "@/types/game"
+import type { NearbyEntity, CombatEntity } from "@/types/game"
 import { Button } from "@/components/ui/button"
 import { Eye, Sword, MessageCircle, Send } from "lucide-react"
 import { NpcInspectModal } from "./NpcInspectModal"
@@ -15,7 +15,7 @@ export function Perception() {
   const isMyTurn = useGameStore((s) => s.isMyTurn)
   const [talkTarget, setTalkTarget] = useState<string | null>(null)
   const [talkText, setTalkText] = useState("")
-  const [inspectEntity, setInspectEntity] = useState<NearbyEntity | null>(null)
+  const [inspectEntity, setInspectEntity] = useState<NearbyEntity | CombatEntity | null>(null)
   const [smiteTarget, setSmiteTarget] = useState<string | null>(null)
 
   if (!awareness) return null

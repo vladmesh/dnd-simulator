@@ -901,6 +901,7 @@ class GameService(
         from dnd_simulator.core.character import Ability
         from dnd_simulator.rules.leveling import xp_to_next_level
         from dnd_simulator.service.dto import PlayerStatusData, ResourcePoolView
+        from dnd_simulator.service.session import build_equipped_payload, build_inventory_payload
 
         session = self._get_session(session_id)
         player = session.get_player(player_id) if player_id else session.get_player()
@@ -935,6 +936,8 @@ class GameService(
                 ResourcePoolView(id=p.id, max_uses=p.max_uses, current_uses=p.current_uses)
                 for p in player.resource_pools
             ],
+            equipped=build_equipped_payload(player),
+            inventory=build_inventory_payload(player),
         )
 
     def _get_session(self, session_id: str) -> GameSession:
