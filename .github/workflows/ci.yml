@@ -7,7 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  # Required gate: backend lint + types + tests.
   check:
     runs-on: ubuntu-latest
     steps:
@@ -29,34 +28,7 @@ jobs:
       - name: Test
         run: uv run pytest --cov=src/dnd_simulator
 
-  # Required gate: frontend types + unit tests (mirrors `make check`).
   frontend:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Type check
-        run: npx tsc --noEmit
-
-      - name: Test
-        run: npx vitest run
-
-  # Non-required (informational until the existing failures are cleared).
-  # eslint currently fails on pre-existing violations (shadcn ui exports,
-  # set-state-in-effect, unused vars); not in `make check`.
-  frontend-lint:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -76,9 +48,12 @@ jobs:
       - name: Lint
         run: npx eslint src/
 
-  # Non-required (informational until the test fixtures are fixed).
-  # Currently red on main: e.g. world 'arena' manifest declares a custom
-  # 'ecology' layer with no content dir -> 500 on session create.
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npx vitest run
+
   integration:
     runs-on: ubuntu-latest
     steps:
