@@ -2,9 +2,10 @@
 
 Приоритеты: **must** — блокирует следующие уровни или играбельность, **should** — заметно улучшает качество, **could** — nice to have.
 
-Механики и контент с зависимостями — в [ecs-and-content.md](docs/brainstorms/ecs-and-content.md).
-Валидация и инварианты — в [world-state-machine.md](docs/brainstorms/world-state-machine.md).
-Что сделано — в [ROADMAP.md](docs/ROADMAP.md).
+Механики и контент с зависимостями — в [ecs-and-content.md](brainstorms/ecs-and-content.md).
+Валидация и инварианты — в [world-state-machine.md](brainstorms/world-state-machine.md).
+Что сделано — в [ROADMAP.md](ROADMAP.md).
+Свежие находки аудита живут в [audit.md](audit.md) до триажа; `/audit-triage` переносит их сюда.
 
 ---
 
@@ -136,7 +137,7 @@
 
 ## Security (from audits 2026-03-25)
 
-- [ ] **should** `cors-wildcard` — CORS allow_origins=["*"], allow_methods=["*"], allow_headers=["*"] в app.py
+- [ ] **should** `cors-wildcard` — origins теперь конфигурируются через `CORS_ALLOWED_ORIGINS` env + credentials отключаются при `*` (fixed d459e19). Остаётся: `allow_methods=["*"]`, `allow_headers=["*"]` всё ещё хардкод
 - [ ] **should** `no-auth` — Нет аутентификации/авторизации, все эндпоинты открыты по session_id
 - [ ] **should** `no-csrf` — Нет CSRF protection на state-changing HTTP; с CORS=* browser-based CSRF тривиален
 - [ ] **could** `ws-max-size` — Нет лимита на размер WebSocket сообщений

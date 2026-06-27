@@ -19,6 +19,8 @@ Run end-to-end regression tests through the real UI using Playwright. Tests foll
 - `--with-llm` — include section 8 (LLM scenarios). Burns tokens, use when changes touched LLM behavior.
 - Without this flag, section 8 is skipped (default).
 - `--section N[,N...]` — run only specific playbook sections (e.g. `--section 3,4` for combat + class features). Useful for targeted testing.
+- `--context LABEL` — label for the report filename and title (e.g. `sprint017-phase3`). Defaults to `regression`.
+- `--report PATH` — write the report to PATH instead of the default `docs/e2e-reports/<date>-<context>.md`. Used by `/close-phase` for its per-phase report.
 
 ## Protocol
 
@@ -73,11 +75,18 @@ Action when Playwright is unavailable:
 
 ### 3. Start the stack
 
+First confirm Playwright MCP is available:
+
+```
+ToolSearch: query="+playwright", max_results=3
+```
+
+If no `mcp__playwright__browser_*` tools are returned, **stop — this is a blocker.** Playwright MCP can't be restarted mid-session; tell the user to restart Claude Code (`/exit` then re-launch) and re-run. Do NOT write a report without browser testing.
+
 Kill any running instances and start fresh with full debug:
 
 ```bash
 # Kill existing processes
-docker compose down 2>/dev/null
 pkill -f 'uvicorn.*dnd_simulator' 2>/dev/null
 pkill -f 'vite' 2>/dev/null
 sleep 2
@@ -155,7 +164,7 @@ Read any log files that look relevant. Note silent errors — things that didn't
 
 ### 6. Write the report
 
-Create `docs/e2e-reports/<date>-<context>.md` (e.g. `2026-03-25-regression.md` or `2026-03-25-sprint003-phase2.md`):
+Create the report at `--report PATH` if it was provided, otherwise `docs/e2e-reports/<date>-<context>.md` (e.g. `2026-03-25-regression.md` or `2026-03-25-sprint003-phase2.md`):
 
 ```markdown
 # E2E Report: <context>

@@ -175,7 +175,7 @@ Ready for Phase 1 task generation.
 ### 7. Commit
 
 ```bash
-git add docs/sprints/NNN-slug/
+git add docs/sprints/NNN-slug/ docs/STATUS.md
 git commit -m "sprint NNN: plan — <goal summary>"
 ```
 

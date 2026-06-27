@@ -139,7 +139,7 @@ Update `docs/STATUS.md` — note the completed task:
 Commit:
 
 ```bash
-git add <changed files>
+git add <changed files> docs/STATUS.md
 git commit -m "sprint NNN phase N task M: <what was done>"
 ```
 
