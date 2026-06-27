@@ -2,9 +2,19 @@
 
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
+**Last updated:** 2026-06-28
+**Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), Phase 3 (автономные тики NPC).
+**Next:** активного спринта нет. Кандидаты — `must` из [BACKLOG](BACKLOG.md): `monster-spawn`, `quest-system`.
+**Blockers:** нет.
+
 ## Current Sprint
 
 No active sprint.
+
+## Recent activity (non-sprint)
+
+- 2026-06-20 — CORS origins сделаны конфигурируемыми (`CORS_ALLOWED_ORIGINS`); Docker base-image запинен по digest.
+- 2026-04-24 — post-017 cleanup: `perceive()` без вшитых ран в имя, REST `player_status` отдаёт equipped + inventory, убрана Cancel-кнопка в LevelUpModal.
 
 ## Sprint History
 

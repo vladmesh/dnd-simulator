@@ -21,7 +21,7 @@ Keep living docs in sync with the codebase. Documentation lives in two places: m
 | Doc | What it covers | Code signals | Update policy |
 |-----|---------------|-------------|---------------|
 | `CLAUDE.md` | Dev commands, architecture overview, code style, environment | `pyproject.toml`, `Makefile`, `src/dnd_simulator/core/`, new layers, new adapters | **Conservative** — see below |
-| `ARCHITECTURE.md` | Detailed system design, module map, data flow, principles | `core/`, `layers/`, `service.py`, `adapters/`, `llm/`, `storage/` | Keep accurate |
+| `ARCHITECTURE.md` | Detailed system design, module map, data flow, principles | `core/`, `layers/`, `service/`, `adapters/`, `llm/`, `storage/` | Keep accurate |
 | `README.md` | Project overview, quick start | Major feature additions, new dependencies | Keep accurate |
 | `docs/ROADMAP.md` | Dev phases, current status, links to plans | Completed phases, new plans in `docs/plans/` | Move done items, add new plans |
 | `docs/BACKLOG.md` | Prioritized backlog: bugs, tech debt, test gaps, small features (must/should/could) | Bug fixes, feature implementations | Mark fixed items done; keep priorities/tags |
@@ -72,10 +72,13 @@ Every package under `src/dnd_simulator/` has a module-level docstring in its `__
 | `layers/geography/` | Physical world: regions, weather, terrain, daylight | `layers/geography/*.py` |
 | `layers/politics/` | Nations, diplomacy, warfare, economy | `layers/politics/*.py` |
 | `layers/settlements/` | Towns, population, prosperity | `layers/settlements/*.py` |
-| `layers/npcs/` | NPC schedules, activities, dialog | `layers/npcs/*.py` |
+| `layers/ecology/` | Squad movement, abstract world simulation | `layers/ecology/*.py` |
+| `layers/entities/` | Tracked creatures (player, NPCs, monsters); awareness, activation, combat | `layers/entities/*.py` |
 | `master/` | Dungeon Master orchestrator role | `master/*.py` |
 | `rules/` | Pure game mechanics functions | `rules/*.py` |
-| `adapters/` | Transport adapters (CLI, API, Telegram) | `adapters/*.py` |
+| `service/` | GameService, ActionDispatcher, BrainFactory, command modules | `service/*.py` |
+| `content_loader/` | World/content loading, Pydantic schemas, catalogs, manifest resolver | `content_loader/*.py` |
+| `adapters/` | Transport adapters (REST + WebSocket API) | `adapters/api/*.py` |
 | `storage/` | Save/load interface and implementations | `storage/*.py` |
 | `llm/` | LLM client and prompt builders | `llm/*.py` |
 
