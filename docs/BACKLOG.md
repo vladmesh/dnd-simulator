@@ -46,10 +46,29 @@
 - [ ] **could** `drag-resize-panels` — Drag-and-drop / resizable панели на dashboard
 - [ ] **could** `mobile-layout` — Мобильная адаптация dashboard
 - [ ] **could** `log-filter-tabs` — Фильтрация лога табами (Все/Бой/Диалоги)
+- [ ] **should** `master-panel-creature-inventory` — `CreatureResponse` / `all_entities` query не включают inventory/equipped_weapon; мастер не видит предметы существ. Добавить поля в схему и query
+- [x] `master-give-item-ui` — ~~endpoint для give_item есть, кнопки нет~~ FIXED Sprint 007 phase 2: кнопка «Выдать предмет» в карточке существа
+- [x] `inspect-as-idle-param` — ~~inspect шёл как `Action(IDLE, {inspect_target})`~~ FIXED Sprint 009 phase 4: клиентская NpcInspectModal из awareness
+- [x] `world-builder-js-modules` — ~~world-builder.js 1700+ строк~~ OBSOLETE Sprint 008 phase 4: legacy vanilla JS заменён React SPA
+
+## Engine & Session
+
+- [ ] **should** `travel-action-type` — `go`/travel реализован как хак: `LocationPanel` шлёт `Action(WAIT, {hours: 0, travel_to})`. Нужен отдельный `ActionType.TRAVEL` с хендлером, валидацией маршрута и расчётом времени
+- [ ] **should** `npc-instant-say-response` — после `say` тикнуть NPC в локации (1 раунд), чтобы RuleBrain/LlmBrain ответил в том же запросе. Сейчас NPC отвечают только при `advance_time`
+- [ ] **could** `list-npcs-iterate-entities` — `list_npcs` итерирует по регионам; NPC в несуществующем регионе выпадает из списка. Итерировать по entities напрямую
+- [ ] **could** `periodic-autosave-scheduler` — фоновый asyncio таск в FastAPI lifespan каждые ~2 мин вызывает `autosave_all_sessions()`; cancel на shutdown перед финальным autosave. Дополняет per-action и shutdown автосейв
+
+## Performance
+
+- [ ] **could** `awareness-rebuild-cache` — `build_awareness()` делает 4-5 query к нижним слоям на каждый ход каждого существа (O(N)/раунд), bottleneck при >20 LlmBrain NPC. Решение: WorldSnapshot per (region, tick) для weather/region/settlements/politics + dirty-flag per location для nearby entities. Делать когда начнёт тормозить
 
 ## Bugs
 
 - [ ] **should** `battle-map-configs-not-wired` — `battle_map_configs` из `regions.yaml` не передаётся в `EntitiesLayer` при создании сессии в `game_service.py`. Все combat maps дефолтят в 60×60. `load_battle_maps()` keyed by region_id, `CombatManager` ищет по location_id — нужен маппинг через `location_graph`
+- [ ] **should** `player-character-no-attacks` — `POST /api/player/sessions/{id}/character` не принимает `attacks`; персонаж дерётся кулаками (1 урон). Добавить `attacks` в `CreatePlayerRequest` и `parse_player` (проверить — мог закрыться в Sprint 013 char-creation)
+- [ ] **could** `look-action-i18n-hardcode` — `_cmd_look` в GameService хардкодит строки «Terrain:»/«Weather:» вместо `_()`. Не критично (perception API отдаёт сырые данные), но для консистентности text-команд стоит перевести
+- [x] `sneak-attack-faction-check` — ~~SA ally-adjacency считала союзником любое живое существо в 5ft без учёта фракции~~ FIXED Sprint 011/014: ally detection через faction relations
+- [x] `flaky-initiative-test` — ~~`test_second_attack_does_not_reroll_initiative` падал рандомно~~ FIXED: AC=30 чтобы атаки всегда мазали, c2 не удаляется из turn_order
 
 ## Tech Debt (from audits 2026-03-25, updated 2026-03-29)
 
