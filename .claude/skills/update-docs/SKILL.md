@@ -24,7 +24,7 @@ Keep living docs in sync with the codebase. Documentation lives in two places: m
 | `ARCHITECTURE.md` | Detailed system design, module map, data flow, principles | `core/`, `layers/`, `service.py`, `adapters/`, `llm/`, `storage/` | Keep accurate |
 | `README.md` | Project overview, quick start | Major feature additions, new dependencies | Keep accurate |
 | `docs/ROADMAP.md` | Dev phases, current status, links to plans | Completed phases, new plans in `docs/plans/` | Move done items, add new plans |
-| `docs/backlog.md` | Known bugs and small feature requests | Bug fixes, feature implementations | Remove fixed bugs / done features |
+| `docs/BACKLOG.md` | Prioritized backlog: bugs, tech debt, test gaps, small features (must/should/could) | Bug fixes, feature implementations | Mark fixed items done; keep priorities/tags |
 | `docs/e2e-playbook.md` | E2E regression scenarios for Playwright | New game mechanics in `rules/`, `core/`, `adapters/`, `layers/`, `frontend/` | Add scenarios for new features, remove for deleted ones |
 
 #### CLAUDE.md update policy
@@ -46,11 +46,11 @@ The roadmap tracks macro progress. When updating:
 - **Don't invent phases** — only reflect what actually shipped or what has a plan/brainstorm doc
 - Keep the existing structure: Done → In Progress → Planned → Known Issues
 
-#### docs/backlog.md update policy
+#### docs/BACKLOG.md update policy
 
-The backlog is a short list of known bugs and small features. When updating:
-- **Remove items** whose underlying issue was fixed (check git log for evidence: relevant commits, changed files)
-- **Add new items** only if a bug or small feature request was explicitly discussed and not yet tracked
+BACKLOG.md is the prioritized backlog (must/should/could) of bugs, tech debt, test gaps and small features. When updating:
+- **Mark items done** when the underlying issue was fixed — check git log for evidence (relevant commits, changed files). Match the file's convention: `[x]` with a `~~strikethrough~~` and a `FIXED Sprint NNN` note, rather than deleting the line.
+- **Add new items** only if a bug or small feature request was explicitly discussed and not yet tracked, with a priority and kebab-case tag matching the existing format.
 - Don't speculatively add items you noticed while reading code — the backlog is curated by the user, this skill just keeps it in sync with reality
 
 #### docs/e2e-playbook.md update policy
@@ -130,7 +130,7 @@ git log --oneline --since="<last_run>" --name-only
 
 From changed files, use the "Code signals" column to determine which docs are potentially affected. Only review those.
 
-For `docs/backlog.md` — also check commit messages for keywords like "fix", "resolve", "close" that might indicate a backlog item was addressed. Read backlog items and see if any match the recently changed code.
+For `docs/BACKLOG.md` — also check commit messages for keywords like "fix", "resolve", "close" that might indicate a backlog item was addressed. Read backlog items and see if any match the recently changed code.
 
 For `docs/ROADMAP.md` — check if any commit messages or changed files suggest a phase/feature was completed or a new plan was added.
 

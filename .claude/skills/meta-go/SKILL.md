@@ -38,7 +38,7 @@ Read `docs/STATUS.md` to understand where we are. This tells you how many steps 
 Spawn an Agent with this exact prompt structure:
 
 ```
-You are working on a D&D simulator project at /home/vlad/projects/dnd_simulator.
+You are working on the dnd-simulator project. Your working directory is the repository root (run `git rev-parse --show-toplevel` if you need the absolute path).
 
 Read CLAUDE.md for project rules. Read docs/STATUS.md for current sprint state.
 

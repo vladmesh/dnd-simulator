@@ -31,7 +31,7 @@ Unused imports are caught by ruff, so focus on what the linter misses:
 
 ```bash
 # Run linter to catch unused imports
-cd /home/vlad/projects/dnd_simulator && uv run ruff check src/ --select F401
+uv run ruff check src/ --select F401
 ```
 
 **Functions/classes with zero callers** — check definitions against usage. Start with files that feel like they might have accumulated dead weight (utility modules, old helpers):
@@ -68,9 +68,6 @@ Check if any reference completed work or are no longer relevant.
 # Files over 400 lines (Python)
 find src/dnd_simulator -name '*.py' -exec wc -l {} + | sort -rn | head -20
 
-# Files over 400 lines (JavaScript)
-find src/dnd_simulator -name '*.js' -exec wc -l {} + | sort -rn | head -20
-
 # Functions over 50 lines — look for long def blocks
 rg -n '^def \w+|^    def \w+' src/dnd_simulator/ --type py
 ```
@@ -80,17 +77,17 @@ For functions that look long, read them and count lines. Also watch for:
 - Copy-paste patterns (similar logic repeated across files)
 - `# noqa` comments that could be fixed instead of suppressed
 
-**Frontend code smells** — the vanilla JS frontend (`adapters/api/static/js/`) doesn't have a linter, so check manually:
+**Frontend code smells** — the React/TypeScript frontend lives in `frontend/src/`. ESLint and `tsc` already run via `make lint-frontend` / `make typecheck-frontend`, so focus on what they miss:
 
 ```bash
-# Large JS functions (look for function/async function definitions, then check length)
-rg -n 'function \w+|async function \w+|const \w+ = (?:async )?\(' src/dnd_simulator/adapters/api/static/js/
+# Large components (over 400 lines)
+find frontend/src \( -name '*.tsx' -o -name '*.ts' \) -exec wc -l {} + | sort -rn | head -20
 
-# Dead JS functions — defined but never called
-rg -n 'function \w+' src/dnd_simulator/adapters/api/static/js/
+# eslint-disable suppressions that could be fixed instead
+rg -n 'eslint-disable' frontend/src
 ```
 
-For each JS function, grep for its name across all `.js` and `.html` files. Zero hits outside the definition = dead code.
+For each oversized component, read it and look for extractable sub-components or duplicated logic.
 
 ---
 
@@ -159,19 +156,14 @@ rg -n 'hp:|population:|wealth:|hours:|ac:' src/dnd_simulator/adapters/api/schema
 
 Flag fields that accept arbitrary values where negative or extreme numbers make no game sense.
 
-**Frontend XSS** — the vanilla JS frontend renders server responses into the DOM. Check for unsafe patterns:
+**Frontend XSS** — React escapes interpolated values by default, so the main XSS vector is `dangerouslySetInnerHTML`:
 
 ```bash
-# innerHTML with dynamic content (potential XSS)
-rg -n 'innerHTML' src/dnd_simulator/adapters/api/static/ --type js
-
-# Check if any user-controlled data flows into innerHTML
-# Safe: innerHTML with static HTML templates
-# Unsafe: innerHTML with server response data or user input without escaping
-rg -n 'innerHTML.*\$\{|innerHTML.*\+' src/dnd_simulator/adapters/api/static/ --type js
+# dangerouslySetInnerHTML usage (potential XSS)
+rg -n 'dangerouslySetInnerHTML' frontend/src
 ```
 
-For each `innerHTML` hit, trace the data source: if it comes from a WebSocket message, REST response, or user input field without escaping, it's an XSS vector. Using `textContent` for user-controlled strings is the safe alternative.
+For each hit, trace the data source: if it renders a WebSocket message, REST response, or user input without sanitization, it's an XSS vector. Prefer plain JSX text (auto-escaped) or a sanitizer.
 
 ---
 
@@ -307,22 +299,23 @@ For each, verify it implements: `name`, `tick_interval`, `tick`, `handle_event`,
 #### Test Gaps
 
 ```bash
-# Source files without corresponding tests
+# Source files without corresponding tests (tests live in tests/unit/)
 ls src/dnd_simulator/rules/*.py | sed 's|src/dnd_simulator/||;s|\.py||;s|/|_|g' | while read mod; do
-  [ -f "tests/test_${mod}.py" ] || echo "MISSING: tests/test_${mod}.py"
+  [ -f "tests/unit/test_${mod}.py" ] || echo "MISSING: tests/unit/test_${mod}.py"
 done
 
 # Skipped tests
 rg -n '@pytest.mark.skip|@pytest.mark.xfail' tests/ --type py
 
-# Layer files without tests
-for layer in geography politics settlements entities; do
-  [ -f "tests/test_${layer}_layer.py" ] || echo "MISSING: tests/test_${layer}_layer.py"
+# Layer files without tests (entities layer test is test_npc_layer.py)
+for layer in geography politics settlements ecology; do
+  [ -f "tests/unit/test_${layer}_layer.py" ] || echo "MISSING: tests/unit/test_${layer}_layer.py"
 done
+[ -f "tests/unit/test_npc_layer.py" ] || echo "MISSING: tests/unit/test_npc_layer.py (entities layer)"
 
-# API, WebSocket, and service tests
+# API, WebSocket tests
 for mod in api ws; do
-  [ -f "tests/test_${mod}.py" ] || echo "MISSING: tests/test_${mod}.py"
+  [ -f "tests/unit/test_${mod}.py" ] || echo "MISSING: tests/unit/test_${mod}.py"
 done
 ```
 
@@ -330,7 +323,7 @@ done
 
 ```bash
 # What WS scenarios are tested?
-rg -n 'def test_|async def test_' tests/test_ws.py
+rg -n 'def test_|async def test_' tests/unit/test_ws.py
 ```
 
 Flag if any of these are missing:
@@ -419,7 +412,7 @@ Write/overwrite `docs/audit.md`:
 ## Test Gaps
 | Source File | Expected Test | Status |
 |-------------|---------------|--------|
-| `rules/combat.py` | `tests/test_rules_combat.py` | missing |
+| `rules/combat.py` | `tests/unit/test_rules_combat.py` | missing |
 
 ## Vision Drift
 | Change | Invariant Violated | Impact |
