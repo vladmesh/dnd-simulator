@@ -96,6 +96,10 @@ Not urgent, not blocking. Candidates for BACKLOG.md:
 
 ### 6. Wait for user
 
+**Autonomous runs (`/meta-go`):** there is no user — the orchestrator is the decision authority. Skip this wait entirely: apply bucket-1 quick-fixes, fix sprint-relevant items <5min (route >5min into a refactor phase), append bucket-3 to BACKLOG.md, then go to step 7.
+
+Otherwise (interactive `/go`):
+
 Do NOT:
 - Apply any fixes
 - Create tasks
