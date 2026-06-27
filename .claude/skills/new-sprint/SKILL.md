@@ -21,6 +21,16 @@ Plan a new sprint through a structured dialogue with the user. This skill covers
 
 ## Protocol
 
+### 0. Branch off a clean main
+
+Sprint work lives on a branch, not on `main`. Start from an up-to-date main:
+
+```bash
+git checkout main && git pull --ff-only
+```
+
+The sprint branch (`sprint/NNN-slug`) is created in step 4 once the slug is decided; every commit from here on lands on that branch, and `/close-sprint` turns it into a PR.
+
 ### 1. Gather context
 
 Read these files to understand the current state of the project:
@@ -83,7 +93,13 @@ The user picks a direction (or proposes their own). Discuss until you both agree
 - **Sprint goal** — one sentence describing the end state
 - **Scope boundary** — what's explicitly in and out
 
-Once agreed, rename the sprint folder to `NNN-slug` (derive slug from the goal, kebab-case, 2-3 words). Write the goal and context into `sprint.md`:
+Once agreed, rename the sprint folder to `NNN-slug` (derive slug from the goal, kebab-case, 2-3 words) and create the sprint branch:
+
+```bash
+git checkout -b sprint/NNN-slug
+```
+
+The uncommitted scaffold from step 2 carries onto the new branch. Write the goal and context into `sprint.md`:
 
 ```markdown
 # Sprint NNN — <Title>
@@ -179,7 +195,7 @@ git add docs/sprints/NNN-slug/ docs/STATUS.md
 git commit -m "sprint NNN: plan — <goal summary>"
 ```
 
-Do NOT push.
+Commits land on the sprint branch; `main` stays untouched until `/close-sprint` opens the PR. Do NOT push.
 
 ### 8. Report
 
