@@ -1,8 +1,8 @@
 ---
 name: close-phase
 description: >
-  Close the current sprint phase: run integration tests (add new ones if needed), run E2E via Playwright
-  with full debug, write a report, and mark the phase complete if no blockers. Use when user says
+  Close the current sprint phase: run integration tests (add new ones if needed), run E2E via the /e2e
+  skill, and mark the phase complete if no blockers. Use when user says
   "close phase", "finish phase", "phase done", "e2e", "run e2e", "test the phase", "verify phase",
   or when all tasks in a phase are marked done and it's time to validate before moving on.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Agent
@@ -10,7 +10,7 @@ allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Agent
 
 # Close Phase
 
-Validate and close the current sprint phase. Integration tests → E2E via Playwright → report → close (or block).
+Validate and close the current sprint phase. Integration tests → E2E (via the `/e2e` skill) → close (or block).
 
 ## What this skill does NOT do
 
@@ -64,129 +64,23 @@ Write and add the new integration tests. Run again until green:
 make test-integration
 ```
 
-### 3. E2E via Playwright
+### 3. E2E via `/e2e`
 
-This is manual-ish testing through the actual UI with Playwright MCP, with full debug logging.
+E2E is a single procedure owned by the `/e2e` skill: Playwright availability check, debug stack launch, playbook + auto-discovered scenarios, log review, and report. Do NOT duplicate it here.
 
-#### 3.0. Verify Playwright MCP is available
-
-Before starting E2E, confirm that Playwright MCP tools are accessible:
+Invoke it scoped to this phase, writing the report to the per-phase path:
 
 ```
-ToolSearch: query="+playwright", max_results=3
+/e2e --context sprintNNN-phaseN --report docs/sprints/NNN-slug/e2e/phaseN-report.md
 ```
 
-If tools like `mcp__playwright__browser_navigate` are returned — proceed.
+- Test the phase's new functionality first, then a basic regression. Use `--section N[,N...]` to target the playbook sections the phase touched.
+- Pass `--with-llm` only if the phase changed LLM behavior.
+- **If `/e2e` reports Playwright MCP is unavailable, it blocks.** Do NOT close the phase without E2E. Tell the user to restart the session (`/exit` then re-launch) and re-run `/close-phase`.
 
-**If no Playwright tools are found — this is a BLOCKER. Do NOT skip E2E or proceed without it.**
+When `/e2e` finishes, read the report it wrote at `docs/sprints/NNN-slug/e2e/phaseN-report.md` and use its blockers to decide close vs block below.
 
-Playwright MCP is installed as a Claude Code plugin (`@playwright/mcp`). If it disconnected mid-session, it cannot be restarted without restarting the Claude Code session itself.
-
-Action when Playwright is unavailable:
-1. Stop immediately. Do NOT close the phase without E2E.
-2. Tell the user: "Playwright MCP is not available. Restart the Claude Code session (`/exit` then re-launch) and re-run `/close_phase`."
-3. Do NOT write an E2E report without browser testing. Do NOT mark the phase as closed.
-
-#### 3a. Restart the stack with debug
-
-Kill any running stack and start fresh with full debug:
-
-```bash
-# Kill existing
-docker compose down 2>/dev/null; pkill -f uvicorn 2>/dev/null; pkill -f vite 2>/dev/null
-sleep 2
-
-# Start backend with debug + file logging
-mkdir -p /tmp/dnd-e2e-logs
-LOG_LEVEL=DEBUG LOG_DIR=/tmp/dnd-e2e-logs make serve &
-
-# Start frontend
-make frontend &
-
-# Wait for both to be ready
-sleep 5
-```
-
-#### 3b. Test the NEW functionality
-
-Using Playwright MCP tools, navigate to the app and test what the phase delivered. This is the primary goal — verify the new feature works end-to-end through the real UI.
-
-For each test scenario:
-1. Describe what you're about to test and what you expect
-2. Perform the actions via Playwright
-3. Record what happened (screenshots, console output, logs)
-4. Note any discrepancies between expected and actual
-
-#### 3c. Basic regression
-
-Run a minimal regression — the simplest existing flows to make sure nothing is broken:
-
-- Load a world, verify it appears
-- Basic combat: attack an NPC, verify damage appears in log
-- Basic interaction: if village world, talk to an NPC (rule-based only unless the phase touched LLM)
-
-**LLM usage:** Avoid LLM-brain NPCs unless the phase specifically modified LLM behavior. If it did — test with LLM, burning some tokens is acceptable for E2E validation.
-
-#### 3d. Quick fixes
-
-If something is broken and fixable in <5 minutes — fix it immediately, then restart and retest that scenario. Note the fix in the report.
-
-If something is seriously broken (>5 minutes to fix, unclear cause, design issue) — note it as a blocker and continue testing other scenarios. Don't spend E2E time debugging.
-
-### 4. Check logs
-
-After E2E, review the debug logs:
-
-```bash
-ls /tmp/dnd-e2e-logs/
-# Read relevant log files for errors, warnings, unexpected behavior
-```
-
-Note anything suspicious — even if the UI looked fine, logs might reveal silent errors, unhandled exceptions, or performance issues.
-
-### 5. Write the E2E report
-
-Create `docs/sprints/NNN-slug/e2e/phaseN-report.md`:
-
-```markdown
-# Phase N E2E Report
-
-**Date:** <today>
-**Sprint:** NNN-slug
-**Phase:** N — <Phase Name>
-
-## New Functionality Tested
-
-| Scenario | Expected | Actual | Status |
-|----------|----------|--------|--------|
-| <what you did> | <what should happen> | <what happened> | pass/fail/partial |
-
-## Regression
-
-| Scenario | Status | Notes |
-|----------|--------|-------|
-| Load world | pass | |
-| Basic combat | pass | |
-| NPC interaction | pass | |
-
-## Quick Fixes Applied
-
-- <description of fix, if any>
-
-## Log Analysis
-
-- <notable findings from debug logs>
-
-## Blockers
-
-- <serious issues that prevent phase closure, if any>
-
-## Minor Issues
-
-- <things that work but are suboptimal — candidates for backlog>
-```
-
-### 6. Close or block
+### 4. Close or block
 
 #### If no blockers:
 
@@ -215,7 +109,8 @@ Update `docs/STATUS.md`:
 Commit:
 
 ```bash
-git add docs/sprints/NNN-slug/ tests/integration/
+git add docs/sprints/NNN-slug/ docs/STATUS.md tests/integration/
+# also stage any src/ or frontend/ files you fixed during integration/E2E debugging (steps 2-3)
 git commit -m "sprint NNN phase N: close — <summary>"
 ```
 
@@ -237,7 +132,7 @@ Blockers:
 
 Tell the user what the blockers are and what you recommend (fix in a new task, rethink approach, etc.).
 
-### 7. Cleanup
+### 5. Cleanup
 
 ```bash
 # Kill the debug stack
@@ -245,7 +140,7 @@ pkill -f uvicorn 2>/dev/null
 pkill -f vite 2>/dev/null
 ```
 
-### 8. Report
+### 6. Report
 
 ```
 Phase N: <Name>

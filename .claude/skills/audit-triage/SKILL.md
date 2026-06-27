@@ -105,7 +105,7 @@ Do NOT:
 
 Just present the triage and wait. The user decides:
 - "Fix quick-fixes" → apply bucket 1
-- "Add to backlog" → append bucket 3 to BACKLOG.md
+- "Add to backlog" → append bucket 3 to BACKLOG.md (skip items already tracked there; mark a finding already fixed in code as done rather than re-adding it)
 - "Create refactor task" → create a task file for bucket 2 items
 - Or any combination / custom decision
 
@@ -122,4 +122,13 @@ Only then — append audit triage note to `docs/STATUS.md`:
 **Audit:** Triaged <date>. Quick-fix: N applied. Sprint-relevant: N (→ refactor phase / deferred). Backlog: N added.
 ```
 
-Do NOT write this marker at the start of the triage or after just presenting the report. It signals to `/go` and `/close_sprint` that the audit cycle is complete.
+Then commit the marker (and any backlog/task files changed during triage):
+
+```bash
+git add docs/STATUS.md docs/BACKLOG.md docs/sprints/NNN-slug/
+git commit -m "sprint NNN: audit triaged"
+```
+
+Do NOT push.
+
+Do NOT write this marker at the start of the triage or after just presenting the report. It signals to `/go` and `/close-sprint` that the audit cycle is complete.

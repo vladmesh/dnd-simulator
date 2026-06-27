@@ -2,7 +2,7 @@
 name: meta-go
 description: >
   Autonomous sprint orchestrator. Runs the full sprint pipeline hands-free by spawning one fresh agent
-  per pipeline step. Each agent does exactly one granule (/plan_phase, /implement one task, /close_phase,
+  per pipeline step. Each agent does exactly one granule (/plan-phase, /implement one task, /close-phase,
   /audit, etc.) and exits. Meta-go monitors results, decides if the next step is safe to run autonomously,
   and stops only when a human decision is genuinely needed. Use when the user says "meta-go", "run the sprint",
   "autopilot", "автопилот", "прогони спринт", or wants to leave and come back to a finished sprint.
@@ -17,13 +17,13 @@ Run the sprint pipeline end-to-end by spawning one Agent per step. The critical 
 
 One granule = one invocation of /go. By the /go decision tree, that means exactly one of:
 
-- `/plan_phase` — generate tasks for one phase
+- `/plan-phase` — generate tasks for one phase
 - `/implement` — implement ONE task (not two, not "the rest")
-- `/close_phase` — validate and close one phase
+- `/close-phase` — validate and close one phase
 - `/audit` — scan the codebase
-- `/audit_triage` — triage findings
+- `/audit-triage` — triage findings
 - `/e2e` — post-audit E2E run
-- `/close_sprint` — final gate + push
+- `/close-sprint` — final gate + push
 
 Each of these is a single agent spawn. No combining.
 
@@ -51,7 +51,7 @@ CRITICAL CONSTRAINTS:
 - Do NOT invoke /go a second time. Do NOT invoke any other skill after /go finishes.
 - Your job is ONE granule. Report and exit.
 
-If /go determines the next step is /audit_triage:
+If /go determines the next step is /audit-triage:
 - Apply all quick-fixes (bucket 1) without asking.
 - For sprint-relevant items (bucket 2): create a refactor phase if there are items with effort >5min.
   Items <5min — fix immediately alongside the quick-fixes.
@@ -86,7 +86,7 @@ Check the agent's report for:
 - **E2E blockers** — serious bugs that need >5min to fix. Report the blocker list.
 - **close_sprint failed** — gate check failed. Report what's missing.
 - **Agent confusion** — output doesn't make sense, agent seems to have gone off track. Don't retry blindly — report what happened.
-- **Sprint complete** — /close_sprint succeeded, code is pushed. Report the final summary.
+- **Sprint complete** — /close-sprint succeeded, code is pushed. Report the final summary.
 
 #### Auto-recover (limited):
 - If `make check` failed on a lint/format issue and the agent didn't fix it — spawn a quick fix agent. But only once. If it fails again, stop and report.
@@ -96,7 +96,7 @@ Check the agent's report for:
 After each agent, print a brief status line:
 
 ```
-[N] /skill_name — result (tests: NNNN, duration: Xm)
+[N] /skill-name — result (tests: NNNN, duration: Xm)
 Sprint NNN phase P: <where we are>
 ```
 

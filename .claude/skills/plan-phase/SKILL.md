@@ -165,7 +165,7 @@ Ready to start task 1.
 ### 9. Commit
 
 ```bash
-git add docs/sprints/NNN-slug/
+git add docs/sprints/NNN-slug/ docs/STATUS.md
 git commit -m "sprint NNN phase N: task breakdown"
 ```
 
