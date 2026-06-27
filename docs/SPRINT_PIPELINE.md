@@ -16,6 +16,8 @@ docs/sprints/NNN-slug/
 
 **Инвариант коммитов:** скилл стейджит ровно изменённые им файлы и **всегда включает `docs/STATUS.md`**, если его трогал. STATUS.md не остаётся незакоммиченным после шага — иначе диспетчер (`/go`, `/meta-go`) рассуждает по устаревшему/потерянному состоянию.
 
+**Форма STATUS.md:** шапка (`Last updated`, `Position` по ROADMAP, `Next`, `Blockers`) → `## Current Sprint` → `## Sprint History`. Любой скилл, меняющий STATUS.md, обновляет `Last updated`.
+
 ## Шаги
 
 ### 1. Планирование → `/new-sprint`

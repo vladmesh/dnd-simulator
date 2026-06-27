@@ -115,9 +115,14 @@ Update `sprint.md` Results section:
 
 #### 4c. Update docs/STATUS.md
 
-Move the completed sprint to the Sprint History table. Set the current sprint section to empty or the next sprint if one is planned:
+Move the completed sprint to the Sprint History table, refresh the header (`Last updated`, `Position`, `Next`, `Blockers`), and set the current sprint section to empty or the next sprint if one is planned:
 
 ```markdown
+**Last updated:** <today>
+**Position:** <where the project sits on the ROADMAP ladder after this sprint>
+**Next:** <next sprint candidate, or "активного спринта нет" + top BACKLOG `must` items>
+**Blockers:** <none, or list>
+
 ## Current Sprint
 
 No active sprint.
