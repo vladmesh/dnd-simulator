@@ -83,8 +83,13 @@ def ws_village(_urls: tuple[str, str, str]) -> Iterator[tuple[str, str, str]]:
     requests.delete(f"{api}/sessions/{sid}", timeout=5)
 
 
-def _recv_until(sock: ws_lib.WebSocket, target_type: str, max_msgs: int = 15) -> dict | None:
-    """Receive messages until one with target_type appears, or return None."""
+def _recv_until(sock: ws_lib.WebSocket, target_type: str, max_msgs: int = 80) -> dict | None:
+    """Receive messages until one with target_type appears, or return None.
+
+    The arena session is module-scoped and shared across WS tests, so on connect
+    the server can replay a long burst of combat events (4 fighters, multi-action
+    turns) before the player's ``turn``. Keep the cap well above a worst-case round.
+    """
     for _ in range(max_msgs):
         msg = ws_recv(sock)
         if msg["type"] == target_type:

@@ -2,11 +2,12 @@
 
 Tests run against a live backend in docker compose.
 CRUD tests fork arena into a throwaway world to avoid mutating shared fixtures.
-assembled_test has all library layers — tests write rejection.
+Library write-rejection assembles a throwaway library-backed world at runtime.
 """
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Iterator
 from http import HTTPStatus
 
@@ -175,22 +176,44 @@ class TestLibraryRejectsWrites:
     """Write operations on library-backed layers return 400."""
 
     def test_create_on_library_layer_rejected(self, api_url: str) -> None:
-        resp = requests.post(
-            f"{api_url}/worlds/assembled_test/entities/npc/blocked_npc",
+        # Assemble a throwaway world whose layers are all library-backed,
+        # then verify entity writes are rejected (caller must fork first).
+        world_id = f"asm_libwrite_{uuid.uuid4().hex[:8]}"
+        assembled = requests.post(
+            f"{api_url}/worlds/assemble",
             json={
-                "name": "Blocked",
-                "race": "human",
-                "class": "commoner",
-                "role": "commoner",
-                "start_location": "test_loc",
-                "hp": 5,
-                "ac": 10,
+                "id": world_id,
+                "name": "Lib Write Test",
+                "layer_selections": {
+                    "geography": "test_geo",
+                    "politics": "test_pol",
+                    "settlements": "test_set",
+                    "ecology": "test_eco",
+                    "entities": "test_ent",
+                },
             },
-            timeout=5,
+            timeout=10,
         )
-        assert resp.status_code == HTTPStatus.BAD_REQUEST
-        detail = resp.json()["detail"].lower()
-        assert "library" in detail or "fork" in detail
+        assembled.raise_for_status()
+        try:
+            resp = requests.post(
+                f"{api_url}/worlds/{world_id}/entities/npc/blocked_npc",
+                json={
+                    "name": "Blocked",
+                    "race": "human",
+                    "class": "commoner",
+                    "role": "commoner",
+                    "start_location": "test_loc",
+                    "hp": 5,
+                    "ac": 10,
+                },
+                timeout=5,
+            )
+            assert resp.status_code == HTTPStatus.BAD_REQUEST
+            detail = resp.json()["detail"].lower()
+            assert "library" in detail or "fork" in detail
+        finally:
+            requests.delete(f"{api_url}/worlds/{world_id}", timeout=5)
 
 
 # ---------------------------------------------------------------------------
