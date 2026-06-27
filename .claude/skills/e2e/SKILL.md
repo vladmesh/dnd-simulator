@@ -84,7 +84,7 @@ sleep 2
 
 # Start backend with debug logging
 mkdir -p /tmp/dnd-e2e-logs
-DEBUG=1 LOG_DIR=/tmp/dnd-e2e-logs nohup uv run uvicorn dnd_simulator.adapters.api.app:app --host 0.0.0.0 --port 8001 --reload --reload-exclude 'saves/*' > /tmp/dnd-e2e-backend.log 2>&1 &
+LOG_LEVEL=DEBUG LOG_DIR=/tmp/dnd-e2e-logs nohup uv run uvicorn dnd_simulator.adapters.api.app:app --host 0.0.0.0 --port 8001 --reload --reload-exclude 'saves/*' > /tmp/dnd-e2e-backend.log 2>&1 &
 echo $! > /tmp/dnd-e2e-backend.pid
 
 # Start frontend
@@ -163,7 +163,7 @@ Create `docs/e2e-reports/<date>-<context>.md` (e.g. `2026-03-25-regression.md` o
 **Date:** <today>
 **Flags:** --no-llm | --llm
 **Sections tested:** all | 1,3,5
-**Stack:** DEBUG=1, LOG_DIR=/tmp/dnd-e2e-logs
+**Stack:** LOG_LEVEL=DEBUG, LOG_DIR=/tmp/dnd-e2e-logs
 
 ## Summary
 
