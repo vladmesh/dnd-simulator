@@ -6,9 +6,11 @@ description: >
   exactly one granule (/plan-phase, /implement one task, /close-phase, /audit, etc.) and exits. The
   orchestrator is the SOLE decision authority: it makes every call itself, answers any clarifying
   questions its sub-agents raise, and ends the run only on success or an unrecoverable dead-end — never to
-  ask a human. Use when the user says "meta-go", "run the sprint", "autopilot", "автопилот",
+  ask a human. Optionally bounded: `/meta-go N` runs at most N granules then stops with a resume report.
+  Use when the user says "meta-go", "run the sprint", "autopilot", "автопилот",
   "прогони спринт", or wants to leave and come back to a finished sprint.
 allowed-tools: Bash, Read, Grep, Glob, Agent
+argument-hint: "[N]"
 ---
 
 # Meta-Go — Sprint Orchestrator
@@ -22,7 +24,16 @@ This is an experiment in fully autonomous development. There is **no human in th
 - **You make every decision yourself.** Scope, design, naming, trade-offs, whether to proceed, whether to refactor. Default to the choice best aligned with `docs/VISION.md` and the layer-stack design in `CLAUDE.md`. When genuinely uncertain, take the most reversible option and proceed — do not halt.
 - **You answer your sub-agents.** If a spawned agent surfaces a clarifying question or a decision it could not make alone, *you* answer it: read its report, decide, and thread the answer into the next spawn (or a short dedicated follow-up agent). Never defer a sub-agent's question to a human.
 - **You don't stop to ask.** "Stop and report to user" / "wait for user" steps in the per-step skills (e.g. `/audit-triage`) are addressed to the interactive `/go` path. Under meta-go you ARE the user — apply the decision and continue.
-- **You end the run** only on sprint completion (closed and pushed) or an unrecoverable dead-end (see Termination). Log your decisions as you go so a human can review the run afterward.
+- **You end the run** only on sprint completion (closed and pushed), the granule budget running out, or an unrecoverable dead-end (see Termination). Log your decisions as you go so a human can review the run afterward.
+
+## Run length — the `N` argument
+
+`/meta-go N` runs **at most N granules**, then stops and reports. `/meta-go` with no argument runs until the sprint is closed or a dead-end.
+
+- **A granule is one `/go` call**, and `/go` may pick any step (`/plan-phase`, `/implement` one task, `/close-phase`, `/audit`, `/audit-triage`, `/e2e`, `/close-sprint`). N counts ALL of them, not just implement-tasks. So `/meta-go 5` might be five implements, or three implements + one close-phase + one audit. Calibrate N knowing a step can be heavy (a `/close-phase` runs the full E2E).
+- **Each granule costs 1 from the budget, retries included.** A targeted auto-recover micro-fix that doesn't go through `/go` (e.g. a lone lint fix) doesn't count, but the 3-failure rail still bounds it.
+- **`/close-sprint` is allowed within the budget.** If it lands inside N, the run closes the sprint and pushes to `main` — flag this loudly in the final report.
+- **Never start a new sprint.** If the next granule would be `/new-sprint` (sprint complete / none active), STOP and report even if budget remains. A bounded run finishes authorized work, it doesn't open new scope.
 
 ## What is a "granule"
 
@@ -45,6 +56,8 @@ Each of these is a single agent spawn. No combining.
 Read `docs/STATUS.md` to understand where we are. This tells you how many steps remain and what the next one is.
 
 ### 2. The loop
+
+If invoked as `/meta-go N`, set a granule budget of N; with no argument the budget is unbounded. Before each spawn, check the budget — if it's 0, stop (see Termination). Decrement it after each granule.
 
 Spawn an Agent with this exact prompt structure:
 
@@ -102,7 +115,7 @@ Check the agent's report for:
 After each agent, print a brief status line:
 
 ```
-[N] /skill-name — result (tests: NNNN, duration: Xm)
+[N] /skill-name — result (tests: NNNN, duration: Xm) — budget: K left
 Sprint NNN phase P: <where we are>
 ```
 
@@ -110,9 +123,12 @@ This is the run log a human can scan afterward (the run itself does not wait for
 
 ### 5. Termination
 
-The loop ends ONLY when:
-- Sprint is closed and pushed (success).
-- Unrecoverable dead-end: the same step fails 3 consecutive times despite your remediation, or a gate cannot be satisfied after you've run the granules that should satisfy it. This is a runaway/cost safety rail, not a human-decision escalation — record the final state for later review and stop.
+The loop ends when (first to hit):
+- **Granule budget exhausted** — `/meta-go N` ran its N granules. Clean stop.
+- **Sprint boundary** — the next granule would be `/new-sprint` (sprint just closed, or none active). Stop even with budget remaining; a bounded run finishes authorized work, it doesn't open new scope. (A successful `/close-sprint` ends the run here too.)
+- **Unrecoverable dead-end** — the same step fails 3 consecutive times despite remediation, or a gate can't be satisfied after you've run the granules that should satisfy it. Runaway/cost safety rail, not a human escalation.
+
+On any stop, print a final summary: granules run (and budget left, if bounded), what's done vs still pending in the plan, the next step to resume with, whether anything was pushed to `main`, and the autonomous decisions you made. Record the final state for later review.
 
 There is no "wait for human" exit. If you find yourself wanting to stop and ask, decide instead and continue.
 
