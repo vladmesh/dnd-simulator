@@ -77,7 +77,7 @@
 
 ## Status
 
-**Current:** Все 3 фазы закрыты (Phase 1/2/3 ✓). Integration 154/154, E2E phase3 6/6 (0 NEW-блокеров), `make check` зелёный. Ready for audit.
+**Current:** CLOSED 2026-06-29. Все 3 фазы закрыты (Phase 1/2/3 ✓), аудит триажирован, post-audit E2E зелёный (0 NEW-блокеров), integration 154/154, `make check` зелёный. См. Results.
 
 ## Decisions
 
@@ -89,8 +89,20 @@
 
 ## Deferred
 
-_(заполняется по ходу спринта)_
+- **should** `player-xp-not-persisted` — XP/`level_up_available` не переживают современный save/reload (`to_full_save_data` не сериализует `experience`); в dev усугубляется WS StrictMode evict→restore. Обнаружено в phase 3, занесено в BACKLOG, фикс вне скоупа техспринта (чинить с/после `session-disconnect-debounce`).
+- Растущие модули из аудита (`round-growing`, `activation-manager-growing`, `action-defs-growing`, `perception-fail-fast`, `god-class-combat-manager`) — это combat/ecology/core, не control-plane. Отложены в будущий tech-sweep (триаж 2026-06-29).
+- Преэкзистинг minor из E2E: dev-only WS StrictMode race, `spawn-role-freetext-enum`, английские item/faction-имена внутри RU-строк (кандидат в i18n-свип). Все в BACKLOG.
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-06-29
+
+Техспринт достиг цели: control-plane отвердён под будущий разрез на роли в `control-interfaces`.
+
+- **Тест-сетка (Phase 1):** characterization-сетка на `session.py` (listener dispatch, round lifecycle start/stop идемпотентность + brain wiring) + `commands_save` round-trip через реальный `JsonFileStore`; `get_world_state` теперь fail-fast с именем слоя/запроса вместо `AssertionError`/500.
+- **Peel (Phase 2):** `GameService` 1044 → 357 строк. Команды разнесены в миксины `WorldBuilderCommands` (world/content/catalog CRUD) и `PlayerCommands` (create_player/level_up_player/player_status) поверх `GameServiceProtocol`. `parse_action`/`ActionParseError` вынесены в `service/action_parsing.py` — адаптеры больше не импортируют `Action`/`ActionType` из core. `World.make_query_fn`/`make_emit_fn` сделаны public. Три backlog-айтема (`action-parsing-in-adapter`, `world-private-method-access`, `adapter-imports-core-directly`) закрыты.
+- **Видимые дырки (Phase 3):** combat-log i18n (сырые `error=` в `movement.py` обёрнуты в `_()`, em-dash убраны, прогон каталога убрал утечку `{oa}`), encounter-перцептор («Поблизости что-то шевелится» вместо утечки ростера/фоллбэка «Something happened»), фронт-гейт Attack/Talk на трупах (`!entity.lootable` в `Perception.tsx`). Удалены 4 мёртвые функции (`refund`/`walk_path`/`prone_stand_cost`/`to_save_data`). Сверка бэклога: 8 айтемов помечены fixed/obsolete.
+
+**Метрики:** integration 154/154 на всех трёх close-phase; финальный post-audit E2E — 28 сценариев, 27 pass / 1 partial, 0 NEW-блокеров (`e2e-reports/2026-06-29-sprint019-post-audit.md`). Аудит 2026-06-29 — 17 находок, 0 new of note, 0 арх-нарушений; «healthiest control-plane state to date». `make check` зелёный (backend 2267, frontend 240, mypy чисто).
+
+**Deferred:** см. раздел выше — главное `player-xp-not-persisted` (should).
