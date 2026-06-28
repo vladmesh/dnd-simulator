@@ -493,6 +493,23 @@ _reg(
 
 _reg(
     ActionDef(
+        action_type=ActionType.TAKE,
+        description=N_("Take all items and gold from a lootable corpse or container."),
+        cost_type=CostType.ACTION,
+        combat_mode=CombatMode.PEACEFUL_ONLY,
+        target_mode=TargetMode.SINGLE,
+        target_scope=TargetScope.ANY,
+        provider_managed=True,
+        params=(ParamDef("target_id", "string", N_("ID of the corpse or container to loot"), required=True),),
+        llm_hint=(
+            "Take all items and gold from a lootable corpse or open container at your location. "
+            "Costs 1 action. Only available outside combat."
+        ),
+    )
+)
+
+_reg(
+    ActionDef(
         action_type=ActionType.LONG_REST,
         description=N_("Take a long rest: heal to full, restore all resources. Takes 8 hours."),
         cost_type=CostType.FREE,

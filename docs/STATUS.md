@@ -12,9 +12,9 @@
 **Sprint:** 018-lairs-encounters-loot
 **Goal:** Монстры населяют мир независимо от игрока: постоянные логова (зачищаются убийством ядра), региональные таблицы встреч, опасность по времени суток и лутаемые контейнеры/трупы.
 **Started:** 2026-06-28
-**Phase:** 2 — Лут и контейнеры (task 2 done, task 3 pending) — 2026-06-28
+**Phase:** 2 — Лут и контейнеры (task 3 done, task 4 pending) — 2026-06-28
 
-Phase 1 closed (materialization, respawn, depletion; integration 146 green, E2E 12/12). Phase 2 tasks: (1) InventoryHolder substrate + `transfer_items` ✓, (2) `Container` entity + persistence ✓, (3) `take` action, (4) lair treasury. Task 2 done: `Container(Entity)` (inventory/gold/is_open), `EntityKind.CONTAINER`, save/load round-trip, `is_lootable` container arm; `make check` green (2202 backend).
+Phase 1 closed (materialization, respawn, depletion; integration 146 green, E2E 12/12). Phase 2 tasks: (1) InventoryHolder substrate + `transfer_items` ✓, (2) `Container` entity + persistence ✓, (3) `take` action ✓, (4) lair treasury. Task 3 done: full `take` pipeline (registry/event, `LootActionProvider`, `check_lootable_target`, `handle_take` reusing `transfer_items`, lootable holders in awareness, `LootPanel` frontend); `make check` green (2218 backend unit, 238 frontend).
 
 ### Phases
 

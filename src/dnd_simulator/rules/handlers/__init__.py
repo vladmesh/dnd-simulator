@@ -26,6 +26,7 @@ from dnd_simulator.rules.handlers.items import (
     handle_second_wind,
     handle_use_item,
 )
+from dnd_simulator.rules.handlers.loot import handle_take
 from dnd_simulator.rules.handlers.movement import (
     handle_dash,
     handle_disengage,
@@ -64,6 +65,7 @@ __all__ = [
     "handle_second_wind",
     "handle_sell",
     "handle_short_rest",
+    "handle_take",
     "handle_unequip",
     "handle_unequip_armor",
     "handle_unequip_feet",

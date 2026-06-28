@@ -24,7 +24,9 @@ from dnd_simulator.rules.action_provider import (
     ClassFeatureActionProvider,
     EquipmentActionProvider,
     InventoryActionProvider,
+    LootActionProvider,
     MerchantActionProvider,
+    NearbyLootablesFn,
     NearbyMerchantsFn,
     WeaponActionProvider,
 )
@@ -54,6 +56,7 @@ from dnd_simulator.rules.handlers import (
     handle_second_wind,
     handle_sell,
     handle_short_rest,
+    handle_take,
     handle_unequip,
     handle_unequip_armor,
     handle_unequip_feet,
@@ -187,6 +190,7 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.register(ActionType.SECOND_WIND, handle_second_wind)
     dispatcher.register(ActionType.ACTION_SURGE, handle_action_surge)
     dispatcher.register(ActionType.LAY_ON_HANDS, handle_lay_on_hands)
+    dispatcher.register(ActionType.TAKE, handle_take)
     dispatcher.register(ActionType.BUY, handle_buy)
     dispatcher.register(ActionType.SELL, handle_sell)
     dispatcher.register(ActionType.LONG_REST, handle_long_rest)
@@ -201,6 +205,7 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.add_provider(WeaponActionProvider())
     dispatcher.add_provider(ClassFeatureActionProvider())
     dispatcher.add_provider(MerchantActionProvider(_build_nearby_merchants_fn(world)))
+    dispatcher.add_provider(LootActionProvider(_build_nearby_lootables_fn(world)))
 
     return dispatcher
 
@@ -232,3 +237,24 @@ def _build_nearby_merchants_fn(world: World) -> NearbyMerchantsFn:
         ]
 
     return get_nearby_merchants
+
+
+def _build_nearby_lootables_fn(world: World) -> NearbyLootablesFn:
+    """Build a callable that returns lootable holders (corpses, open containers) at a location."""
+    from dnd_simulator.core.character import Entity
+    from dnd_simulator.layers.entities.layer import EntitiesLayer
+    from dnd_simulator.rules.loot import is_lootable
+
+    entities_layer: EntitiesLayer | None = None
+    for layer in world.layers:
+        if isinstance(layer, EntitiesLayer):
+            entities_layer = layer
+            break
+
+    def get_nearby_lootables(location_id: str) -> list[Entity]:
+        if entities_layer is None:
+            return []
+        # Corpses are dormant (active=False) — surface by location + lootable state, not activity.
+        return [e for e in entities_layer._entities.values() if e.location_id == location_id and is_lootable(e)]
+
+    return get_nearby_lootables

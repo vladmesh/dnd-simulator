@@ -35,6 +35,9 @@ class NearbyEntity:
     relation: str = ""
     npc_description: str = ""
     is_merchant: bool = False
+    lootable: bool = False
+    loot_items: list[ItemInfo] = field(default_factory=list)
+    loot_gold: int = 0
 
 
 @dataclass(frozen=True)

@@ -17,6 +17,7 @@ vi.mock("../PlayerStats", () => ({ PlayerStats: () => <div data-testid="player-s
 vi.mock("../BattleMap", () => ({ BattleMap: () => <div data-testid="battle-map">BattleMap</div> }))
 vi.mock("../CombatPanel", () => ({ CombatPanel: () => <div data-testid="combat-panel">CombatPanel</div> }))
 vi.mock("../TradePanel", () => ({ TradePanel: () => <div data-testid="trade-panel">TradePanel</div> }))
+vi.mock("../LootPanel", () => ({ LootPanel: () => <div data-testid="loot-panel">LootPanel</div> }))
 vi.mock("../ActionBar", () => ({ ActionBar: () => <div data-testid="action-bar">ActionBar</div> }))
 vi.mock("../Header", () => ({ Header: () => <div data-testid="header">Header</div> }))
 

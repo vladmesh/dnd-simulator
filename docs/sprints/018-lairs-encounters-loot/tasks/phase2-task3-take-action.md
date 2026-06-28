@@ -49,4 +49,16 @@ Integration, product-level (mirror `tests/integration/test_lairs.py` structure):
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Full action pipeline wired end to end, reusing the Task 1/2 substrate (`transfer_items`, `is_lootable`, `Container`).
+
+- **Registry/event:** `ActionType.TAKE` (`core/action.py`), `EventType.ENTITY_TAKE` (`core/models.py`), `ActionDef` for TAKE (`core/action_defs.py`) — `SINGLE`/`ANY`/`ACTION`/`PEACEFUL_ONLY`/`provider_managed`, required `target_id`.
+- **Provider:** `LootActionProvider` + `NearbyLootablesFn` (`rules/action_provider.py`), wired via `_build_nearby_lootables_fn` in `create_dispatcher`. The lookup keys on location + `is_lootable` and deliberately ignores `active`, because corpses are dormant after death (activation_manager sets dead creatures `active=False`).
+- **Validation:** new `check_lootable_target` (after `check_target_valid` in `_CHECKS`). TAKE short-circuits both `check_target_valid` (would reject corpses as TARGET_DEAD and containers as non-Creature) and `check_target_scope` (a corpse/container has no useful faction relation). Codes: TARGET_NOT_FOUND / TARGET_WRONG_LOCATION / TARGET_NOT_LOOTABLE.
+- **Handler:** `handle_take` (`rules/handlers/loot.py`) — take-all of items + gold via `transfer_items`, emits `ENTITY_TAKE`. Selective `item_id` taking deferred per task scope.
+- **Awareness:** `build_nearby_entities` now surfaces lootable holders even when dormant, with `lootable` / `loot_items` (reusing `ItemInfo`/`describe_item`) / `loot_gold` added to `NearbyEntity`. Living creatures get `lootable=False`. Serialization is automatic via `dataclasses.asdict` (verified the dict carries the loot fields) — no manual change needed in `session.py`. Added `_perceive_take` so the event log renders looting instead of the generic fallback.
+- **Frontend:** `LootPanel.tsx` (modeled on `TradePanel`) lists lootable holders + contents and issues `take {target_id}` over WS; rendered in the peaceful column of `GameScreen`. `take` added to `ActionBar`'s `ALWAYS_HIDDEN` (same treatment as buy/sell — the panel owns it, so no `actionCategories.ts` change was needed). i18n keys `loot`/`take_all`/`loot_empty` (en + ru). Mocked `LootPanel` in the GameScreen layout test.
+- **Tests:** `tests/unit/test_take_loot.py` (12 — handler corpse/container, validation rejects living/wrong-location/closed, provider gating incl. combat, full dispatch) and `tests/unit/test_loot_awareness.py` (4 — lootable holders surface, living/closed do not). Unit-level but drive the real validation chain, handler, dispatcher, and awareness builder. Integration scenarios in the task brief land at `/close-phase`.

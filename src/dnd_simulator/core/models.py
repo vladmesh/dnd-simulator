@@ -123,6 +123,7 @@ class EventType(Enum):
     ENTITY_UNEQUIP = "entity_unequip"
     ENTITY_BUY = "entity_buy"
     ENTITY_SELL = "entity_sell"
+    ENTITY_TAKE = "entity_take"
     TURN_SKIPPED = "turn_skipped"
     COMBAT_STARTED = "combat_started"
     COMBAT_ENDED = "combat_ended"

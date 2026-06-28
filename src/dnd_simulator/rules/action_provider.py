@@ -16,11 +16,14 @@ from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.rules.validation import validate_action
 
 if TYPE_CHECKING:
-    from dnd_simulator.core.character import Character, Creature
+    from dnd_simulator.core.character import Character, Creature, Entity
     from dnd_simulator.rules.validation import ActionContext
 
 # Callable that returns merchant NPCs at a given location ID.
 NearbyMerchantsFn = Callable[[str], "list[Character]"]
+
+# Callable that returns lootable holders (corpses, open containers) at a location ID.
+NearbyLootablesFn = Callable[[str], "list[Entity]"]
 
 
 class ActionProvider(Protocol):
@@ -129,6 +132,21 @@ class WeaponActionProvider:
             if validate_action(creature, probe, ctx) is None:
                 result.append(at)
         return result
+
+
+class LootActionProvider:
+    """Provides TAKE when a lootable holder (corpse/container) is at the actor's location."""
+
+    def __init__(self, get_nearby_lootables: NearbyLootablesFn) -> None:
+        self._get_nearby_lootables = get_nearby_lootables
+
+    def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
+        if not self._get_nearby_lootables(creature.location_id):
+            return []
+        probe = Action(name=ActionType.TAKE)
+        if validate_action(creature, probe, ctx) is not None:
+            return []
+        return [ActionType.TAKE]
 
 
 class MerchantActionProvider:
