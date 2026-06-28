@@ -482,6 +482,12 @@ def _perceive_squad_dematerialized(event: Event, observer: Character, get_entity
     return _("{name} moves on, disappearing into the distance").format(name=name)
 
 
+def _perceive_encounter_spawned(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    """Vague flavor for an encounter spawn. Deliberately hides the monster roster —
+    danger-by-place is intentional, the player gets no advance roster."""
+    return _("Something stirs nearby")
+
+
 def _perceive_xp_gained(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     d = event.data
     entity_id = str(d["entity_id"])
@@ -543,6 +549,7 @@ _DISPATCH: dict[EventType, _PerceiveHandler] = {
     EventType.SQUAD_COMBAT: _perceive_squad_combat,
     EventType.SQUAD_MATERIALIZED: _perceive_squad_materialized,
     EventType.SQUAD_DEMATERIALIZED: _perceive_squad_dematerialized,
+    EventType.ENCOUNTER_SPAWNED: _perceive_encounter_spawned,
     EventType.REPUTATION_CHANGED: _perceive_reputation_change,
     EventType.XP_GAINED: _perceive_xp_gained,
 }

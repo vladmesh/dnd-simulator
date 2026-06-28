@@ -52,4 +52,13 @@ Product-level, run under a Russian session (use `set_language("ru")` from `dnd_s
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Wrapped all 9 user-facing `error=` literals in `rules/handlers/movement.py` with `_()`; dropped both em-dashes (`"Cannot move there, blocked"`, `"Cannot move, insufficient budget"`). Added the `from dnd_simulator.i18n import _` import.
+- Added `_perceive_encounter_spawned` (returns `_("Something stirs nearby")`, roster hidden per world-does-not-adapt-to-player) and registered `EventType.ENCOUNTER_SPAWNED` in `_DISPATCH`.
+- Catalog drift fix: the 3 attack msgids in the `.po` were updated to carry the `{oa}` placeholder so they match the code msgids (`perception.py`) and now render RU instead of falling back to English.
+- Locale: the project has no `msgmerge` target — the `.po` is hand-maintained, `make messages` only regenerates `messages.pot` (a build artifact; pygettext3 prints harmless "unexpected token" warnings on f-strings). Hand-added RU translations for the 9 movement errors, the encounter flavor, the 2 reputation strings (named in the backlog item, previously missing), plus adjacent combat-log strings that were untranslated and render right beside the attack line: the OA marker `" (opportunity attack)"`, the 3 "seize the opening" variants, and disengage. Recompiled the `.mo` with `make compile-messages`.
+- Out of scope, noted for backlog: `_perceive_take` (loot) strings are still untranslated in the RU `.po` — not named by this task's backlog item, left for a future i18n sweep.
+- Tests: 5 new (3 in test_perception.py: attack-line RU render, encounter not-fallback + no name leak, encounter RU flavor; 2 in test_handlers_movement.py: blocked-move RU + EN). All use `set_language` with an `set_language("en")` teardown to avoid contextvar leak.

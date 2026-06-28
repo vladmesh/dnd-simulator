@@ -195,6 +195,37 @@ msgid "Target too far ({dist} ft, reach {reach} ft)."
 msgstr "Цель слишком далеко ({dist} ft, досягаемость {reach} ft)."
 
 # =========================================================================
+# rules/handlers/movement.py — action errors
+# =========================================================================
+
+msgid "Move requires a direction"
+msgstr "Для перемещения нужно направление"
+
+msgid "Not on the battle map"
+msgstr "Не на карте боя"
+
+msgid "Cannot move there, blocked"
+msgstr "Туда не пройти, путь заблокирован"
+
+msgid "No movement remaining"
+msgstr "Запас движения исчерпан"
+
+msgid "Not in combat"
+msgstr "Не в бою"
+
+msgid "Already at that position"
+msgstr "Уже на этой позиции"
+
+msgid "No path to target"
+msgstr "Нет пути к цели"
+
+msgid "Cannot move, insufficient budget"
+msgstr "Не хватает запаса движения"
+
+msgid "Dash requires a turn budget"
+msgstr "Для рывка нужен запас хода"
+
+# =========================================================================
 # layers/entities/perception.py — event descriptions
 # =========================================================================
 
@@ -242,14 +273,34 @@ msgid "{speaker} says: \"{text}\""
 msgstr "{speaker} говорит: «{text}»"
 
 #: Attack (with roll detail)
-msgid "You attack {target}{weapon}{roll}{outcome}"
-msgstr "Ты атакуешь {target}{weapon}{roll}{outcome}"
+msgid "You attack {target}{weapon}{oa}{roll}{outcome}"
+msgstr "Ты атакуешь {target}{weapon}{oa}{roll}{outcome}"
 
-msgid "{attacker} attacks you{weapon}{roll}{outcome}"
-msgstr "{attacker} атакует тебя{weapon}{roll}{outcome}"
+msgid "{attacker} attacks you{weapon}{oa}{roll}{outcome}"
+msgstr "{attacker} атакует тебя{weapon}{oa}{roll}{outcome}"
 
-msgid "{attacker} attacks {target}{weapon}{roll}{outcome}"
-msgstr "{attacker} атакует {target}{weapon}{roll}{outcome}"
+msgid "{attacker} attacks {target}{weapon}{oa}{roll}{outcome}"
+msgstr "{attacker} атакует {target}{weapon}{oa}{roll}{outcome}"
+
+#: Opportunity attack marker + log note
+msgid " (opportunity attack)"
+msgstr " (атака возможности)"
+
+msgid "You seize the opening against {target}!"
+msgstr "Ты пользуешься оплошностью {target}!"
+
+msgid "{attacker} seizes the opening against you!"
+msgstr "{attacker} пользуется твоей оплошностью!"
+
+msgid "{attacker} seizes the opening against {target}!"
+msgstr "{attacker} пользуется оплошностью {target}!"
+
+#: Disengage
+msgid "You disengage"
+msgstr "Ты отступаешь"
+
+msgid "{entity} disengages"
+msgstr "{entity} отступает"
 
 #: Death
 msgid "You die"
@@ -390,6 +441,17 @@ msgstr "{name} появляется — {count} существ материал�
 
 msgid "{name} moves on, disappearing into the distance"
 msgstr "{name} уходит, исчезая вдали"
+
+#: Encounter spawned — vague flavor, roster hidden on purpose
+msgid "Something stirs nearby"
+msgstr "Поблизости что-то шевелится"
+
+#: Reputation changed
+msgid "Your reputation with {faction} changed ({old} → {new})"
+msgstr "Твоя репутация с {faction} изменилась ({old} → {new})"
+
+msgid "{entity}'s reputation with {faction} changed"
+msgstr "Репутация {entity} с {faction} изменилась"
 
 # =========================================================================
 # layers/entities/perception.py — translatable dynamic values
