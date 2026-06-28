@@ -23,7 +23,9 @@
 
 **Ссылки:** [control-interfaces](../../brainstorms/control-interfaces.md), [BACKLOG](../../BACKLOG.md), [audit](../../audit.md), [VISION](../../VISION.md)
 
-## Phase 1: Session lifecycle test net
+## Phase 1: Session lifecycle test net ✓
+
+**Closed 2026-06-28.** Все 3 таски `done`; integration 154/154 зелёный; E2E (`e2e/phase1-report.md`) — 9/9, ноль блокеров (находки преэкзистинг minor: `spawn-role-freetext-enum`, mixed-language race, dev-only WS StrictMode race). `get_world_state` happy-path и SchemaForm (memoize-фикс) подтверждены через UI; `make check` зелёный. Доп: убраны 2 преэкзистинг eslint-варнинга в `SchemaForm.tsx`.
 
 **Перескоплено при планировании (2026-06-28).** Исходный headline фазы — «вынести `GameService.get_world_state()`» — **уже сделан** (sprint 016: `commands_world_state.py`, адаптер `routes_session.py:55-60` это 6-строчный делегат) **и покрыт тестами** (`test_commands_world_state.py`). Несколько перечисленных test-gap тоже оказались устаревшими: `test_commands_politics.py` и `test_autosave_all.py` существуют; `advance_time` — тонкий 1-строчный враппер с 7 integration-ссылками. `thick-adapter-world-state` и эти test-gap помечаются fixed в фазе 3 (сверка бэклога).
 
