@@ -108,22 +108,24 @@ minor findings (two pre-existing, one sprint-introduced).
   `session` still has zero listeners under the lock before evicting/stopping; or debounce disconnect
   handling with a short grace period to absorb reconnects.
 
-  **Blocker fix (applied + re-verified).** Two changes:
-  1. `service/session.py` — `run_round_loop` now fires `on_game_over` only when the loop ended on its own
-     (`if not game_round.is_stopped`). `stop_round()` sets the flag for administrative stops (last listener
-     gone), so a transient disconnect no longer reports game over. New `Round.is_stopped` property
-     (`round.py`). On real player death the loop exits naturally (`_stop_flag` stays False), so the genuine
-     game-over still fires — covered by `tests/unit/test_game_loop.py::TestRoundStopFlag`.
-  2. `service/game_service.py` — `_on_session_empty` re-checks `session.has_listeners()` (new thread-safe
-     method on `GameSession`) and skips eviction if a client reconnected in the gap. Covered by
-     `tests/unit/test_game_service_player.py::TestSessionEvictionReconnect`.
+  **Blocker fix (applied + re-verified).** `service/session.py` — `run_round_loop` now fires `on_game_over`
+  only when the loop ended on its own (`if not game_round.is_stopped`). `stop_round()` sets the flag for
+  administrative stops (last listener gone), so a transient disconnect no longer reports game over. New
+  `Round.is_stopped` property (`round.py`). On real player death the loop exits naturally (`_stop_flag`
+  stays False), so the genuine game-over still fires — covered by `tests/unit/test_game_loop.py::TestRoundStopFlag`.
 
   Re-verified in a second E2E pass: character creation entered the game with **no GAME OVER**, the round
   drove the player's turn, and Wait advanced time 10:00 → 11:00. Backend log confirmed `run_round_loop` did
-  not emit game over on the StrictMode disconnect. The remaining benign behaviour (session still evicted
-  from the registry when the evict wins the race vs the reconnect's `add_listener`, leaving a working but
-  orphaned-from-registry session) is filed as `session-disconnect-debounce` in the backlog — the proper
-  grace-period debounce is a larger change and production (no StrictMode double-mount) is barely affected.
+  not emit game over on the StrictMode disconnect — even though the evict still fired (won the race vs the
+  reconnect), the `is_stopped` gate alone is sufficient to kill the symptom.
+
+  An additional robustness change was tried (re-checking `has_listeners()` in `_on_session_empty` to skip
+  eviction on a fast reconnect) but **reverted**: it kept the module-scoped arena session alive across the
+  WS integration tests' connect/disconnect cycles instead of the expected evict→reload-reset, letting arena
+  combat accumulate to a `game_over` state (5 `test_websocket.py` failures in CI, timing-dependent — passed
+  locally). The `is_stopped` gate stands alone for the blocker; the eviction-on-transient-reconnect cleanup
+  is filed as `session-disconnect-debounce` (needs a grace-period debounce + fixture rework; production
+  without a StrictMode double-mount is barely affected).
 
 ### Minor
 

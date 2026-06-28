@@ -326,11 +326,6 @@ class GameSession:
             count = len(self._listeners)
         logger.info("add_listener", listener_count=count)
 
-    def has_listeners(self) -> bool:
-        """True if any listener is currently attached (thread-safe)."""
-        with self._lock:
-            return bool(self._listeners)
-
     def get_last_turn_msg(self) -> dict[str, Any] | None:
         """Return the last turn message for replay by the caller."""
         return self._last_turn_msg

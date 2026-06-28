@@ -78,35 +78,6 @@ class TestLevelUpPlayer:
         with pytest.raises(ValueError, match="No player"):
             service.level_up_player(sid, fighting_style=None)
 
-
-class TestSessionEvictionReconnect:
-    """_on_session_empty must not evict a session a client just reconnected to.
-
-    The WS disconnect handler runs on a worker thread, so a client that immediately
-    reconnects (React StrictMode remount, network blip) can re-attach a listener
-    before eviction runs. Evicting then orphans a live session and stops its round.
-    """
-
-    def test_evicts_when_no_listeners(self, tmp_path: Path) -> None:
-        service = _make_service(tmp_path)
-        sid = _new_session_with_fighter(service)
-        session = service.get_session(sid)
-
-        service._on_session_empty(session)
-
-        assert sid not in service._sessions
-
-    def test_skips_eviction_when_listener_reconnected(self, tmp_path: Path) -> None:
-        service = _make_service(tmp_path)
-        sid = _new_session_with_fighter(service)
-        session = service.get_session(sid)
-        session.add_listener(object())  # a client reconnected during the disconnect window
-
-        service._on_session_empty(session)
-
-        assert sid in service._sessions
-        assert service.get_session(sid) is session
-
     def test_no_level_up_available_raises(self, tmp_path: Path) -> None:
         service = _make_service(tmp_path)
         sid = _new_session_with_fighter(service)
