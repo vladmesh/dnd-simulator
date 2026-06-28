@@ -98,7 +98,7 @@ Run the full test suite:
 make check
 ```
 
-This runs lint + typecheck + all unit tests. Everything must pass.
+This runs the full local gate: backend (lint + typecheck + tests) and frontend (eslint + typecheck + vitest) — the same checks CI runs, minus integration. Everything must pass. (Integration runs at `/close-phase`.)
 
 #### If new tests fail
 
