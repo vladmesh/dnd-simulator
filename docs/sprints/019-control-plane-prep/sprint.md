@@ -23,15 +23,21 @@
 
 **Ссылки:** [control-interfaces](../../brainstorms/control-interfaces.md), [BACKLOG](../../BACKLOG.md), [audit](../../audit.md), [VISION](../../VISION.md)
 
-## Phase 1: World-state seam + hot-control test net
+## Phase 1: Session lifecycle test net
 
-Вынести `GameService.get_world_state()` — снапшот мира живёт в сервисе, а не в адаптере (`thick-adapter-world-state`: `routes_session` сейчас сам дёргает 7+ layer-queries с assert-валидацией). Покрыть тестами live-session control-поверхность, на которой это сидит: `session.py` (listener dispatch, round lifecycle), `commands_time/politics/save`, master/content-роуты. Это защитная сетка под глубокий peel фазы 2.
+**Перескоплено при планировании (2026-06-28).** Исходный headline фазы — «вынести `GameService.get_world_state()`» — **уже сделан** (sprint 016: `commands_world_state.py`, адаптер `routes_session.py:55-60` это 6-строчный делегат) **и покрыт тестами** (`test_commands_world_state.py`). Несколько перечисленных test-gap тоже оказались устаревшими: `test_commands_politics.py` и `test_autosave_all.py` существуют; `advance_time` — тонкий 1-строчный враппер с 7 integration-ссылками. `thick-adapter-world-state` и эти test-gap помечаются fixed в фазе 3 (сверка бэклога).
 
-**Verify:** characterization-тест фиксирует поведение world-state эндпоинта без изменений; новые unit-тесты на session/commands/routes зелёные; `make check` зелёный.
+Реальная незакрытая дыра, и именно на поверхности, которую трогает peel фазы 2 и spectator-listener следующего спринта: **round-lifecycle и listener-dispatch в `session.py`** (`add_listener`/`remove_listener`/`start_round`/`stop_round`/`_fire`/`submit_*`/`resolve_abstract_move` — 0 выделенных тестов; покрыты только serialization-хелперы). Плюс мелкие: `commands_save.load_game`/`list_saves`/`delete_save` (0 unit) и fail-fast вместо `assert` в `get_world_state`.
+
+Фаза = characterization-сетка на этот срез (плюс одно маленькое поведенческое ужесточение get_world_state). Это защитная сетка под глубокий peel фазы 2.
+
+**Verify:** новые unit-тесты на session lifecycle/listener + commands_save зелёные (characterization — проходят сразу); get_world_state на битых данных слоя кидает понятную типизированную ошибку, не `AssertionError`/500; `make check` зелёный.
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Session listener dispatch + abstract-move resolution](tasks/phase1-task1-session-listener-dispatch.md) — синхронная сетка: listener dispatch, empty→`_on_empty`, submit-raises-when-idle, все ветки `resolve_abstract_move`
+2. [Session round lifecycle](tasks/phase1-task2-session-round-lifecycle.md) — `start_round` идемпотентность + wiring PlayerBrain + живой thread; `stop_round` чистит стейт + join; submit после старта
+3. [commands_save round-trip + get_world_state hardening](tasks/phase1-task3-save-commands-worldstate-hardening.md) — `load_game`/`list_saves`/`delete_save` через реальный `JsonFileStore`; `assert isinstance` → явный fail-fast с именем слоя/запроса
 
 ## Phase 2: GameService deeper peel + adapter hygiene
 
@@ -65,6 +71,7 @@ _(генерируются отдельно перед началом фазы)_
 - **Тесты раньше рефактора (фаза 1 → фаза 2).** Deeper peel god-class без сетки = занос регрессий. Сначала characterization + unit на поверхность, потом дробление.
 - **Deeper peel, но дисциплинированный.** Пользователь поднял глубину с «небольшой рефактор» до реального дробления GameService; держим в рамках команд/query-групп под защитой тестов, без переписывания механик.
 - **Identity/roles/spectator/мультиплеер — не сюда.** Это содержание самого `control-interfaces`; техспринт только готовит почву (тонкие адаптеры, сервисный get_world_state, развязка core/adapter).
+- **Phase 1 перескоплена с «вынести seam» на «сетка на session.py» (2026-06-28).** При планировании фазы выяснилось: `get_world_state` уже вынесен и покрыт тестами (sprint 016), а `thick-adapter-world-state` + часть test-gap (`commands-politics`, autosave) устарели. Реальная незакрытая дыра — round-lifecycle/listener в `session.py` (0 тестов), ровно та поверхность, что трогает peel фазы 2 и spectator-listener следующего спринта. Headline фазы сменился, цель (сетка под peel) — нет.
 
 ## Deferred
 

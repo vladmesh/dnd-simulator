@@ -12,15 +12,15 @@
 **Sprint:** 019-control-plane-prep
 **Goal:** Отвердить control-plane (GameService / session / commands / адаптеры) под будущий разрез на роли в `control-interfaces` — раздробить god-class, покрыть тестами, утончить адаптеры; попутно закрыть видимые дырки и свести бэклог.
 **Started:** 2026-06-28
-**Phase:** Planning (COMPLETE) — 2026-06-28
+**Phase:** 1 — Session lifecycle test net (tasks generated) — 2026-06-28
 
-Ready for Phase 1 task generation.
+Ready to start task 1. (Phase 1 перескоплена: исходный headline «вынести get_world_state» уже сделан в sprint 016 — фаза переориентирована на реальную дыру, round-lifecycle/listener в `session.py`.)
 
 ### Phases
 
-1. World-state seam + hot-control test net — вынести `GameService.get_world_state()`, покрыть тестами session/commands/routes (сетка под peel).
+1. Session lifecycle test net — characterization-сетка на `session.py` (listener dispatch + round lifecycle) + commands_save + get_world_state fail-fast. Сетка под peel.
 2. GameService deeper peel + adapter hygiene — раздробить god-class на суб-фасады, развязать core/adapter, public World-query API.
-3. Visible gaps + backlog reconcile + dead code — combat-log i18n, encounter-perceiver, corpse-actions, удаление dead code, сверка бэклога.
+3. Visible gaps + backlog reconcile + dead code — combat-log i18n, encounter-perceiver, corpse-actions, удаление dead code, сверка бэклога (вкл. устаревшие `thick-adapter-world-state` + test-gap).
 
 ## Recent activity (non-sprint)
 
