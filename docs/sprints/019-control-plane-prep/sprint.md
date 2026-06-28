@@ -47,9 +47,13 @@
 
 **Verify:** integration зелёный (поведение сохранено), число строк GameService падает, mypy чисто.
 
+**Перескоплено при планировании (2026-06-28).** Worldbuilder-templates и content/catalog-CRUD объединены в один mixin (`WorldBuilderCommands`) — у них общие приватные хелперы (`_validate_world_id`, `_resolve_layer_path`, `_resolve_entity_layer_path`), разрезать = протокол-черн. Это и есть «worldbuilder lens» для `control-interfaces`. Peel: ~500 (worldbuilder+content) + ~176 (player) строк → GameService 1044 → ~370. `adapter-imports-core-directly` решён прагматично (решение планирования): из core-импортов в адаптерах удаляется только `Action/ActionType` (через вынос парсинга), `BrainType`/`FightingStyle` остаются как enum-at-boundary в Pydantic-схемах (аудит 2026-06-28: 0 арх-нарушений, адаптерам можно импортировать enum).
+
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Peel worldbuilder + content CRUD](tasks/phase2-task1-worldbuilder-commands-peel.md) — `WorldBuilderCommands` mixin (~500 строк): world templates/manifest + layer-files + entity/catalog CRUD; `_content_dir`/`_validate_world_id` в протокол
+2. [Peel player commands](tasks/phase2-task2-player-commands-peel.md) — `PlayerCommands` mixin (~176 строк): create_player/level_up_player/player_status
+3. [Adapter hygiene](tasks/phase2-task3-adapter-hygiene.md) — `action-parsing-in-adapter` (вынос в `service/action_parsing.py` + типизированная ошибка) + `world-private-method-access` (public `make_query_fn`/`make_emit_fn`) + сверка бэклога
 
 ## Phase 3: Visible gaps + backlog reconcile + dead code
 

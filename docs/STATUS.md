@@ -12,9 +12,9 @@
 **Sprint:** 019-control-plane-prep
 **Goal:** Отвердить control-plane (GameService / session / commands / адаптеры) под будущий разрез на роли в `control-interfaces` — раздробить god-class, покрыть тестами, утончить адаптеры; попутно закрыть видимые дырки и свести бэклог.
 **Started:** 2026-06-28
-**Phase:** 1 — Session lifecycle test net (COMPLETE) — 2026-06-28
+**Phase:** 2 — GameService deeper peel + adapter hygiene (tasks generated) — 2026-06-28
 
-Phase 1 closed: integration 154/154, E2E 9/9 (0 blockers, см. `sprints/019-control-plane-prep/e2e/phase1-report.md`), `make check` зелёный. Ready for Phase 2 task generation (`/plan-phase`).
+Phase 1 closed: integration 154/154, E2E 9/9 (0 blockers, см. `sprints/019-control-plane-prep/e2e/phase1-report.md`), `make check` зелёный. Phase 2 tasks сгенерированы (3 шт: worldbuilder/content peel, player peel, adapter hygiene). Ready to start task 1.
 
 ### Phases
 
