@@ -79,6 +79,8 @@ Run the tests. They should be RED (failing). If they pass before implementation 
 uv run pytest <test_file> -v
 ```
 
+If the task's tests live under `tests/integration/`, they need the docker stack to run — `uv run pytest` against them won't work without a live backend. Write them now, but their RED/GREEN verification happens in step 7b via docker, not here.
+
 ### 6. TDD — GREEN phase
 
 Implement the minimum code to make the tests pass. Follow the task's "Implementation" section as a guide, but use judgment — the task plan may not account for everything you discovered during code review.
@@ -98,7 +100,7 @@ Run the full test suite:
 make check
 ```
 
-This runs the full local gate: backend (lint + typecheck + tests) and frontend (eslint + typecheck + vitest) — the same checks CI runs, minus integration. Everything must pass. (Integration runs at `/close-phase`.)
+This runs the full local gate: backend (lint + typecheck + tests) and frontend (eslint + typecheck + vitest) — the same checks CI runs, minus integration. Everything must pass. (Integration is not in `make check` — if this task touched it, see step 7b.)
 
 #### If new tests fail
 
@@ -113,6 +115,29 @@ Debug and fix. This is normal TDD iteration.
 3. **If intentional** — update the old tests to reflect the new contract. Document what changed and why in the task's developer notes.
 4. **If accidental** — fix the implementation, not the tests. The old tests are telling you something is wrong.
 5. **If unclear** — ask the user. "These 3 tests in test_combat.py fail because we changed the Attack dataclass. The task requires this change because X. Should I update them or rethink the approach?"
+
+### 7b. Run integration tests if this task added or changed any
+
+`make check` does NOT run integration tests — they need the docker stack. If this task added or modified anything under `tests/integration/`, run them **now**. Do not defer to `/close-phase`: a broken integration test committed here stays invisible (it never runs in `make check`) until close-phase, several tasks later, where it's far more expensive to diagnose.
+
+Check whether integration tests changed:
+
+```bash
+git status --short tests/integration/
+```
+
+If nothing under `tests/integration/` is new or modified, skip this step — `/close-phase` runs the full integration suite anyway.
+
+If anything changed, run the suite via docker — the clean, in-order environment CI uses, not a hand-started local backend. Always log to a file (per CLAUDE.md, never run it bare):
+
+```bash
+make test-integration 2>&1 | tee /tmp/integration.log
+```
+
+Read the log to inspect results. The **whole** suite must be green, not just your new test:
+
+- Integration shares a process-global RNG and a single backend across all tests. A new test can break a *later* one through roll-ordering or a leaked session. If your test passes alone but the suite fails, that coupling is the bug — fix it, don't commit red.
+- Treat any failure here exactly like a failing unit test: debug to root cause and fix before commit. Same rules as step 7 (don't blindly edit old tests; if a contract changed intentionally, update them and note why; if unclear, ask).
 
 ### 8. Update docs and commit
 
