@@ -118,26 +118,13 @@ Debug and fix. This is normal TDD iteration.
 
 ### 7b. Run integration tests if this task added or changed any
 
-`make check` does NOT run integration tests — they need the docker stack. If this task added or modified anything under `tests/integration/`, run them **now**. Do not defer to `/close-phase`: a broken integration test committed here stays invisible (it never runs in `make check`) until close-phase, several tasks later, where it's far more expensive to diagnose.
-
-Check whether integration tests changed:
-
-```bash
-git status --short tests/integration/
-```
-
-If nothing under `tests/integration/` is new or modified, skip this step — `/close-phase` runs the full integration suite anyway.
-
-If anything changed, run the suite via docker — the clean, in-order environment CI uses, not a hand-started local backend. Always log to a file (per CLAUDE.md, never run it bare):
+`make check` does not run integration tests. If this task touched `tests/integration/`, run them now via docker (don't defer to `/close-phase`):
 
 ```bash
 make test-integration 2>&1 | tee /tmp/integration.log
 ```
 
-Read the log to inspect results. The **whole** suite must be green, not just your new test:
-
-- Integration shares a process-global RNG and a single backend across all tests. A new test can break a *later* one through roll-ordering or a leaked session. If your test passes alone but the suite fails, that coupling is the bug — fix it, don't commit red.
-- Treat any failure here exactly like a failing unit test: debug to root cause and fix before commit. Same rules as step 7 (don't blindly edit old tests; if a contract changed intentionally, update them and note why; if unclear, ask).
+The whole suite must be green, not just your new test. Treat failures like any other: fix to root cause before commit.
 
 ### 8. Update docs and commit
 
