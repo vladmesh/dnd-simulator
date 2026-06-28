@@ -13,7 +13,7 @@ import pytest
 
 from dnd_simulator.core.character import AbilityScores, Attack, Creature
 from dnd_simulator.core.lair import Lair, LairState
-from dnd_simulator.core.models import ActionResult, Answer, FactionRelation, GameDateTime, Query
+from dnd_simulator.core.models import ActionResult, Answer, FactionRelation, GameDateTime, Query, TimeDelta
 from dnd_simulator.core.monster import MonsterTemplate
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.ecology.layer import EcologyLayer
@@ -50,7 +50,11 @@ def _templates() -> dict[str, MonsterTemplate]:
     }
 
 
-def _lair(location: str = "warren", core: str | None = "goblin_chieftain") -> Lair:
+def _lair(
+    location: str = "warren",
+    core: str | None = "goblin_chieftain",
+    respawn_interval: int = 3600,
+) -> Lair:
     return Lair(
         id="goblin_warren",
         name="Goblin Warren",
@@ -58,6 +62,7 @@ def _lair(location: str = "warren", core: str | None = "goblin_chieftain") -> La
         location_id=location,
         members=["goblin", "goblin", "goblin"],
         core=core,
+        respawn_interval=respawn_interval,
     )
 
 
@@ -79,12 +84,13 @@ def _player(location: str = "warren") -> PlayerCharacter:
 
 
 def _make_layers(
-    lairs: list[Lair],
-    entities: list[object],
+    lairs: list[Lair] | None = None,
+    entities: list[object] | None = None,
     relation: FactionRelation = FactionRelation.HOSTILE,
+    ecology: EcologyLayer | None = None,
 ) -> tuple[EcologyLayer, EntitiesLayer, object, object]:
-    ecology = EcologyLayer(lairs=lairs)
-    entities_layer = EntitiesLayer(entities=entities, monster_templates=_templates())  # type: ignore[arg-type]
+    ecology = ecology if ecology is not None else EcologyLayer(lairs=lairs or [])
+    entities_layer = EntitiesLayer(entities=entities or [], monster_templates=_templates())  # type: ignore[arg-type]
     layers = {"ecology": ecology, "entities": entities_layer}
 
     def query_fn(layer_name: str, query: Query) -> Answer:
@@ -194,3 +200,65 @@ class TestLairContentLoading:
         )
         with pytest.raises(RuntimeError, match="ancient_dragon"):
             load_lairs(tmp_path, known_templates={"goblin"})
+
+
+# T0 = leave time; T_SOON = +30 min (< 3600s interval); T_LATER = +2 h (>= interval)
+T0 = GameDateTime(year=1490, month=6, day=1, hour=10)
+T_SOON = GameDateTime(year=1490, month=6, day=1, hour=10, minute=30)
+T_LATER = GameDateTime(year=1490, month=6, day=1, hour=12)
+_HOUR = TimeDelta(seconds=3600)
+
+
+def _goblins(entities: EntitiesLayer) -> list[Creature]:
+    return [c for c in _lair_creatures(entities) if c.name == "Goblin"]
+
+
+class TestLairRespawn:
+    def _enter_kill_leave(self) -> tuple[EcologyLayer, PlayerCharacter, object, object]:
+        """Enter the lair, kill 2 of 3 goblins, leave. Returns the ecology + reusable player/fns."""
+        player = _player()
+        eco, entities, qfn, efn = _make_layers([_lair()], entities=[player], relation=FactionRelation.NEUTRAL)
+        entities.update_activation(T0, query_fn=qfn, emit_fn=efn)
+        goblins = _goblins(entities)
+        assert len(goblins) == 3
+        goblins[0].current_hp = 0
+        goblins[1].current_hp = 0
+        player.location_id = "elsewhere"
+        entities.update_activation(T0, query_fn=qfn, emit_fn=efn)
+        return eco, player, qfn, efn
+
+    def _reenter(self, eco: EcologyLayer, time: GameDateTime) -> EntitiesLayer:
+        """Bring a fresh player into the lair against the given ecology, return entities layer."""
+        _eco, entities, qfn, efn = _make_layers(entities=[_player()], relation=FactionRelation.NEUTRAL, ecology=eco)
+        entities.update_activation(time, query_fn=qfn, emit_fn=efn)
+        return entities
+
+    def test_losses_persist_without_respawn_before_interval(self) -> None:
+        eco, _player_obj, qfn, efn = self._enter_kill_leave()
+        eco.tick(_HOUR, T_SOON, qfn, efn)  # +30 min < interval → no respawn
+        entities = self._reenter(eco, T_SOON)
+        assert len(_goblins(entities)) == 1
+
+    def test_minions_respawn_to_full_after_interval(self) -> None:
+        eco, _player_obj, qfn, efn = self._enter_kill_leave()
+        eco.tick(_HOUR, T_LATER, qfn, efn)  # +2 h >= interval → respawn
+        entities = self._reenter(eco, T_LATER)
+        assert len(_goblins(entities)) == 3
+
+    def test_respawn_does_not_overflow_roster(self) -> None:
+        eco, _player_obj, qfn, efn = self._enter_kill_leave()
+        # Tick several intervals — population must cap at the full roster, never grow past it.
+        eco.tick(_HOUR, T_LATER, qfn, efn)
+        eco.tick(_HOUR, GameDateTime(year=1490, month=6, day=1, hour=14), qfn, efn)
+        entities = self._reenter(eco, GameDateTime(year=1490, month=6, day=1, hour=14))
+        assert len(_goblins(entities)) == 3
+
+    def test_losses_survive_save_load(self) -> None:
+        eco, _player_obj, _qfn, _efn = self._enter_kill_leave()
+        saved = eco.get_state()
+
+        eco2 = EcologyLayer(lairs=[_lair()])
+        eco2.load_state(saved)
+        # Re-enter before any respawn tick → the two dead goblins are still gone.
+        entities = self._reenter(eco2, T0)
+        assert len(_goblins(entities)) == 1

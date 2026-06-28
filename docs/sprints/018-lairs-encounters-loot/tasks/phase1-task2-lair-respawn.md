@@ -43,4 +43,13 @@ Integration:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- **Runtime state на `Lair`.** Добавлены мутабельные поля: `alive_members: list[str] | None` (`None` == полный ростер), `core_alive: bool`, `last_respawn_time: int`. Держим прямо на dataclass, как `Squad.strength`; `EcologyLayer` мутирует и сериализует подмножество.
+- **Текущее население в материализации.** `_lair_to_dict` теперь отдаёт `members` = живые миньоны (`alive_members` или полный ростер) и `core` = id ядра только если `core_alive`. Материализатор спавнит ровно текущее население. Задача-1 тесты не задеты (свежее логово → None → полный ростер).
+- **Синк потерь.** `ActivationManager._dematerialize_lair` считает выживших (ядро + миньоны по `_is_alive`: существо есть в `_entities` и `is_alive` — мёртвые temporary уже удалены на `ENTITY_DIED`, но в юнит-тестах остаются с hp 0, поэтому проверяю именно `is_alive`) и эмитит `LAIR_DEMATERIALIZED` (новый `EventType`) с `alive_members`, `core_alive`, `at_seconds`. `EcologyLayer.handle_event` применяет это к логову. Трекинг расширен до 3-tuple `(creature_ids, core_creature_id, minion_templates)` — порядок creature_ids = `[core?] + minions`, так что survivors мапятся на шаблоны по позиции.
+- **Респавн.** Новая фаза в `EcologyLayer.tick`: `ACTIVE` логово ниже полного ростера и `now - last_respawn_time >= respawn_interval` → `alive_members = None` (полный), `last_respawn_time = now`. Анкер таймера = время ухода игрока (`at_seconds` из события), поэтому отсчёт идёт от визита, а не от эпохи. Респавн = refill до полного за один тик, без overflow (`alive_members=None` ≡ ровно `len(members)`).
+- **Персистенс.** `lairs` добавлен в `EcologyLayer.get_state`/`load_state` рядом со `squads`. Логова приходят из контента; восстанавливаем только мутабельные поля (как у сквадов).
+- **Тесты.** 4 новых в `TestLairRespawn` (потери до интервала / респавн после / без overflow / save-load). Хелперы `_lair`/`_make_layers` из задачи 1 расширены (param `respawn_interval`, опц. готовый `ecology`) — обратносовместимо, задача-1 тесты зелёные.

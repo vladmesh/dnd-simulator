@@ -38,7 +38,7 @@ class ActivationManager:
         encounter_cooldowns: dict[str, int],
         creature_locations: dict[str, str],
         materialized_squads: dict[str, tuple[list[str], int, int]],
-        materialized_lairs: dict[str, tuple[list[str], str | None]],
+        materialized_lairs: dict[str, tuple[list[str], str | None, list[str]]],
     ) -> None:
         self._entities = entities
         self._location_log = location_log
@@ -142,7 +142,7 @@ class ActivationManager:
         # Fourth pass: squad + lair materialization/dematerialization
         if query_fn is not None:
             self._update_materialization(player_locations, query_fn, emit_fn)
-            self._update_lair_materialization(player_locations, query_fn, emit_fn)
+            self._update_lair_materialization(now, player_locations, query_fn, emit_fn)
 
     def _check_encounters(self, now: int, active_ids: set[str], query_fn: QueryFn | None = None) -> None:
         """Roll encounters for locations where any active creature just arrived."""
@@ -413,6 +413,7 @@ class ActivationManager:
 
     def _update_lair_materialization(
         self,
+        now: int,
         active_locations: set[str],
         query_fn: QueryFn,
         emit_fn: EmitFn | None,
@@ -449,20 +450,21 @@ class ActivationManager:
         for lair_id in list(self._materialized_lairs):
             if lair_id in lairs_at_active:
                 continue
-            creature_ids, _core_id = self._materialized_lairs[lair_id]
+            creature_ids, _core_id, _minions = self._materialized_lairs[lair_id]
             any_in_combat = any(
                 isinstance(ent := self._entities.get(cid), Creature) and ent.in_combat for cid in creature_ids
             )
             if any_in_combat:
                 continue
-            self._dematerialize_lair(lair_id, creature_ids)
+            self._dematerialize_lair(lair_id, now, emit_fn)
 
     def _materialize_lair(self, lair_id: str, info: dict[str, Any]) -> None:
-        """Spawn a lair's full roster (core + minions) as concrete creatures."""
+        """Spawn a lair's current roster (core if alive + alive minions) as concrete creatures."""
         from dnd_simulator.rules.rule_brain import RuleBrain
 
         core_tid = info.get("core")
-        roster: list[str] = ([str(core_tid)] if core_tid else []) + [str(t) for t in info["members"]]
+        minion_templates = [str(t) for t in info["members"]]
+        roster: list[str] = ([str(core_tid)] if core_tid else []) + minion_templates
         faction_id = str(info["faction_id"])
         location = str(info["location_id"])
 
@@ -482,11 +484,39 @@ class ActivationManager:
                 core_creature_id = instance_id
             logger.info("lair_materialize", lair_id=lair_id, creature_id=instance_id)
 
-        self._materialized_lairs[lair_id] = (creature_ids, core_creature_id)
+        self._materialized_lairs[lair_id] = (creature_ids, core_creature_id, minion_templates)
 
-    def _dematerialize_lair(self, lair_id: str, creature_ids: list[str]) -> None:
-        """Remove a lair's materialized creatures. Population/depletion sync lands in later tasks."""
+    def _dematerialize_lair(self, lair_id: str, now: int, emit_fn: EmitFn | None) -> None:
+        """Remove a lair's creatures and emit its surviving population so ecology can sync."""
+        creature_ids, core_creature_id, minion_templates = self._materialized_lairs[lair_id]
+
+        core_alive = bool(core_creature_id) and self._is_alive(core_creature_id)
+        minion_ids = [cid for cid in creature_ids if cid != core_creature_id]
+        alive_members = [tid for cid, tid in zip(minion_ids, minion_templates, strict=True) if self._is_alive(cid)]
+
         for cid in creature_ids:
             self._entities.pop(cid, None)
         del self._materialized_lairs[lair_id]
-        logger.info("lair_dematerialize", lair_id=lair_id)
+        logger.info("lair_dematerialize", lair_id=lair_id, alive_minions=len(alive_members), core_alive=core_alive)
+
+        if emit_fn is not None:
+            emit_fn(
+                Event(
+                    event_type=EventType.LAIR_DEMATERIALIZED,
+                    source_layer="entities",
+                    data={
+                        "lair_id": lair_id,
+                        "core_alive": core_alive,
+                        "alive_members": alive_members,
+                        "at_seconds": now,
+                    },
+                    description=f"Lair {lair_id} dematerialized ({len(alive_members)} minions left)",
+                )
+            )
+
+    def _is_alive(self, creature_id: str | None) -> bool:
+        """True if the tracked creature is still present and alive (dead temporaries are auto-removed)."""
+        if creature_id is None:
+            return False
+        ent = self._entities.get(creature_id)
+        return isinstance(ent, Creature) and ent.is_alive

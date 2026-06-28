@@ -83,8 +83,8 @@ class EntitiesLayer(Layer):
         self._spawn_counter = 0
         # Materialization tracking: squad_id → (creature_ids, original_strength, spawn_count)
         self._materialized_squads: dict[str, tuple[list[str], int, int]] = {}
-        # Lair materialization tracking: lair_id → (creature_ids, core_creature_id)
-        self._materialized_lairs: dict[str, tuple[list[str], str | None]] = {}
+        # Lair materialization tracking: lair_id -> (creature_ids, core_creature_id, minion_templates)
+        self._materialized_lairs: dict[str, tuple[list[str], str | None, list[str]]] = {}
         if entities:
             for e in entities:
                 self._entities[e.id] = e

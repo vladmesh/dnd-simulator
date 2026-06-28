@@ -27,8 +27,12 @@ class Lair:
     name: str
     faction_id: str
     location_id: str
-    members: list[str]  # minion MonsterTemplate IDs
+    members: list[str]  # minion MonsterTemplate IDs (full roster)
     core: str | None = None  # core/boss MonsterTemplate ID; its death depletes the lair
     respawn_interval: int = 86400  # seconds of game time between respawns (default 1 day)
     depletion_chance: float = 0.0  # chance to deplete after a full wipe (coreless lairs)
+    # -- mutable runtime state (persisted via EcologyLayer.get_state) --
     state: LairState = field(default=LairState.ACTIVE)
+    alive_members: list[str] | None = None  # surviving minion templates; None == full roster
+    core_alive: bool = True
+    last_respawn_time: int = 0  # game-time seconds anchoring the respawn countdown (set on loss/respawn)

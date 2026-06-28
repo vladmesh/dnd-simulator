@@ -12,9 +12,9 @@
 **Sprint:** 018-lairs-encounters-loot
 **Goal:** Монстры населяют мир независимо от игрока: постоянные логова (зачищаются убийством ядра), региональные таблицы встреч, опасность по времени суток и лутаемые контейнеры/трупы.
 **Started:** 2026-06-28
-**Phase:** 1 — Логова (task 1 done, task 2 pending) — 2026-06-28
+**Phase:** 1 — Логова (task 2 done, task 3 pending) — 2026-06-28
 
-Lair model, content & materialization landed. Next: respawn while active.
+Lair respawn + persistence landed. Next: depletion (core death + optional chance).
 
 ### Phases
 
