@@ -92,7 +92,7 @@
 ## Tech Debt (from audits 2026-03-25, updated 2026-03-29)
 
 - [x] `god-class-entities` — ~~EntitiesLayer 1215 строк~~ FIXED Sprint 005: extracted awareness_builder, activation_manager, query_handler, combat_manager, perception
-- [ ] **should** `god-class-game-service` — GameService 1044 строки (836 на 2026-04-13, растёт). Продолжить выделение commands_*.py модулей
+- [x] `god-class-game-service` — ~~GameService 1044 строки, растёт~~ FIXED Sprint 019 phases 2-3: раздроблен 1044 → 357 строк (`WorldBuilderCommands` + `PlayerCommands` mixins, тонкий фасад над `commands_*`). Больше не god-class (verified audit 2026-06-29)
 - [x] `god-class-politics` — ~~PoliticsLayer 609 строк~~ FIXED Sprint 014 phase 0: split into diplomacy.py, warfare.py, economy.py submodules
 - [x] `test-gaps-critical` — ~~rules/action_handlers.py без unit-тестов~~ FIXED Sprint 005: action_provider, awareness_builder, brain_factory, world isolation tests
 - [x] `test-gaps` — ~~Нет тестов: action_provider, awareness, world, brain_factory~~ FIXED Sprint 005 (commands_*, session, store remain)
@@ -113,7 +113,7 @@
 - [ ] **should** `thick-adapter-world-state` — routes_master.py:290-330 оркестрирует 7+ layer queries напрямую + assert-based validation (500 при плохих данных). Вынести в GameService.get_world_state()
 - [ ] **should** `routes-master-growing` — routes_master.py 560 строк, 34 роута. Разделить content-editing и session-control роуты
 - [ ] **should** `test-gap-content-loader` — content_loader/refs, utils, creatures без выделенных unit-тестов (частично покрыты интеграционными)
-- [ ] **should** `core-brain-imports-rules` — core/brain.py:50,63,141 lazy-imports из rules/ (calculate_direction, get_weapon_attack). core не должен зависеть от rules. Перенести RuleBrain в rules/ или service/, или inject rule functions
+- [x] `core-brain-imports-rules` — ~~core/brain.py:50,63,141 lazy-imports из rules/~~ FIXED: `RuleBrain` вынесен в `rules/rule_brain.py`, `core/brain.py` больше не импортирует rules (verified audit 2026-06-29). Оставшиеся lazy-import `core/`→`rules/` в `class_features`/`combat`/`monster` — by-design композиция (frozen core делегирует чистую математику в pure rules), не runtime-цикл; принято
 - [ ] **should** `test-gap-session` — service/session.py 457 строк, 27 методов без выделенных unit-тестов. Round lifecycle, listener dispatch, resolve_abstract_move непокрыты
 - [ ] **should** `god-class-combat-manager` — layers/entities/combat_manager.py 535 строк. Выделить initiative/turn logic от combat state management
 - [ ] **could** `entities-layer-imports-content-loader` — layers/entities/layer.py:465,484,490 lazy-imports из content_loader в load_state. Layers → core only, content_loader — peer module
