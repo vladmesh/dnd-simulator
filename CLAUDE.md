@@ -54,13 +54,13 @@ Layered LLM-powered text RPG simulator built on a **layer stack** pattern. Each 
 1. **Geography** (`layers/geography/`) — terrain, coordinates, weather, day/night cycle. Ticks every call.
 2. **Politics** (`layers/politics/`) — nations, diplomacy, warfare, economy, faction relations. Ticks every 30 in-game days. Split into submodules: `diplomacy.py`, `warfare.py`, `economy.py`.
 3. **Settlements** (`layers/settlements/`) — towns, population, prosperity, harvests. Ticks every 30 in-game days.
-4. **Ecology** (`layers/ecology/`) — squad movement, abstract world simulation. Ticks every hour.
-5. **Entities** (`layers/entities/`) — all tracked creatures: player, NPCs, named monsters. Tick is a no-op; the Round orchestrator drives all creature turns.
+4. **Ecology** (`layers/ecology/`) — squad movement, lairs, abstract world simulation. Ticks every hour.
+5. **Entities** (`layers/entities/`) — all tracked creatures: player, NPCs, named monsters, plus `Container` loot objects. Tick is a no-op; the Round orchestrator drives all creature turns.
 
 ### Module Dependency Flow
 
 ```
-core/              — models, Layer ABC, World, Entity/Character hierarchy, Condition, Item, ClassFeatures, ResourcePool, ActionDef (no deps)
+core/              — models, Layer ABC, World, Entity/Character hierarchy, Container, Lair, InventoryHolder, Condition, Item, ClassFeatures, ResourcePool, ActionDef, TimeOfDay (no deps)
   ↓
 layers/            — concrete layer implementations (depend on core only)
   ↓
@@ -69,7 +69,7 @@ service/           — GameService, ActionDispatcher, BrainFactory, command modu
   ↓
 adapters/          — FastAPI REST + WebSocket API
 
-rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, divine smite, fighting style, resources, character creation (point buy, HP, starting equipment), leveling (XP-by-CR, thresholds, perform_level_up), action providers, handlers/ package, reputation, combat_sides, rule_brain (no deps)
+rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, divine smite, fighting style, resources, character creation (point buy, HP, starting equipment), leveling (XP-by-CR, thresholds, perform_level_up), action providers, handlers/ package, reputation, combat_sides, encounters (time-of-day gate), inventory (transfer_items), loot, rule_brain (no deps)
 llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
 storage/           — SaveStore interface, JsonFileStore
 content_loader/    — loads worlds, nations, settlements, NPCs, player from YAML; Pydantic content schemas, JSON Schema generation, entity CRUD, manifest resolver, library catalog, world assembly, catalog loader (monsters/items)
@@ -93,7 +93,7 @@ frontend/          — React + TypeScript SPA (Vite, shadcn/ui, Zustand)
 
 ### Entity Hierarchy
 
-`Entity` (id, name, location_id, active, on_tick) → `Creature` (ability scores, HP, AC, speed, attacks, conditions, inventory, in_combat, is_dodging, is_disengaging, wake_at_seconds, brain, turn_budget, combat_position, equipped_weapon, equipped_armor, equipped_shield, equipped_head, equipped_feet, equipped_ring, resource_pools, faction_id, reputation, xp_value) → `Character` (race, class, alignment, class_features, level, experience, level_up_available) → `PlayerCharacter` / `Npc`. Creature delegates decisions to `brain.choose_action()`. The `perceive()` method controls what information an observer sees about a target — LLM prompts never receive raw character data. All tracked entities live on the `EntitiesLayer`. `World.location_graph` (`LocationGraph`) maps locations to regions/settlements; entities reference `location_id`, and the graph resolves which region/settlement a location belongs to. NPCs have structured memory (`NpcMemory`: tags, recent, inner_state, current_conversation) readable by both LLM and RuleBrain; a `MemorySummarizer` compresses events into memory via LLM after combat/conversation ends. Combat is managed via `CombatState` (initiative order, round tracking, combat sides, auto-exit after 2 idle rounds) and `BattleMap` (2D grid with positions, walls, and movement). Movement rules live in `rules/movement.py` (D&D 5e diagonal distance, wall collision, occupied-cell blocking). `move_to(x, y)` action uses BFS pathfinding (`find_path`) and budget-aware walking (`walk_path`); player-only (frontend click-to-move), excluded from LLM action schemas via `provider_managed=True`.
+`Entity` (id, name, location_id, active, on_tick) → `Creature` (ability scores, HP, AC, speed, attacks, conditions, inventory, gold, in_combat, is_dodging, is_disengaging, wake_at_seconds, brain, turn_budget, combat_position, equipped_weapon, equipped_armor, equipped_shield, equipped_head, equipped_feet, equipped_ring, resource_pools, faction_id, reputation, xp_value) → `Character` (race, class, alignment, class_features, level, experience, level_up_available) → `PlayerCharacter` / `Npc`. Creature delegates decisions to `brain.choose_action()`. `Container` (`core/container.py`) is a separate `Entity` sibling of `Creature` — inventory + gold, no HP/turn/brain — used for lair treasuries and other lootable world objects (`EntityKind.CONTAINER`). The `perceive()` method controls what information an observer sees about a target — LLM prompts never receive raw character data. All tracked entities live on the `EntitiesLayer`. `World.location_graph` (`LocationGraph`) maps locations to regions/settlements; entities reference `location_id`, and the graph resolves which region/settlement a location belongs to. NPCs have structured memory (`NpcMemory`: tags, recent, inner_state, current_conversation) readable by both LLM and RuleBrain; a `MemorySummarizer` compresses events into memory via LLM after combat/conversation ends. Combat is managed via `CombatState` (initiative order, round tracking, combat sides, auto-exit after 2 idle rounds) and `BattleMap` (2D grid with positions, walls, and movement). Movement rules live in `rules/movement.py` (D&D 5e diagonal distance, wall collision, occupied-cell blocking). `move_to(x, y)` action uses BFS pathfinding (`find_path`) and budget-aware walking (`walk_path`); player-only (frontend click-to-move), excluded from LLM action schemas via `provider_managed=True`.
 
 ### Multi-Action Turns
 
@@ -127,7 +127,15 @@ Centralized derived stat computation (`core/modifiers.py` data types, `rules/mod
 
 ### Activation & Fast-Forward
 
-Proximity-based activation: `EntitiesLayer.update_activation(time)` runs at the start of each round. Players without `wake_at_seconds` are anchors — creatures at an anchor's location become active, all others go dormant. Creatures in combat stay active regardless. `wait` action sets `creature.wake_at_seconds` and marks it dormant. When no active creatures exist, `Round.run_loop()` fast-forwards time to the nearest `wake_at`, then re-checks activation. Content requires explicit locations — no auto-generation from regions.
+Proximity-based activation: `EntitiesLayer.update_activation(time)` runs at the start of each round. Players without `wake_at_seconds` are anchors — creatures at an anchor's location become active, all others go dormant. Creatures in combat stay active regardless. `wait` action sets `creature.wake_at_seconds` and marks it dormant. When no active creatures exist, `Round.run_loop()` fast-forwards time to the nearest `wake_at`, then re-checks activation. Content requires explicit locations — no auto-generation from regions. On entering a location with an encounter table, `ActivationManager` rolls encounters (see Lairs, Encounters & Loot).
+
+### Lairs, Encounters & Loot
+
+**Lairs** (`core/lair.py`, hosted on `EcologyLayer`) — a fixed-roster monster population at a location with a `LairState` machine (`ACTIVE → DEPLETED`). While `ACTIVE`, population respawns to the roster cap on the ecology tick (interval `respawn_interval`); killing the optional `core`/boss depletes the lair permanently (terminal `DEPLETED`, respawn off, survives save/load). Lairs without a core can use an optional `depletion_chance` rolled after a full wipe. The full roster materializes when the player enters (reuses the squad materialization pattern; lair spawns are `temporary=True` and removed on death — no corpse loot).
+
+**Encounters** — encounter tables are keyed by location (`encounters`) or region (`region_encounters`) in `ecology/monsters.yaml`; a location without its own table falls through to its region's table, a location table overrides. Resolution is load-time (`_flatten_region_defaults`, shared with `battle_map_configs`), so `ActivationManager` sees only effective per-location tables. Entries can carry a `time_of_day` tag (`TimeOfDay.DAY`/`NIGHT`); `ActivationManager._roll_encounters` filters via pure `rules/encounters.is_active_at_time`, reading day/night from the geography `IS_DAYLIGHT` query (resolves location→region→latitude→`is_daylight`); untagged entries fire at any time. Danger is fixed by place and time, never scaled to party level (kenshi-style, per VISION).
+
+**Loot** — `InventoryHolder` Protocol (`core/loot.py`, anything with `inventory` + `gold`) with derived `is_lootable()` (dead creature or open container). The `take` action (`ActionType.TAKE`, `LootActionProvider`, handler in `rules/handlers/loot.py`) is take-all: one action transfers a holder's whole inventory + gold to the actor via the shared `rules/inventory.transfer_items` primitive (trade is refactored onto the same primitive; loot/trade/theft are separate access modes over it). Lair treasuries are persistent `Container` entities gated behind core death.
 
 ### Faction Relations, Reputation & Combat Sides
 

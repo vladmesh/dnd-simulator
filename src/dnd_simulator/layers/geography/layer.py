@@ -126,6 +126,7 @@ class GeographyLayer(Layer):
         - CONNECTIONS: params={region_id} -> connected regions with directions
         - TRAVEL_TIME: params={from_id, to_id} -> travel hours, distance
         - DAYLIGHT: params={region_id, month?} -> hours of daylight
+        - IS_DAYLIGHT: params={region_id} -> bool, whether it is currently daytime
         - REGION_INFO: params={region_id} -> full region data
         - REGIONS: -> list of all region IDs
         """

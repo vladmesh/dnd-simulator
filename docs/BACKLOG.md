@@ -11,7 +11,7 @@
 
 ## Gameplay
 
-- [ ] **must** `monster-spawn` — Система спавна монстров: триггеры (proximity, time, event), таблицы встреч по региону/локации, CR-бюджет
+- [x] `monster-spawn` — ~~Система спавна монстров: триггеры (proximity, time, event), таблицы встреч по региону/локации, CR-бюджет~~ FIXED Sprint 018: логова (`core/lair.py`, core-death depletion), региональные encounter-таблицы (region→location fallthrough), time-of-day гейт (day/night). CR-бюджет/авто-скейлинг сознательно отброшен (кенши-стиль). Event-триггер вынесен в `spawn-event-trigger`
 - [ ] **must** `quest-system` — Система квестов: цели, триггеры завершения, награды. Минимум: fetch/kill/escort
 - [ ] **should** `key-npcs` — Ключевые NPC (антагонист, компаньон): глубокая память, реакция на мировые события, персональные цели
 - [ ] **should** `npc-wandering` — Динамические маршруты NPC между поселениями (сейчас только статичные расписания)
@@ -28,6 +28,7 @@
 - [ ] **could** `container-hp-locks` — Сундуки с замком/HP: взлом (lockpicking) и «разбить» контейнер
 - [ ] **could** `lair-actions` — D&D lair actions на ядре логова
 - [ ] **could** `lair-new-leader` — После смерти ядра логово с шансом поднимает нового вожака вместо деплита (динамика мира)
+- [ ] **could** `lair-time-of-day` — Активность логова варьируется день/ночь (`active_at: day|night` гейтит материализацию ростера). Переиспользует `TimeOfDay`/`IS_DAYLIGHT`/`is_active_at_time` из Sprint 018 phase 4 (отложено при планировании фазы 4)
 
 ## World Simulation
 
@@ -64,6 +65,7 @@
 - [ ] **should** `npc-instant-say-response` — после `say` тикнуть NPC в локации (1 раунд), чтобы RuleBrain/LlmBrain ответил в том же запросе. Сейчас NPC отвечают только при `advance_time`
 - [ ] **could** `list-npcs-iterate-entities` — `list_npcs` итерирует по регионам; NPC в несуществующем регионе выпадает из списка. Итерировать по entities напрямую
 - [ ] **could** `periodic-autosave-scheduler` — фоновый asyncio таск в FastAPI lifespan каждые ~2 мин вызывает `autosave_all_sessions()`; cancel на shutdown перед финальным autosave. Дополняет per-action и shutdown автосейв
+- [ ] **should** `session-disconnect-debounce` — быстрый disconnect+reconnect (React StrictMode remount, сетевой блип) всё ещё гонит лишний evict: `remove_listener` останавливает раунд и `_on_session_empty` выселяет сессию из реестра. Симптом GAME OVER устранён в post-audit sprint 018 (раунд-луп больше не шлёт `on_game_over` при административном `stop()` — `Round.is_stopped`; `_on_session_empty` перепроверяет `has_listeners()`), но при «evict раньше add_listener» сессия всё равно выселяется и живёт орфаном на reconnect-WS (прогресс может не попасть в реестровый autosave; reload поднимает старый autosave). Полноценный фикс — grace-period: при опустошении не выселять сразу, а отложенно (1–2с через `threading.Timer`) перепроверить пустоту и только тогда `stop_round`+evict; reconnect внутри окна отменяет. Прод (без StrictMode-двумаунта) почти не задет, поэтому not-must
 
 ## DevOps / Infra
 
@@ -76,9 +78,11 @@
 ## Bugs
 
 - [ ] **could** `corpse-nearby-actions` — мёртвое существо показывается в Nearby-панели с кнопками Attack/Talk/Inspect (E2E sprint 018 phase 2). Лут идёт через отдельный LootPanel; атака трупа возвращает корректное «уже мертва», так что ничего не ломается — но Attack/Talk на трупе бессмысленны. Скрывать их для мёртвых (или убирать трупы из Nearby, раз есть LootPanel)
+- [ ] **should** `encounter-spawned-perceiver` — `EncounterSpawned` события не имеют перцептора в `perception.py` `_DISPATCH`, в логе игрока выводится мусорный фолбэк `Something happened (encounter_spawned)` (E2E post-audit sprint 018; срабатывает на каждый региональный/локационный спавн встречи). Добавить `_perceive_encounter_spawned` (напр. «Рядом что-то зашевелилось») и зарегистрировать в `_DISPATCH`
 - [ ] **should** `battle-map-configs-not-wired` — `battle_map_configs` из `regions.yaml` не передаётся в `EntitiesLayer` при создании сессии в `game_service.py`. Все combat maps дефолтят в 60×60. `load_battle_maps()` keyed by region_id, `CombatManager` ищет по location_id — нужен маппинг через `location_graph`
 - [ ] **should** `player-character-no-attacks` — `POST /api/player/sessions/{id}/character` не принимает `attacks`; персонаж дерётся кулаками (1 урон). Добавить `attacks` в `CreatePlayerRequest` и `parse_player` (проверить — мог закрыться в Sprint 013 char-creation)
 - [ ] **could** `look-action-i18n-hardcode` — `_cmd_look` в GameService хардкодит строки «Terrain:»/«Weather:» вместо `_()`. Не критично (perception API отдаёт сырые данные), но для консистентности text-команд стоит перевести
+- [ ] **should** `combat-log-i18n-gaps` — при дефолтном `DND_LANGUAGE=ru` боевой лог наполовину английский (E2E post-audit sprint 018). Три причины: (1) дрейф каталога — msgid в коде несут лишний `{oa}` (`perception.py:141,145`), не совпадают с записью в `.po` («You attack {target}{weapon}{roll}{outcome}») → фолбэк на английский; нужен `make messages` + перевод + `make compile-messages`; (2) непереведены строки репутации (`perception.py:505`) и «moved (X ft)»; (3) код-баг: `rules/handlers/movement.py:52,56` возвращают сырой английский `error=...` не обёрнутый в `_()` («Not on the battle map», «Cannot move there — blocked» — последняя ещё и с em-dash) → никогда не локализуется. В основном преэкзистинг (строки спринтов 012/014), но очень заметно
 - [x] `sneak-attack-faction-check` — ~~SA ally-adjacency считала союзником любое живое существо в 5ft без учёта фракции~~ FIXED Sprint 011/014: ally detection через faction relations
 - [x] `flaky-initiative-test` — ~~`test_second_attack_does_not_reroll_initiative` падал рандомно~~ FIXED: AC=30 чтобы атаки всегда мазали, c2 не удаляется из turn_order
 - [ ] **could** `flaky-schemaform-ref-select` — `frontend/src/components/master/__tests__/SchemaForm.test.tsx > renders ref field as select with fetched options` флапает в полном `npx vitest run` (ждёт 3 option, видит 1), но зелёный при изоляции файла и на повторе. Похоже на гонку мока fetch ref-опций / async-рендера select. Замечен на Sprint 018 phase 3 (бэкенд-only коммит, влиять не мог). Стабилизировать ожидание опций (`findBy`/`waitFor`) или изолировать fetch-мок между тестами
@@ -170,7 +174,7 @@
 - [x] `dead-auto-fail-saves` — ~~rules/conditions.py:32~~ FIXED audit 2026-03-31: removed
 - [ ] `dead-refund` — core/turn_budget.py:58 (tested but unused, future budget mechanic)
 - [x] `dead-check-reactions` — ~~stubbed~~ FIXED Sprint 012: wired into round loop
-- [ ] `dead-is-daylight` — rules/geography.py:172, tested but unused in prod. Wire into geography layer or remove
+- [x] `dead-is-daylight` — ~~rules/geography.py:172, tested but unused in prod. Wire into geography layer or remove~~ FIXED Sprint 018 phase 4: wired into `IS_DAYLIGHT` geography query (location→region→latitude→is_daylight) для time-of-day встреч
 - [ ] `dead-prone-stand-cost` — rules/conditions.py:27, tested but never integrated into movement handler
 - [x] `dead-reset-resources` — ~~rules/resources.py, 12 test refs, 0 prod~~ FIXED Sprint 015 phase 1: wired into rest handlers
 - [ ] `dead-walk-path` — rules/movement.py:201, 12 test refs, 0 prod. Budget-aware path walking
