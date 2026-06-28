@@ -10,13 +10,14 @@ class EntityKind(StrEnum):
     """Runtime entity discriminator for save/load and query filtering.
 
     Distinct from content_loader.EntityType (which enumerates YAML content kinds).
-    PLAYER / NPC / CREATURE are used in EntitiesLayer save data; PLAYER / NPC / MONSTER
-    are used by the detail/query API surface.
+    PLAYER / NPC / CREATURE / CONTAINER are used in EntitiesLayer save data;
+    PLAYER / NPC / MONSTER are used by the detail/query API surface.
     """
 
     PLAYER = "player"
     NPC = "npc"
     CREATURE = "creature"
+    CONTAINER = "container"
     MONSTER = "monster"
 
 

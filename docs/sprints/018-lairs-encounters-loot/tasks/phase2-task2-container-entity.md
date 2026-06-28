@@ -44,4 +44,13 @@ Gotcha: the `get_state` ladder is `isinstance(e, Creature)` first (adds combat f
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `Container(Entity)` in `core/container.py`: `inventory`, `gold`, `is_open` (default open). No HP/brain/turn.
+- `is_lootable` (`rules/loot.py`) gained the container arm: open → lootable, closed → not.
+- `EntityKind.CONTAINER` added (`core/models.py`). Save/load wired in `layers/entities/layer.py`: a top-level `elif isinstance(e, Container)` branch in `get_state` (skips the Creature structural block, serializes `is_open`/`gold`/`inventory` via `_serialize_item`); a `CONTAINER` reconstruct branch in `load_state` that builds a bare `Container`; and a Container arm in the mutable-state chain that restores `gold`/`is_open`/`inventory` (via `deserialize_item`). Splitting reconstruct (bare object) from mutable-restore (contents) mirrors the existing Creature pattern, so both fresh-load and pre-existing containers restore correctly — matters for the Task 4 treasury.
+- Coexistence confirmed: `Container` is excluded from `get_active_creatures`/merchant/wake queries (all guard on `isinstance(e, Creature)`/`Npc`). `awareness_builder` and `query_handler._entity_detail` iterate `_entities` without a Creature guard, but only matter once a container sits in a live location — that surfacing is Task 3 (`take`/awareness). No live-location container exists yet, so the suite stays green.
+- One ruff I001 import-order fix (container import slotted after combat, belongs after conditions) auto-fixed.
+- `make check` green: backend 2202 passed (+4), tsc clean, vitest 238 passed. The 2 `SchemaForm.tsx` eslint warnings are pre-existing.

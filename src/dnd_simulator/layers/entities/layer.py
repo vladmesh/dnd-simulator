@@ -17,6 +17,7 @@ from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.container import Container
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, EntityKind, Event, EventType, Query
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
@@ -478,6 +479,14 @@ class EntitiesLayer(Layer):
             elif isinstance(e, Creature):
                 data["entity_type"] = EntityKind.CREATURE.value
                 data["current_hp"] = e.current_hp
+            elif isinstance(e, Container):
+                from dnd_simulator.core.player import _serialize_item
+
+                data["entity_type"] = EntityKind.CONTAINER.value
+                data["is_open"] = e.is_open
+                data["gold"] = e.gold
+                if e.inventory:
+                    data["inventory"] = [_serialize_item(item) for item in e.inventory]
             entities[eid] = data
         combats = self._combat.get_combats_state()
         result: dict[str, object] = {"entities": entities}
@@ -524,6 +533,14 @@ class EntitiesLayer(Layer):
                         speed=int(edata["speed"]),
                         ability_scores=parse_ability_scores(edata),
                         attacks=parse_attacks(edata.get("attacks") or []),
+                    )
+                    self.add_entity(entity)
+                    # Fall through to mutable state restoration below
+                elif entity_kind is EntityKind.CONTAINER:
+                    entity = Container(
+                        id=str(eid),
+                        name=str(edata["name"]),
+                        location_id=str(edata["location_id"]),
                     )
                     self.add_entity(entity)
                     # Fall through to mutable state restoration below
@@ -598,6 +615,14 @@ class EntitiesLayer(Layer):
                         entity.memory = NpcMemory(current_conversation=legacy) if legacy else NpcMemory()
                 elif isinstance(entity, Creature):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
+                elif isinstance(entity, Container):
+                    entity.gold = int(edata.get("gold", entity.gold))
+                    entity.is_open = bool(edata.get("is_open", entity.is_open))
+                    inv_raw = edata.get("inventory")
+                    if isinstance(inv_raw, list):
+                        from dnd_simulator.content_loader.items import deserialize_item
+
+                        entity.inventory = [deserialize_item(d) for d in inv_raw]
 
         combats_data = state.get("combats")
         if isinstance(combats_data, dict):

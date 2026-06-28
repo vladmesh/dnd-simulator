@@ -9,11 +9,13 @@ checks across handlers.
 from __future__ import annotations
 
 from dnd_simulator.core.character import Creature, Entity
+from dnd_simulator.core.container import Container
 
 
 def is_lootable(entity: Entity) -> bool:
     """Whether `entity` can currently be looted via `take`."""
     if isinstance(entity, Creature):
         return not entity.is_alive
-    # Container (open chest, lair treasury) is handled when that type lands.
+    if isinstance(entity, Container):
+        return entity.is_open
     return False
