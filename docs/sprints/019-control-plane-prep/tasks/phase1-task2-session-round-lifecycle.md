@@ -65,4 +65,25 @@ gate assertions on state that `start_round` sets synchronously before returning
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Test-only, no product code, as planned. Extended `tests/unit/test_session_lifecycle.py`
+with 5 round-lifecycle tests (16 total in the file now), all GREEN on first run.
+
+Approach:
+- A `session_with_player` fixture builds a real `sword_vale` session + fighter
+  (`GameService(store=MagicMock(spec=SaveStore))` — start_game/create_player never touch
+  the store) and always calls `stop_round` in teardown, so no test can leak a live thread.
+- `start_round`: returns a `Round`, wires a `PlayerBrain` onto `player.brain`,
+  `_round_thread.is_alive()` (loop parks on the player's blocking `queue.get`).
+- Idempotency: `r1 is r2`, `_round_thread` unchanged on a second call.
+- `submit_player_action(END_TURN)` after start reaches the live brain without raising.
+- `stop_round`: clears `_round` / `_player_brain` / `_round_thread` and the captured
+  thread is dead after the in-method `join`.
+- `stop_round` on a never-started session is a safe no-op.
+
+Determinism confirmed: PlayerBrain blocks on its queue so the loop never races to
+completion; ran the file 5× back-to-back with no flakes and no leaked threads. `make
+check` fully green (ruff + mypy 146 files clean, 2263 backend tests, 238 frontend).

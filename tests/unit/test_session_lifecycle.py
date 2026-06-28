@@ -15,10 +15,14 @@ from unittest.mock import MagicMock
 import pytest
 
 from dnd_simulator.core.action import Action, ActionType
+from dnd_simulator.core.brain import PlayerBrain
 from dnd_simulator.core.combat import Position
 from dnd_simulator.core.world import World
+from dnd_simulator.round import Round
 from dnd_simulator.rules.movement import calculate_away_direction, calculate_direction
+from dnd_simulator.service import GameService
 from dnd_simulator.service.session import GameSession, resolve_abstract_move
+from dnd_simulator.storage.store import SaveStore
 
 # ---------------------------------------------------------------------------
 # Test doubles
@@ -245,3 +249,87 @@ class TestResolveAbstractMove:
         result = resolve_abstract_move(action, mover, host)  # type: ignore[arg-type]
 
         assert result is action
+
+
+# ---------------------------------------------------------------------------
+# Round lifecycle (live background thread)
+# ---------------------------------------------------------------------------
+
+_FIGHTER_DATA = {
+    "name": "Thrain",
+    "race": "dwarf",
+    "class": "fighter",
+    "alignment": "lawful_good",
+    "ability_scores": {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 12, "cha": 8},
+    "fighting_style": "defense",
+}
+
+
+@pytest.fixture
+def session_with_player() -> Any:
+    """A real sword_vale session with a fighter; teardown always stops the round.
+
+    PlayerBrain blocks on its queue, so a started round parks on the player's first
+    turn and the thread stays alive without sleeps. Teardown's stop_round is a safe
+    no-op when no round was started, so no test can leak a live thread.
+    """
+    service = GameService(store=MagicMock(spec=SaveStore))
+    sid = service.start_game(world_name="sword_vale").session_id
+    service.create_player(sid, _FIGHTER_DATA)
+    session = service.get_session(sid)
+    player = session.get_player()
+    assert player is not None
+    try:
+        yield session, player
+    finally:
+        session.stop_round()
+
+
+class TestStartRound:
+    def test_start_returns_round_wires_brain_and_thread_alive(self, session_with_player: Any) -> None:
+        session, player = session_with_player
+
+        game_round = session.start_round(player)
+
+        assert isinstance(game_round, Round)
+        assert isinstance(player.brain, PlayerBrain)
+        assert session._round_thread is not None
+        assert session._round_thread.is_alive()
+
+    def test_start_round_is_idempotent(self, session_with_player: Any) -> None:
+        """A second start while the thread is alive returns the same Round, no 2nd thread."""
+        session, player = session_with_player
+
+        r1 = session.start_round(player)
+        thread1 = session._round_thread
+        r2 = session.start_round(player)
+
+        assert r1 is r2
+        assert session._round_thread is thread1
+
+    def test_submit_after_start_does_not_raise(self, session_with_player: Any) -> None:
+        session, player = session_with_player
+        session.start_round(player)
+
+        # Reaches the live brain (no RuntimeError); ends the parked player turn.
+        session.submit_player_action(Action(name=ActionType.END_TURN))
+
+
+class TestStopRound:
+    def test_stop_clears_state_and_joins_thread(self, session_with_player: Any) -> None:
+        session, player = session_with_player
+        session.start_round(player)
+        thread = session._round_thread
+        assert thread is not None
+
+        session.stop_round()
+
+        assert session._round is None
+        assert session._player_brain is None
+        assert session._round_thread is None
+        assert not thread.is_alive()
+
+    def test_stop_when_idle_does_not_raise(self, session_with_player: Any) -> None:
+        session, _player = session_with_player
+        # No round started — stop_round must be a safe no-op.
+        session.stop_round()
