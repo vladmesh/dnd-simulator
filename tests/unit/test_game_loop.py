@@ -266,6 +266,37 @@ class TestProximityActivation:
         assert npc.active is True
 
 
+class TestRoundStopFlag:
+    """is_stopped distinguishes an administrative stop() from a natural loop exit.
+
+    GameSession only fires on_game_over when the loop ends on its own. A transient
+    disconnect+reconnect calls stop(), and must not be reported as game over.
+    """
+
+    def test_natural_end_is_not_stopped(self) -> None:
+        """Dead player → loop exits on its own; is_stopped stays False."""
+        player = PlayerCharacter(id="player", name="Hero", location_id="r1", current_hp=0, brain=_EndTurnBrain())
+        world = _make_world([player])
+        entities_layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+
+        game_round = Round(world, entities_layer)
+        assert game_round.is_stopped is False
+        game_round.run_loop(max_rounds=5)
+
+        assert game_round.is_stopped is False  # natural game over → on_game_over should fire
+
+    def test_stop_sets_is_stopped(self) -> None:
+        """stop() (administrative) flips is_stopped so on_game_over is suppressed."""
+        npc = Creature(id="npc", name="Guard", location_id="r1", brain=_EndTurnBrain())
+        world = _make_world([npc])
+        entities_layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+
+        game_round = Round(world, entities_layer)
+        game_round.stop()
+
+        assert game_round.is_stopped is True
+
+
 class TestWaitAndFastForward:
     """Wait makes creatures dormant, fast-forward advances time to wake_at."""
 

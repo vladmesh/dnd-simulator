@@ -248,8 +248,17 @@ class GameService(
         del self._sessions[session_id]
 
     def _on_session_empty(self, session: GameSession) -> None:
-        """Called when all listeners disconnect. Autosave and evict from memory."""
+        """Called when all listeners disconnect. Autosave and evict from memory.
+
+        Re-checks for a reconnect first: the disconnect handler runs on a worker
+        thread, so a client that immediately reconnects (e.g. a React StrictMode
+        remount, or a network blip) may have re-attached a listener in the gap.
+        Evicting then would orphan a live session and stop its round.
+        """
         sid = session.session_id
+        if session.has_listeners():
+            logger.info("session_empty_evict_skipped_reconnect", session_id=sid)
+            return
         logger.info("session_empty_evict", session_id=sid)
         with contextlib.suppress(Exception):
             self.autosave_session(sid)

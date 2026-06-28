@@ -85,6 +85,11 @@ class Round:
         """Signal the run_loop to exit after current round completes."""
         self._stop_flag = True
 
+    @property
+    def is_stopped(self) -> bool:
+        """True if run_loop exited because stop() was requested (not a natural end)."""
+        return self._stop_flag
+
     def set_on_round_end(self, callback: Callable[[RoundResult], None]) -> None:
         """Set callback invoked after each round with the round result."""
         self._on_round_end = callback

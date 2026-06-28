@@ -326,6 +326,11 @@ class GameSession:
             count = len(self._listeners)
         logger.info("add_listener", listener_count=count)
 
+    def has_listeners(self) -> bool:
+        """True if any listener is currently attached (thread-safe)."""
+        with self._lock:
+            return bool(self._listeners)
+
     def get_last_turn_msg(self) -> dict[str, Any] | None:
         """Return the last turn message for replay by the caller."""
         return self._last_turn_msg
@@ -471,7 +476,12 @@ class GameSession:
                     import traceback
 
                     logger.error("round_loop_error", traceback=traceback.format_exc())
-                self._fire("on_game_over")
+                # Only signal game_over when the loop ended on its own (e.g. player death).
+                # stop_round() sets the stop flag for administrative stops (last listener
+                # disconnected); a transient disconnect+reconnect must not flash GAME OVER on
+                # the reconnected client.
+                if not game_round.is_stopped:
+                    self._fire("on_game_over")
 
             # Copy contextvars (session_id etc.) into the round thread
             ctx = contextvars.copy_context()
