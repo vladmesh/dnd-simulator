@@ -20,9 +20,13 @@
 
 **Verify:** integration. Мир с гоблинским логовом; вход → население на месте; убил миньонов, промотал время → респавн; убил ядро → респавн выключен навсегда и переживает save/load.
 
+**Решение по модели:** логово это отдельная сущность на `EcologyLayer` (не разновидность `Squad`): стационарно, фиксированный ростер с ядром, машина состояний `ACTIVE → DEPLETED`. Переиспользуем паттерн материализации сквадов (спавн `Creature` рядом с игроком + дематериализация при уходе), не класс `Squad`. `depleted`/население логова персистятся в `EcologyLayer.get_state`. Деплит-ролл через сидируемый `get_global_rng()`.
+
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Lair model, content & materialization](tasks/phase1-task1-lair-materialization.md) — `Lair`/`LairState`, схема + `load_lairs`, `LAIRS_AT_LOCATION`, материализация полного ростера при входе
+2. [Lair respawn while active](tasks/phase1-task2-lair-respawn.md) — синк потерь визита, респавн до полного ростера на тике, персистенс состояния логова
+3. [Lair depletion](tasks/phase1-task3-lair-depletion.md) — смерть ядра → `DEPLETED` навсегда, опц. `depletion_chance`, переживает save/load
 
 ## Phase 2: Лут и контейнеры (Loot & Containers)
 
