@@ -56,9 +56,12 @@ Encounter-таблицы можно задавать на уровне реги�
 
 **Verify:** integration. Локация без своей таблицы в регионе с таблицей → ролл из региональной; локация со своей таблицей → её таблица, регион игнорируется.
 
+**Решение по подходу:** резолв «регион → локация» делаем на загрузке, калькой с уже существующей сборки `battle_map_configs` (`game_service.py:153-163`: региональный дефолт + пер-локационный override). Региональные таблицы схлопываются в эффективную пер-локационную `dict[str, list[EncounterEntry]]`, поэтому рантайм `ActivationManager` не меняется. Контент аддитивен: новый sibling-ключ `region_encounters` (по region_id) рядом с существующим `encounters` (по location_id) в `ecology/monsters.yaml`, без миграции.
+
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Региональные encounter-таблицы — схема, загрузка, fail-fast](tasks/phase3-task1-region-encounter-tables.md) — `region_encounters` в YAML, `parse_region_encounters` (fail-fast по template и region_id), `load_monsters` → 3-кортеж, прокидка в `game_service`
+2. [Фоллтру локация → регион (override) и боевой ролл](tasks/phase3-task2-region-fallthrough.md) — сборка эффективных таблиц (регион дефолт, локация override) калькой `battle_map_configs`; integration на живом пути активации
 
 ## Phase 4: Время суток (Time-of-Day Spawns)
 
