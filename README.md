@@ -13,7 +13,7 @@ Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/). Frontend requires No
 
 ```bash
 make install        # install Python dependencies
-make check          # run all checks (lint + typecheck + test)
+make check          # backend + frontend lint/typecheck/test (CI minus integration)
 make format         # auto-format code
 make test           # run tests only
 make serve          # start API server on :8001 (auto-builds frontend)
