@@ -42,3 +42,9 @@ encounters:
     - template: bandit
       chance: 0.3
       count: [1, 2]
+
+region_encounters:
+  crossroads:
+    - template: goblin
+      chance: 0.4
+      count: [1, 3]

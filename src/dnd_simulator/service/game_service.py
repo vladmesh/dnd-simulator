@@ -38,7 +38,7 @@ from dnd_simulator.content_loader.library import (
 )
 from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.character import Entity
-from dnd_simulator.core.location import LocationGraph
+from dnd_simulator.core.location import Location, LocationGraph
 from dnd_simulator.core.models import GameDateTime, TimeDelta
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
@@ -62,6 +62,27 @@ from .session import GameSession
 DEFAULT_CONTENT_DIR = Path(__file__).resolve().parents[3] / "content"
 
 logger = structlog.get_logger(domain="service")
+
+
+def _flatten_region_defaults[T](
+    locations: list[Location],
+    by_region: dict[str, T],
+    by_location: dict[str, T],
+) -> dict[str, T]:
+    """Collapse region-level defaults and per-location overrides into a flat per-location map.
+
+    A region entry applies to every location in that region (default); a
+    per-location entry overrides it (no merge). Battle maps and encounter tables
+    both resolve region → location this way at load time, so the runtime only
+    ever sees per-location data.
+    """
+    resolved: dict[str, T] = {}
+    for loc in locations:
+        if loc.region_id in by_region:
+            resolved[loc.id] = by_region[loc.region_id]
+        if loc.id in by_location:
+            resolved[loc.id] = by_location[loc.id]
+    return resolved
 
 
 class GameService(
@@ -118,8 +139,7 @@ class GameService(
 
         catalog_dir = self._content_dir / "catalogs" / "monsters"
         monster_catalog = load_catalog(catalog_dir, MonsterTemplateContent) if catalog_dir.exists() else {}
-        # region_encounter_tables resolve into per-location tables in phase 3 task 2; loaded here.
-        monster_templates, encounter_tables, _region_encounter_tables = load_monsters(
+        monster_templates, encounter_tables, region_encounter_tables = load_monsters(
             layer_paths["ecology"], lang=lang, catalog=monster_catalog, known_regions={r.id for r in regions}
         )
         faction_data = load_factions(layer_paths["politics"], lang=lang)
@@ -153,23 +173,22 @@ class GameService(
         ecology_layer = EcologyLayer(
             squads=list(squads.values()), location_graph=location_graph, lairs=list(lairs.values())
         )
-        # Load battle maps from geography. Region-level declarations apply to
-        # every location in that region (default); per-location declarations
-        # override the region default.
-        region_battle_maps = load_battle_maps(layer_paths["geography"])
-        location_battle_maps = load_location_battle_maps(layer_paths["geography"])
-        battle_map_configs = {}
-        for loc in locations:
-            if loc.region_id in region_battle_maps:
-                battle_map_configs[loc.id] = region_battle_maps[loc.region_id]
-            if loc.id in location_battle_maps:
-                battle_map_configs[loc.id] = location_battle_maps[loc.id]
+        # Battle maps and encounter tables both resolve region → location at load
+        # time: a region-level declaration is the default for every location in
+        # that region, a per-location declaration overrides it. The runtime sees
+        # only the flat per-location maps.
+        battle_map_configs = _flatten_region_defaults(
+            locations,
+            load_battle_maps(layer_paths["geography"]),
+            load_location_battle_maps(layer_paths["geography"]),
+        )
+        effective_encounters = _flatten_region_defaults(locations, region_encounter_tables, encounter_tables)
 
         entities_layer = EntitiesLayer(
             entities=entities,
             summarizer=summarizer,
             monster_templates=monster_templates,
-            encounter_tables=encounter_tables,
+            encounter_tables=effective_encounters,
             battle_map_configs=battle_map_configs,
         )
 

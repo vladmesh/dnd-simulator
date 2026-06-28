@@ -54,4 +54,13 @@ Integration (живой путь активации/ролла через реа
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- **Resolution = one shared helper, not a second copy-paste loop.** Extracted `_flatten_region_defaults[T]` (PEP 695 generic) in `game_service.py` and routed *both* `battle_map_configs` and the new `effective_encounters` through it. The task said "калька с battle_map_configs"; literally copying the loop would have doubled the pattern, so I deduped instead. `effective_encounters` is passed into the existing `EntitiesLayer(encounter_tables=...)` param — `ActivationManager` / `_roll_encounters` are byte-for-byte unchanged (resolution is load-time only).
+- **`_region_encounter_tables` → `region_encounter_tables`** (now consumed). Region default first, per-location override second — exact override semantics, no merge.
+- **Test boundary: in-process product test, not docker.** The encounter roll uses the bare `random.random()` / `random.randint()` module functions, *not* the seeded `get_global_rng()`, so `DND_DICE_SEED` (how the docker `test_lairs.py` gets determinism) would NOT make the roll deterministic. The faithful deterministic path is in-process: `GameService.start_game` + `create_player` build the world through the real game_service resolution, then drive `EntitiesLayer.update_activation` with the world's real query/emit fns and `random` mocked. Lives in `tests/unit/test_region_encounters.py` (4 tests), same pattern as `test_lair_materialization.py`.
+- **Content (test_vale, additive):** `region_encounters: crossroads → goblin` in `ecology/monsters.yaml`; new bare `forest_edge` location in region `darkwood` (no lair) for the "no table anywhere → nothing spawns" negative check — `forest_clearing` couldn't serve that role because it hosts the goblin lair. Bumped the `test_manifest_game_service.py` location-count assertion 5 → 6 (intentional: the test world gained a location).
+- **RED coverage.** Fallthrough (`crossroads_tavern` → regional goblin) and per-location cooldown (two tableless crossroads locations roll independently) were RED before the impl, GREEN after. Override (`forest_road` own bandit table beats the regional goblin) and the darkwood negative are guards: they can't be RED pre-impl because the regional table only enters the roll path *with* this change — they catch a future merge/global-leak regression.
+- `make check`: backend 2237 passed (4 new), mypy clean (145 files), frontend 238 passed. The 2 eslint SchemaForm warnings are pre-existing/unrelated.

@@ -66,3 +66,17 @@ forest_clearing:
   neighbors:
     - target: forest_road
       distance: 3000
+    - target: forest_edge
+      distance: 1000
+
+forest_edge:
+  name:
+    en: "Forest Edge"
+    ru: "Опушка леса"
+  region: darkwood
+  description:
+    en: "The quiet outer fringe of the Darkwood, away from the warren."
+    ru: "Тихая окраина Тёмнолесья, в стороне от норы."
+  neighbors:
+    - target: forest_clearing
+      distance: 1000
