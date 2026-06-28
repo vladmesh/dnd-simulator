@@ -84,6 +84,7 @@ class QueryType(Enum):
     # Ecology
     SQUADS_AT_LOCATION = "squads_at_location"
     SQUAD_INFO = "squad_info"
+    LAIRS_AT_LOCATION = "lairs_at_location"
 
     # Entities
     PLAYERS = "players"

@@ -342,6 +342,18 @@ class SquadContent(BaseModel):
             object.__setattr__(self, "max_strength", self.strength)
 
 
+class LairContent(BaseModel):
+    """A lair definition from YAML — a fixed monster home at one location."""
+
+    name: LocalizedText
+    faction: str
+    location: str
+    members: list[str] = []
+    core: str | None = None
+    respawn_interval: int = 86400
+    depletion_chance: float = 0.0
+
+
 # ---------------------------------------------------------------------------
 # Entity models
 # ---------------------------------------------------------------------------

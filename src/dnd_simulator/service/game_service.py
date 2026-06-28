@@ -19,6 +19,7 @@ from dnd_simulator.content_loader import (
     load_battle_maps,
     load_catalog,
     load_factions,
+    load_lairs,
     load_location_battle_maps,
     load_locations,
     load_monsters,
@@ -120,6 +121,7 @@ class GameService(
         monster_templates, encounter_tables = load_monsters(layer_paths["ecology"], lang=lang, catalog=monster_catalog)
         faction_data = load_factions(layer_paths["politics"], lang=lang)
         squads = load_squads(layer_paths["ecology"], lang=lang)
+        lairs = load_lairs(layer_paths["ecology"], known_templates=set(monster_templates), lang=lang)
         region_terrains = extract_region_terrains(regions)
 
         # Players are created via API (create_player), not from templates
@@ -143,7 +145,9 @@ class GameService(
         # Resolve member CRs from monster templates for abstract combat
         for squad in squads.values():
             squad.member_crs = [monster_templates[tid].cr for tid in squad.member_templates]
-        ecology_layer = EcologyLayer(squads=list(squads.values()), location_graph=location_graph)
+        ecology_layer = EcologyLayer(
+            squads=list(squads.values()), location_graph=location_graph, lairs=list(lairs.values())
+        )
         # Load battle maps from geography. Region-level declarations apply to
         # every location in that region (default); per-location declarations
         # override the region default.

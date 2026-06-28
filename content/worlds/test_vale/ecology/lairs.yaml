@@ -1,0 +1,8 @@
+goblin_warren:
+  name: {en: Goblin Warren, ru: Гоблинья нора}
+  faction: goblin_tribe
+  location: forest_clearing
+  core: goblin_chieftain
+  members: [goblin, goblin, goblin]
+  respawn_interval: 86400
+  depletion_chance: 0.0

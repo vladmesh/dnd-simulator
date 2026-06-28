@@ -37,7 +37,7 @@ _TIME_LATER = GameDateTime(year=1490, month=6, day=1, hour=12, minute=15)  # +15
 
 
 def _noop_query_fn(layer: str, query: Query) -> Answer:
-    if layer == "ecology" and query.question == QueryType.SQUADS_AT_LOCATION:
+    if layer == "ecology" and query.question in (QueryType.SQUADS_AT_LOCATION, QueryType.LAIRS_AT_LOCATION):
         return Answer(value=[])
     return Answer(value=None)
 
@@ -209,6 +209,8 @@ class TestSquadMaterialization:
                         ]
                     )
                 return Answer(value=[])
+            if target == "ecology" and query.question == QueryType.LAIRS_AT_LOCATION:
+                return Answer(value=[])
             return Answer(value=None)
 
         return query_fn
@@ -295,7 +297,10 @@ class TestHostileEncounterAutoCombat:
         def hostile_query_fn(target: str, query: Query) -> Answer:
             if target == "politics" and query.question == QueryType.FACTION_RELATION:
                 return Answer(value=FactionRelation.HOSTILE)
-            if target == "ecology" and query.question == QueryType.SQUADS_AT_LOCATION:
+            if target == "ecology" and query.question in (
+                QueryType.SQUADS_AT_LOCATION,
+                QueryType.LAIRS_AT_LOCATION,
+            ):
                 return Answer(value=[])
             return Answer(value=None)
 

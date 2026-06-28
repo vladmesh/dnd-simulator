@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 import structlog
 
 from dnd_simulator.core.character import Creature, Entity
+from dnd_simulator.core.lair import LairState
 from dnd_simulator.core.models import Event, EventType, FactionRelation, Query, QueryType
 from dnd_simulator.core.monster import EncounterEntry
 
@@ -37,6 +38,7 @@ class ActivationManager:
         encounter_cooldowns: dict[str, int],
         creature_locations: dict[str, str],
         materialized_squads: dict[str, tuple[list[str], int, int]],
+        materialized_lairs: dict[str, tuple[list[str], str | None]],
     ) -> None:
         self._entities = entities
         self._location_log = location_log
@@ -46,6 +48,7 @@ class ActivationManager:
         self._encounter_cooldowns = encounter_cooldowns
         self._creature_locations = creature_locations
         self._materialized_squads = materialized_squads
+        self._materialized_lairs = materialized_lairs
         self._spawn_counter = 0
 
     def update_activation(
@@ -136,9 +139,10 @@ class ActivationManager:
         # Third pass: check for encounter spawns from creatures that were active
         self._check_encounters(now, previously_active, query_fn)
 
-        # Fourth pass: squad materialization/dematerialization
+        # Fourth pass: squad + lair materialization/dematerialization
         if query_fn is not None:
             self._update_materialization(player_locations, query_fn, emit_fn)
+            self._update_lair_materialization(player_locations, query_fn, emit_fn)
 
     def _check_encounters(self, now: int, active_ids: set[str], query_fn: QueryFn | None = None) -> None:
         """Roll encounters for locations where any active creature just arrived."""
@@ -404,3 +408,85 @@ class ActivationManager:
                     description=f"Squad {squad_id} dematerialized (strength {new_strength})",
                 )
             )
+
+    # -- Lair materialization --
+
+    def _update_lair_materialization(
+        self,
+        active_locations: set[str],
+        query_fn: QueryFn,
+        emit_fn: EmitFn | None,
+    ) -> None:
+        """Materialize active lairs at active locations; dematerialize lairs the player left."""
+        from dnd_simulator.core.world import LayerError
+
+        lairs_at_active: dict[str, dict[str, Any]] = {}
+        for loc in active_locations:
+            try:
+                answer = query_fn("ecology", Query(QueryType.LAIRS_AT_LOCATION, params={"location_id": loc}))
+            except LayerError:
+                return  # No ecology layer in this world — skip lair materialization
+            assert isinstance(answer.value, list)
+            for lair_info in answer.value:
+                lairs_at_active[str(lair_info["id"])] = lair_info
+
+        # Materialize new lairs (skip depleted — terminal, nothing spawns)
+        for lair_id, info in lairs_at_active.items():
+            if lair_id in self._materialized_lairs:
+                continue
+            if info["state"] != LairState.ACTIVE.value:
+                continue
+            self._materialize_lair(lair_id, info)
+            location_id = str(info["location_id"])
+            creature_ids = self._materialized_lairs[lair_id][0]
+            spawned = [
+                e for cid in creature_ids if cid in self._entities and isinstance((e := self._entities[cid]), Creature)
+            ]
+            if spawned and location_id not in self._combat.get_combat_locations():
+                self._maybe_start_combat(location_id, spawned, query_fn)
+
+        # Dematerialize lairs no longer at active locations
+        for lair_id in list(self._materialized_lairs):
+            if lair_id in lairs_at_active:
+                continue
+            creature_ids, _core_id = self._materialized_lairs[lair_id]
+            any_in_combat = any(
+                isinstance(ent := self._entities.get(cid), Creature) and ent.in_combat for cid in creature_ids
+            )
+            if any_in_combat:
+                continue
+            self._dematerialize_lair(lair_id, creature_ids)
+
+    def _materialize_lair(self, lair_id: str, info: dict[str, Any]) -> None:
+        """Spawn a lair's full roster (core + minions) as concrete creatures."""
+        from dnd_simulator.rules.rule_brain import RuleBrain
+
+        core_tid = info.get("core")
+        roster: list[str] = ([str(core_tid)] if core_tid else []) + [str(t) for t in info["members"]]
+        faction_id = str(info["faction_id"])
+        location = str(info["location_id"])
+
+        creature_ids: list[str] = []
+        core_creature_id: str | None = None
+        for tid in roster:
+            template = self._monster_templates[tid]
+            self._spawn_counter += 1
+            instance_id = f"{tid}_{self._spawn_counter}"
+            creature = template.spawn(location, instance_id)
+            creature.faction_id = faction_id
+            creature.brain = RuleBrain()
+            creature.active = True
+            self._entities[creature.id] = creature
+            creature_ids.append(instance_id)
+            if core_tid and core_creature_id is None and tid == str(core_tid):
+                core_creature_id = instance_id
+            logger.info("lair_materialize", lair_id=lair_id, creature_id=instance_id)
+
+        self._materialized_lairs[lair_id] = (creature_ids, core_creature_id)
+
+    def _dematerialize_lair(self, lair_id: str, creature_ids: list[str]) -> None:
+        """Remove a lair's materialized creatures. Population/depletion sync lands in later tasks."""
+        for cid in creature_ids:
+            self._entities.pop(cid, None)
+        del self._materialized_lairs[lair_id]
+        logger.info("lair_dematerialize", lair_id=lair_id)

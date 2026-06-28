@@ -18,6 +18,25 @@ templates:
   guard:
     base: guard
 
+  goblin:
+    base: goblin
+
+  goblin_chieftain:
+    name: {en: Goblin Chieftain, ru: Гоблин-вожак}
+    faction: goblin_tribe
+    hp: 21
+    ac: 15
+    speed: 30
+    ability_scores: {str: 15, dex: 14, con: 14, int: 10, wis: 9, cha: 10}
+    attacks:
+      - name: scimitar
+        ability: dex
+        damage:
+          - dice: "1d6"
+            type: slashing
+        reach: 5
+    cr: 1.0
+
 encounters:
   forest_road:
     - template: bandit

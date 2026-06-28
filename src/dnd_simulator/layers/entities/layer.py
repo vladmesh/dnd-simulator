@@ -83,6 +83,8 @@ class EntitiesLayer(Layer):
         self._spawn_counter = 0
         # Materialization tracking: squad_id → (creature_ids, original_strength, spawn_count)
         self._materialized_squads: dict[str, tuple[list[str], int, int]] = {}
+        # Lair materialization tracking: lair_id → (creature_ids, core_creature_id)
+        self._materialized_lairs: dict[str, tuple[list[str], str | None]] = {}
         if entities:
             for e in entities:
                 self._entities[e.id] = e
@@ -97,6 +99,7 @@ class EntitiesLayer(Layer):
             self._encounter_cooldowns,
             self._creature_locations,
             self._materialized_squads,
+            self._materialized_lairs,
         )
         self._query_handler = QueryHandler(
             self._entities,

@@ -11,10 +11,12 @@ from typing import Any
 from dnd_simulator.content_loader.creatures import _to_attacks
 from dnd_simulator.content_loader.schemas import (
     EncounterEntryContent,
+    LairContent,
     MonsterTemplateContent,
     SquadContent,
 )
 from dnd_simulator.content_loader.utils import _read_yaml, resolve_text
+from dnd_simulator.core.lair import Lair
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.squad import Squad
 
@@ -165,6 +167,47 @@ def load_monsters(
     encounters = parse_encounters(encounters_data, set(templates.keys())) if encounters_data else {}
 
     return templates, encounters
+
+
+def _to_lair(lair_id: str, model: LairContent, lang: str) -> Lair:
+    """Convert validated LairContent to runtime Lair."""
+    return Lair(
+        id=lair_id,
+        name=resolve_text(model.name, lang),
+        faction_id=model.faction,
+        location_id=model.location,
+        members=list(model.members),
+        core=model.core,
+        respawn_interval=model.respawn_interval,
+        depletion_chance=model.depletion_chance,
+    )
+
+
+def parse_lairs(data: dict[str, Any], known_templates: set[str], lang: str = "en") -> dict[str, Lair]:
+    """Parse lairs from YAML data, validating that every template ref exists.
+
+    Each key is a lair_id. Unknown ``core``/``members`` refs raise RuntimeError (fail-fast).
+    """
+    result: dict[str, Lair] = {}
+    for lair_id, ldata in data.items():
+        model = LairContent.model_validate(ldata)
+        refs = [*model.members, *([model.core] if model.core else [])]
+        for ref in refs:
+            if ref not in known_templates:
+                raise RuntimeError(f"Lair '{lair_id}' references unknown monster template '{ref}'")
+        result[str(lair_id)] = _to_lair(str(lair_id), model, lang)
+    return result
+
+
+def load_lairs(path: Path, known_templates: set[str], lang: str = "en") -> dict[str, Lair]:
+    """Load lairs from a world directory's ``lairs.yaml``.
+
+    Returns lairs_by_id. Missing lairs.yaml -> empty dict.
+    """
+    lairs_data = _read_yaml(path / "lairs.yaml")
+    if not lairs_data:
+        return {}
+    return parse_lairs(lairs_data, known_templates, lang)
 
 
 def parse_squad(squad_id: str, data: dict[str, Any], lang: str = "en") -> Squad:

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 
+from dnd_simulator.core.lair import Lair
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, FactionRelation, Query, QueryType
 from dnd_simulator.core.squad import Squad, SquadBehavior
@@ -33,11 +34,16 @@ class EcologyLayer(Layer):
         self,
         squads: list[Squad] | None = None,
         location_graph: LocationGraph | None = None,
+        lairs: list[Lair] | None = None,
     ) -> None:
         self._squads: dict[str, Squad] = {}
         if squads:
             for s in squads:
                 self._squads[s.id] = s
+        self._lairs: dict[str, Lair] = {}
+        if lairs:
+            for lair in lairs:
+                self._lairs[lair.id] = lair
         self._location_graph = location_graph
         self._last_move_time: dict[str, int] = {}  # squad_id → game-time seconds of last move
         self._route_index: dict[str, int] = {}  # squad_id → current index in route
@@ -134,6 +140,11 @@ class EcologyLayer(Layer):
             squad_id = str(params["squad_id"])
             squad = self._squads[squad_id]  # KeyError if not found
             return Answer(value=self._squad_to_dict(squad))
+
+        if q is QueryType.LAIRS_AT_LOCATION:
+            location_id = str(params["location_id"])
+            lairs = [self._lair_to_dict(lair) for lair in self._lairs.values() if lair.location_id == location_id]
+            return Answer(value=lairs)
 
         raise ValueError(f"Unknown ecology query: {q}")
 
@@ -350,4 +361,16 @@ class EcologyLayer(Layer):
             "strength": squad.strength,
             "max_strength": squad.max_strength,
             "member_templates": list(squad.member_templates),
+        }
+
+    @staticmethod
+    def _lair_to_dict(lair: Lair) -> dict[str, Any]:
+        return {
+            "id": lair.id,
+            "name": lair.name,
+            "faction_id": lair.faction_id,
+            "location_id": lair.location_id,
+            "members": list(lair.members),
+            "core": lair.core,
+            "state": lair.state.value,
         }

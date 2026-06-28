@@ -50,4 +50,14 @@ Integration (бой/материализация через реальные с�
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- **Модель.** `core/lair.py`: `Lair` (`@dataclass`, как `Squad`) + `LairState` enum. Статические поля контента (members/core/respawn_interval/depletion_chance) заведены сразу, чтобы YAML был полным; в этой задаче из мутабельного работает только `state` (всегда `ACTIVE`). Респавн/деплит/персистенс — задачи 2-3.
+- **Загрузка.** `LairContent` в schemas, `parse_lairs`/`load_lairs` в `content_loader/monsters.py` (файл `ecology/lairs.yaml`). `parse_lairs` валидирует `members`+`core` против известных шаблонов, бьёт `RuntimeError` на битый ref. Wiring в `game_service`: `load_lairs(..., known_templates=set(monster_templates))` → `EcologyLayer(lairs=...)`.
+- **Материализация.** Параллельный squad-пути путь в `ActivationManager._update_lair_materialization`: запрос `LAIRS_AT_LOCATION` к ecology, спавн полного ростера (ядро первым, затем миньоны) через `MonsterTemplate.spawn`, faction = faction логова, `RuleBrain`, авто-бой через `_maybe_start_combat`. Трекинг `_materialized_lairs: dict[lair_id → (creature_ids, core_creature_id)]` (core id уже трекается под задачу 3, хотя здесь не используется). Дематериализация при уходе игрока; in-combat guard как у сквадов (бой удерживает существ на месте).
+- **Тесты.** `tests/unit/test_lair_materialization.py` (8 тестов) в стиле `test_materialization.py` + politics-стаб для проверки авто-боя. Assembly-тест грузит `test_vale` через `GameService` (lair загружается в `ecology._lairs`). Fail-fast тест через `tmp_path`.
+- **Контент.** В `test_vale` добавлены шаблоны `goblin` (base из каталога) + `goblin_chieftain` (inline, hp 21, CR 1) и `ecology/lairs.yaml` (`goblin_warren` в `forest_clearing`). Counts в `test_manifest_game_service` не задеты.
+- **Изменённые старые тесты.** `test_activation_manager.py`: три query-стаба (`_noop_query_fn`, `_squad_query_fn`, `hostile_query_fn`) теперь отвечают `[]` на `LAIRS_AT_LOCATION`. Контракт `update_activation` расширился (добавлен запрос логов к ecology) — стабы моделируют пустой ответ ecology, как уже делают для сквадов. Это ожидаемое расширение, не починка ради зелени.
+- **mypy gotcha.** Walrus `e` в двух comprehension-ах одной функции конфликтовал по типу (`Entity` vs `Entity | None`); переименовал второй в `ent`.
