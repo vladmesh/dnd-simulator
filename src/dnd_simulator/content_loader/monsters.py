@@ -124,22 +124,40 @@ def resolve_monster_template(
     return _to_monster_template(template_id, model, lang)
 
 
+def _parse_encounter_entries(key: str, entries: Any, known_templates: set[str]) -> list[EncounterEntry]:
+    """Validate and convert one table's entries; fail fast on unknown template refs."""
+    parsed: list[EncounterEntry] = []
+    for entry in entries:
+        model = EncounterEntryContent.model_validate(entry)
+        if model.template not in known_templates:
+            raise RuntimeError(f"Encounter at '{key}' references unknown monster template '{model.template}'")
+        parsed.append(_to_encounter_entry(model))
+    return parsed
+
+
 def parse_encounters(data: dict[str, Any], known_templates: set[str]) -> dict[str, list[EncounterEntry]]:
     """Parse encounter tables from YAML data.
 
     Each key is a location_id mapping to a list of encounter entries.
     """
+    return {loc_id: _parse_encounter_entries(loc_id, entries, known_templates) for loc_id, entries in data.items()}
+
+
+def parse_region_encounters(
+    data: dict[str, Any], known_templates: set[str], known_regions: set[str] | None = None
+) -> dict[str, list[EncounterEntry]]:
+    """Parse region-level encounter tables from YAML data.
+
+    Each key is a region_id mapping to a list of encounter entries. Fails fast on
+    unknown monster templates and (when *known_regions* is given) unknown region ids —
+    a typo'd region would otherwise yield a silently dead table. *known_regions* is None
+    only on direct loader calls without geography; the gameplay path always passes it.
+    """
     result: dict[str, list[EncounterEntry]] = {}
-    for location_id, entries in data.items():
-        parsed: list[EncounterEntry] = []
-        for entry in entries:
-            model = EncounterEntryContent.model_validate(entry)
-            if model.template not in known_templates:
-                raise RuntimeError(
-                    f"Encounter at '{location_id}' references unknown monster template '{model.template}'"
-                )
-            parsed.append(_to_encounter_entry(model))
-        result[location_id] = parsed
+    for region_id, entries in data.items():
+        if known_regions is not None and region_id not in known_regions:
+            raise RuntimeError(f"region_encounters references unknown region '{region_id}'")
+        result[region_id] = _parse_encounter_entries(region_id, entries, known_templates)
     return result
 
 
@@ -147,17 +165,20 @@ def load_monsters(
     path: Path,
     lang: str = "en",
     catalog: dict[str, MonsterTemplateContent] | None = None,
-) -> tuple[dict[str, MonsterTemplate], dict[str, list[EncounterEntry]]]:
+    known_regions: set[str] | None = None,
+) -> tuple[dict[str, MonsterTemplate], dict[str, list[EncounterEntry]], dict[str, list[EncounterEntry]]]:
     """Load monster templates and encounter tables from a world directory.
 
     If *catalog* is provided, templates with a ``base`` key resolve against it.
-    Returns (templates_by_id, encounters_by_location_id).
+    Returns (templates_by_id, encounters_by_location_id, encounters_by_region_id).
+    Region tables are validated against *known_regions* when given (the gameplay path
+    always passes it); None skips region validation for direct loader calls.
     Missing monsters.yaml → empty dicts (worlds without monsters are valid).
     """
     monsters_data = _read_yaml(path / "monsters.yaml")
 
     if not monsters_data:
-        return {}, {}
+        return {}, {}, {}
 
     templates_data = monsters_data.get("templates", {})
     templates: dict[str, MonsterTemplate] = {}
@@ -165,10 +186,14 @@ def load_monsters(
     for tid, tdata in templates_data.items():
         templates[str(tid)] = resolve_monster_template(str(tid), tdata, effective_catalog, lang)
 
+    known_templates = set(templates.keys())
     encounters_data = monsters_data.get("encounters", {})
-    encounters = parse_encounters(encounters_data, set(templates.keys())) if encounters_data else {}
+    encounters = parse_encounters(encounters_data, known_templates) if encounters_data else {}
 
-    return templates, encounters
+    region_data = monsters_data.get("region_encounters", {})
+    region_encounters = parse_region_encounters(region_data, known_templates, known_regions) if region_data else {}
+
+    return templates, encounters, region_encounters
 
 
 def _to_lair(

@@ -33,6 +33,7 @@ from dnd_simulator.content_loader.monsters import (
     parse_encounters,
     parse_lairs,
     parse_monster_template,
+    parse_region_encounters,
     parse_squad,
     resolve_monster_template,
 )
@@ -83,6 +84,7 @@ __all__ = [
     "parse_monster_template",
     "parse_npc",
     "parse_player",
+    "parse_region_encounters",
     "parse_squad",
     "resolve_manifest",
     "resolve_monster_template",

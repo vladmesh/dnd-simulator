@@ -118,7 +118,10 @@ class GameService(
 
         catalog_dir = self._content_dir / "catalogs" / "monsters"
         monster_catalog = load_catalog(catalog_dir, MonsterTemplateContent) if catalog_dir.exists() else {}
-        monster_templates, encounter_tables = load_monsters(layer_paths["ecology"], lang=lang, catalog=monster_catalog)
+        # region_encounter_tables resolve into per-location tables in phase 3 task 2; loaded here.
+        monster_templates, encounter_tables, _region_encounter_tables = load_monsters(
+            layer_paths["ecology"], lang=lang, catalog=monster_catalog, known_regions={r.id for r in regions}
+        )
         faction_data = load_factions(layer_paths["politics"], lang=lang)
         squads = load_squads(layer_paths["ecology"], lang=lang)
         lairs = load_lairs(

@@ -57,4 +57,13 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- **Загрузка/валидация.** Вынес общий цикл по entries в `_parse_encounter_entries(key, entries, known_templates)` — `parse_encounters` теперь однострочный dict-comprehension над ним, `parse_region_encounters` тот же helper плюс проверка `region_id in known_regions`. Дедуп, а не копипаст.
+- **`known_regions` опционален и в `parse_region_encounters`** (`set[str] | None = None`, None → проверка региона скипается), не только в `load_monsters`. Так прямой вызов парсера без геогра­фии не падает, а геймплейный путь (`game_service` всегда передаёт `{r.id for r in regions}`) сохраняет fail-fast. Шаблоны валидируются всегда.
+- **`load_monsters` → 3-кортеж** `(templates, encounters, region_encounters)`. Обновил 5 распаковок: `test_monster.py` (2), `test_content_parsers_creatures.py` (3) + потребитель `game_service.py:121`. Региональные таблицы пока уходят в `_region_encounter_tables` (не потребляются — экспансия это задача 2).
+- **Экспорт.** `parse_region_encounters` добавлен в `content_loader/__init__.py` (import + `__all__`) симметрично `parse_encounters`.
+- **Тесты.** 7 новых юнит-тестов (`TestParseRegionEncounters` ×3, `TestLoadMonstersYaml` +2 region-кейса, +regression на пустой `region_encounters` в существующих кейсах). `make check`: backend 2233 passed, mypy/ruff чисто.
+- **Не моё, к сведению.** `frontend/SchemaForm.test.tsx > renders ref field as select with fetched options` флапнул один раз в полном vitest-прогоне, зелёный при изоляции и на повторе полного прогона. Бэкенд-only изменение на него влиять не может — фликер фронтового мока, не регресс этой задачи.
