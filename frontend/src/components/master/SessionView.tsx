@@ -23,7 +23,6 @@ export function SessionView() {
 
   const refresh = useCallback(() => {
     if (!sessionId) return
-    setLoading(true)
     api.master
       .getSession(sessionId)
       .then(setWorldState)

@@ -22,7 +22,6 @@ export function SavesPanel({ sessionId, onLoaded }: Props) {
   const [operating, setOperating] = useState<string | null>(null)
 
   const refresh = useCallback(() => {
-    setLoading(true)
     api.master
       .getSaves(sessionId)
       .then((res) => setSaves(res.saves))

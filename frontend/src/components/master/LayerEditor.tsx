@@ -22,11 +22,10 @@ export function LayerEditor({ worldId, layerType, readOnly, onClose }: Props) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    setLoading(true)
-    setError(null)
     api.master
       .getLayerFiles(worldId, layerType)
       .then((data) => {
+        setError(null)
         setFiles(data.files)
         const filenames = Object.keys(data.files)
         if (filenames.length > 0) {

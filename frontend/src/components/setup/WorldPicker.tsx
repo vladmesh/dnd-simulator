@@ -18,7 +18,6 @@ export function WorldPicker({ onWorldSelected }: Props) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    setLoading(true)
     api.master
       .getWorlds(i18n.language)
       .then(setWorlds)

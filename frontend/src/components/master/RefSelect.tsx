@@ -12,6 +12,8 @@ interface RefSelectProps {
 
 // Simple in-memory cache for ref options (key = worldId:refType)
 const refCache = new Map<string, RefOption[]>()
+// Keys whose fetch has settled (success or error) — avoids refetch and stuck loading
+const refAttempted = new Set<string>()
 
 export function RefSelect({
   id,
@@ -21,25 +23,27 @@ export function RefSelect({
   onChange,
   fetchRefs,
 }: RefSelectProps) {
-  const [options, setOptions] = useState<RefOption[]>([])
-  const [loading, setLoading] = useState(false)
+  const [, forceRerender] = useState(0)
+  const cacheKey = `${worldId}:${refType}`
+  const cached = refCache.get(cacheKey)
+  const options = cached ?? []
+  const loading = cached === undefined && !refAttempted.has(cacheKey)
 
   useEffect(() => {
-    const cacheKey = `${worldId}:${refType}`
-    const cached = refCache.get(cacheKey)
-    if (cached) {
-      setOptions(cached)
-      return
-    }
-
-    setLoading(true)
+    if (refCache.has(cacheKey) || refAttempted.has(cacheKey)) return
+    let active = true
     fetchRefs(worldId, refType)
       .then((data) => {
         refCache.set(cacheKey, data)
-        setOptions(data)
       })
-      .finally(() => setLoading(false))
-  }, [worldId, refType, fetchRefs])
+      .finally(() => {
+        refAttempted.add(cacheKey)
+        if (active) forceRerender((n) => n + 1)
+      })
+    return () => {
+      active = false
+    }
+  }, [cacheKey, worldId, refType, fetchRefs])
 
   return (
     <select
