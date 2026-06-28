@@ -4,12 +4,23 @@
 
 **Last updated:** 2026-06-28
 **Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 закрыт (логова, лут/контейнеры, региональные таблицы встреч, время суток) — backlog must-айтем `monster-spawn` закрыт. По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), автономные тики NPC.
-**Next:** активного спринта нет. Топ-кандидат BACKLOG must — `quest-system` (система квестов); также Level 2 (расходуемые ресурсы). См. [BACKLOG](BACKLOG.md) / [ROADMAP](ROADMAP.md).
+**Next:** Sprint 019 (control-plane-prep) — техспринт, готовит control-plane к разрезу на роли в следующем спринте `control-interfaces`. После него топ-кандидаты: `control-interfaces`, `quest-system`. См. [BACKLOG](BACKLOG.md) / [ROADMAP](ROADMAP.md).
 **Blockers:** нет.
 
 ## Current Sprint
 
-Активного спринта нет. Sprint 018 закрыт 2026-06-28 ([sprint.md](sprints/018-lairs-encounters-loot/sprint.md) → Results, [post-audit E2E](e2e-reports/2026-06-28-sprint018-post-audit.md)).
+**Sprint:** 019-control-plane-prep
+**Goal:** Отвердить control-plane (GameService / session / commands / адаптеры) под будущий разрез на роли в `control-interfaces` — раздробить god-class, покрыть тестами, утончить адаптеры; попутно закрыть видимые дырки и свести бэклог.
+**Started:** 2026-06-28
+**Phase:** Planning (COMPLETE) — 2026-06-28
+
+Ready for Phase 1 task generation.
+
+### Phases
+
+1. World-state seam + hot-control test net — вынести `GameService.get_world_state()`, покрыть тестами session/commands/routes (сетка под peel).
+2. GameService deeper peel + adapter hygiene — раздробить god-class на суб-фасады, развязать core/adapter, public World-query API.
+3. Visible gaps + backlog reconcile + dead code — combat-log i18n, encounter-perceiver, corpse-actions, удаление dead code, сверка бэклога.
 
 ## Recent activity (non-sprint)
 
