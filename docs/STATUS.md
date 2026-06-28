@@ -3,31 +3,13 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-06-28
-**Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 закрыт по фазам 1–4 (логова, лут/контейнеры, региональные таблицы встреч, время суток). По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), Phase 3 (автономные тики NPC).
-**Next:** аудит 2026-06-28 проведён и триажирован → `/e2e` (post-audit E2E перед закрытием спринта).
+**Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 закрыт (логова, лут/контейнеры, региональные таблицы встреч, время суток) — backlog must-айтем `monster-spawn` закрыт. По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), автономные тики NPC.
+**Next:** активного спринта нет. Топ-кандидат BACKLOG must — `quest-system` (система квестов); также Level 2 (расходуемые ресурсы). См. [BACKLOG](BACKLOG.md) / [ROADMAP](ROADMAP.md).
 **Blockers:** нет.
-
-**Audit:** Triaged 2026-06-28. Quick-fix: 1 applied (`monsters.py` `treasure_items: list[Item]`). Sprint-relevant: 2 (1 applied — unit-тест `is_active_at_time` в `test_encounters.py`; 1 deferred → backlog — `activation-manager-growing` EncounterRoller extraction). Backlog: 5 added + 2 recorded fixed + 2 stale counts refreshed. Все находки аудита разнесены, ничего не потеряно.
 
 ## Current Sprint
 
-**Sprint:** 018-lairs-encounters-loot
-**Goal:** Монстры населяют мир независимо от игрока: постоянные логова (зачищаются убийством ядра), региональные таблицы встреч, опасность по времени суток и лутаемые контейнеры/трупы.
-**Started:** 2026-06-28
-**Phase:** 4 — Время суток (COMPLETE) — 2026-06-28. Все фазы Sprint 018 закрыты. Ready for audit.
-
-Phase 4 closed (scope сужен на планировании до **встреч**; лог-активность день/ночь → бэклог `lair-time-of-day`). `TimeOfDay` enum + geography-запрос `IS_DAYLIGHT` (резолв location→region→latitude→`is_daylight`), `time_of_day`-тег на encounter-entry/схеме/лоадере, чистое правило `is_active_at_time`, фильтр в `ActivationManager._roll_encounters` (`_is_daylight_at`, дефолт «день» при отсутствии geography → untagged никогда не подавляется). Close-phase: integration 152 → 154 green (`TestTimeOfDayEncounter` ×2), `make check` green (2245 backend, 238 frontend, mypy чисто), E2E 9/9 0 блокеров — фича подтверждена вживую (`night_hollow` пусто в 10:00, Bandit в 02:00; логи `off_hours`/`is_day:false`) ([e2e/phase4-report.md](sprints/018-lairs-encounters-loot/e2e/phase4-report.md)). Старый тест обновлён намеренно: `test_locations` 6 → 7 (`night_hollow` в `test_vale`).
-
-Phase 3 closed: region encounter tables resolve region → location at load time (`_flatten_region_defaults[T]`, shared with battle maps); `ActivationManager` untouched. Integration 149 → 152 green (`test_encounters.py` + `encounter_world`: fallthrough, override, empty region); `make check` green (2237 backend, 238 frontend); E2E regression on the activation/round/combat path 12/12, 0 blockers ([e2e/phase3-report.md](sprints/018-lairs-encounters-loot/e2e/phase3-report.md)).
-
-Phase 1 closed (materialization, respawn, depletion; integration 146 green, E2E 12/12). Phase 2 closed: (1) InventoryHolder substrate + `transfer_items` ✓, (2) `Container` entity + persistence ✓, (3) `take` action ✓, (4) lair treasury ✓. Close-phase: docker `make test-integration` 149 green (incl. `TestLairTreasury` ×3), `make check` green (2228 backend unit, 238 frontend), E2E 7/7 (kill → corpse loot → Take all transfers gold+item; report in `e2e/phase2-report.md`). Two fixes landed during close: (a) **product** — WS disconnect no longer blocks the asyncio loop (`routes_ws.py`: `remove_listener` via `asyncio.to_thread`; was a ≤5s freeze of all sessions on every disconnect, deadlock between the round thread's `_send` and `stop_round`'s join); (b) **test** — `test_lairs.py` drains the auto re-prompt after a turn-ending `take` (off-by-one turn stream). Minor non-blocking finding: dead creatures still show Attack/Talk in the Nearby panel (loot handled by LootPanel; attacking a corpse returns a clean "already dead").
-
-### Phases
-
-1. Логова — машина состояний `active → depleted`, core-gating, respawn, опц. `depletion_chance`
-2. Лут и контейнеры — `InventoryHolder`/`Lootable`, `Container`, `transfer_items`, action `take`, казна логова
-3. Региональные таблицы встреч — таблицы по региону с fallthrough от локации
-4. Время суток — встречи и активность логов варьируются день/ночь; финальный E2E
+Активного спринта нет. Sprint 018 закрыт 2026-06-28 ([sprint.md](sprints/018-lairs-encounters-loot/sprint.md) → Results, [post-audit E2E](e2e-reports/2026-06-28-sprint018-post-audit.md)).
 
 ## Recent activity (non-sprint)
 
@@ -38,6 +20,7 @@ Phase 1 closed (materialization, respawn, depletion; integration 146 green, E2E 
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 018-lairs-encounters-loot | Логова (active→depleted), лут/контейнеры (`take`, `transfer_items`), региональные таблицы встреч, время суток; закрыт `monster-spawn` | 2026-06-28 | 2026-06-28 |
 | 017-xp-leveling | XP-by-CR и система уровней, level-up модалка; Paladin L1→L2 fix, Fighter Action Surge, Rogue L2 HP | 2026-04-13 | 2026-04-13 |
 | 016-tech-sweep | Fix E2E/backlog bugs, resolve architecture violations, add enums + harden fail-fast | 2026-04-12 | 2026-04-13 |
 | 015-paladin-spell-slots | Paladin L1-L2: spell slots as ResourcePool, Divine Smite, Lay on Hands, multi-damage weapons, target scope enums | 2026-04-10 | 2026-04-12 |

@@ -86,9 +86,24 @@ Encounter-таблицы тегаются временем суток: ночн�
 
 ---
 
+## Results
+
+**Completed:** 2026-06-28
+
+Все 4 фазы закрыты. Монстры теперь населяют мир независимо от игрока, опасность фиксирована местом и временем (кенши-стиль, без авто-скейлинга под уровень партии). Закрыт backlog must-айтем `monster-spawn`.
+
+- **Phase 1 — Лога:** `core/lair.py` (`Lair`/`LairState`), машина `ACTIVE → DEPLETED`, материализация ростера при входе, респавн на тике ecology, смерть ядра деплитит навсегда + опц. `depletion_chance`, переживает save/load.
+- **Phase 2 — Лут и контейнеры:** `InventoryHolder` Protocol + `is_lootable`, `Container`-сущность (`EntityKind.CONTAINER`), общий `transfer_items` (торговля переведена на него), action `take` (take-all) + LootPanel, казна логова за ядром. Попутно: фикс WS-disconnect deadlock (`asyncio.to_thread`).
+- **Phase 3 — Региональные таблицы встреч:** `region_encounters` по region_id, fallthrough локация→регион + override, резолв load-time через общий `_flatten_region_defaults`.
+- **Phase 4 — Время суток:** `TimeOfDay` enum, geography `IS_DAYLIGHT` query, тег `time_of_day`, чистое `is_active_at_time`, фильтр в `ActivationManager`.
+
+**Метрики:** integration 142 → 154 green; `make check` зелёный (2249 backend unit, 238 frontend, mypy чисто). Аудит 2026-06-28 (12 находок) триажирован. Post-audit E2E: loot/take/combat/reputation/encounters зелёные; найден и исправлен 1 блокер — brand-new сессия показывала «GAME OVER» (раунд-луп слал `on_game_over` при административном `stop()` на StrictMode-disconnect); фикс `Round.is_stopped` гейт + `_on_session_empty` перепроверяет `has_listeners()` (+5 unit-тестов).
+
+**Deferred (в бэклог):** `loot-drops-monsters`, `theft`, `container-hp-locks`, `lair-actions`, `lair-new-leader`, `spawn-event-trigger`, `lair-time-of-day` (фичи); `encounter-spawned-perceiver`, `combat-log-i18n-gaps`, `session-disconnect-debounce`, `corpse-nearby-actions` (находки E2E/полиш).
+
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** CLOSED 2026-06-28.
 
 ## Decisions
 
