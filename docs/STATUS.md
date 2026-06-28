@@ -4,12 +4,24 @@
 
 **Last updated:** 2026-06-28
 **Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), Phase 3 (автономные тики NPC).
-**Next:** активного спринта нет. Кандидаты — `must` из [BACKLOG](BACKLOG.md): `monster-spawn`, `quest-system`.
+**Next:** Sprint 018 спланирован. Дальше — генерация задач Фазы 1 (`/plan-phase`).
 **Blockers:** нет.
 
 ## Current Sprint
 
-No active sprint.
+**Sprint:** 018-lairs-encounters-loot
+**Goal:** Монстры населяют мир независимо от игрока: постоянные логова (зачищаются убийством ядра), региональные таблицы встреч, опасность по времени суток и лутаемые контейнеры/трупы.
+**Started:** 2026-06-28
+**Phase:** Planning (COMPLETE) — 2026-06-28
+
+Ready for Phase 1 task generation.
+
+### Phases
+
+1. Логова — машина состояний `active → depleted`, core-gating, respawn, опц. `depletion_chance`
+2. Лут и контейнеры — `InventoryHolder`/`Lootable`, `Container`, `transfer_items`, action `take`, казна логова
+3. Региональные таблицы встреч — таблицы по региону с fallthrough от локации
+4. Время суток — встречи и активность логов варьируются день/ночь; финальный E2E
 
 ## Recent activity (non-sprint)
 

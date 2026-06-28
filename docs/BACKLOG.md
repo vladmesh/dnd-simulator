@@ -22,6 +22,12 @@
 - [ ] **should** `versatile-weapons` — Versatile weapon property: переключение одноручный/двуручный хват, разный урон (longsword 1d8/1d10, warhammer 1d8/1d10, quarterstaff 1d6/1d8). WeaponDef.versatile_damage, автовыбор хвата по наличию щита
 - [ ] **should** `hit-dice-short-rest` — Hit Dice spending на коротком отдыхе: ResourcePool(hit_dice, max=level, reset_on=LONG_REST), игрок выбирает сколько тратить, за каждую кость roll(class_hit_die)+CON_mod HP. Long rest восстанавливает max(1, level//2) костей (partial reset). Нужен PlayerBrain callback для выбора количества + UI
 - [ ] **could** `conversation-costs-time` — Каждая реплика разговора тратит 6 секунд игрового времени (частично)
+- [ ] **should** `loot-drops-monsters` — Общемонстровый дроп: loot-таблицы на шаблонах монстров, корпс-лут с обычных мобов поверх action `take` (Sprint 018 закладывает примитив `Lootable`/`transfer_items`)
+- [ ] **should** `theft` — Воровство как отдельный режим доступа к инвентарю: take у живого несогласного владельца, contested Sleight of Hand против Perception, crime/репутация; отдельная `validate_steal` поверх общего `transfer_items`
+- [ ] **should** `spawn-event-trigger` — Event-триггер спавна (спавн по мировому событию), в связке со спринтом квестов
+- [ ] **could** `container-hp-locks` — Сундуки с замком/HP: взлом (lockpicking) и «разбить» контейнер
+- [ ] **could** `lair-actions` — D&D lair actions на ядре логова
+- [ ] **could** `lair-new-leader` — После смерти ядра логово с шансом поднимает нового вожака вместо деплита (динамика мира)
 
 ## World Simulation
 
