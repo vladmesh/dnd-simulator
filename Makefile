@@ -32,7 +32,7 @@ lint-frontend:
 typecheck-frontend:
 	cd frontend && npx tsc --noEmit
 
-check: lint typecheck test test-frontend typecheck-frontend
+check: lint typecheck test lint-frontend typecheck-frontend test-frontend
 
 setup-hooks:
 	@bash scripts/setup-hooks.sh

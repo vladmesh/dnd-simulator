@@ -1,5 +1,7 @@
 #!/bin/bash
-# Pre-push hook: lint + typecheck + tests must pass
+# Pre-push hook: full local gate (make check) must pass before pushing.
+# Mirrors CI (backend + frontend lint/typecheck/tests); integration runs in
+# CI and at /close-phase, not here (too heavy for a hook).
 
 set -e
 
@@ -11,20 +13,15 @@ if ! command -v uv &> /dev/null; then
     exit 1
 fi
 
-echo "Running pre-push checks..."
-
-if ! make lint; then
-    echo "Lint failed. Fix before pushing."
+if ! command -v npx &> /dev/null; then
+    echo "node/npx not found — required for frontend checks (make check). Install Node 18+ and run 'cd frontend && npm ci'."
     exit 1
 fi
 
-if ! make typecheck; then
-    echo "Typecheck failed. Fix before pushing."
-    exit 1
-fi
+echo "Running pre-push checks (make check)..."
 
-if ! make test-unit; then
-    echo "Tests failed. Fix before pushing."
+if ! make check; then
+    echo "Checks failed. Fix before pushing."
     exit 1
 fi
 
