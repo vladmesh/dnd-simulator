@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 make install      # uv sync — install all dependencies
-make check        # lint + typecheck + test (full CI validation)
+make check        # backend + frontend lint/typecheck/test (mirrors CI minus integration)
 make test         # uv run pytest (all tests)
 make test-unit    # uv run pytest tests/unit/ (fast, no I/O)
 make test-integration  # docker compose — backend + integration tests
