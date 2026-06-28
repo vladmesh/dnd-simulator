@@ -6,7 +6,7 @@ Stateless calculations that can be used by any layer or the Master:
 - combat: attack resolution (resolve_attack → AttackResult), initiative rolls (roll_initiative)
 - actions: action cost rules (action_cost → ActionCost), per-creature budget defaults
 - validation: precondition checks (alive, active, budget, target, reach) → ValidationError or None
-- handlers/: per-action-type execution split by domain (combat, movement, equipment, items, trade, reactions)
+- handlers/: per-action-type execution split by domain (combat, movement, equipment, items, trade, loot, reactions)
 - action_provider: dynamic available-action sources (base, inventory, weapon) per creature+context
 - abstract_combat: squad-vs-squad abstract combat formulas
 - conditions: condition effects (is_incapacitated, effective_speed, attack_advantage, tick_conditions)
@@ -20,6 +20,9 @@ Stateless calculations that can be used by any layer or the Master:
 - reactions: OA trigger detection (find_oa_triggers)
 - reputation: effective_relation (personal rep → thresholds → faction fallback), kill reputation drop
 - combat_sides: build_combat_sides with relation callback, forced_opponents for attack-initiated combat
+- encounters: is_active_at_time — time-of-day gate for spawn rolls (DAY/NIGHT tag vs current phase)
+- inventory: transfer_items — the single primitive that moves items and gold between holders (shared by trade and loot)
+- loot: is_lootable — pure predicate (dead creature or open container)
 - movement: grid distance (D&D 5e diagonal rule), move toward/away/direction with wall collision
 - geography: temperature, daylight, travel time, distance calculations
 - politics: warfare, trade, stability, diplomacy formulas

@@ -39,6 +39,7 @@ class ActionType(StrEnum):
     SELL = "sell"
     OPPORTUNITY_ATTACK = "opportunity_attack"
     LAY_ON_HANDS = "lay_on_hands"
+    TAKE = "take"
     LONG_REST = "long_rest"
     SHORT_REST = "short_rest"
     END_TURN = "end_turn"

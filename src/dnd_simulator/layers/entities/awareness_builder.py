@@ -236,14 +236,16 @@ class AwarenessBuilder:
         self, creature: Creature, hour: int, query_fn: QueryFn | None = None
     ) -> list[NearbyEntity]:
         """Build list of nearby entities for peaceful awareness."""
+        from dnd_simulator.core.awareness import ItemInfo, describe_item
+        from dnd_simulator.core.loot import InventoryHolder
+        from dnd_simulator.rules.loot import is_lootable
+
         result: list[NearbyEntity] = []
         creature_location = creature.location_id
         if isinstance(creature, Npc):
             creature_location = creature.current_location(hour)
         for e in self._entities.values():
-            if e.id == creature.id or not e.active:
-                continue
-            if isinstance(e, Creature) and not e.is_alive:
+            if e.id == creature.id:
                 continue
             # Determine effective location
             e_location = e.location_id
@@ -251,10 +253,32 @@ class AwarenessBuilder:
                 e_location = e.current_location(hour)
             if e_location != creature_location:
                 continue
+            lootable = is_lootable(e)
+            # Corpses are dormant after death — surface them as loot anyway. Other
+            # inactive/dead entities stay hidden.
+            if not lootable:
+                if not e.active:
+                    continue
+                if isinstance(e, Creature) and not e.is_alive:
+                    continue
             desc = creature.perceive(e) if isinstance(creature, Character) and isinstance(e, Entity) else e.name
-            is_wounded = isinstance(e, Creature) and e.current_hp < e.max_hp // 2
-            is_hostile = self.check_faction_hostility(creature, e, query_fn)
+            is_wounded = isinstance(e, Creature) and e.is_alive and e.current_hp < e.max_hp // 2
+            is_hostile = (not lootable) and self.check_faction_hostility(creature, e, query_fn)
             relation = self._resolve_relation(creature, e, query_fn)
+            loot_items: list[ItemInfo] = []
+            loot_gold = 0
+            if lootable and isinstance(e, InventoryHolder):
+                loot_items = [
+                    ItemInfo(
+                        id=i.id,
+                        name=i.name,
+                        description=describe_item(i),
+                        item_type=str(i.item_type),
+                        price=i.price,
+                    )
+                    for i in e.inventory
+                ]
+                loot_gold = e.gold
             # Structured fields for inspect card — all populated from AwarenessBuilder
             name = e.name
             race = ""
@@ -283,6 +307,9 @@ class AwarenessBuilder:
                     relation=relation,
                     npc_description=npc_description,
                     is_merchant=is_merchant,
+                    lootable=lootable,
+                    loot_items=loot_items,
+                    loot_gold=loot_gold,
                 )
             )
         if result:

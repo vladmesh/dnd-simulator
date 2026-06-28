@@ -81,7 +81,8 @@ class TestStartGameTestVale:
     def test_locations(self, tmp_path: Path) -> None:
         svc = _make_service(tmp_path)
         session = svc.start_game("test_vale")
-        assert len(session.world.location_graph.all_ids()) == 5
+        # 6 original + night_hollow (added for the time-of-day encounter tests).
+        assert len(session.world.location_graph.all_ids()) == 7
 
     def test_npcs(self, tmp_path: Path) -> None:
         svc = _make_service(tmp_path)

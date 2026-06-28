@@ -1,0 +1,15 @@
+goblin_warren:
+  name: Goblin Warren
+  faction: goblins
+  location: cave
+  core: goblin_boss
+  members:
+  - goblin
+  - goblin
+  respawn_interval: 3600
+  depletion_chance: 0.0
+  treasure:
+    gold: 100
+    behind_core: true
+    items:
+    - ref: flaming_longsword

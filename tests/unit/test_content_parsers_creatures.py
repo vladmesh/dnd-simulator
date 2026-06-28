@@ -174,7 +174,7 @@ class TestMonsterTemplatesRoundTrip:
         from dnd_simulator.content_loader.monsters import load_monsters
 
         catalog = load_catalog(MONSTER_CATALOG_PATH, MonsterTemplateContent)
-        templates, _encounters = load_monsters(ECOLOGY_PATH, lang="en", catalog=catalog)
+        templates, _encounters, _region = load_monsters(ECOLOGY_PATH, lang="en", catalog=catalog)
         assert len(templates) > 0
         assert "goblin" in templates
         assert "wolf" in templates
@@ -184,7 +184,7 @@ class TestMonsterTemplatesRoundTrip:
         from dnd_simulator.content_loader.monsters import load_monsters
 
         catalog = load_catalog(MONSTER_CATALOG_PATH, MonsterTemplateContent)
-        templates, _ = load_monsters(ECOLOGY_PATH, lang="en", catalog=catalog)
+        templates, _, _ = load_monsters(ECOLOGY_PATH, lang="en", catalog=catalog)
         goblin = templates["goblin"]
         assert goblin.name  # non-empty
         assert goblin.hp == 7
@@ -217,7 +217,7 @@ class TestMonsterTemplatesRoundTrip:
         from dnd_simulator.content_loader.monsters import load_monsters
 
         catalog = load_catalog(MONSTER_CATALOG_PATH, MonsterTemplateContent)
-        _, encounters = load_monsters(ECOLOGY_PATH, lang="en", catalog=catalog)
+        _, encounters, _region = load_monsters(ECOLOGY_PATH, lang="en", catalog=catalog)
         assert len(encounters) > 0
         # silverport_greenwood_road has goblin + wolf encounters
         assert "silverport_greenwood_road" in encounters

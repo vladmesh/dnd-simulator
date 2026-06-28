@@ -83,36 +83,46 @@ ToolSearch: query="+playwright", max_results=3
 
 If no `mcp__playwright__browser_*` tools are returned, **stop — this is a blocker.** Playwright MCP can't be restarted mid-session; tell the user to restart Claude Code (`/exit` then re-launch) and re-run. Do NOT write a report without browser testing.
 
-Kill any running instances and start fresh with full debug:
+Kill any running instances and start fresh with full debug.
+
+**Launch the servers with the Bash tool's `run_in_background: true` mode — NOT `nohup ... &`.**
+A `nohup ... &` job started inside a normal Bash call dies when that call's shell exits, so the
+stack is gone by the next tool call. `run_in_background: true` is the only thing that keeps a
+server alive across turns. Use `exec` so the background task's pid is the server itself (clean
+stop later). Each server is its own `run_in_background` Bash call.
+
+First, kill any stale instances (normal foreground Bash call):
 
 ```bash
-# Kill existing processes
-pkill -f 'uvicorn.*dnd_simulator' 2>/dev/null
-pkill -f 'vite' 2>/dev/null
-sleep 2
-
-# Start backend with debug logging
-mkdir -p /tmp/dnd-e2e-logs
-LOG_LEVEL=DEBUG LOG_DIR=/tmp/dnd-e2e-logs nohup uv run uvicorn dnd_simulator.adapters.api.app:app --host 0.0.0.0 --port 8001 --reload --reload-exclude 'saves/*' > /tmp/dnd-e2e-backend.log 2>&1 &
-echo $! > /tmp/dnd-e2e-backend.pid
-
-# Start frontend
-cd frontend && nohup npx vite --host 0.0.0.0 --port 5173 > /tmp/dnd-e2e-frontend.log 2>&1 &
-echo $! > /tmp/dnd-e2e-frontend.pid
-cd ..
-
-# Wait for readiness
-sleep 5
+pkill -f 'uvicorn.*dnd_simulator' 2>/dev/null; pkill -f 'vite' 2>/dev/null; sleep 2; mkdir -p /tmp/dnd-e2e-logs; echo cleaned
 ```
 
-Verify both are up:
+Then start the backend — Bash tool call with `run_in_background: true`:
 
 ```bash
-curl -s http://localhost:8001/health && echo " backend OK"
-curl -s http://localhost:5173/ > /dev/null && echo " frontend OK"
+cd /home/dev/projects/dnd-simulator && LOG_LEVEL=DEBUG LOG_DIR=/tmp/dnd-e2e-logs exec uv run uvicorn dnd_simulator.adapters.api.app:app --host 0.0.0.0 --port 8001 --reload --reload-exclude 'saves/*' > /tmp/dnd-e2e-backend.log 2>&1
 ```
 
-If either fails — check logs, fix, retry. Don't proceed with a broken stack.
+Then start the frontend — separate Bash tool call with `run_in_background: true`:
+
+```bash
+cd /home/dev/projects/dnd-simulator/frontend && exec npx vite --host 0.0.0.0 --port 5173 > /tmp/dnd-e2e-frontend.log 2>&1
+```
+
+Note each returned background task ID — you'll stop them by ID in step 7.
+
+Wait for readiness by polling (normal foreground Bash call — do NOT trust a fixed `sleep`):
+
+```bash
+for i in $(seq 1 10); do
+  b=$(curl -s http://localhost:8001/health 2>/dev/null)
+  f=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5173/ 2>/dev/null)
+  [ -n "$b" ] && [ "$f" = "200" ] && { echo "READY backend=$b frontend=$f"; break; }
+  sleep 2
+done
+```
+
+If either never comes up — read `/tmp/dnd-e2e-backend.log` / `/tmp/dnd-e2e-frontend.log` (or the background task's output), fix, retry. Don't proceed with a broken stack.
 
 ### 4. Run scenarios
 
@@ -221,12 +231,15 @@ Create the report at `--report PATH` if it was provided, otherwise `docs/e2e-rep
 
 ### 7. Cleanup
 
+Stop each background server task by the ID you got in step 3 (use the TaskStop tool / stop-background-task), then make sure nothing lingers and confirm the ports are free:
+
 ```bash
-# Kill the stack
-kill $(cat /tmp/dnd-e2e-backend.pid 2>/dev/null) 2>/dev/null
-kill $(cat /tmp/dnd-e2e-frontend.pid 2>/dev/null) 2>/dev/null
-rm -f /tmp/dnd-e2e-backend.pid /tmp/dnd-e2e-frontend.pid
+pkill -f 'uvicorn.*dnd_simulator' 2>/dev/null; pkill -f 'vite' 2>/dev/null; sleep 1
+echo "backend: $(curl -s -m 2 http://localhost:8001/health 2>/dev/null || echo DOWN)"
+echo "frontend: $(curl -s -m 2 -o /dev/null -w '%{http_code}' http://localhost:5173/ 2>/dev/null || echo DOWN)"
 ```
+
+`pkill` from a foreground Bash call only reaches the server if it outlived its launcher — which is exactly why step 3 uses `run_in_background`. Both lines should report DOWN.
 
 ### 8. Report to user
 

@@ -9,12 +9,17 @@ from pathlib import Path
 from typing import Any
 
 from dnd_simulator.content_loader.creatures import _to_attacks
+from dnd_simulator.content_loader.items import parse_items
 from dnd_simulator.content_loader.schemas import (
     EncounterEntryContent,
+    ItemContent,
+    LairContent,
     MonsterTemplateContent,
     SquadContent,
 )
 from dnd_simulator.content_loader.utils import _read_yaml, resolve_text
+from dnd_simulator.core.items import Item
+from dnd_simulator.core.lair import Lair
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.squad import Squad
 
@@ -59,6 +64,7 @@ def _to_encounter_entry(model: EncounterEntryContent) -> EncounterEntry:
         chance=model.chance,
         count_min=model.count[0],
         count_max=model.count[1],
+        time_of_day=model.time_of_day,
     )
 
 
@@ -120,22 +126,40 @@ def resolve_monster_template(
     return _to_monster_template(template_id, model, lang)
 
 
+def _parse_encounter_entries(key: str, entries: Any, known_templates: set[str]) -> list[EncounterEntry]:
+    """Validate and convert one table's entries; fail fast on unknown template refs."""
+    parsed: list[EncounterEntry] = []
+    for entry in entries:
+        model = EncounterEntryContent.model_validate(entry)
+        if model.template not in known_templates:
+            raise RuntimeError(f"Encounter at '{key}' references unknown monster template '{model.template}'")
+        parsed.append(_to_encounter_entry(model))
+    return parsed
+
+
 def parse_encounters(data: dict[str, Any], known_templates: set[str]) -> dict[str, list[EncounterEntry]]:
     """Parse encounter tables from YAML data.
 
     Each key is a location_id mapping to a list of encounter entries.
     """
+    return {loc_id: _parse_encounter_entries(loc_id, entries, known_templates) for loc_id, entries in data.items()}
+
+
+def parse_region_encounters(
+    data: dict[str, Any], known_templates: set[str], known_regions: set[str] | None = None
+) -> dict[str, list[EncounterEntry]]:
+    """Parse region-level encounter tables from YAML data.
+
+    Each key is a region_id mapping to a list of encounter entries. Fails fast on
+    unknown monster templates and (when *known_regions* is given) unknown region ids —
+    a typo'd region would otherwise yield a silently dead table. *known_regions* is None
+    only on direct loader calls without geography; the gameplay path always passes it.
+    """
     result: dict[str, list[EncounterEntry]] = {}
-    for location_id, entries in data.items():
-        parsed: list[EncounterEntry] = []
-        for entry in entries:
-            model = EncounterEntryContent.model_validate(entry)
-            if model.template not in known_templates:
-                raise RuntimeError(
-                    f"Encounter at '{location_id}' references unknown monster template '{model.template}'"
-                )
-            parsed.append(_to_encounter_entry(model))
-        result[location_id] = parsed
+    for region_id, entries in data.items():
+        if known_regions is not None and region_id not in known_regions:
+            raise RuntimeError(f"region_encounters references unknown region '{region_id}'")
+        result[region_id] = _parse_encounter_entries(region_id, entries, known_templates)
     return result
 
 
@@ -143,17 +167,20 @@ def load_monsters(
     path: Path,
     lang: str = "en",
     catalog: dict[str, MonsterTemplateContent] | None = None,
-) -> tuple[dict[str, MonsterTemplate], dict[str, list[EncounterEntry]]]:
+    known_regions: set[str] | None = None,
+) -> tuple[dict[str, MonsterTemplate], dict[str, list[EncounterEntry]], dict[str, list[EncounterEntry]]]:
     """Load monster templates and encounter tables from a world directory.
 
     If *catalog* is provided, templates with a ``base`` key resolve against it.
-    Returns (templates_by_id, encounters_by_location_id).
+    Returns (templates_by_id, encounters_by_location_id, encounters_by_region_id).
+    Region tables are validated against *known_regions* when given (the gameplay path
+    always passes it); None skips region validation for direct loader calls.
     Missing monsters.yaml → empty dicts (worlds without monsters are valid).
     """
     monsters_data = _read_yaml(path / "monsters.yaml")
 
     if not monsters_data:
-        return {}, {}
+        return {}, {}, {}
 
     templates_data = monsters_data.get("templates", {})
     templates: dict[str, MonsterTemplate] = {}
@@ -161,10 +188,84 @@ def load_monsters(
     for tid, tdata in templates_data.items():
         templates[str(tid)] = resolve_monster_template(str(tid), tdata, effective_catalog, lang)
 
+    known_templates = set(templates.keys())
     encounters_data = monsters_data.get("encounters", {})
-    encounters = parse_encounters(encounters_data, set(templates.keys())) if encounters_data else {}
+    encounters = parse_encounters(encounters_data, known_templates) if encounters_data else {}
 
-    return templates, encounters
+    region_data = monsters_data.get("region_encounters", {})
+    region_encounters = parse_region_encounters(region_data, known_templates, known_regions) if region_data else {}
+
+    return templates, encounters, region_encounters
+
+
+def _to_lair(
+    lair_id: str,
+    model: LairContent,
+    lang: str,
+    item_catalog: dict[str, ItemContent] | None = None,
+) -> Lair:
+    """Convert validated LairContent to runtime Lair, resolving any treasure item refs."""
+    treasure_items: list[Item] = []
+    treasure_gold = 0
+    treasure_behind_core = True
+    if model.treasure is not None:
+        treasure_items = parse_items(
+            [item.model_dump(exclude_none=True, exclude_unset=True) for item in model.treasure.items],
+            item_catalog=item_catalog,
+        )
+        treasure_gold = model.treasure.gold
+        treasure_behind_core = model.treasure.behind_core
+    return Lair(
+        id=lair_id,
+        name=resolve_text(model.name, lang),
+        faction_id=model.faction,
+        location_id=model.location,
+        members=list(model.members),
+        core=model.core,
+        respawn_interval=model.respawn_interval,
+        depletion_chance=model.depletion_chance,
+        treasure_items=treasure_items,
+        treasure_gold=treasure_gold,
+        treasure_behind_core=treasure_behind_core,
+    )
+
+
+def parse_lairs(
+    data: dict[str, Any],
+    known_templates: set[str],
+    lang: str = "en",
+    item_catalog: dict[str, ItemContent] | None = None,
+) -> dict[str, Lair]:
+    """Parse lairs from YAML data, validating that every template ref exists.
+
+    Each key is a lair_id. Unknown ``core``/``members`` refs raise RuntimeError (fail-fast);
+    unknown treasure item refs raise RuntimeError via the catalog resolver.
+    """
+    result: dict[str, Lair] = {}
+    for lair_id, ldata in data.items():
+        model = LairContent.model_validate(ldata)
+        refs = [*model.members, *([model.core] if model.core else [])]
+        for ref in refs:
+            if ref not in known_templates:
+                raise RuntimeError(f"Lair '{lair_id}' references unknown monster template '{ref}'")
+        result[str(lair_id)] = _to_lair(str(lair_id), model, lang, item_catalog=item_catalog)
+    return result
+
+
+def load_lairs(
+    path: Path,
+    known_templates: set[str],
+    lang: str = "en",
+    item_catalog: dict[str, ItemContent] | None = None,
+) -> dict[str, Lair]:
+    """Load lairs from a world directory's ``lairs.yaml``.
+
+    Returns lairs_by_id. Missing lairs.yaml -> empty dict.
+    """
+    lairs_data = _read_yaml(path / "lairs.yaml")
+    if not lairs_data:
+        return {}
+    return parse_lairs(lairs_data, known_templates, lang, item_catalog=item_catalog)
 
 
 def parse_squad(squad_id: str, data: dict[str, Any], lang: str = "en") -> Squad:

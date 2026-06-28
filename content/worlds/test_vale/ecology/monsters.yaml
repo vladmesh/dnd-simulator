@@ -18,8 +18,41 @@ templates:
   guard:
     base: guard
 
+  goblin:
+    base: goblin
+
+  goblin_chieftain:
+    name: {en: Goblin Chieftain, ru: Гоблин-вожак}
+    faction: goblin_tribe
+    hp: 21
+    ac: 15
+    speed: 30
+    ability_scores: {str: 15, dex: 14, con: 14, int: 10, wis: 9, cha: 10}
+    attacks:
+      - name: scimitar
+        ability: dex
+        damage:
+          - dice: "1d6"
+            type: slashing
+        reach: 5
+    cr: 1.0
+
 encounters:
   forest_road:
     - template: bandit
       chance: 0.3
       count: [1, 2]
+
+  # Night-only table in darkwood (latitude 45): bandits prowl the hollow after
+  # dark, never by day. Used by the time-of-day encounter tests.
+  night_hollow:
+    - template: bandit
+      chance: 1.0
+      count: [1, 1]
+      time_of_day: night
+
+region_encounters:
+  crossroads:
+    - template: goblin
+      chance: 0.4
+      count: [1, 3]

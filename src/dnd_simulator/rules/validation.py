@@ -139,6 +139,9 @@ def check_target_valid(actor: Creature, action: Action, ctx: ActionContext) -> V
     if get_action_def(action.name).target_mode != TargetMode.SINGLE:
         return None
 
+    if action.name == ActionType.TAKE:
+        return None  # lootable targets are validated by check_lootable_target, not the live-creature checks
+
     target_id = action.params.get("target_id") if action.params else None
     if not target_id:
         return None  # no target specified — probes pass, real dispatch relies on handler
@@ -166,6 +169,38 @@ def check_target_valid(actor: Creature, action: Action, ctx: ActionContext) -> V
             "TARGET_WRONG_LOCATION",
             _("Target '{id}' is not in this region.").format(id=target_id),
         )
+
+    return None
+
+
+def check_lootable_target(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
+    """For TAKE: target must exist, be at the same location, and be a lootable holder.
+
+    A lootable holder is a dead creature (corpse) or an open container — see
+    `rules/loot.is_lootable`. Faction/scope is irrelevant: a corpse has no useful
+    relation, so TAKE bypasses check_target_scope.
+    """
+    if action.name != ActionType.TAKE:
+        return None
+
+    target_id = action.params.get("target_id") if action.params else None
+    if not target_id:
+        return None  # probe — availability check, no target yet
+
+    if ctx.get_entity is None:
+        return None
+
+    from dnd_simulator.rules.loot import is_lootable
+
+    target = ctx.get_entity(str(target_id))
+    if target is None:
+        return ValidationError("TARGET_NOT_FOUND", _("Target '{id}' not found.").format(id=target_id))
+
+    if target.location_id != actor.location_id:
+        return ValidationError("TARGET_WRONG_LOCATION", _("Target '{id}' is not in this region.").format(id=target_id))
+
+    if not is_lootable(target):
+        return ValidationError("TARGET_NOT_LOOTABLE", _("Target '{id}' cannot be looted.").format(id=target_id))
 
     return None
 
@@ -258,6 +293,9 @@ def check_target_scope(actor: Creature, action: Action, ctx: ActionContext) -> V
     if ad.target_mode != TargetMode.SINGLE:
         return None
 
+    if action.name == ActionType.TAKE:
+        return None  # a corpse/container has no useful faction relation — check_lootable_target gates it
+
     target_id = action.params.get("target_id") if action.params else None
     if not target_id:
         return None  # probe mode
@@ -328,6 +366,7 @@ _CHECKS = [
     check_budget,
     check_has_item,
     check_target_valid,
+    check_lootable_target,
     check_target_scope,
     check_target_not_full_hp,
     check_reach,

@@ -222,6 +222,7 @@ class Creature(Entity):
     turn_budget: TurnBudget | None = None
     conditions: dict[Condition, int | None] = field(default_factory=dict)
     inventory: list[Item] = field(default_factory=list)
+    gold: int = 0
     equipped_weapon: Item | None = None
     equipped_armor: Item | None = None
     equipped_shield: Item | None = None
@@ -271,7 +272,6 @@ class Character(Creature):
     level: int = 1
     alignment: Alignment = Alignment.TRUE_NEUTRAL
     appearance: str = ""
-    gold: int = 0
     experience: int = 0
     level_up_available: bool = False
     class_features: list[ClassFeatures] = field(default_factory=list)

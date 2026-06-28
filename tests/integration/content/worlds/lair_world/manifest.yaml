@@ -1,0 +1,16 @@
+name: Lair Test World
+description: >
+  Minimal world for testing EcologyLayer lairs. A goblin warren (core + minions)
+  sits in a cave; a player can enter, clear it, and leave.
+
+layers:
+  geography:
+    source: custom
+  politics:
+    source: custom
+  settlements:
+    source: custom
+  ecology:
+    source: custom
+  entities:
+    source: custom

@@ -23,6 +23,7 @@ from dnd_simulator.rules.geography import (
     calculate_distance_km,
     calculate_travel_hours,
     get_season,
+    is_daylight,
 )
 
 if TYPE_CHECKING:
@@ -60,6 +61,19 @@ class GeographyLayer(Layer):
         if region_id not in self._regions:
             raise KeyError(f"Region '{region_id}' not found")
         return self._regions[region_id]
+
+    def _resolve_region(self, params: dict[str, Any]) -> Region | None:
+        """Resolve a region from query params by ``region_id`` or ``location_id`` (None if unknown)."""
+        region_id = params.get("region_id")
+        if region_id is None:
+            location_id = params.get("location_id")
+            if location_id is None or self._location_graph is None:
+                return None
+            try:
+                region_id = self._location_graph.region_of(str(location_id))
+            except KeyError:
+                return None
+        return self._regions.get(str(region_id))
 
     def tick(self, delta: TimeDelta, time: GameDateTime, query_fn: QueryFn, emit_fn: EmitFn) -> list[Event]:
         """Advance weather and recalculate temperatures."""
@@ -112,6 +126,7 @@ class GeographyLayer(Layer):
         - CONNECTIONS: params={region_id} -> connected regions with directions
         - TRAVEL_TIME: params={from_id, to_id} -> travel hours, distance
         - DAYLIGHT: params={region_id, month?} -> hours of daylight
+        - IS_DAYLIGHT: params={region_id} -> bool, whether it is currently daytime
         - REGION_INFO: params={region_id} -> full region data
         - REGIONS: -> list of all region IDs
         """
@@ -150,6 +165,16 @@ class GeographyLayer(Layer):
             month = params.get("month", 6)
             hours = calculate_daylight_hours(region.latitude, int(month))
             return Answer(value=hours, description=f"{hours} hours of daylight")
+
+        if q is QueryType.IS_DAYLIGHT:
+            # Resolve location → region → latitude, then ask the solar model.
+            # Degrade to daytime (True) when day/night can't be determined so the
+            # caller never gates spuriously (e.g. worlds without a location graph).
+            resolved = self._resolve_region(params)
+            if resolved is None:
+                return Answer(value=True)
+            day = is_daylight(resolved.latitude, int(params["month"]), int(params["hour"]))
+            return Answer(value=day, description="day" if day else "night")
 
         if q is QueryType.REGION_INFO:
             region = self.get_region(params["region_id"])

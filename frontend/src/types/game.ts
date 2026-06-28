@@ -92,6 +92,9 @@ export interface NearbyEntity {
   faction_name?: string
   npc_description?: string
   is_merchant?: boolean
+  lootable?: boolean
+  loot_items?: ItemInfo[]
+  loot_gold?: number
 }
 
 export interface CombatEntity {

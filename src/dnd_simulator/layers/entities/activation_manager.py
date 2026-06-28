@@ -8,8 +8,10 @@ from typing import TYPE_CHECKING, Any
 import structlog
 
 from dnd_simulator.core.character import Creature, Entity
+from dnd_simulator.core.lair import LairState
 from dnd_simulator.core.models import Event, EventType, FactionRelation, Query, QueryType
 from dnd_simulator.core.monster import EncounterEntry
+from dnd_simulator.rules.encounters import is_active_at_time
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn
@@ -37,6 +39,7 @@ class ActivationManager:
         encounter_cooldowns: dict[str, int],
         creature_locations: dict[str, str],
         materialized_squads: dict[str, tuple[list[str], int, int]],
+        materialized_lairs: dict[str, tuple[list[str], str | None, list[str]]],
     ) -> None:
         self._entities = entities
         self._location_log = location_log
@@ -46,6 +49,7 @@ class ActivationManager:
         self._encounter_cooldowns = encounter_cooldowns
         self._creature_locations = creature_locations
         self._materialized_squads = materialized_squads
+        self._materialized_lairs = materialized_lairs
         self._spawn_counter = 0
 
     def update_activation(
@@ -134,14 +138,16 @@ class ActivationManager:
                 e.wake_at_seconds = None
 
         # Third pass: check for encounter spawns from creatures that were active
-        self._check_encounters(now, previously_active, query_fn)
+        self._check_encounters(time, previously_active, query_fn)
 
-        # Fourth pass: squad materialization/dematerialization
+        # Fourth pass: squad + lair materialization/dematerialization
         if query_fn is not None:
             self._update_materialization(player_locations, query_fn, emit_fn)
+            self._update_lair_materialization(now, player_locations, query_fn, emit_fn)
 
-    def _check_encounters(self, now: int, active_ids: set[str], query_fn: QueryFn | None = None) -> None:
+    def _check_encounters(self, time: GameDateTime, active_ids: set[str], query_fn: QueryFn | None = None) -> None:
         """Roll encounters for locations where any active creature just arrived."""
+        now = time.to_total_seconds()
         for e in list(self._entities.values()):
             if not isinstance(e, Creature):
                 continue
@@ -172,18 +178,32 @@ class ActivationManager:
                 continue
 
             self._encounter_cooldowns[e.location_id] = now
-            self._roll_encounters(e.location_id, query_fn)
+            self._roll_encounters(e.location_id, time, query_fn)
 
-    def _roll_encounters(self, location_id: str, query_fn: QueryFn | None = None) -> None:
-        """Roll each encounter entry for a location and spawn monsters."""
+    def _roll_encounters(self, location_id: str, time: GameDateTime, query_fn: QueryFn | None = None) -> None:
+        """Roll each encounter entry for a location and spawn monsters.
+
+        Entries tagged with a time of day roll only in the matching phase; the
+        day/night signal comes from the geography layer.
+        """
         from dnd_simulator.rules.rule_brain import RuleBrain
 
         entries = self._encounter_tables[location_id]
+        is_day = self._is_daylight_at(location_id, time, query_fn)
         spawned_names: list[str] = []
         spawned_creatures: list[Creature] = []
 
-        logger.info("encounter_rolling", location=location_id, entries=len(entries))
+        logger.info("encounter_rolling", location=location_id, entries=len(entries), is_day=is_day)
         for entry in entries:
+            if not is_active_at_time(entry.time_of_day, is_day):
+                logger.info(
+                    "encounter_roll_off_hours",
+                    location=location_id,
+                    template=entry.template_id,
+                    time_of_day=entry.time_of_day,
+                    is_day=is_day,
+                )
+                continue
             roll = random.random()
             if roll >= entry.chance:
                 logger.info(
@@ -218,6 +238,29 @@ class ActivationManager:
             # Auto-start combat if spawned creatures are hostile to anyone at this location
             if query_fn is not None and location_id not in self._combat.get_combat_locations():
                 self._maybe_start_combat(location_id, spawned_creatures, query_fn)
+
+    def _is_daylight_at(self, location_id: str, time: GameDateTime, query_fn: QueryFn | None) -> bool:
+        """Ask geography whether it is day at a location. Defaults to day when unknown.
+
+        Defaulting to day means an absent/queryless geography never suppresses an
+        untagged spawn (untagged is always active) — only explicit night/day tags
+        ever depend on this signal.
+        """
+        if query_fn is None:
+            return True
+        from dnd_simulator.core.world import LayerError
+
+        try:
+            answer = query_fn(
+                "geography",
+                Query(
+                    question=QueryType.IS_DAYLIGHT,
+                    params={"location_id": location_id, "month": time.month, "hour": time.hour},
+                ),
+            )
+        except LayerError:
+            return True  # no geography layer in this world
+        return bool(answer.value)
 
     def _maybe_start_combat(self, location_id: str, spawned: list[Creature], query_fn: QueryFn) -> None:
         """Start combat if any spawned creature is hostile to an existing creature at the location."""
@@ -404,3 +447,168 @@ class ActivationManager:
                     description=f"Squad {squad_id} dematerialized (strength {new_strength})",
                 )
             )
+
+    # -- Lair materialization --
+
+    def _update_lair_materialization(
+        self,
+        now: int,
+        active_locations: set[str],
+        query_fn: QueryFn,
+        emit_fn: EmitFn | None,
+    ) -> None:
+        """Materialize active lairs at active locations; dematerialize lairs the player left."""
+        from dnd_simulator.core.world import LayerError
+
+        lairs_at_active: dict[str, dict[str, Any]] = {}
+        for loc in active_locations:
+            try:
+                answer = query_fn("ecology", Query(QueryType.LAIRS_AT_LOCATION, params={"location_id": loc}))
+            except LayerError:
+                return  # No ecology layer in this world — skip lair materialization
+            assert isinstance(answer.value, list)
+            for lair_info in answer.value:
+                lairs_at_active[str(lair_info["id"])] = lair_info
+
+        # Materialize new lairs (skip depleted — terminal, nothing spawns)
+        for lair_id, info in lairs_at_active.items():
+            # The treasury syncs for any lair state — a depleted (core-dead) lair still
+            # has a lootable, persistent treasury at its location.
+            self._sync_lair_treasury(lair_id, info)
+            if lair_id in self._materialized_lairs:
+                continue
+            if info["state"] != LairState.ACTIVE.value:
+                continue
+            self._materialize_lair(lair_id, info)
+            location_id = str(info["location_id"])
+            creature_ids = self._materialized_lairs[lair_id][0]
+            spawned = [
+                e for cid in creature_ids if cid in self._entities and isinstance((e := self._entities[cid]), Creature)
+            ]
+            if spawned and location_id not in self._combat.get_combat_locations():
+                self._maybe_start_combat(location_id, spawned, query_fn)
+
+        # Dematerialize lairs no longer at active locations
+        for lair_id in list(self._materialized_lairs):
+            if lair_id in lairs_at_active:
+                continue
+            creature_ids, _core_id, _minions = self._materialized_lairs[lair_id]
+            any_in_combat = any(
+                isinstance(ent := self._entities.get(cid), Creature) and ent.in_combat for cid in creature_ids
+            )
+            if any_in_combat:
+                continue
+            self._dematerialize_lair(lair_id, now, emit_fn)
+
+    def _materialize_lair(self, lair_id: str, info: dict[str, Any]) -> None:
+        """Spawn a lair's current roster (core if alive + alive minions) as concrete creatures."""
+        from dnd_simulator.rules.rule_brain import RuleBrain
+
+        core_tid = info.get("core")
+        minion_templates = [str(t) for t in info["members"]]
+        roster: list[str] = ([str(core_tid)] if core_tid else []) + minion_templates
+        faction_id = str(info["faction_id"])
+        location = str(info["location_id"])
+
+        creature_ids: list[str] = []
+        core_creature_id: str | None = None
+        for tid in roster:
+            template = self._monster_templates[tid]
+            self._spawn_counter += 1
+            instance_id = f"{tid}_{self._spawn_counter}"
+            creature = template.spawn(location, instance_id)
+            creature.faction_id = faction_id
+            creature.brain = RuleBrain()
+            creature.active = True
+            self._entities[creature.id] = creature
+            creature_ids.append(instance_id)
+            if core_tid and core_creature_id is None and tid == str(core_tid):
+                core_creature_id = instance_id
+            logger.info("lair_materialize", lair_id=lair_id, creature_id=instance_id)
+
+        self._materialized_lairs[lair_id] = (creature_ids, core_creature_id, minion_templates)
+
+    def _treasury_core_alive(self, lair_id: str, info: dict[str, Any]) -> bool:
+        """Current core status for the treasury gate.
+
+        Prefer the live materialized core creature (so killing the core unlocks the
+        treasury this visit, before the lair dematerializes). Fall back to the
+        persisted lair flag when the lair isn't materialized (e.g. return after
+        save/load). A coreless lair has nothing to gate behind → False (always open).
+        """
+        if lair_id in self._materialized_lairs:
+            return self._is_alive(self._materialized_lairs[lair_id][1])
+        if not info.get("has_core"):
+            return False
+        return bool(info.get("core_alive", True))
+
+    def _sync_lair_treasury(self, lair_id: str, info: dict[str, Any]) -> None:
+        """Spawn the lair's persistent treasury once, then keep its open-state in sync.
+
+        Skips lairs with no treasure block. Spawn is idempotent (deterministic id,
+        survives dematerialize and save/load), so a return visit reuses whatever is
+        left rather than refilling. ``is_open`` tracks the core gate every pass.
+        """
+        from dnd_simulator.core.container import Container
+        from dnd_simulator.i18n import _
+
+        treasure_items = info.get("treasure_items") or []
+        treasure_gold = int(info.get("treasure_gold", 0))
+        if not treasure_items and not treasure_gold:
+            return
+
+        behind_core = bool(info.get("treasure_behind_core", True))
+        is_open = (not behind_core) or (not self._treasury_core_alive(lair_id, info))
+
+        container_id = f"{lair_id}_treasury"
+        existing = self._entities.get(container_id)
+        if isinstance(existing, Container):
+            existing.is_open = is_open
+            return
+
+        container = Container(
+            id=container_id,
+            name=_("Treasure"),
+            location_id=str(info["location_id"]),
+            temporary=False,
+            inventory=list(treasure_items),
+            gold=treasure_gold,
+            is_open=is_open,
+        )
+        self._entities[container_id] = container
+        logger.info("lair_treasury_spawn", lair_id=lair_id, container_id=container_id, is_open=is_open)
+
+    def _dematerialize_lair(self, lair_id: str, now: int, emit_fn: EmitFn | None) -> None:
+        """Remove a lair's creatures and emit its surviving population so ecology can sync."""
+        creature_ids, core_creature_id, minion_templates = self._materialized_lairs[lair_id]
+
+        core_alive = bool(core_creature_id) and self._is_alive(core_creature_id)
+        minion_ids = [cid for cid in creature_ids if cid != core_creature_id]
+        alive_members = [tid for cid, tid in zip(minion_ids, minion_templates, strict=True) if self._is_alive(cid)]
+
+        for cid in creature_ids:
+            self._entities.pop(cid, None)
+        del self._materialized_lairs[lair_id]
+        logger.info("lair_dematerialize", lair_id=lair_id, alive_minions=len(alive_members), core_alive=core_alive)
+
+        if emit_fn is not None:
+            emit_fn(
+                Event(
+                    event_type=EventType.LAIR_DEMATERIALIZED,
+                    source_layer="entities",
+                    data={
+                        "lair_id": lair_id,
+                        "core_alive": core_alive,
+                        "alive_members": alive_members,
+                        "at_seconds": now,
+                    },
+                    description=f"Lair {lair_id} dematerialized ({len(alive_members)} minions left)",
+                )
+            )
+
+    def _is_alive(self, creature_id: str | None) -> bool:
+        """True if the tracked creature is still present and alive (dead temporaries are auto-removed)."""
+        if creature_id is None:
+            return False
+        ent = self._entities.get(creature_id)
+        return isinstance(ent, Creature) and ent.is_alive

@@ -1,0 +1,30 @@
+wild_trail:
+  name: Wild Trail
+  region: wilds
+  description: An overgrown trail through the wilds. No table of its own.
+  neighbors:
+  - target: wild_den
+    distance: 100
+wild_den:
+  name: Wild Den
+  region: wilds
+  description: A beast den off the trail. Has its own encounter table.
+  neighbors:
+  - target: wild_trail
+    distance: 100
+border_post:
+  name: Border Post
+  region: borderlands
+  description: A quiet outpost. Its region has no encounter table.
+  neighbors:
+  - target: wild_trail
+    distance: 500
+  - target: night_marsh
+    distance: 200
+night_marsh:
+  name: Night Marsh
+  region: borderlands
+  description: A bog that only stirs after dark. Its own table is night-only.
+  neighbors:
+  - target: border_post
+    distance: 200

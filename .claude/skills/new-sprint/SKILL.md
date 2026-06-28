@@ -84,6 +84,8 @@ Prioritize options by dependency logic: things that unblock the most future work
 
 Also consider whether it's time for a tech sprint. Signals: backlog has accumulated >5 "should" tech debt items, last tech sprint was >4 sprints ago, audit findings are piling up.
 
+Cross-check every option against `docs/VISION.md` before proposing it. Drop or flag anything that contradicts the product vision (e.g. a mechanic that makes the world adapt to the player when the vision is a self-living sandbox). The vision is the tie-breaker when scope options compete.
+
 Be opinionated. If one option is clearly better than the others, say so and explain why. Challenge the user if they pick something that has unmet dependencies or is premature.
 
 ### 4. Dialogue

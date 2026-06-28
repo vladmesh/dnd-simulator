@@ -27,10 +27,13 @@ from dnd_simulator.content_loader.manifest import (
     resolve_manifest,
 )
 from dnd_simulator.content_loader.monsters import (
+    load_lairs,
     load_monsters,
     load_squads,
     parse_encounters,
+    parse_lairs,
     parse_monster_template,
+    parse_region_encounters,
     parse_squad,
     resolve_monster_template,
 )
@@ -61,6 +64,7 @@ __all__ = [
     "load_battle_maps",
     "load_catalog",
     "load_factions",
+    "load_lairs",
     "load_location_battle_maps",
     "load_locations",
     "load_monsters",
@@ -76,9 +80,11 @@ __all__ = [
     "parse_encounters",
     "parse_equipped_weapon",
     "parse_items",
+    "parse_lairs",
     "parse_monster_template",
     "parse_npc",
     "parse_player",
+    "parse_region_encounters",
     "parse_squad",
     "resolve_manifest",
     "resolve_monster_template",

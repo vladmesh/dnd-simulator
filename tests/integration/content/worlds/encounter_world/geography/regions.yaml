@@ -1,0 +1,16 @@
+wilds:
+  name: The Wilds
+  latitude: 45.0
+  longitude: 10.0
+  elevation: 200
+  terrain: forest
+  water_proximity: 0.1
+  connections: []
+borderlands:
+  name: The Borderlands
+  latitude: 45.0
+  longitude: 11.0
+  elevation: 150
+  terrain: plains
+  water_proximity: 0.1
+  connections: []

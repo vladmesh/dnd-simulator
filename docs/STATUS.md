@@ -3,13 +3,13 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-06-28
-**Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), Phase 3 (автономные тики NPC).
-**Next:** активного спринта нет. Кандидаты — `must` из [BACKLOG](BACKLOG.md): `monster-spawn`, `quest-system`.
+**Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 закрыт (логова, лут/контейнеры, региональные таблицы встреч, время суток) — backlog must-айтем `monster-spawn` закрыт. По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), автономные тики NPC.
+**Next:** активного спринта нет. Топ-кандидат BACKLOG must — `quest-system` (система квестов); также Level 2 (расходуемые ресурсы). См. [BACKLOG](BACKLOG.md) / [ROADMAP](ROADMAP.md).
 **Blockers:** нет.
 
 ## Current Sprint
 
-No active sprint.
+Активного спринта нет. Sprint 018 закрыт 2026-06-28 ([sprint.md](sprints/018-lairs-encounters-loot/sprint.md) → Results, [post-audit E2E](e2e-reports/2026-06-28-sprint018-post-audit.md)).
 
 ## Recent activity (non-sprint)
 
@@ -20,6 +20,7 @@ No active sprint.
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 018-lairs-encounters-loot | Логова (active→depleted), лут/контейнеры (`take`, `transfer_items`), региональные таблицы встреч, время суток; закрыт `monster-spawn` | 2026-06-28 | 2026-06-28 |
 | 017-xp-leveling | XP-by-CR и система уровней, level-up модалка; Paladin L1→L2 fix, Fighter Action Surge, Rogue L2 HP | 2026-04-13 | 2026-04-13 |
 | 016-tech-sweep | Fix E2E/backlog bugs, resolve architecture violations, add enums + harden fail-fast | 2026-04-12 | 2026-04-13 |
 | 015-paladin-spell-slots | Paladin L1-L2: spell slots as ResourcePool, Divine Smite, Lay on Hands, multi-damage weapons, target scope enums | 2026-04-10 | 2026-04-12 |

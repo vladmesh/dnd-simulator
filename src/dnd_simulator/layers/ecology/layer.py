@@ -8,10 +8,12 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 
+from dnd_simulator.core.lair import Lair, LairState
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, FactionRelation, Query, QueryType
 from dnd_simulator.core.squad import Squad, SquadBehavior
 from dnd_simulator.rules.abstract_combat import TriggeredEncounter, resolve_abstract_combat
+from dnd_simulator.rules.dice import get_global_rng
 
 if TYPE_CHECKING:
     from dnd_simulator.core.location import LocationGraph
@@ -33,11 +35,16 @@ class EcologyLayer(Layer):
         self,
         squads: list[Squad] | None = None,
         location_graph: LocationGraph | None = None,
+        lairs: list[Lair] | None = None,
     ) -> None:
         self._squads: dict[str, Squad] = {}
         if squads:
             for s in squads:
                 self._squads[s.id] = s
+        self._lairs: dict[str, Lair] = {}
+        if lairs:
+            for lair in lairs:
+                self._lairs[lair.id] = lair
         self._location_graph = location_graph
         self._last_move_time: dict[str, int] = {}  # squad_id → game-time seconds of last move
         self._route_index: dict[str, int] = {}  # squad_id → current index in route
@@ -91,6 +98,9 @@ class EcologyLayer(Layer):
         # Phase 2: Resolve squad-vs-squad combat at shared locations
         events.extend(self._resolve_squad_combat(query_fn))
 
+        # Phase 3: Respawn lair populations
+        self._respawn_lairs(now)
+
         if events:
             logger.info(
                 "ecology_tick_summary",
@@ -110,7 +120,54 @@ class EcologyLayer(Layer):
             if squad_id in self._squads:
                 self._squads[squad_id].strength = new_strength
                 logger.info("squad_strength_updated", squad_id=squad_id, new_strength=new_strength)
+        elif event.event_type is EventType.LAIR_DEMATERIALIZED:
+            self._apply_lair_dematerialize(event)
         return ActionResult()
+
+    def _apply_lair_dematerialize(self, event: Event) -> None:
+        """Sync a lair's surviving population from a finished visit."""
+        lair_id = str(event.data["lair_id"])
+        lair = self._lairs.get(lair_id)
+        if lair is None:
+            return
+        alive_members = event.data.get("alive_members")
+        lair.alive_members = [str(m) for m in alive_members] if isinstance(alive_members, list) else []
+        lair.core_alive = bool(event.data.get("core_alive", lair.core_alive))
+        # Anchor the respawn countdown to this visit so respawn waits a full interval afterwards.
+        lair.last_respawn_time = int(event.data.get("at_seconds", lair.last_respawn_time))
+
+        # Depletion: a cored lair dies permanently when its core dies; a coreless lair
+        # may run dry by chance after a full wipe (roll only when wiped, via short-circuit).
+        core_died = lair.core is not None and not lair.core_alive
+        chance_ran_dry = (
+            lair.core is None
+            and not lair.alive_members
+            and lair.depletion_chance > 0.0
+            and get_global_rng().random() < lair.depletion_chance
+        )
+        if core_died or chance_ran_dry:
+            lair.state = LairState.DEPLETED
+
+        logger.info(
+            "lair_population_updated",
+            lair_id=lair_id,
+            alive_members=len(lair.alive_members),
+            core_alive=lair.core_alive,
+            state=lair.state.value,
+        )
+
+    def _respawn_lairs(self, now: int) -> None:
+        """Refill ACTIVE lairs to their full roster once respawn_interval has elapsed since the last visit."""
+        for lair in self._lairs.values():
+            if lair.state is not LairState.ACTIVE:
+                continue
+            if lair.alive_members is None or len(lair.alive_members) >= len(lair.members):
+                continue  # already at full roster
+            if now - lair.last_respawn_time < lair.respawn_interval:
+                continue
+            lair.alive_members = None  # back to full roster
+            lair.last_respawn_time = now
+            logger.info("lair_respawn", lair_id=lair.id)
 
     def query(self, query: Query) -> Answer:
         """Answer queries about squads.
@@ -135,6 +192,11 @@ class EcologyLayer(Layer):
             squad = self._squads[squad_id]  # KeyError if not found
             return Answer(value=self._squad_to_dict(squad))
 
+        if q is QueryType.LAIRS_AT_LOCATION:
+            location_id = str(params["location_id"])
+            lairs = [self._lair_to_dict(lair) for lair in self._lairs.values() if lair.location_id == location_id]
+            return Answer(value=lairs)
+
         raise ValueError(f"Unknown ecology query: {q}")
 
     def get_state(self) -> dict[str, object]:
@@ -145,8 +207,17 @@ class EcologyLayer(Layer):
                 "current_location_id": s.current_location_id,
                 "strength": s.strength,
             }
+        lairs: dict[str, dict[str, object]] = {}
+        for lid, lair in self._lairs.items():
+            lairs[lid] = {
+                "state": lair.state.value,
+                "alive_members": lair.alive_members,
+                "core_alive": lair.core_alive,
+                "last_respawn_time": lair.last_respawn_time,
+            }
         return {
             "squads": squads,
+            "lairs": lairs,
             "last_move_time": dict(self._last_move_time),
             "route_index": dict(self._route_index),
             "route_direction": dict(self._route_direction),
@@ -161,6 +232,19 @@ class EcologyLayer(Layer):
             if sid in self._squads:
                 self._squads[sid].current_location_id = str(sdata["current_location_id"])
                 self._squads[sid].strength = int(sdata["strength"])
+
+        lairs_data = state.get("lairs")
+        if isinstance(lairs_data, dict):
+            for lid, ldata in lairs_data.items():
+                assert isinstance(ldata, dict)
+                lair = self._lairs.get(str(lid))
+                if lair is None:
+                    continue
+                lair.state = LairState(str(ldata["state"]))
+                am = ldata.get("alive_members")
+                lair.alive_members = [str(m) for m in am] if isinstance(am, list) else None
+                lair.core_alive = bool(ldata.get("core_alive", True))
+                lair.last_respawn_time = int(ldata.get("last_respawn_time", 0))
 
         lmt = state.get("last_move_time")
         if isinstance(lmt, dict):
@@ -350,4 +434,24 @@ class EcologyLayer(Layer):
             "strength": squad.strength,
             "max_strength": squad.max_strength,
             "member_templates": list(squad.member_templates),
+        }
+
+    @staticmethod
+    def _lair_to_dict(lair: Lair) -> dict[str, Any]:
+        """Materialization view: current alive roster, not the full template list."""
+        current_minions = list(lair.alive_members) if lair.alive_members is not None else list(lair.members)
+        return {
+            "id": lair.id,
+            "name": lair.name,
+            "faction_id": lair.faction_id,
+            "location_id": lair.location_id,
+            "members": current_minions,
+            "core": lair.core if lair.core_alive else None,
+            "state": lair.state.value,
+            # Treasury inputs (in-memory only — consumed by ActivationManager, never serialized)
+            "has_core": lair.core is not None,
+            "core_alive": lair.core_alive,
+            "treasure_items": lair.treasure_items,
+            "treasure_gold": lair.treasure_gold,
+            "treasure_behind_core": lair.treasure_behind_core,
         }

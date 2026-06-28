@@ -403,6 +403,28 @@ def _perceive_sell(event: Event, observer: Character, get_entity: GetEntityFn) -
     )
 
 
+def _perceive_take(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    d = event.data
+    actor_id = str(d["actor_id"])
+    target_id = str(d["target_id"])
+    raw_names = d.get("item_names")
+    item_names = [str(n) for n in raw_names] if isinstance(raw_names, list) else []
+    gold = d.get("gold", 0)
+
+    parts: list[str] = []
+    if item_names:
+        parts.append(", ".join(_(n) for n in item_names))
+    if isinstance(gold, int) and gold > 0:
+        parts.append(_("{gold} gold").format(gold=gold))
+    loot = "; ".join(parts) if parts else _("nothing")
+
+    target = _describe(observer, target_id, get_entity)
+    if actor_id == observer.id:
+        return _("You loot {target} ({loot})").format(target=target, loot=loot)
+    actor = _describe(observer, actor_id, get_entity)
+    return _("{actor} loots {target} ({loot})").format(actor=actor, target=target, loot=loot)
+
+
 def _perceive_combat_started(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     names = event.data["turn_order_names"]
     assert isinstance(names, list)
@@ -512,6 +534,7 @@ _DISPATCH: dict[EventType, _PerceiveHandler] = {
     EventType.ENTITY_UNEQUIP: _perceive_unequip,
     EventType.ENTITY_BUY: _perceive_buy,
     EventType.ENTITY_SELL: _perceive_sell,
+    EventType.ENTITY_TAKE: _perceive_take,
     EventType.TURN_SKIPPED: _perceive_turn_skipped,
     EventType.ROUND_START: _perceive_round_start,
     EventType.COMBAT_STARTED: _perceive_combat_started,

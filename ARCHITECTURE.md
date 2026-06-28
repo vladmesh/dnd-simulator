@@ -14,8 +14,8 @@ Layers are ordered from most abstract (physical world) to most concrete (individ
 Layer 0: Geography    — terrain, coordinates, weather, day/night cycle
 Layer 1: Politics     — factions, borders, laws, diplomacy
 Layer 2: Settlements  — towns, economy, population, local events
-Layer 3: Ecology      — squad movement, abstract world simulation
-Layer 4: Entities     — all tracked creatures (player, NPCs, named monsters)
+Layer 3: Ecology      — squad movement, lairs, abstract world simulation
+Layer 4: Entities     — all tracked creatures (player, NPCs, named monsters) + Container loot objects
 ```
 
 New layers can be inserted between existing ones as the simulation grows in detail (e.g., a Cosmology layer above Geography for gods and planar mechanics).
@@ -33,22 +33,22 @@ Every layer implements the same interface:
 
 ```
 src/dnd_simulator/
-├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/BrainType/Action, CreatureHost protocol, LocationGraph, Condition, Item/WeaponDef/ArmorDef, Modifier, ClassFeatures, ResourcePool, ActionDef/TargetMode/TargetScope, EntityKind, NpcMemory, Squad
+├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/BrainType/Action, CreatureHost protocol, LocationGraph, Condition, Item/WeaponDef/ArmorDef, Modifier, ClassFeatures, ResourcePool, ActionDef/TargetMode/TargetScope, EntityKind, NpcMemory, Squad, Lair/LairState, Container, InventoryHolder/Lootable, TimeOfDay
 ├── layers/        — concrete layer implementations
 │   ├── geography/ — physical world simulation
 │   ├── politics/  — factions and diplomacy
 │   ├── settlements/ — towns and local economy
-│   ├── ecology/   — squad movement, abstract world simulation (EcologyLayer)
+│   ├── ecology/   — squad movement, lairs, abstract world simulation (EcologyLayer)
 │   └── entities/  — all tracked creatures (player, NPCs, named monsters)
 │       ├── layer.py              — EntitiesLayer (main)
 │       ├── combat_manager.py     — CombatManager (attack resolution, initiative)
 │       ├── awareness_builder.py  — AwarenessBuilder (creature awareness construction)
-│       ├── activation_manager.py — ActivationManager (proximity-based activation)
+│       ├── activation_manager.py — ActivationManager (proximity activation + encounter rolling, region/time-of-day)
 │       ├── query_handler.py      — QueryHandler (layer query dispatch)
 │       └── perception.py         — event perception and visibility filtering
 ├── master/        — DM orchestrator (LLM-powered)
-├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation (+ target scope), conditions, weapons, modifiers, proficiency, sneak attack, divine smite, fighting style, reactions, reputation, combat_sides, resources, character creation, leveling (XP/thresholds/perform_level_up), action providers, abstract combat, physics, economics, RuleBrain (utility scoring)
-│   └── handlers/  — per-action-type execution (combat, attack_resolution, movement, equipment, items, rest, trade, reactions)
+├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation (+ target scope), conditions, weapons, modifiers, proficiency, sneak attack, divine smite, fighting style, reactions, reputation, combat_sides, resources, character creation, leveling (XP/thresholds/perform_level_up), action providers, encounters (time-of-day gate), inventory (transfer_items), loot, abstract combat, physics, economics, RuleBrain (utility scoring)
+│   └── handlers/  — per-action-type execution (combat, attack_resolution, movement, equipment, items, rest, trade, loot, reactions)
 ├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, MemorySummarizer (layer-agnostic: only depends on core/ and rules/)
 ├── i18n.py        — gettext internationalization, per-session language via contextvars
 ├── adapters/      — transport layer
@@ -219,6 +219,14 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 **Conditions** (`core/conditions.py`): D&D 5e status effects as a `Condition` enum (Blinded, Poisoned, Prone, Stunned, etc. + Blessed). `ConditionsMap` = `dict[Condition, int | None]` — maps active conditions to remaining rounds (`int`) or permanent (`None`). Pure mechanics in `rules/conditions.py`: `is_incapacitated()`, `effective_speed()`, `attack_advantage()`, `tick_conditions()` (decrement/expire at turn start).
 
 **Items** (`core/items.py`): `Item` dataclass with `ItemType` (WEAPON, POTION, ARMOR, SHIELD). Weapons carry a `WeaponDef` — attack name, damage components, reach, ability, magic bonus, finesse flag, `WeaponCategory` (simple/martial), and can grant passive conditions and bonus action types while equipped. Armor carries `ArmorDef` — base AC, DEX cap, `ArmorCategory` (light/medium/heavy). Shields carry `ShieldDef` — AC bonus. `rules/weapons.py`: `get_weapon_attack()` builds `Attack` from equipped weapon, falling back to `creature.attacks` or unarmed strike (1 bludgeoning). `rules/proficiency.py`: proficiency bonus by level, weapon/armor proficiency tables per class. `Creature.equipped_weapon`/`equipped_armor`/`equipped_shield` are the active equipment; inventory holds all items. Equip/unequip actions swap equipment from inventory.
+
+## Lairs, Encounters & Loot
+
+**Lairs** (`core/lair.py`, hosted on `EcologyLayer`): a fixed-roster monster population pinned to a location, with a `LairState` machine `ACTIVE → DEPLETED`. While `ACTIVE`, population respawns to the roster cap on the ecology tick (`respawn_interval`); the full roster materializes when the player enters (reusing the squad materialization pattern — lair spawns are `temporary=True`, removed on death, no corpse loot). Killing the optional `core`/boss is the deterministic depletion trigger → terminal `DEPLETED` (respawn off, survives save/load); coreless lairs may use an optional `depletion_chance` rolled after a full wipe. Danger is a property of place, not party level (kenshi-style, per VISION).
+
+**Encounters**: encounter tables are authored per-location (`encounters`) or per-region (`region_encounters`) in `ecology/monsters.yaml`. A location without its own table falls through to its region's table; a location table overrides. Resolution is load-time — `_flatten_region_defaults` (shared with `battle_map_configs`) collapses regional defaults into effective per-location tables, so `ActivationManager` stays unchanged at runtime. Each entry may carry a `time_of_day` tag (`TimeOfDay.DAY`/`NIGHT`); `ActivationManager._roll_encounters` filters with the pure `rules/encounters.is_active_at_time`, reading day/night from the geography `IS_DAYLIGHT` query (resolves location → region → latitude → `is_daylight`). Untagged entries fire at any time; spawns emit `encounter_spawned`.
+
+**Loot** (`core/loot.py`): `InventoryHolder` is a `runtime_checkable` Protocol over anything with `inventory` + `gold` (Creature, Container); `is_lootable()` is derived state (a dead creature, or an open `Container`). `Container` (`core/container.py`) is an `Entity` sibling of `Creature` (`EntityKind.CONTAINER`) — inventory/gold/`is_open`, no HP/turn/brain — persisted by `EntitiesLayer`. The `take` action (`ActionType.TAKE`, `LootActionProvider`, handler in `rules/handlers/loot.py`) is take-all: it moves a holder's whole inventory + gold to the actor via the shared `rules/inventory.transfer_items` primitive, emitting `entity_take`. Trade is refactored onto the same primitive; loot / trade / theft are distinct access modes (no consent / consent+price / contested) over one transfer. Lair treasuries are persistent `Container`s gated behind core death.
 
 ## Class Features & Resources
 

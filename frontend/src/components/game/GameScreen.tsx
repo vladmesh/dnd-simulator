@@ -9,6 +9,7 @@ import { Perception } from "./Perception"
 import { PlayerStats } from "./PlayerStats"
 import { LocationPanel } from "./LocationPanel"
 import { TradePanel } from "./TradePanel"
+import { LootPanel } from "./LootPanel"
 import { BattleMap } from "./BattleMap"
 import { CombatPanel } from "./CombatPanel"
 import { NpcInspectModal } from "./NpcInspectModal"
@@ -96,6 +97,7 @@ export function GameScreen() {
                 <Perception />
                 <div className="my-3 border-t border-border" />
                 <TradePanel />
+                <LootPanel />
               </>
             )}
           </div>

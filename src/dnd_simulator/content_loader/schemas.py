@@ -26,7 +26,7 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.items import ItemType
-from dnd_simulator.core.models import TerrainType
+from dnd_simulator.core.models import TerrainType, TimeOfDay
 from dnd_simulator.core.squad import SquadBehavior, SquadType
 from dnd_simulator.layers.geography.models import Direction
 from dnd_simulator.layers.politics.models import LeaderTrait
@@ -320,6 +320,7 @@ class EncounterEntryContent(BaseModel):
     template: str
     chance: float
     count: list[int]
+    time_of_day: TimeOfDay | None = None  # "day"/"night"; omitted == any time
 
 
 class SquadContent(BaseModel):
@@ -340,6 +341,31 @@ class SquadContent(BaseModel):
     def model_post_init(self, __context: object) -> None:
         if self.max_strength is None:
             object.__setattr__(self, "max_strength", self.strength)
+
+
+class LairTreasureContent(BaseModel):
+    """A lair's treasury block — explicit item refs + gold, optionally gated behind the core.
+
+    Item dicts may carry a ``ref`` to a catalog entry (resolved at load). Random
+    loot tables are out of scope: contents are deterministic.
+    """
+
+    items: list[ItemContent] = []
+    gold: int = 0
+    behind_core: bool = True
+
+
+class LairContent(BaseModel):
+    """A lair definition from YAML — a fixed monster home at one location."""
+
+    name: LocalizedText
+    faction: str
+    location: str
+    members: list[str] = []
+    core: str | None = None
+    respawn_interval: int = 86400
+    depletion_chance: float = 0.0
+    treasure: LairTreasureContent | None = None
 
 
 # ---------------------------------------------------------------------------

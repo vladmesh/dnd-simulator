@@ -10,13 +10,14 @@ class EntityKind(StrEnum):
     """Runtime entity discriminator for save/load and query filtering.
 
     Distinct from content_loader.EntityType (which enumerates YAML content kinds).
-    PLAYER / NPC / CREATURE are used in EntitiesLayer save data; PLAYER / NPC / MONSTER
-    are used by the detail/query API surface.
+    PLAYER / NPC / CREATURE / CONTAINER are used in EntitiesLayer save data;
+    PLAYER / NPC / MONSTER are used by the detail/query API surface.
     """
 
     PLAYER = "player"
     NPC = "npc"
     CREATURE = "creature"
+    CONTAINER = "container"
     MONSTER = "monster"
 
 
@@ -63,6 +64,7 @@ class QueryType(Enum):
     CONNECTIONS = "connections"
     TRAVEL_TIME = "travel_time"
     DAYLIGHT = "daylight"
+    IS_DAYLIGHT = "is_daylight"
     REGION_INFO = "region_info"
     REGIONS = "regions"
     LOCATION_REGION = "location_region"
@@ -84,6 +86,7 @@ class QueryType(Enum):
     # Ecology
     SQUADS_AT_LOCATION = "squads_at_location"
     SQUAD_INFO = "squad_info"
+    LAIRS_AT_LOCATION = "lairs_at_location"
 
     # Entities
     PLAYERS = "players"
@@ -121,6 +124,7 @@ class EventType(Enum):
     ENTITY_UNEQUIP = "entity_unequip"
     ENTITY_BUY = "entity_buy"
     ENTITY_SELL = "entity_sell"
+    ENTITY_TAKE = "entity_take"
     TURN_SKIPPED = "turn_skipped"
     COMBAT_STARTED = "combat_started"
     COMBAT_ENDED = "combat_ended"
@@ -131,11 +135,19 @@ class EventType(Enum):
     SQUAD_COMBAT = "squad_combat"
     SQUAD_MATERIALIZED = "squad_materialized"
     SQUAD_DEMATERIALIZED = "squad_dematerialized"
+    LAIR_DEMATERIALIZED = "lair_dematerialized"
     ROUND_START = "round_start"
     OPPORTUNITY_ATTACK = "opportunity_attack"
     REPUTATION_CHANGED = "reputation_changed"
     XP_GAINED = "xp_gained"
     CUSTOM = "custom"
+
+
+class TimeOfDay(StrEnum):
+    """Day/night phase tag for content that varies with the clock (e.g. encounters)."""
+
+    DAY = "day"
+    NIGHT = "night"
 
 
 @dataclass(frozen=True)

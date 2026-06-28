@@ -207,6 +207,60 @@ class TestParseEncounters:
         with pytest.raises(RuntimeError, match="dragon"):
             parse_encounters(data, known_templates={"goblin"})
 
+    def test_parse_encounter_time_of_day(self) -> None:
+        from dnd_simulator.content_loader import parse_encounters
+        from dnd_simulator.core.models import TimeOfDay
+
+        data = {
+            "crypt": [
+                {"template": "goblin", "chance": 0.5, "count": [1, 1], "time_of_day": "night"},
+                {"template": "wolf", "chance": 0.5, "count": [1, 1]},
+            ]
+        }
+        entries = parse_encounters(data, known_templates={"goblin", "wolf"})["crypt"]
+        assert entries[0].time_of_day is TimeOfDay.NIGHT
+        assert entries[1].time_of_day is None  # untagged
+
+    def test_parse_encounter_bad_time_of_day_raises(self) -> None:
+        from pydantic import ValidationError
+
+        from dnd_simulator.content_loader import parse_encounters
+
+        data = {"forest": [{"template": "goblin", "chance": 0.5, "count": [1, 1], "time_of_day": "dusk"}]}
+        with pytest.raises(ValidationError):
+            parse_encounters(data, known_templates={"goblin"})
+
+
+class TestParseRegionEncounters:
+    """parse_region_encounters keys by region_id and fails fast on bad refs."""
+
+    def test_parse_region_encounter_table(self) -> None:
+        from dnd_simulator.content_loader import parse_region_encounters
+
+        data = {"darkwood": [{"template": "goblin", "chance": 0.4, "count": [1, 3]}]}
+        encounters = parse_region_encounters(data, known_templates={"goblin"}, known_regions={"darkwood"})
+
+        assert "darkwood" in encounters
+        entry = encounters["darkwood"][0]
+        assert entry.template_id == "goblin"
+        assert entry.chance == 0.4
+        assert entry.count_min == 1
+        assert entry.count_max == 3
+
+    def test_parse_region_encounter_unknown_template_raises(self) -> None:
+        from dnd_simulator.content_loader import parse_region_encounters
+
+        data = {"darkwood": [{"template": "dragon", "chance": 0.5, "count": [1, 1]}]}
+        with pytest.raises(RuntimeError, match="dragon"):
+            parse_region_encounters(data, known_templates={"goblin"}, known_regions={"darkwood"})
+
+    def test_parse_region_encounter_unknown_region_raises(self) -> None:
+        from dnd_simulator.content_loader import parse_region_encounters
+
+        data = {"mordor": [{"template": "goblin", "chance": 0.5, "count": [1, 1]}]}
+        with pytest.raises(RuntimeError, match="mordor"):
+            parse_region_encounters(data, known_templates={"goblin"}, known_regions={"darkwood"})
+
 
 class TestLoadMonstersYaml:
     """Full load of monsters.yaml from directory-format world."""
@@ -238,12 +292,14 @@ class TestLoadMonstersYaml:
         world_dir.mkdir()
         (world_dir / "monsters.yaml").write_text(yaml.dump(monsters_yaml, allow_unicode=True))
 
-        templates, encounters = load_monsters(world_dir, lang="en")
+        templates, encounters, region_encounters = load_monsters(world_dir, lang="en")
 
         assert "goblin" in templates
         assert templates["goblin"].hp == 7
         assert "dark_forest" in encounters
         assert encounters["dark_forest"][0].template_id == "goblin"
+        # No region_encounters in this world → empty, location table unaffected.
+        assert region_encounters == {}
 
     def test_load_monsters_missing_file_returns_empty(self, tmp_path: Path) -> None:
         """Worlds without monsters.yaml are valid — return empty dicts."""
@@ -252,7 +308,74 @@ class TestLoadMonstersYaml:
         world_dir = tmp_path / "empty_world"
         world_dir.mkdir()
 
-        templates, encounters = load_monsters(world_dir, lang="en")
+        templates, encounters, region_encounters = load_monsters(world_dir, lang="en")
 
         assert templates == {}
         assert encounters == {}
+        assert region_encounters == {}
+
+    def test_load_monsters_region_encounters(self, tmp_path: Path) -> None:
+        """region_encounters loads in parallel with location encounters, keyed by region."""
+        from dnd_simulator.content_loader import load_monsters
+
+        monsters_yaml = {
+            "templates": {
+                "goblin": {
+                    "name": {"en": "Goblin"},
+                    "hp": 7,
+                    "ac": 15,
+                    "speed": 30,
+                    "ability_scores": {"str": 8, "dex": 14, "con": 10, "int": 10, "wis": 8, "cha": 8},
+                    "attacks": [
+                        {"name": "scimitar", "ability": "dex", "damage": [{"dice": "1d6", "type": "slashing"}]}
+                    ],
+                    "cr": 0.25,
+                },
+            },
+            "encounters": {
+                "forest_road": [{"template": "goblin", "chance": 0.3, "count": [1, 2]}],
+            },
+            "region_encounters": {
+                "darkwood": [{"template": "goblin", "chance": 0.4, "count": [1, 3]}],
+            },
+        }
+        world_dir = tmp_path / "region_world"
+        world_dir.mkdir()
+        (world_dir / "monsters.yaml").write_text(yaml.dump(monsters_yaml, allow_unicode=True))
+
+        _templates, encounters, region_encounters = load_monsters(world_dir, lang="en", known_regions={"darkwood"})
+
+        assert "forest_road" in encounters  # location table still present
+        assert "darkwood" in region_encounters
+        entry = region_encounters["darkwood"][0]
+        assert entry.template_id == "goblin"
+        assert entry.count_max == 3
+
+    def test_load_monsters_region_encounters_unknown_region_raises(self, tmp_path: Path) -> None:
+        """A region_encounters key naming an unknown region fails fast at load."""
+        from dnd_simulator.content_loader import load_monsters
+
+        monsters_yaml = {
+            "templates": {
+                "goblin": {
+                    "name": {"en": "Goblin"},
+                    "hp": 7,
+                    "ac": 15,
+                    "speed": 30,
+                    "ability_scores": {"str": 8, "dex": 14, "con": 10, "int": 10, "wis": 8, "cha": 8},
+                    "attacks": [
+                        {"name": "scimitar", "ability": "dex", "damage": [{"dice": "1d6", "type": "slashing"}]}
+                    ],
+                    "cr": 0.25,
+                },
+            },
+            "region_encounters": {
+                "no_such_region": [{"template": "goblin", "chance": 0.4, "count": [1, 3]}],
+            },
+        }
+        world_dir = tmp_path / "bad_region_world"
+        world_dir.mkdir()
+        (world_dir / "monsters.yaml").write_text(yaml.dump(monsters_yaml, allow_unicode=True))
+
+        with pytest.raises(RuntimeError, match="no_such_region"):
+            load_monsters(world_dir, lang="en", known_regions={"darkwood"})

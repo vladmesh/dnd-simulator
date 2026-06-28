@@ -471,7 +471,12 @@ class GameSession:
                     import traceback
 
                     logger.error("round_loop_error", traceback=traceback.format_exc())
-                self._fire("on_game_over")
+                # Only signal game_over when the loop ended on its own (e.g. player death).
+                # stop_round() sets the stop flag for administrative stops (last listener
+                # disconnected); a transient disconnect+reconnect must not flash GAME OVER on
+                # the reconnected client.
+                if not game_round.is_stopped:
+                    self._fire("on_game_over")
 
             # Copy contextvars (session_id etc.) into the round thread
             ctx = contextvars.copy_context()

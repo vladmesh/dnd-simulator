@@ -21,6 +21,10 @@ Defines the core abstractions that everything else builds on:
 - BattleMap, Position, Wall — 2D combat grid with entity positions, wall collision, random placement
 - Location, LocationEdge, LocationGraph — flat navigation graph mapping locations to regions/settlements
 - PeacefulAwareness, CombatAwareness, PerceivedEvent — structured awareness data passed to Brain.choose_action
+- Container — Entity sibling with inventory/gold but no HP/turn/brain (chests, lair treasury); EntityKind.CONTAINER
+- InventoryHolder — protocol (inventory + gold) shared by creatures and containers; substrate for the transfer primitive
+- Lair, LairState — stationary monster home: roster, optional core/boss, treasury; ACTIVE → DEPLETED state machine
+- TimeOfDay — DAY/NIGHT phase tag for clock-varying content (e.g. encounters)
 
 This module has no external dependencies (except i18n for translatable strings).
 All other modules depend on it.

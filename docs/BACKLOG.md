@@ -11,7 +11,7 @@
 
 ## Gameplay
 
-- [ ] **must** `monster-spawn` — Система спавна монстров: триггеры (proximity, time, event), таблицы встреч по региону/локации, CR-бюджет
+- [x] `monster-spawn` — ~~Система спавна монстров: триггеры (proximity, time, event), таблицы встреч по региону/локации, CR-бюджет~~ FIXED Sprint 018: логова (`core/lair.py`, core-death depletion), региональные encounter-таблицы (region→location fallthrough), time-of-day гейт (day/night). CR-бюджет/авто-скейлинг сознательно отброшен (кенши-стиль). Event-триггер вынесен в `spawn-event-trigger`
 - [ ] **must** `quest-system` — Система квестов: цели, триггеры завершения, награды. Минимум: fetch/kill/escort
 - [ ] **should** `key-npcs` — Ключевые NPC (антагонист, компаньон): глубокая память, реакция на мировые события, персональные цели
 - [ ] **should** `npc-wandering` — Динамические маршруты NPC между поселениями (сейчас только статичные расписания)
@@ -22,6 +22,13 @@
 - [ ] **should** `versatile-weapons` — Versatile weapon property: переключение одноручный/двуручный хват, разный урон (longsword 1d8/1d10, warhammer 1d8/1d10, quarterstaff 1d6/1d8). WeaponDef.versatile_damage, автовыбор хвата по наличию щита
 - [ ] **should** `hit-dice-short-rest` — Hit Dice spending на коротком отдыхе: ResourcePool(hit_dice, max=level, reset_on=LONG_REST), игрок выбирает сколько тратить, за каждую кость roll(class_hit_die)+CON_mod HP. Long rest восстанавливает max(1, level//2) костей (partial reset). Нужен PlayerBrain callback для выбора количества + UI
 - [ ] **could** `conversation-costs-time` — Каждая реплика разговора тратит 6 секунд игрового времени (частично)
+- [ ] **should** `loot-drops-monsters` — Общемонстровый дроп: loot-таблицы на шаблонах монстров, корпс-лут с обычных мобов поверх action `take` (Sprint 018 закладывает примитив `Lootable`/`transfer_items`)
+- [ ] **should** `theft` — Воровство как отдельный режим доступа к инвентарю: take у живого несогласного владельца, contested Sleight of Hand против Perception, crime/репутация; отдельная `validate_steal` поверх общего `transfer_items`
+- [ ] **should** `spawn-event-trigger` — Event-триггер спавна (спавн по мировому событию), в связке со спринтом квестов
+- [ ] **could** `container-hp-locks` — Сундуки с замком/HP: взлом (lockpicking) и «разбить» контейнер
+- [ ] **could** `lair-actions` — D&D lair actions на ядре логова
+- [ ] **could** `lair-new-leader` — После смерти ядра логово с шансом поднимает нового вожака вместо деплита (динамика мира)
+- [ ] **could** `lair-time-of-day` — Активность логова варьируется день/ночь (`active_at: day|night` гейтит материализацию ростера). Переиспользует `TimeOfDay`/`IS_DAYLIGHT`/`is_active_at_time` из Sprint 018 phase 4 (отложено при планировании фазы 4)
 
 ## World Simulation
 
@@ -58,6 +65,11 @@
 - [ ] **should** `npc-instant-say-response` — после `say` тикнуть NPC в локации (1 раунд), чтобы RuleBrain/LlmBrain ответил в том же запросе. Сейчас NPC отвечают только при `advance_time`
 - [ ] **could** `list-npcs-iterate-entities` — `list_npcs` итерирует по регионам; NPC в несуществующем регионе выпадает из списка. Итерировать по entities напрямую
 - [ ] **could** `periodic-autosave-scheduler` — фоновый asyncio таск в FastAPI lifespan каждые ~2 мин вызывает `autosave_all_sessions()`; cancel на shutdown перед финальным autosave. Дополняет per-action и shutdown автосейв
+- [ ] **should** `session-disconnect-debounce` — быстрый disconnect+reconnect (React StrictMode remount, сетевой блип) гонит лишний evict: `remove_listener` останавливает раунд и `_on_session_empty` выселяет сессию из реестра. Симптом GAME OVER устранён в post-audit sprint 018 (раунд-луп больше не шлёт `on_game_over` при административном `stop()` — `Round.is_stopped`), но сессия всё равно выселяется и живёт орфаном на reconnect-WS (прогресс может не попасть в реестровый autosave; reload поднимает старый autosave). Простой re-check `has_listeners()` в `_on_session_empty` пробовали и откатили: на module-scoped WS-тестах он сохранял сессию вместо evict→reload-reset, и арена-бой накапливался до `game_over` (5 падений `test_websocket.py` в CI, timing-зависимо). Полноценный фикс — grace-period: при опустошении не выселять сразу, а отложенно (1–2с через `threading.Timer`) перепроверить пустоту и только тогда `stop_round`+evict; reconnect внутри окна отменяет (+ переработать module-scoped арена-фикстуру, чтобы не зависеть от evict-reset). Прод (без StrictMode-двумаунта) почти не задет, поэтому not-must
+
+## DevOps / Infra
+
+- [ ] **should** `containerized-stack` — Воспроизводимый контейнерный сетап для подъёма всего стека (фронт + бэк) одной командой. Двойная польза: локально быстро поднять перед E2E и переиспользовать на проде. Сейчас `docker-compose.test.yml` — только `backend` + `integration-tests` (pytest), без фронта и без проброса портов наружу, поэтому браузерный E2E гоняется на хостовых `uvicorn`/`vite`: ловит убийство процесса песочницей при бинде порта и зависит от хостовых Node/uv. План: добавить сервис `frontend` (собранный бандл через `vite build` + `vite preview` или nginx со статикой, не dev-сервер — заодно тестируем прод-бандл), пробросить `8001`/`5173`, оформить профилем `--profile e2e` чтобы не мешать `integration-tests`, и перевести шаг «Start the stack» в скилле `/e2e` на `docker compose --profile e2e up`. Прод-вариант: тот же образ фронта (nginx) + бэкенд, общий базовый compose. Не закрывает E2E-в-CI (нужен отдельно Playwright-в-контейнере + написанные спеки) — это про воспроизводимость стека, не про сами тесты
 
 ## Performance
 
@@ -65,16 +77,20 @@
 
 ## Bugs
 
+- [ ] **could** `corpse-nearby-actions` — мёртвое существо показывается в Nearby-панели с кнопками Attack/Talk/Inspect (E2E sprint 018 phase 2). Лут идёт через отдельный LootPanel; атака трупа возвращает корректное «уже мертва», так что ничего не ломается — но Attack/Talk на трупе бессмысленны. Скрывать их для мёртвых (или убирать трупы из Nearby, раз есть LootPanel)
+- [ ] **should** `encounter-spawned-perceiver` — `EncounterSpawned` события не имеют перцептора в `perception.py` `_DISPATCH`, в логе игрока выводится мусорный фолбэк `Something happened (encounter_spawned)` (E2E post-audit sprint 018; срабатывает на каждый региональный/локационный спавн встречи). Добавить `_perceive_encounter_spawned` (напр. «Рядом что-то зашевелилось») и зарегистрировать в `_DISPATCH`
 - [ ] **should** `battle-map-configs-not-wired` — `battle_map_configs` из `regions.yaml` не передаётся в `EntitiesLayer` при создании сессии в `game_service.py`. Все combat maps дефолтят в 60×60. `load_battle_maps()` keyed by region_id, `CombatManager` ищет по location_id — нужен маппинг через `location_graph`
 - [ ] **should** `player-character-no-attacks` — `POST /api/player/sessions/{id}/character` не принимает `attacks`; персонаж дерётся кулаками (1 урон). Добавить `attacks` в `CreatePlayerRequest` и `parse_player` (проверить — мог закрыться в Sprint 013 char-creation)
 - [ ] **could** `look-action-i18n-hardcode` — `_cmd_look` в GameService хардкодит строки «Terrain:»/«Weather:» вместо `_()`. Не критично (perception API отдаёт сырые данные), но для консистентности text-команд стоит перевести
+- [ ] **should** `combat-log-i18n-gaps` — при дефолтном `DND_LANGUAGE=ru` боевой лог наполовину английский (E2E post-audit sprint 018). Три причины: (1) дрейф каталога — msgid в коде несут лишний `{oa}` (`perception.py:141,145`), не совпадают с записью в `.po` («You attack {target}{weapon}{roll}{outcome}») → фолбэк на английский; нужен `make messages` + перевод + `make compile-messages`; (2) непереведены строки репутации (`perception.py:505`) и «moved (X ft)»; (3) код-баг: `rules/handlers/movement.py:52,56` возвращают сырой английский `error=...` не обёрнутый в `_()` («Not on the battle map», «Cannot move there — blocked» — последняя ещё и с em-dash) → никогда не локализуется. В основном преэкзистинг (строки спринтов 012/014), но очень заметно
 - [x] `sneak-attack-faction-check` — ~~SA ally-adjacency считала союзником любое живое существо в 5ft без учёта фракции~~ FIXED Sprint 011/014: ally detection через faction relations
 - [x] `flaky-initiative-test` — ~~`test_second_attack_does_not_reroll_initiative` падал рандомно~~ FIXED: AC=30 чтобы атаки всегда мазали, c2 не удаляется из turn_order
+- [ ] **could** `flaky-schemaform-ref-select` — `frontend/src/components/master/__tests__/SchemaForm.test.tsx > renders ref field as select with fetched options` флапает в полном `npx vitest run` (ждёт 3 option, видит 1), но зелёный при изоляции файла и на повторе. Похоже на гонку мока fetch ref-опций / async-рендера select. Замечен на Sprint 018 phase 3 (бэкенд-only коммит, влиять не мог). Стабилизировать ожидание опций (`findBy`/`waitFor`) или изолировать fetch-мок между тестами
 
 ## Tech Debt (from audits 2026-03-25, updated 2026-03-29)
 
 - [x] `god-class-entities` — ~~EntitiesLayer 1215 строк~~ FIXED Sprint 005: extracted awareness_builder, activation_manager, query_handler, combat_manager, perception
-- [ ] **should** `god-class-game-service` — GameService 836 строк, 43 метода. Продолжить выделение commands_*.py модулей
+- [ ] **should** `god-class-game-service` — GameService 1044 строки (836 на 2026-04-13, растёт). Продолжить выделение commands_*.py модулей
 - [x] `god-class-politics` — ~~PoliticsLayer 609 строк~~ FIXED Sprint 014 phase 0: split into diplomacy.py, warfare.py, economy.py submodules
 - [x] `test-gaps-critical` — ~~rules/action_handlers.py без unit-тестов~~ FIXED Sprint 005: action_provider, awareness_builder, brain_factory, world isolation tests
 - [x] `test-gaps` — ~~Нет тестов: action_provider, awareness, world, brain_factory~~ FIXED Sprint 005 (commands_*, session, store remain)
@@ -116,7 +132,7 @@
 - [ ] **could** `test-bare-status-codes` — test_api.py, test_trade_ws.py используют bare 200/404 вместо HTTPStatus
 - [ ] **should** `long-func-start-round` — service/session.py start_round 103 строки. Extract closures into named methods
 - [x] `perception-dispatch-chain` — ~~perception.py if-elif chain~~ FIXED Sprint 012 phase 4: dict[EventType, handler] dispatch
-- [ ] **could** `activation-manager-growing` — activation_manager.py 406 строк. Extract _materialize_squads()
+- [ ] **should** `activation-manager-growing` — activation_manager.py 614 строк (406 на 2026-04-13; вырос на encounter-rolling в Sprint 018). Extract EncounterRoller (_roll_encounters, _is_daylight_at) + _materialize_squads()
 - [ ] **could** `deep-nesting-diplomacy` — politics/layer.py _process_diplomacy 7 уровней вложенности
 - [ ] **should** `silent-failure-autosave` — 3x contextlib.suppress(Exception) вокруг autosave. Логировать ошибки, не глушить
 - [x] `silent-failure-awareness` — ~~awareness_builder.py 6x broad except Exception~~ FIXED Sprint 012 phase 4: narrowed to KeyError/LookupError
@@ -158,7 +174,7 @@
 - [x] `dead-auto-fail-saves` — ~~rules/conditions.py:32~~ FIXED audit 2026-03-31: removed
 - [ ] `dead-refund` — core/turn_budget.py:58 (tested but unused, future budget mechanic)
 - [x] `dead-check-reactions` — ~~stubbed~~ FIXED Sprint 012: wired into round loop
-- [ ] `dead-is-daylight` — rules/geography.py:172, tested but unused in prod. Wire into geography layer or remove
+- [x] `dead-is-daylight` — ~~rules/geography.py:172, tested but unused in prod. Wire into geography layer or remove~~ FIXED Sprint 018 phase 4: wired into `IS_DAYLIGHT` geography query (location→region→latitude→is_daylight) для time-of-day встреч
 - [ ] `dead-prone-stand-cost` — rules/conditions.py:27, tested but never integrated into movement handler
 - [x] `dead-reset-resources` — ~~rules/resources.py, 12 test refs, 0 prod~~ FIXED Sprint 015 phase 1: wired into rest handlers
 - [ ] `dead-walk-path` — rules/movement.py:201, 12 test refs, 0 prod. Budget-aware path walking
@@ -197,3 +213,13 @@
 - [ ] **could** `test-gap-ws-disconnect` — нет теста disconnect во время активного game loop
 - [ ] **could** `test-gap-ws-reaction-prompts` — reaction prompt flow по WS не покрыт
 - [ ] **could** `test-gap-ws-concurrent-messages` — concurrent message handling по WS не тестируется
+
+## From audit 2026-06-28 (post Sprint 018), triaged
+
+- [x] `any-treasure-items` — ~~`content_loader/monsters.py:207` `treasure_items: list[Any]`, хотя `parse_items()` отдаёт `list[Item]`~~ FIXED в триаже 2026-06-28: аннотация `list[Item]` + импорт `Item`
+- [x] `test-gap-encounters-rule` — ~~`rules/encounters.py:8` `is_active_at_time` покрыт только косвенно через integration `test_time_of_day_encounters.py`~~ FIXED в триаже 2026-06-28: `tests/unit/test_encounters.py` (3 теста, truth-table)
+- [ ] **could** `item-create-bounds` — `adapters/api/schemas.py:87` поля создания/выдачи предметов (`base_ac`, `max_dex_bonus`, `strength_req`, `ac_bonus`, `reach`) без `Field(ge=, le=)`, в отличие от player HP/AC. Master-only, game-data. Сосед `ability-scores-no-bounds`
+- [ ] **could** `any-encounter-entries` — `content_loader/monsters.py:128` `_parse_encounter_entries(entries: Any)` на raw-YAML границе. `object`/`list[object]` строже (часть общего `any-to-object-sweep`)
+- [ ] **could** `entities-layer-regrowth` — `layers/entities/layer.py` снова 629 строк после декомпозиции Sprint 005 (`god-class-entities`). Следить за ростом по мере ecology-фич
+- [ ] **should** `test-gap-leveling` — `rules/leveling.py` без выделенных unit-тестов (косвенно через level-up тесты)
+- [ ] **could** `schema-form-eslint-suppress` — `frontend SchemaForm.tsx:137` eslint-disable-next-line react-hooks/exhaustive-deps (намеренная зависимость эффекта; см. также `event-log-eslint-suppress`, `schema-form-growing`)
