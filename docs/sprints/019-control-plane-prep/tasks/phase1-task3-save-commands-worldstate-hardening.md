@@ -60,4 +60,22 @@ not a mock — a genuine disk round-trip is the point.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `tests/unit/test_commands_save.py` (5 tests, real `JsonFileStore(tmp_path)`): load_game
+  round-trip (advance_time 5h → save → advance 3h → load → `world.time` restored to the
+  snapshot, not the later mutation), brain reassignment (null an NPC's brain, load,
+  assert the restored NPC has a `RuleBrain`), list_saves, delete_save. `world.load`
+  restores `world.time` in place on the existing layer objects, so re-fetching the NPC by
+  id from the same `EntitiesLayer` after load is sound.
+- `commands_world_state.py`: replaced the 6 `assert isinstance(...)` guards with a single
+  `_expect[T](value, expected, *, layer, query)` helper (3.12 type-param syntax, ruff
+  UP047) that raises `RuntimeError` naming layer + `QueryType.name`. Happy path unchanged
+  (existing world-state tests stay green); chose `RuntimeError` (layer invariant breach,
+  not a caller arg error). `region_ids` narrowed once and reused for the settlements loop.
+- One red→green: the hardening test (`test_malformed_layer_answer_raises_typed_error`)
+  monkeypatches `world.query_layer` to return `Answer(value="not-a-list")` for the
+  geography REGIONS query; was `AssertionError` before the swap, now `RuntimeError`.
+- No integration touched. `make check` green (backend 2268, frontend 238).
