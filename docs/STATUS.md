@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-06-28
 **Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 Phase 1 (логова) закрыта. По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), Phase 3 (автономные тики NPC).
-**Next:** Sprint 018 Phase 2 (лут и контейнеры). Дальше — генерация задач Фазы 2 (`/plan-phase`).
+**Next:** Sprint 018 Phase 2 (лут и контейнеры) — задачи сгенерированы (4 шт). Дальше — `/implement` Task 1.
 **Blockers:** нет.
 
 ## Current Sprint
@@ -12,9 +12,9 @@
 **Sprint:** 018-lairs-encounters-loot
 **Goal:** Монстры населяют мир независимо от игрока: постоянные логова (зачищаются убийством ядра), региональные таблицы встреч, опасность по времени суток и лутаемые контейнеры/трупы.
 **Started:** 2026-06-28
-**Phase:** 1 — Логова (COMPLETE) — 2026-06-28
+**Phase:** 2 — Лут и контейнеры (tasks generated) — 2026-06-28
 
-Tasks 1-3 done (materialization, respawn, depletion). Integration suite 146 green (+4 lair tests + `lair_world`); E2E regression 12/12, 0 blockers. Ready for Phase 2 task generation.
+Phase 1 closed (materialization, respawn, depletion; integration 146 green, E2E 12/12). Phase 2 broken into 4 tasks: (1) InventoryHolder substrate + `transfer_items`, (2) `Container` entity + persistence, (3) `take` action, (4) lair treasury. Ready to start Task 1.
 
 ### Phases
 

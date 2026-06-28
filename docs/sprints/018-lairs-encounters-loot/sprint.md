@@ -36,9 +36,19 @@
 
 **Verify:** integration. Труп с инвентарём → `take` переносит предметы и золото игроку; казна логова доступна после смерти ядра; существующие trade-тесты зелёные (рефактор не сломал перенос). E2E: убил → залутал.
 
+**Решения по фазе (из планирования):**
+- `gold` поднят с `Character` на `Creature` — единый субстрат `InventoryHolder` (inventory + gold); мобы по умолчанию `gold == 0`.
+- `take` — take-all: одно действие переносит весь инвентарь + золото холдера. Per-item отложено.
+- Казна логова = персистентный `Container`-entity (новый `EntityKind.CONTAINER`, save/load в Task 2); спавнится один раз, не дематериализуется, разлутанное состояние переживает уход/возврат и save/load.
+- Трупы обычных мобов не лутаются: lair-спавны `temporary=True` и удаляются на смерти. Лут идёт через казну-`Container` и персистентные (authored) трупы. Общемонстровый дроп — backlog (`loot-drops-monsters`).
+- Лут-таблицы детерминированы (список предметов + золото в контенте); рандомные таблицы — вне scope.
+
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [InventoryHolder substrate, `is_lootable`, `transfer_items`](tasks/phase2-task1-inventory-holder.md) — `gold`→`Creature`, `InventoryHolder` Protocol, `is_lootable`, общий примитив переноса, рефактор trade
+2. [`Container` entity + save/load](tasks/phase2-task2-container-entity.md) — `Container(Entity)` (inventory/gold/open), `EntityKind.CONTAINER`, персистенс
+3. [`take` action](tasks/phase2-task3-take-action.md) — `ActionType.TAKE`, `LootActionProvider`, валидация, хендлер, awareness, лут-UI
+4. [Lair treasury](tasks/phase2-task4-lair-treasury.md) — казна-`Container` из контента, гейт за ядром, персистенс разлутанного состояния
 
 ## Phase 3: Региональные таблицы встреч (Region Encounter Tables)
 
