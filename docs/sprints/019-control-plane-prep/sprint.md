@@ -57,7 +57,9 @@
 2. [Peel player commands](tasks/phase2-task2-player-commands-peel.md) — `PlayerCommands` mixin (~176 строк): create_player/level_up_player/player_status
 3. [Adapter hygiene](tasks/phase2-task3-adapter-hygiene.md) — `action-parsing-in-adapter` (вынос в `service/action_parsing.py` + типизированная ошибка) + `world-private-method-access` (public `make_query_fn`/`make_emit_fn`) + сверка бэклога
 
-## Phase 3: Visible gaps + backlog reconcile + dead code
+## Phase 3: Visible gaps + backlog reconcile + dead code ✓
+
+**Closed 2026-06-29.** Все 3 таски `done`; integration 154/154 зелёный; E2E (`e2e/phase3-report.md`) — 6/6, ноль NEW-блокеров. Все три видимых фикса подтверждены в живом UI под RU-сессией: (1) **combat-log i18n** — строка атаки рендерится по-русски «Ты атакуешь человек (longsword slash) [d20(13)+2=15 vs КЗ 10], 4 урона (1d8 рубящий)», без утечки плейсхолдеров `{oa}`/`{weapon}`, плюс RU для combat-start/смерти/репутации/конца боя (catalog-drift фикс работает); (2) **encounter-perceiver** — лог показывает «Поблизости что-то шевелится» (RU-флейвор), НЕ фоллбэк «Something happened», ростер скрыт (нет утечки имён мобов), бэкенд-лог: 5 `encounter_spawn`, ноль «Something happened»; (3) **corpse-nearby-actions** — у трупа в панели «Поблизости» только Inspect (нет Атаковать/Говорить), лут через панель «Добыча». Movement-handler ошибки (`movement.py`, 9 строк в `_()`, em-dash убраны) покрыты 2 новыми unit-тестами + RU-каталог доказан вживую на трёх независимых группах строк. `make check` зелёный (backend 2267, frontend 240, mypy чисто). Находки — преэкзистинг minor: dev-only WS StrictMode race, английские item/faction-имена внутри RU-строк (вне скоупа фазы, кандидат в i18n-свип). Латентный баг `player-xp-not-persisted` занесён в BACKLOG как should (вне гранулы).
 
 Закрыть видимую грязь: `combat-log-i18n-gaps` (код-баг `rules/handlers/movement.py` — сырые английские `error=...` без `_()`, em-dash на строке 56; + дрейф каталога через `make messages`/`compile-messages`), `encounter-spawned-perceiver` (мусорный «Something happened» в логе на каждый спавн), `corpse-nearby-actions` (скрыть Attack/Talk у трупа), `look-action-i18n-hardcode`. Удалить мёртвый код (`dead-refund`, `dead-walk-path`, `dead-prone-stand-cost`, `dead-to-save-data`, `dead-can-opportunity-attack`). Свести бэклог: пометить `battle-map-configs-not-wired` и `player-character-no-attacks` как fixed (проверено в коде при планировании).
 
@@ -75,7 +77,7 @@
 
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** Все 3 фазы закрыты (Phase 1/2/3 ✓). Integration 154/154, E2E phase3 6/6 (0 NEW-блокеров), `make check` зелёный. Ready for audit.
 
 ## Decisions
 
