@@ -12,9 +12,11 @@
 **Sprint:** 019-control-plane-prep
 **Goal:** Отвердить control-plane (GameService / session / commands / адаптеры) под будущий разрез на роли в `control-interfaces` — раздробить god-class, покрыть тестами, утончить адаптеры; попутно закрыть видимые дырки и свести бэклог.
 **Started:** 2026-06-28
-**Phase:** 2 — GameService deeper peel + adapter hygiene (COMPLETE) — 2026-06-29
+**Phase:** 3 — Visible gaps + backlog reconcile + dead code (tasks generated) — 2026-06-29
 
-Phase 1 closed: integration 154/154, E2E 9/9 (0 blockers, см. `sprints/019-control-plane-prep/e2e/phase1-report.md`), `make check` зелёный. Phase 2 closed: все 3 таски done, GameService 1044 → 357 (`WorldBuilderCommands` + `PlayerCommands` mixins; `autosave_session` в `GameServiceProtocol`), `parse_action`/`ActionParseError` вынесены в `service/action_parsing.py` (routes_ws больше не импортирует Action/ActionType из core), `World.make_query_fn`/`make_emit_fn` public; три backlog-айтема (`action-parsing-in-adapter`, `world-private-method-access`, `adapter-imports-core-directly`) помечены fixed. Integration 154/154, E2E 18/18 (0 блокеров, `sprints/019-control-plane-prep/e2e/phase2-report.md`), `make check` зелёный. Ready for Phase 3 task generation (visible gaps + backlog reconcile + dead code).
+Phase 1 closed: integration 154/154, E2E 9/9 (0 blockers, см. `sprints/019-control-plane-prep/e2e/phase1-report.md`), `make check` зелёный. Phase 2 closed: все 3 таски done, GameService 1044 → 357 (`WorldBuilderCommands` + `PlayerCommands` mixins; `autosave_session` в `GameServiceProtocol`), `parse_action`/`ActionParseError` вынесены в `service/action_parsing.py` (routes_ws больше не импортирует Action/ActionType из core), `World.make_query_fn`/`make_emit_fn` public; три backlog-айтема (`action-parsing-in-adapter`, `world-private-method-access`, `adapter-imports-core-directly`) помечены fixed. Integration 154/154, E2E 18/18 (0 блокеров, `sprints/019-control-plane-prep/e2e/phase2-report.md`), `make check` зелёный.
+
+Phase 3 tasks generated (3): (1) combat-log i18n (сырые `error=` в `movement.py` + em-dash + дрейф каталога `{oa}`) + encounter-spawned перцептор; (2) фронт-гейт Attack/Talk на трупах в `Perception.tsx`; (3) удаление 4 мёртвых функций + сверка бэклога. Код-ревью при планировании: `look-action-i18n-hardcode` и `dead-can-opportunity-attack` устарели (уже удалены), оба reconcile-айтема (`battle-map-configs-not-wired`, `player-character-no-attacks`) подтверждены fixed в коде. Ready to start task 1.
 
 ### Phases
 

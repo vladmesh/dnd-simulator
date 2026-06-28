@@ -63,9 +63,13 @@
 
 **Verify:** E2E — чистый RU боевой лог, нет мусорной encounter-строки, нет кнопок на трупе; grep подтверждает удаление мёртвого кода; `make check` зелёный.
 
+**Перескоплено при планировании (2026-06-29).** Код-ревью нашло два айтема фазы устаревшими: `look-action-i18n-hardcode` — `_cmd_look` уже удалён в раннем рефакторе (хардкод-строк «Terrain:»/«Weather:» в `service/` нет, остались только мусорные msgid в `.po`); `dead-can-opportunity-attack` — функция уже удалена (коммит 67f057b). Оба схлопываются в reconcile, не в работу. Оба reconcile-айтема подтверждены fixed в коде: `battle-map-configs-not-wired` (проводка `game_service.py:171-183`), `player-character-no-attacks` (стартовое снаряжение даёт оружие, симптом «дерётся кулаками» ушёл). Часть `combat-log-i18n-gaps` тоже устарела: `direction_label`/репутационные строки уже обёрнуты в `_()`, им нужна только регенерация каталога, не правка кода. Реальная работа: код-баг сырых `error=` в `movement.py` (+ em-dash) + дрейф каталога (`{oa}`) + перцептор encounter + фронт-гейт на трупах + удаление 4 мёртвых функций.
+
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Combat-log i18n + encounter perceiver](tasks/phase3-task1-combat-log-i18n-encounter-perceiver.md) — обернуть сырые `error=` в `movement.py` в `_()` (убрать em-dash); `_perceive_encounter_spawned` в `_DISPATCH`; один проход каталога (`make messages` → перевод RU → `make compile-messages`)
+2. [Hide Attack/Talk on corpses](tasks/phase3-task2-corpse-nearby-actions.md) — фронт-гейт Attack/Talk на `!entity.lootable` в `Perception.tsx` (бэкенд уже отдаёт `lootable`)
+3. [Dead-code removal + backlog reconcile](tasks/phase3-task3-dead-code-backlog-reconcile.md) — удалить `dead-refund`/`dead-walk-path`/`dead-prone-stand-cost`/`dead-to-save-data` (+ тесты); пометить fixed/obsolete `dead-can-opportunity-attack`, `battle-map-configs-not-wired`, `player-character-no-attacks`, `look-action-i18n-hardcode`
 
 ---
 
