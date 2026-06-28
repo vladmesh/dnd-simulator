@@ -4,7 +4,7 @@ import {
   EVENT_ICONS,
   EVENT_COLORS,
 } from "../logProcessing"
-import type { EventType, PerceivedEvent } from "@/types/game"
+import type { EventType } from "@/types/game"
 import type { LogEntry } from "@/store/slices/logSlice"
 
 // ---------------------------------------------------------------------------

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { ChevronDown } from "lucide-react"
 import { getActionLabel, getButtonVariant } from "./utils"
 import type { ResourcePoolInfo } from "@/types/game"
-import { getSpellSlots } from "../SmiteChoice"
+import { getSpellSlots } from "../spellSlots"
 import { useGameStore } from "@/store/gameStore"
 
 interface TargetDropdownProps {

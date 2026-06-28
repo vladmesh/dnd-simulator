@@ -13,7 +13,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { MerchantView } from "./TradePanel"
 import { Sword, MessageCircle, ShoppingBag, Send } from "lucide-react"
-import { SmiteChoice, getSpellSlots } from "./SmiteChoice"
+import { SmiteChoice } from "./SmiteChoice"
+import { getSpellSlots } from "./spellSlots"
 
 interface NpcInspectModalProps {
   entity: NearbyEntity | CombatEntity | null
