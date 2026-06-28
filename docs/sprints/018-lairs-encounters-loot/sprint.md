@@ -65,7 +65,7 @@ Encounter-таблицы можно задавать на уровне реги�
 
 **Closed 2026-06-28.** Резолв собран в `_flatten_region_defaults[T]` (общий хелпер для `battle_map_configs` и `effective_encounters` — дедуп, не копипаст); `ActivationManager` не тронут (резолв load-time). Integration: +3 теста (`tests/integration/test_encounters.py` + `encounter_world`) — fallthrough из региональной таблицы, override локационной, пустой регион без таблицы; suite 149 → 152 green (детерминизм через `chance: 1.0` + `count: [1,1]`, без сидов — encounter-ролл идёт мимо seeded dice RNG). Unit: 4 in-process продуктовых теста через `GameService` + реальные слои (`random` мокается). `make check` green (2237 backend, 238 frontend, mypy чисто). E2E: регрессия общего пути активация/раунд/бой (setup → peaceful: wait+move → combat), 12/12 pass, 0 blockers — [e2e/phase3-report.md](e2e/phase3-report.md). Пре-существующая мелочь (не фаза 3): смешанный EN/RU в game-строках (бэкенд `DND_LANGUAGE=ru`, UI-хром EN).
 
-## Phase 4: Время суток (Time-of-Day Spawns)
+## Phase 4: Время суток (Time-of-Day Spawns) ✓
 
 Encounter-таблицы тегаются временем суток: ночная встреча роллится только ночью, дневная — только днём, без тега — всегда (текущее поведение). День/ночь берётся из geography-слоя (`rules/geography.is_daylight`) через новый запрос `IS_DAYLIGHT`. Здесь же финальный E2E-цикл спринта.
 
@@ -81,6 +81,8 @@ Encounter-таблицы тегаются временем суток: ночн�
 **Tasks:**
 
 1. [Time-of-day encounters](tasks/phase4-task1-time-of-day-encounters.md) — `TimeOfDay` enum, `IS_DAYLIGHT` geography query, `time_of_day` на encounter-схеме/рантайме/лоадере, чистое правило `is_active_at_time`, фильтр в `ActivationManager._roll_encounters`
+
+**Closed 2026-06-28.** Day/night сигнал собран в geography (`IS_DAYLIGHT` резолвит location→region→latitude→`is_daylight`); `ActivationManager._is_daylight_at` дёргает его раз на ролл, фильтр через чистое `rules/encounters.is_active_at_time` (дефолт «день» при отсутствии geography — untagged никогда не подавляется). Integration: +2 теста (`TestTimeOfDayEncounter` на `encounter_world/night_marsh`) — пусто днём, спавн после `advance_time` в ночь; suite 152 → 154 green. Unit: 3 продуктовых (`test_time_of_day_encounters.py`) + 2 парсерных fail-fast/round-trip (`test_monster.py`); `make check` green (2245 backend, 238 frontend, mypy чисто). Старый тест обновлён намеренно: `test_manifest_game_service.test_locations` 6 → 7 (в `test_vale` добавлен `night_hollow`). E2E (sprint018-phase4): фича подтверждена вживую на запущенном сервере — `night_hollow` пусто в 10:00, Bandit в 02:00 (логи: `encounter_roll_off_hours` днём, `is_day:false` + спавн ночью); регрессия setup→peaceful→combat→loot→reputation 9/9, 0 блокеров ([e2e/phase4-report.md](e2e/phase4-report.md)). Фундамент (`TimeOfDay`/`IS_DAYLIGHT`/`is_active_at_time`) переиспользуем отложенным `lair-time-of-day`. Пре-существующие мелочи (не фаза 4): смешанный EN/RU в game-строках; мёртвое существо держит Attack/Talk в Nearby; после килла нужен End Turn до peaceful-move.
 
 ---
 
