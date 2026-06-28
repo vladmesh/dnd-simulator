@@ -3,8 +3,8 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-06-28
-**Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 Phase 1 (логова) закрыта. По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), Phase 3 (автономные тики NPC).
-**Next:** Sprint 018 Phase 3 — обе задачи реализованы (региональные таблицы + фоллтру/override). Дальше — `/close-phase`.
+**Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 Phases 1–3 закрыты (логова, лут/контейнеры, региональные таблицы встреч). По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), Phase 3 (автономные тики NPC).
+**Next:** Sprint 018 Phase 4 (время суток — встречи/активность день-ночь, финальный E2E) — задачи ещё не сгенерированы. Дальше — `/plan-phase`.
 **Blockers:** нет.
 
 ## Current Sprint
@@ -12,7 +12,9 @@
 **Sprint:** 018-lairs-encounters-loot
 **Goal:** Монстры населяют мир независимо от игрока: постоянные логова (зачищаются убийством ядра), региональные таблицы встреч, опасность по времени суток и лутаемые контейнеры/трупы.
 **Started:** 2026-06-28
-**Phase:** 3 — Региональные таблицы встреч (task 1 done, task 2 done — all tasks done, phase not yet closed) — 2026-06-28.
+**Phase:** 3 — Региональные таблицы встреч (COMPLETE) — 2026-06-28. Ready for Phase 4 task generation.
+
+Phase 3 closed: region encounter tables resolve region → location at load time (`_flatten_region_defaults[T]`, shared with battle maps); `ActivationManager` untouched. Integration 149 → 152 green (`test_encounters.py` + `encounter_world`: fallthrough, override, empty region); `make check` green (2237 backend, 238 frontend); E2E regression on the activation/round/combat path 12/12, 0 blockers ([e2e/phase3-report.md](sprints/018-lairs-encounters-loot/e2e/phase3-report.md)).
 
 Phase 1 closed (materialization, respawn, depletion; integration 146 green, E2E 12/12). Phase 2 closed: (1) InventoryHolder substrate + `transfer_items` ✓, (2) `Container` entity + persistence ✓, (3) `take` action ✓, (4) lair treasury ✓. Close-phase: docker `make test-integration` 149 green (incl. `TestLairTreasury` ×3), `make check` green (2228 backend unit, 238 frontend), E2E 7/7 (kill → corpse loot → Take all transfers gold+item; report in `e2e/phase2-report.md`). Two fixes landed during close: (a) **product** — WS disconnect no longer blocks the asyncio loop (`routes_ws.py`: `remove_listener` via `asyncio.to_thread`; was a ≤5s freeze of all sessions on every disconnect, deadlock between the round thread's `_send` and `stop_round`'s join); (b) **test** — `test_lairs.py` drains the auto re-prompt after a turn-ending `take` (off-by-one turn stream). Minor non-blocking finding: dead creatures still show Attack/Talk in the Nearby panel (loot handled by LootPanel; attacking a corpse returns a clean "already dead").
 

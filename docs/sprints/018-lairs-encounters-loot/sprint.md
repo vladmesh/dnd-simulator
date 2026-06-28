@@ -50,7 +50,7 @@
 3. [`take` action](tasks/phase2-task3-take-action.md) — `ActionType.TAKE`, `LootActionProvider`, валидация, хендлер, awareness, лут-UI
 4. [Lair treasury](tasks/phase2-task4-lair-treasury.md) — казна-`Container` из контента, гейт за ядром, персистенс разлутанного состояния
 
-## Phase 3: Региональные таблицы встреч (Region Encounter Tables)
+## Phase 3: Региональные таблицы встреч (Region Encounter Tables) ✓
 
 Encounter-таблицы можно задавать на уровне региона; локация без своей таблицы фоллбечится на таблицу своего региона (резолв через `location_graph`). Своя таблица локации перекрывает региональную. Контент-автор задаёт профиль угрозы на весь регион без поштучной разметки локаций.
 
@@ -62,6 +62,8 @@ Encounter-таблицы можно задавать на уровне реги�
 
 1. [Региональные encounter-таблицы — схема, загрузка, fail-fast](tasks/phase3-task1-region-encounter-tables.md) — `region_encounters` в YAML, `parse_region_encounters` (fail-fast по template и region_id), `load_monsters` → 3-кортеж, прокидка в `game_service`
 2. [Фоллтру локация → регион (override) и боевой ролл](tasks/phase3-task2-region-fallthrough.md) — сборка эффективных таблиц (регион дефолт, локация override) калькой `battle_map_configs`; integration на живом пути активации
+
+**Closed 2026-06-28.** Резолв собран в `_flatten_region_defaults[T]` (общий хелпер для `battle_map_configs` и `effective_encounters` — дедуп, не копипаст); `ActivationManager` не тронут (резолв load-time). Integration: +3 теста (`tests/integration/test_encounters.py` + `encounter_world`) — fallthrough из региональной таблицы, override локационной, пустой регион без таблицы; suite 149 → 152 green (детерминизм через `chance: 1.0` + `count: [1,1]`, без сидов — encounter-ролл идёт мимо seeded dice RNG). Unit: 4 in-process продуктовых теста через `GameService` + реальные слои (`random` мокается). `make check` green (2237 backend, 238 frontend, mypy чисто). E2E: регрессия общего пути активация/раунд/бой (setup → peaceful: wait+move → combat), 12/12 pass, 0 blockers — [e2e/phase3-report.md](e2e/phase3-report.md). Пре-существующая мелочь (не фаза 3): смешанный EN/RU в game-строках (бэкенд `DND_LANGUAGE=ru`, UI-хром EN).
 
 ## Phase 4: Время суток (Time-of-Day Spawns)
 

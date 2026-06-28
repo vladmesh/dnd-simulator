@@ -1,0 +1,54 @@
+templates:
+  goblin:
+    name: Goblin
+    hp: 7
+    ac: 15
+    speed: 30
+    str: 8
+    dex: 14
+    con: 10
+    int: 10
+    wis: 8
+    cha: 8
+    cr: 0.25
+    faction: goblins
+    attacks:
+    - name: scimitar
+      ability: dex
+      damage:
+      - dice: 1d6+2
+        type: slashing
+  wolf:
+    name: Wolf
+    hp: 11
+    ac: 13
+    speed: 40
+    str: 12
+    dex: 15
+    con: 12
+    int: 3
+    wis: 12
+    cha: 6
+    cr: 0.25
+    faction: beasts
+    attacks:
+    - name: bite
+      ability: dex
+      damage:
+      - dice: 2d4+2
+        type: piercing
+
+# Per-location table — overrides the regional default for wild_den (no merge).
+encounters:
+  wild_den:
+    - template: wolf
+      chance: 1.0
+      count: [1, 1]
+
+# Regional default — applies to every wilds location without its own table.
+# chance 1.0 + count [1,1] make the roll deterministic without seeding random.
+region_encounters:
+  wilds:
+    - template: goblin
+      chance: 1.0
+      count: [1, 1]
