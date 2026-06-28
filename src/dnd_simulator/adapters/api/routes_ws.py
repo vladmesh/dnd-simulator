@@ -26,8 +26,8 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketDisconnect as _StarletteDisconnect
 
 from dnd_simulator.adapters.api.deps import get_service
-from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.i18n import _
+from dnd_simulator.service.action_parsing import ActionParseError, parse_action
 
 logger = structlog.get_logger(domain="transport")
 
@@ -159,22 +159,16 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
 
             if msg_type == "action":
                 try:
-                    action = Action(
-                        name=ActionType(str(msg.get("name", "idle"))),
-                        params=msg.get("params", {}),
-                    )
-                except ValueError:
-                    await ws.send_json({"type": "error", "message": _("Unknown action: {}").format(msg.get("name"))})
+                    action = parse_action(msg, default_name="idle")
+                except ActionParseError as err:
+                    await ws.send_json({"type": "error", "message": _("Unknown action: {}").format(err.name)})
                     continue
                 session.submit_player_action(action)
             elif msg_type == "reaction":
                 try:
-                    action = Action(
-                        name=ActionType(str(msg.get("name", "skip"))),
-                        params=msg.get("params", {}),
-                    )
-                except ValueError:
-                    await ws.send_json({"type": "error", "message": _("Unknown reaction: {}").format(msg.get("name"))})
+                    action = parse_action(msg, default_name="skip")
+                except ActionParseError as err:
+                    await ws.send_json({"type": "error", "message": _("Unknown reaction: {}").format(err.name)})
                     continue
                 session.submit_player_reaction(action)
             else:

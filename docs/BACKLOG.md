@@ -107,7 +107,7 @@
 - [ ] **should** `test-gap-weapons` — rules/weapons.py (48 строк) частично покрыт через test_combat/test_proficiency, но нет выделенных тестов
 - [x] `session-serialization-duplication` — ~~on_turn, on_action, on_round_end повторяют сериализацию~~ FIXED Sprint 012 phase 4: shared event builder extracted
 - [ ] **could** `npc-behaviors-yaml-loading` — layers/entities/npc_behaviors.py загружает YAML на уровне модуля с global state mutation. Перенести в content_loader
-- [ ] **could** `action-parsing-in-adapter` — Adapter (routes_ws) парсит Action из JSON, должен service layer
+- [x] `action-parsing-in-adapter` — ~~Adapter (routes_ws) парсит Action из JSON, должен service layer~~ FIXED Sprint 019 phase 2 task 3: `parse_action`/`ActionParseError` в `service/action_parsing.py`; routes_ws больше не импортирует Action/ActionType из core
 - [x] `magic-number-trade` — ~~Magic number 0.08 в politics/layer.py:338~~ FIXED 2026-03-24
 - [ ] **should** `thick-adapter-world-state` — routes_master.py:290-330 оркестрирует 7+ layer queries напрямую + assert-based validation (500 при плохих данных). Вынести в GameService.get_world_state()
 - [ ] **should** `routes-master-growing` — routes_master.py 560 строк, 34 роута. Разделить content-editing и session-control роуты
@@ -120,7 +120,7 @@
 - [ ] **should** `merchant-provider-in-rules` — MerchantActionProvider в rules/ хранит world-query callback (I/O в pure rules). Перенести в service/ или передавать данные аргументом
 - [x] `dice-os-import` — ~~rules/dice.py import os~~ FIXED audit 2026-03-31: set_global_seed() function
 - [ ] **should** `base-action-provider-stateful` — BaseActionProvider в rules/ — stateful class с self._types. Сделать standalone функцией или frozen dataclass
-- [ ] **should** `adapter-imports-core-directly` — routes_player импортирует PlayerCharacter/Ability, routes_master — Query/QueryType напрямую из core. Вынести бизнес-логику в GameService
+- [x] `adapter-imports-core-directly` — ~~routes_player импортирует PlayerCharacter/Ability, routes_master — Query/QueryType напрямую из core~~ FIXED Sprint 019 phase 2 task 3: старые PlayerCharacter/Ability/Query/QueryType импорты убраны при routes_master split (Sprint 016); Action/ActionType вынесены в `service/action_parsing.py` (task 3). Оставшиеся BrainType/FightingStyle — enum-at-boundary в Pydantic-схемах, приняты (аудит 2026-06-28: 0 арх-нарушений, адаптерам можно импортировать enum)
 - [ ] **should** `any-to-object-sweep` — 15+ файлов используют dict[str, Any] вместо dict[str, object] (core/models, layers, llm, adapters)
 - [ ] **should** `entity-type-enum` — "player"/"npc"/"creature" строковые сравнения в 5+ файлах. Добавить EntityType(StrEnum)
 - [ ] **should** `brain-type-enum` — ai_type == "rule_based" строковые сравнения. Добавить BrainType(StrEnum)
@@ -146,7 +146,7 @@
 - [ ] **should** `perception-hardcoded-weapons` — perception.py:29-31 дублирует названия оружия из YAML каталогов
 - [ ] **should** `content-loader-fail-fast` — 31 .get() с дефолтами в content_loader/. Некоторые оправданы (YAML boundary), но bm_data.get("width", 60) молча дефолтит размер карты
 - [ ] **should** `dict-str-object-overuse` — 57+ dict[str, object] вместо TypedDict/dataclass в query_handler, game_service, combat_manager, schemas
-- [ ] **should** `world-private-method-access` — world._make_query_fn() вызывается из session.py и round.py. Выставить как public API
+- [x] `world-private-method-access` — ~~world._make_query_fn() вызывается из session.py и round.py~~ FIXED Sprint 019 phase 2 task 3: `World.make_query_fn`/`make_emit_fn` теперь public API
 - [ ] **could** `event-log-eslint-suppress` — EventLog.tsx eslint-disable-next-line react-hooks/exhaustive-deps
 - [ ] **could** `api-client-growing` — apiClient.ts 365 строк, 35+ методов. Разделить по домену
 - [ ] **could** `world-overview-growing` — WorldOverview.tsx 331 строка. Split sub-components

@@ -146,8 +146,8 @@ class TestMultiActionLoop:
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
         game_round = Round(world, el)
 
-        query_fn = world._make_query_fn("entities")
-        emit_fn = world._make_emit_fn("entities")
+        query_fn = world.make_query_fn("entities")
+        emit_fn = world.make_emit_fn("entities")
         actions = game_round.run_creature_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(actions) == 1
@@ -180,8 +180,8 @@ class TestMultiActionLoop:
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
         game_round = Round(world, el)
 
-        query_fn = world._make_query_fn("entities")
-        emit_fn = world._make_emit_fn("entities")
+        query_fn = world.make_query_fn("entities")
+        emit_fn = world.make_emit_fn("entities")
         actions = game_round.run_combat_turn(creature, world.time, query_fn, emit_fn)
 
         # Only 1 dodge should have executed (budget has 1 action)
@@ -205,8 +205,8 @@ class TestMultiActionLoop:
 
         game_round.set_on_action(on_action)
 
-        query_fn = world._make_query_fn("entities")
-        emit_fn = world._make_emit_fn("entities")
+        query_fn = world.make_query_fn("entities")
+        emit_fn = world.make_emit_fn("entities")
         game_round.run_combat_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(callback_log) == 1
@@ -231,8 +231,8 @@ class TestMultiActionLoop:
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
         game_round = Round(world, el)
 
-        query_fn = world._make_query_fn("entities")
-        emit_fn = world._make_emit_fn("entities")
+        query_fn = world.make_query_fn("entities")
+        emit_fn = world.make_emit_fn("entities")
         game_round.run_combat_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(received_budgets) == 1
@@ -256,8 +256,8 @@ class TestPeacefulTurn:
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
         game_round = Round(world, el)
 
-        query_fn = world._make_query_fn("entities")
-        emit_fn = world._make_emit_fn("entities")
+        query_fn = world.make_query_fn("entities")
+        emit_fn = world.make_emit_fn("entities")
         actions = game_round.run_peaceful_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(actions) == 1
@@ -272,8 +272,8 @@ class TestPeacefulTurn:
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
         game_round = Round(world, el)
 
-        query_fn = world._make_query_fn("entities")
-        emit_fn = world._make_emit_fn("entities")
+        query_fn = world.make_query_fn("entities")
+        emit_fn = world.make_emit_fn("entities")
         actions = game_round.run_peaceful_turn(creature, world.time, query_fn, emit_fn)
 
         # First idle ends the turn — second idle and end_turn never reached
@@ -299,8 +299,8 @@ class TestPeacefulTurn:
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
         game_round = Round(world, el)
 
-        query_fn = world._make_query_fn("entities")
-        emit_fn = world._make_emit_fn("entities")
+        query_fn = world.make_query_fn("entities")
+        emit_fn = world.make_emit_fn("entities")
         game_round.run_peaceful_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(received_budgets) == 1
@@ -322,8 +322,8 @@ class TestPeacefulTurn:
 
         game_round.set_on_action(on_action)
 
-        query_fn = world._make_query_fn("entities")
-        emit_fn = world._make_emit_fn("entities")
+        query_fn = world.make_query_fn("entities")
+        emit_fn = world.make_emit_fn("entities")
         game_round.run_peaceful_turn(creature, world.time, query_fn, emit_fn)
 
         assert len(callback_log) == 1
@@ -338,8 +338,8 @@ class TestPeacefulTurn:
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
         game_round = Round(world, el)
 
-        query_fn = world._make_query_fn("entities")
-        emit_fn = world._make_emit_fn("entities")
+        query_fn = world.make_query_fn("entities")
+        emit_fn = world.make_emit_fn("entities")
 
         # Peaceful
         creature.in_combat = False

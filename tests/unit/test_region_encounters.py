@@ -60,8 +60,8 @@ def _entities(session: GameSession) -> EntitiesLayer:
 def _activate(session: GameSession) -> None:
     """Run one activation pass with a guaranteed encounter hit (count fixed at 1)."""
     ents = _entities(session)
-    qfn = session.world._make_query_fn("entities")
-    efn = session.world._make_emit_fn("entities")
+    qfn = session.world.make_query_fn("entities")
+    efn = session.world.make_emit_fn("entities")
     with patch("random.random", return_value=0.0), patch("random.randint", return_value=1):
         ents.update_activation(session.world.time, query_fn=qfn, emit_fn=efn)
 

@@ -85,4 +85,27 @@ In `docs/BACKLOG.md`, mark resolved with rationale:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Done as planned, all three parts.
+
+- **A (action parsing):** `service/action_parsing.py` — `parse_action(raw, *, default_name)` +
+  `ActionParseError(ValueError)` carrying `.name`. Added a non-dict `params` guard (falls back to
+  `{}`) so a malformed `params` field can't break the frozen `Action`; not in the plan but cheap and
+  defensive. `routes_ws.py` now imports only the service symbols and keeps both i18n replies
+  (`Unknown action` / `Unknown reaction`) via `err.name`. 5 unit tests in `test_action_parsing.py`.
+- **B (World public API):** plain rename `_make_query_fn`→`make_query_fn`, `_make_emit_fn`→`make_emit_fn`.
+  src call sites: world.py (4 internal), round.py (×4), session.py (×1) — all updated, grep clean in src.
+- **Old tests:** the rename is an intentional contract change, so I updated the 7 test modules that
+  call the method on a real/mocked `world` (test_world, test_multi_action, test_dead_creature_mid_turn,
+  test_time_of_day_encounters, test_region_encounters, test_session_round_state, test_turn_budget_on_creature).
+  Left untouched: `test_auto_hostility.py`, `test_wire_sides_combat.py`, `test_settlements_layer.py` —
+  each defines its own unrelated module-level `def _make_query_fn(...)` helper (faction/weather query
+  builder, bare calls, nothing to do with `World`). Renaming those would be scope creep, so the grep
+  for `_make_query_fn` is intentionally non-empty in those three files only.
+- **C:** three backlog items marked `[x]` with rationale.
+
+`make check` green (ruff/format/mypy clean, 2273 backend + 238 frontend). Integration 154/154 — the WS
+`test_invalid_action_name` / `test_unknown_message_type` paths exercise the new parser.

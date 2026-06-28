@@ -78,7 +78,7 @@ class TestBuildRoundState:
         # Build a mock world + round just enough for _build_round_state
         world = MagicMock(spec=World)
         world.time = time
-        world._make_query_fn.return_value = query_fn
+        world.make_query_fn.return_value = query_fn
         world.location_graph = MagicMock()
         world.location_graph.has.return_value = False
 
@@ -118,7 +118,7 @@ class TestCallbackFieldConsistency:
 
         world = MagicMock(spec=World)
         world.time = time
-        world._make_query_fn.return_value = query_fn
+        world.make_query_fn.return_value = query_fn
         world.location_graph = MagicMock()
         world.location_graph.has.return_value = False
 
@@ -149,7 +149,7 @@ class TestCallbackFieldConsistency:
 
         world = MagicMock(spec=World)
         world.time = time
-        world._make_query_fn.return_value = query_fn
+        world.make_query_fn.return_value = query_fn
         world.location_graph = MagicMock()
         world.location_graph.has.return_value = False
 

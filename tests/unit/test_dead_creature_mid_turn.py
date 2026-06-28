@@ -91,8 +91,8 @@ class TestDeadCreatureMidTurn:
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
         game_round = Round(world, el)
 
-        query_fn = world._make_query_fn("entities")
-        emit_fn = world._make_emit_fn("entities")
+        query_fn = world.make_query_fn("entities")
+        emit_fn = world.make_emit_fn("entities")
 
         # Kill the creature after first successful action (simulates OA death)
         def on_action(c: Creature, a: Action, b: TurnBudget | None, error: str = "") -> None:

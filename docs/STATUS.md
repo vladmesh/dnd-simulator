@@ -12,9 +12,9 @@
 **Sprint:** 019-control-plane-prep
 **Goal:** Отвердить control-plane (GameService / session / commands / адаптеры) под будущий разрез на роли в `control-interfaces` — раздробить god-class, покрыть тестами, утончить адаптеры; попутно закрыть видимые дырки и свести бэклог.
 **Started:** 2026-06-28
-**Phase:** 2 — GameService deeper peel + adapter hygiene (task 2 done, task 3 pending) — 2026-06-28
+**Phase:** 2 — GameService deeper peel + adapter hygiene (all 3 tasks done, phase ready to close) — 2026-06-29
 
-Phase 1 closed: integration 154/154, E2E 9/9 (0 blockers, см. `sprints/019-control-plane-prep/e2e/phase1-report.md`), `make check` зелёный. Phase 2 task 1 (worldbuilder/content peel) done: `WorldBuilderCommands` mixin, GameService 1044 → 541. Task 2 (player commands peel) done: `PlayerCommands` mixin, GameService 541 → 357; `autosave_session` добавлен в `GameServiceProtocol` (первый cross-mixin вызов). `make check` зелёный. Next: task 3 (adapter hygiene — action-parsing + public World-query API).
+Phase 1 closed: integration 154/154, E2E 9/9 (0 blockers, см. `sprints/019-control-plane-prep/e2e/phase1-report.md`), `make check` зелёный. Phase 2 task 1 (worldbuilder/content peel) done: `WorldBuilderCommands` mixin, GameService 1044 → 541. Task 2 (player commands peel) done: `PlayerCommands` mixin, GameService 541 → 357; `autosave_session` добавлен в `GameServiceProtocol`. Task 3 (adapter hygiene) done: `parse_action`/`ActionParseError` вынесены в `service/action_parsing.py` (routes_ws больше не импортирует Action/ActionType из core), `World.make_query_fn`/`make_emit_fn` сделаны public, три backlog-айтема (`action-parsing-in-adapter`, `world-private-method-access`, `adapter-imports-core-directly`) помечены fixed. `make check` зелёный, integration 154/154. Next: `/close-phase` для фазы 2.
 
 ### Phases
 

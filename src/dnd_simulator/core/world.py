@@ -59,8 +59,8 @@ class World:
             elapsed = now - last
 
             if layer.tick_interval == 0 or elapsed >= layer.tick_interval:
-                query_fn = self._make_query_fn(layer.name)
-                emit_fn = self._make_emit_fn(layer.name)
+                query_fn = self.make_query_fn(layer.name)
+                emit_fn = self.make_emit_fn(layer.name)
                 events = layer.tick(TimeDelta(seconds=elapsed), self.time, query_fn, emit_fn)
                 all_events.extend(events)
                 self._propagate_events(events, source=layer)
@@ -72,8 +72,8 @@ class World:
         """Send an event to all layers. Returns first failure or aggregated success."""
         all_events: list[Event] = []
         for layer in self._layers:
-            query_fn = self._make_query_fn(layer.name)
-            emit_fn = self._make_emit_fn(layer.name)
+            query_fn = self.make_query_fn(layer.name)
+            emit_fn = self.make_emit_fn(layer.name)
             result = layer.handle_event(event, query_fn, emit_fn)
             if not result.success:
                 return result
@@ -87,7 +87,7 @@ class World:
                 return layer.query(query)
         raise ValueError(f"Layer '{layer_name}' not found")
 
-    def _make_query_fn(self, caller_layer: str) -> QueryFn:
+    def make_query_fn(self, caller_layer: str) -> QueryFn:
         """Create a query callback for a specific layer with validation."""
         caller_index = self._layer_indices[caller_layer]
 
@@ -106,7 +106,7 @@ class World:
 
         return query_fn
 
-    def _make_emit_fn(self, caller_layer: str) -> EmitFn:
+    def make_emit_fn(self, caller_layer: str) -> EmitFn:
         """Create an emit callback for a specific layer with validation."""
 
         def emit_fn(event: Event) -> ActionResult:
@@ -121,8 +121,8 @@ class World:
         for event in events:
             for layer in self._layers:
                 if layer is not source:
-                    query_fn = self._make_query_fn(layer.name)
-                    emit_fn = self._make_emit_fn(layer.name)
+                    query_fn = self.make_query_fn(layer.name)
+                    emit_fn = self.make_emit_fn(layer.name)
                     layer.handle_event(event, query_fn, emit_fn)
 
     def save(self) -> dict[str, object]:
