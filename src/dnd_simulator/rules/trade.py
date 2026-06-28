@@ -8,6 +8,7 @@ from __future__ import annotations
 from dnd_simulator.core.character import Character
 from dnd_simulator.core.items import Item
 from dnd_simulator.i18n import _
+from dnd_simulator.rules.inventory import transfer_items
 
 
 def _find_item(creature: Character, item_id: str) -> Item | None:
@@ -55,17 +56,11 @@ def execute_buy(*, buyer: Character, seller: Character, item: Item) -> None:
     """Transfer item from seller to buyer, adjust gold. Call after validate_buy."""
     price = item.price
     assert price is not None
-    seller.inventory.remove(item)
-    buyer.inventory.append(item)
-    buyer.gold -= price
-    seller.gold += price
+    transfer_items(src=seller, dst=buyer, items=[item], gold=-price)
 
 
 def execute_sell(*, seller: Character, buyer: Character, item: Item) -> None:
     """Transfer item from seller to buyer, adjust gold. Call after validate_sell."""
     price = item.price
     assert price is not None
-    seller.inventory.remove(item)
-    buyer.inventory.append(item)
-    seller.gold += price
-    buyer.gold -= price
+    transfer_items(src=seller, dst=buyer, items=[item], gold=-price)

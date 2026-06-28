@@ -46,4 +46,13 @@ Product-level behavior to pin down before implementing:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `gold` moved from `Character` to `Creature` (`core/character.py`); all call sites are keyword (`gold=`), so no positional breakage. `Npc`/`PlayerCharacter` inherit it unchanged; bare monster `Creature`s now default to `gold == 0`.
+- `InventoryHolder` Protocol in `core/loot.py`; `transfer_items` in `rules/inventory.py`; `is_lootable` in `rules/loot.py`.
+- `is_lootable` implements only the Creature (dead corpse) arm this task; the open-`Container` arm is added in Task 2 (planned that way).
+- Trade refactor: `execute_buy`/`execute_sell` both collapse to `transfer_items(src=seller, dst=buyer, items=[item], gold=-price)` — buy and sell were already mirror images, so they share one call. Validators and handler signatures untouched.
+- Tests: added `tests/unit/test_inventory.py` (transfer both directions, gold-only, items-only, bare-monster holder) and `tests/unit/test_loot.py` (living vs dead). Buy/sell behavior is guarded by the existing `test_trade.py` / `test_trade_handlers.py` (still green) rather than duplicated.
+- `make check` green: backend 2198 passed, tsc clean, vitest 238 passed. The 2 eslint warnings in `SchemaForm.tsx` are pre-existing and unrelated.
