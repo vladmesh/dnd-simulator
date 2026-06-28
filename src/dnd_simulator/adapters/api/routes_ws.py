@@ -185,5 +185,9 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
     except Exception:
         logger.exception("ws_error", session_id=session_id)
     finally:
-        session.remove_listener(listener)
-        # Don't stop round — it lives with the session, not the WS connection
+        # remove_listener may call stop_round(), which joins the round thread. That
+        # thread can be blocked in _send (run_coroutine_threadsafe awaiting this loop),
+        # so a blocking join on the event loop thread would deadlock until the join
+        # times out, freezing all sessions. Run it in a worker thread so the loop stays
+        # free to drain the round thread's pending send.
+        await asyncio.to_thread(session.remove_listener, listener)

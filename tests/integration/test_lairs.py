@@ -77,6 +77,19 @@ def _recv_until(sock: ws_lib.WebSocket, msg_type: str, max_msgs: int = 40) -> di
     raise AssertionError(f"Never received a '{msg_type}' message")
 
 
+def _take_treasury(sock: ws_lib.WebSocket, target_id: str) -> dict[str, object]:
+    """Loot a target and resync the turn stream.
+
+    A turn-ending action (``take``) auto-prompts the next turn, so an extra ``turn``
+    message follows the ``action_result``. Drain it here, otherwise later
+    ``_advance_turn`` calls read that stale prompt (one turn behind the real state).
+    """
+    ws_send_action(sock, "take", target_id=target_id)
+    result = _recv_until(sock, "action_result")
+    _get_turn(sock)  # consume the auto re-prompt
+    return result
+
+
 def _nearby(turn: dict[str, object], entity_id: str) -> dict[str, object] | None:
     """Find a nearby entity in a turn message's peaceful awareness."""
     awareness = turn["awareness"]
@@ -255,8 +268,7 @@ class TestLairTreasury:
             assert "Flaming Longsword" in [i["name"] for i in chest["loot_items"]]
 
             gold_before = turn["player"]["gold"]
-            ws_send_action(sock, "take", target_id=TREASURY_ID)
-            result = _recv_until(sock, "action_result")
+            result = _take_treasury(sock, TREASURY_ID)
             assert result["action"] == "take"
             assert result["player"]["gold"] == gold_before + 100
             assert "Flaming Longsword" in [i["name"] for i in result["player"]["inventory"]]
@@ -275,8 +287,7 @@ class TestLairTreasury:
             boss = next(c for c in _monsters_at(api_url, sid, "cave") if c["name"] == "Goblin Boss")
             requests.delete(f"{api_url}/sessions/{sid}/creatures/{boss['id']}", timeout=5).raise_for_status()
             _advance_turn(sock)  # unlock
-            ws_send_action(sock, "take", target_id=TREASURY_ID)
-            _recv_until(sock, "action_result")
+            _take_treasury(sock, TREASURY_ID)
 
             # Leave and return — the depleted lair spawns nothing, treasury persists empty.
             _move_player(api_url, sid, pid, "cave_mouth")
@@ -303,8 +314,7 @@ class TestLairTreasury:
             boss = next(c for c in _monsters_at(api_url, sid, "cave") if c["name"] == "Goblin Boss")
             requests.delete(f"{api_url}/sessions/{sid}/creatures/{boss['id']}", timeout=5).raise_for_status()
             _advance_turn(sock)
-            ws_send_action(sock, "take", target_id=TREASURY_ID)
-            _recv_until(sock, "action_result")
+            _take_treasury(sock, TREASURY_ID)
 
             resp = requests.post(f"{api_url}/sessions/{sid}/save?name=lair_looted", timeout=10)
             assert resp.status_code == HTTPStatus.OK

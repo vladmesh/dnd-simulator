@@ -30,7 +30,7 @@
 
 **Closed 2026-06-28.** Integration: +4 lair tests (`tests/integration/test_lairs.py` + `lair_world`) covering load, full-roster materialization, core-death depletion, depleted-state save/load survival; suite 142 → 146 green. E2E: regression on the shared round/activation/combat path (setup → peaceful → combat), 12/12 pass, 0 blockers — see [e2e/phase1-report.md](e2e/phase1-report.md).
 
-## Phase 2: Лут и контейнеры (Loot & Containers)
+## Phase 2: Лут и контейнеры (Loot & Containers) ✓
 
 Примитив лутаемого инвентаря. `InventoryHolder` Protocol (всё, у чего есть `inventory` + `gold`) и `is_lootable()` как производное состояние (мёртвое существо / открытый контейнер). Труп остаётся `Creature` (класс не меняем: задел под воскрешение и «осмотреть труп»). Новая лёгкая `Entity`-сущность `Container` (сосед `Creature`, без HP/хода/мозга). Вынос общего `transfer_items` из `rules/trade.py` и перевод торговли на него. Action `take` поверх любого `Lootable` в локации + awareness + лут-UI. Казна логова = `Container`, наполняется из loot-таблицы при спавне (опционально за ядром). Торговля и воровство не замешиваются в лут: общий у них только примитив переноса, гейты разные.
 
