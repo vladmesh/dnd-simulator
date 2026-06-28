@@ -65,6 +65,10 @@
 - [ ] **could** `list-npcs-iterate-entities` — `list_npcs` итерирует по регионам; NPC в несуществующем регионе выпадает из списка. Итерировать по entities напрямую
 - [ ] **could** `periodic-autosave-scheduler` — фоновый asyncio таск в FastAPI lifespan каждые ~2 мин вызывает `autosave_all_sessions()`; cancel на shutdown перед финальным autosave. Дополняет per-action и shutdown автосейв
 
+## DevOps / Infra
+
+- [ ] **should** `containerized-stack` — Воспроизводимый контейнерный сетап для подъёма всего стека (фронт + бэк) одной командой. Двойная польза: локально быстро поднять перед E2E и переиспользовать на проде. Сейчас `docker-compose.test.yml` — только `backend` + `integration-tests` (pytest), без фронта и без проброса портов наружу, поэтому браузерный E2E гоняется на хостовых `uvicorn`/`vite`: ловит убийство процесса песочницей при бинде порта и зависит от хостовых Node/uv. План: добавить сервис `frontend` (собранный бандл через `vite build` + `vite preview` или nginx со статикой, не dev-сервер — заодно тестируем прод-бандл), пробросить `8001`/`5173`, оформить профилем `--profile e2e` чтобы не мешать `integration-tests`, и перевести шаг «Start the stack» в скилле `/e2e` на `docker compose --profile e2e up`. Прод-вариант: тот же образ фронта (nginx) + бэкенд, общий базовый compose. Не закрывает E2E-в-CI (нужен отдельно Playwright-в-контейнере + написанные спеки) — это про воспроизводимость стека, не про сами тесты
+
 ## Performance
 
 - [ ] **could** `awareness-rebuild-cache` — `build_awareness()` делает 4-5 query к нижним слоям на каждый ход каждого существа (O(N)/раунд), bottleneck при >20 LlmBrain NPC. Решение: WorldSnapshot per (region, tick) для weather/region/settlements/politics + dirty-flag per location для nearby entities. Делать когда начнёт тормозить
