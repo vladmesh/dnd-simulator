@@ -41,7 +41,9 @@
 2. [Session round lifecycle](tasks/phase1-task2-session-round-lifecycle.md) — `start_round` идемпотентность + wiring PlayerBrain + живой thread; `stop_round` чистит стейт + join; submit после старта
 3. [commands_save round-trip + get_world_state hardening](tasks/phase1-task3-save-commands-worldstate-hardening.md) — `load_game`/`list_saves`/`delete_save` через реальный `JsonFileStore`; `assert isinstance` → явный fail-fast с именем слоя/запроса
 
-## Phase 2: GameService deeper peel + adapter hygiene
+## Phase 2: GameService deeper peel + adapter hygiene ✓
+
+**Closed 2026-06-29.** Все 3 таски `done`; integration 154/154 зелёный; E2E (`e2e/phase2-report.md`) — 18/18, ноль блокеров. GameService 1044 → 357 строк (`WorldBuilderCommands` + `PlayerCommands` mixins); `parse_action`/`ActionParseError` вынесены в `service/action_parsing.py` (routes_ws больше не импортирует `Action`/`ActionType` из core); `World.make_query_fn`/`make_emit_fn` сделаны public. Три backlog-айтема помечены fixed: `action-parsing-in-adapter`, `world-private-method-access`, `adapter-imports-core-directly`. E2E подтвердил поведение сохранено на всех трёх peel-поверхностях (char creation / WS-actions / worldbuilder+creature CRUD); все находки преэкзистинг (F1 `spawn-role-freetext-enum`, F2 i18n-split, F3 dev-only WS StrictMode race, + косметика `corpse-nearby-actions`), ноль регрессий. `make check` зелёный, mypy чисто.
 
 Структурный выигрыш. Раздробить оставшиеся command/query-группы GameService в суб-фасады, чтобы заметно опустить 1044 строки. Убрать прямые импорты `core` из адаптеров (`adapter-imports-core-directly`), вынести парсинг `Action` из JSON в сервис (`action-parsing-in-adapter`), выставить `World`-query как public API (`world-private-method-access`: `world._make_query_fn()` зовётся из session/round). Тесты фазы 1 стерегут поведение.
 

@@ -2,7 +2,7 @@
 
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
-**Last updated:** 2026-06-28
+**Last updated:** 2026-06-29
 **Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 закрыт (логова, лут/контейнеры, региональные таблицы встреч, время суток) — backlog must-айтем `monster-spawn` закрыт. По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), автономные тики NPC.
 **Next:** Sprint 019 (control-plane-prep) — техспринт, готовит control-plane к разрезу на роли в следующем спринте `control-interfaces`. После него топ-кандидаты: `control-interfaces`, `quest-system`. См. [BACKLOG](BACKLOG.md) / [ROADMAP](ROADMAP.md).
 **Blockers:** нет.
@@ -12,9 +12,9 @@
 **Sprint:** 019-control-plane-prep
 **Goal:** Отвердить control-plane (GameService / session / commands / адаптеры) под будущий разрез на роли в `control-interfaces` — раздробить god-class, покрыть тестами, утончить адаптеры; попутно закрыть видимые дырки и свести бэклог.
 **Started:** 2026-06-28
-**Phase:** 2 — GameService deeper peel + adapter hygiene (all 3 tasks done, phase ready to close) — 2026-06-29
+**Phase:** 2 — GameService deeper peel + adapter hygiene (COMPLETE) — 2026-06-29
 
-Phase 1 closed: integration 154/154, E2E 9/9 (0 blockers, см. `sprints/019-control-plane-prep/e2e/phase1-report.md`), `make check` зелёный. Phase 2 task 1 (worldbuilder/content peel) done: `WorldBuilderCommands` mixin, GameService 1044 → 541. Task 2 (player commands peel) done: `PlayerCommands` mixin, GameService 541 → 357; `autosave_session` добавлен в `GameServiceProtocol`. Task 3 (adapter hygiene) done: `parse_action`/`ActionParseError` вынесены в `service/action_parsing.py` (routes_ws больше не импортирует Action/ActionType из core), `World.make_query_fn`/`make_emit_fn` сделаны public, три backlog-айтема (`action-parsing-in-adapter`, `world-private-method-access`, `adapter-imports-core-directly`) помечены fixed. `make check` зелёный, integration 154/154. Next: `/close-phase` для фазы 2.
+Phase 1 closed: integration 154/154, E2E 9/9 (0 blockers, см. `sprints/019-control-plane-prep/e2e/phase1-report.md`), `make check` зелёный. Phase 2 closed: все 3 таски done, GameService 1044 → 357 (`WorldBuilderCommands` + `PlayerCommands` mixins; `autosave_session` в `GameServiceProtocol`), `parse_action`/`ActionParseError` вынесены в `service/action_parsing.py` (routes_ws больше не импортирует Action/ActionType из core), `World.make_query_fn`/`make_emit_fn` public; три backlog-айтема (`action-parsing-in-adapter`, `world-private-method-access`, `adapter-imports-core-directly`) помечены fixed. Integration 154/154, E2E 18/18 (0 блокеров, `sprints/019-control-plane-prep/e2e/phase2-report.md`), `make check` зелёный. Ready for Phase 3 task generation (visible gaps + backlog reconcile + dead code).
 
 ### Phases
 
