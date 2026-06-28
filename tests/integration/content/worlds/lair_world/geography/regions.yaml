@@ -1,0 +1,8 @@
+caverns:
+  name: The Caverns
+  latitude: 45.0
+  longitude: 10.0
+  elevation: 200
+  terrain: hills
+  water_proximity: 0.1
+  connections: []

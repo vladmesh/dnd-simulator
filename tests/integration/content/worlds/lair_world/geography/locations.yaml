@@ -1,0 +1,14 @@
+cave_mouth:
+  name: Cave Mouth
+  region: caverns
+  description: The entrance to a dark cave. Safe ground just outside.
+  neighbors:
+  - target: cave
+    distance: 30
+cave:
+  name: Goblin Cave
+  region: caverns
+  description: A foul-smelling cavern, home to a goblin warren.
+  neighbors:
+  - target: cave_mouth
+    distance: 30

@@ -14,7 +14,7 @@
 
 **Ссылки:** [VISION](../../VISION.md), [ROADMAP](../../ROADMAP.md), [BACKLOG `monster-spawn`](../../BACKLOG.md), [Sprint 004](../004-monster-encounters/sprint.md)
 
-## Phase 1: Логова (Lairs)
+## Phase 1: Логова (Lairs) ✓
 
 Концепт логова: локация с постоянным населением монстров и машиной состояний `active → depleted`. Пока живо ядро (core/boss), население восстанавливается до капа по интервалу на тике ecology; смерть ядра деплитит логово навсегда (респавн выключен, состояние сохраняется). Для логов без выраженного босса опциональный `depletion_chance` (ролл после полного вайпа). Лута в этой фазе нет.
 
@@ -27,6 +27,8 @@
 1. [Lair model, content & materialization](tasks/phase1-task1-lair-materialization.md) — `Lair`/`LairState`, схема + `load_lairs`, `LAIRS_AT_LOCATION`, материализация полного ростера при входе
 2. [Lair respawn while active](tasks/phase1-task2-lair-respawn.md) — синк потерь визита, респавн до полного ростера на тике, персистенс состояния логова
 3. [Lair depletion](tasks/phase1-task3-lair-depletion.md) — смерть ядра → `DEPLETED` навсегда, опц. `depletion_chance`, переживает save/load
+
+**Closed 2026-06-28.** Integration: +4 lair tests (`tests/integration/test_lairs.py` + `lair_world`) covering load, full-roster materialization, core-death depletion, depleted-state save/load survival; suite 142 → 146 green. E2E: regression on the shared round/activation/combat path (setup → peaceful → combat), 12/12 pass, 0 blockers — see [e2e/phase1-report.md](e2e/phase1-report.md).
 
 ## Phase 2: Лут и контейнеры (Loot & Containers)
 
