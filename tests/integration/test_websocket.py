@@ -29,9 +29,15 @@ def _urls(backend_url: str) -> tuple[str, str, str]:
     return api, player_api, ws_base
 
 
-@pytest.fixture(scope="module")
+# Function-scoped (not module): the arena is a lethal 4-gladiator free-for-all, and the
+# round loop advances combat on a background thread whenever a WS is connected. A shared
+# module session accumulated combat across tests until the player died, leaving the session
+# in a terminal `game_over` state that broke every later test (flaky: depended on how many
+# rounds elapsed per connect). A fresh session per test starts combat at round 1 — player
+# and all enemies alive — which is exactly the ongoing-combat state these tests assert on.
+@pytest.fixture
 def ws_arena(_urls: tuple[str, str, str]) -> Iterator[tuple[str, str, str]]:
-    """Fresh arena session for WS tests. Yields (ws_base_url, session_id, player_id)."""
+    """Fresh arena session per test. Yields (ws_base_url, session_id, player_id)."""
     api, player_api, ws_base = _urls
     resp = requests.post(f"{api}/sessions", json={"world_name": "arena", "lang": "en"}, timeout=10)
     resp.raise_for_status()
@@ -86,9 +92,9 @@ def ws_village(_urls: tuple[str, str, str]) -> Iterator[tuple[str, str, str]]:
 def _recv_until(sock: ws_lib.WebSocket, target_type: str, max_msgs: int = 80) -> dict | None:
     """Receive messages until one with target_type appears, or return None.
 
-    The arena session is module-scoped and shared across WS tests, so on connect
-    the server can replay a long burst of combat events (4 fighters, multi-action
-    turns) before the player's ``turn``. Keep the cap well above a worst-case round.
+    The arena starts a 4-gladiator combat, so on connect the server can emit a burst
+    of combat events (multi-action turns) before the player's ``turn``. Keep the cap
+    well above a worst-case round.
     """
     for _ in range(max_msgs):
         msg = ws_recv(sock)
