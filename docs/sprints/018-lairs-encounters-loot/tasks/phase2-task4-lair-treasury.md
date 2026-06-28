@@ -53,4 +53,19 @@ Gotcha: the treasury container's `is_open` must track `core_alive` across visits
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Treasury reuses `Container` (task 2) + `take`/`is_lootable` (task 3) — no new loot logic.
+
+- **Content:** `LairTreasureContent` (`items: list[ItemContent]`, `gold`, `behind_core`) on `LairContent.treasure` (`schemas.py`). `_to_lair` resolves item refs via `parse_items(..., item_catalog=)` (fail-fast on unknown refs, same as NPC inventory); `parse_lairs`/`load_lairs` thread `item_catalog`; `game_service` passes it. `Lair` gained `treasure_items`/`treasure_gold`/`treasure_behind_core`.
+- **Spawn/gate:** `ActivationManager._sync_lair_treasury` spawns one persistent (`temporary=False`) `Container` with deterministic id `{lair_id}_treasury`, idempotent (skip if it already exists). `is_open = (not behind_core) or (not core_alive)`.
+
+**Deviations from the task plan (with reasons):**
+
+1. **Treasure is NOT persisted in `EcologyLayer.get_state`.** The plan said to persist it next to `alive_members`. But treasure is static content (deterministic, re-loaded from YAML on world assembly) — exactly like `members`/`core`, which the existing code does *not* persist. The *mutable* looted state lives in the `Container` entity, which already round-trips via `EntitiesLayer` save/load (task 2). Persisting treasure on the lair too would duplicate item serialization for zero behavioral gain. `load_game` loads state into the existing content-assembled world, so `lair.treasure_items` is always present. Save/load of looted state verified by unit + integration tests.
+2. **Gate computed from the LIVE materialized core, not the persisted `lair.core_alive`** (`_treasury_core_alive`). `lair.core_alive` only updates on dematerialize (via the `LAIR_DEMATERIALIZED` event), so it lags within a visit. Using the live core creature lets "kill core → loot" work the same visit. Falls back to persisted `core_alive` when the lair isn't materialized (return after save/load). Coreless lair → treated as core-dead (always open).
+3. **Treasury syncs for *any* lair state, before the active-only roster gate.** Core death depletes the lair, and `_update_lair_materialization` skips depleted lairs for roster spawn — so the treasury update had to move ahead of that skip, or a returning player would find it still locked. `_lair_to_dict` now also exposes `has_core`/`core_alive`/treasure fields (in-memory only; `LAIRS_AT_LOCATION` is consumed solely by the ActivationManager, never serialized). Dematerialize already leaves the treasury alone (it's not in the lair's `creature_ids`).
+- **Container name** is `_("Treasure")` (gettext); faction left empty so a locked treasury isn't tinted hostile in awareness.
+- **Tests:** `tests/unit/test_lair_treasury.py` (10 — spawn/contents, gate open/closed, core-death unlock same visit, no-treasure→no-container, dematerialize-persist, no-refill, save/load round-trip, content ref resolve + fail-fast) drive the real activation pipeline. Integration `TestLairTreasury` (3 — gated→kill→loot, no-refill-on-return, looted-survives-save/load) added to `test_lairs.py` with a `treasure` block (flaming_longsword + 100g, behind_core) in the `lair_world` fixture; runs at `/close-phase`. The `behind_core: false` and `no-treasure` variants are unit-covered to avoid extra world fixtures.

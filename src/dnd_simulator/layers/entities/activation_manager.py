@@ -433,6 +433,9 @@ class ActivationManager:
 
         # Materialize new lairs (skip depleted — terminal, nothing spawns)
         for lair_id, info in lairs_at_active.items():
+            # The treasury syncs for any lair state — a depleted (core-dead) lair still
+            # has a lootable, persistent treasury at its location.
+            self._sync_lair_treasury(lair_id, info)
             if lair_id in self._materialized_lairs:
                 continue
             if info["state"] != LairState.ACTIVE.value:
@@ -485,6 +488,56 @@ class ActivationManager:
             logger.info("lair_materialize", lair_id=lair_id, creature_id=instance_id)
 
         self._materialized_lairs[lair_id] = (creature_ids, core_creature_id, minion_templates)
+
+    def _treasury_core_alive(self, lair_id: str, info: dict[str, Any]) -> bool:
+        """Current core status for the treasury gate.
+
+        Prefer the live materialized core creature (so killing the core unlocks the
+        treasury this visit, before the lair dematerializes). Fall back to the
+        persisted lair flag when the lair isn't materialized (e.g. return after
+        save/load). A coreless lair has nothing to gate behind → False (always open).
+        """
+        if lair_id in self._materialized_lairs:
+            return self._is_alive(self._materialized_lairs[lair_id][1])
+        if not info.get("has_core"):
+            return False
+        return bool(info.get("core_alive", True))
+
+    def _sync_lair_treasury(self, lair_id: str, info: dict[str, Any]) -> None:
+        """Spawn the lair's persistent treasury once, then keep its open-state in sync.
+
+        Skips lairs with no treasure block. Spawn is idempotent (deterministic id,
+        survives dematerialize and save/load), so a return visit reuses whatever is
+        left rather than refilling. ``is_open`` tracks the core gate every pass.
+        """
+        from dnd_simulator.core.container import Container
+        from dnd_simulator.i18n import _
+
+        treasure_items = info.get("treasure_items") or []
+        treasure_gold = int(info.get("treasure_gold", 0))
+        if not treasure_items and not treasure_gold:
+            return
+
+        behind_core = bool(info.get("treasure_behind_core", True))
+        is_open = (not behind_core) or (not self._treasury_core_alive(lair_id, info))
+
+        container_id = f"{lair_id}_treasury"
+        existing = self._entities.get(container_id)
+        if isinstance(existing, Container):
+            existing.is_open = is_open
+            return
+
+        container = Container(
+            id=container_id,
+            name=_("Treasure"),
+            location_id=str(info["location_id"]),
+            temporary=False,
+            inventory=list(treasure_items),
+            gold=treasure_gold,
+            is_open=is_open,
+        )
+        self._entities[container_id] = container
+        logger.info("lair_treasury_spawn", lair_id=lair_id, container_id=container_id, is_open=is_open)
 
     def _dematerialize_lair(self, lair_id: str, now: int, emit_fn: EmitFn | None) -> None:
         """Remove a lair's creatures and emit its surviving population so ecology can sync."""

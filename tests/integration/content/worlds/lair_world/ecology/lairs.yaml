@@ -8,3 +8,8 @@ goblin_warren:
   - goblin
   respawn_interval: 3600
   depletion_chance: 0.0
+  treasure:
+    gold: 100
+    behind_core: true
+    items:
+    - ref: flaming_longsword

@@ -10,6 +10,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from dnd_simulator.core.items import Item
 
 
 class LairState(Enum):
@@ -31,6 +35,10 @@ class Lair:
     core: str | None = None  # core/boss MonsterTemplate ID; its death depletes the lair
     respawn_interval: int = 86400  # seconds of game time between respawns (default 1 day)
     depletion_chance: float = 0.0  # chance to deplete after a full wipe (coreless lairs)
+    # -- treasury (static content; resolved at load, like members/core — not persisted) --
+    treasure_items: list[Item] = field(default_factory=list)  # resolved loot; empty == no treasury
+    treasure_gold: int = 0
+    treasure_behind_core: bool = True  # treasury stays locked until the core/boss is dead
     # -- mutable runtime state (persisted via EcologyLayer.get_state) --
     state: LairState = field(default=LairState.ACTIVE)
     alive_members: list[str] | None = None  # surviving minion templates; None == full roster

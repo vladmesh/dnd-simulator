@@ -12,9 +12,9 @@
 **Sprint:** 018-lairs-encounters-loot
 **Goal:** Монстры населяют мир независимо от игрока: постоянные логова (зачищаются убийством ядра), региональные таблицы встреч, опасность по времени суток и лутаемые контейнеры/трупы.
 **Started:** 2026-06-28
-**Phase:** 2 — Лут и контейнеры (task 3 done, task 4 pending) — 2026-06-28
+**Phase:** 2 — Лут и контейнеры (all 4 tasks done — ready for /close-phase) — 2026-06-28
 
-Phase 1 closed (materialization, respawn, depletion; integration 146 green, E2E 12/12). Phase 2 tasks: (1) InventoryHolder substrate + `transfer_items` ✓, (2) `Container` entity + persistence ✓, (3) `take` action ✓, (4) lair treasury. Task 3 done: full `take` pipeline (registry/event, `LootActionProvider`, `check_lootable_target`, `handle_take` reusing `transfer_items`, lootable holders in awareness, `LootPanel` frontend); `make check` green (2218 backend unit, 238 frontend).
+Phase 1 closed (materialization, respawn, depletion; integration 146 green, E2E 12/12). Phase 2 tasks all done: (1) InventoryHolder substrate + `transfer_items` ✓, (2) `Container` entity + persistence ✓, (3) `take` action ✓, (4) lair treasury ✓. Task 4 done: content `treasure` block (item refs + gold + behind_core), `Lair` treasure fields, persistent `{lair_id}_treasury` Container spawned at materialization and gated on live core status, looted state persists via the Container entity (no ecology-state duplication); `make check` green (2228 backend unit, 238 frontend). Integration `TestLairTreasury` added (runs at /close-phase). Phase ready for `/close-phase`.
 
 ### Phases
 

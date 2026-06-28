@@ -342,6 +342,18 @@ class SquadContent(BaseModel):
             object.__setattr__(self, "max_strength", self.strength)
 
 
+class LairTreasureContent(BaseModel):
+    """A lair's treasury block — explicit item refs + gold, optionally gated behind the core.
+
+    Item dicts may carry a ``ref`` to a catalog entry (resolved at load). Random
+    loot tables are out of scope: contents are deterministic.
+    """
+
+    items: list[ItemContent] = []
+    gold: int = 0
+    behind_core: bool = True
+
+
 class LairContent(BaseModel):
     """A lair definition from YAML — a fixed monster home at one location."""
 
@@ -352,6 +364,7 @@ class LairContent(BaseModel):
     core: str | None = None
     respawn_interval: int = 86400
     depletion_chance: float = 0.0
+    treasure: LairTreasureContent | None = None
 
 
 # ---------------------------------------------------------------------------

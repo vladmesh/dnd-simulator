@@ -9,8 +9,10 @@ from pathlib import Path
 from typing import Any
 
 from dnd_simulator.content_loader.creatures import _to_attacks
+from dnd_simulator.content_loader.items import parse_items
 from dnd_simulator.content_loader.schemas import (
     EncounterEntryContent,
+    ItemContent,
     LairContent,
     MonsterTemplateContent,
     SquadContent,
@@ -169,8 +171,23 @@ def load_monsters(
     return templates, encounters
 
 
-def _to_lair(lair_id: str, model: LairContent, lang: str) -> Lair:
-    """Convert validated LairContent to runtime Lair."""
+def _to_lair(
+    lair_id: str,
+    model: LairContent,
+    lang: str,
+    item_catalog: dict[str, ItemContent] | None = None,
+) -> Lair:
+    """Convert validated LairContent to runtime Lair, resolving any treasure item refs."""
+    treasure_items: list[Any] = []
+    treasure_gold = 0
+    treasure_behind_core = True
+    if model.treasure is not None:
+        treasure_items = parse_items(
+            [item.model_dump(exclude_none=True, exclude_unset=True) for item in model.treasure.items],
+            item_catalog=item_catalog,
+        )
+        treasure_gold = model.treasure.gold
+        treasure_behind_core = model.treasure.behind_core
     return Lair(
         id=lair_id,
         name=resolve_text(model.name, lang),
@@ -180,13 +197,22 @@ def _to_lair(lair_id: str, model: LairContent, lang: str) -> Lair:
         core=model.core,
         respawn_interval=model.respawn_interval,
         depletion_chance=model.depletion_chance,
+        treasure_items=treasure_items,
+        treasure_gold=treasure_gold,
+        treasure_behind_core=treasure_behind_core,
     )
 
 
-def parse_lairs(data: dict[str, Any], known_templates: set[str], lang: str = "en") -> dict[str, Lair]:
+def parse_lairs(
+    data: dict[str, Any],
+    known_templates: set[str],
+    lang: str = "en",
+    item_catalog: dict[str, ItemContent] | None = None,
+) -> dict[str, Lair]:
     """Parse lairs from YAML data, validating that every template ref exists.
 
-    Each key is a lair_id. Unknown ``core``/``members`` refs raise RuntimeError (fail-fast).
+    Each key is a lair_id. Unknown ``core``/``members`` refs raise RuntimeError (fail-fast);
+    unknown treasure item refs raise RuntimeError via the catalog resolver.
     """
     result: dict[str, Lair] = {}
     for lair_id, ldata in data.items():
@@ -195,11 +221,16 @@ def parse_lairs(data: dict[str, Any], known_templates: set[str], lang: str = "en
         for ref in refs:
             if ref not in known_templates:
                 raise RuntimeError(f"Lair '{lair_id}' references unknown monster template '{ref}'")
-        result[str(lair_id)] = _to_lair(str(lair_id), model, lang)
+        result[str(lair_id)] = _to_lair(str(lair_id), model, lang, item_catalog=item_catalog)
     return result
 
 
-def load_lairs(path: Path, known_templates: set[str], lang: str = "en") -> dict[str, Lair]:
+def load_lairs(
+    path: Path,
+    known_templates: set[str],
+    lang: str = "en",
+    item_catalog: dict[str, ItemContent] | None = None,
+) -> dict[str, Lair]:
     """Load lairs from a world directory's ``lairs.yaml``.
 
     Returns lairs_by_id. Missing lairs.yaml -> empty dict.
@@ -207,7 +238,7 @@ def load_lairs(path: Path, known_templates: set[str], lang: str = "en") -> dict[
     lairs_data = _read_yaml(path / "lairs.yaml")
     if not lairs_data:
         return {}
-    return parse_lairs(lairs_data, known_templates, lang)
+    return parse_lairs(lairs_data, known_templates, lang, item_catalog=item_catalog)
 
 
 def parse_squad(squad_id: str, data: dict[str, Any], lang: str = "en") -> Squad:

@@ -68,6 +68,24 @@ def _advance_turn(sock: ws_lib.WebSocket) -> dict[str, object]:
     return _get_turn(sock)
 
 
+def _recv_until(sock: ws_lib.WebSocket, msg_type: str, max_msgs: int = 40) -> dict[str, object]:
+    """Drain messages until one of `msg_type` arrives."""
+    for _ in range(max_msgs):
+        msg = ws_recv(sock)
+        if msg["type"] == msg_type:
+            return msg
+    raise AssertionError(f"Never received a '{msg_type}' message")
+
+
+def _nearby(turn: dict[str, object], entity_id: str) -> dict[str, object] | None:
+    """Find a nearby entity in a turn message's peaceful awareness."""
+    awareness = turn["awareness"]
+    assert isinstance(awareness, dict)
+    nearby = awareness.get("nearby", [])
+    assert isinstance(nearby, list)
+    return next((n for n in nearby if n["id"] == entity_id), None)
+
+
 def _monsters_at(api_url: str, sid: str, location_id: str = "cave") -> list[dict[str, object]]:
     """Active non-player creatures at a location (the materialized lair roster)."""
     resp = requests.get(
@@ -201,4 +219,105 @@ class TestLairSaveLoad:
             sock.close()
 
         requests.delete(f"{api_url}/sessions/{sid}/saves/lair_depleted", timeout=5)
+        requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+
+
+# ── Treasury (loot gated behind the core) ────────────────────────────
+
+TREASURY_ID = "goblin_warren_treasury"
+
+
+class TestLairTreasury:
+    """A lair treasury: spawned from content, locked until the boss dies, lootable after."""
+
+    def test_treasury_gated_then_looted_on_core_death(
+        self, backend_url: str, api_url: str, player_api_url: str
+    ) -> None:
+        """Boss alive → treasury locked. Kill boss → treasury unlocks → take grants the sword + 100 gold."""
+        ws_base, sid, pid = _create_lair_session(backend_url, api_url, player_api_url)
+
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            turn = _get_turn(sock)  # enter: roster + treasury spawn
+            chest = _nearby(turn, TREASURY_ID)
+            assert chest is not None, "treasury should be visible at the lair"
+            assert chest["lootable"] is False, "treasury is locked while the boss lives"
+
+            # Kill the core via master control (no combat needed).
+            boss = next(c for c in _monsters_at(api_url, sid, "cave") if c["name"] == "Goblin Boss")
+            requests.delete(f"{api_url}/sessions/{sid}/creatures/{boss['id']}", timeout=5).raise_for_status()
+
+            # Next activation pass recomputes the gate from the (now dead) core.
+            turn = _advance_turn(sock)
+            chest = _nearby(turn, TREASURY_ID)
+            assert chest is not None and chest["lootable"] is True
+            assert chest["loot_gold"] == 100
+            assert "Flaming Longsword" in [i["name"] for i in chest["loot_items"]]
+
+            gold_before = turn["player"]["gold"]
+            ws_send_action(sock, "take", target_id=TREASURY_ID)
+            result = _recv_until(sock, "action_result")
+            assert result["action"] == "take"
+            assert result["player"]["gold"] == gold_before + 100
+            assert "Flaming Longsword" in [i["name"] for i in result["player"]["inventory"]]
+        finally:
+            sock.close()
+
+        requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+
+    def test_treasury_does_not_refill_on_return(self, backend_url: str, api_url: str, player_api_url: str) -> None:
+        """Loot the treasury, leave, return → it's still present and empty (no refill)."""
+        ws_base, sid, pid = _create_lair_session(backend_url, api_url, player_api_url)
+
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            _get_turn(sock)
+            boss = next(c for c in _monsters_at(api_url, sid, "cave") if c["name"] == "Goblin Boss")
+            requests.delete(f"{api_url}/sessions/{sid}/creatures/{boss['id']}", timeout=5).raise_for_status()
+            _advance_turn(sock)  # unlock
+            ws_send_action(sock, "take", target_id=TREASURY_ID)
+            _recv_until(sock, "action_result")
+
+            # Leave and return — the depleted lair spawns nothing, treasury persists empty.
+            _move_player(api_url, sid, pid, "cave_mouth")
+            _advance_turn(sock)
+            _move_player(api_url, sid, pid, "cave")
+            turn = _advance_turn(sock)
+
+            chest = _nearby(turn, TREASURY_ID)
+            assert chest is not None, "treasury persists across leave/return"
+            assert chest["loot_gold"] == 0
+            assert chest["loot_items"] == []
+        finally:
+            sock.close()
+
+        requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+
+    def test_looted_treasury_survives_save_load(self, backend_url: str, api_url: str, player_api_url: str) -> None:
+        """Loot, save+load → the treasury stays empty (looted state persisted via the Container entity)."""
+        ws_base, sid, pid = _create_lair_session(backend_url, api_url, player_api_url)
+
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            _get_turn(sock)
+            boss = next(c for c in _monsters_at(api_url, sid, "cave") if c["name"] == "Goblin Boss")
+            requests.delete(f"{api_url}/sessions/{sid}/creatures/{boss['id']}", timeout=5).raise_for_status()
+            _advance_turn(sock)
+            ws_send_action(sock, "take", target_id=TREASURY_ID)
+            _recv_until(sock, "action_result")
+
+            resp = requests.post(f"{api_url}/sessions/{sid}/save?name=lair_looted", timeout=10)
+            assert resp.status_code == HTTPStatus.OK
+            resp = requests.post(f"{api_url}/sessions/{sid}/saves/lair_looted/load", timeout=10)
+            assert resp.status_code == HTTPStatus.OK
+
+            turn = _advance_turn(sock)
+            chest = _nearby(turn, TREASURY_ID)
+            assert chest is not None
+            assert chest["loot_gold"] == 0
+            assert chest["loot_items"] == []
+        finally:
+            sock.close()
+
+        requests.delete(f"{api_url}/sessions/{sid}/saves/lair_looted", timeout=5)
         requests.delete(f"{api_url}/sessions/{sid}", timeout=5)

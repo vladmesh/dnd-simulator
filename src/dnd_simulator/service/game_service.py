@@ -121,7 +121,9 @@ class GameService(
         monster_templates, encounter_tables = load_monsters(layer_paths["ecology"], lang=lang, catalog=monster_catalog)
         faction_data = load_factions(layer_paths["politics"], lang=lang)
         squads = load_squads(layer_paths["ecology"], lang=lang)
-        lairs = load_lairs(layer_paths["ecology"], known_templates=set(monster_templates), lang=lang)
+        lairs = load_lairs(
+            layer_paths["ecology"], known_templates=set(monster_templates), lang=lang, item_catalog=item_catalog
+        )
         region_terrains = extract_region_terrains(regions)
 
         # Players are created via API (create_player), not from templates

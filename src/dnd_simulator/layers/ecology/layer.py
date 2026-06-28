@@ -448,4 +448,10 @@ class EcologyLayer(Layer):
             "members": current_minions,
             "core": lair.core if lair.core_alive else None,
             "state": lair.state.value,
+            # Treasury inputs (in-memory only — consumed by ActivationManager, never serialized)
+            "has_core": lair.core is not None,
+            "core_alive": lair.core_alive,
+            "treasure_items": lair.treasure_items,
+            "treasure_gold": lair.treasure_gold,
+            "treasure_behind_core": lair.treasure_behind_core,
         }
