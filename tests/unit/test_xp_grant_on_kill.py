@@ -169,24 +169,3 @@ class TestMonsterTemplateSpawnXp:
         )
         spawned = template.spawn(location_id="arena", instance_id="rat_1")
         assert spawned.xp_value == 25
-
-
-class TestCharacterSaveRoundtrip:
-    def test_experience_persists_through_save(self) -> None:
-        from dnd_simulator.core.player import PlayerCharacter
-
-        pc = PlayerCharacter(
-            id="player",
-            name="Hero",
-            location_id="town",
-            experience=450,
-            level_up_available=True,
-        )
-        data = pc.to_save_data()
-        assert data["experience"] == 450
-        assert data["level_up_available"] is True
-
-        restored = PlayerCharacter(id="player", name="Hero", location_id="town")
-        restored.load_save_data(data)
-        assert restored.experience == 450
-        assert restored.level_up_available is True

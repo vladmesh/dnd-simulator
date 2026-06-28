@@ -51,4 +51,18 @@ This task is removal + doc edits, so there are no new product behaviors to asser
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Removed all four dead functions and their tests; `grep` confirms zero references in `src/`/`tests/`. `make check` green (backend 2267 passed, mypy clean 149 files, frontend 240 passed).
+
+Deviations / decisions:
+- **`walk_path` cost tests re-expressed, not deleted.** Two tests used `walk_path` only as an incidental way to compute a returned path's foot-cost while asserting real behavior: `test_find_path_uses_cost_aware_routing` (find_path picks cost-optimal route) and `test_path_cost_matches_budget` (compute_reachable edge-of-range cost). Deleting them outright would drop genuine coverage. Re-expressed the cost loop via the production pure `step_cost()` (the same function `handle_move_to` uses), so the assertions survive without the dead symbol. Deleted the dedicated `TestWalkPath` class entirely (it only exercised `walk_path`).
+- **Discovered latent bug while removing `to_save_data`** — see below. Filed as `player-xp-not-persisted` in BACKLOG.
+
+Backlog reconcile: marked FIXED/OBSOLETE the four reconcile entries (`dead-can-opportunity-attack`, `battle-map-configs-not-wired`, `player-character-no-attacks`, `look-action-i18n-hardcode`) plus the four dead-code entries actually removed (`dead-refund`, `dead-prone-stand-cost`, `dead-walk-path`, `dead-to-save-data`).
+
+### Finding: player XP not persisted through modern save path (filed `player-xp-not-persisted`)
+
+The removed `to_save_data()` + the still-present `load_save_data()` round-trip `experience`/`level_up_available`, but that pair is wired only to `load_game`'s backward-compat branch for OLD saves (a separate `"player"` block). The modern path — `save_game`/`autosave_session` write `{"world": ...}` → `world.save()` → `EntitiesLayer.get_state()` → `PlayerCharacter.to_full_save_data()` → store → `world.load()` → `EntitiesLayer.load_state()` → `parse_player()` — does NOT carry XP: `to_full_save_data()` omits `experience`/`level_up_available`, and `PlayerContent`/`_to_player`/`parse_player` have no such fields. So on reload (server restart restoring autosave, or manual load of a new-format save) the player's earned XP resets to the content value (0). The deleted test `test_experience_persists_through_save` was a false guard — green only because it exercised the dead `to_save_data` path, not the real one. Recommended fix: add `experience`/`level_up_available` to `to_full_save_data()` and to `PlayerContent` + `_to_player` (note the JSON-Schema/form ripple on PlayerContent). Out of scope for this removal granule; left for the orchestrator to schedule.

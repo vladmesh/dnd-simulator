@@ -309,20 +309,6 @@ class TestHpMutation:
 
 
 class TestPlayerSaveLoad:
-    def test_save_data(self) -> None:
-        p = PlayerCharacter(
-            id="player",
-            name="Hero",
-            location_id="r1",
-            current_hp=8,
-            max_hp=12,
-            gold=50,
-        )
-        data = p.to_save_data()
-        assert data["location_id"] == "r1"
-        assert data["current_hp"] == 8
-        assert data["gold"] == 50
-
     def test_load_save_data(self) -> None:
         p = PlayerCharacter(
             id="player",

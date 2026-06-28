@@ -198,40 +198,6 @@ def step_cost(current: Position, next_pos: Position, diag_count: int) -> tuple[i
     return 5, diag_count
 
 
-def walk_path(path: list[Position], speed: int) -> tuple[Position, int]:
-    """Walk along a path spending movement budget with D&D 5e diagonal cost.
-
-    Returns (final_position, feet_spent). Stops when speed budget is exhausted.
-    """
-    if not path:
-        return Position(0, 0), 0
-    if len(path) == 1:
-        return path[0], 0
-
-    cur = path[0]
-    spent = 0
-    diag_count = 0
-
-    for next_pos in path[1:]:
-        dx = abs(next_pos.x - cur.x)
-        dy = abs(next_pos.y - cur.y)
-        is_diag = dx > 0 and dy > 0
-
-        if is_diag:
-            cost = 10 if diag_count % 2 == 1 else 5
-            diag_count += 1
-        else:
-            cost = 5
-
-        if spent + cost > speed:
-            break
-
-        cur = next_pos
-        spent += cost
-
-    return cur, spent
-
-
 def _step_toward(origin: Position, target: Position, speed: int, battle_map: BattleMap, mover_id: str = "") -> Position:
     """Step one square at a time toward target, tracking diagonal cost."""
     cur = origin
