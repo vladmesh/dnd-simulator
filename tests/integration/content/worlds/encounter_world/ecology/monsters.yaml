@@ -45,6 +45,14 @@ encounters:
       chance: 1.0
       count: [1, 1]
 
+  # Night-only table. wolf rolls only when it is night at this location
+  # (borderlands, latitude 45). By day the marsh stays empty.
+  night_marsh:
+    - template: wolf
+      chance: 1.0
+      count: [1, 1]
+      time_of_day: night
+
 # Regional default — applies to every wilds location without its own table.
 # chance 1.0 + count [1,1] make the roll deterministic without seeding random.
 region_encounters:

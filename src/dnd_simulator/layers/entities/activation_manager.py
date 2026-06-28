@@ -11,6 +11,7 @@ from dnd_simulator.core.character import Creature, Entity
 from dnd_simulator.core.lair import LairState
 from dnd_simulator.core.models import Event, EventType, FactionRelation, Query, QueryType
 from dnd_simulator.core.monster import EncounterEntry
+from dnd_simulator.rules.encounters import is_active_at_time
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn
@@ -137,15 +138,16 @@ class ActivationManager:
                 e.wake_at_seconds = None
 
         # Third pass: check for encounter spawns from creatures that were active
-        self._check_encounters(now, previously_active, query_fn)
+        self._check_encounters(time, previously_active, query_fn)
 
         # Fourth pass: squad + lair materialization/dematerialization
         if query_fn is not None:
             self._update_materialization(player_locations, query_fn, emit_fn)
             self._update_lair_materialization(now, player_locations, query_fn, emit_fn)
 
-    def _check_encounters(self, now: int, active_ids: set[str], query_fn: QueryFn | None = None) -> None:
+    def _check_encounters(self, time: GameDateTime, active_ids: set[str], query_fn: QueryFn | None = None) -> None:
         """Roll encounters for locations where any active creature just arrived."""
+        now = time.to_total_seconds()
         for e in list(self._entities.values()):
             if not isinstance(e, Creature):
                 continue
@@ -176,18 +178,32 @@ class ActivationManager:
                 continue
 
             self._encounter_cooldowns[e.location_id] = now
-            self._roll_encounters(e.location_id, query_fn)
+            self._roll_encounters(e.location_id, time, query_fn)
 
-    def _roll_encounters(self, location_id: str, query_fn: QueryFn | None = None) -> None:
-        """Roll each encounter entry for a location and spawn monsters."""
+    def _roll_encounters(self, location_id: str, time: GameDateTime, query_fn: QueryFn | None = None) -> None:
+        """Roll each encounter entry for a location and spawn monsters.
+
+        Entries tagged with a time of day roll only in the matching phase; the
+        day/night signal comes from the geography layer.
+        """
         from dnd_simulator.rules.rule_brain import RuleBrain
 
         entries = self._encounter_tables[location_id]
+        is_day = self._is_daylight_at(location_id, time, query_fn)
         spawned_names: list[str] = []
         spawned_creatures: list[Creature] = []
 
-        logger.info("encounter_rolling", location=location_id, entries=len(entries))
+        logger.info("encounter_rolling", location=location_id, entries=len(entries), is_day=is_day)
         for entry in entries:
+            if not is_active_at_time(entry.time_of_day, is_day):
+                logger.info(
+                    "encounter_roll_off_hours",
+                    location=location_id,
+                    template=entry.template_id,
+                    time_of_day=entry.time_of_day,
+                    is_day=is_day,
+                )
+                continue
             roll = random.random()
             if roll >= entry.chance:
                 logger.info(
@@ -222,6 +238,29 @@ class ActivationManager:
             # Auto-start combat if spawned creatures are hostile to anyone at this location
             if query_fn is not None and location_id not in self._combat.get_combat_locations():
                 self._maybe_start_combat(location_id, spawned_creatures, query_fn)
+
+    def _is_daylight_at(self, location_id: str, time: GameDateTime, query_fn: QueryFn | None) -> bool:
+        """Ask geography whether it is day at a location. Defaults to day when unknown.
+
+        Defaulting to day means an absent/queryless geography never suppresses an
+        untagged spawn (untagged is always active) — only explicit night/day tags
+        ever depend on this signal.
+        """
+        if query_fn is None:
+            return True
+        from dnd_simulator.core.world import LayerError
+
+        try:
+            answer = query_fn(
+                "geography",
+                Query(
+                    question=QueryType.IS_DAYLIGHT,
+                    params={"location_id": location_id, "month": time.month, "hour": time.hour},
+                ),
+            )
+        except LayerError:
+            return True  # no geography layer in this world
+        return bool(answer.value)
 
     def _maybe_start_combat(self, location_id: str, spawned: list[Creature], query_fn: QueryFn) -> None:
         """Start combat if any spawned creature is hostile to an existing creature at the location."""

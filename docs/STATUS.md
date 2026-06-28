@@ -12,9 +12,9 @@
 **Sprint:** 018-lairs-encounters-loot
 **Goal:** Монстры населяют мир независимо от игрока: постоянные логова (зачищаются убийством ядра), региональные таблицы встреч, опасность по времени суток и лутаемые контейнеры/трупы.
 **Started:** 2026-06-28
-**Phase:** 4 — Время суток (tasks generated) — 2026-06-28. Ready to start task 1.
+**Phase:** 4 — Время суток (task 1 done, фаза готова к закрытию) — 2026-06-28.
 
-Phase 4 scope сужен на планировании до **встреч** (лог-активность день/ночь → бэклог `lair-time-of-day`). Один таск: `time_of_day`-тег на encounter-entry, новый geography-запрос `IS_DAYLIGHT`, чистое правило `is_active_at_time`, фильтр в `ActivationManager._roll_encounters`. Жёсткий гейт по тегу (untagged = всегда, как сейчас). Финальный полный E2E спринта — при `/close-phase`.
+Phase 4 scope сужен на планировании до **встреч** (лог-активность день/ночь → бэклог `lair-time-of-day`). Task 1 done: `TimeOfDay` enum + geography-запрос `IS_DAYLIGHT` (резолв location→region→latitude→`is_daylight`), `time_of_day`-тег на encounter-entry/схеме/лоадере, чистое правило `is_active_at_time`, фильтр в `ActivationManager._roll_encounters` (`_is_daylight_at`, дефолт «день» при отсутствии geography). Untagged = всегда (без регрессий). `make check` green (2245 backend, 238 frontend); integration 152 → 154 green (`TestTimeOfDayEncounter` ×2). Дальше — `/close-phase` (включая финальный полный E2E спринта).
 
 Phase 3 closed: region encounter tables resolve region → location at load time (`_flatten_region_defaults[T]`, shared with battle maps); `ActivationManager` untouched. Integration 149 → 152 green (`test_encounters.py` + `encounter_world`: fallthrough, override, empty region); `make check` green (2237 backend, 238 frontend); E2E regression on the activation/round/combat path 12/12, 0 blockers ([e2e/phase3-report.md](sprints/018-lairs-encounters-loot/e2e/phase3-report.md)).
 

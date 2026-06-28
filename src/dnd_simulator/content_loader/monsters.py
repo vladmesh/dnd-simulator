@@ -63,6 +63,7 @@ def _to_encounter_entry(model: EncounterEntryContent) -> EncounterEntry:
         chance=model.chance,
         count_min=model.count[0],
         count_max=model.count[1],
+        time_of_day=model.time_of_day,
     )
 
 

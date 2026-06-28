@@ -110,4 +110,30 @@ Gotchas:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented as planned, no surprises.
+
+- `TimeOfDay(StrEnum)` (`day`/`night`) and `QueryType.IS_DAYLIGHT` in `core/models.py`.
+  `IS_DAYLIGHT` resolves `location_id`/`region_id → region → latitude` via a new
+  `GeographyLayer._resolve_region` helper, then returns `rules.geography.is_daylight(...)`.
+  Degrades to `True` (day) when day/night can't be determined, so absent/queryless geography
+  never suppresses an untagged spawn.
+- `EncounterEntry.time_of_day` (runtime) + `EncounterEntryContent.time_of_day` (content) +
+  `_to_encounter_entry` carry the tag. Pydantic enum validation gives fail-fast on bad values
+  for free.
+- Pure `rules/encounters.py::is_active_at_time(time_of_day, is_day)`.
+- `ActivationManager`: threaded `time: GameDateTime` into `_check_encounters` / `_roll_encounters`
+  (replaced the `now: int` param on `_check_encounters`, derive `now` inside). New
+  `_is_daylight_at(location, time, query_fn)` queries geography once per rolled location;
+  `_roll_encounters` filters each entry through `is_active_at_time` before the chance roll.
+- Content: added `night_hollow` (darkwood, night-only bandit table) to `test_vale` for unit
+  tests; `night_marsh` (borderlands, night-only wolf table) to `encounter_world` for integration.
+- Old test updated (intentional contract change): `test_manifest_game_service.test_locations`
+  6 → 7, since `test_vale` gained `night_hollow`.
+
+Tests: 3 product unit tests (`test_time_of_day_encounters.py`), 2 parser fail-fast/round-trip
+tests (`test_monster.py`), 2 integration tests (`test_encounters.py::TestTimeOfDayEncounter`).
+`make check` green (2245 backend, 238 frontend, mypy clean). Integration green (152 → 154).

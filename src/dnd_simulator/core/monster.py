@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from dnd_simulator.core.character import AbilityScores, Attack, Creature
+from dnd_simulator.core.models import TimeOfDay
 
 
 @dataclass(frozen=True)
@@ -50,3 +51,4 @@ class EncounterEntry:
     chance: float  # 0.0-1.0
     count_min: int
     count_max: int
+    time_of_day: TimeOfDay | None = None  # None == any time; else rolls only in the matching phase

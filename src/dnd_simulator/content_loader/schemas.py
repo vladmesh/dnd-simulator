@@ -26,7 +26,7 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.items import ItemType
-from dnd_simulator.core.models import TerrainType
+from dnd_simulator.core.models import TerrainType, TimeOfDay
 from dnd_simulator.core.squad import SquadBehavior, SquadType
 from dnd_simulator.layers.geography.models import Direction
 from dnd_simulator.layers.politics.models import LeaderTrait
@@ -320,6 +320,7 @@ class EncounterEntryContent(BaseModel):
     template: str
     chance: float
     count: list[int]
+    time_of_day: TimeOfDay | None = None  # "day"/"night"; omitted == any time
 
 
 class SquadContent(BaseModel):

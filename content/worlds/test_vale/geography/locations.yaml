@@ -80,3 +80,17 @@ forest_edge:
   neighbors:
     - target: forest_clearing
       distance: 1000
+    - target: night_hollow
+      distance: 800
+
+night_hollow:
+  name:
+    en: "Night Hollow"
+    ru: "Ночная лощина"
+  region: darkwood
+  description:
+    en: "A sunless hollow where things only stir after dark."
+    ru: "Бессолнечная лощина, где всё оживает лишь после заката."
+  neighbors:
+    - target: forest_edge
+      distance: 800

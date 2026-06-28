@@ -124,3 +124,50 @@ class TestRegionOverride:
         assert "Goblin" not in names, f"regional goblins must not leak into an overridden location: {names}"
 
         requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+
+
+# ── Time of day: night-only table fires after dark, not by day ───────
+
+
+class TestTimeOfDayEncounter:
+    """night_marsh (borderlands, latitude 45) has a night-only wolf table.
+
+    The world starts at month 6, hour 10 (day). Encounter rolls happen in the
+    round loop on connect, at the current world time; advancing the clock ticks
+    layers without rolling. So advancing into the night before connecting makes
+    the first activation roll at night.
+    """
+
+    def test_night_table_silent_by_day(self, backend_url: str, api_url: str, player_api_url: str) -> None:
+        """At the default day start, the night-only marsh table does not fire."""
+        ws_base, sid, pid = _create_session(backend_url, api_url, player_api_url, "night_marsh")
+
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            _get_turn(sock)
+            names = _monster_names_at(api_url, sid, "night_marsh")
+        finally:
+            sock.close()
+
+        assert names == [], f"night-only table must stay empty by day, got {names}"
+
+        requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+
+    def test_night_table_fires_after_dark(self, backend_url: str, api_url: str, player_api_url: str) -> None:
+        """Advancing the clock into the night before connecting makes the night-only wolf spawn."""
+        ws_base, sid, pid = _create_session(backend_url, api_url, player_api_url, "night_marsh")
+
+        # 10:00 + 16h → 02:00 next day, still month 6 → night at latitude 45.
+        resp = requests.post(f"{api_url}/sessions/{sid}/time/advance", json={"hours": 16}, timeout=10)
+        resp.raise_for_status()
+
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            _get_turn(sock)
+            names = _monster_names_at(api_url, sid, "night_marsh")
+        finally:
+            sock.close()
+
+        assert "Wolf" in names, f"expected the night-only wolf spawn after dark, got {names}"
+
+        requests.delete(f"{api_url}/sessions/{sid}", timeout=5)

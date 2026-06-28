@@ -207,6 +207,29 @@ class TestParseEncounters:
         with pytest.raises(RuntimeError, match="dragon"):
             parse_encounters(data, known_templates={"goblin"})
 
+    def test_parse_encounter_time_of_day(self) -> None:
+        from dnd_simulator.content_loader import parse_encounters
+        from dnd_simulator.core.models import TimeOfDay
+
+        data = {
+            "crypt": [
+                {"template": "goblin", "chance": 0.5, "count": [1, 1], "time_of_day": "night"},
+                {"template": "wolf", "chance": 0.5, "count": [1, 1]},
+            ]
+        }
+        entries = parse_encounters(data, known_templates={"goblin", "wolf"})["crypt"]
+        assert entries[0].time_of_day is TimeOfDay.NIGHT
+        assert entries[1].time_of_day is None  # untagged
+
+    def test_parse_encounter_bad_time_of_day_raises(self) -> None:
+        from pydantic import ValidationError
+
+        from dnd_simulator.content_loader import parse_encounters
+
+        data = {"forest": [{"template": "goblin", "chance": 0.5, "count": [1, 1], "time_of_day": "dusk"}]}
+        with pytest.raises(ValidationError):
+            parse_encounters(data, known_templates={"goblin"})
+
 
 class TestParseRegionEncounters:
     """parse_region_encounters keys by region_id and fails fast on bad refs."""

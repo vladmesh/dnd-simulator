@@ -64,6 +64,7 @@ class QueryType(Enum):
     CONNECTIONS = "connections"
     TRAVEL_TIME = "travel_time"
     DAYLIGHT = "daylight"
+    IS_DAYLIGHT = "is_daylight"
     REGION_INFO = "region_info"
     REGIONS = "regions"
     LOCATION_REGION = "location_region"
@@ -140,6 +141,13 @@ class EventType(Enum):
     REPUTATION_CHANGED = "reputation_changed"
     XP_GAINED = "xp_gained"
     CUSTOM = "custom"
+
+
+class TimeOfDay(StrEnum):
+    """Day/night phase tag for content that varies with the clock (e.g. encounters)."""
+
+    DAY = "day"
+    NIGHT = "night"
 
 
 @dataclass(frozen=True)

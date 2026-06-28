@@ -43,6 +43,14 @@ encounters:
       chance: 0.3
       count: [1, 2]
 
+  # Night-only table in darkwood (latitude 45): bandits prowl the hollow after
+  # dark, never by day. Used by the time-of-day encounter tests.
+  night_hollow:
+    - template: bandit
+      chance: 1.0
+      count: [1, 1]
+      time_of_day: night
+
 region_encounters:
   crossroads:
     - template: goblin
