@@ -83,4 +83,32 @@ Gotchas:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Behavior-preserving peel, landed as planned. GameService 1044 → 541 lines (−503), new
+`commands_worldbuilder.py` is 535 lines. The whole group (lines 258–755) was contiguous,
+so it moved as one block verbatim — method bodies unchanged, including the method-local
+imports and the `_BASE_WORLDS` / `_SAFE_ID_RE` class attributes.
+
+Protocol: added only `_content_dir: Path` to `GameServiceProtocol`. `_validate_world_id`
+did NOT need a protocol entry after all — it's defined in the mixin and `start_game`
+(facade) reaches it through inheritance, so mypy resolves it via the MRO without a
+protocol declaration.
+
+Import fallout in the facade: dropped the whole `content_loader.library` block
+(`TemplateInfo`/`list_templates`/`list_compatible_templates`, all moved) and the
+TYPE_CHECKING `ContentEntityType`. Every other `content_loader` top-level import stays —
+`start_game` still uses nearly all of them. `effective_ac` stays too (player_status, not
+yet moved).
+
+Bonus cleanup (not in plan): `commands_creatures.py:159` had
+`content_dir: Path = self._content_dir  # type: ignore[attr-defined]` — the ignore was
+only there because `_content_dir` wasn't on the protocol. Adding it to the protocol made
+the ignore unused (mypy flagged it), so I inlined `self._content_dir` and dropped the now
+-unused `Path` import. No behavior change.
+
+`make check` green (backend 2268, frontend 238). No integration tests touched — this is a
+pure refactor guarded by the existing unit suite (171 covering tests confirmed green
+before and after).
