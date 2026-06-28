@@ -62,4 +62,29 @@ Gotcha: `create_player` reads the item catalog via `self._content_dir / "catalog
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Behavior-preserving peel, same pattern as Task 1. `create_player` / `level_up_player` /
+`player_status` moved verbatim into `service/commands_player.py` (`PlayerCommands` mixin,
+200 lines). Facade `game_service.py` 541 → 357 (−184).
+
+Deviation from plan: the task said "no new protocol additions needed." One was needed —
+`create_player` calls `self.autosave_session(session_id)`, which lives in the `SaveCommands`
+mixin, not on `GameServiceProtocol`. This is the first cross-mixin call among the peeled
+groups (worldbuilder/creatures/politics only ever call their own helpers + the shared
+session/layer accessors), so under mypy strict `self.autosave_session` had no declared
+attribute. Added `def autosave_session(self, session_id: str) -> None: ...` to
+`GameServiceProtocol` — it's exactly "the contract mixins depend on," and a mixin now
+depends on it.
+
+Imports removed from facade: `PlayerCharacter`, top-level `effective_ac`, the whole
+`if TYPE_CHECKING` block (`FightingStyle`, `PlayerStatusData`), and `from typing import
+TYPE_CHECKING, Any` (both became unused once the methods left). `BrainType`, `load_catalog`,
+`contextlib` stay (still used by `start_game` / `_assign_brains` / `_on_session_empty`).
+
+Guarded by the existing suite (`test_game_service_player.py` covers all three directly,
+plus session-setup paths in `test_session_lifecycle` / `test_region_encounters` /
+`test_time_of_day_encounters`). No integration tests touched. `make check` green: ruff +
+mypy strict (148 files) + 2268 backend + 238 frontend.

@@ -12,9 +12,9 @@
 **Sprint:** 019-control-plane-prep
 **Goal:** Отвердить control-plane (GameService / session / commands / адаптеры) под будущий разрез на роли в `control-interfaces` — раздробить god-class, покрыть тестами, утончить адаптеры; попутно закрыть видимые дырки и свести бэклог.
 **Started:** 2026-06-28
-**Phase:** 2 — GameService deeper peel + adapter hygiene (task 1 done, task 2 pending) — 2026-06-28
+**Phase:** 2 — GameService deeper peel + adapter hygiene (task 2 done, task 3 pending) — 2026-06-28
 
-Phase 1 closed: integration 154/154, E2E 9/9 (0 blockers, см. `sprints/019-control-plane-prep/e2e/phase1-report.md`), `make check` зелёный. Task 1 (worldbuilder/content peel) done: `WorldBuilderCommands` mixin вынесен, GameService 1044 → 541 строк, `make check` зелёный. Next: task 2 (player commands peel).
+Phase 1 closed: integration 154/154, E2E 9/9 (0 blockers, см. `sprints/019-control-plane-prep/e2e/phase1-report.md`), `make check` зелёный. Phase 2 task 1 (worldbuilder/content peel) done: `WorldBuilderCommands` mixin, GameService 1044 → 541. Task 2 (player commands peel) done: `PlayerCommands` mixin, GameService 541 → 357; `autosave_session` добавлен в `GameServiceProtocol` (первый cross-mixin вызов). `make check` зелёный. Next: task 3 (adapter hygiene — action-parsing + public World-query API).
 
 ### Phases
 
