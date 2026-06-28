@@ -54,6 +54,7 @@ def _lair(
     location: str = "warren",
     core: str | None = "goblin_chieftain",
     respawn_interval: int = 3600,
+    depletion_chance: float = 0.0,
 ) -> Lair:
     return Lair(
         id="goblin_warren",
@@ -63,6 +64,7 @@ def _lair(
         members=["goblin", "goblin", "goblin"],
         core=core,
         respawn_interval=respawn_interval,
+        depletion_chance=depletion_chance,
     )
 
 
@@ -213,52 +215,103 @@ def _goblins(entities: EntitiesLayer) -> list[Creature]:
     return [c for c in _lair_creatures(entities) if c.name == "Goblin"]
 
 
+def _reenter(eco: EcologyLayer, time: GameDateTime = T0) -> EntitiesLayer:
+    """Bring a fresh player into the lair against the given ecology, return its entities layer."""
+    _eco, entities, qfn, efn = _make_layers(entities=[_player()], relation=FactionRelation.NEUTRAL, ecology=eco)
+    entities.update_activation(time, query_fn=qfn, emit_fn=efn)
+    return entities
+
+
+def _enter_kill_leave(
+    eco_lair: Lair,
+    *,
+    kill_minions: int = 0,
+    kill_core: bool = False,
+) -> tuple[EcologyLayer, object, object]:
+    """Enter the lair, kill `kill_minions` goblins (and the core if `kill_core`), leave. Returns ecology + fns."""
+    player = _player()
+    eco, entities, qfn, efn = _make_layers([eco_lair], entities=[player], relation=FactionRelation.NEUTRAL)
+    entities.update_activation(T0, query_fn=qfn, emit_fn=efn)
+    for c in _goblins(entities)[:kill_minions]:
+        c.current_hp = 0
+    if kill_core:
+        for c in _lair_creatures(entities):
+            if c.name == "Goblin Chieftain":
+                c.current_hp = 0
+    player.location_id = "elsewhere"
+    entities.update_activation(T0, query_fn=qfn, emit_fn=efn)
+    return eco, qfn, efn
+
+
 class TestLairRespawn:
-    def _enter_kill_leave(self) -> tuple[EcologyLayer, PlayerCharacter, object, object]:
-        """Enter the lair, kill 2 of 3 goblins, leave. Returns the ecology + reusable player/fns."""
-        player = _player()
-        eco, entities, qfn, efn = _make_layers([_lair()], entities=[player], relation=FactionRelation.NEUTRAL)
-        entities.update_activation(T0, query_fn=qfn, emit_fn=efn)
-        goblins = _goblins(entities)
-        assert len(goblins) == 3
-        goblins[0].current_hp = 0
-        goblins[1].current_hp = 0
-        player.location_id = "elsewhere"
-        entities.update_activation(T0, query_fn=qfn, emit_fn=efn)
-        return eco, player, qfn, efn
-
-    def _reenter(self, eco: EcologyLayer, time: GameDateTime) -> EntitiesLayer:
-        """Bring a fresh player into the lair against the given ecology, return entities layer."""
-        _eco, entities, qfn, efn = _make_layers(entities=[_player()], relation=FactionRelation.NEUTRAL, ecology=eco)
-        entities.update_activation(time, query_fn=qfn, emit_fn=efn)
-        return entities
-
     def test_losses_persist_without_respawn_before_interval(self) -> None:
-        eco, _player_obj, qfn, efn = self._enter_kill_leave()
+        eco, qfn, efn = _enter_kill_leave(_lair(), kill_minions=2)
         eco.tick(_HOUR, T_SOON, qfn, efn)  # +30 min < interval → no respawn
-        entities = self._reenter(eco, T_SOON)
+        entities = _reenter(eco, T_SOON)
         assert len(_goblins(entities)) == 1
 
     def test_minions_respawn_to_full_after_interval(self) -> None:
-        eco, _player_obj, qfn, efn = self._enter_kill_leave()
+        eco, qfn, efn = _enter_kill_leave(_lair(), kill_minions=2)
         eco.tick(_HOUR, T_LATER, qfn, efn)  # +2 h >= interval → respawn
-        entities = self._reenter(eco, T_LATER)
+        entities = _reenter(eco, T_LATER)
         assert len(_goblins(entities)) == 3
 
     def test_respawn_does_not_overflow_roster(self) -> None:
-        eco, _player_obj, qfn, efn = self._enter_kill_leave()
+        eco, qfn, efn = _enter_kill_leave(_lair(), kill_minions=2)
         # Tick several intervals — population must cap at the full roster, never grow past it.
         eco.tick(_HOUR, T_LATER, qfn, efn)
         eco.tick(_HOUR, GameDateTime(year=1490, month=6, day=1, hour=14), qfn, efn)
-        entities = self._reenter(eco, GameDateTime(year=1490, month=6, day=1, hour=14))
+        entities = _reenter(eco, GameDateTime(year=1490, month=6, day=1, hour=14))
         assert len(_goblins(entities)) == 3
 
     def test_losses_survive_save_load(self) -> None:
-        eco, _player_obj, _qfn, _efn = self._enter_kill_leave()
+        eco, _qfn, _efn = _enter_kill_leave(_lair(), kill_minions=2)
         saved = eco.get_state()
 
         eco2 = EcologyLayer(lairs=[_lair()])
         eco2.load_state(saved)
         # Re-enter before any respawn tick → the two dead goblins are still gone.
-        entities = self._reenter(eco2, T0)
+        entities = _reenter(eco2, T0)
         assert len(_goblins(entities)) == 1
+
+
+class TestLairDepletion:
+    def test_core_death_depletes_lair_forever(self) -> None:
+        # Kill the chieftain (core); minions can survive — core death alone depletes.
+        eco, qfn, efn = _enter_kill_leave(_lair(), kill_core=True)
+        eco.tick(_HOUR, T_LATER, qfn, efn)
+        eco.tick(_HOUR, GameDateTime(year=1490, month=6, day=1, hour=16), qfn, efn)
+        entities = _reenter(eco, GameDateTime(year=1490, month=6, day=1, hour=16))
+        assert len(_lair_creatures(entities)) == 0  # depleted: nothing materializes, ever
+
+    def test_minion_only_death_keeps_lair_active(self) -> None:
+        # Regression on task 2: minions die, core lives → lair stays ACTIVE and respawns.
+        eco, qfn, efn = _enter_kill_leave(_lair(), kill_minions=2)
+        assert eco._lairs["goblin_warren"].state is LairState.ACTIVE
+        eco.tick(_HOUR, T_LATER, qfn, efn)
+        entities = _reenter(eco, T_LATER)
+        assert len(_goblins(entities)) == 3
+
+    def test_core_death_depletion_survives_save_load(self) -> None:
+        eco, _qfn, _efn = _enter_kill_leave(_lair(), kill_core=True)
+
+        eco2 = EcologyLayer(lairs=[_lair()])
+        eco2.load_state(eco.get_state())
+        assert eco2._lairs["goblin_warren"].state is LairState.DEPLETED
+        entities = _reenter(eco2, T_LATER)
+        assert len(_lair_creatures(entities)) == 0
+
+    def test_coreless_lair_depletes_on_full_wipe_with_chance(self) -> None:
+        # depletion_chance=1.0 → any roll < 1.0 always depletes.
+        eco, qfn, efn = _enter_kill_leave(_lair(core=None, depletion_chance=1.0), kill_minions=3)
+        assert eco._lairs["goblin_warren"].state is LairState.DEPLETED
+        eco.tick(_HOUR, T_LATER, qfn, efn)
+        entities = _reenter(eco, T_LATER)
+        assert len(_lair_creatures(entities)) == 0  # depleted: no respawn
+
+    def test_coreless_lair_respawns_with_zero_chance(self) -> None:
+        eco, qfn, efn = _enter_kill_leave(_lair(core=None, depletion_chance=0.0), kill_minions=3)
+        assert eco._lairs["goblin_warren"].state is LairState.ACTIVE
+        eco.tick(_HOUR, T_LATER, qfn, efn)
+        entities = _reenter(eco, T_LATER)
+        assert len(_goblins(entities)) == 3  # full wipe but not depleted → respawns

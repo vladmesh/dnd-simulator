@@ -13,6 +13,7 @@ from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, FactionRelation, Query, QueryType
 from dnd_simulator.core.squad import Squad, SquadBehavior
 from dnd_simulator.rules.abstract_combat import TriggeredEncounter, resolve_abstract_combat
+from dnd_simulator.rules.dice import get_global_rng
 
 if TYPE_CHECKING:
     from dnd_simulator.core.location import LocationGraph
@@ -134,11 +135,25 @@ class EcologyLayer(Layer):
         lair.core_alive = bool(event.data.get("core_alive", lair.core_alive))
         # Anchor the respawn countdown to this visit so respawn waits a full interval afterwards.
         lair.last_respawn_time = int(event.data.get("at_seconds", lair.last_respawn_time))
+
+        # Depletion: a cored lair dies permanently when its core dies; a coreless lair
+        # may run dry by chance after a full wipe (roll only when wiped, via short-circuit).
+        core_died = lair.core is not None and not lair.core_alive
+        chance_ran_dry = (
+            lair.core is None
+            and not lair.alive_members
+            and lair.depletion_chance > 0.0
+            and get_global_rng().random() < lair.depletion_chance
+        )
+        if core_died or chance_ran_dry:
+            lair.state = LairState.DEPLETED
+
         logger.info(
             "lair_population_updated",
             lair_id=lair_id,
             alive_members=len(lair.alive_members),
             core_alive=lair.core_alive,
+            state=lair.state.value,
         )
 
     def _respawn_lairs(self, now: int) -> None:

@@ -44,4 +44,12 @@ Integration (для шанса — сидировать RNG через `set_glob
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- **Минимальная задача.** Вся инфраструктура легла в задаче 2 (`LAIR_DEMATERIALIZED` несёт `core_alive`/`alive_members`; респавн и материализация уже гейтят по `state is ACTIVE`; `state` уже персистится). Деплит это одно решение в `EcologyLayer._apply_lair_dematerialize`.
+- **Логика.** `core_died = lair.core is not None and not core_alive` (детерминированный основной триггер); `chance_ran_dry` для безбоссовых: `core is None and not alive_members and depletion_chance > 0 and get_global_rng().random() < depletion_chance` (ролл только при полном вайпе, через short-circuit). Любой из них → `state = DEPLETED`. `DEPLETED` терминально: респавн/материализация уже пропускают не-ACTIVE логова, `state` уже в save/load.
+- **Сидируемый RNG.** `get_global_rng()` из `rules.dice` (ecology уже импортирует из rules — `abstract_combat`, так что граница слоёв не нарушена). Для `depletion_chance` 1.0/0.0 пороги детерминированы и без seed (`random()` ∈ [0,1)), поэтому тесты не зависят от конкретного seed.
+- **Тесты.** 5 новых в `TestLairDepletion` (core death деплитит навсегда; minion-only оставляет ACTIVE — регрессия задачи 2; core-death переживает save/load; coreless chance=1.0 деплитит; chance=0.0 респавнит). Хелперы вынесены на уровень модуля (`_reenter`, `_enter_kill_leave(kill_minions=, kill_core=)`), тесты задачи 2 переписаны под них (свои же тесты, поведение то же).
+- **Линт.** ruff SIM102/SIM114 заставили схлопнуть вложенные/дублирующие ветки в два именованных булева + один `if core_died or chance_ran_dry`.
