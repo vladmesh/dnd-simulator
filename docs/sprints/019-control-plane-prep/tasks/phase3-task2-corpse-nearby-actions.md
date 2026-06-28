@@ -33,4 +33,10 @@ Vitest component test for `Perception` (mirror the existing `frontend/src/compon
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Frontend-only as planned. In `Perception.tsx` gated the Attack `<Button>` on `!entity.lootable` and the Talk `<Button>` on `!isCombat && !entity.lootable`. Inspect button left untouched (harmless on corpses/containers, consistent with the loot card). No backend/schema/type change — `NearbyEntity.lootable?: boolean` already existed.
+
+New test file `frontend/src/components/game/__tests__/Perception.test.tsx` (2 tests): corpse (`lootable: true`) hides both buttons; living (`lootable: false`) shows both. Stubs `wsClient` and seeds the game store (`mode: explore`, `isMyTurn: true`, awareness with one nearby entity). RED confirmed before the fix (Attack present on corpse), GREEN after. `make check` green: backend 2278, frontend 240.
