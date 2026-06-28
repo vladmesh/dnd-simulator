@@ -371,7 +371,7 @@ class GameSession:
     ) -> dict[str, Any]:
         """Build the common state dict shared by on_turn, on_action, and on_round_end."""
         perceived = game_round.get_perceived_events(player)
-        query_fn = self.world._make_query_fn("entities")
+        query_fn = self.world.make_query_fn("entities")
         awareness = creature_host.build_awareness(player, self.world.time, query_fn)
         return {
             "type": msg_type,

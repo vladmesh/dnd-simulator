@@ -75,11 +75,14 @@ src/dnd_simulator/
 │   ├── assembly.py   — world assembly (create manifest from library selections) and fork (copy to custom)
 │   └── utils.py      — YAML section loading, text resolution
 ├── service/       — GameService + command modules
-│   ├── game_service.py — session management, command routing, creature hot controls
+│   ├── game_service.py — session management, command routing, creature hot controls; composes the WorldBuilderCommands + PlayerCommands mixins
+│   ├── commands_worldbuilder.py — WorldBuilderCommands mixin: world templates/manifest, layer files, entity/catalog CRUD
+│   ├── commands_player.py  — PlayerCommands mixin: create_player, level_up_player, player_status
 │   ├── session.py      — GameSession: world ref, player lookup via entities layer, autosave
 │   ├── action_dispatcher.py — validate → route → execute (single entry point for all actions)
+│   ├── action_parsing.py    — parse JSON action payloads into Action (ActionParseError); keeps adapters off core Action/ActionType
 │   ├── brain_factory.py     — creates Brain instances from BrainType
-│   ├── base.py              — ServiceMixin Protocol base for command modules
+│   ├── base.py              — GameServiceProtocol base shared by the command mixins
 │   ├── dto.py               — typed DTOs returned by service methods (PlayerStatusData, ResourcePoolView)
 │   └── commands_creatures.py, commands_politics.py, commands_save.py, commands_time.py, commands_world_state.py
 └── round.py       — Round orchestrator: multi-action turn loop with budget enforcement
@@ -199,7 +202,7 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 
 **Turn order:** Initiative = d20 + DEX modifier, tiebreaker by DEX score. Order is fixed for the entire combat. Game loop iterates combatants in this order.
 
-**Battle map:** Each `CombatState` owns a `BattleMap` — a 2D grid (coordinates in feet, 5-ft cells). Entities have `Position`s on the map. `Wall` segments block movement between adjacent cells. Perimeter walls auto-generated from map dimensions. Movement uses `rules/movement.py`: atomic direction + distance steps, D&D 5e alternating diagonal cost (5/10/5/…), wall collision. Dash is a self-buff action that adds speed to the movement pool. Abstract moves (toward/away from target) are resolved to concrete directions server-side. Failed moves refund budget. `move_to(x, y)` uses BFS pathfinding with D&D 5e diagonal costs and budget-aware walking; player-only (excluded from LLM schemas via `provider_managed`).
+**Battle map:** Each `CombatState` owns a `BattleMap` — a 2D grid (coordinates in feet, 5-ft cells). Entities have `Position`s on the map. `Wall` segments block movement between adjacent cells. Perimeter walls auto-generated from map dimensions. Movement uses `rules/movement.py`: atomic direction + distance steps, D&D 5e alternating diagonal cost (5/10/5/…), wall collision. Dash is a self-buff action that adds speed to the movement pool. Abstract moves (toward/away from target) are resolved to concrete directions server-side. Budget is consumed only on a successful action, so a blocked move costs nothing. `move_to(x, y)` uses BFS pathfinding with D&D 5e diagonal costs and budget-aware stepping; player-only (excluded from LLM schemas via `provider_managed`).
 
 **Dual awareness:** Creatures in combat get a focused prompt (HP, weapon, nearby combatants with positions/distances, round number — no weather/time/politics). Peaceful creatures get full world awareness. Two separate tool sets: combat (attack/move/dodge/flee/idle, no say — use description for flavor) and peaceful (say/attack/idle).
 

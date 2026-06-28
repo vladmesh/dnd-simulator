@@ -61,7 +61,7 @@ class StubLayer(Layer):
 
 
 class TestLayerIsolationQueryDirection:
-    """_make_query_fn enforces layers-depend-down invariant."""
+    """make_query_fn enforces layers-depend-down invariant."""
 
     def _make_world(self) -> World:
         return World(
@@ -74,50 +74,50 @@ class TestLayerIsolationQueryDirection:
 
     def test_entities_queries_geography_succeeds(self) -> None:
         world = self._make_world()
-        query_fn = world._make_query_fn("entities")
+        query_fn = world.make_query_fn("entities")
         result = query_fn("geography", Query(question=QueryType.LOCATION_REGION))
         assert result.value == "forest"
 
     def test_entities_queries_politics_succeeds(self) -> None:
         world = self._make_world()
-        query_fn = world._make_query_fn("entities")
+        query_fn = world.make_query_fn("entities")
         result = query_fn("politics", Query(question=QueryType.REGION_OWNER))
         assert result.value == "kingdom"
 
     def test_entities_queries_itself_raises_layer_error(self) -> None:
         world = self._make_world()
-        query_fn = world._make_query_fn("entities")
+        query_fn = world.make_query_fn("entities")
         with pytest.raises(LayerError, match="cannot query itself"):
             query_fn("entities", Query(question=QueryType.LOCATION_REGION))
 
     def test_geography_queries_entities_raises_layer_error(self) -> None:
         world = self._make_world()
-        query_fn = world._make_query_fn("geography")
+        query_fn = world.make_query_fn("geography")
         with pytest.raises(LayerError, match="only layers below"):
             query_fn("entities", Query(question=QueryType.LOCATION_REGION))
 
     def test_politics_queries_entities_raises_layer_error(self) -> None:
         world = self._make_world()
-        query_fn = world._make_query_fn("politics")
+        query_fn = world.make_query_fn("politics")
         with pytest.raises(LayerError, match="only layers below"):
             query_fn("entities", Query(question=QueryType.LOCATION_REGION))
 
     def test_query_nonexistent_layer_raises_layer_error(self) -> None:
         world = self._make_world()
-        query_fn = world._make_query_fn("entities")
+        query_fn = world.make_query_fn("entities")
         with pytest.raises(LayerError, match="not found"):
             query_fn("magic", Query(question=QueryType.LOCATION_REGION))
 
 
 class TestLayerIsolationEmitValidation:
-    """_make_emit_fn validates event source_layer matches caller."""
+    """make_emit_fn validates event source_layer matches caller."""
 
     def test_emit_with_matching_source_propagates(self) -> None:
         geo = StubLayer("geography")
         ent = StubLayer("entities")
         world = World([geo, ent])
 
-        emit_fn = world._make_emit_fn("geography")
+        emit_fn = world.make_emit_fn("geography")
         event = Event(event_type=EventType.ENTITY_MOVE, source_layer="geography")
         result = emit_fn(event)
         assert result.success is True
@@ -127,7 +127,7 @@ class TestLayerIsolationEmitValidation:
         ent = StubLayer("entities")
         world = World([geo, ent])
 
-        emit_fn = world._make_emit_fn("geography")
+        emit_fn = world.make_emit_fn("geography")
         event = Event(event_type=EventType.ENTITY_MOVE, source_layer="entities")
         with pytest.raises(LayerError, match="cannot emit event"):
             emit_fn(event)

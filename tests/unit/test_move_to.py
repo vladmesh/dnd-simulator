@@ -11,7 +11,7 @@ from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.combat import BattleMap, Position, Wall
 from dnd_simulator.core.models import ActionResult
 from dnd_simulator.core.turn_budget import TurnBudget
-from dnd_simulator.rules.movement import compute_reachable, find_path, walk_path
+from dnd_simulator.rules.movement import compute_reachable, find_path, step_cost
 from dnd_simulator.rules.validation import ActionContext
 
 # ---------------------------------------------------------------------------
@@ -85,7 +85,11 @@ class TestFindPath:
         assert path[-1] == goal
         # Walk the path — cost should be exactly 30ft (pure cardinal)
         # Old BFS might pick diagonal shortcuts that cost more due to alternating rule
-        _final, cost = walk_path(path, 999)
+        cost = 0
+        diag_count = 0
+        for a, b in itertools.pairwise(path):
+            step, diag_count = step_cost(a, b, diag_count)
+            cost += step
         assert cost == 30
 
     def test_find_path_matches_compute_reachable(self) -> None:
@@ -98,53 +102,6 @@ class TestFindPath:
         path_reachable = reachable.get(goal, [])
         # Both should find the same optimal path
         assert path_direct == path_reachable
-
-
-# ---------------------------------------------------------------------------
-# walk_path — walk a path spending movement budget
-# ---------------------------------------------------------------------------
-
-
-class TestWalkPath:
-    def test_walk_full_path_within_budget(self) -> None:
-        # Straight line 3 squares = 15ft, budget = 30ft
-        path = [Position(0, 0), Position(5, 0), Position(10, 0), Position(15, 0)]
-        final_pos, feet_spent = walk_path(path, 30)
-        assert final_pos == Position(15, 0)
-        assert feet_spent == 15
-
-    def test_walk_stops_at_budget_limit(self) -> None:
-        # 8 squares straight = 40ft, budget = 30ft → stop after 6 squares
-        path = [Position(i * 5, 0) for i in range(9)]  # 0 to 40ft
-        final_pos, feet_spent = walk_path(path, 30)
-        assert final_pos == Position(30, 0)
-        assert feet_spent == 30
-
-    def test_diagonal_alternating_cost(self) -> None:
-        # Diagonal path: first diag = 5ft, second = 10ft, third = 5ft
-        path = [Position(0, 0), Position(5, 5), Position(10, 10), Position(15, 15)]
-        # Cost: 5 + 10 + 5 = 20ft
-        final_pos, feet_spent = walk_path(path, 30)
-        assert final_pos == Position(15, 15)
-        assert feet_spent == 20
-
-    def test_budget_35_on_diagonal_stops_at_30(self) -> None:
-        # 7 diagonal steps, budget = 30ft
-        # Cost: 5 + 10 + 5 + 10 + 5 = 35ft for 5 steps, but 30ft budget
-        # After 4 diags: 5+10+5+10 = 30ft
-        path = [Position(i * 5, i * 5) for i in range(8)]
-        final_pos, feet_spent = walk_path(path, 30)
-        assert final_pos == Position(20, 20)
-        assert feet_spent == 30
-
-    def test_empty_path(self) -> None:
-        _final_pos, feet_spent = walk_path([], 30)
-        assert feet_spent == 0
-
-    def test_single_position_path(self) -> None:
-        final_pos, feet_spent = walk_path([Position(10, 10)], 30)
-        assert final_pos == Position(10, 10)
-        assert feet_spent == 0
 
 
 # ---------------------------------------------------------------------------
@@ -228,7 +185,7 @@ class TestHandleMoveTo:
 
         With 30ft budget, a cell at exactly 30ft via the optimal path must be reached.
         The old BFS could pick a path with more diagonals (fewer steps but higher cost),
-        causing walk_path to stop short.
+        causing the walk to stop short.
         """
         from dnd_simulator.rules.handlers.movement import handle_move_to
 

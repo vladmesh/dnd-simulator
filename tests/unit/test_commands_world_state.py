@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from dnd_simulator.core.models import Answer, Query, QueryType
 from dnd_simulator.service.game_service import GameService
 from dnd_simulator.storage.store import SaveStore
 
@@ -88,3 +89,27 @@ class TestGetWorldState:
 
         with pytest.raises(ValueError, match=r"Session .* not found"):
             svc.get_world_state("nonexistent-session-id")
+
+    def test_malformed_layer_answer_raises_typed_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A layer returning the wrong value type must surface a descriptive,
+        typed error naming the layer/query — not a bare AssertionError (which is
+        stripped under ``python -O``)."""
+        svc = _make_service()
+        session = svc.start_game("sword_vale")
+        sid = session.session_id
+
+        original = session.world.query_layer
+
+        def corrupt(layer_name: str, query: Query) -> Answer:
+            if layer_name == "geography" and query.question == QueryType.REGIONS:
+                return Answer(value="not-a-list")
+            return original(layer_name, query)
+
+        monkeypatch.setattr(session.world, "query_layer", corrupt)
+
+        with pytest.raises(RuntimeError) as exc:
+            svc.get_world_state(sid)
+
+        msg = str(exc.value).lower()
+        assert "geography" in msg
+        assert "regions" in msg

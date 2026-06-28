@@ -518,8 +518,8 @@ class Round:
 
     def run_round(self) -> RoundResult:
         """Execute one round: combat turns (initiative order), then peaceful turns, then advance time."""
-        query_fn = self._world._make_query_fn("entities")
-        emit_fn = self._world._make_emit_fn("entities")
+        query_fn = self._world.make_query_fn("entities")
+        emit_fn = self._world.make_emit_fn("entities")
         time = self._world.time
 
         # Activate creatures near players, dormify the rest, materialize squads
@@ -560,8 +560,8 @@ class Round:
 
     def _activate(self) -> None:
         """Update activation with materialization support."""
-        qfn = self._world._make_query_fn("entities")
-        efn = self._world._make_emit_fn("entities")
+        qfn = self._world.make_query_fn("entities")
+        efn = self._world.make_emit_fn("entities")
         self._host.update_activation(self._world.time, query_fn=qfn, emit_fn=efn)
 
     def run_loop(self, max_rounds: int | None = None) -> None:

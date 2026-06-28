@@ -71,16 +71,6 @@ class PlayerCharacter(Character):
     Transport-specific I/O (CLI, WebSocket) is handled by the Brain's turn handler.
     """
 
-    def to_save_data(self) -> dict[str, Any]:
-        """Serialize mutable player state for saving."""
-        return {
-            "location_id": self.location_id,
-            "current_hp": self.current_hp,
-            "gold": self.gold,
-            "experience": self.experience,
-            "level_up_available": self.level_up_available,
-        }
-
     def to_full_save_data(self) -> dict[str, Any]:
         """Serialize full player definition (for autosave restore)."""
         data: dict[str, Any] = {

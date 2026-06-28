@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react"
+import { useEffect, useCallback, useMemo } from "react"
 import { useForm, useFieldArray, Controller } from "react-hook-form"
 import type { UseFormRegister, Control, FieldValues, Path } from "react-hook-form"
 import { Input } from "@/components/ui/input"
@@ -111,13 +111,13 @@ export function SchemaForm({
   worldId,
   fetchRefs,
 }: SchemaFormProps) {
-  const rootDefs = schema.$defs ?? {}
+  const rootDefs = useMemo(() => schema.$defs ?? {}, [schema])
   const defaults = buildDefaults(schema, rootDefs)
   const merged = { ...defaults, ...initialValues }
 
   // For localized text fields in initialValues, unwrap {lang: value} → value
   const formDefaults: Record<string, unknown> = {}
-  const props = schema.properties ?? {}
+  const props = useMemo(() => schema.properties ?? {}, [schema])
   for (const [key, rawProp] of Object.entries(props)) {
     const prop = resolveProperty(rawProp, rootDefs)
     const val = merged[key]

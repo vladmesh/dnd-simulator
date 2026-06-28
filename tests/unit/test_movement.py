@@ -169,10 +169,14 @@ class TestComputeReachable:
         target = Position(35, 35)
         assert target in reachable
         # Walk the path and verify cost
-        from dnd_simulator.rules.movement import walk_path
+        from dnd_simulator.rules.movement import step_cost
 
         path = reachable[target]
-        _final, cost = walk_path(path, 999)
+        cost = 0
+        diag_count = 0
+        for a, b in itertools.pairwise(path):
+            step, diag_count = step_cost(a, b, diag_count)
+            cost += step
         assert cost == 30
 
     def test_start_position_in_reachable(self) -> None:

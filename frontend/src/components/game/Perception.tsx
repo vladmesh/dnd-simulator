@@ -62,20 +62,22 @@ export function Perception() {
           {isMyTurn && (
             <div className="mt-1 space-y-1">
               <div className="flex gap-1">
-                <Button
-                  size="xs"
-                  variant="destructive"
-                  onClick={() => {
-                    if (spellSlots.length > 0) {
-                      setSmiteTarget(smiteTarget === entity.id ? null : entity.id)
-                    } else {
-                      sendAction("attack", { target_id: entity.id })
-                    }
-                  }}
-                >
-                  <Sword className="mr-1 size-3" /> {t("game:attack")}
-                </Button>
-                {!isCombat && (
+                {!entity.lootable && (
+                  <Button
+                    size="xs"
+                    variant="destructive"
+                    onClick={() => {
+                      if (spellSlots.length > 0) {
+                        setSmiteTarget(smiteTarget === entity.id ? null : entity.id)
+                      } else {
+                        sendAction("attack", { target_id: entity.id })
+                      }
+                    }}
+                  >
+                    <Sword className="mr-1 size-3" /> {t("game:attack")}
+                  </Button>
+                )}
+                {!isCombat && !entity.lootable && (
                   <Button
                     size="xs"
                     variant="secondary"

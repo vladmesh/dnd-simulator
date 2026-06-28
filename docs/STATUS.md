@@ -2,14 +2,14 @@
 
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
-**Last updated:** 2026-06-28
-**Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 закрыт (логова, лут/контейнеры, региональные таблицы встреч, время суток) — backlog must-айтем `monster-spawn` закрыт. По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), автономные тики NPC.
-**Next:** активного спринта нет. Топ-кандидат BACKLOG must — `quest-system` (система квестов); также Level 2 (расходуемые ресурсы). См. [BACKLOG](BACKLOG.md) / [ROADMAP](ROADMAP.md).
+**Last updated:** 2026-06-29
+**Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 закрыт (логова, лут/контейнеры, региональные таблицы встреч, время суток). Sprint 019 (control-plane-prep) закрыт — `GameService` раздроблён 1044 → 357 строк (миксины `WorldBuilderCommands`/`PlayerCommands`), core/adapter развязаны, видимые дырки (combat-log i18n, encounter-перцептор, труп-кнопки) закрыты; control-plane готов к разрезу на роли. По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), автономные тики NPC.
+**Next:** активного спринта нет. Топ-кандидат — `control-interfaces` (разрез control-plane на роли worldbuilder/DM/админка, ради чего готовился Sprint 019); далее `quest-system`. См. [BACKLOG](BACKLOG.md) / [ROADMAP](ROADMAP.md).
 **Blockers:** нет.
 
 ## Current Sprint
 
-Активного спринта нет. Sprint 018 закрыт 2026-06-28 ([sprint.md](sprints/018-lairs-encounters-loot/sprint.md) → Results, [post-audit E2E](e2e-reports/2026-06-28-sprint018-post-audit.md)).
+Активного спринта нет. Sprint 019 (control-plane-prep) закрыт 2026-06-29 — см. Sprint History. Топ-кандидат на следующий — `control-interfaces`.
 
 ## Recent activity (non-sprint)
 
@@ -20,6 +20,7 @@
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 019-control-plane-prep | Отвердить control-plane под разрез на роли: GameService 1044→357 (миксины WorldBuilderCommands/PlayerCommands), тест-сетка на session, развязка core/adapter (action_parsing seam, public World query API), видимые дырки (combat-log i18n, encounter-перцептор, труп-кнопки) | 2026-06-28 | 2026-06-29 |
 | 018-lairs-encounters-loot | Логова (active→depleted), лут/контейнеры (`take`, `transfer_items`), региональные таблицы встреч, время суток; закрыт `monster-spawn` | 2026-06-28 | 2026-06-28 |
 | 017-xp-leveling | XP-by-CR и система уровней, level-up модалка; Paladin L1→L2 fix, Fighter Action Surge, Rogue L2 HP | 2026-04-13 | 2026-04-13 |
 | 016-tech-sweep | Fix E2E/backlog bugs, resolve architecture violations, add enums + harden fail-fast | 2026-04-12 | 2026-04-13 |

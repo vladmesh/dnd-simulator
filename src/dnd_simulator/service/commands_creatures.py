@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.brain import BrainType
@@ -156,8 +155,7 @@ class CreatureCommands(GameServiceProtocol):
         if entity is None or not isinstance(entity, Creature):
             raise ValueError(f"Creature '{entity_id}' not found")
 
-        content_dir: Path = self._content_dir  # type: ignore[attr-defined]
-        item_catalog_dir = content_dir / "catalogs" / "items"
+        item_catalog_dir = self._content_dir / "catalogs" / "items"
         item_catalog = load_catalog(item_catalog_dir, ItemContent) if item_catalog_dir.exists() else {}
         items = parse_items([item_data], item_catalog=item_catalog)
         item = items[0]

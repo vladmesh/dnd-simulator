@@ -2,7 +2,7 @@
 
 Note: advantage/disadvantage, speed reduction, and auto-crit tests have been moved
 to test_modifiers.py (modifier pipeline). This file tests: is_incapacitated,
-prone_stand_cost, tick_conditions, Creature condition fields, save/load.
+tick_conditions, Creature condition fields, save/load.
 """
 
 from __future__ import annotations
@@ -22,7 +22,6 @@ from dnd_simulator.core.conditions import Condition, ConditionsMap
 from dnd_simulator.rules.combat import resolve_attack
 from dnd_simulator.rules.conditions import (
     is_incapacitated,
-    prone_stand_cost,
     tick_conditions,
 )
 
@@ -76,14 +75,6 @@ class TestIsIncapacitated:
 
     def test_prone_is_not_incapacitated(self) -> None:
         assert not is_incapacitated(_conds(Condition.PRONE))
-
-
-class TestProneStandCost:
-    def test_half_speed(self) -> None:
-        assert prone_stand_cost(30) == 15
-
-    def test_zero_speed(self) -> None:
-        assert prone_stand_cost(0) == 0
 
 
 # ---------------------------------------------------------------------------

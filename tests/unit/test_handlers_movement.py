@@ -12,8 +12,14 @@ from dnd_simulator.core.character import Creature
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.core.models import ActionResult, Event
 from dnd_simulator.core.turn_budget import TurnBudget
+from dnd_simulator.i18n import set_language
 from dnd_simulator.rules.handlers.movement import handle_dash, handle_disengage, handle_move, handle_wait
 from dnd_simulator.rules.validation import ActionContext
+
+
+def _has_cyrillic(text: str) -> bool:
+    return any("Ѐ" <= ch <= "ӿ" for ch in text)
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -124,6 +130,41 @@ class TestHandleMove:
 
         # Should fail since south would go to negative y which is off-map
         assert not result.success
+
+
+class TestMoveErrorI18n:
+    """Movement-handler error strings must localize and carry no em-dash."""
+
+    def teardown_method(self) -> None:
+        set_language("en")
+
+    def _blocked_move(self) -> ActionResult:
+        # Mover at y=0 moving south goes off-map → blocked branch.
+        mover = _creature("mover")
+        bm = _battle_map()
+        bm.set_position("mover", Position(10, 0))
+        cs = _combat_state(bm, ["mover"])
+        on_leave_reach = MagicMock(return_value=True)
+        ctx = _ctx(mover, combat_state=cs, entities={"mover": mover}, on_leave_reach=on_leave_reach)
+        action = Action(name=ActionType.MOVE, params={"direction": "south", "ft": 5})
+        emit_fn = MagicMock(return_value=ActionResult())
+        world = MagicMock()
+        return handle_move(mover, action, emit_fn, ctx, world)
+
+    def test_blocked_move_localizes_russian(self) -> None:
+        """Under a RU session the blocked error renders in Russian with no em-dash."""
+        set_language("ru")
+        result = self._blocked_move()
+        assert not result.success
+        assert "—" not in result.error
+        assert _has_cyrillic(result.error)
+
+    def test_blocked_move_english_plain(self) -> None:
+        """Under an EN session the wrapped literal still comes back, comma not em-dash."""
+        set_language("en")
+        result = self._blocked_move()
+        assert not result.success
+        assert result.error == "Cannot move there, blocked"
 
 
 # ---------------------------------------------------------------------------

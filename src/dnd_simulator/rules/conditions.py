@@ -24,11 +24,6 @@ def is_incapacitated(conditions: ConditionsMap) -> bool:
     return bool(conditions.keys() & _INCAPACITATING)
 
 
-def prone_stand_cost(base_speed: int) -> int:
-    """Movement cost to stand up from prone: half of speed (D&D 5e rule)."""
-    return base_speed // 2
-
-
 def tick_conditions(conditions: ConditionsMap) -> list[Condition]:
     """Decrement timed conditions, remove expired ones. Returns list of removed conditions."""
     expired: list[Condition] = []

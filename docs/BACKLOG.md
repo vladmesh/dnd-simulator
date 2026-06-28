@@ -79,9 +79,11 @@
 
 - [ ] **could** `corpse-nearby-actions` — мёртвое существо показывается в Nearby-панели с кнопками Attack/Talk/Inspect (E2E sprint 018 phase 2). Лут идёт через отдельный LootPanel; атака трупа возвращает корректное «уже мертва», так что ничего не ломается — но Attack/Talk на трупе бессмысленны. Скрывать их для мёртвых (или убирать трупы из Nearby, раз есть LootPanel)
 - [ ] **should** `encounter-spawned-perceiver` — `EncounterSpawned` события не имеют перцептора в `perception.py` `_DISPATCH`, в логе игрока выводится мусорный фолбэк `Something happened (encounter_spawned)` (E2E post-audit sprint 018; срабатывает на каждый региональный/локационный спавн встречи). Добавить `_perceive_encounter_spawned` (напр. «Рядом что-то зашевелилось») и зарегистрировать в `_DISPATCH`
-- [ ] **should** `battle-map-configs-not-wired` — `battle_map_configs` из `regions.yaml` не передаётся в `EntitiesLayer` при создании сессии в `game_service.py`. Все combat maps дефолтят в 60×60. `load_battle_maps()` keyed by region_id, `CombatManager` ищет по location_id — нужен маппинг через `location_graph`
-- [ ] **should** `player-character-no-attacks` — `POST /api/player/sessions/{id}/character` не принимает `attacks`; персонаж дерётся кулаками (1 урон). Добавить `attacks` в `CreatePlayerRequest` и `parse_player` (проверить — мог закрыться в Sprint 013 char-creation)
-- [ ] **could** `look-action-i18n-hardcode` — `_cmd_look` в GameService хардкодит строки «Terrain:»/«Weather:» вместо `_()`. Не критично (perception API отдаёт сырые данные), но для консистентности text-команд стоит перевести
+- [x] `battle-map-configs-not-wired` — ~~`battle_map_configs` из `regions.yaml` не передаётся в `EntitiesLayer` при создании сессии в `game_service.py`. Все combat maps дефолтят в 60×60~~ FIXED Sprint 018 (verified Sprint 019 phase 3): `game_service.py:171-183` строит `battle_map_configs` через `_flatten_region_defaults(load_battle_maps(...))` и передаёт в `EntitiesLayer`
+- [x] `player-character-no-attacks` — ~~`POST /api/player/sessions/{id}/character` не принимает `attacks`; персонаж дерётся кулаками (1 урон)~~ FIXED Sprint 013 char-creation (verified Sprint 019 phase 3): `create_player` грузит `starting_equipment` оружие, игрок бьёт через `get_weapon_attack()`. Поле `attacks` в `CreatePlayerRequest` вестигиальное для игрока (raw `attacks` — путь монстра/спавна)
+- [x] `look-action-i18n-hardcode` — ~~`_cmd_look` в GameService хардкодит строки «Terrain:»/«Weather:» вместо `_()`~~ OBSOLETE Sprint 019 phase 3: `_cmd_look` удалён в раннем рефакторе, строк «Terrain:»/«Weather:» в `service/` нет (остались только устаревшие msgid в `.po`, помечены obsolete в phase 3 task 1)
+- [ ] **should** `player-xp-not-persisted` — XP и `level_up_available` игрока НЕ переживают save/reload через современный путь (обнаружено Sprint 019 phase 3 task 3 при удалении dead-`to_save_data`). `save_game`/`autosave_session` пишут `{"world": ...}`; `to_full_save_data()` (`core/player.py`) НЕ сериализует `experience`/`level_up_available`, а `PlayerContent`/`_to_player`/`parse_player` их не читают. На reload XP сбрасывается к значению из контента (0). Старый round-trip жил в `to_save_data`+`load_save_data`, но тот завязан только на backward-compat ветку `load_game` для СТАРЫХ сейвов. Фикс: добавить `experience`/`level_up_available` в `to_full_save_data()` и в `PlayerContent`+`_to_player`. **Подтверждено в post-audit E2E (Sprint 019, `e2e-reports/2026-06-29-sprint019-post-audit.md`):** в dev ломает не только save/reload, а live level-up целиком — dev-only WS StrictMode evict→restore (см. `session-disconnect-debounce`) гоняет игрока через этот же save-путь, XP теряется, `player_status` отдаёт `experience=0`, `POST /level-up` → 400. В prod (без StrictMode-двумаунта) проявляется на рестарте/ручном load. Чинить вместе с/после `session-disconnect-debounce`
+- [ ] **could** `spawn-role-freetext-enum` — мастерский Spawn Creature диалог (`CreatureForm`) рендерит Role как свободный textbox, но бэкенд `NpcContent.role` — enum (`commoner`/`blacksmith`/`tavern_keeper`/`guard`/`merchant`/`farmer`/`gladiator`). Пустой/произвольный role → HTTP 400 с сырым Pydantic-сообщением прямо в диалоге (E2E sprint 019 phase 1). Сделать Role дропдауном `NpcRole` (и/или маппить ошибку в дружелюбный i18n-тост). Сосед `corpse-nearby-actions` по теме visible-gaps
 - [ ] **should** `combat-log-i18n-gaps` — при дефолтном `DND_LANGUAGE=ru` боевой лог наполовину английский (E2E post-audit sprint 018). Три причины: (1) дрейф каталога — msgid в коде несут лишний `{oa}` (`perception.py:141,145`), не совпадают с записью в `.po` («You attack {target}{weapon}{roll}{outcome}») → фолбэк на английский; нужен `make messages` + перевод + `make compile-messages`; (2) непереведены строки репутации (`perception.py:505`) и «moved (X ft)»; (3) код-баг: `rules/handlers/movement.py:52,56` возвращают сырой английский `error=...` не обёрнутый в `_()` («Not on the battle map», «Cannot move there — blocked» — последняя ещё и с em-dash) → никогда не локализуется. В основном преэкзистинг (строки спринтов 012/014), но очень заметно
 - [x] `sneak-attack-faction-check` — ~~SA ally-adjacency считала союзником любое живое существо в 5ft без учёта фракции~~ FIXED Sprint 011/014: ally detection через faction relations
 - [x] `flaky-initiative-test` — ~~`test_second_attack_does_not_reroll_initiative` падал рандомно~~ FIXED: AC=30 чтобы атаки всегда мазали, c2 не удаляется из turn_order
@@ -90,7 +92,7 @@
 ## Tech Debt (from audits 2026-03-25, updated 2026-03-29)
 
 - [x] `god-class-entities` — ~~EntitiesLayer 1215 строк~~ FIXED Sprint 005: extracted awareness_builder, activation_manager, query_handler, combat_manager, perception
-- [ ] **should** `god-class-game-service` — GameService 1044 строки (836 на 2026-04-13, растёт). Продолжить выделение commands_*.py модулей
+- [x] `god-class-game-service` — ~~GameService 1044 строки, растёт~~ FIXED Sprint 019 phases 2-3: раздроблен 1044 → 357 строк (`WorldBuilderCommands` + `PlayerCommands` mixins, тонкий фасад над `commands_*`). Больше не god-class (verified audit 2026-06-29)
 - [x] `god-class-politics` — ~~PoliticsLayer 609 строк~~ FIXED Sprint 014 phase 0: split into diplomacy.py, warfare.py, economy.py submodules
 - [x] `test-gaps-critical` — ~~rules/action_handlers.py без unit-тестов~~ FIXED Sprint 005: action_provider, awareness_builder, brain_factory, world isolation tests
 - [x] `test-gaps` — ~~Нет тестов: action_provider, awareness, world, brain_factory~~ FIXED Sprint 005 (commands_*, session, store remain)
@@ -106,12 +108,12 @@
 - [ ] **should** `test-gap-weapons` — rules/weapons.py (48 строк) частично покрыт через test_combat/test_proficiency, но нет выделенных тестов
 - [x] `session-serialization-duplication` — ~~on_turn, on_action, on_round_end повторяют сериализацию~~ FIXED Sprint 012 phase 4: shared event builder extracted
 - [ ] **could** `npc-behaviors-yaml-loading` — layers/entities/npc_behaviors.py загружает YAML на уровне модуля с global state mutation. Перенести в content_loader
-- [ ] **could** `action-parsing-in-adapter` — Adapter (routes_ws) парсит Action из JSON, должен service layer
+- [x] `action-parsing-in-adapter` — ~~Adapter (routes_ws) парсит Action из JSON, должен service layer~~ FIXED Sprint 019 phase 2 task 3: `parse_action`/`ActionParseError` в `service/action_parsing.py`; routes_ws больше не импортирует Action/ActionType из core
 - [x] `magic-number-trade` — ~~Magic number 0.08 в politics/layer.py:338~~ FIXED 2026-03-24
 - [ ] **should** `thick-adapter-world-state` — routes_master.py:290-330 оркестрирует 7+ layer queries напрямую + assert-based validation (500 при плохих данных). Вынести в GameService.get_world_state()
 - [ ] **should** `routes-master-growing` — routes_master.py 560 строк, 34 роута. Разделить content-editing и session-control роуты
 - [ ] **should** `test-gap-content-loader` — content_loader/refs, utils, creatures без выделенных unit-тестов (частично покрыты интеграционными)
-- [ ] **should** `core-brain-imports-rules` — core/brain.py:50,63,141 lazy-imports из rules/ (calculate_direction, get_weapon_attack). core не должен зависеть от rules. Перенести RuleBrain в rules/ или service/, или inject rule functions
+- [x] `core-brain-imports-rules` — ~~core/brain.py:50,63,141 lazy-imports из rules/~~ FIXED: `RuleBrain` вынесен в `rules/rule_brain.py`, `core/brain.py` больше не импортирует rules (verified audit 2026-06-29). Оставшиеся lazy-import `core/`→`rules/` в `class_features`/`combat`/`monster` — by-design композиция (frozen core делегирует чистую математику в pure rules), не runtime-цикл; принято
 - [ ] **should** `test-gap-session` — service/session.py 457 строк, 27 методов без выделенных unit-тестов. Round lifecycle, listener dispatch, resolve_abstract_move непокрыты
 - [ ] **should** `god-class-combat-manager` — layers/entities/combat_manager.py 535 строк. Выделить initiative/turn logic от combat state management
 - [ ] **could** `entities-layer-imports-content-loader` — layers/entities/layer.py:465,484,490 lazy-imports из content_loader в load_state. Layers → core only, content_loader — peer module
@@ -119,7 +121,7 @@
 - [ ] **should** `merchant-provider-in-rules` — MerchantActionProvider в rules/ хранит world-query callback (I/O в pure rules). Перенести в service/ или передавать данные аргументом
 - [x] `dice-os-import` — ~~rules/dice.py import os~~ FIXED audit 2026-03-31: set_global_seed() function
 - [ ] **should** `base-action-provider-stateful` — BaseActionProvider в rules/ — stateful class с self._types. Сделать standalone функцией или frozen dataclass
-- [ ] **should** `adapter-imports-core-directly` — routes_player импортирует PlayerCharacter/Ability, routes_master — Query/QueryType напрямую из core. Вынести бизнес-логику в GameService
+- [x] `adapter-imports-core-directly` — ~~routes_player импортирует PlayerCharacter/Ability, routes_master — Query/QueryType напрямую из core~~ FIXED Sprint 019 phase 2 task 3: старые PlayerCharacter/Ability/Query/QueryType импорты убраны при routes_master split (Sprint 016); Action/ActionType вынесены в `service/action_parsing.py` (task 3). Оставшиеся BrainType/FightingStyle — enum-at-boundary в Pydantic-схемах, приняты (аудит 2026-06-28: 0 арх-нарушений, адаптерам можно импортировать enum)
 - [ ] **should** `any-to-object-sweep` — 15+ файлов используют dict[str, Any] вместо dict[str, object] (core/models, layers, llm, adapters)
 - [ ] **should** `entity-type-enum` — "player"/"npc"/"creature" строковые сравнения в 5+ файлах. Добавить EntityType(StrEnum)
 - [ ] **should** `brain-type-enum` — ai_type == "rule_based" строковые сравнения. Добавить BrainType(StrEnum)
@@ -145,7 +147,7 @@
 - [ ] **should** `perception-hardcoded-weapons` — perception.py:29-31 дублирует названия оружия из YAML каталогов
 - [ ] **should** `content-loader-fail-fast` — 31 .get() с дефолтами в content_loader/. Некоторые оправданы (YAML boundary), но bm_data.get("width", 60) молча дефолтит размер карты
 - [ ] **should** `dict-str-object-overuse` — 57+ dict[str, object] вместо TypedDict/dataclass в query_handler, game_service, combat_manager, schemas
-- [ ] **should** `world-private-method-access` — world._make_query_fn() вызывается из session.py и round.py. Выставить как public API
+- [x] `world-private-method-access` — ~~world._make_query_fn() вызывается из session.py и round.py~~ FIXED Sprint 019 phase 2 task 3: `World.make_query_fn`/`make_emit_fn` теперь public API
 - [ ] **could** `event-log-eslint-suppress` — EventLog.tsx eslint-disable-next-line react-hooks/exhaustive-deps
 - [ ] **could** `api-client-growing` — apiClient.ts 365 строк, 35+ методов. Разделить по домену
 - [ ] **could** `world-overview-growing` — WorldOverview.tsx 331 строка. Split sub-components
@@ -172,14 +174,14 @@
 
 - [x] `dead-move-away-from-target` — ~~core/brain.py, zero callers~~ FIXED audit 2026-03-31: removed
 - [x] `dead-auto-fail-saves` — ~~rules/conditions.py:32~~ FIXED audit 2026-03-31: removed
-- [ ] `dead-refund` — core/turn_budget.py:58 (tested but unused, future budget mechanic)
+- [x] `dead-refund` — ~~core/turn_budget.py:58 (tested but unused, future budget mechanic)~~ FIXED Sprint 019 phase 3: removed `TurnBudget.refund()` + test
 - [x] `dead-check-reactions` — ~~stubbed~~ FIXED Sprint 012: wired into round loop
 - [x] `dead-is-daylight` — ~~rules/geography.py:172, tested but unused in prod. Wire into geography layer or remove~~ FIXED Sprint 018 phase 4: wired into `IS_DAYLIGHT` geography query (location→region→latitude→is_daylight) для time-of-day встреч
-- [ ] `dead-prone-stand-cost` — rules/conditions.py:27, tested but never integrated into movement handler
+- [x] `dead-prone-stand-cost` — ~~rules/conditions.py:27, tested but never integrated into movement handler~~ FIXED Sprint 019 phase 3: removed `prone_stand_cost()` + tests
 - [x] `dead-reset-resources` — ~~rules/resources.py, 12 test refs, 0 prod~~ FIXED Sprint 015 phase 1: wired into rest handlers
-- [ ] `dead-walk-path` — rules/movement.py:201, 12 test refs, 0 prod. Budget-aware path walking
-- [ ] `dead-to-save-data` — core/player.py:73, 1 test ref, 0 prod
-- [ ] `dead-can-opportunity-attack` — rules/reactions.py:15, 0 prod callers, дублирует inline check в find_oa_triggers()
+- [x] `dead-walk-path` — ~~rules/movement.py:201, 12 test refs, 0 prod. Budget-aware path walking~~ FIXED Sprint 019 phase 3: removed `walk_path()`; cost-assertion tests re-expressed via prod `step_cost()` (handler uses `compute_reachable`+`step_cost`)
+- [x] `dead-to-save-data` — ~~core/player.py:73, 1 test ref, 0 prod~~ FIXED Sprint 019 phase 3: removed `to_save_data()` + tests. NB: surfaced `player-xp-not-persisted` (modern save path via `to_full_save_data` drops experience)
+- [x] `dead-can-opportunity-attack` — ~~rules/reactions.py:15, 0 prod callers, дублирует inline check в find_oa_triggers()~~ FIXED Sprint 019 phase 3 (removed earlier in commit 67f057b audit triage); `rules/reactions.py` now only defines `find_oa_triggers`
 
 ## Test Gaps (from audit 2026-03-29)
 

@@ -7,8 +7,13 @@ import pytest
 import dnd_simulator.layers.entities.perception as perception_mod
 from dnd_simulator.core.character import Ability, Attack, Character, DamageComponent, DamageType, Entity, Race
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
+from dnd_simulator.i18n import set_language
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.perception import perceive_event
+
+
+def _has_cyrillic(text: str) -> bool:
+    return any("Ѐ" <= ch <= "ӿ" for ch in text)
 
 
 def _noop_query_fn(layer: str, query: Query) -> Answer:
@@ -687,3 +692,70 @@ class TestPerceiveReputationChanged:
         assert "Bandits" in result
         # Should reference the actor, not "you"
         assert "elf" in result.lower()
+
+
+class TestAttackLineLocalizes:
+    """Attack-line msgids carry {oa}; the .po must match so RU renders (catalog drift fix)."""
+
+    def teardown_method(self) -> None:
+        set_language("en")
+
+    def _attack_event(self) -> Event:
+        return Event(
+            event_type=EventType.ENTITY_ATTACK,
+            source_layer="entities",
+            data={
+                "attacker_id": "player",
+                "target_id": "smith",
+                "weapon": "Longsword",
+                "hit": False,
+                "critical": False,
+                "ac": 15,
+                "attack_roll": {
+                    "natural": 8,
+                    "components": [{"source": "ability", "value": 3, "dice": ""}],
+                    "total": 11,
+                    "advantage": False,
+                    "disadvantage": False,
+                },
+            },
+        )
+
+    def test_attack_line_renders_russian(self) -> None:
+        """Observer-is-attacker line renders RU, not the English fallback, with no raw placeholders."""
+        set_language("ru")
+        observer = Character(id="player", name="Hero", location_id="r1")
+        target = Character(id="smith", name="Smith", location_id="r1", race=Race.DWARF)
+        result = perceive_event(self._attack_event(), observer, _get_entity_fn(observer, target))
+        assert "You attack" not in result
+        assert "{oa}" not in result
+        assert "{weapon}" not in result
+        assert _has_cyrillic(result)
+
+
+class TestEncounterSpawnedPerceiver:
+    """ENCOUNTER_SPAWNED should produce vague flavor, never the fallback or monster names."""
+
+    def teardown_method(self) -> None:
+        set_language("en")
+
+    def _event(self) -> Event:
+        return Event(
+            event_type=EventType.ENCOUNTER_SPAWNED,
+            source_layer="entities",
+            data={"location_id": "loc1", "names": ["Goblin", "Goblin"]},
+        )
+
+    def test_not_fallback_and_no_name_leak(self) -> None:
+        observer = Character(id="player", name="Hero", location_id="loc1")
+        result = perceive_event(self._event(), observer, _get_entity_fn(observer))
+        assert "Something happened" not in result
+        assert "Goblin" not in result
+
+    def test_russian_flavor(self) -> None:
+        set_language("ru")
+        observer = Character(id="player", name="Hero", location_id="loc1")
+        result = perceive_event(self._event(), observer, _get_entity_fn(observer))
+        assert "Goblin" not in result
+        assert "encounter_spawned" not in result  # not the raw-type fallback
+        assert _has_cyrillic(result)

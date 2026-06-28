@@ -180,13 +180,6 @@ class TestReactionCost:
         budget.consume(cost)
         assert budget.can_afford(cost) is False
 
-    def test_turn_budget_refund_reaction(self) -> None:
-        """Refunding reaction cost restores it."""
-        budget = TurnBudget(reaction=0)
-        cost = ActionCost(reaction=1)
-        budget.refund(cost)
-        assert budget.reaction == 1
-
     def test_reaction_does_not_end_turn(self) -> None:
         """Having unused reaction doesn't count as turn_over."""
         budget = TurnBudget(actions=0, bonus_actions=0, movement_remaining=0, reaction=1)

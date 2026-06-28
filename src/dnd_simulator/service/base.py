@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
@@ -19,8 +20,11 @@ class GameServiceProtocol(Protocol):
     _store: SaveStore
     _sessions: dict[str, GameSession]
     _brain_factory: BrainFactory
+    _content_dir: Path
 
     def _get_session(self, session_id: str) -> GameSession: ...
+
+    def autosave_session(self, session_id: str) -> None: ...
 
     def _get_entities_layer(self, session: GameSession) -> EntitiesLayer: ...
 

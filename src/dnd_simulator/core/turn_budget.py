@@ -54,10 +54,3 @@ class TurnBudget:
         self.bonus_actions -= cost.bonus_actions
         self.movement_remaining -= cost.movement_ft
         self.reaction -= cost.reaction
-
-    def refund(self, cost: ActionCost) -> None:
-        """Return cost to budget after a failed action."""
-        self.actions += cost.actions
-        self.bonus_actions += cost.bonus_actions
-        self.movement_remaining += cost.movement_ft
-        self.reaction += cost.reaction
