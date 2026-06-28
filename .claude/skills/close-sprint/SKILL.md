@@ -135,17 +135,27 @@ No active sprint.
 | ... previous sprints ... |
 ```
 
-#### 4d. Commit and push
+#### 4d. Commit, push the branch, open the PR
+
+The sprint ran on its own branch (`sprint/NNN-slug`, created by `/new-sprint`). Close it by opening a PR into `main` with auto-merge — CI is the gate, not a human.
 
 ```bash
 git add docs/ CLAUDE.md ARCHITECTURE.md README.md src/dnd_simulator/**/__init__.py
 git commit -m "sprint NNN: close — <goal summary>"
-git push
+
+branch=$(git branch --show-current)   # sprint/NNN-slug
+git push -u origin "$branch"
+gh pr create --base main --head "$branch" \
+  --title "sprint NNN: <goal summary>" \
+  --body "<sprint summary + key metrics; note it was produced autonomously>"
+gh pr merge "$branch" --auto --squash --delete-branch
 ```
 
-**Note:** Do NOT stage `.claude/skills/update-docs/state.json` here — it is committed by the `/update-docs` skill itself in step 4a. The close-sprint commit should not touch it.
+`--auto` lands the PR on `main` automatically once the required CI checks pass — no human approval (branch protection requires the checks, not a reviewer). If CI fails, the PR stays open and `main` is untouched: that is the gate doing its job. After this, return to a clean base for the next sprint: `git checkout main` (the merge lands on remote `main` asynchronously; the next `/new-sprint` fast-forwards local main).
 
-This is the only skill that pushes. The sprint is done.
+**Note:** Do NOT stage `.claude/skills/update-docs/state.json` here — it is committed by the `/update-docs` skill itself in step 4a.
+
+This is the only skill that pushes. The sprint is done once the auto-merge PR is open; the merge itself completes when CI is green.
 
 ### 5. Report
 

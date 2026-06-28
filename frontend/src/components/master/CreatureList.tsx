@@ -25,7 +25,6 @@ export function CreatureList({ sessionId }: Props) {
   const [deleting, setDeleting] = useState<string | null>(null)
 
   const refresh = useCallback(() => {
-    setLoading(true)
     const params = filter === "all" ? undefined : { entity_type: filter }
     api.master
       .getCreatures(sessionId, params)

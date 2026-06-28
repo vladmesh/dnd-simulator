@@ -29,7 +29,6 @@ export function MasterScreen() {
   const [forkSubmitting, setForkSubmitting] = useState(false)
 
   const refresh = useCallback(() => {
-    setLoading(true)
     Promise.all([
       api.master.getSessions(),
       api.master.getWorlds(i18n.language),

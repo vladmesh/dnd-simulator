@@ -6,7 +6,8 @@ import type { NearbyEntity, CombatEntity } from "@/types/game"
 import { Button } from "@/components/ui/button"
 import { Eye, Sword, MessageCircle, Send } from "lucide-react"
 import { NpcInspectModal } from "./NpcInspectModal"
-import { SmiteChoice, getSpellSlots } from "./SmiteChoice"
+import { SmiteChoice } from "./SmiteChoice"
+import { getSpellSlots } from "./spellSlots"
 
 export function Perception() {
   const { t } = useTranslation(["game", "common"])

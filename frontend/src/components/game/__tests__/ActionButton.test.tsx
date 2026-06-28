@@ -644,8 +644,6 @@ describe("SayAction", () => {
     const input = screen.getByPlaceholderText(/say|сказать/i)
     fireEvent.change(input, { target: { value: "Greetings" } })
 
-    // Find the submit button (↵)
-    const submitBtn = container.querySelector("button")
     // The submit button with ↵ is next to the input
     const buttons = container.querySelectorAll("button")
     const enterBtn = Array.from(buttons).find((b) => b.textContent === "↵")

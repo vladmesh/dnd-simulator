@@ -24,7 +24,7 @@ This is an experiment in fully autonomous development. There is **no human in th
 - **You make every decision yourself.** Scope, design, naming, trade-offs, whether to proceed, whether to refactor. Default to the choice best aligned with `docs/VISION.md` and the layer-stack design in `CLAUDE.md`. When genuinely uncertain, take the most reversible option and proceed — do not halt.
 - **You answer your sub-agents.** If a spawned agent surfaces a clarifying question or a decision it could not make alone, *you* answer it: read its report, decide, and thread the answer into the next spawn (or a short dedicated follow-up agent). Never defer a sub-agent's question to a human.
 - **You don't stop to ask.** "Stop and report to user" / "wait for user" steps in the per-step skills (e.g. `/audit-triage`) are addressed to the interactive `/go` path. Under meta-go you ARE the user — apply the decision and continue.
-- **You end the run** only on sprint completion (closed and pushed), the granule budget running out, or an unrecoverable dead-end (see Termination). Log your decisions as you go so a human can review the run afterward.
+- **You end the run** only on sprint completion (`/close-sprint` opened the auto-merge PR), the granule budget running out, or an unrecoverable dead-end (see Termination). Log your decisions as you go so a human can review the run afterward.
 
 ## Run length — the `N` argument
 
@@ -32,7 +32,7 @@ This is an experiment in fully autonomous development. There is **no human in th
 
 - **A granule is one `/go` call**, and `/go` may pick any step (`/plan-phase`, `/implement` one task, `/close-phase`, `/audit`, `/audit-triage`, `/e2e`, `/close-sprint`). N counts ALL of them, not just implement-tasks. So `/meta-go 5` might be five implements, or three implements + one close-phase + one audit. Calibrate N knowing a step can be heavy (a `/close-phase` runs the full E2E).
 - **Each granule costs 1 from the budget, retries included.** A targeted auto-recover micro-fix that doesn't go through `/go` (e.g. a lone lint fix) doesn't count, but the 3-failure rail still bounds it.
-- **`/close-sprint` is allowed within the budget.** If it lands inside N, the run closes the sprint and pushes to `main` — flag this loudly in the final report.
+- **`/close-sprint` is allowed within the budget.** If it lands inside N, the run closes the sprint by opening an auto-merge PR (it lands on `main` when CI is green) — flag this loudly in the final report.
 - **Never start a new sprint.** If the next granule would be `/new-sprint` (sprint complete / none active), STOP and report even if budget remains. A bounded run finishes authorized work, it doesn't open new scope.
 
 ## What is a "granule"
@@ -104,7 +104,7 @@ Check the agent's report for:
 - **Architecture blocker** — a sub-agent says the foundation is bad. Decide the path yourself: if a refactor phase fixes it, make the next granule plan that phase (`/plan-phase` for a refactor phase) and continue; if it's a local fix, spawn one fix granule; if it's a deep design fork, take the most reversible option, record the decision, and proceed. Log what you chose and why.
 - **E2E blockers** — spawn a fix granule (or, for >5min/structural issues, a refactor phase) and continue. Don't stop.
 - **`/close-sprint` failed** — read what the gate says is missing, run the granule that supplies it (e.g. `/audit`, `/e2e`, a fix), then re-attempt `/close-sprint`.
-- **Sprint complete** — `/close-sprint` succeeded, code is pushed. End the run with a final summary.
+- **Sprint complete** — `/close-sprint` opened the auto-merge PR (it lands on `main` once CI is green). End the run with a final summary.
 
 #### Auto-recover:
 - **`make check` lint/format failure** the agent didn't fix → spawn one quick-fix granule. If it fails again, treat it as a failed step (see Termination).
@@ -125,7 +125,7 @@ This is the run log a human can scan afterward (the run itself does not wait for
 
 The loop ends when (first to hit):
 - **Granule budget exhausted** — `/meta-go N` ran its N granules. Clean stop.
-- **Sprint boundary** — the next granule would be `/new-sprint` (sprint just closed, or none active). Stop even with budget remaining; a bounded run finishes authorized work, it doesn't open new scope. (A successful `/close-sprint` ends the run here too.)
+- **Sprint boundary** — the next granule would be `/new-sprint` (sprint just closed, or none active). Stop even with budget remaining; a bounded run finishes authorized work, it doesn't open new scope. (A successful `/close-sprint` — auto-merge PR opened — ends the run here too.)
 - **Unrecoverable dead-end** — the same step fails 3 consecutive times despite remediation, or a gate can't be satisfied after you've run the granules that should satisfy it. Runaway/cost safety rail, not a human escalation.
 
 On any stop, print a final summary: granules run (and budget left, if bounded), what's done vs still pending in the plan, the next step to resume with, whether anything was pushed to `main`, and the autonomous decisions you made. Record the final state for later review.

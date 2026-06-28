@@ -28,7 +28,6 @@ function costLabel(t: (key: string) => string, costType: string): string {
 }
 
 export function ActionButton({ action, nearby, selfId, disabled, budget, openDropdown, setOpenDropdown, sendAction, t, spellSlots }: ActionButtonProps) {
-  const { name } = action
   const costOptions = action.cost_options
   const hasCostChoice = costOptions != null && costOptions.length > 1
 
@@ -167,7 +166,6 @@ function CoreActionButton({ action, nearby, selfId, disabled, budget, openDropdo
 function CostChoiceButton({
   action,
   costOptions,
-  enemies,
   disabled,
   budget,
   openDropdown,

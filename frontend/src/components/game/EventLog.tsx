@@ -40,7 +40,8 @@ import {
   hasAttackBreakdown,
 } from "@/lib/logProcessing"
 import type { DisplayEntry, EventDisplayEntry } from "@/lib/logProcessing"
-import { AttackCardModal, extractAttackCardData } from "./AttackCardModal"
+import { AttackCardModal } from "./AttackCardModal"
+import { extractAttackCardData } from "./attackCard"
 
 // ---------------------------------------------------------------------------
 // Icon name → component mapping

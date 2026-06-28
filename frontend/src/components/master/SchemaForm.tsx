@@ -143,7 +143,7 @@ export function SchemaForm({
       const result: Record<string, unknown> = {}
       for (const [key, rawProp] of Object.entries(props)) {
         const prop = resolveProperty(rawProp, rootDefs)
-        let val = data[key]
+        const val = data[key]
 
         if (isLocalizedText(prop)) {
           result[key] = { [lang]: val as string }

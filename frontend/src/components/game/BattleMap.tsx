@@ -84,19 +84,12 @@ export function BattleMap({ onEntityClick }: BattleMapProps = {}) {
     useGameStore.getState().setWaitingForAction(true)
   }, [])
 
-  if (!awareness || !("self_hp" in awareness)) return null
-  const combat = awareness as CombatAwareness
+  const combat = awareness && "self_hp" in awareness ? (awareness as CombatAwareness) : null
 
-  const width = combat.battle_map_width ?? 0
-  const height = combat.battle_map_height ?? 0
-  if (width === 0 || height === 0) return null
-
-  const cols = width / 5 + 1
-  const rows = height / 5 + 1
-
-  // Build position lookup and blocked edges
+  // Build position lookup and blocked edges (hook runs unconditionally; guards null inside)
   const { posLookup, blockedEdges } = useMemo(() => {
     const lookup = new Map<string, { glyph: string; isPlayer: boolean; entity?: CombatEntity }>()
+    if (!combat) return { posLookup: lookup, blockedEdges: buildBlockedEdges([]) }
 
     // Player position
     if (combat.self_x != null && combat.self_y != null) {
@@ -118,19 +111,28 @@ export function BattleMap({ onEntityClick }: BattleMapProps = {}) {
     const edges = buildBlockedEdges(combat.battle_map_walls ?? [])
 
     return { posLookup: lookup, blockedEdges: edges }
-  }, [combat.self_x, combat.self_y, combat.nearby, combat.battle_map_walls])
+  }, [combat])
 
   // Build reachable set from backend-computed data
   const reachableCells = useMemo(() => {
     const cells = new Set<string>()
-    if (!isMyTurn || waitingForAction) return cells
+    if (!combat || !isMyTurn || waitingForAction) return cells
     for (const pair of combat.reachable ?? []) {
       const col = pair[0] / 5
       const row = pair[1] / 5
       cells.add(`${col},${row}`)
     }
     return cells
-  }, [isMyTurn, waitingForAction, combat.reachable])
+  }, [combat, isMyTurn, waitingForAction])
+
+  if (!combat) return null
+
+  const width = combat.battle_map_width ?? 0
+  const height = combat.battle_map_height ?? 0
+  if (width === 0 || height === 0) return null
+
+  const cols = width / 5 + 1
+  const rows = height / 5 + 1
 
   const canClick = isMyTurn && !waitingForAction
 

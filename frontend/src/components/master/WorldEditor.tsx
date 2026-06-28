@@ -33,7 +33,6 @@ export function WorldEditor({ worldId, readOnly, onClose }: Props) {
   const [showCatalogPicker, setShowCatalogPicker] = useState(false)
 
   useEffect(() => {
-    setLoading(true)
     api.master
       .getWorldManifest(worldId, i18n.language)
       .then((data) => setLayers(data.layers))
