@@ -4,8 +4,10 @@
 
 **Last updated:** 2026-06-28
 **Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 закрыт по фазам 1–4 (логова, лут/контейнеры, региональные таблицы встреч, время суток). По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), Phase 3 (автономные тики NPC).
-**Next:** все фазы Sprint 018 закрыты → `/audit` (свежий аудит перед закрытием спринта).
+**Next:** аудит 2026-06-28 проведён и триажирован → `/e2e` (post-audit E2E перед закрытием спринта).
 **Blockers:** нет.
+
+**Audit:** Triaged 2026-06-28. Quick-fix: 1 applied (`monsters.py` `treasure_items: list[Item]`). Sprint-relevant: 2 (1 applied — unit-тест `is_active_at_time` в `test_encounters.py`; 1 deferred → backlog — `activation-manager-growing` EncounterRoller extraction). Backlog: 5 added + 2 recorded fixed + 2 stale counts refreshed. Все находки аудита разнесены, ничего не потеряно.
 
 ## Current Sprint
 

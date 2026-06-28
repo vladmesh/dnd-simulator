@@ -18,6 +18,7 @@ from dnd_simulator.content_loader.schemas import (
     SquadContent,
 )
 from dnd_simulator.content_loader.utils import _read_yaml, resolve_text
+from dnd_simulator.core.items import Item
 from dnd_simulator.core.lair import Lair
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.squad import Squad
@@ -204,7 +205,7 @@ def _to_lair(
     item_catalog: dict[str, ItemContent] | None = None,
 ) -> Lair:
     """Convert validated LairContent to runtime Lair, resolving any treasure item refs."""
-    treasure_items: list[Any] = []
+    treasure_items: list[Item] = []
     treasure_gold = 0
     treasure_behind_core = True
     if model.treasure is not None:

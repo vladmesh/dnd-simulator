@@ -86,7 +86,7 @@
 ## Tech Debt (from audits 2026-03-25, updated 2026-03-29)
 
 - [x] `god-class-entities` — ~~EntitiesLayer 1215 строк~~ FIXED Sprint 005: extracted awareness_builder, activation_manager, query_handler, combat_manager, perception
-- [ ] **should** `god-class-game-service` — GameService 836 строк, 43 метода. Продолжить выделение commands_*.py модулей
+- [ ] **should** `god-class-game-service` — GameService 1044 строки (836 на 2026-04-13, растёт). Продолжить выделение commands_*.py модулей
 - [x] `god-class-politics` — ~~PoliticsLayer 609 строк~~ FIXED Sprint 014 phase 0: split into diplomacy.py, warfare.py, economy.py submodules
 - [x] `test-gaps-critical` — ~~rules/action_handlers.py без unit-тестов~~ FIXED Sprint 005: action_provider, awareness_builder, brain_factory, world isolation tests
 - [x] `test-gaps` — ~~Нет тестов: action_provider, awareness, world, brain_factory~~ FIXED Sprint 005 (commands_*, session, store remain)
@@ -128,7 +128,7 @@
 - [ ] **could** `test-bare-status-codes` — test_api.py, test_trade_ws.py используют bare 200/404 вместо HTTPStatus
 - [ ] **should** `long-func-start-round` — service/session.py start_round 103 строки. Extract closures into named methods
 - [x] `perception-dispatch-chain` — ~~perception.py if-elif chain~~ FIXED Sprint 012 phase 4: dict[EventType, handler] dispatch
-- [ ] **could** `activation-manager-growing` — activation_manager.py 406 строк. Extract _materialize_squads()
+- [ ] **should** `activation-manager-growing` — activation_manager.py 614 строк (406 на 2026-04-13; вырос на encounter-rolling в Sprint 018). Extract EncounterRoller (_roll_encounters, _is_daylight_at) + _materialize_squads()
 - [ ] **could** `deep-nesting-diplomacy` — politics/layer.py _process_diplomacy 7 уровней вложенности
 - [ ] **should** `silent-failure-autosave` — 3x contextlib.suppress(Exception) вокруг autosave. Логировать ошибки, не глушить
 - [x] `silent-failure-awareness` — ~~awareness_builder.py 6x broad except Exception~~ FIXED Sprint 012 phase 4: narrowed to KeyError/LookupError
@@ -209,3 +209,13 @@
 - [ ] **could** `test-gap-ws-disconnect` — нет теста disconnect во время активного game loop
 - [ ] **could** `test-gap-ws-reaction-prompts` — reaction prompt flow по WS не покрыт
 - [ ] **could** `test-gap-ws-concurrent-messages` — concurrent message handling по WS не тестируется
+
+## From audit 2026-06-28 (post Sprint 018), triaged
+
+- [x] `any-treasure-items` — ~~`content_loader/monsters.py:207` `treasure_items: list[Any]`, хотя `parse_items()` отдаёт `list[Item]`~~ FIXED в триаже 2026-06-28: аннотация `list[Item]` + импорт `Item`
+- [x] `test-gap-encounters-rule` — ~~`rules/encounters.py:8` `is_active_at_time` покрыт только косвенно через integration `test_time_of_day_encounters.py`~~ FIXED в триаже 2026-06-28: `tests/unit/test_encounters.py` (3 теста, truth-table)
+- [ ] **could** `item-create-bounds` — `adapters/api/schemas.py:87` поля создания/выдачи предметов (`base_ac`, `max_dex_bonus`, `strength_req`, `ac_bonus`, `reach`) без `Field(ge=, le=)`, в отличие от player HP/AC. Master-only, game-data. Сосед `ability-scores-no-bounds`
+- [ ] **could** `any-encounter-entries` — `content_loader/monsters.py:128` `_parse_encounter_entries(entries: Any)` на raw-YAML границе. `object`/`list[object]` строже (часть общего `any-to-object-sweep`)
+- [ ] **could** `entities-layer-regrowth` — `layers/entities/layer.py` снова 629 строк после декомпозиции Sprint 005 (`god-class-entities`). Следить за ростом по мере ecology-фич
+- [ ] **should** `test-gap-leveling` — `rules/leveling.py` без выделенных unit-тестов (косвенно через level-up тесты)
+- [ ] **could** `schema-form-eslint-suppress` — `frontend SchemaForm.tsx:137` eslint-disable-next-line react-hooks/exhaustive-deps (намеренная зависимость эффекта; см. также `event-log-eslint-suppress`, `schema-form-growing`)
