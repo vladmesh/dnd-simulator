@@ -74,4 +74,31 @@ run.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Test-only, as planned. New `tests/unit/test_session_lifecycle.py` with 11 tests, all
+GREEN on first run (characterization confirmed):
+
+- Listener dispatch: `_fire` calls every listener; a `RaisingListener` registered
+  before a `RecordingListener` does not block it (error swallowed + logged).
+- Empty-listeners: removing the last listener with no round running fires `_on_empty`
+  once; removing an unregistered listener is a silent no-op (suppressed `ValueError`,
+  existing listener untouched, `_on_empty` not fired since list is non-empty).
+- Submit guards: `submit_player_action` / `submit_player_reaction` raise `RuntimeError`
+  when `_player_brain is None`.
+- `resolve_abstract_move`: called as a module function with a stub `CreatureHost`
+  (`get_combat → combat.battle_map.get_position`). `toward`/`away_from` resolve to a
+  concrete `MOVE` with `direction` (asserted via `rules/movement.calculate_direction`
+  / `calculate_away_direction`) + `ft`; identity return on no-combat, no-mover-position,
+  no-target-position.
+
+No product code changed. Listener/submit tests use a `MagicMock(spec=World)` (no real
+world needed — guards trip before any world access). No background round thread started,
+so fully deterministic with no sleeps.
+
+`make check`: backend fully green (ruff + ruff-format clean, mypy 146 files clean, 2258
+tests pass). One frontend vitest flake (`SchemaForm.test.tsx`) failed under the full
+parallel run but passes 22/22 in isolation — pre-existing flakiness (cf. commit 5830ba4),
+unrelated to this backend-only change.

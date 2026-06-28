@@ -12,7 +12,7 @@
 **Sprint:** 019-control-plane-prep
 **Goal:** Отвердить control-plane (GameService / session / commands / адаптеры) под будущий разрез на роли в `control-interfaces` — раздробить god-class, покрыть тестами, утончить адаптеры; попутно закрыть видимые дырки и свести бэклог.
 **Started:** 2026-06-28
-**Phase:** 1 — Session lifecycle test net (tasks generated) — 2026-06-28
+**Phase:** 1 — Session lifecycle test net (task 1 done, task 2 pending) — 2026-06-28
 
 Ready to start task 1. (Phase 1 перескоплена: исходный headline «вынести get_world_state» уже сделан в sprint 016 — фаза переориентирована на реальную дыру, round-lifecycle/listener в `session.py`.)
 
