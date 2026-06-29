@@ -53,6 +53,12 @@ DEFAULT_CONTENT_DIR = Path(__file__).resolve().parents[3] / "content"
 logger = structlog.get_logger(domain="service")
 
 
+def format_session_time(session: GameSession) -> str:
+    """Human-readable in-game clock for a session — shared by the session list and REST payloads."""
+    t = session.world.time
+    return f"Y{t.year} M{t.month} D{t.day} {t.hour:02d}:{t.minute:02d}"
+
+
 def _flatten_region_defaults[T](
     locations: list[Location],
     by_region: dict[str, T],
@@ -211,14 +217,25 @@ class GameService(
         return session
 
     def list_sessions(self) -> list[dict[str, str]]:
-        """List all active sessions (in-memory + saved on disk)."""
+        """List all active sessions (in-memory + saved on disk).
+
+        Each entry carries ``created_by`` (who started it) and ``time`` (in-game
+        clock) for the DM/admin lens. Saved-but-not-loaded sessions report both as
+        empty rather than reading every save file during a listing.
+        """
         result: dict[str, dict[str, str]] = {}
 
         # In-memory sessions
         for sid, s in self._sessions.items():
             players = s.get_players()
             player_name = players[0].name if players else ""
-            result[sid] = {"session_id": sid, "player_name": player_name, "world_name": s.world_name}
+            result[sid] = {
+                "session_id": sid,
+                "player_name": player_name,
+                "world_name": s.world_name,
+                "created_by": s.created_by,
+                "time": format_session_time(s),
+            }
 
         # Saved sessions on disk (not yet loaded) — scan all world subdirs
         from dnd_simulator.storage.store import JsonFileStore
@@ -229,7 +246,13 @@ class GameService(
                     if save_name.startswith("session_"):
                         sid = save_name[len("session_") :]
                         if sid not in result:
-                            result[sid] = {"session_id": sid, "player_name": "(saved)", "world_name": world_name}
+                            result[sid] = {
+                                "session_id": sid,
+                                "player_name": "(saved)",
+                                "world_name": world_name,
+                                "created_by": "",
+                                "time": "",
+                            }
 
         return list(result.values())
 

@@ -23,7 +23,7 @@ from dnd_simulator.adapters.api.schemas import (
 )
 from dnd_simulator.core.brain import BrainType
 from dnd_simulator.i18n import _
-from dnd_simulator.service.game_service import GameService
+from dnd_simulator.service.game_service import GameService, format_session_time
 from dnd_simulator.service.identity import Identity
 from dnd_simulator.service.session import GameSession
 
@@ -50,7 +50,7 @@ def create_session(body: CreateSessionRequest, identity: Annotated[Identity, Dep
         session_id=session.session_id,
         player_name=player.name if player else "",
         player_location=session.player_location,
-        time=_format_time(session),
+        time=format_session_time(session),
     )
 
 
@@ -275,11 +275,6 @@ def delete_save(session_id: str, save_name: str) -> MessageResponse:
 
 
 # -- Helpers --
-
-
-def _format_time(session: GameSession) -> str:
-    t = session.world.time
-    return f"Y{t.year} M{t.month} D{t.day} {t.hour:02d}:{t.minute:02d}"
 
 
 def _get_session(service: GameService, session_id: str) -> GameSession:

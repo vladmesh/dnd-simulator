@@ -333,3 +333,24 @@ class TestStopRound:
         session, _player = session_with_player
         # No round started — stop_round must be a safe no-op.
         session.stop_round()
+
+
+class TestListSessionsAttribution:
+    """list_sessions() surfaces created_by + in-game clock for the DM/admin lens (Sprint 020 phase 2)."""
+
+    def test_started_session_lists_created_by_and_time(self) -> None:
+        service = GameService(store=MagicMock(spec=SaveStore))
+        sid = service.start_game(world_name="sword_vale", created_by="dm_dana").session_id
+
+        entry = next(s for s in service.list_sessions() if s["session_id"] == sid)
+        assert entry["created_by"] == "dm_dana"
+        assert entry["time"]  # non-empty formatted clock
+
+    def test_session_without_creator_lists_empty_and_still_appears(self) -> None:
+        """Backward-compat: no created_by → '' (not dropped from the listing)."""
+        service = GameService(store=MagicMock(spec=SaveStore))
+        sid = service.start_game(world_name="sword_vale").session_id
+
+        entry = next(s for s in service.list_sessions() if s["session_id"] == sid)
+        assert entry["created_by"] == ""
+        assert entry["time"]

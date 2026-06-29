@@ -42,4 +42,13 @@ Gotchas: keep the `creator` filter purely a query helper — do not reject or 40
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Straightforward, no surprises.
+
+- **Worlds filter** is a one-line post-filter in `commands_worldbuilder.list_worlds` (`creator: str | None = None` → `[w for w in result if w.get("creator") == creator]`). Base/system worlds fall out of a personal filter naturally because their creator is `"system"`, and `creator="system"` requests them back — no special-casing needed. Route gained a `creator` query param; `WorldListItem` already carried `creator` so no schema change.
+- **Session enrichment**: `list_sessions` entries now carry `created_by` (from `session.created_by`) and `time`. Pulled the clock formatter out as a shared `format_session_time(session)` in `game_service.py` and pointed the existing `routes_session._format_time` at it, then dropped that now-trivial wrapper and called `format_session_time` directly at its one call site (DRY: one format string, not two). Saved-but-unloaded sessions report `created_by`/`time` as `""` to avoid reading every save file during a listing.
+- **Projection only** — no `creator` mismatch rejection, no role checks. `MagicMock(spec=SaveStore)` cleanly isolates the in-memory session-list path (not a `JsonFileStore`, so the disk scan is skipped). Note the REST header-less default user is `"local"`, so the `created_by == ""` backward-compat case is asserted at the service layer (`start_game()` with no arg), not via HTTP.
+- Verified: 6 new tests RED → GREEN; `make check` green (backend 2292, frontend 246). No integration tests touched.

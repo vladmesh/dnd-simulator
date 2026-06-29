@@ -54,10 +54,10 @@ def list_library_templates(layer_type: LayerType, geography: str | None = None) 
 
 
 @router.get("/worlds", response_model=list[WorldListItem])
-def list_worlds(lang: str = "en") -> list[WorldListItem]:
-    """List available world templates."""
+def list_worlds(lang: str = "en", creator: str | None = None) -> list[WorldListItem]:
+    """List available world templates. ``creator`` scopes to one author (worldbuilder lens)."""
     service = get_service()
-    worlds = service.list_worlds(lang=lang)
+    worlds = service.list_worlds(lang=lang, creator=creator)
     base_worlds = service.base_worlds
     return [
         WorldListItem(

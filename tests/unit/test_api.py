@@ -100,6 +100,20 @@ class TestWorldsEndpoint:
         my_world = next(w for w in worlds if w["id"] == "my_world")
         assert my_world["editable"] is True
 
+    def test_list_worlds_filter_by_creator(self, tmp_path: object) -> None:
+        """GET /api/master/worlds?creator=alice returns only alice's worlds (worldbuilder lens scope)."""
+        client, _ = _make_client(tmp_path, isolated_content=True)
+        # Two worlds attributed to different users via the X-User-Id seam
+        client.post(
+            "/api/master/worlds", json={"id": "alice_world", "name": "Alice World"}, headers={"X-User-Id": "alice"}
+        )
+        client.post("/api/master/worlds", json={"id": "bob_world", "name": "Bob World"}, headers={"X-User-Id": "bob"})
+
+        resp = client.get("/api/master/worlds?creator=alice")
+        assert resp.status_code == HTTPStatus.OK
+        ids = {w["id"] for w in resp.json()}
+        assert ids == {"alice_world"}  # bob's world and the system base worlds are filtered out
+
 
 class TestMasterSessions:
     def test_create_session(self, tmp_path: object) -> None:
@@ -131,6 +145,19 @@ class TestMasterSessions:
         client, _ = _make_client(tmp_path)
         resp = client.get("/api/master/sessions/doesnotexist")
         assert resp.status_code == HTTPStatus.NOT_FOUND
+
+    def test_sessions_list_surfaces_created_by_and_time(self, tmp_path: object) -> None:
+        """Session listing carries who started it (X-User-Id) and its in-game clock — DM/admin lens needs both."""
+        client, _ = _make_client(tmp_path)
+        resp = client.post("/api/master/sessions", json={"world_name": "sword_vale"}, headers={"X-User-Id": "dm_dana"})
+        assert resp.status_code == HTTPStatus.OK
+        sid = resp.json()["session_id"]
+
+        resp = client.get("/api/master/sessions")
+        assert resp.status_code == HTTPStatus.OK
+        entry = next(s for s in resp.json() if s["session_id"] == sid)
+        assert entry["created_by"] == "dm_dana"
+        assert entry["time"]  # non-empty formatted in-game clock
 
 
 class TestCreatureHotControls:

@@ -35,8 +35,13 @@ if TYPE_CHECKING:
 class WorldBuilderCommands(GameServiceProtocol):
     """Mixin: world templates, layer files, and content/catalog CRUD (worldbuilder lens)."""
 
-    def list_worlds(self, lang: str = "en") -> list[dict[str, object]]:
-        """List available world templates with completeness flag."""
+    def list_worlds(self, lang: str = "en", creator: str | None = None) -> list[dict[str, object]]:
+        """List available world templates with completeness flag.
+
+        ``creator`` (optional) scopes the result to worlds with that exact creator —
+        a projection helper for the worldbuilder lens, not access enforcement. Base
+        worlds (creator ``system``) fall out of a personal filter naturally.
+        """
         worlds_dir = self._content_dir / "worlds"
         result: list[dict[str, object]] = []
         if not worlds_dir.exists():
@@ -47,6 +52,8 @@ class WorldBuilderCommands(GameServiceProtocol):
                 resolved = resolve_manifest(entry, self._content_dir)
                 complete = len(resolved) == len(LayerType)
                 result.append({"id": entry.name, **meta, "complete": complete})
+        if creator is not None:
+            result = [w for w in result if w.get("creator") == creator]
         return result
 
     def list_library_templates(self, layer_type: LayerType) -> list[TemplateInfo]:

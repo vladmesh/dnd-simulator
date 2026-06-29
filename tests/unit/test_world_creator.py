@@ -113,6 +113,32 @@ class TestForkReAttributes:
         assert source_meta["creator"] == "alice"
 
 
+class TestListWorldsCreatorFilter:
+    """list_worlds(creator=...) is a scoping helper for the worldbuilder lens (projection, not enforcement)."""
+
+    def test_filter_returns_only_matching_creator(self, tmp_path: Path) -> None:
+        """list_worlds(creator='alice') returns alice's worlds; system/other creators are excluded."""
+        content_dir = _with_library(tmp_path)
+        create_empty_world(content_dir, "alice_one", "Alice One", "", "", creator="alice")
+        create_empty_world(content_dir, "alice_two", "Alice Two", "", "", creator="alice")
+        create_empty_world(content_dir, "system_world", "System World", "", "", creator="system")
+        create_empty_world(content_dir, "bob_one", "Bob One", "", "", creator="bob")
+        service = _service(content_dir)
+
+        assert {w["id"] for w in service.list_worlds(creator="alice")} == {"alice_one", "alice_two"}
+        # A system/base creator is requestable the same way — not special-cased, just filtered.
+        assert {w["id"] for w in service.list_worlds(creator="system")} == {"system_world"}
+
+    def test_unfiltered_returns_all_creators(self, tmp_path: Path) -> None:
+        """list_worlds() with no creator returns every world regardless of who made it."""
+        content_dir = _with_library(tmp_path)
+        create_empty_world(content_dir, "alice_one", "Alice One", "", "", creator="alice")
+        create_empty_world(content_dir, "bob_one", "Bob One", "", "", creator="bob")
+        service = _service(content_dir)
+
+        assert {w["id"] for w in service.list_worlds()} == {"alice_one", "bob_one"}
+
+
 class TestBackwardCompat:
     def test_manifest_without_creator_loads_as_empty(self, tmp_path: Path) -> None:
         """A manifest with no creator key returns creator == '' and does not raise."""
