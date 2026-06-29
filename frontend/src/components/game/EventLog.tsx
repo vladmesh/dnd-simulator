@@ -119,6 +119,7 @@ function DisplayEntryRow({
   onToggleExpand?: () => void
   onAttackClick?: (entry: EventDisplayEntry) => void
 }) {
+  const { t } = useTranslation(["game"])
   if (entry.kind === "round_header") {
     return (
       <div
@@ -126,7 +127,7 @@ function DisplayEntryRow({
         className="flex items-center gap-2 border-t-2 border-orange-500/40 bg-orange-500/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-orange-400"
       >
         <div className="h-px flex-1 bg-orange-500/30" />
-        <span>Round {entry.roundNumber}</span>
+        <span>{t("game:round", { n: entry.roundNumber })}</span>
         <div className="h-px flex-1 bg-orange-500/30" />
       </div>
     )
@@ -158,7 +159,7 @@ function DisplayEntryRow({
           </button>
           <EventIcon name={entry.icon} className="size-3 shrink-0 text-muted-foreground" />
           <span className={entry.colorClass}>
-            {entry.actorName} moved ({entry.totalDistanceFt} ft)
+            {t("game:moved", { name: entry.actorName, ft: entry.totalDistanceFt })}
           </span>
         </div>
         {expanded && (

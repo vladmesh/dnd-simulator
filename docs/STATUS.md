@@ -12,7 +12,9 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** 4 — Save robustness & i18n polish (tasks 1-3 done, ready to close) — 2026-06-29. Phases 1-3 COMPLETE.
+**Phase:** 4 — Save robustness & i18n polish (COMPLETE) — 2026-06-29. Phases 1-3 COMPLETE. All phases complete — ready for audit.
+
+Phase 4 CLOSED (2026-06-29): integration 166 passed (stable across 3 clean runs — two earlier `test_player_state_xp` failures traced to a stale docker build cache, not code: clean bisects at phase-3-close and task-1 both passed, and 3 fresh-rebuild runs are green). E2E green ([phase4-report](sprints/020-control-interfaces/e2e/phase4-report.md)) — at `DND_LANGUAGE=ru` the combat/event log renders fully Russian (attack, damage breakdown, death, combat-end) and the reputation line now shows the faction display name «Силы Королевства» instead of the raw `kingdom` slug (closes the phase-3 finding); handler action-failure errors render in Russian. One E2E quick-fix: frontend `EventLog.tsx` rendered the round divider and aggregated-move summary as hardcoded English — wired them through i18n (`game:round` + new `game:moved` key), which closes the remaining client-side half of `combat-log-i18n-gaps`. 0 blockers. Minor finding deferred to backlog: stale combat turn after combat ends (player left mid-turn with exhausted budget until «Конец хода»).
 
 Phase 4 task 3 DONE (2026-06-29): i18n sweep of action-failure error strings — wrapped 20 `ActionResult.error` strings in `_()` across `rules/handlers/` (action_surge/items/loot/trade/equipment), converted parametrized f-strings to gettext `.format()` templates, dropped the em-dash in `items.py`'s item-type error. 20 ru catalog entries added + `.mo` recompiled. Closes `combat-log-i18n-gaps` (both halves across tasks 2-3, marked resolved in BACKLOG). 4 new unit tests (`test_handler_error_i18n.py`); `make check` green (backend 2317, frontend 260). All Phase 4 tasks done — phase ready for `/close-phase`.
 

@@ -42,6 +42,7 @@
   "battle_map": "Battle Map",
   "combat_info": "Combat",
   "round": "Round {{n}}",
+  "moved": "{{name}} moved ({{ft}} ft)",
   "self_stats": "Your Stats",
   "hp_display": "HP: {{hp}}/{{max}}",
   "ac_display": "AC: {{n}}",

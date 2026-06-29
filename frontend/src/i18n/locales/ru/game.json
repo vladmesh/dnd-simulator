@@ -42,6 +42,7 @@
   "battle_map": "Карта боя",
   "combat_info": "Бой",
   "round": "Раунд {{n}}",
+  "moved": "{{name}} переместился ({{ft}} фт)",
   "self_stats": "Ваши характеристики",
   "hp_display": "ОЗ: {{hp}}/{{max}}",
   "ac_display": "КД: {{n}}",
