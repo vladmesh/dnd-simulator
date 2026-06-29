@@ -26,5 +26,12 @@
   "ability_cha": "CHA",
   "exit_session": "Exit session",
   "play": "Play",
-  "play_description": "Join a world as a player character"
+  "play_description": "Join a world as a player character",
+  "identity_name_label": "Name",
+  "identity_name_placeholder": "your name",
+  "identity_role_label": "Role",
+  "role_worldbuilder": "World Builder",
+  "role_dm": "Dungeon Master",
+  "role_admin": "Admin",
+  "role_player": "Player"
 }

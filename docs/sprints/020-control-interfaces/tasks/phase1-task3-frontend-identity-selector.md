@@ -30,14 +30,23 @@ After red: add the slice (with persist), inject headers in the one `request()` w
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing frontend tests still pass (`make check`)
-- [ ] Identity persists to localStorage and rehydrates
-- [ ] Every HTTP call routes through the one wrapper and carries `X-User-Id`/`X-Role` when set
-- [ ] WS URL carries `user_id`/`role` when set
-- [ ] Selector on LandingPage sets identity; strings are i18n (en + ru)
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing frontend tests still pass (`make check`)
+- [x] Identity persists to localStorage and rehydrates
+- [x] Every HTTP call routes through the one wrapper and carries `X-User-Id`/`X-Role` when set
+- [x] WS URL carries `user_id`/`role` when set
+- [x] Selector on LandingPage sets identity; strings are i18n (en + ru)
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- **Single source of truth = the zustand slice.** `identitySlice` holds `userId`/`role`; `setIdentity` writes through to `localStorage` (key `"identity"`, JSON `{userId, role}`) and the slice rehydrates from it at store creation via the exported `loadIdentity()`. No second mirror. `loadIdentity` validates the persisted role against `ROLES` so a corrupted/stale blob degrades to nulls rather than leaking a bad role into headers.
+- **Transport reads the store, not localStorage.** `apiClient.request()` and `wsClient.doConnect()` both call `useGameStore.getState()` and inject only when set — HTTP as `X-User-Id`/`X-Role` headers, WS as `user_id`/`role` query params. The WS URL build was refactored from string-concat to `URLSearchParams` so `player_id` + the two identity params compose cleanly.
+- **Import cycle note:** `wsClient` now imports `gameStore`, completing a `gameStore → connectionSlice → wsClient → gameStore` cycle. It's safe because the only `useGameStore` access is inside `doConnect()` (call time), never at module init — ESM live bindings are resolved by then. `make check` (tsc + eslint + vitest) is green, no circular-import breakage. `apiClient → gameStore` is acyclic (the store never imports apiClient).
+- **Selector:** native `<select>` (not the Radix shadcn Select) for the role so `userEvent.selectOptions` drives it in tests; `Input` for the name. Both wired through one `apply()` that calls `setIdentity` on any change once the name is non-blank. Backend `Role` values (`worldbuilder`/`dm`/`admin`/`player`) are the option values verbatim, so header/param strings match `service/identity.Role` with no mapping.
+- **Routing unchanged this task** — role still only labels the identity; Play vs Master entry is still the card click. Phase 2 differentiates the master UI by role.
+- Backend WS endpoint still reads only `player_id` (Phase 3 consumes `user_id`/`role`); sending them now is forward-compatible and ignored.

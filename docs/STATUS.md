@@ -12,9 +12,9 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** 1 — Identity & role keystone (task 2 done, task 3 pending) — 2026-06-29
+**Phase:** 1 — Identity & role keystone (all 3 tasks done; ready to close) — 2026-06-29
 
-Task 2 done: `service/identity.py` (`Role`/`Identity`/`resolve_identity`) + `get_identity` FastAPI dependency (header `X-User-Id`/`X-Role`, invalid role → 400, env `DND_DEFAULT_ROLE` default ADMIN). World-create/assemble/fork stamp `creator` from caller; session-create stamps `meta.created_by`. Next: task 3 (frontend identity/role selector + header propagation).
+Task 3 done: `store/slices/identitySlice.ts` (`userId`/`role`/`setIdentity`, persisted to localStorage, rehydrates via `loadIdentity()`) composed into `gameStore`. `apiClient.request()` injects `X-User-Id`/`X-Role` headers and `wsClient.doConnect()` appends `user_id`/`role` query params, both reading `useGameStore.getState()` when set. `LandingPage` gets a name input + native role `<select>` wired to `setIdentity` (i18n en+ru). Phase 1 (identity & role keystone) complete: world/session attribution (tasks 1-2) + request-seam (task 2) + front selector/propagation (task 3). Next: `/close-phase`, then Phase 2 (three-lens projection of `/api/master/*`).
 
 ### Phases
 

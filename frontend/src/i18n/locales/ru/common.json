@@ -26,5 +26,12 @@
   "ability_cha": "ХАР",
   "exit_session": "Выйти из сессии",
   "play": "Играть",
-  "play_description": "Присоединиться к миру как игрок"
+  "play_description": "Присоединиться к миру как игрок",
+  "identity_name_label": "Имя",
+  "identity_name_placeholder": "ваше имя",
+  "identity_role_label": "Роль",
+  "role_worldbuilder": "Создатель миров",
+  "role_dm": "Мастер",
+  "role_admin": "Админ",
+  "role_player": "Игрок"
 }

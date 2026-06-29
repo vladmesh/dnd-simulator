@@ -1,3 +1,4 @@
+import { useGameStore } from "@/store/gameStore"
 import type { LevelUpRequest, PlayerStatus } from "@/types/game"
 import type {
   AdvanceTimeRequest,
@@ -50,10 +51,11 @@ async function request<T>(
   path: string,
   body?: unknown,
 ): Promise<T> {
-  const opts: RequestInit = {
-    method,
-    headers: { "Content-Type": "application/json" },
-  }
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  const { userId, role } = useGameStore.getState()
+  if (userId) headers["X-User-Id"] = userId
+  if (role) headers["X-Role"] = role
+  const opts: RequestInit = { method, headers }
   if (body !== undefined) {
     opts.body = JSON.stringify(body)
   }

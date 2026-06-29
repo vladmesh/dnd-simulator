@@ -1,3 +1,4 @@
+import { useGameStore } from "@/store/gameStore"
 import type { ClientMessage, ServerMessage } from "@/types/ws"
 
 type MessageHandler = (msg: ServerMessage) => void
@@ -78,9 +79,13 @@ export class WsClient {
 
     const proto = location.protocol === "https:" ? "wss:" : "ws:"
     let url = `${proto}//${location.host}/api/ws/${this.sessionId}`
-    if (this.playerId) {
-      url += `?player_id=${encodeURIComponent(this.playerId)}`
-    }
+    const params = new URLSearchParams()
+    if (this.playerId) params.set("player_id", this.playerId)
+    const { userId, role } = useGameStore.getState()
+    if (userId) params.set("user_id", userId)
+    if (role) params.set("role", role)
+    const qs = params.toString()
+    if (qs) url += `?${qs}`
 
     const ws = new WebSocket(url)
     this.ws = ws
