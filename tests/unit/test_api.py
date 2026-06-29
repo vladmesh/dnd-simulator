@@ -400,6 +400,35 @@ class TestPlayerCharacterCreation:
         assert resp.status_code == HTTPStatus.NOT_FOUND
 
 
+class TestLevelUpHTTPStatus:
+    """Level-up route must map exceptions to HTTP status via type, not message text."""
+
+    def test_level_up_unknown_session_returns_404(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        resp = client.post("/api/player/sessions/does_not_exist/level-up", json={})
+        assert resp.status_code == HTTPStatus.NOT_FOUND
+
+    def test_level_up_no_player_returns_404(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        sid = _create_session(client)
+        # Session exists but has no player character
+        resp = client.post(f"/api/player/sessions/{sid}/level-up", json={})
+        assert resp.status_code == HTTPStatus.NOT_FOUND
+
+    def test_level_up_no_pending_levelup_returns_400(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        sid = _create_session_with_player(client)
+        # Player exists but level_up_available is False (default after creation)
+        resp = client.post(f"/api/player/sessions/{sid}/level-up", json={})
+        assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+    def test_level_up_invalid_fighting_style_returns_400(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        sid = _create_session_with_player(client)
+        resp = client.post(f"/api/player/sessions/{sid}/level-up", json={"fighting_style": "not_a_style"})
+        assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+
 class TestLanguage:
     def test_create_session_with_lang(self, tmp_path: object) -> None:
         client, service = _make_client(tmp_path)

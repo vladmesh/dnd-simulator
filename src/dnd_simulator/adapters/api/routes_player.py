@@ -14,6 +14,7 @@ from dnd_simulator.adapters.api.schemas import (
 from dnd_simulator.core.class_features import FightingStyle
 from dnd_simulator.rules.character_creation import POINT_BUY_BUDGET, STARTING_GOLD
 from dnd_simulator.service.dto import PlayerStatusData
+from dnd_simulator.service.errors import PlayerNotFoundError, SessionNotFoundError
 
 router = APIRouter(prefix="/api/player", tags=["player"])
 
@@ -35,6 +36,8 @@ def create_character(session_id: str, body: CreatePlayerRequest) -> PlayerStatus
     data["class"] = data.pop("char_class")
     try:
         player = service.create_player(session_id, data)
+    except (SessionNotFoundError, PlayerNotFoundError):
+        raise
     except ValueError as e:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e)) from e
     return _to_response(service.player_status(session_id, player_id=player.id))
@@ -46,6 +49,8 @@ def get_status(session_id: str) -> PlayerStatusResponse:
     service = get_service()
     try:
         status = service.player_status(session_id)
+    except (SessionNotFoundError, PlayerNotFoundError):
+        raise
     except ValueError as e:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
     return _to_response(status)
@@ -61,11 +66,10 @@ def level_up(session_id: str, body: LevelUpRequest) -> PlayerStatusResponse:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e)) from e
     try:
         service.level_up_player(session_id, fighting_style=style)
+    except (SessionNotFoundError, PlayerNotFoundError):
+        raise
     except ValueError as e:
-        msg = str(e)
-        is_missing = "No player" in msg or "not found" in msg
-        status_code = HTTPStatus.NOT_FOUND if is_missing else HTTPStatus.BAD_REQUEST
-        raise HTTPException(status_code=status_code, detail=str(e)) from e
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e)) from e
     return _to_response(service.player_status(session_id))
 
 

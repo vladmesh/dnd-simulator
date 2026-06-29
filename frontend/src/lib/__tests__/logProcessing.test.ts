@@ -73,6 +73,7 @@ describe("EVENT_ICONS", () => {
     "entity_bless",
     "entity_use_item",
     "entity_second_wind",
+    "entity_lay_on_hands",
     "entity_equip",
     "entity_unequip",
     "entity_buy",

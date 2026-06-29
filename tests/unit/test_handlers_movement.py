@@ -307,3 +307,85 @@ class TestHandleWait:
         assert result.success
         assert mover.location_id == "tavern"
         world.advance_time.assert_called_once()
+
+    def test_wait_travel_no_direct_route_by_name_succeeds(self) -> None:
+        """Travel by name finds target and succeeds when a route exists."""
+        mover = _creature("mover")
+        mover.location_id = "town_square"
+        world = MagicMock()
+        # Direct route fails, name-match route succeeds
+        loc = MagicMock()
+        loc.name = "Tavern"
+        world.location_graph.travel_seconds.side_effect = [ValueError("no direct route"), 300]
+        world.location_graph.all_ids.return_value = ["tavern_id"]
+        world.location_graph.get.return_value = loc
+        ctx = _ctx(mover)
+        action = Action(name=ActionType.WAIT, params={"travel_to": "tavern"})
+        emit_fn = MagicMock(return_value=ActionResult())
+
+        result = handle_wait(mover, action, emit_fn, ctx, world)
+
+        assert result.success
+        assert mover.location_id == "tavern_id"
+        world.advance_time.assert_called_once()
+
+    def test_wait_travel_unreachable_returns_failure(self) -> None:
+        """Travel to an ID with no route returns success=False and location unchanged."""
+        mover = _creature("mover")
+        mover.location_id = "starting_town"
+        world = MagicMock()
+        world.location_graph.travel_seconds.side_effect = ValueError("no route")
+        world.location_graph.all_ids.return_value = []
+        ctx = _ctx(mover)
+        action = Action(name=ActionType.WAIT, params={"travel_to": "nowhere_island"})
+        emit_fn = MagicMock(return_value=ActionResult())
+
+        result = handle_wait(mover, action, emit_fn, ctx, world)
+
+        assert not result.success
+        assert result.error
+        assert mover.location_id == "starting_town"
+
+    def test_wait_travel_misnamed_target_returns_failure(self) -> None:
+        """Travel by name when no location matches returns success=False and location unchanged."""
+        mover = _creature("mover")
+        mover.location_id = "starting_town"
+        world = MagicMock()
+        # Direct route by ID fails (no such ID), name scan finds no match
+        world.location_graph.travel_seconds.side_effect = ValueError("no direct route")
+        loc_a = MagicMock()
+        loc_a.name = "Market Square"
+        loc_b = MagicMock()
+        loc_b.name = "The Docks"
+        world.location_graph.all_ids.return_value = ["market", "docks"]
+        world.location_graph.get.side_effect = lambda lid: {"market": loc_a, "docks": loc_b}[lid]
+        ctx = _ctx(mover)
+        action = Action(name=ActionType.WAIT, params={"travel_to": "Nonexistent Place"})
+        emit_fn = MagicMock(return_value=ActionResult())
+
+        result = handle_wait(mover, action, emit_fn, ctx, world)
+
+        assert not result.success
+        assert result.error
+        assert mover.location_id == "starting_town"
+
+    def test_wait_travel_name_match_unreachable_returns_failure(self) -> None:
+        """Travel where name matches but route to that location is unreachable returns failure."""
+        mover = _creature("mover")
+        mover.location_id = "starting_town"
+        world = MagicMock()
+        # Both direct and name-based route raise ValueError
+        world.location_graph.travel_seconds.side_effect = ValueError("no route")
+        loc = MagicMock()
+        loc.name = "Dead End"
+        world.location_graph.all_ids.return_value = ["dead_end_id"]
+        world.location_graph.get.return_value = loc
+        ctx = _ctx(mover)
+        action = Action(name=ActionType.WAIT, params={"travel_to": "Dead End"})
+        emit_fn = MagicMock(return_value=ActionResult())
+
+        result = handle_wait(mover, action, emit_fn, ctx, world)
+
+        assert not result.success
+        assert result.error
+        assert mover.location_id == "starting_town"

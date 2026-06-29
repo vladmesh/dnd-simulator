@@ -282,11 +282,13 @@ class GameService(
                 entity.brain = self._brain_factory.create(BrainType.RULE_BASED)
 
     def _get_session(self, session_id: str) -> GameSession:
+        from dnd_simulator.service.errors import SessionNotFoundError
+
         if session_id not in self._sessions:
             # Try to restore from autosave on disk
             self._try_restore_session(session_id)
         if session_id not in self._sessions:
-            raise ValueError(f"Session '{session_id}' not found")
+            raise SessionNotFoundError(f"Session '{session_id}' not found")
         structlog.contextvars.bind_contextvars(session_id=session_id)
         return self._sessions[session_id]
 

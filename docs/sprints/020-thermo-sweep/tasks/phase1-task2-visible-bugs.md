@@ -56,4 +56,14 @@ Gotchas:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All three bugs fixed.
+
+1. **Icon**: `ICON_MAP` moved to `frontend/src/lib/iconMap.ts` (extracted from EventLog.tsx to satisfy `react-refresh/only-export-components` lint rule). Added `HandHeart` for `"hand-heart"`. Vitest exhaustiveness guard added to `EventLog.test.tsx` — iterates all `EVENT_ICONS` values and asserts each is a key in `ICON_MAP`.
+
+2. **Silent travel**: `handle_wait` in `rules/handlers/movement.py` rewritten. The destination is resolved in a single pass (direct ID, else name-match). If no destination resolves, returns `ActionResult(success=False, error=_(...))` immediately. If a destination resolves but the route is unreachable (second `travel_seconds` call fails), also returns failure. No more silent `pass`.
+
+3. **HTTP status**: Added `service/errors.py` with `SessionNotFoundError` and `PlayerNotFoundError` (both subclass `ValueError` to keep `pytest.raises(ValueError, match=...)` tests green). `_get_session` raises `SessionNotFoundError`; `level_up_player` and `player_status` raise `PlayerNotFoundError` when player missing. App-level `@exception_handler`s in `app.py` map both to 404. Routes re-raise domain exceptions instead of catching them with `except ValueError`.

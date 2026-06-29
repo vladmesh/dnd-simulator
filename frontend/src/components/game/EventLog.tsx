@@ -1,81 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useVirtualizer } from "@tanstack/react-virtual"
-import {
-  ChevronDown,
-  ChevronRight,
-  Swords,
-  Skull,
-  MessageCircle,
-  Footprints,
-  Zap,
-  Shield,
-  Rabbit,
-  ArrowLeftRight,
-  Sparkles,
-  FlaskRound,
-  HeartPulse,
-  Sword,
-  PackageOpen,
-  Coins,
-  HandCoins,
-  TriangleAlert,
-  Clock,
-  Flame,
-  Flag,
-  Users,
-  CloudSun,
-  Hourglass,
-  MapPin,
-  ShieldAlert,
-  Eye,
-  EyeOff,
-  Scroll,
-} from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+import { ChevronDown, ChevronRight } from "lucide-react"
 import { useGameStore } from "@/store/gameStore"
 import {
   processLogEntries,
   EVENT_COLORS,
   hasAttackBreakdown,
 } from "@/lib/logProcessing"
+import { ICON_MAP } from "@/lib/iconMap"
 import type { DisplayEntry, EventDisplayEntry } from "@/lib/logProcessing"
 import { AttackCardModal } from "./AttackCardModal"
 import { extractAttackCardData } from "./attackCard"
-
-// ---------------------------------------------------------------------------
-// Icon name → component mapping
-// ---------------------------------------------------------------------------
-
-const ICON_MAP: Record<string, LucideIcon> = {
-  swords: Swords,
-  skull: Skull,
-  "message-circle": MessageCircle,
-  footprints: Footprints,
-  zap: Zap,
-  shield: Shield,
-  rabbit: Rabbit,
-  "arrow-left-right": ArrowLeftRight,
-  sparkles: Sparkles,
-  "flask-round": FlaskRound,
-  "heart-pulse": HeartPulse,
-  sword: Sword,
-  "package-open": PackageOpen,
-  coins: Coins,
-  "hand-coins": HandCoins,
-  "alert-triangle": TriangleAlert,
-  clock: Clock,
-  flame: Flame,
-  flag: Flag,
-  users: Users,
-  "cloud-sun": CloudSun,
-  hourglass: Hourglass,
-  "map-pin": MapPin,
-  "shield-alert": ShieldAlert,
-  eye: Eye,
-  "eye-off": EyeOff,
-  scroll: Scroll,
-}
 
 function EventIcon({ name, className }: { name: string; className?: string }) {
   const Icon = ICON_MAP[name]
