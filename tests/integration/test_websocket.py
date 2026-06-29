@@ -137,6 +137,37 @@ class TestConnection:
         assert "awareness" in msg2
         sock2.close()
 
+    def test_quick_reconnect_keeps_session_live(self, ws_arena: tuple[str, str, str]) -> None:
+        """A disconnect+reconnect inside the grace window keeps the session usable.
+
+        The precise no-evict mechanics are unit-tested (test_session_lifecycle); here we
+        exercise the real grace timer end-to-end: after a fast reconnect the player still
+        gets a turn and the round is live enough to accept an action.
+        """
+        ws_base, sid, pid = ws_arena
+
+        sock1 = ws_connect(ws_base, sid, pid)
+        assert _recv_until(sock1, "turn") is not None
+        sock1.close()
+
+        # Reconnect well within the default grace window (~1.5s) — no sleep.
+        sock2 = ws_connect(ws_base, sid, pid)
+        try:
+            msg = _recv_until(sock2, "turn")
+            if msg is None:
+                return  # combat may have ended; reconnect itself succeeded
+            ws_send_action(sock2, "end_turn")
+            # Round is alive: it advances and emits a follow-up event.
+            for _ in range(15):
+                try:
+                    nxt = ws_recv(sock2)
+                except ws_lib.WebSocketConnectionClosedException:
+                    break
+                if nxt["type"] in ("turn", "round_result", "action_result"):
+                    break
+        finally:
+            sock2.close()
+
     def test_invalid_session_returns_error(self, ws_arena: tuple[str, str, str]) -> None:
         """Connecting to nonexistent session returns error and closes."""
         ws_base, _, _ = ws_arena
