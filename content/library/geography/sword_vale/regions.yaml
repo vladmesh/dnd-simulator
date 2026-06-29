@@ -45,6 +45,9 @@ greenwood:
   elevation: 100
   terrain: forest
   water_proximity: 0.2
+  battle_map:
+    width: 50
+    height: 50
   connections:
   - target: silverport
     direction: nw

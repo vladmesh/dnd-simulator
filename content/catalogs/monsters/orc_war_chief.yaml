@@ -1,0 +1,14 @@
+name: {en: Orc War Chief, ru: Орк-вождь войны}
+faction: orc_warband
+hp: 32
+ac: 16
+speed: 30
+ability_scores: {str: 18, dex: 12, con: 18, int: 11, wis: 11, cha: 16}
+attacks:
+  - name: greataxe
+    ability: str
+    damage:
+      - dice: "1d12"
+        type: slashing
+    reach: 5
+cr: 2.0
