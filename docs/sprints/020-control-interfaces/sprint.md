@@ -47,7 +47,7 @@ Sprint 019 (control-plane-prep) отвердил ровно тот класте�
 2. [Frontend worldbuilder/DM lens](tasks/phase2-task2-frontend-worldbuilder-dm-lens.md) — роутинг по роли; worldbuilder = авторинг своих миров (без Sessions); DM = свои миры + свои сессии (`created_by`) + hot-controls; fallback на текущий экран
 3. [Admin park lens + inline inventory](tasks/phase2-task3-admin-park-lens-inline-inventory.md) — admin read-only кросс-сессионный/кросс-мировой срез (атрибуция + время, write-контролы сняты, `SessionView` observe-only) + inline-предметы существ в observation-списке; закрывает остаток `master-panel-creature-inventory`
 
-## Phase 3: Spectator-listener + disconnect-debounce
+## Phase 3: Spectator-listener + disconnect-debounce ✓
 
 Read-only подписка на поток событий живой сессии, развязанная от `PlayerBrain`/WS-игрока — извлекается раз, используется трижды (DM-наблюдение, админка-парк, будущие зрители). Фолдит `session-disconnect-debounce` (grace-period evict): та же listener-lifecycle в `session.py`, чиним пока внутри.
 
@@ -74,7 +74,9 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 2 (Three-lens projection) COMPLETE — 2026-06-29. Phase 1 COMPLETE. Phase 2 was a **projection-only** cut (3 tasks): backend scoping primitives → frontend worldbuilder/DM lens → admin park lens + inline inventory. `master-panel-creature-inventory` remnant closed (inline items in observe list). Integration 160 passed (3 new lens-scoping tests); E2E green ([phase2-report](e2e/phase2-report.md)), 4 lenses + core-flow regression all pass, 0 blockers. Ready for Phase 3 task generation.
+**Current:** Phase 3 (Spectator-listener + disconnect-debounce) COMPLETE — 2026-06-29. Phase 1 + 2 COMPLETE. Phase 3 (4 tasks): spectator-listener primitive → disconnect grace-period (closes `session-disconnect-debounce`) → `?spectate=true` WS endpoint → frontend Live observe feed. Integration 166 passed (5 spectator-WS tests + 1 grace-period test added during implementation); E2E green ([phase3-report](e2e/phase3-report.md)) — Live feed verified end-to-end across two tabs (player generates combat events, admin+DM spectator streams them read-only), spectator churn never evicts session, 0 blockers. One minor i18n leak (`kingdom` faction id in RU reputation log) noted for Phase 4 (`combat-log-i18n-gaps`). Ready for Phase 4 task generation.
+
+Phase 2 (Three-lens projection) COMPLETE — 2026-06-29 — **projection-only** cut (3 tasks): backend scoping primitives → frontend worldbuilder/DM lens → admin park lens + inline inventory. `master-panel-creature-inventory` remnant closed. Integration 160 passed; E2E green ([phase2-report](e2e/phase2-report.md)), 4 lenses + core-flow regression, 0 blockers.
 
 ## Decisions (Phase 2)
 

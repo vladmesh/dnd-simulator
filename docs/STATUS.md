@@ -12,7 +12,9 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** 3 — Spectator-listener + disconnect-debounce (all 4 tasks done, phase NOT yet closed) — 2026-06-29. Phase 1 + 2 COMPLETE.
+**Phase:** 3 — Spectator-listener + disconnect-debounce (COMPLETE) — 2026-06-29. Phase 1 + 2 COMPLETE. Ready for Phase 4 task generation.
+
+Phase 3 CLOSED (2026-06-29): integration 166 passed (5 spectator-WS + 1 grace-period test added during implementation, 0 failures); E2E green ([phase3-report](sprints/020-control-interfaces/e2e/phase3-report.md)) — DM/admin Live observe feed verified end-to-end across two browser tabs (player generates combat events → admin+DM spectator streams them read-only with event-type badges + RU descriptions), spectator connect/disconnect churn never evicts the session while a player is connected, player-WS identity propagation regression green. 0 blockers. One minor finding deferred to Phase 4: `kingdom` faction id leaks untranslated into the RU reputation log line (known `combat-log-i18n-gaps`).
 
 Phase 3 task 4 DONE (2026-06-29): frontend live observe stream — `components/master/SessionLiveFeed.tsx` opens a dedicated `new WsClient()` spectator socket (`?spectate=true`), accumulates `events` from `turn`/`action_result`/`round_result` into a read-only scrolling feed; `SessionView` gets a `live` tab for DM + admin. `WsClient.connect` now takes `{ playerId?, spectate? }`. Broke the latent `wsClient ↔ gameStore` import cycle (surfaced by importing `WsClient` from a component loaded before gameStore): `wsClient.ts` reads identity via `loadIdentity()` from `identitySlice` (type-only gameStore import) instead of `useGameStore.getState()`. 4 new unit tests; `make check` green (backend 2303, frontend 260).
 
