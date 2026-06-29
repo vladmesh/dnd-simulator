@@ -6,12 +6,13 @@ import type { WorldStateResponse } from "@/types/api"
 import { Button } from "@/components/ui/button"
 import { WorldOverview } from "./WorldOverview"
 import { CreatureList } from "./CreatureList"
+import { SessionLiveFeed } from "./SessionLiveFeed"
 import { TimeControl } from "./TimeControl"
 import { SavesPanel } from "./SavesPanel"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ArrowLeft } from "lucide-react"
 
-type Tab = "world" | "creatures" | "time" | "saves"
+type Tab = "world" | "creatures" | "live" | "time" | "saves"
 
 export function SessionView() {
   const { sessionId } = useParams<{ sessionId: string }>()
@@ -46,6 +47,7 @@ export function SessionView() {
   const tabs: { key: Tab; label: string }[] = [
     { key: "world", label: t("master:tab_world") },
     { key: "creatures", label: t("master:tab_creatures") },
+    { key: "live", label: t("master:tab_live") },
     { key: "time", label: t("master:tab_time") },
     { key: "saves", label: t("master:tab_saves") },
   ]
@@ -100,6 +102,7 @@ export function SessionView() {
           {tab === "creatures" && (
             <CreatureList sessionId={sessionId} />
           )}
+          {tab === "live" && <SessionLiveFeed sessionId={sessionId} />}
           {tab === "time" && (
             <TimeControl sessionId={sessionId} onAdvanced={refresh} />
           )}
