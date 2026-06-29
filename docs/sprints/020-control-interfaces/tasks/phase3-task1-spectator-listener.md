@@ -52,4 +52,15 @@ Gotchas: `_fire` must broadcast to spectators too, but the empty/evict logic mus
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Clean, no surprises. The existing listener section took the parallel-list shape exactly as planned.
+
+- Added `_spectators: list[SessionEventListener]` next to `_listeners`, plus `add_spectator`/`remove_spectator` (lock-guarded, log a count, never touch the round or `_on_empty`).
+- `_fire` now broadcasts to `self._listeners + self._spectators`. Snapshot taken under the lock, dispatched outside it, same per-listener error isolation.
+- `has_player_listeners()` is the single source of truth for "session empty" (lock-free read, atomic under the GIL). `remove_listener`'s empty check routes through it so task 2 has one place to hook the grace timer. Because spectators live in their own list, `_listeners` already holds only players, so this is a named alias of the prior `not self._listeners` check — no behavior change for the existing player path (the 18 existing lifecycle tests pass unchanged).
+- Spectator-alone is correctly player-empty: a session watched only by spectators reports `has_player_listeners() == False`, and removing the last player fires `_on_empty` even with a spectator still attached.
+
+7 new unit tests in `test_session_lifecycle.py::TestSpectatorListener`, RED → GREEN. `make check` green (backend 2299, frontend 256). No integration tests touched (WS endpoint is task 3).
