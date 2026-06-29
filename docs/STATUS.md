@@ -12,9 +12,11 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** 1 — Identity & role keystone (COMPLETE) — 2026-06-29
+**Phase:** 2 — Three-lens projection of `/api/master/*` (tasks generated) — 2026-06-29
 
-Ready for Phase 2 task generation. Phase 1 delivered: world/session attribution (`creator`/`created_by`), `service/identity.py` + `get_identity` request-seam (header `X-User-Id`/`X-Role`, invalid role → 400, default ADMIN), and the frontend identity slice (persist/rehydrate) + `X-User-Id`/`X-Role` HTTP headers + `user_id`/`role` WS params + role selector on `LandingPage`. Validation: integration 157 passed (+3 `test_identity_seam`: invalid role → 400, creator from `X-User-Id`, header-less → "local"); E2E green ([phase1-report](sprints/020-control-interfaces/e2e/phase1-report.md)) — headers/WS params confirmed on the wire, persistence across reload, peaceful regression clean. Next: Phase 2 — three-lens projection of `/api/master/*`.
+Phase 1 COMPLETE (2026-06-29): world/session attribution (`creator`/`created_by`), `service/identity.py` + `get_identity` request-seam (header `X-User-Id`/`X-Role`, invalid role → 400, default ADMIN), frontend identity slice + header/WS propagation + role selector. Integration 157 passed; E2E green ([phase1-report](sprints/020-control-interfaces/e2e/phase1-report.md)).
+
+Phase 2 tasks generated (3) — projection-only cut (creator = attribution, role not enforced yet; no 403s): (1) backend lens-scoping primitives — `list_worlds(creator=)` filter + `list_sessions` `created_by`/`time`; (2) frontend worldbuilder/DM lens — role routing + own-worlds/own-sessions scope + hot-controls; (3) admin read-only park lens + inline creature inventory in observation. Note: `master-panel-creature-inventory` already delivered (sprint 007) — only the inline-observation remnant folds into task 3. Ready to start task 1.
 
 ### Phases
 

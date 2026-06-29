@@ -39,9 +39,13 @@ Sprint 019 (control-plane-prep) отвердил ровно тот класте�
 
 **Что доставляет:** worldbuilder не трогает чужой мир; DM наблюдает + нуджит; админка получает read-only park-view; предметы существ видны в мастер-панели.
 
+Срез **projection-only** (по решениям спринта: creator = атрибуция, роль «not enforced yet»): линза меняет, что UI показывает/скейпит, бэкенд остаётся открытым god-mode (тонкие scoping-хелперы, без 403). `master-panel-creature-inventory` уже доставлен (бэк + edit-диалог со спринта 007) — фолдим только остаток: inline-показ предметов в read-only observation-списке.
+
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Backend lens-scoping primitives](tasks/phase2-task1-lens-scoping-backend.md) — `list_worlds(creator=)` фильтр + `?creator=` query-param; `list_sessions` обогащён `created_by`/`time`. Аддитивно, без enforcement.
+2. [Frontend worldbuilder/DM lens](tasks/phase2-task2-frontend-worldbuilder-dm-lens.md) — роутинг по роли; worldbuilder = авторинг своих миров (без Sessions); DM = свои миры + свои сессии (`created_by`) + hot-controls; fallback на текущий экран
+3. [Admin park lens + inline inventory](tasks/phase2-task3-admin-park-lens-inline-inventory.md) — admin read-only кросс-сессионный/кросс-мировой срез (атрибуция + время, write-контролы сняты, `SessionView` observe-only) + inline-предметы существ в observation-списке; закрывает остаток `master-panel-creature-inventory`
 
 ## Phase 3: Spectator-listener + disconnect-debounce
 
@@ -67,7 +71,12 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 1 (Identity & role keystone) COMPLETE — 2026-06-29. World/session attribution (`creator`/`created_by`), `service/identity.py` + `get_identity` seam (invalid X-Role → 400), and the front identity slice + header/WS propagation + role selector all landed. Integration 157 passed (+3 `test_identity_seam`); E2E green (`e2e/phase1-report.md`). Ready to generate Phase 2 tasks.
+**Current:** Phase 2 (Three-lens projection) tasks generated — 2026-06-29. Phase 1 COMPLETE. Phase 2 is a **projection-only** cut (3 tasks): backend scoping primitives → frontend worldbuilder/DM lens → admin park lens + inline inventory. `master-panel-creature-inventory` confirmed already delivered (sprint 007); only its inline-observation remnant folds into task 3. Ready to start task 1.
+
+## Decisions (Phase 2)
+
+- **Projection-only, no backend enforcement.** (2026-06-29, phase 2 planning) The lens cut changes what each role's UI scopes/offers; `/api/master/*` stays open god-mode with thin scoping helpers (`?creator=` filter, session-list `created_by`/`time`), no 403s. Consistent with phase-1 decisions (creator = attribution; role "not enforced yet"). Hard access enforcement waits for the M2M/DB sprint.
+- **`master-panel-creature-inventory` was already fixed.** Backend `_entity_detail` has returned `inventory`/`equipped_weapon` since sprint 007 (`c5fe924`); `CreatureForm` has rendered them since sprint 007 (`7976363`). The backlog claim ("query doesn't include the fields") is stale. Only real remnant: items not shown inline in the read-only observation list — folded into task 3, backlog item marked resolved there.
 
 ## Decisions
 
