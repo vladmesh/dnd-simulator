@@ -54,4 +54,19 @@ Gotchas:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented as planned. `websocket_game` got a `spectate: bool = False` param; FastAPI parses `?spectate=true`. The branch fires after session validation + `ws.accept()`, before player resolution / `start_round`, so the player path is byte-for-byte unchanged.
+
+Factored the read-only loop into a module-level `_run_spectator(ws, session, session_id)` rather than inlining — the divergent message handling (reject `action`/`reaction`, no dispatch) reads cleaner as its own function and keeps `websocket_game` short. It replays `get_last_turn_msg()`, calls `add_spectator`, runs a rate-limited receive loop that rejects submissions, and `finally: to_thread(remove_spectator)` (symmetric with the player path, though `remove_spectator` never joins the round thread).
+
+Tests (5, in `test_websocket.py::TestSpectator`, function-scoped `ws_arena`): added a `_spectate_connect` helper.
+- `test_no_player_id_needed` — connecting without `player_id` stays open (no 4004); after a player joins, the spectator receives the broadcast (proves no `start_round` from the spectator, and registration works without a player).
+- `test_join_replays_last_turn` — player drives the round to its turn (caches `_last_turn_msg`), then a fresh spectator gets the replay on connect without sending.
+- `test_receives_event_stream` — player `end_turn` broadcasts to the spectator read-only.
+- `test_cannot_submit` — spectator `attack` → `error` "Spectators cannot submit actions" (rejected before dispatch).
+- `test_disconnect_does_not_evict` — close spectator → session still listed in `GET /api/master/sessions` AND the player socket keeps advancing (the strong signal: eviction autosaves+pops, so the list alone can't discriminate; the live round can).
+
+`make check` green (backend 2303, frontend 256). `make test-integration` 166 passed (161 + 5 new). No old tests modified.

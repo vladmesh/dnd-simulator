@@ -103,6 +103,14 @@ def _recv_until(sock: ws_lib.WebSocket, target_type: str, max_msgs: int = 80) ->
     return None
 
 
+def _spectate_connect(ws_base_url: str, session_id: str, player_id: str | None = None) -> ws_lib.WebSocket:
+    """Open a read-only spectator WS (`?spectate=true`). player_id is optional."""
+    url = f"{ws_base_url}/{session_id}?spectate=true"
+    if player_id:
+        url += f"&player_id={player_id}"
+    return ws_lib.create_connection(url, timeout=10)
+
+
 # ── Connection & first turn ───────────────────────────────────────────
 
 
@@ -180,6 +188,127 @@ class TestConnection:
             pass
         finally:
             sock.close()
+
+
+# ── Spectator (read-only observe) ─────────────────────────────────────
+
+
+class TestSpectator:
+    """Phase 3 task 3: `?spectate=true` registers a read-only observer.
+
+    A spectator receives the same player's-eye broadcast as the player, never
+    drives the round, cannot submit actions, and never evicts the session.
+    """
+
+    def test_no_player_id_needed(self, ws_arena: tuple[str, str, str]) -> None:
+        """`?spectate=true` with no player_id connects (no 4004 no_player) and works.
+
+        The spectator never calls start_round, so the session stays dormant until a
+        player joins; once one does, the spectator receives the broadcast — proving it
+        registered correctly without a player_id.
+        """
+        ws_base, sid, pid = ws_arena
+        spec = _spectate_connect(ws_base, sid)  # no player_id
+        try:
+            assert spec.connected, "spectator socket should stay open without a player_id"
+            player = ws_connect(ws_base, sid, pid)
+            try:
+                assert _recv_until(spec, "turn") is not None, "spectator got no broadcast after player joined"
+            finally:
+                player.close()
+        finally:
+            spec.close()
+
+    def test_join_replays_last_turn(self, ws_arena: tuple[str, str, str]) -> None:
+        """A spectator joining a running session receives the cached last turn on connect."""
+        ws_base, sid, pid = ws_arena
+        player = ws_connect(ws_base, sid, pid)
+        try:
+            assert _recv_until(player, "turn") is not None  # round running, last-turn cached
+            spec = _spectate_connect(ws_base, sid)
+            try:
+                # No send from the spectator — the replay arrives on connect.
+                assert _recv_until(spec, "turn") is not None, "spectator never got the replayed turn"
+            finally:
+                spec.close()
+        finally:
+            player.close()
+
+    def test_receives_event_stream(self, ws_arena: tuple[str, str, str]) -> None:
+        """A player action broadcasts to the spectator read-only (it sent nothing to get it)."""
+        ws_base, sid, pid = ws_arena
+        player = ws_connect(ws_base, sid, pid)
+        try:
+            assert _recv_until(player, "turn") is not None
+            spec = _spectate_connect(ws_base, sid)
+            try:
+                assert _recv_until(spec, "turn") is not None  # consume the connect replay
+
+                ws_send_action(player, "end_turn")
+
+                got = None
+                for _ in range(60):
+                    msg = ws_recv(spec)
+                    if msg["type"] in ("action_result", "round_result", "turn"):
+                        got = msg
+                        break
+                assert got is not None, "spectator never received a broadcast after the player acted"
+            finally:
+                spec.close()
+        finally:
+            player.close()
+
+    def test_cannot_submit(self, ws_arena: tuple[str, str, str]) -> None:
+        """An action on the spectator socket is rejected before dispatch (no state change)."""
+        ws_base, sid, pid = ws_arena
+        player = ws_connect(ws_base, sid, pid)
+        try:
+            assert _recv_until(player, "turn") is not None
+            spec = _spectate_connect(ws_base, sid)
+            try:
+                assert _recv_until(spec, "turn") is not None  # consume replay
+
+                ws_send_action(spec, "attack", target_id="razor")
+
+                err = _recv_until(spec, "error")
+                assert err is not None, "spectator action should be rejected with an error"
+                assert "Spectators cannot submit actions" in err["message"]
+            finally:
+                spec.close()
+        finally:
+            player.close()
+
+    def test_disconnect_does_not_evict(self, ws_arena: tuple[str, str, str], _urls: tuple[str, str, str]) -> None:
+        """A spectator leaving never evicts: the player keeps playing and the session stays listed."""
+        api, _, _ = _urls
+        ws_base, sid, pid = ws_arena
+        player = ws_connect(ws_base, sid, pid)
+        try:
+            assert _recv_until(player, "turn") is not None
+            spec = _spectate_connect(ws_base, sid)
+            assert _recv_until(spec, "turn") is not None
+            spec.close()
+            time.sleep(0.3)  # let the server process the spectator disconnect
+
+            # Session still in the registry (no eviction from a spectator leaving).
+            resp = requests.get(f"{api}/sessions", timeout=10)
+            resp.raise_for_status()
+            assert sid in {s["session_id"] for s in resp.json()}
+
+            # Strong signal: the round is still live — the player socket keeps advancing.
+            ws_send_action(player, "end_turn")
+            got = None
+            for _ in range(20):
+                try:
+                    msg = ws_recv(player)
+                except ws_lib.WebSocketConnectionClosedException:
+                    break
+                if msg["type"] in ("turn", "round_result", "action_result"):
+                    got = msg
+                    break
+            assert got is not None, "player socket stopped working after the spectator left"
+        finally:
+            player.close()
 
 
 # ── Peaceful flow ─────────────────────────────────────────────────────
