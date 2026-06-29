@@ -271,6 +271,7 @@ class GameSession:
     lang: str = "en"
     world_name: str = ""
     default_player_faction: str = ""
+    created_by: str = ""  # attribution: who started the session (unenforced)
 
     # Round lifecycle (managed, not serialized)
     _round: Round | None = field(default=None, init=False, repr=False)

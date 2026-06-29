@@ -32,6 +32,7 @@ class SaveCommands(GameServiceProtocol):
                 "world_name": session.world_name,
                 "lang": session.lang,
                 "default_player_faction": session.default_player_faction,
+                "created_by": session.created_by,
             },
             "world": session.world.save(),
         }

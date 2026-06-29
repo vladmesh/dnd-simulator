@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
 
-from dnd_simulator.adapters.api.deps import get_service
+from fastapi import APIRouter, Depends, HTTPException
+
+from dnd_simulator.adapters.api.deps import get_identity, get_service
 from dnd_simulator.adapters.api.schemas import (
     AssembleWorldRequest,
     CreateWorldRequest,
@@ -18,6 +20,7 @@ from dnd_simulator.adapters.api.schemas import (
 )
 from dnd_simulator.content_loader.manifest import LayerType
 from dnd_simulator.i18n import _
+from dnd_simulator.service.identity import Identity
 
 router = APIRouter(prefix="/api/master", tags=["world-management"])
 
@@ -70,8 +73,8 @@ def list_worlds(lang: str = "en") -> list[WorldListItem]:
 
 
 @router.post("/worlds", response_model=WorldListItem, status_code=201)
-def create_world(req: CreateWorldRequest) -> WorldListItem:
-    """Create a new empty world (no layers defined)."""
+def create_world(req: CreateWorldRequest, identity: Annotated[Identity, Depends(get_identity)]) -> WorldListItem:
+    """Create a new empty world (no layers defined). Creator is the calling identity."""
     service = get_service()
     try:
         result = service.create_empty_world(
@@ -79,7 +82,7 @@ def create_world(req: CreateWorldRequest) -> WorldListItem:
             name=req.name,
             description=req.description,
             default_player_faction=req.default_player_faction,
-            creator=req.creator,
+            creator=identity.user_id,
         )
     except FileExistsError as exc:
         raise HTTPException(status_code=409, detail=_("World '{}' already exists").format(req.id)) from exc
@@ -89,13 +92,13 @@ def create_world(req: CreateWorldRequest) -> WorldListItem:
         description=req.description,
         complete=False,
         editable=True,
-        creator=req.creator,
+        creator=identity.user_id,
     )
 
 
 @router.post("/worlds/assemble", response_model=WorldListItem, status_code=201)
-def assemble_world(req: AssembleWorldRequest) -> WorldListItem:
-    """Assemble a new world from library templates."""
+def assemble_world(req: AssembleWorldRequest, identity: Annotated[Identity, Depends(get_identity)]) -> WorldListItem:
+    """Assemble a new world from library templates. Creator is the calling identity."""
     service = get_service()
     try:
         result = service.assemble_world(
@@ -104,7 +107,7 @@ def assemble_world(req: AssembleWorldRequest) -> WorldListItem:
             description=req.description,
             layer_selections=req.layer_selections,
             default_player_faction=req.default_player_faction,
-            creator=req.creator,
+            creator=identity.user_id,
         )
     except FileExistsError as exc:
         raise HTTPException(status_code=409, detail=_("World '{}' already exists").format(req.id)) from exc
@@ -116,19 +119,22 @@ def assemble_world(req: AssembleWorldRequest) -> WorldListItem:
         description=req.description,
         complete=True,
         editable=True,
-        creator=req.creator,
+        creator=identity.user_id,
     )
 
 
 @router.post("/worlds/{world_id}/fork", response_model=WorldListItem, status_code=201)
-def fork_world(world_id: str, req: ForkWorldRequest) -> WorldListItem:
-    """Fork a world, optionally truncating layers from a given type upward."""
+def fork_world(
+    world_id: str, req: ForkWorldRequest, identity: Annotated[Identity, Depends(get_identity)]
+) -> WorldListItem:
+    """Fork a world, optionally truncating layers. The fork is attributed to the calling identity."""
     service = get_service()
     try:
         result = service.fork_world(
             source_world_id=world_id,
             new_world_id=req.new_id,
             from_layer=req.from_layer,
+            creator=identity.user_id,
         )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

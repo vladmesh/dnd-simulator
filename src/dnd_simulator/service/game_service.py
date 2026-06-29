@@ -97,8 +97,11 @@ class GameService(
         self._llm = llm
         self._brain_factory = BrainFactory(llm=llm)
 
-    def start_game(self, world_name: str = "sword_vale", lang: str = "en") -> GameSession:
-        """Create a new game session with a world loaded from content/worlds/<world_name>/."""
+    def start_game(self, world_name: str = "sword_vale", lang: str = "en", created_by: str = "") -> GameSession:
+        """Create a new game session with a world loaded from content/worlds/<world_name>/.
+
+        ``created_by`` records who started the session (attribution, unenforced).
+        """
         session_id = uuid.uuid4().hex[:8]
         structlog.contextvars.bind_contextvars(session_id=session_id)
 
@@ -201,6 +204,7 @@ class GameService(
             lang=lang,
             world_name=world_name,
             default_player_faction=meta.get("default_player_faction", ""),
+            created_by=created_by,
         )
         session._on_empty = self._on_session_empty
         self._sessions[session_id] = session
@@ -317,13 +321,14 @@ class GameService(
         assert isinstance(meta, dict)
         world_name = str(meta.get("world_name", ""))
         lang = str(meta.get("lang", "en"))
+        created_by = str(meta.get("created_by", ""))
 
         if not world_name:
             return
 
         # Recreate session from the same world template, then load saved state
         try:
-            session = self.start_game(world_name, lang=lang)
+            session = self.start_game(world_name, lang=lang, created_by=created_by)
         except Exception:
             return
 

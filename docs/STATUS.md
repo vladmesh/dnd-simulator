@@ -12,9 +12,9 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** 1 — Identity & role keystone (task 1 done, task 2 pending) — 2026-06-29
+**Phase:** 1 — Identity & role keystone (task 2 done, task 3 pending) — 2026-06-29
 
-Task 1 done: `creator` attribution tag on world manifests (renamed from `owner` mid-task — `creator` is authorship, not access control; sharing/visibility deferred to a future many-to-many model). Base worlds carry `creator: system`. Session `created_by` seam folded into task 2.
+Task 2 done: `service/identity.py` (`Role`/`Identity`/`resolve_identity`) + `get_identity` FastAPI dependency (header `X-User-Id`/`X-Role`, invalid role → 400, env `DND_DEFAULT_ROLE` default ADMIN). World-create/assemble/fork stamp `creator` from caller; session-create stamps `meta.created_by`. Next: task 3 (frontend identity/role selector + header propagation).
 
 ### Phases
 

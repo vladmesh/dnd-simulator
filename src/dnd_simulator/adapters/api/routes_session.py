@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
 
-from dnd_simulator.adapters.api.deps import get_service
+from fastapi import APIRouter, Depends, HTTPException
+
+from dnd_simulator.adapters.api.deps import get_identity, get_service
 from dnd_simulator.adapters.api.schemas import (
     AdvanceTimeRequest,
     CreateSessionRequest,
@@ -22,6 +24,7 @@ from dnd_simulator.adapters.api.schemas import (
 from dnd_simulator.core.brain import BrainType
 from dnd_simulator.i18n import _
 from dnd_simulator.service.game_service import GameService
+from dnd_simulator.service.identity import Identity
 from dnd_simulator.service.session import GameSession
 
 router = APIRouter(prefix="/api/master", tags=["session"])
@@ -38,10 +41,10 @@ def list_sessions() -> list[dict[str, str]]:
 
 
 @router.post("/sessions", response_model=SessionResponse)
-def create_session(body: CreateSessionRequest) -> SessionResponse:
-    """Start a new game session from a world template."""
+def create_session(body: CreateSessionRequest, identity: Annotated[Identity, Depends(get_identity)]) -> SessionResponse:
+    """Start a new game session from a world template. created_by is the calling identity."""
     service = get_service()
-    session = service.start_game(body.world_name, lang=body.lang)
+    session = service.start_game(body.world_name, lang=body.lang, created_by=identity.user_id)
     player = session.get_player()
     return SessionResponse(
         session_id=session.session_id,

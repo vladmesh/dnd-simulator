@@ -62,4 +62,13 @@ After red: add `service/identity.py`, the `get_identity` dependency, and wire it
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- **`service/identity.py`** (pure): `Role(StrEnum)` (worldbuilder/dm/admin/player), frozen `Identity(user_id, role)`, `resolve_identity(user_id, role, *, default_role=Role.ADMIN)`. Kept the env read OUT of the pure resolver — `default_role` is a param. Blank/None user → `"local"`; blank/None role → `default_role`; bad role string → `ValueError`.
+- **`deps.py`** (adapter): `get_identity(request)` reads `X-User-Id`/`X-Role`, resolves the default role from env `DND_DEFAULT_ROLE` via a small `_default_role()` helper (unset/invalid → ADMIN), maps `ValueError` → `HTTPException(400)`.
+- **Wiring** uses `Annotated[Identity, Depends(get_identity)]`, not `= Depends(...)` — ruff B008 forbids the call-in-default form (this repo has no prior `Depends` usage, so this sets the pattern). `create_world`/`assemble_world`/`fork_world` now stamp `creator=identity.user_id`; `create_session` stamps `created_by`.
+- **Body `creator` is now ignored** on world routes (identity is authoritative) — the `CreateWorldRequest`/`AssembleWorldRequest.creator` fields are left in place for round-trip compat but unread. Added `test_body_creator_is_ignored_identity_wins` to lock this.
+- **Session attribution:** added `created_by: str = ""` to `GameSession`, threaded through `start_game(created_by=...)`, persisted in autosave `meta.created_by`, and restored in `_try_restore_session` (survives evict→restore). All existing `start_game` callers keep working via the default.
+- Tests: `tests/unit/test_identity.py` (13). No `tests/integration/` touched — header-less default-identity path covered by unit route tests. `make check` green (2286 backend + 240 frontend).
