@@ -12,9 +12,9 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** 1 — Identity & role keystone (all 3 tasks done; ready to close) — 2026-06-29
+**Phase:** 1 — Identity & role keystone (COMPLETE) — 2026-06-29
 
-Task 3 done: `store/slices/identitySlice.ts` (`userId`/`role`/`setIdentity`, persisted to localStorage, rehydrates via `loadIdentity()`) composed into `gameStore`. `apiClient.request()` injects `X-User-Id`/`X-Role` headers and `wsClient.doConnect()` appends `user_id`/`role` query params, both reading `useGameStore.getState()` when set. `LandingPage` gets a name input + native role `<select>` wired to `setIdentity` (i18n en+ru). Phase 1 (identity & role keystone) complete: world/session attribution (tasks 1-2) + request-seam (task 2) + front selector/propagation (task 3). Next: `/close-phase`, then Phase 2 (three-lens projection of `/api/master/*`).
+Ready for Phase 2 task generation. Phase 1 delivered: world/session attribution (`creator`/`created_by`), `service/identity.py` + `get_identity` request-seam (header `X-User-Id`/`X-Role`, invalid role → 400, default ADMIN), and the frontend identity slice (persist/rehydrate) + `X-User-Id`/`X-Role` HTTP headers + `user_id`/`role` WS params + role selector on `LandingPage`. Validation: integration 157 passed (+3 `test_identity_seam`: invalid role → 400, creator from `X-User-Id`, header-less → "local"); E2E green ([phase1-report](sprints/020-control-interfaces/e2e/phase1-report.md)) — headers/WS params confirmed on the wire, persistence across reload, peaceful regression clean. Next: Phase 2 — three-lens projection of `/api/master/*`.
 
 ### Phases
 

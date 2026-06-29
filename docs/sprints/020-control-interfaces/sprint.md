@@ -21,7 +21,7 @@ Sprint 019 (control-plane-prep) отвердил ровно тот класте�
 
 **Ссылки:** [control-interfaces](../../brainstorms/control-interfaces.md), [game-loop-and-master](../../brainstorms/game-loop-and-master.md), [frontend-architecture](../../brainstorms/frontend-architecture.md), [BACKLOG](../../BACKLOG.md), [VISION](../../VISION.md)
 
-## Phase 1: Identity & role keystone
+## Phase 1: Identity & role keystone ✓
 
 Минимальная модель идентичности — камень в основании, без которого три линзы не формулируются. `Role` (worldbuilder / DM / admin / player), owner-тег на мирах, request-seam, который резолвит «кто звонит» (header/config-driven, без паролей). Плюс минимальный фронт-селектор личности/роли, чтобы следующие фазы тестировались через UI.
 
@@ -67,7 +67,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** Phase 1 (Identity & role keystone) COMPLETE — 2026-06-29. World/session attribution (`creator`/`created_by`), `service/identity.py` + `get_identity` seam (invalid X-Role → 400), and the front identity slice + header/WS propagation + role selector all landed. Integration 157 passed (+3 `test_identity_seam`); E2E green (`e2e/phase1-report.md`). Ready to generate Phase 2 tasks.
 
 ## Decisions
 
