@@ -25,11 +25,13 @@ Sprint 019 (control-plane-prep) отвердил ровно тот класте�
 
 Минимальная модель идентичности — камень в основании, без которого три линзы не формулируются. `Role` (worldbuilder / DM / admin / player), owner-тег на мирах, request-seam, который резолвит «кто звонит» (header/config-driven, без паролей). Плюс минимальный фронт-селектор личности/роли, чтобы следующие фазы тестировались через UI.
 
-**Что доставляет:** создание мира пишет owner; сервер резолвит identity → role; seam отклоняет неизвестную личность. Линза-разрез фазы 2 опирается на это — потому первым.
+**Что доставляет:** создание мира пишет owner; сервер резолвит identity → role; seam отклоняет невалидную роль (400). Линза-разрез фазы 2 опирается на это — потому первым.
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [World ownership field](tasks/phase1-task1-world-ownership.md) — `owner`-тег на манифесте (raw-dict, без enforcement): плумбинг через `assembly`/`manifest`/`WorldBuilderCommands`/схемы; fork re-owns, backward-compat `owner==""`
+2. [Identity & role resolution seam](tasks/phase1-task2-identity-seam.md) — `service/identity.py` (`Role` StrEnum, `Identity`, `resolve_identity`) + `get_identity` FastAPI-dependency (header `X-User-Id`/`X-Role`, invalid role → 400) + стамп owner из вызывающего на world-create/fork
+3. [Frontend identity/role selector + header propagation](tasks/phase1-task3-frontend-identity-selector.md) — `identitySlice` (persist) + инъекция заголовков в `apiClient`/`wsClient` + селектор на `LandingPage`
 
 ## Phase 2: Three-lens projection of `/api/master/*`
 

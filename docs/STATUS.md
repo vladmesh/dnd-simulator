@@ -12,9 +12,9 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** Planning (COMPLETE) — 2026-06-29
+**Phase:** 1 — Identity & role keystone (tasks generated) — 2026-06-29
 
-Ready for Phase 1 task generation.
+Ready to start task 1 (world ownership field).
 
 ### Phases
 
