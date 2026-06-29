@@ -12,7 +12,9 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** 4 — Save robustness & i18n polish (task 1 done, task 2 pending) — 2026-06-29. Phases 1-3 COMPLETE.
+**Phase:** 4 — Save robustness & i18n polish (tasks 1-2 done, task 3 pending) — 2026-06-29. Phases 1-3 COMPLETE.
+
+Phase 4 task 2 DONE (2026-06-29): combat/event-log i18n — added 9 missing `ru` catalog entries (Conditions, Action Surge, Lay on Hands ×4, loot ×2, `{gold} gold`, `nothing`) so those log lines render Russian instead of the English msgid; fixed the faction-id leak by resolving `faction_name` via `QueryType.FACTION_NAME` in `combat_manager._handle_death` (omitted when unresolvable → perception's `faction_id` fallback). Closes the E2E phase-3 `kingdom` finding. 7 new unit tests (3 faction-name event, 4 RU-rendering); `make check` green (backend 2313, frontend 260).
 
 Phase 4 task 1 DONE (2026-06-29): persist player XP/level-up across save/reload — closes backlog `player-xp-not-persisted`. `experience`/`level_up_available` now round-trip the modern path: emitted in `PlayerCharacter.to_full_save_data`, carried on `PlayerContent`, passed through `_to_player`, re-applied in `EntitiesLayer.load_state` existing-entity block (mirrors `current_hp`/`gold`). 3 unit tests in `test_commands_save.py` (same-session re-apply, fresh `parse_player`, autosave→fresh-session dev-evict path); a reloaded eligible Fighter now levels up without a 400. `make check` green (backend 2306, frontend 260).
 

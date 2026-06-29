@@ -43,4 +43,14 @@ Gotcha: the lay-on-hands msgids contain `→` (U+2192) and paired `{before}`/`{a
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented as planned, no surprises.
+
+**Faction-id leak (code):** in `combat_manager._handle_death`, the `REPUTATION_CHANGED` data dict is now built into a local `rep_data` and tagged with `faction_name` via `query_fn(Query(FACTION_NAME, {faction_id}))` — only when `query_fn` is present, the target has a faction, and the politics layer returns a non-empty name. Otherwise the key is omitted and `perception._perceive_reputation_change`'s existing `d.get("faction_name", d["faction_id"])` fallback applies. No try/except: the politics `FACTION_NAME` handler returns `Answer(value=None)` for unknown ids (never raises), matching the surrounding `get_faction_relation` closure which is also unguarded. `perception.py` untouched.
+
+**Catalog:** added 9 missing `ru` `msgstr` entries to `.po` (Conditions, Action Surge ×2, Lay on Hands ×4, loot ×2, `{gold} gold`, `nothing`), then `make compile-messages`. `make messages` has no merge step (it only writes `.pot`), so entries were added to `.po` by hand grouped under `#:` comment headers matching the existing file convention. The lay-on-hands msgids' `→` (U+2192, no surrounding spaces in `{before}→{after}`) was copied verbatim so they match.
+
+**Tests:** 3 in new `test_reputation_event_faction_name.py` (drives `_handle_death` directly à la `test_xp_grant_on_kill.py`: display-name carried + line shows it not the slug; no-query_fn omits key + perception falls back; unresolvable name omits key); 4 in `test_perception.py::TestCombatLogLocalizesRussian` (loot / lay-on-hands / action-surge / inspect-conditions each render RU, assert English msgid absent + cyrillic present). `make check` green (backend 2313, frontend 260).

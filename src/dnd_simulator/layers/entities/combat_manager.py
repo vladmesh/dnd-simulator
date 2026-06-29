@@ -424,17 +424,27 @@ class CombatManager:
 
         delta = apply_reputation_drop(attacker, target, BASE_KILL_REPUTATION_DELTA, get_faction_relation)
         if delta > 0:
+            rep_data: dict[str, object] = {
+                "entity_id": attacker.id,
+                "faction_id": target.faction_id,
+                "old_rep": old_rep,
+                "new_rep": old_rep - delta,
+                "delta": -delta,
+                "reason": "kill",
+            }
+            # Resolve the localized faction display name so the log shows the name, not the raw slug.
+            # Omitted when unresolvable — perception falls back to faction_id.
+            if query_fn is not None and target.faction_id:
+                name_answer = query_fn(
+                    "politics",
+                    Query(question=QueryType.FACTION_NAME, params={"faction_id": target.faction_id}),
+                )
+                if name_answer.value:
+                    rep_data["faction_name"] = str(name_answer.value)
             rep_event = Event(
                 event_type=EventType.REPUTATION_CHANGED,
                 source_layer="entities",
-                data={
-                    "entity_id": attacker.id,
-                    "faction_id": target.faction_id,
-                    "old_rep": old_rep,
-                    "new_rep": old_rep - delta,
-                    "delta": -delta,
-                    "reason": "kill",
-                },
+                data=rep_data,
             )
             self._location_log[target.location_id].append(rep_event)
             events.append(rep_event)

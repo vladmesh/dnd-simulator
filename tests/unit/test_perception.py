@@ -759,3 +759,73 @@ class TestEncounterSpawnedPerceiver:
         assert "Goblin" not in result
         assert "encounter_spawned" not in result  # not the raw-type fallback
         assert _has_cyrillic(result)
+
+
+class TestCombatLogLocalizesRussian:
+    """Loot / Lay-on-Hands / Action-Surge / inspect-conditions log lines render RU, not the English msgid.
+
+    Sprint 020, Phase 4, Task 2 — these msgids were wrapped in _() but missing from the ru catalog."""
+
+    def teardown_method(self) -> None:
+        set_language("en")
+
+    def test_loot_line_russian(self) -> None:
+        set_language("ru")
+        observer = Character(id="player", name="Hero", location_id="r1")
+        corpse = Character(id="bandit", name="Bandit", location_id="r1", race=Race.HUMAN)
+        event = Event(
+            event_type=EventType.ENTITY_TAKE,
+            source_layer="entities",
+            data={"actor_id": "player", "target_id": "bandit", "item_names": [], "gold": 12},
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer, corpse))
+        assert "You loot" not in result
+        assert "gold" not in result  # the "{gold} gold" fragment is also localized
+        assert _has_cyrillic(result)
+
+    def test_lay_on_hands_line_russian(self) -> None:
+        set_language("ru")
+        observer = Character(id="paladin", name="Pal", location_id="r1")
+        event = Event(
+            event_type=EventType.ENTITY_LAY_ON_HANDS,
+            source_layer="entities",
+            data={
+                "entity_id": "paladin",
+                "target_id": "paladin",
+                "healed": 5,
+                "pool_before": 10,
+                "pool_after": 5,
+            },
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer))
+        assert "lay hands" not in result
+        assert "→" in result  # arrow preserved between pool values
+        assert _has_cyrillic(result)
+
+    def test_action_surge_line_russian(self) -> None:
+        set_language("ru")
+        observer = Character(id="fighter", name="Ftr", location_id="r1")
+        event = Event(
+            event_type=EventType.ENTITY_ACTION_SURGE,
+            source_layer="entities",
+            data={"entity_id": "fighter"},
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer))
+        assert "surge with energy" not in result
+        assert _has_cyrillic(result)
+
+    def test_inspect_conditions_line_russian(self) -> None:
+        from dnd_simulator.core.conditions import Condition
+
+        set_language("ru")
+        observer = Character(id="player", name="Hero", location_id="r1")
+        target = Character(id="orc", name="Orc", location_id="r1", race=Race.HUMAN)
+        target.conditions[Condition.POISONED] = 3
+        event = Event(
+            event_type=EventType.CUSTOM,
+            source_layer="entities",
+            data={"inspect_target": "orc"},
+        )
+        result = perceive_event(event, observer, _get_entity_fn(observer, target))
+        assert "Conditions:" not in result
+        assert _has_cyrillic(result)
