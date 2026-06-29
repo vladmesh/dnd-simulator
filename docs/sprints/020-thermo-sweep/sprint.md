@@ -42,7 +42,11 @@ Scope OUT:
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Save/load data integrity (BLOCKER)](tasks/phase1-task1-save-load-integrity.md) — аксессуар-модификаторы + XP/`level_up_available` переживают save→load round-trip
+2. [Visible behavioral bugs](tasks/phase1-task2-visible-bugs.md) — иконка `lay_on_hands`, тихий `handle_wait` travel, HTTP-статус из типов исключений
+3. [rules/ purity — determinism](tasks/phase1-task3-purity-determinism.md) — structlog вон из sneak_attack/rule_brain, `rng` через `ActionContext`, `rules/lairs.should_deplete`
+4. [rules/ purity — i18n handler errors](tasks/phase1-task4-handler-i18n.md) — обернуть `ActionResult(error=...)` в `_()` (items/equipment/trade/action_surge/loot) + RU перевод
+5. [rules/ purity — provider I/O & state](tasks/phase1-task5-purity-providers.md) — merchant/loot провайдеры без world-query в rules; `BaseActionProvider` без состояния
 
 ## Phase 2: Типизация границ + enums (фундамент под control-interfaces)
 
@@ -93,7 +97,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** Phase 1 tasks generated (5 tasks) — 2026-06-30. Ready to start task 1.
 
 ## Decisions
 

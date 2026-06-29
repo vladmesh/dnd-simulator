@@ -12,9 +12,9 @@
 **Sprint:** 020-thermo-sweep
 **Goal:** закрыть кластер структурного долга и багов из термоядерного ревью — чистота `rules/`, типизация межслойных границ, декомпозиция выросших модулей и фронтовых god-компонентов; поведение неизменно
 **Started:** 2026-06-30
-**Phase:** Planning (COMPLETE) — 2026-06-30
+**Phase:** 1 — Корректность и инварианты (tasks generated, 5 tasks) — 2026-06-30
 
-Полный sweep (выбран пользователем), целится в `control-interfaces`. Источник — [thermo-nuclear-review.md](thermo-nuclear-review.md). Готов к генерации задач Phase 1.
+Полный sweep (выбран пользователем), целится в `control-interfaces`. Источник — [thermo-nuclear-review.md](thermo-nuclear-review.md). Phase 1 разбита на 5 задач (data integrity / visible bugs / purity-determinism / purity-i18n / purity-providers). Ready to start task 1.
 
 ### Phases
 
