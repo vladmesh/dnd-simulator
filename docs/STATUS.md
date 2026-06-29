@@ -18,11 +18,10 @@
 
 ### Phases
 
-1. Корректность и целостность save/load — баги ревью под regression-тестами (BLOCKER порчи данных, иконка, тихий travel, HTTP-статус)
-2. Чистота rules/ + добивка i18n — убрать structlog/I-O из чистых функций, обернуть ошибки хендлеров в gettext, прокинуть RNG
-3. Типизация границ + enums — query-контракт, EntityType/BrainType/LayerSource, World.get_layer, exception handlers, player-status (фундамент под control-interfaces)
-4. Декомпозиция бэка — round/combat/ecology/activation split, реестр экипировки, дедуп сериализации, разрыв цикла core/player→content_loader
-5. Декомпозиция фронта — TargetDropdown/SchemaForm/EventLog/WorldOverview, общие типы, дедуп slice'ов
+1. Корректность и инварианты — баги ревью (BLOCKER порчи данных, иконка, тихий travel, HTTP-статус) + чистота rules/ (structlog/I-O вон, gettext, RNG) под regression-тестами
+2. Типизация границ + enums — query-контракт, EntityType/BrainType/LayerSource, World.get_layer, exception handlers, player-status (фундамент под control-interfaces)
+3. Декомпозиция бэка — round/combat/ecology/activation split, реестр экипировки, дедуп сериализации, разрыв цикла core/player→content_loader
+4. Декомпозиция фронта — TargetDropdown/SchemaForm/EventLog/WorldOverview, общие типы, дедуп slice'ов
 
 ## Recent activity (non-sprint)
 
