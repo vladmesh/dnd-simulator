@@ -173,6 +173,91 @@ class TestEmptyListeners:
         assert session._listeners == [registered]
 
 
+class TestSpectatorListener:
+    """Read-only spectators (Sprint 020 phase 3): receive the broadcast, never drive lifecycle."""
+
+    def test_spectator_receives_broadcast(self) -> None:
+        """A spectator gets the same events fired to player listeners."""
+        session = _session()
+        player = RecordingListener()
+        spectator = RecordingListener()
+        session.add_listener(player)
+        session.add_spectator(spectator)
+
+        msg = {"x": 1}
+        session._fire("on_turn", msg)
+        session._fire("on_action_result", msg)
+
+        assert player.calls == [("on_turn", (msg,)), ("on_action_result", (msg,))]
+        assert spectator.calls == [("on_turn", (msg,)), ("on_action_result", (msg,))]
+
+    def test_spectator_added_after_player_receives_later_events(self) -> None:
+        """Joining mid-stream, a spectator gets subsequent events (not the ones it missed)."""
+        session = _session()
+        player = RecordingListener()
+        session.add_listener(player)
+        session._fire("on_turn", {"first": 1})
+
+        spectator = RecordingListener()
+        session.add_spectator(spectator)
+        session._fire("on_turn", {"second": 2})
+
+        assert spectator.calls == [("on_turn", ({"second": 2},))]
+        assert player.calls == [("on_turn", ({"first": 1},)), ("on_turn", ({"second": 2},))]
+
+    def test_spectator_alone_is_player_empty(self) -> None:
+        """A session with only spectators counts as player-empty (lifecycle keys on players)."""
+        session = _session()
+        session.add_spectator(RecordingListener())
+        assert session.has_player_listeners() is False
+
+    def test_player_present_has_player_listeners(self) -> None:
+        session = _session()
+        session.add_listener(RecordingListener())
+        assert session.has_player_listeners() is True
+
+    def test_remove_only_spectator_does_not_fire_on_empty(self) -> None:
+        """Removing a spectator never triggers the empty handler, even with no players present."""
+        session = _session()
+        spectator = RecordingListener()
+        session.add_spectator(spectator)
+
+        fired: list[GameSession] = []
+        session._on_empty = lambda s: fired.append(s)
+
+        session.remove_spectator(spectator)
+
+        assert fired == []
+
+    def test_remove_spectator_keeps_player_in_broadcast(self) -> None:
+        """After a spectator leaves, the remaining player listener still gets events."""
+        session = _session()
+        player = RecordingListener()
+        spectator = RecordingListener()
+        session.add_listener(player)
+        session.add_spectator(spectator)
+
+        session.remove_spectator(spectator)
+        session._fire("on_turn", {"z": 9})
+
+        assert player.calls == [("on_turn", ({"z": 9},))]
+
+    def test_last_player_leaving_with_spectator_present_fires_on_empty(self) -> None:
+        """The session is player-empty when the last player goes, even if a spectator remains."""
+        session = _session()
+        player = RecordingListener()
+        spectator = RecordingListener()
+        session.add_listener(player)
+        session.add_spectator(spectator)
+
+        seen: list[GameSession] = []
+        session._on_empty = lambda s: seen.append(s)
+
+        session.remove_listener(player)
+
+        assert seen == [session]
+
+
 # ---------------------------------------------------------------------------
 # Submit guards (no round running)
 # ---------------------------------------------------------------------------

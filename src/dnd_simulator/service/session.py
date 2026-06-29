@@ -268,6 +268,9 @@ class GameSession:
     _round_thread: threading.Thread | None = field(default=None, init=False, repr=False)
     _player_brain: PlayerBrain | None = field(default=None, init=False, repr=False)
     _listeners: list[SessionEventListener] = field(default_factory=list, init=False, repr=False)
+    # Read-only observers (DM/admin/future spectators). Receive the broadcast, never drive
+    # the round and never count toward the "session empty" lifecycle decision.
+    _spectators: list[SessionEventListener] = field(default_factory=list, init=False, repr=False)
     _last_turn_msg: dict[str, Any] | None = field(default=None, init=False, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
     _on_empty: Callable[[GameSession], None] | None = field(default=None, init=False, repr=False)
@@ -304,12 +307,38 @@ class GameSession:
         """Ensure session_id is bound in contextvars for all log calls."""
         structlog.contextvars.bind_contextvars(session_id=self.session_id)
 
+    def has_player_listeners(self) -> bool:
+        """Whether any player (round-driving) listener is connected.
+
+        Single source of truth for the "session empty" decision: spectators are
+        excluded, so a session watched only by spectators counts as empty. Lock-free
+        read (atomic under the GIL); callers needing a consistent snapshot hold ``_lock``.
+        """
+        return bool(self._listeners)
+
     def add_listener(self, listener: SessionEventListener) -> None:
         self._bind_session_context()
         with self._lock:
             self._listeners.append(listener)
             count = len(self._listeners)
         logger.info("add_listener", listener_count=count)
+
+    def add_spectator(self, listener: SessionEventListener) -> None:
+        """Register a read-only observer. Receives the broadcast; never drives lifecycle."""
+        self._bind_session_context()
+        with self._lock:
+            self._spectators.append(listener)
+            count = len(self._spectators)
+        logger.info("add_spectator", spectator_count=count)
+
+    def remove_spectator(self, listener: SessionEventListener) -> None:
+        """Remove a read-only observer. Never stops the round, never fires ``_on_empty``."""
+        self._bind_session_context()
+        with self._lock:
+            with contextlib.suppress(ValueError):
+                self._spectators.remove(listener)
+            count = len(self._spectators)
+        logger.info("remove_spectator", spectator_count=count)
 
     def get_last_turn_msg(self) -> dict[str, Any] | None:
         """Return the last turn message for replay by the caller."""
@@ -323,7 +352,7 @@ class GameSession:
             with contextlib.suppress(ValueError):
                 self._listeners.remove(listener)
             count = len(self._listeners)
-            if not self._listeners:
+            if not self.has_player_listeners():
                 is_empty = True
                 if self._round is not None:
                     stop_round = True
@@ -334,9 +363,9 @@ class GameSession:
             self._on_empty(self)
 
     def _fire(self, method: str, *args: object) -> None:
-        """Call a method on all listeners, swallowing individual errors."""
+        """Call a method on all listeners and spectators, swallowing individual errors."""
         with self._lock:
-            listeners = list(self._listeners)
+            listeners = self._listeners + self._spectators
         for listener in listeners:
             try:
                 getattr(listener, method)(*args)
