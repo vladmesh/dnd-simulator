@@ -356,6 +356,7 @@ class TestHealingDiceDetail:
 
         action = Action(name=ActionType.SECOND_WIND, params={})
         ctx = MagicMock()
+        ctx.rng = None
         world = MagicMock()
 
         handle_second_wind(actor, action, capture_emit, ctx, world)
@@ -396,6 +397,7 @@ class TestHealingDiceDetail:
 
         action = Action(name=ActionType.USE_ITEM, params={"item_id": "pot1"})
         ctx = MagicMock()
+        ctx.rng = None
         world = MagicMock()
 
         handle_use_item(actor, action, capture_emit, ctx, world)

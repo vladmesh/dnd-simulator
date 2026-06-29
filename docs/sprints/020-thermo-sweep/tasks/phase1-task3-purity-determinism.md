@@ -53,4 +53,14 @@ Files: `rules/sneak_attack.py`, `rules/rule_brain.py`, `layers/entities/combat_m
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Three purity violations fixed:
+
+1. **structlog out of rules**: Removed `logger` from `rules/sneak_attack.py` and `rules/rule_brain.py`. `check_sneak_attack` now returns the trigger reason in `ExtraDamage.reason` (new optional field); `combat_manager` logs it after the call. All `RuleBrain` decision traces dropped (low-value noise in a pure module); the two callers in `round.py` already had context to log if needed.
+
+2. **ActionContext.rng threaded**: Added `rng: random.Random | None` to `ActionContext` (with `import random`). `round.py` populates it from `get_global_rng()` in all three ctx-build sites (combat, peaceful, reaction). `_apply_potion` and `handle_second_wind` in `handlers/items.py` pass `ctx.rng` to `roll()`. Two pre-existing tests in `test_breakdown_pipeline.py` used `MagicMock()` for `ctx` — fixed by setting `ctx.rng = None` so the mock doesn't pollute the rng call.
+
+3. **Lair depletion pure rule**: Created `rules/lairs.py` with `should_deplete(lair, roll)` — pure function, no RNG inside. `ecology/layer.py` rolls once, calls `should_deplete`, then mutates `lair.state`. Behavior unchanged.

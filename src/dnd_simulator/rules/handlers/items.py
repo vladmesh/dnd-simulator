@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 from typing import TYPE_CHECKING
 
 import structlog
@@ -65,10 +66,10 @@ def _find_item(actor: Creature, item_id: str) -> Item:
     raise KeyError(f"Item '{item_id}' not in {actor.name}'s inventory")
 
 
-def _apply_potion(actor: Creature, item: Item) -> tuple[int, list[dict[str, object]]]:
+def _apply_potion(actor: Creature, item: Item, rng: random.Random | None = None) -> tuple[int, list[dict[str, object]]]:
     """Roll heal dice and apply healing. Returns (actual HP restored, dice_detail)."""
     heal_dice = str(item.params["heal_dice"])
-    result = roll(heal_dice)
+    result = roll(heal_dice, rng=rng)
     healed = actor.heal(result.total)
     dice_detail: list[dict[str, object]] = [{"sides": d.sides, "result": d.result} for d in result.dice]
     return healed, dice_detail
@@ -80,7 +81,7 @@ def handle_use_item(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Actio
     item = _find_item(actor, item_id)
 
     if item.item_type == ItemType.POTION:
-        healed, dice_detail = _apply_potion(actor, item)
+        healed, dice_detail = _apply_potion(actor, item, rng=ctx.rng)
         actor.inventory.remove(item)
         logger.info("use_item", item=item.name, healed=healed)
         emit_fn(
@@ -218,7 +219,7 @@ def handle_second_wind(
         return ActionResult(success=False, error="Only characters can use Second Wind")
 
     use_resource(actor, "second_wind")
-    dice_result = roll_dice("1d10")
+    dice_result = roll_dice("1d10", rng=ctx.rng)
     healing = dice_result.total + actor.level
     healed = actor.heal(healing)
     dice_detail: list[dict[str, object]] = [{"sides": d.sides, "result": d.result} for d in dice_result.dice]

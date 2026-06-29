@@ -36,6 +36,7 @@ from dnd_simulator.rules.actions import (
     get_num_bonus_actions,
 )
 from dnd_simulator.rules.conditions import is_incapacitated, tick_conditions
+from dnd_simulator.rules.dice import get_global_rng
 from dnd_simulator.rules.modifiers import effective_speed
 from dnd_simulator.rules.validation import ActionContext
 
@@ -263,6 +264,7 @@ class Round:
             turn_budget=creature.turn_budget,
             combat_state=combat_state,
             get_entity=self._host.get_entity,
+            rng=get_global_rng(),
         )
 
     def _build_combat_awareness(
@@ -385,6 +387,7 @@ class Round:
             is_combat=False,
             current_turn_entity_id=creature.id,
             get_entity=self._host.get_entity,
+            rng=get_global_rng(),
         )
 
         while True:
@@ -465,6 +468,7 @@ class Round:
                 turn_budget=creature.turn_budget,
                 combat_state=combat_state,
                 get_entity=self._host.get_entity,
+                rng=get_global_rng(),
             )
             result = self._execute_action(creature, action, ctx, _emit)
             if result.success:

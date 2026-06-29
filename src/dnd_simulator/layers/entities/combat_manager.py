@@ -300,6 +300,9 @@ class CombatManager:
             already_used=attacker.id in self._sneak_attack_used,
             ally_adjacent=ally_adjacent,
         )
+        if extra_damage:
+            sa = extra_damage[0]
+            logger.info("sneak_attack", attacker=attacker.name, dice=sa.dice, reason=sa.reason)
 
         # Divine Smite: validate before attack, add damage, spend slot only on hit.
         smite_slot_level: int | None = None
