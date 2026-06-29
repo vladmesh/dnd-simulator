@@ -57,8 +57,8 @@ src/dnd_simulator/
 │                    routes_world.py (world/library, layers, fork/delete),
 │                    routes_player.py (player actions, awareness),
 │                    routes_content.py (CRUD + schemas),
-│                    routes_ws.py (WebSocket loop),
-│                    app.py / deps.py / schemas.py
+│                    routes_ws.py (WebSocket loop; ?spectate=true read-only observe path),
+│                    app.py / deps.py (get_identity seam) / schemas.py
 │                    also serves React SPA build
 ├── content_loader/ — loads content from YAML directory format; locations must be explicit
 │   ├── schemas.py    — Pydantic content models (RegionContent, NpcContent, etc.) — source of truth for validation
@@ -78,7 +78,8 @@ src/dnd_simulator/
 │   ├── game_service.py — session management, command routing, creature hot controls; composes the WorldBuilderCommands + PlayerCommands mixins
 │   ├── commands_worldbuilder.py — WorldBuilderCommands mixin: world templates/manifest, layer files, entity/catalog CRUD
 │   ├── commands_player.py  — PlayerCommands mixin: create_player, level_up_player, player_status
-│   ├── session.py      — GameSession: world ref, player lookup via entities layer, autosave
+│   ├── session.py      — GameSession: world ref, player lookup via entities layer, autosave; spectator-listeners (read-only broadcast) + disconnect grace-period evict
+│   ├── identity.py     — Role (worldbuilder/DM/admin/player) + Identity + resolve_identity; backs the get_identity request-seam (no auth/DB, attribution + UI-lens only, not enforced)
 │   ├── action_dispatcher.py — validate → route → execute (single entry point for all actions)
 │   ├── action_parsing.py    — parse JSON action payloads into Action (ActionParseError); keeps adapters off core Action/ActionType
 │   ├── brain_factory.py     — creates Brain instances from BrainType
@@ -99,17 +100,17 @@ content/           — authored game data (YAML)
     └── test_vale/          — minimal test world (all custom layers)
 
 frontend/          — React + TypeScript SPA (Vite + shadcn/ui + Zustand)
-├── src/components/         — LandingPage (Player/DM split), ErrorBoundary
+├── src/components/         — LandingPage (Player/DM split + identity/role selector), ErrorBoundary
 ├── src/components/setup/   — world picker, character creation, session connect (player flow)
 ├── src/components/game/    — GameScreen (dashboard: 3-col grid), EventLog (compact strip + expand overlay),
 │                             BattleMap (interactive CSS Grid, click-to-move, click-to-inspect),
 │                             ActionBar (orchestrator) + action-bar/ (ActionButton, SayAction, drawers, utils),
 │                             CombatPanel, NpcInspectModal, Perception, LocationPanel
-├── src/components/master/  — MasterScreen (Worlds/Sessions tabs), WorldEditor (layer stepper),
+├── src/components/master/  — MasterScreen (role-routed lenses: worldbuilder/DM/admin/god-mode), WorldEditor (layer stepper),
 │                             EntityListEditor (schema-driven CRUD), SchemaForm, CatalogBrowser,
-│                             SessionView (WorldOverview, CreatureList, TimeControl, SavesPanel)
-├── src/store/              — Zustand store (slices: connection, player, turn, log)
-├── src/transport/          — apiClient (REST), wsClient (WebSocket)
+│                             SessionView (WorldOverview, CreatureList, TimeControl, SavesPanel, SessionLiveFeed — read-only observe)
+├── src/store/              — Zustand store (slices: connection, player, turn, log, identity)
+├── src/transport/          — apiClient (REST, identity headers), wsClient (WebSocket; player + ?spectate observe sockets)
 └── src/i18n/               — i18next with EN/RU locale files
 ```
 
@@ -144,7 +145,9 @@ Player input flow (service/, command-based):
 REST API flow (adapters/api/):
     FastAPI routes → GameService methods → JSON responses
     I18nMiddleware sets session language before each request via contextvars
+    get_identity resolves X-User-Id/X-Role headers into an Identity (no auth; invalid role → 400)
     Master routes: session CRUD, creature hot controls, nation/settlement patching, saves
+                   (role projects the UI lens; backend stays open god-mode, no 403s)
     Player routes: character creation, perception, events, combat, map, actions
 
 WebSocket flow (React frontend):
@@ -152,6 +155,7 @@ WebSocket flow (React frontend):
     GameSession owns Round lifecycle (start/stop round thread)
     Round thread fires callbacks → SessionEventListener → WS messages → Zustand store
     Player actions: WS message → PlayerBrain queue → Round processes → broadcast result
+    ?spectate=true: read-only observer — add_spectator, replays last turn, rejects actions, never evicts the session
 ```
 
 `GameSession` (in `service/session.py`) owns the `Round` lifecycle — starting and stopping the round thread, bridging events to transport listeners via `SessionEventListener` protocol. The `Round` class separates combat and peaceful turns. Combat locations use initiative order (d20 + DEX mod, rolled once at combat start); peaceful creatures use default order. Each creature's turn is a multi-action loop: a `TurnBudget` is created from creature stats, then the brain is called repeatedly until it returns `end_turn` or the budget is exhausted. `ActionDispatcher` (`service/action_dispatcher.py`) is the single entry point: it validates preconditions via `rules/validation.py` (alive, budget, target validity, weapon reach), routes to the appropriate handler in `rules/handlers/`, and consumes budget on success. `ActionProvider` (`rules/action_provider.py`) determines available actions per creature based on state, inventory, and weapon. Brains receive structured awareness (`PeacefulAwareness` or `CombatAwareness` from `core/awareness.py`) with the current budget attached, so they can make informed decisions. Three brain types: `RuleBrain` (utility scoring), `LlmBrain` (LLM calls), `PlayerBrain` (queue + on_turn callback for interactive I/O). `World.advance_time()` checks each layer in order (0 → N) and only ticks those whose `tick_interval` has elapsed since their last tick. This way a 6-second combat round doesn't trigger monthly political updates. Events generated during ticks are propagated to all other layers.
@@ -285,5 +289,6 @@ Structured logging via `structlog` (`logging_config.py`, `logging_file_dispatch.
 - **LLM is injected, not hardcoded.** `LlmBrain` receives an `LlmClient`; rule-based NPCs use no LLM at all.
 - **Content is data, not code.** Worlds are composed from reusable library templates (1 template = 1 layer). Each world has a `manifest.yaml` referencing library templates or custom layers. ContentLoader resolves manifests and parses YAML into runtime objects. Fork (copy to custom) enables per-world customization.
 - **Transport is a thin adapter.** The game works the same whether accessed via terminal, HTTP, or Telegram. REST API (FastAPI) is the primary adapter for frontend.
+- **Identity is attribution + a UI lens, not access control.** A request's `Role` (resolved from `X-User-Id`/`X-Role`, no auth) projects which lens the master UI shows — worldbuilder (own worlds), DM (own worlds + sessions), admin (read-only park view), player/null (god-mode). `creator`/`created_by` tag who made a world/session. The backend stays open god-mode (no 403s); hard access enforcement waits for a future M2M/DB sprint. Spectator-listeners subscribe read-only to a session's event stream without driving the round, so DM/admin/observers can watch live.
 - **Two editing modes.** Between sessions: master edits YAML templates on disk. During sessions: hot controls (creature spawn/delete, HP, brain, nation/settlement patches) modify objects in memory. Saves persist state to disk.
 - **Per-session i18n.** Language is set per session via `contextvars`. The global `_()` function reads the current context, so NPC LLM prompts and translated strings respect session language.

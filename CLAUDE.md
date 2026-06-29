@@ -65,9 +65,9 @@ core/              — models, Layer ABC, World, Entity/Character hierarchy, Con
 layers/            — concrete layer implementations (depend on core only)
   ↓
 round.py           — Round orchestrator: multi-action turn loop with budget enforcement
-service/           — GameService, ActionDispatcher, BrainFactory, command modules
+service/           — GameService, ActionDispatcher, BrainFactory, command modules, identity/role seam (projection-only), GameSession (round lifecycle + spectator-listeners)
   ↓
-adapters/          — FastAPI REST + WebSocket API
+adapters/          — FastAPI REST + WebSocket API (player + ?spectate observe sockets; get_identity header seam)
 
 rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, divine smite, fighting style, resources, character creation (point buy, HP, starting equipment), leveling (XP-by-CR, thresholds, perform_level_up), action providers, handlers/ package, reputation, combat_sides, encounters (time-of-day gate), inventory (transfer_items), loot, rule_brain (no deps)
 llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
