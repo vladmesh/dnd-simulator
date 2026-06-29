@@ -1,4 +1,4 @@
-import { useGameStore } from "@/store/gameStore"
+import { loadIdentity } from "@/store/slices/identitySlice"
 import type { ClientMessage, ServerMessage } from "@/types/ws"
 
 type MessageHandler = (msg: ServerMessage) => void
@@ -13,6 +13,7 @@ export class WsClient {
   private ws: WebSocket | null = null
   private sessionId: string | null = null
   private playerId: string | null = null
+  private spectate = false
   private messageHandlers = new Set<MessageHandler>()
   private statusHandlers = new Set<StatusHandler>()
   private status: WsStatus = "disconnected"
@@ -24,10 +25,18 @@ export class WsClient {
     return this.status
   }
 
-  connect(sessionId: string, playerId?: string): void {
+  // The player game screen calls `connect(sessionId, playerId)`; a read-only
+  // master observer calls `connect(sessionId, { spectate: true })`.
+  connect(sessionId: string, opts?: string | { playerId?: string; spectate?: boolean }): void {
     this.intentionalClose = false
     this.sessionId = sessionId
-    this.playerId = playerId ?? null
+    if (typeof opts === "string" || opts === undefined) {
+      this.playerId = opts ?? null
+      this.spectate = false
+    } else {
+      this.playerId = opts.playerId ?? null
+      this.spectate = opts.spectate ?? false
+    }
     this.retryMs = INITIAL_RETRY_MS
     this.doConnect()
   }
@@ -81,7 +90,10 @@ export class WsClient {
     let url = `${proto}//${location.host}/api/ws/${this.sessionId}`
     const params = new URLSearchParams()
     if (this.playerId) params.set("player_id", this.playerId)
-    const { userId, role } = useGameStore.getState()
+    if (this.spectate) params.set("spectate", "true")
+    // Read identity from localStorage rather than the game store to avoid a
+    // wsClient ↔ gameStore import cycle (identitySlice imports gameStore as a type only).
+    const { userId, role } = loadIdentity()
     if (userId) params.set("user_id", userId)
     if (role) params.set("role", role)
     const qs = params.toString()

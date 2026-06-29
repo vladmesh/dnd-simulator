@@ -19,8 +19,10 @@
 
   "tab_world": "Мир",
   "tab_creatures": "Существа",
+  "tab_live": "Лента",
   "tab_time": "Время",
   "tab_saves": "Сохранения",
+  "live_empty": "Ожидание событий…",
 
   "regions": "Регионы",
   "nations": "Нации",

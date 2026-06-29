@@ -6,13 +6,14 @@ import type { WorldStateResponse } from "@/types/api"
 import { Button } from "@/components/ui/button"
 import { WorldOverview } from "./WorldOverview"
 import { CreatureList } from "./CreatureList"
+import { SessionLiveFeed } from "./SessionLiveFeed"
 import { TimeControl } from "./TimeControl"
 import { SavesPanel } from "./SavesPanel"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ArrowLeft } from "lucide-react"
 import { useGameStore } from "@/store/gameStore"
 
-type Tab = "world" | "creatures" | "time" | "saves"
+type Tab = "world" | "creatures" | "live" | "time" | "saves"
 
 export function SessionView() {
   const { sessionId } = useParams<{ sessionId: string }>()
@@ -49,6 +50,8 @@ export function SessionView() {
   const tabs: { key: Tab; label: string }[] = [
     { key: "world", label: t("master:tab_world") },
     { key: "creatures", label: t("master:tab_creatures") },
+    // Live event feed — read-only observation surface for DM and admin alike.
+    { key: "live", label: t("master:tab_live") },
     // time-advance and saves are write controls — absent for observers.
     ...(observe
       ? []
@@ -113,6 +116,7 @@ export function SessionView() {
           {tab === "creatures" && (
             <CreatureList sessionId={sessionId} observe={observe} />
           )}
+          {tab === "live" && <SessionLiveFeed sessionId={sessionId} />}
           {tab === "time" && (
             <TimeControl sessionId={sessionId} onAdvanced={refresh} />
           )}

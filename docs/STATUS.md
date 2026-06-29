@@ -12,7 +12,9 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** 3 — Spectator-listener + disconnect-debounce (task 3 done, task 4 pending) — 2026-06-29. Phase 1 + 2 COMPLETE.
+**Phase:** 3 — Spectator-listener + disconnect-debounce (all 4 tasks done, phase NOT yet closed) — 2026-06-29. Phase 1 + 2 COMPLETE.
+
+Phase 3 task 4 DONE (2026-06-29): frontend live observe stream — `components/master/SessionLiveFeed.tsx` opens a dedicated `new WsClient()` spectator socket (`?spectate=true`), accumulates `events` from `turn`/`action_result`/`round_result` into a read-only scrolling feed; `SessionView` gets a `live` tab for DM + admin. `WsClient.connect` now takes `{ playerId?, spectate? }`. Broke the latent `wsClient ↔ gameStore` import cycle (surfaced by importing `WsClient` from a component loaded before gameStore): `wsClient.ts` reads identity via `loadIdentity()` from `identitySlice` (type-only gameStore import) instead of `useGameStore.getState()`. 4 new unit tests; `make check` green (backend 2303, frontend 260).
 
 Phase 3 task 1 DONE (2026-06-29): spectator-listener primitive in `GameSession` — `add_spectator`/`remove_spectator` (read-only broadcast via `_fire`, never drive the round or `_on_empty`), `has_player_listeners()` predicate keys the "session empty" decision on player listeners only. 7 new unit tests.
 

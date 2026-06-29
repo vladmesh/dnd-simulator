@@ -19,8 +19,10 @@
 
   "tab_world": "World",
   "tab_creatures": "Creatures",
+  "tab_live": "Live",
   "tab_time": "Time",
   "tab_saves": "Saves",
+  "live_empty": "Waiting for events…",
 
   "regions": "Regions",
   "nations": "Nations",
