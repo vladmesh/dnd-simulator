@@ -12,11 +12,11 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** 2 — Three-lens projection of `/api/master/*` (tasks 1-3 done, ready to close) — 2026-06-29
+**Phase:** 2 — Three-lens projection of `/api/master/*` (COMPLETE) — 2026-06-29. Ready for Phase 3 task generation.
 
 Phase 1 COMPLETE (2026-06-29): world/session attribution (`creator`/`created_by`), `service/identity.py` + `get_identity` request-seam (header `X-User-Id`/`X-Role`, invalid role → 400, default ADMIN), frontend identity slice + header/WS propagation + role selector. Integration 157 passed; E2E green ([phase1-report](sprints/020-control-interfaces/e2e/phase1-report.md)).
 
-Phase 2 tasks generated (3) — projection-only cut (creator = attribution, role not enforced yet; no 403s): (1) backend lens-scoping primitives — `list_worlds(creator=)` filter + `list_sessions` `created_by`/`time`; (2) frontend worldbuilder/DM lens — role routing + own-worlds/own-sessions scope + hot-controls; (3) admin read-only park lens + inline creature inventory in observation. Note: `master-panel-creature-inventory` already delivered (sprint 007) — only the inline-observation remnant folds into task 3. Ready to start task 1.
+Phase 2 COMPLETE (2026-06-29): projection-only lens cut (creator = attribution, role not enforced; no 403s). Backend scoping primitives (`list_worlds(creator=)` filter + `?creator=` query-param, `list_sessions` enriched with `created_by`/`time`); frontend role routing in `MasterScreen` — worldbuilder (own worlds, no sessions), DM (own worlds + own sessions scoped by `created_by` + hot-controls), admin (read-only cross-session park view, write affordances stripped, observe-only `SessionView`), player/null fallback (full god-mode); inline creature inventory in observe list closes `master-panel-creature-inventory` remnant. Integration 160 passed (3 new lens-scoping tests); E2E green ([phase2-report](sprints/020-control-interfaces/e2e/phase2-report.md)) — 4 lenses + core-flow regression, 0 blockers.
 
 ### Phases
 

@@ -33,7 +33,7 @@ Sprint 019 (control-plane-prep) отвердил ровно тот класте�
 2. [Identity & role resolution seam](tasks/phase1-task2-identity-seam.md) — `service/identity.py` (`Role` StrEnum, `Identity`, `resolve_identity`) + `get_identity` FastAPI-dependency (header `X-User-Id`/`X-Role`, invalid role → 400) + стамп `creator` из вызывающего на world-create/fork + `meta.created_by` на session-create
 3. [Frontend identity/role selector + header propagation](tasks/phase1-task3-frontend-identity-selector.md) — `identitySlice` (persist) + инъекция заголовков в `apiClient`/`wsClient` + селектор на `LandingPage`
 
-## Phase 2: Three-lens projection of `/api/master/*`
+## Phase 2: Three-lens projection of `/api/master/*` ✓
 
 Разрезать безавторизационный god-mode по ролям поверх уже физически разделённых route-файлов. Worldbuilder — авторинг, скопленный своими мирами. DM — авторинг + наблюдение живой сессии + hot-controls. Админка — read-only кросс-сессионный срез + техглубина. Фронт направляет каждую роль в свою линзу. Фолдит `master-panel-creature-inventory` (`CreatureResponse`/`all_entities` отдают inventory/equipped — данные DM/админка-наблюдения).
 
@@ -71,7 +71,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 2 (Three-lens projection) tasks generated — 2026-06-29. Phase 1 COMPLETE. Phase 2 is a **projection-only** cut (3 tasks): backend scoping primitives → frontend worldbuilder/DM lens → admin park lens + inline inventory. `master-panel-creature-inventory` confirmed already delivered (sprint 007); only its inline-observation remnant folds into task 3. Ready to start task 1.
+**Current:** Phase 2 (Three-lens projection) COMPLETE — 2026-06-29. Phase 1 COMPLETE. Phase 2 was a **projection-only** cut (3 tasks): backend scoping primitives → frontend worldbuilder/DM lens → admin park lens + inline inventory. `master-panel-creature-inventory` remnant closed (inline items in observe list). Integration 160 passed (3 new lens-scoping tests); E2E green ([phase2-report](e2e/phase2-report.md)), 4 lenses + core-flow regression all pass, 0 blockers. Ready for Phase 3 task generation.
 
 ## Decisions (Phase 2)
 
