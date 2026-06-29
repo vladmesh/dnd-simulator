@@ -4,12 +4,24 @@
 
 **Last updated:** 2026-06-29
 **Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 закрыт (логова, лут/контейнеры, региональные таблицы встреч, время суток). Sprint 019 (control-plane-prep) закрыт — `GameService` раздроблён 1044 → 357 строк (миксины `WorldBuilderCommands`/`PlayerCommands`), core/adapter развязаны, видимые дырки (combat-log i18n, encounter-перцептор, труп-кнопки) закрыты; control-plane готов к разрезу на роли. По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), автономные тики NPC.
-**Next:** активного спринта нет. Топ-кандидат — `control-interfaces` (разрез control-plane на роли worldbuilder/DM/админка, ради чего готовился Sprint 019); далее `quest-system`. См. [BACKLOG](BACKLOG.md) / [ROADMAP](ROADMAP.md).
+**Next:** Sprint 020 (`control-interfaces`) спланирован — разрез control-plane на роли worldbuilder/DM/админка (identity keystone + spectator-listener, минимальный вес) + кластер session/save-багов. Дальше по бэклогу: `quest-system`. См. [BACKLOG](BACKLOG.md) / [ROADMAP](ROADMAP.md).
 **Blockers:** нет.
 
 ## Current Sprint
 
-Активного спринта нет. Sprint 019 (control-plane-prep) закрыт 2026-06-29 — см. Sprint History. Топ-кандидат на следующий — `control-interfaces`.
+**Sprint:** 020-control-interfaces
+**Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
+**Started:** 2026-06-29
+**Phase:** Planning (COMPLETE) — 2026-06-29
+
+Ready for Phase 1 task generation.
+
+### Phases
+
+1. Identity & role keystone — Role + owner-тег на мирах + request-seam «кто звонит» (header/config, без auth/БД) + фронт-селектор роли
+2. Three-lens projection of `/api/master/*` — разрез god-mode по ролям (worldbuilder/DM/админка) + `master-panel-creature-inventory`
+3. Spectator-listener + disconnect-debounce — read-only подписка на сессию (DM/админка/зрители) + grace-period evict-фикс
+4. Save robustness & i18n polish — `player-xp-not-persisted` + `combat-log-i18n-gaps` + сверка бэклога
 
 ## Recent activity (non-sprint)
 
