@@ -102,8 +102,13 @@ const master = {
     post<WorldListItem>("/api/master/worlds/assemble", data),
 
   // Worlds
-  getWorlds: (lang?: string) =>
-    get<WorldListItem[]>(lang ? `/api/master/worlds?lang=${lang}` : "/api/master/worlds"),
+  getWorlds: (lang?: string, creator?: string) => {
+    const query = new URLSearchParams()
+    if (lang) query.set("lang", lang)
+    if (creator) query.set("creator", creator)
+    const qs = query.toString()
+    return get<WorldListItem[]>(`/api/master/worlds${qs ? `?${qs}` : ""}`)
+  },
 
   getWorld: (worldId: string) =>
     get<Record<string, unknown>>(`/api/master/worlds/${worldId}`),

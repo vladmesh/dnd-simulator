@@ -54,4 +54,16 @@ Gotchas: scope worlds at the request level (`?creator=`) for worldbuilder/DM, bu
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Projection-only frontend cut, no backend touched. Three changes plus tests:
+
+- **`getWorlds(lang?, creator?)`** — second optional arg appended as `?creator=`; switched the query build to `URLSearchParams` so `lang`+`creator` compose. Existing single-arg callers (`WorldPicker`) unchanged.
+- **`SessionListItem.created_by: string`** — consumes the field task 1 added to the listing; DM lens filters on it client-side.
+- **`MasterScreen` branches by `role`/`userId` from the store.** Derived: `isWorldbuilder`/`isDm`, `scopedCreator` (own worlds for wb/dm, `undefined` = unfiltered for fallback), `showSessions` (hidden for worldbuilder), `visibleSessions` (DM → `created_by === userId`, else all). Header gained an identity line (`userId · role`, reusing existing `common:role_*` keys — no new i18n strings needed). Admin/player/null all fall through to the current full god-mode screen, so task 3 grafts the admin branch onto the same component.
+
+Tests live in a new `MasterScreen.lens.test.tsx` (separate file → fresh zustand singleton per vitest file, no state-leak into the existing fallback tests which stay role-null). The routing test renders `LandingPage`+`MasterScreen` under one `MemoryRouter` and clicks the master link by role. `import "@/i18n"` initializes real translations (mirrors `LandingPage.test`). Existing `MasterScreen.test.tsx` untouched and green (role null → fallback).
+
+Verified: 4 new lens tests RED → GREEN; `make check` green (backend 2292, frontend 250 / 32 files). No integration tests touched.

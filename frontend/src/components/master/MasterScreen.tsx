@@ -14,9 +14,21 @@ import { LanguageToggle } from "@/components/setup/LanguageToggle"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Loader2, Trash2, Settings, GitFork } from "lucide-react"
 import { WorldEditor } from "./WorldEditor"
+import { useGameStore } from "@/store/gameStore"
 
 export function MasterScreen() {
   const { t, i18n } = useTranslation(["master", "common"])
+  const role = useGameStore((s) => s.role)
+  const userId = useGameStore((s) => s.userId)
+  // Lens projection (projection-only, no backend enforcement):
+  //   worldbuilder → own worlds, no live sessions
+  //   dm           → own worlds + own sessions + hot-controls
+  //   else         → full god-mode screen (fallback for admin/player/null)
+  const isWorldbuilder = role === "worldbuilder"
+  const isDm = role === "dm"
+  const scopedCreator = isWorldbuilder || isDm ? userId ?? undefined : undefined
+  const showSessions = !isWorldbuilder
+
   const [sessions, setSessions] = useState<SessionListItem[]>([])
   const [worlds, setWorlds] = useState<WorldListItem[]>([])
   const [loading, setLoading] = useState(true)
@@ -31,7 +43,7 @@ export function MasterScreen() {
   const refresh = useCallback(() => {
     Promise.all([
       api.master.getSessions(),
-      api.master.getWorlds(i18n.language),
+      api.master.getWorlds(i18n.language, scopedCreator),
     ])
       .then(([s, w]) => {
         setSessions(s)
@@ -40,7 +52,7 @@ export function MasterScreen() {
       })
       .catch(() => toast.error(t("common:error")))
       .finally(() => setLoading(false))
-  }, [i18n.language, t, selectedWorld])
+  }, [i18n.language, t, selectedWorld, scopedCreator])
 
   useEffect(() => { refresh() }, [refresh])
 
@@ -95,11 +107,20 @@ export function MasterScreen() {
   }
 
   const editingWorldData = editingWorld ? worlds.find((w) => w.id === editingWorld) : null
+  // DM lens scopes the session list to its own sessions; other lenses see all.
+  const visibleSessions = isDm && userId ? sessions.filter((s) => s.created_by === userId) : sessions
 
   return (
     <div className="dark mx-auto min-h-screen max-w-4xl bg-background px-4 py-8 text-foreground">
       <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">{t("master:title")}</h1>
+        <div>
+          <h1 className="text-3xl font-bold">{t("master:title")}</h1>
+          {role && userId && (
+            <p className="text-sm text-muted-foreground" data-testid="identity-line">
+              {userId} · {t(`common:role_${role}`)}
+            </p>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <LanguageToggle />
           <Link to="/">
@@ -111,7 +132,7 @@ export function MasterScreen() {
       <Tabs defaultValue="worlds">
         <TabsList>
           <TabsTrigger value="worlds">{t("master:tab_worlds")}</TabsTrigger>
-          <TabsTrigger value="sessions">{t("master:tab_sessions")}</TabsTrigger>
+          {showSessions && <TabsTrigger value="sessions">{t("master:tab_sessions")}</TabsTrigger>}
         </TabsList>
 
         {/* ── Worlds Tab ── */}
@@ -215,6 +236,7 @@ export function MasterScreen() {
         </TabsContent>
 
         {/* ── Sessions Tab ── */}
+        {showSessions && (
         <TabsContent value="sessions">
           <div className="mb-6 flex items-center gap-2 pt-4">
             <Select value={selectedWorld} onValueChange={(v) => { if (v) setSelectedWorld(v) }}>
@@ -249,13 +271,13 @@ export function MasterScreen() {
                 </Card>
               ))}
             </div>
-          ) : sessions.length === 0 ? (
+          ) : visibleSessions.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted-foreground">
               {t("master:no_sessions")}
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
-              {sessions.map((s) => (
+              {visibleSessions.map((s) => (
                 <Card key={s.session_id}>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-mono">{s.session_id.slice(0, 8)}</CardTitle>
@@ -289,6 +311,7 @@ export function MasterScreen() {
             </div>
           )}
         </TabsContent>
+        )}
       </Tabs>
     </div>
   )
