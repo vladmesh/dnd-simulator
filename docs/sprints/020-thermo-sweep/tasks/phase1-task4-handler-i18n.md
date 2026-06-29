@@ -50,4 +50,8 @@ Files: the six handler files above; `locale/messages.pot`; `locale/ru/LC_MESSAGE
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+All 20 error strings across items.py, equipment.py, trade.py, action_surge.py, and loot.py wrapped in `_()`. Em-dash in `handle_use_item` removed (replaced with comma). Parameterized strings use `.format()` with named placeholders so msgids stay stable and translatable. Russian translations added and compiled. 12 new tests cover one error path per handler file in both EN and RU locales.

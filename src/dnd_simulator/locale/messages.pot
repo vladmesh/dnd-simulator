@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-06-29 01:11+0300\n"
+"POT-Creation-Date: 2026-06-30 01:29+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -152,8 +152,8 @@ msgid "Attacker '{id}' not found."
 msgstr ""
 
 #: src/dnd_simulator/layers/entities/combat_manager.py:265
-#: src/dnd_simulator/rules/validation.py:158
-#: src/dnd_simulator/rules/validation.py:197
+#: src/dnd_simulator/rules/validation.py:160
+#: src/dnd_simulator/rules/validation.py:199
 msgid "Target '{id}' not found."
 msgstr ""
 
@@ -838,12 +838,84 @@ msgstr ""
 msgid "Divine Smite requires Paladin level 2."
 msgstr ""
 
+#: src/dnd_simulator/rules/handlers/action_surge.py:30
+msgid "Only characters can use Action Surge"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/action_surge.py:34
+msgid "Action Surge not available (requires Fighter L2+)"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/action_surge.py:36
+msgid "Action Surge already used"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/action_surge.py:39
+msgid "Action Surge requires an active turn"
+msgstr ""
+
 #: src/dnd_simulator/rules/handlers/attack_resolution.py:125
 msgid "Creature not on the battle map."
 msgstr ""
 
 #: src/dnd_simulator/rules/handlers/attack_resolution.py:139
 msgid "Cannot move there — blocked."
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/equipment.py:101
+msgid "Item {id} not in inventory"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/equipment.py:105
+msgid "Item {id} is not a {item_type}"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/equipment.py:111
+msgid "Item {id} is a {slot} accessory, not {expected}"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/equipment.py:137
+msgid "No {item_type} equipped"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/items.py:49
+msgid "Nothing to say (text is empty)"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/items.py:106
+msgid "Cannot use item of type '{item_type}', try equipping it instead"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/items.py:119
+msgid "Only Paladins can use Lay on Hands"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/items.py:123
+msgid "Amount must be at least 1"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/items.py:128
+msgid "No lay_on_hands pool"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/items.py:132
+msgid "Insufficient pool: {current} remaining, need {amount}"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/items.py:142
+msgid "Cannot resolve target"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/items.py:145
+msgid "Target '{id}' not found"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/items.py:225
+msgid "Only characters can use Second Wind"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/loot.py:36
+msgid "Target '{id}' cannot be looted"
 msgstr ""
 
 #: src/dnd_simulator/rules/handlers/movement.py:43
@@ -881,6 +953,24 @@ msgstr ""
 
 #: src/dnd_simulator/rules/handlers/movement.py:188
 msgid "Dash requires a turn budget"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/movement.py:247
+msgid "Unknown travel destination"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/movement.py:251
+msgid "No route to destination"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/trade.py:44
+#: src/dnd_simulator/rules/handlers/trade.py:83
+msgid "Merchant '{id}' not found"
+msgstr ""
+
+#: src/dnd_simulator/rules/handlers/trade.py:47
+#: src/dnd_simulator/rules/handlers/trade.py:86
+msgid "Only characters can trade"
 msgstr ""
 
 #: src/dnd_simulator/rules/movement.py:46
@@ -948,68 +1038,68 @@ msgstr ""
 msgid "Merchant doesn't have enough gold (need {price}, have {gold})"
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:62
+#: src/dnd_simulator/rules/validation.py:64
 msgid "Dead creatures cannot act"
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:69
+#: src/dnd_simulator/rules/validation.py:71
 msgid "Dormant creatures cannot act"
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:85
+#: src/dnd_simulator/rules/validation.py:87
 msgid "'{action}' requires parameter '{param}'."
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:96
+#: src/dnd_simulator/rules/validation.py:98
 msgid "'{action}' is not available in combat"
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:101
+#: src/dnd_simulator/rules/validation.py:103
 msgid "'{action}' is not available outside combat"
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:120
+#: src/dnd_simulator/rules/validation.py:122
 msgid "No cost override '{mode}' available for '{action}'"
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:132
+#: src/dnd_simulator/rules/validation.py:134
 msgid "Insufficient budget for '{action}'"
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:164
+#: src/dnd_simulator/rules/validation.py:166
 msgid "Target '{id}' is already dead."
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:170
-#: src/dnd_simulator/rules/validation.py:200
+#: src/dnd_simulator/rules/validation.py:172
+#: src/dnd_simulator/rules/validation.py:202
 msgid "Target '{id}' is not in this region."
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:203
+#: src/dnd_simulator/rules/validation.py:205
 msgid "Target '{id}' cannot be looted."
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:221
+#: src/dnd_simulator/rules/validation.py:223
 msgid "Item '{id}' not in inventory."
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:249
+#: src/dnd_simulator/rules/validation.py:251
 msgid "Target is already at full HP."
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:284
+#: src/dnd_simulator/rules/validation.py:286
 msgid "Target too far ({dist} ft, reach {reach} ft)."
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:310
+#: src/dnd_simulator/rules/validation.py:312
 msgid "Cannot target yourself with '{action}'."
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:349
+#: src/dnd_simulator/rules/validation.py:351
 msgid "'{action}' can only target hostile creatures."
 msgstr ""
 
-#: src/dnd_simulator/rules/validation.py:354
+#: src/dnd_simulator/rules/validation.py:356
 msgid "'{action}' can only target allies."
 msgstr ""
 
