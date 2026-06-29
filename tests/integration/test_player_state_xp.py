@@ -97,10 +97,13 @@ class TestPlayerStateXpAfterKill:
             # Remove allied NPC so the player gets the kill credit
             requests.delete(f"{api_url}/sessions/{sid}/creatures/ally_fighter_npc", timeout=10).raise_for_status()
 
-            # Give target_dummy a CR-1/4 XP value and 1 HP so one attack kills it
+            # Give target_dummy a CR-1/4 XP value, 1 HP, and AC 1 so one attack kills it.
+            # AC 1 makes the hit deterministic: the player's d20+4 attack lands regardless of
+            # how the seeded dice ordering shifts under async round/WS interleaving (a low AC
+            # removes the miss-based flakiness — the kill, and thus the xp_gained event, always fires).
             requests.patch(
                 f"{api_url}/sessions/{sid}/creatures/target_dummy",
-                json={"current_hp": 1, "xp_value": 50},
+                json={"current_hp": 1, "xp_value": 50, "ac": 1},
                 timeout=10,
             ).raise_for_status()
 

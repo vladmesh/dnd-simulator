@@ -97,8 +97,24 @@ Phase 2 (Three-lens projection) COMPLETE — 2026-06-29 — **projection-only** 
 
 ## Deferred
 
-_(заполняется по ходу спринта)_
+- **Мультиплеер (N PlayerBrain + приватность awareness)** и **полная auth/login/БД** — отдельные спринты (по брейншторму самое тяжёлое). Identity остался projection-only.
+- **`no-auth` hardening** — `X-User-Id`/`X-Role` доверяются без проверки, пустая роль → `ADMIN` god-mode; by-design для keystone-фазы, требует реальной auth перед не-локальным деплоем (бэклог security).
+- **Post-audit E2E находки** (4, все minor/преэкзистинг) → бэклог: `combat-log-target-label-case` (раса в им. падеже vs имя), `combat-log-content-names-en` (имена атак/`+2 str` английские), `rep-log-faction-raw-id-fallback` (сырой `faction_id` когда нет политик-определения), `ws-reconnect-listener-error-noise` (dev StrictMode двумаунт).
+- **Audit находка** `ws-rate-limit-dup` (token-bucket дублируется spectator/player путём) → бэклог, low.
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-06-29
+
+Спроецировал единое control-ядро на три человеческие роли через минимальную identity-модель + spectator-listener, и закрыл тематический кластер session/save/i18n-багов.
+
+- **Phase 1 — Identity keystone:** `service/identity.py` (`Role` StrEnum, `Identity`, `resolve_identity`) + `get_identity` request-seam (`X-User-Id`/`X-Role`, invalid → 400, без auth/БД); `creator` на мирах + `created_by` на сессиях; фронт identity-slice + header/WS-пропагация + селектор роли.
+- **Phase 2 — Three-lens projection** (projection-only, без enforcement): worldbuilder / DM / admin / player-god-mode линзы над `/api/master/*`; backend scoping-хелперы (`list_worlds(creator=)`, session `created_by`/`time`); закрыт остаток `master-panel-creature-inventory`.
+- **Phase 3 — Spectator-listener + grace-period:** `add_spectator`/`remove_spectator` (read-only broadcast, lifecycle на player-листенерах), disconnect grace-period (`threading.Timer` evict, reconnect отменяет — закрыл `session-disconnect-debounce`), `?spectate=true` WS endpoint, фронт Live observe feed.
+- **Phase 4 — Save robustness & i18n:** `player-xp-not-persisted` (XP/`level_up_available` через `to_full_save_data` + `PlayerContent` + `load_state`), `combat-log-i18n-gaps` (msgid'ы + faction display-name через `QueryType.FACTION_NAME` + свип ~20 handler-ошибок).
+
+**Метрики:** 4 фазы, integration 166 passed (включая 5 spectator-WS + 1 grace-period + XP-persist round-trip), unit backend 2317 / frontend 260. Post-audit аудит (6 issues, 1 new low — `ws-rate-limit-dup`), 0 арх/layer-нарушений. Post-audit E2E green ([report](../../e2e-reports/2026-06-29-sprint020-post-audit.md)) — 28 сценариев, 0 блокеров; все 4 фазы подтверждены через UI (identity/WS, три линзы, live observe, faction display-name «Силы Королевства», XP round-trip + level-up после reload). Закрыты backlog: `player-xp-not-persisted`, `combat-log-i18n-gaps`, `session-disconnect-debounce`, `master-panel-creature-inventory`.
+
+**Discovery при закрытии:** флапающий integration-тест `test_player_state_xp::test_rest_status_updated_after_kill` (атака могла промахнуться при сдвиге seeded-кубов под async-таймингом) сделан детерминированным — патч AC цели на 1 гарантирует попадание (`xp_gained` всегда эмитится); прод-код не тронут.
+
+**Deferred:** мультиплеер + полная auth (отдельные спринты), 4 E2E-находки + `ws-rate-limit-dup` + `no-auth` hardening — в бэклог (см. Deferred выше).
