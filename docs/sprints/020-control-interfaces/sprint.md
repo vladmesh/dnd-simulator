@@ -62,13 +62,15 @@ Read-only подписка на поток событий живой сесси�
 
 ## Phase 4: Save robustness & i18n polish
 
-Закрыть оставшийся кластер багов и почистить лог, который читают новые наблюдатели. `player-xp-not-persisted` — сериализовать `experience`/`level_up_available` через `to_full_save_data` + `PlayerContent`/`_to_player`. `combat-log-i18n-gaps` — английские item/faction-имена внутри RU-строк (i18n-свип). Сверка бэклога.
+Закрыть оставшийся кластер багов и почистить лог, который читают новые наблюдатели. `player-xp-not-persisted` — сериализовать `experience`/`level_up_available` через `to_full_save_data` + `PlayerContent`/`_to_player` + restore в `load_state`. `combat-log-i18n-gaps` — выбран **полный i18n-свип** (решение при планировании): три исходных причины бага уже закрыты кодом, осевшим после заведения тикета (attack-msgid'ы с `{oa}` переведены, move/reputation-шаблоны переведены, `movement.py`-ошибки обёрнуты в `_()`). Остаток режется надвое: (A) недостающие лог-msgid'ы + утечка faction-id в лог, (B) ~23 необёрнутых `ActionResult.error` в `rules/handlers/`. Сверка бэклога — на закрытии фазы (новых deferred-итемов нет, свип полный).
 
-**Что доставляет:** XP/level_up переживают save/reload (и dev StrictMode evict→restore); RU боевой лог полностью локализован; `make check` зелёный.
+**Что доставляет:** XP/level_up переживают save/reload (и dev StrictMode evict→restore); RU боевой/событийный лог полностью локализован (включая faction-имя вместо слага `kingdom`); все action-ошибки переводимы; `make check` зелёный.
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Persist player XP & level-up](tasks/phase4-task1-xp-persistence.md) — закрывает `player-xp-not-persisted`: `experience`/`level_up_available` через `to_full_save_data` + `PlayerContent` + `_to_player` + restore-блок в `EntitiesLayer.load_state`; round-trip-тесты save/reload + autosave/load
+2. [Combat/event-log i18n + faction leak](tasks/phase4-task2-combat-log-i18n.md) — недостающие msgid'ы (loot / lay-on-hands / action-surge / conditions) в `ru` `.po` + фикс утечки `faction_id`: `faction_name` в `REPUTATION_CHANGED`-событие через `QueryType.FACTION_NAME` (query_fn уже в `_handle_death`); закрывает E2E-находку `kingdom`
+3. [Handler error-string i18n sweep](tasks/phase4-task3-handler-error-i18n.md) — обернуть ~23 `ActionResult.error` в `action_surge`/`items`/`loot`/`trade`/`equipment` в `_()` (named-placeholders, не f-string) + перевод; убрать em-dash в `items.py:102`; добивает `combat-log-i18n-gaps`
 
 ---
 

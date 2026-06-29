@@ -12,7 +12,9 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** 3 — Spectator-listener + disconnect-debounce (COMPLETE) — 2026-06-29. Phase 1 + 2 COMPLETE. Ready for Phase 4 task generation.
+**Phase:** 4 — Save robustness & i18n polish (tasks generated) — 2026-06-29. Phases 1-3 COMPLETE. Ready to start task 1.
+
+Phase 4 tasks (3): (1) persist player XP/level_up across save/reload — closes `player-xp-not-persisted` (fix `to_full_save_data` + `PlayerContent` + `_to_player` + `load_state` restore); (2) combat/event-log i18n — missing msgids (loot/lay-hands/action-surge/conditions) + faction-id leak fix (`faction_name` into `REPUTATION_CHANGED` via `QueryType.FACTION_NAME`), closes E2E `kingdom` finding; (3) handler error-string sweep — wrap ~23 `ActionResult.error` in `_()` + translate, drops em-dash in `items.py:102`; tasks 2-3 together close `combat-log-i18n-gaps`. Planning note: the bug's three originally-named causes were already fixed by code landed after the ticket; user chose the **full i18n sweep** over combat-log-only, so the handler-error gap (newly found during planning) is folded in rather than deferred to backlog.
 
 Phase 3 CLOSED (2026-06-29): integration 166 passed (5 spectator-WS + 1 grace-period test added during implementation, 0 failures); E2E green ([phase3-report](sprints/020-control-interfaces/e2e/phase3-report.md)) — DM/admin Live observe feed verified end-to-end across two browser tabs (player generates combat events → admin+DM spectator streams them read-only with event-type badges + RU descriptions), spectator connect/disconnect churn never evicts the session while a player is connected, player-WS identity propagation regression green. 0 blockers. One minor finding deferred to Phase 4: `kingdom` faction id leaks untranslated into the RU reputation log line (known `combat-log-i18n-gaps`).
 
