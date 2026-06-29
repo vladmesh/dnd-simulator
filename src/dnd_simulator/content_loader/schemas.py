@@ -118,7 +118,10 @@ class ItemContent(BaseModel):
     ``name`` and ``type`` become optional (provided by the catalog).
     """
 
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
     ref: str | None = None
+    id: str | None = None
     name: str = ""
     type: ItemType = ItemType.WEAPON
     equipped: bool = False
@@ -149,7 +152,8 @@ class ItemContent(BaseModel):
     # Accessory fields
     accessory_id: str | None = None
     slot: str | None = None
-    modifiers: list[dict[str, Any]] | None = None
+    # YAML uses "modifiers"; save data emits "grant_modifiers" — both accepted via alias
+    modifiers: list[dict[str, Any]] | None = Field(None, alias="grant_modifiers")
     # Potion fields
     heal_dice: str | None = None
 
@@ -453,5 +457,7 @@ class PlayerContent(BaseModel):
     class_features: dict[str, Any] = {}
     combat_position: list[int] | None = None
     reputation: dict[str, int] = {}
+    experience: int = 0
+    level_up_available: bool = False
 
     _validate_combat_position = field_validator("combat_position")(_validate_combat_position)

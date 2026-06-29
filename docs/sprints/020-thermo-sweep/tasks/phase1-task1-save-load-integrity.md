@@ -44,4 +44,14 @@ Gotchas:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Two separate data-loss bugs fixed:
+
+1. **Accessory modifiers**: `_serialize_item` emits `grant_modifiers` but `ItemContent.modifiers` had no alias, so Pydantic silently dropped the key on load. Fix: added `Field(None, alias="grant_modifiers")` + `ConfigDict(populate_by_name=True, extra="forbid")` to `ItemContent`. Also added `id: str | None = None` to `ItemContent` since save data includes runtime-generated item IDs — `extra="forbid"` would have rejected them otherwise.
+
+2. **XP / level-up flag**: `to_full_save_data()` never wrote `experience`/`level_up_available`; `PlayerContent` had no such fields; `_to_player` never set them. Fixed all three sites.
+
+All 2272 unit tests pass, mypy and ruff clean.

@@ -262,6 +262,8 @@ def _to_player(
         resource_pools=build_class_resource_pools(model.char_class, level=model.level),
         combat_position=tuple(model.combat_position) if model.combat_position else None,  # type: ignore[arg-type]
         reputation=dict(model.reputation),
+        experience=model.experience,
+        level_up_available=model.level_up_available,
     )
 
 

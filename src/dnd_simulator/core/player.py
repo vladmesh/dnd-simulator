@@ -86,6 +86,8 @@ class PlayerCharacter(Character):
             "gold": self.gold,
             "start_location": self.location_id,
             "current_hp": self.current_hp,
+            "experience": self.experience,
+            "level_up_available": self.level_up_available,
         }
         # Build unified items list: inventory + equipped items.
         # Equipped items get "equipped": true so parse_player can re-equip them.
