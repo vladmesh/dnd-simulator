@@ -13,6 +13,7 @@ description:
 
     '
 default_player_faction: kingdom
+creator: system
 layers:
   geography:
     source: library

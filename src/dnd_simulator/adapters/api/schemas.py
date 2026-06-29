@@ -129,6 +129,7 @@ class CreateWorldRequest(BaseModel):
     name: str
     description: str = ""
     default_player_faction: str = ""
+    creator: str = ""
 
 
 class AssembleWorldRequest(BaseModel):
@@ -139,6 +140,7 @@ class AssembleWorldRequest(BaseModel):
     description: str = ""
     layer_selections: dict[str, str]
     default_player_faction: str = ""
+    creator: str = ""
 
 
 class AdvanceTimeRequest(BaseModel):
@@ -175,6 +177,7 @@ class WorldListItem(BaseModel):
     description: str
     complete: bool
     editable: bool
+    creator: str = ""
 
 
 class PlayerStatusResponse(BaseModel):

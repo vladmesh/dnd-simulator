@@ -67,4 +67,5 @@ def load_world_meta_from_manifest(world_path: Path, lang: str = "en") -> dict[st
         "name": resolve_text(manifest["name"], lang),
         "description": resolve_text(manifest.get("description", ""), lang),
         "default_player_faction": str(manifest.get("default_player_faction", "")),
+        "creator": str(manifest.get("creator", "")),
     }

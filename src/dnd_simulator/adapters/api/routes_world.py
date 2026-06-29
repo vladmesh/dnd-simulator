@@ -63,6 +63,7 @@ def list_worlds(lang: str = "en") -> list[WorldListItem]:
             description=str(w["description"]),
             complete=bool(w["complete"]),
             editable=str(w["id"]) not in base_worlds,
+            creator=str(w.get("creator", "")),
         )
         for w in worlds
     ]
@@ -78,6 +79,7 @@ def create_world(req: CreateWorldRequest) -> WorldListItem:
             name=req.name,
             description=req.description,
             default_player_faction=req.default_player_faction,
+            creator=req.creator,
         )
     except FileExistsError as exc:
         raise HTTPException(status_code=409, detail=_("World '{}' already exists").format(req.id)) from exc
@@ -87,6 +89,7 @@ def create_world(req: CreateWorldRequest) -> WorldListItem:
         description=req.description,
         complete=False,
         editable=True,
+        creator=req.creator,
     )
 
 
@@ -101,6 +104,7 @@ def assemble_world(req: AssembleWorldRequest) -> WorldListItem:
             description=req.description,
             layer_selections=req.layer_selections,
             default_player_faction=req.default_player_faction,
+            creator=req.creator,
         )
     except FileExistsError as exc:
         raise HTTPException(status_code=409, detail=_("World '{}' already exists").format(req.id)) from exc
@@ -112,6 +116,7 @@ def assemble_world(req: AssembleWorldRequest) -> WorldListItem:
         description=req.description,
         complete=True,
         editable=True,
+        creator=req.creator,
     )
 
 
@@ -135,6 +140,7 @@ def fork_world(world_id: str, req: ForkWorldRequest) -> WorldListItem:
         description="",
         complete=bool(result["complete"]),
         editable=True,
+        creator=str(result.get("creator", "")),
     )
 
 

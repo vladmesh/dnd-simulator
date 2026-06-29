@@ -163,6 +163,7 @@ class WorldBuilderCommands(GameServiceProtocol):
         description: str,
         layer_selections: dict[str, str],
         default_player_faction: str,
+        creator: str = "",
     ) -> dict[str, str]:
         """Assemble a new world from library templates.
 
@@ -178,6 +179,7 @@ class WorldBuilderCommands(GameServiceProtocol):
             description=description,
             layer_selections=layer_selections,
             default_player_faction=default_player_faction,
+            creator=creator,
         )
         return {"id": world_id, "name": name}
 
@@ -187,6 +189,7 @@ class WorldBuilderCommands(GameServiceProtocol):
         name: str,
         description: str,
         default_player_faction: str,
+        creator: str = "",
     ) -> dict[str, str]:
         """Create a new empty world (no layers defined).
 
@@ -200,6 +203,7 @@ class WorldBuilderCommands(GameServiceProtocol):
             name=name,
             description=description,
             default_player_faction=default_player_faction,
+            creator=creator,
         )
         return {"id": world_id, "name": name}
 
@@ -214,10 +218,12 @@ class WorldBuilderCommands(GameServiceProtocol):
         source_world_id: str,
         new_world_id: str,
         from_layer: str | None = None,
+        creator: str = "",
     ) -> dict[str, object]:
         """Fork a world, optionally truncating layers from a given type upward.
 
-        Returns world info dict with id, name, complete.
+        The new world is owned by the forking user (``creator``), not the source's creator.
+        Returns world info dict with id, name, creator, complete.
         """
         from dnd_simulator.content_loader.assembly import fork_world
 
@@ -227,12 +233,13 @@ class WorldBuilderCommands(GameServiceProtocol):
             source_world_id=source_world_id,
             new_world_id=new_world_id,
             from_layer=layer_type,
+            creator=creator,
         )
         new_world_path = self._content_dir / "worlds" / new_world_id
         meta = load_world_meta_from_manifest(new_world_path)
         resolved = resolve_manifest(new_world_path, self._content_dir)
         complete = len(resolved) == len(LayerType)
-        return {"id": new_world_id, "name": meta["name"], "complete": complete}
+        return {"id": new_world_id, "name": meta["name"], "creator": meta["creator"], "complete": complete}
 
     def delete_world(self, world_id: str) -> None:
         """Delete a world. Blocked for base worlds and worlds with active sessions."""

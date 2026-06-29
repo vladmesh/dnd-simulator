@@ -12,7 +12,7 @@ Sprint 019 (control-plane-prep) отвердил ровно тот класте�
 
 Порядок по зависимостям из брейншторма: **identity (keystone) → spectator-listener → multiplayer → DM policy**. Этот спринт берёт первые две ступени на **минимальном весе** и сознательно откладывает две самые тяжёлые:
 
-- **Identity — минимальный вес.** Роль + owner-тег на мирах + request-seam «кто звонит» (header/config-driven, без паролей/login/БД). Достаточно, чтобы выразить три линзы и разрезать `/api/master/*`. Открытый вопрос «file-namespace vs БД» из брейншторма не решаем — остаёмся на файлах с owner-тегом.
+- **Identity — минимальный вес.** Роль + creator-тег на мирах + request-seam «кто звонит» (header/config-driven, без паролей/login/БД). Достаточно, чтобы выразить три линзы и разрезать `/api/master/*`. Открытый вопрос «file-namespace vs БД» из брейншторма не решаем — остаёмся на файлах с creator-тегом.
 - **Spectator-listener** — read-only подписка на события сессии, развязанная от `PlayerBrain`/WS-игрока. Самый дешёвый разблокиратор: нужен DM (наблюдать стол), админке (наблюдать парк) и будущим зрителям-игрокам. Едет в `session.py` — ровно туда, где 019 положил тест-сетку.
 
 Попутно закрываем кластер багов, тематически совпадающий с трогаемым кодом: **`session-disconnect-debounce`** (grace-period evict — та же listener-lifecycle поверхность, что и spectator), **`player-xp-not-persisted`** (save-путь теряет XP), **`master-panel-creature-inventory`** (DM/админка-наблюдению нужны предметы существ), **`combat-log-i18n-gaps`** (лог, который читают новые наблюдатели).
@@ -29,8 +29,8 @@ Sprint 019 (control-plane-prep) отвердил ровно тот класте�
 
 **Tasks:**
 
-1. [World ownership field](tasks/phase1-task1-world-ownership.md) — `owner`-тег на манифесте (raw-dict, без enforcement): плумбинг через `assembly`/`manifest`/`WorldBuilderCommands`/схемы; fork re-owns, backward-compat `owner==""`
-2. [Identity & role resolution seam](tasks/phase1-task2-identity-seam.md) — `service/identity.py` (`Role` StrEnum, `Identity`, `resolve_identity`) + `get_identity` FastAPI-dependency (header `X-User-Id`/`X-Role`, invalid role → 400) + стамп owner из вызывающего на world-create/fork
+1. [World creator field](tasks/phase1-task1-world-ownership.md) — `creator`-тег на манифесте (raw-dict, атрибуция без enforcement): плумбинг через `assembly`/`manifest`/`WorldBuilderCommands`/схемы; fork re-attributes, backward-compat `creator==""`, базовые миры `creator: system`
+2. [Identity & role resolution seam](tasks/phase1-task2-identity-seam.md) — `service/identity.py` (`Role` StrEnum, `Identity`, `resolve_identity`) + `get_identity` FastAPI-dependency (header `X-User-Id`/`X-Role`, invalid role → 400) + стамп `creator` из вызывающего на world-create/fork + `meta.created_by` на session-create
 3. [Frontend identity/role selector + header propagation](tasks/phase1-task3-frontend-identity-selector.md) — `identitySlice` (persist) + инъекция заголовков в `apiClient`/`wsClient` + селектор на `LandingPage`
 
 ## Phase 2: Three-lens projection of `/api/master/*`
@@ -71,7 +71,8 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Decisions
 
-- **Identity на минимальном весе, не full auth.** Роль + owner-тег + header/config seam, без login/паролей/БД. Достаточно выразить три линзы и разрезать `/api/master/*`; открытый вопрос брейншторма «file-namespace vs БД» не решаем — остаёмся на файлах.
+- **`creator` (атрибуция), не `owner` (контроль доступа).** (2026-06-29, по ходу task 1) Поле на манифесте называется `creator` и означает «кто создал шаблон» — неизменяемая атрибуция, НЕ право доступа. Кто может смотреть/редактировать/играть — отдельное измерение, которое поедет «в другую сторону» как many-to-many (юзер ↔ ресурс), вероятно в БД. В файлы семантику доступа не зашиваем. Публичные миры = есть создатель, нет ограничения. Базовые миры: `creator: system`. Та же логика на сессиях: `meta.created_by` (атрибуция, без enforcement) — task 2.
+- **Identity на минимальном весе, не full auth.** Роль + creator-тег + header/config seam, без login/паролей/БД. Достаточно выразить три линзы и разрезать `/api/master/*`; открытый вопрос брейншторма «file-namespace vs БД» не решаем — остаёмся на файлах. Видение «библиотека миров + приватные сессии» — главный аргумент в сторону БД, когда дойдём.
 - **Мультиплеер и полная auth — отдельными спринтами.** По брейншторму мультиплеер «архитектурно самое тяжёлое, возможно в свой спринт». Этот спринт берёт identity (keystone) + spectator (дешёвый разблокиратор), две тяжёлые ступени откладывает.
 - **Баги распределены по тематическим фазам, не в отдельный bug-dump.** Каждый баг садится в код, который его фаза и так трогает: disconnect-debounce → spectator/session-listener (фаза 3), master-panel-creature-inventory → DM/админка-наблюдение (фаза 2), player-xp-not-persisted + combat-log-i18n → save/лог-полировка (фаза 4).
 - **Spectator-listener — приоритет №2 после identity.** Read-only подписка нужна сразу двум линзам (DM + админка); едет в `session.py`, отвердённый тест-сеткой 019.

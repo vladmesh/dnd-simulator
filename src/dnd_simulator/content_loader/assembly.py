@@ -26,6 +26,7 @@ def assemble_world(
     description: str,
     layer_selections: dict[str, str],
     default_player_faction: str,
+    creator: str = "",
 ) -> Path:
     """Create a new world directory with a manifest pointing to library templates.
 
@@ -61,6 +62,7 @@ def assemble_world(
         "name": name,
         "description": description,
         "default_player_faction": default_player_faction,
+        "creator": creator,
         "layers": {
             lt.value: {
                 "source": LayerSource.LIBRARY.value,
@@ -83,6 +85,7 @@ def create_empty_world(
     name: str,
     description: str,
     default_player_faction: str,
+    creator: str = "",
 ) -> Path:
     """Create a new world directory with an empty manifest (no layers defined).
 
@@ -99,6 +102,7 @@ def create_empty_world(
         "name": name,
         "description": description,
         "default_player_faction": default_player_faction,
+        "creator": creator,
         "layers": {},
     }
 
@@ -147,6 +151,7 @@ def fork_world(
     source_world_id: str,
     new_world_id: str,
     from_layer: LayerType | None = None,
+    creator: str = "",
 ) -> Path:
     """Fork a world — copy its manifest with a new ID.
 
@@ -188,6 +193,7 @@ def fork_world(
         "name": source_manifest["name"],
         "description": source_manifest.get("description", ""),
         "default_player_faction": source_manifest.get("default_player_faction", ""),
+        "creator": creator,
         "layers": source_layers,
     }
 

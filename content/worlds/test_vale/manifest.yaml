@@ -5,6 +5,7 @@ description:
   en: Small test world for integration testing
   ru: Маленький тестовый мир для интеграционных тестов
 default_player_faction: militia
+creator: system
 
 layers:
   geography:

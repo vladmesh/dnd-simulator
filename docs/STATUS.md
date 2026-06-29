@@ -12,9 +12,9 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** 1 — Identity & role keystone (tasks generated) — 2026-06-29
+**Phase:** 1 — Identity & role keystone (task 1 done, task 2 pending) — 2026-06-29
 
-Ready to start task 1 (world ownership field).
+Task 1 done: `creator` attribution tag on world manifests (renamed from `owner` mid-task — `creator` is authorship, not access control; sharing/visibility deferred to a future many-to-many model). Base worlds carry `creator: system`. Session `created_by` seam folded into task 2.
 
 ### Phases
 
