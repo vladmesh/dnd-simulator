@@ -12,7 +12,9 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** 2 — Three-lens projection of `/api/master/*` (COMPLETE) — 2026-06-29. Ready for Phase 3 task generation.
+**Phase:** 3 — Spectator-listener + disconnect-debounce (tasks generated) — 2026-06-29. Phase 1 + 2 COMPLETE. Ready to start task 1.
+
+Phase 3 tasks (4): (1) spectator-listener primitive in `GameSession` (read-only broadcast, lifecycle keyed on player listeners); (2) disconnect grace-period — closes `session-disconnect-debounce` via deferred `threading.Timer` evict, reconnect cancels; (3) spectator WS endpoint (`?spectate=true`, no `start_round`, actions rejected); (4) frontend live observe feed in `SessionView` for DM/admin. Backend-first, then frontend. `player-xp-not-persisted` stays in Phase 4 (grace-period only removes the dev evict→restore that *triggers* it).
 
 Phase 1 COMPLETE (2026-06-29): world/session attribution (`creator`/`created_by`), `service/identity.py` + `get_identity` request-seam (header `X-User-Id`/`X-Role`, invalid role → 400, default ADMIN), frontend identity slice + header/WS propagation + role selector. Integration 157 passed; E2E green ([phase1-report](sprints/020-control-interfaces/e2e/phase1-report.md)).
 

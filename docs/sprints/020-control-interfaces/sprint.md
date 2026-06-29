@@ -55,7 +55,10 @@ Read-only подписка на поток событий живой сесси�
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Spectator-listener primitive](tasks/phase3-task1-spectator-listener.md) — `add_spectator`/`remove_spectator` в `GameSession`: read-only-подписка получает полный broadcast, но не гонит раунд и не держит сессию; «пусто» (stop_round + `_on_empty`) keyed на player-листенерах. Unit-only.
+2. [Disconnect grace-period](tasks/phase3-task2-disconnect-grace-period.md) — закрывает `session-disconnect-debounce`: опустошение откладывает stop+evict через `threading.Timer` (~1.5с, конфигурируемо), reconnect в окне отменяет; re-check в `session.py`, не в `_on_session_empty`. Unit (инъектируемый seam, без sleep) + 1 integration.
+3. [Spectator WS endpoint](tasks/phase3-task3-spectator-ws-endpoint.md) — `?spectate=true` на `/api/ws/{session_id}`: без player_id, без `start_round`, replay last-turn, `action`/`reaction` отклоняются, disconnect не выселяет. Integration.
+4. [Frontend live observe stream](tasks/phase3-task4-frontend-live-observe.md) — таб «Live» в `SessionView` для DM/админки: отдельный `WsClient`-инстанс на spectator-сокет, read-only лента событий; observe-стрипинг контролов не трогаем.
 
 ## Phase 4: Save robustness & i18n polish
 
