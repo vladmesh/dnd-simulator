@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.models import ActionResult, Event, EventType
+from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
     from dnd_simulator.core.action import Action
@@ -32,7 +33,7 @@ def handle_take(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
     target_id = str(action.params["target_id"])
     target = ctx.get_entity(target_id) if ctx.get_entity is not None else None
     if target is None or not is_lootable(target):
-        return ActionResult(success=False, error=f"Target '{target_id}' cannot be looted")
+        return ActionResult(success=False, error=_("Target '{target_id}' cannot be looted").format(target_id=target_id))
     assert isinstance(target, InventoryHolder)  # is_lootable ⇒ Creature or Container, both holders
 
     taken_items = list(target.inventory)

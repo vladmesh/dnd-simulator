@@ -10,6 +10,7 @@ import structlog
 from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.items import EquipmentSlot, Item, ItemType
 from dnd_simulator.core.models import ActionResult, Event, EventType
+from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
     from dnd_simulator.core.action import Action
@@ -97,14 +98,19 @@ def _handle_equip_slot(cfg: SlotConfig, actor: Creature, action: Action, emit_fn
     item_id = str(action.params[cfg.param_key])
     item = next((i for i in actor.inventory if i.id == item_id), None)
     if item is None:
-        return ActionResult(success=False, error=f"Item {item_id} not in inventory")
+        return ActionResult(success=False, error=_("Item {item_id} not in inventory").format(item_id=item_id))
     if item.item_type != cfg.item_type:
-        return ActionResult(success=False, error=f"Item {item_id} is not a {cfg.item_type.value}")
+        return ActionResult(
+            success=False,
+            error=_("Item {item_id} is not a {item_type}").format(item_id=item_id, item_type=cfg.item_type.value),
+        )
     # Accessory slot validation: ring can't go in head slot, etc.
     if item.item_type == ItemType.ACCESSORY and item.accessory_def is not None and item.accessory_def.slot != cfg.slot:
         return ActionResult(
             success=False,
-            error=f"Item {item_id} is a {item.accessory_def.slot.value} accessory, not {cfg.slot.value}",
+            error=_("Item {item_id} is a {actual} accessory, not {expected}").format(
+                item_id=item_id, actual=item.accessory_def.slot.value, expected=cfg.slot.value
+            ),
         )
 
     old: Item | None = getattr(actor, cfg.creature_field)
@@ -128,7 +134,7 @@ def _handle_unequip_slot(cfg: SlotConfig, actor: Creature, action: Action, emit_
     """Generic unequip: remove from slot → return to inventory → emit event."""
     item: Item | None = getattr(actor, cfg.creature_field)
     if item is None:
-        return ActionResult(success=False, error=f"No {cfg.item_type.value} equipped")
+        return ActionResult(success=False, error=_("No {item_type} equipped").format(item_type=cfg.item_type.value))
 
     actor.inventory.append(item)
     setattr(actor, cfg.creature_field, None)

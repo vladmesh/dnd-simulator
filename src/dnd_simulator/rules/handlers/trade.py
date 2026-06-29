@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.models import ActionResult, Event, EventType
+from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
     from dnd_simulator.core.action import Action
@@ -40,10 +41,12 @@ def handle_buy(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCont
 
     merchant = _resolve_merchant(merchant_id, ctx)
     if merchant is None:
-        return ActionResult(success=False, error=f"Merchant '{merchant_id}' not found")
+        return ActionResult(
+            success=False, error=_("Merchant '{merchant_id}' not found").format(merchant_id=merchant_id)
+        )
 
     if not isinstance(actor, Character):
-        return ActionResult(success=False, error="Only characters can trade")
+        return ActionResult(success=False, error=_("Only characters can trade"))
 
     error = validate_buy(buyer=actor, seller=merchant, item_id=item_id)
     if error is not None:
@@ -79,10 +82,12 @@ def handle_sell(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
 
     merchant = _resolve_merchant(merchant_id, ctx)
     if merchant is None:
-        return ActionResult(success=False, error=f"Merchant '{merchant_id}' not found")
+        return ActionResult(
+            success=False, error=_("Merchant '{merchant_id}' not found").format(merchant_id=merchant_id)
+        )
 
     if not isinstance(actor, Character):
-        return ActionResult(success=False, error="Only characters can trade")
+        return ActionResult(success=False, error=_("Only characters can trade"))
 
     error = validate_sell(seller=actor, buyer=merchant, item_id=item_id)
     if error is not None:

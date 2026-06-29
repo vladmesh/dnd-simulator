@@ -46,4 +46,17 @@ Gotcha: keep placeholder names stable between msgid and msgstr; don't leave any 
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented as planned. Wrapped 20 `ActionResult.error` strings in `_()` across 5 handler files (action_surge, items, loot, trade, equipment), added `from dnd_simulator.i18n import _` to the 3 that lacked it (action_surge already, items/loot/trade/equipment got it). Parametrized messages converted from f-strings to gettext templates with named placeholders + `.format()` (Insufficient pool, Target not found, merchant not found, item-not-in-inventory, item-not-a-type, accessory-wrong-slot, no-X-equipped, item-type). Attribute access pulled into `.format()` args (`item.item_type.value`, `cfg.item_type.value`, slot `.value`s).
+
+Em-dash in `items.py` item-type error replaced with a comma: `"Cannot use item of type '{item_type}', try equipping it instead"`.
+
+Notes:
+- `item.item_type` is a `StrEnum`, so the old f-string already rendered the bare value ("armor") not `ItemType.ARMOR` — switching to `.format(item_type=item.item_type.value)` keeps output identical.
+- Added 20 ru `msgstr` entries under a new `rules/handlers/` section in the `.po`; `make compile-messages` regenerated the `.mo`. No duplicate msgids (checked before appending).
+- `make format` split the two `Merchant '{merchant_id}' not found` lines (were 121 chars) across lines — auto-applied, no manual edit.
+
+Tests: 4 new in `test_handler_error_i18n.py` (3 RU-rendering — lay-on-hands gate bare-literal path, equip + buy `.format()` paths asserting the interpolated id survives; 1 no-em-dash on the item-type error). No old tests modified — handler-error assertions run under `DND_LANGUAGE=en` (conftest) so wrapping in `_()` left English output unchanged. `make check` green (backend 2317, frontend 260). Closes `combat-log-i18n-gaps` (both halves, tasks 2-3) — marked resolved in BACKLOG.md.

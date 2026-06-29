@@ -12,7 +12,9 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** 4 — Save robustness & i18n polish (tasks 1-2 done, task 3 pending) — 2026-06-29. Phases 1-3 COMPLETE.
+**Phase:** 4 — Save robustness & i18n polish (tasks 1-3 done, ready to close) — 2026-06-29. Phases 1-3 COMPLETE.
+
+Phase 4 task 3 DONE (2026-06-29): i18n sweep of action-failure error strings — wrapped 20 `ActionResult.error` strings in `_()` across `rules/handlers/` (action_surge/items/loot/trade/equipment), converted parametrized f-strings to gettext `.format()` templates, dropped the em-dash in `items.py`'s item-type error. 20 ru catalog entries added + `.mo` recompiled. Closes `combat-log-i18n-gaps` (both halves across tasks 2-3, marked resolved in BACKLOG). 4 new unit tests (`test_handler_error_i18n.py`); `make check` green (backend 2317, frontend 260). All Phase 4 tasks done — phase ready for `/close-phase`.
 
 Phase 4 task 2 DONE (2026-06-29): combat/event-log i18n — added 9 missing `ru` catalog entries (Conditions, Action Surge, Lay on Hands ×4, loot ×2, `{gold} gold`, `nothing`) so those log lines render Russian instead of the English msgid; fixed the faction-id leak by resolving `faction_name` via `QueryType.FACTION_NAME` in `combat_manager._handle_death` (omitted when unresolvable → perception's `faction_id` fallback). Closes the E2E phase-3 `kingdom` finding. 7 new unit tests (3 faction-name event, 4 RU-rendering); `make check` green (backend 2313, frontend 260).
 
