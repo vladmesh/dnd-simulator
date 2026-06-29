@@ -124,7 +124,7 @@ def _handle_equip_slot(cfg: SlotConfig, actor: Creature, action: Action, emit_fn
         Event(
             event_type=EventType.ENTITY_EQUIP,
             source_layer="entities",
-            data={"entity_id": actor.id, cfg.event_field: item.name},
+            data={"entity_id": actor.id, "item_name": item.name},
         )
     )
     return ActionResult()
@@ -144,7 +144,7 @@ def _handle_unequip_slot(cfg: SlotConfig, actor: Creature, action: Action, emit_
         Event(
             event_type=EventType.ENTITY_UNEQUIP,
             source_layer="entities",
-            data={"entity_id": actor.id, cfg.event_field: item.name},
+            data={"entity_id": actor.id, "item_name": item.name},
         )
     )
     return ActionResult()

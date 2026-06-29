@@ -23,7 +23,7 @@ Scope OUT:
 
 **Ссылки:** [thermo-nuclear-review](../../thermo-nuclear-review.md), [BACKLOG](../../BACKLOG.md), [VISION](../../VISION.md), [Sprint 019](../019-control-plane-prep/sprint.md)
 
-## Phase 1: Корректность и инварианты
+## Phase 1: Корректность и инварианты ✓
 
 Чинит все поведенческие баги ревью И восстанавливает чистоту `rules/` — вся корректностная/инвариантная работа до рефактора, каждый пункт под regression-тестом (TDD: RED → GREEN). Верификация: save→load round-trip на магических аксессуарах из `d0e8eda`, frontend vitest на иконку, тест RU-локали ошибок хендлеров, seeded-тест воспроизводимости хила, integration зелёный.
 
@@ -97,7 +97,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 1 tasks generated (5 tasks) — 2026-06-30. Ready to start task 1.
+**Current:** Phase 1 COMPLETE — 2026-06-30. Ready for Phase 2 task generation.
 
 ## Decisions
 
