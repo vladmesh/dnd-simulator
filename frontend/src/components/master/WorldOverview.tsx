@@ -9,14 +9,16 @@ import { Check, Loader2 } from "lucide-react"
 interface Props {
   sessionId: string
   worldState: WorldStateResponse
+  /** Observation-only mode (admin park lens): hide nation / settlement edit (patch) controls. */
+  observe?: boolean
 }
 
-export function WorldOverview({ sessionId, worldState }: Props) {
+export function WorldOverview({ sessionId, worldState, observe = false }: Props) {
   return (
     <div className="space-y-8">
       <RegionsTable regions={worldState.regions} />
-      <NationsTable sessionId={sessionId} nations={worldState.nations} />
-      <SettlementsTable sessionId={sessionId} settlements={worldState.settlements} regions={worldState.regions} />
+      <NationsTable sessionId={sessionId} nations={worldState.nations} observe={observe} />
+      <SettlementsTable sessionId={sessionId} settlements={worldState.settlements} regions={worldState.regions} observe={observe} />
     </div>
   )
 }
@@ -64,9 +66,11 @@ function RegionsTable({ regions }: { regions: Array<Record<string, unknown>> }) 
 function NationsTable({
   sessionId,
   nations,
+  observe,
 }: {
   sessionId: string
   nations: Array<Record<string, unknown>>
+  observe: boolean
 }) {
   const { t } = useTranslation(["master"])
   const [editing, setEditing] = useState<string | null>(null)
@@ -114,7 +118,7 @@ function NationsTable({
               <th className="px-3 py-2 text-left font-medium">{t("master:col_wealth")}</th>
               <th className="px-3 py-2 text-left font-medium">{t("master:col_military")}</th>
               <th className="px-3 py-2 text-left font-medium">{t("master:col_stability")}</th>
-              <th className="px-3 py-2 text-left font-medium">{t("master:col_actions")}</th>
+              {!observe && <th className="px-3 py-2 text-left font-medium">{t("master:col_actions")}</th>}
             </tr>
           </thead>
           <tbody>
@@ -166,22 +170,24 @@ function NationsTable({
                       String(n.stability ?? 0)
                     )}
                   </td>
-                  <td className="px-3 py-2">
-                    {isEditing ? (
-                      <div className="flex gap-1">
-                        <Button size="xs" onClick={() => saveEdit(id)} disabled={saving}>
-                          {saving ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+                  {!observe && (
+                    <td className="px-3 py-2">
+                      {isEditing ? (
+                        <div className="flex gap-1">
+                          <Button size="xs" onClick={() => saveEdit(id)} disabled={saving}>
+                            {saving ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+                          </Button>
+                          <Button size="xs" variant="ghost" onClick={() => setEditing(null)}>
+                            ✕
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button size="xs" variant="ghost" onClick={() => startEdit(n)}>
+                          {t("master:edit")}
                         </Button>
-                        <Button size="xs" variant="ghost" onClick={() => setEditing(null)}>
-                          ✕
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button size="xs" variant="ghost" onClick={() => startEdit(n)}>
-                        {t("master:edit")}
-                      </Button>
-                    )}
-                  </td>
+                      )}
+                    </td>
+                  )}
                 </tr>
               )
             })}
@@ -196,10 +202,12 @@ function SettlementsTable({
   sessionId,
   settlements,
   regions,
+  observe,
 }: {
   sessionId: string
   settlements: Array<Record<string, unknown>>
   regions: Array<Record<string, unknown>>
+  observe: boolean
 }) {
   const { t } = useTranslation(["master"])
   const [editing, setEditing] = useState<string | null>(null)
@@ -250,7 +258,7 @@ function SettlementsTable({
               <th className="px-3 py-2 text-left font-medium">{t("master:col_population")}</th>
               <th className="px-3 py-2 text-left font-medium">{t("master:col_prosperity")}</th>
               <th className="px-3 py-2 text-left font-medium">{t("master:col_defenses")}</th>
-              <th className="px-3 py-2 text-left font-medium">{t("master:col_actions")}</th>
+              {!observe && <th className="px-3 py-2 text-left font-medium">{t("master:col_actions")}</th>}
             </tr>
           </thead>
           <tbody>
@@ -304,22 +312,24 @@ function SettlementsTable({
                       String(s.defenses ?? 0)
                     )}
                   </td>
-                  <td className="px-3 py-2">
-                    {isEditing ? (
-                      <div className="flex gap-1">
-                        <Button size="xs" onClick={() => saveEdit(id)} disabled={saving}>
-                          {saving ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+                  {!observe && (
+                    <td className="px-3 py-2">
+                      {isEditing ? (
+                        <div className="flex gap-1">
+                          <Button size="xs" onClick={() => saveEdit(id)} disabled={saving}>
+                            {saving ? <Loader2 className="size-3 animate-spin" /> : <Check className="size-3" />}
+                          </Button>
+                          <Button size="xs" variant="ghost" onClick={() => setEditing(null)}>
+                            ✕
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button size="xs" variant="ghost" onClick={() => startEdit(s)}>
+                          {t("master:edit")}
                         </Button>
-                        <Button size="xs" variant="ghost" onClick={() => setEditing(null)}>
-                          ✕
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button size="xs" variant="ghost" onClick={() => startEdit(s)}>
-                        {t("master:edit")}
-                      </Button>
-                    )}
-                  </td>
+                      )}
+                    </td>
+                  )}
                 </tr>
               )
             })}

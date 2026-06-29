@@ -10,12 +10,15 @@ import { TimeControl } from "./TimeControl"
 import { SavesPanel } from "./SavesPanel"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ArrowLeft } from "lucide-react"
+import { useGameStore } from "@/store/gameStore"
 
 type Tab = "world" | "creatures" | "time" | "saves"
 
 export function SessionView() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const { t } = useTranslation(["master", "common"])
+  // Admin observes a live table read-only — hide every hot-control write surface.
+  const observe = useGameStore((s) => s.role) === "admin"
   const [worldState, setWorldState] = useState<WorldStateResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -46,8 +49,13 @@ export function SessionView() {
   const tabs: { key: Tab; label: string }[] = [
     { key: "world", label: t("master:tab_world") },
     { key: "creatures", label: t("master:tab_creatures") },
-    { key: "time", label: t("master:tab_time") },
-    { key: "saves", label: t("master:tab_saves") },
+    // time-advance and saves are write controls — absent for observers.
+    ...(observe
+      ? []
+      : [
+          { key: "time" as Tab, label: t("master:tab_time") },
+          { key: "saves" as Tab, label: t("master:tab_saves") },
+        ]),
   ]
 
   return (
@@ -62,6 +70,11 @@ export function SessionView() {
         <h1 className="font-mono text-lg font-bold">{sessionId.slice(0, 8)}</h1>
         {worldState && (
           <span className="text-sm text-muted-foreground">{worldState.time}</span>
+        )}
+        {observe && (
+          <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+            {t("master:observing")}
+          </span>
         )}
       </div>
 
@@ -95,10 +108,10 @@ export function SessionView() {
       ) : (
         <>
           {tab === "world" && worldState && (
-            <WorldOverview sessionId={sessionId} worldState={worldState} />
+            <WorldOverview sessionId={sessionId} worldState={worldState} observe={observe} />
           )}
           {tab === "creatures" && (
-            <CreatureList sessionId={sessionId} />
+            <CreatureList sessionId={sessionId} observe={observe} />
           )}
           {tab === "time" && (
             <TimeControl sessionId={sessionId} onAdvanced={refresh} />

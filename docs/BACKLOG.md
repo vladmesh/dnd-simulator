@@ -54,7 +54,7 @@
 - [ ] **could** `drag-resize-panels` — Drag-and-drop / resizable панели на dashboard
 - [ ] **could** `mobile-layout` — Мобильная адаптация dashboard
 - [ ] **could** `log-filter-tabs` — Фильтрация лога табами (Все/Бой/Диалоги)
-- [ ] **should** `master-panel-creature-inventory` — `CreatureResponse` / `all_entities` query не включают inventory/equipped_weapon; мастер не видит предметы существ. Добавить поля в схему и query
+- [x] `master-panel-creature-inventory` — ~~`CreatureResponse` / `all_entities` query не включают inventory/equipped_weapon; мастер не видит предметы существ~~ RESOLVED: backend поля (`inventory`/`equipped_weapon`) и рендер в edit-диалоге — Sprint 007 (`c5fe924`/`7976363`); inline-показ предметов в read-only observation-списке (`CreatureList`) — Sprint 020 phase 2 task 3
 - [x] `master-give-item-ui` — ~~endpoint для give_item есть, кнопки нет~~ FIXED Sprint 007 phase 2: кнопка «Выдать предмет» в карточке существа
 - [x] `inspect-as-idle-param` — ~~inspect шёл как `Action(IDLE, {inspect_target})`~~ FIXED Sprint 009 phase 4: клиентская NpcInspectModal из awareness
 - [x] `world-builder-js-modules` — ~~world-builder.js 1700+ строк~~ OBSOLETE Sprint 008 phase 4: legacy vanilla JS заменён React SPA

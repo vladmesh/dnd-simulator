@@ -11,11 +11,13 @@ import { Loader2, Plus, Trash2, Brain } from "lucide-react"
 
 interface Props {
   sessionId: string
+  /** Observation-only mode (admin park lens): hide spawn / edit / delete / brain-toggle writes. */
+  observe?: boolean
 }
 
 type Filter = "all" | "npc" | "monster"
 
-export function CreatureList({ sessionId }: Props) {
+export function CreatureList({ sessionId, observe = false }: Props) {
   const { t } = useTranslation(["master"])
   const [creatures, setCreatures] = useState<CreatureResponse[]>([])
   const [loading, setLoading] = useState(true)
@@ -80,10 +82,12 @@ export function CreatureList({ sessionId }: Props) {
             </Button>
           ))}
         </div>
-        <Button size="sm" onClick={() => { setEditCreature(null); setShowForm(true) }}>
-          <Plus className="mr-1 size-3" />
-          {t("master:spawn_creature")}
-        </Button>
+        {!observe && (
+          <Button size="sm" onClick={() => { setEditCreature(null); setShowForm(true) }}>
+            <Plus className="mr-1 size-3" />
+            {t("master:spawn_creature")}
+          </Button>
+        )}
       </div>
 
       {loading ? (
@@ -91,7 +95,7 @@ export function CreatureList({ sessionId }: Props) {
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
-                {[t("master:col_name"), t("master:col_type"), t("master:col_hp"), t("master:col_ac"), t("master:col_location"), t("master:col_ai"), t("master:col_active"), t("master:col_actions")].map((h) => (
+                {[t("master:col_name"), t("master:col_type"), t("master:col_hp"), t("master:col_ac"), t("master:col_location"), t("master:col_items"), t("master:col_ai"), t("master:col_active"), t("master:col_actions")].map((h) => (
                   <th key={h} className="px-3 py-2 text-left font-medium">{h}</th>
                 ))}
               </tr>
@@ -99,7 +103,7 @@ export function CreatureList({ sessionId }: Props) {
             <tbody>
               {Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-t border-border">
-                  {Array.from({ length: 8 }).map((_, j) => (
+                  {Array.from({ length: 9 }).map((_, j) => (
                     <td key={j} className="px-3 py-2"><Skeleton className="h-4 w-16" /></td>
                   ))}
                 </tr>
@@ -119,21 +123,26 @@ export function CreatureList({ sessionId }: Props) {
                 <th className="px-3 py-2 text-left font-medium">{t("master:col_hp")}</th>
                 <th className="px-3 py-2 text-left font-medium">{t("master:col_ac")}</th>
                 <th className="px-3 py-2 text-left font-medium">{t("master:col_location")}</th>
+                <th className="px-3 py-2 text-left font-medium">{t("master:col_items")}</th>
                 <th className="px-3 py-2 text-left font-medium">{t("master:col_ai")}</th>
                 <th className="px-3 py-2 text-left font-medium">{t("master:col_active")}</th>
-                <th className="px-3 py-2 text-left font-medium">{t("master:col_actions")}</th>
+                {!observe && <th className="px-3 py-2 text-left font-medium">{t("master:col_actions")}</th>}
               </tr>
             </thead>
             <tbody>
               {creatures.map((c) => (
                 <tr key={c.id} className="border-t border-border">
                   <td className="px-3 py-2">
-                    <button
-                      className="text-left hover:underline"
-                      onClick={() => { setEditCreature(c); setShowForm(true) }}
-                    >
-                      {c.name}
-                    </button>
+                    {observe ? (
+                      <span>{c.name}</span>
+                    ) : (
+                      <button
+                        className="text-left hover:underline"
+                        onClick={() => { setEditCreature(c); setShowForm(true) }}
+                      >
+                        {c.name}
+                      </button>
+                    )}
                     <span className="ml-1 font-mono text-xs text-muted-foreground">{c.id}</span>
                   </td>
                   <td className="px-3 py-2">
@@ -149,34 +158,58 @@ export function CreatureList({ sessionId }: Props) {
                   <td className="px-3 py-2">{c.ac}</td>
                   <td className="px-3 py-2 font-mono text-xs">{c.location_id}</td>
                   <td className="px-3 py-2">
-                    <button
-                      className="flex items-center gap-1 hover:underline"
-                      onClick={() => toggleBrain(c)}
-                      title={t("master:set_brain")}
-                    >
-                      <Brain className="size-3" />
-                      {c.ai_type || "rule_based"}
-                    </button>
+                    <div className="flex flex-wrap gap-1">
+                      {c.equipped_weapon && (
+                        <Badge variant="default" title={t("master:equipped_weapon")}>
+                          {c.equipped_weapon.attack_name}
+                        </Badge>
+                      )}
+                      {(c.inventory ?? []).map((it) => (
+                        <Badge key={it.id} variant="outline">{it.name}</Badge>
+                      ))}
+                      {!c.equipped_weapon && (c.inventory ?? []).length === 0 && (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2">
+                    {observe ? (
+                      <span className="flex items-center gap-1">
+                        <Brain className="size-3" />
+                        {c.ai_type || "rule_based"}
+                      </span>
+                    ) : (
+                      <button
+                        className="flex items-center gap-1 hover:underline"
+                        onClick={() => toggleBrain(c)}
+                        title={t("master:set_brain")}
+                      >
+                        <Brain className="size-3" />
+                        {c.ai_type || "rule_based"}
+                      </button>
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     <Badge variant={c.active ? "default" : "outline"}>
                       {c.active ? "yes" : "no"}
                     </Badge>
                   </td>
-                  <td className="px-3 py-2">
-                    <Button
-                      size="xs"
-                      variant="destructive"
-                      disabled={deleting === c.id}
-                      onClick={() => deleteCreature(c)}
-                    >
-                      {deleting === c.id ? (
-                        <Loader2 className="size-3 animate-spin" />
-                      ) : (
-                        <Trash2 className="size-3" />
-                      )}
-                    </Button>
-                  </td>
+                  {!observe && (
+                    <td className="px-3 py-2">
+                      <Button
+                        size="xs"
+                        variant="destructive"
+                        disabled={deleting === c.id}
+                        onClick={() => deleteCreature(c)}
+                      >
+                        {deleting === c.id ? (
+                          <Loader2 className="size-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-3" />
+                        )}
+                      </Button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

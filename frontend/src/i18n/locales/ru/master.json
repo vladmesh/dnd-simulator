@@ -41,6 +41,8 @@
   "col_defenses": "Оборона",
   "col_region": "Регион",
   "col_nation": "Нация",
+  "col_items": "Предметы",
+  "observing": "Наблюдение (только чтение)",
 
   "creatures": "Существа",
   "no_creatures": "Нет существ.",

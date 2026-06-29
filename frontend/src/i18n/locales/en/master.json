@@ -41,6 +41,8 @@
   "col_defenses": "Defenses",
   "col_region": "Region",
   "col_nation": "Nation",
+  "col_items": "Items",
+  "observing": "Observing (read-only)",
 
   "creatures": "Creatures",
   "no_creatures": "No creatures.",

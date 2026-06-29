@@ -89,3 +89,54 @@ describe("CreatureList — brain toggle warning", () => {
     })
   })
 })
+
+describe("CreatureList — inline inventory", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it("renders item names and the equipped weapon attack name inline in the row", async () => {
+    const { CreatureList } = await import("../CreatureList")
+    mockApi.getCreatures.mockResolvedValue([
+      makeCreature({
+        name: "Bandit",
+        inventory: [
+          { id: "potion_1", name: "Healing Potion", item_type: "potion" },
+          { id: "dagger_1", name: "Dagger", item_type: "weapon" },
+        ],
+        equipped_weapon: { weapon_id: "longsword", attack_name: "Longsword", damage: "1d8" },
+      }),
+    ])
+
+    render(<CreatureList sessionId="sess-1" />)
+
+    await waitFor(() => expect(screen.getByText("Bandit")).toBeInTheDocument())
+    expect(screen.getByText("Healing Potion")).toBeInTheDocument()
+    expect(screen.getByText("Dagger")).toBeInTheDocument()
+    expect(screen.getByText("Longsword")).toBeInTheDocument()
+  })
+
+  it("renders a creature with empty inventory without items and without error", async () => {
+    const { CreatureList } = await import("../CreatureList")
+    mockApi.getCreatures.mockResolvedValue([
+      makeCreature({ name: "Pauper", inventory: [], equipped_weapon: null }),
+    ])
+
+    render(<CreatureList sessionId="sess-1" />)
+
+    await waitFor(() => expect(screen.getByText("Pauper")).toBeInTheDocument())
+  })
+})
+
+describe("CreatureList — observe mode", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it("hides spawn / delete / brain write controls but keeps the observation list", async () => {
+    const { CreatureList } = await import("../CreatureList")
+    mockApi.getCreatures.mockResolvedValue([makeCreature({ name: "Watcher" })])
+
+    render(<CreatureList sessionId="sess-1" observe />)
+
+    await waitFor(() => expect(screen.getByText("Watcher")).toBeInTheDocument())
+    expect(screen.queryByRole("button", { name: /spawn/i })).not.toBeInTheDocument()
+    expect(screen.queryByTitle(/brain/i)).not.toBeInTheDocument()
+  })
+})

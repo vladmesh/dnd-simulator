@@ -121,6 +121,45 @@ describe("MasterScreen — routing from landing", () => {
   })
 })
 
+describe("MasterScreen — admin park lens", () => {
+  it("shows the whole park read-only with attribution and no write controls", async () => {
+    const user = userEvent.setup()
+    useGameStore.setState({ userId: "root", role: "admin" })
+    mockApi.getWorlds.mockResolvedValue([
+      { id: "w1", name: "World One", description: "", editable: true },
+    ])
+    mockApi.getSessions.mockResolvedValue([
+      { session_id: "aaa11111", player_name: "P1", player_location: "x", time: "Day 3", world_name: "w1", created_by: "dana" },
+      { session_id: "bbb22222", player_name: "P2", player_location: "y", time: "Day 5", world_name: "w1", created_by: "vlad" },
+    ])
+
+    render(
+      <MemoryRouter>
+        <MasterScreen />
+      </MemoryRouter>,
+    )
+
+    await screen.findByText("World One")
+    // worlds fetched unfiltered (no creator scope)
+    expect(mockApi.getWorlds.mock.calls.every((c) => c[1] === undefined)).toBe(true)
+    // no world write controls
+    expect(screen.queryByRole("button", { name: /fork/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /delete/i })).not.toBeInTheDocument()
+
+    // sessions across all created_by values render (no per-owner filter)
+    await user.click(screen.getByRole("tab", { name: /sessions/i }))
+    await waitFor(() => expect(screen.getByText(/aaa11111/)).toBeInTheDocument())
+    expect(screen.getByText(/bbb22222/)).toBeInTheDocument()
+    // attribution + clock surfaced
+    expect(screen.getByText(/dana/)).toBeInTheDocument()
+    expect(screen.getByText(/vlad/)).toBeInTheDocument()
+    expect(screen.getByText(/Day 3/)).toBeInTheDocument()
+    // no session write controls; Manage (observation entry) stays
+    expect(screen.queryByRole("button", { name: /new session/i })).not.toBeInTheDocument()
+    expect(screen.getAllByRole("link", { name: /manage/i })).toHaveLength(2)
+  })
+})
+
 describe("MasterScreen — fallback (no role)", () => {
   it("shows both tabs and all worlds unfiltered when role is null", async () => {
     mockApi.getWorlds.mockResolvedValue([

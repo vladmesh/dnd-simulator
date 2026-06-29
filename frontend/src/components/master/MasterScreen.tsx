@@ -23,11 +23,15 @@ export function MasterScreen() {
   // Lens projection (projection-only, no backend enforcement):
   //   worldbuilder → own worlds, no live sessions
   //   dm           → own worlds + own sessions + hot-controls
-  //   else         → full god-mode screen (fallback for admin/player/null)
+  //   admin        → whole park, read-only (observation, no writes)
+  //   else         → full god-mode screen (fallback for player/null)
   const isWorldbuilder = role === "worldbuilder"
   const isDm = role === "dm"
+  const isAdmin = role === "admin"
   const scopedCreator = isWorldbuilder || isDm ? userId ?? undefined : undefined
   const showSessions = !isWorldbuilder
+  // Admin observes the park without touching the fiction — strip every write affordance.
+  const canWrite = !isAdmin
 
   const [sessions, setSessions] = useState<SessionListItem[]>([])
   const [worlds, setWorlds] = useState<WorldListItem[]>([])
@@ -140,7 +144,7 @@ export function MasterScreen() {
           {editingWorld ? (
             <WorldEditor
               worldId={editingWorld}
-              readOnly={!editingWorldData?.editable}
+              readOnly={isAdmin || !editingWorldData?.editable}
               onClose={() => setEditingWorld(null)}
             />
           ) : loading ? (
@@ -171,31 +175,33 @@ export function MasterScreen() {
                     <CardTitle className="text-base">{w.name}</CardTitle>
                     <CardDescription>{w.description || w.id}</CardDescription>
                   </CardHeader>
-                  <CardContent className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => { e.stopPropagation(); handleFork(w.id) }}
-                    >
-                      <GitFork className="mr-1 size-3" />
-                      {t("master:fork_world_btn")}
-                    </Button>
-                    {w.editable && (
+                  {canWrite && (
+                    <CardContent className="flex items-center gap-2">
                       <Button
                         size="sm"
-                        variant="destructive"
-                        disabled={deleting === w.id}
-                        onClick={(e) => { e.stopPropagation(); deleteWorld(w.id) }}
+                        variant="outline"
+                        onClick={(e) => { e.stopPropagation(); handleFork(w.id) }}
                       >
-                        {deleting === w.id ? (
-                          <Loader2 className="size-3 animate-spin" />
-                        ) : (
-                          <Trash2 className="mr-1 size-3" />
-                        )}
-                        {t("master:delete_world_btn")}
+                        <GitFork className="mr-1 size-3" />
+                        {t("master:fork_world_btn")}
                       </Button>
-                    )}
-                  </CardContent>
+                      {w.editable && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={deleting === w.id}
+                          onClick={(e) => { e.stopPropagation(); deleteWorld(w.id) }}
+                        >
+                          {deleting === w.id ? (
+                            <Loader2 className="size-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="mr-1 size-3" />
+                          )}
+                          {t("master:delete_world_btn")}
+                        </Button>
+                      )}
+                    </CardContent>
+                  )}
                 </Card>
               ))}
 
@@ -238,6 +244,7 @@ export function MasterScreen() {
         {/* ── Sessions Tab ── */}
         {showSessions && (
         <TabsContent value="sessions">
+          {canWrite && (
           <div className="mb-6 flex items-center gap-2 pt-4">
             <Select value={selectedWorld} onValueChange={(v) => { if (v) setSelectedWorld(v) }}>
               <SelectTrigger className="w-48">
@@ -256,6 +263,7 @@ export function MasterScreen() {
               {t("master:new_session")}
             </Button>
           </div>
+          )}
 
           {loading ? (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -284,6 +292,7 @@ export function MasterScreen() {
                     <CardDescription>
                       {s.player_name || "—"}{s.time ? ` · ${s.time}` : ""}
                       {s.world_name && ` · ${s.world_name}`}
+                      {s.created_by ? ` · ${s.created_by}` : ""}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="flex items-center gap-2">
@@ -293,18 +302,20 @@ export function MasterScreen() {
                         {t("master:manage")}
                       </Button>
                     </Link>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      disabled={deleting === s.session_id}
-                      onClick={() => deleteSession(s.session_id)}
-                    >
-                      {deleting === s.session_id ? (
-                        <Loader2 className="size-3 animate-spin" />
-                      ) : (
-                        <Trash2 className="size-3" />
-                      )}
-                    </Button>
+                    {canWrite && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        disabled={deleting === s.session_id}
+                        onClick={() => deleteSession(s.session_id)}
+                      >
+                        {deleting === s.session_id ? (
+                          <Loader2 className="size-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="size-3" />
+                        )}
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               ))}

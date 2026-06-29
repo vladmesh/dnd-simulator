@@ -46,4 +46,17 @@ Gotchas: reuse the existing observation components — admin is "DM minus writes
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Projection-only frontend cut, no backend touched (data was already on `CreatureResponse`). Three surfaces gained an observe/read-only mode plus the inline-inventory render:
+
+- **`MasterScreen` admin branch.** `isAdmin = role === "admin"` → `canWrite = !isAdmin`. Admin fetches worlds unfiltered (`scopedCreator` stays `undefined`) and sees all sessions (no `created_by` filter). Every write affordance is gated on `canWrite`: world-card fork/delete (whole `CardContent`), the New-Session control row, and the per-session delete button. World cards still open, but `WorldEditor` is forced `readOnly` for admin. Session cards now append `created_by` to the description line (attribution + clock visible). Manage link stays — it's the observation entry into `SessionView`.
+- **`SessionView` observe mode.** `observe = role === "admin"`. The time and saves tabs (pure write controls) drop out of the tab list; an "Observing (read-only)" chip appears in the header. `observe` threads into `WorldOverview` and `CreatureList`.
+- **`CreatureList`** gained `observe?` + an inline **Items** column (9 cols now). The column renders the equipped weapon's attack name (filled Badge) and each inventory item name (outline Badge), `—` when empty — visible to DM and admin observers alike. In observe mode: spawn button, name-edit affordance, brain toggle, and the whole Actions/delete column are hidden (name and AI render as plain text).
+- **`WorldOverview`** gained `observe?` threaded to `NationsTable`/`SettlementsTable`, which drop their Actions (patch-edit) column when observing.
+
+Tests: admin park-lens case added to `MasterScreen.lens.test.tsx`; new `SessionView.test.tsx` (admin observe vs DM write-capable); inline-inventory + observe cases added to `CreatureList.test.tsx`. Existing `CreatureList` brain-toggle tests stay green (they render without `observe`, so the toggle button + title persist). `master-panel-creature-inventory` marked resolved in BACKLOG (backend + edit-dialog shipped sprint 007; inline observation display added here).
+
+Verified: 6 new tests RED → GREEN; `make check` green (backend 2292, frontend 256 / 33 files). No integration tests touched.
