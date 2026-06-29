@@ -47,4 +47,16 @@ Gotcha: leave `load_save_data()` as-is (legacy branch) — it already restores t
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Four-site implementation landed exactly as planned (`to_full_save_data`, `PlayerContent`, `_to_player`, `load_state` re-apply block). No surprises in the prod code.
+
+Test placement deviated from the task hint. The hint suggested extending `tests/integration/test_save_roundtrip.py` / `test_player_state_xp.py`, but both are HTTP-driven (require docker) and granting XP over HTTP isn't deterministic. The described mechanism — `world.save()`→`world.load()`, `autosave_session`→`load_game` into a fresh session — is all in-process GameService API. So the 3 tests went into `tests/unit/test_commands_save.py`, the canonical in-process `GameService` + on-disk `JsonFileStore` round-trip file, matching its existing pattern. This kept RED→GREEN verifiable locally (no docker) and exercised the real disk JSON round-trip, not just the dict.
+
+Tests cover both load branches the task flagged: (1) same-session reload hits the existing-entity re-apply block in `layer.py` and asserts `level_up_player` succeeds (no 400) for a reloaded eligible Fighter; (2) mid-level XP=150 loads into a fresh session, exercising the `parse_player`→`PlayerContent`→`_to_player` branch; (3) autosave→load into a fresh session (the dev StrictMode evict→restore path) preserves XP=450. XP set product-level via `patch_creature({"experience": N})`, which recomputes `level_up_available` through `can_level_up`.
+
+`make check`: backend 2306 passed, frontend 260 passed. One flaky frontend failure on the first run (`SchemaForm.test.tsx` async ref-fetch, `x-ref-type` test) — passed on isolated + full re-run; unrelated (change is backend-only). No integration tests touched, so step 7b skipped.
+
+Note: adding `experience`/`level_up_available` to `PlayerContent` also surfaces them in the schema-driven player edit form, exactly as `current_hp` already does — same save-restore-field-on-content-schema precedent.

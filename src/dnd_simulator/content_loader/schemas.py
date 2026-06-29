@@ -446,6 +446,8 @@ class PlayerContent(BaseModel):
     current_hp: int | None = None
     ac: int = 10
     gold: int = 0
+    experience: int = 0
+    level_up_available: bool = False
     speed: int = 30
     attacks: list[AttackContent] = []
     items: list[ItemContent] = []

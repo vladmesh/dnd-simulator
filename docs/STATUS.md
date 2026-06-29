@@ -12,7 +12,9 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** 4 — Save robustness & i18n polish (tasks generated) — 2026-06-29. Phases 1-3 COMPLETE. Ready to start task 1.
+**Phase:** 4 — Save robustness & i18n polish (task 1 done, task 2 pending) — 2026-06-29. Phases 1-3 COMPLETE.
+
+Phase 4 task 1 DONE (2026-06-29): persist player XP/level-up across save/reload — closes backlog `player-xp-not-persisted`. `experience`/`level_up_available` now round-trip the modern path: emitted in `PlayerCharacter.to_full_save_data`, carried on `PlayerContent`, passed through `_to_player`, re-applied in `EntitiesLayer.load_state` existing-entity block (mirrors `current_hp`/`gold`). 3 unit tests in `test_commands_save.py` (same-session re-apply, fresh `parse_player`, autosave→fresh-session dev-evict path); a reloaded eligible Fighter now levels up without a 400. `make check` green (backend 2306, frontend 260).
 
 Phase 4 tasks (3): (1) persist player XP/level_up across save/reload — closes `player-xp-not-persisted` (fix `to_full_save_data` + `PlayerContent` + `_to_player` + `load_state` restore); (2) combat/event-log i18n — missing msgids (loot/lay-hands/action-surge/conditions) + faction-id leak fix (`faction_name` into `REPUTATION_CHANGED` via `QueryType.FACTION_NAME`), closes E2E `kingdom` finding; (3) handler error-string sweep — wrap ~23 `ActionResult.error` in `_()` + translate, drops em-dash in `items.py:102`; tasks 2-3 together close `combat-log-i18n-gaps`. Planning note: the bug's three originally-named causes were already fixed by code landed after the ticket; user chose the **full i18n sweep** over combat-log-only, so the handler-error gap (newly found during planning) is folded in rather than deferred to backlog.
 

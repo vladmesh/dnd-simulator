@@ -243,6 +243,8 @@ def _to_player(
         race=model.race,
         char_class=model.char_class,
         level=model.level,
+        experience=model.experience,
+        level_up_available=model.level_up_available,
         alignment=model.alignment,
         appearance=resolve_text(model.appearance, lang) if model.appearance else "",
         ability_scores=_to_ability_scores(model),

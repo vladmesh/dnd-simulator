@@ -600,6 +600,8 @@ class EntitiesLayer(Layer):
                 if isinstance(entity, PlayerCharacter):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
                     entity.gold = int(edata.get("gold", entity.gold))
+                    entity.experience = int(edata.get("experience", entity.experience))
+                    entity.level_up_available = bool(edata.get("level_up_available", entity.level_up_available))
                 elif isinstance(entity, Npc):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
                     ai_type = edata.get("ai_type")
