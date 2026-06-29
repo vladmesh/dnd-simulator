@@ -1,0 +1,10 @@
+name: Boots of Speed
+type: accessory
+accessory_id: boots_of_speed
+slot: feet
+is_magic: true
+modifiers:
+  - stat: speed
+    op: add
+    value: 10
+    source: boots_of_speed

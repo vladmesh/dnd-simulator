@@ -1,0 +1,10 @@
+name: Ring of Protection
+type: accessory
+accessory_id: ring_of_protection
+slot: ring
+is_magic: true
+modifiers:
+  - stat: ac
+    op: add
+    value: 1
+    source: ring_of_protection

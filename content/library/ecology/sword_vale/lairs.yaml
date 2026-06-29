@@ -1,0 +1,31 @@
+greenwood_goblin_warren:
+  name: {en: Goblin Warren, ru: Гоблинья нора}
+  faction: goblin_tribe
+  location: greenwood_goblin_warren
+  core: goblin_boss
+  members: [goblin, goblin, goblin]
+  respawn_interval: 86400
+  depletion_chance: 0.0
+  treasure:
+    gold: 120
+    behind_core: true
+    items:
+      - ref: ring_of_protection
+      - ref: health_potion
+      - ref: frost_dagger
+
+dustmere_orc_stronghold:
+  name: {en: Orc Stronghold, ru: Оплот орков}
+  faction: orc_warband
+  location: dustmere_orc_stronghold
+  core: orc_war_chief
+  members: [orc, orc, orc]
+  respawn_interval: 86400
+  depletion_chance: 0.0
+  treasure:
+    gold: 250
+    behind_core: true
+    items:
+      - ref: boots_of_speed
+      - ref: greataxe
+      - ref: health_potion

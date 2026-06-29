@@ -41,7 +41,7 @@ class TestStartGameSwordVale:
     def test_locations(self, tmp_path: Path) -> None:
         svc = _make_service(tmp_path)
         session = svc.start_game("sword_vale")
-        assert len(session.world.location_graph.all_ids()) == 32
+        assert len(session.world.location_graph.all_ids()) == 34
 
     def test_npcs(self, tmp_path: Path) -> None:
         svc = _make_service(tmp_path)

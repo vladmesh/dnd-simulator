@@ -289,6 +289,20 @@ greenwood_village_edge:
       distance: 125000
     - target: greenwood_highfield_road
       distance: 185000
+    - target: greenwood_goblin_warren
+      distance: 2500
+
+greenwood_goblin_warren:
+  name:
+    en: "Goblin Warren"
+    ru: "Гоблинья нора"
+  region: greenwood
+  description:
+    en: "A reeking cave mouth half-hidden by brambles, deep in the forest. Bones and gnawed scraps litter the entrance."
+    ru: "Смрадный вход в пещеру, наполовину скрытый колючим кустарником в чаще леса. У входа разбросаны кости и обглоданные объедки."
+  neighbors:
+    - target: greenwood_village_edge
+      distance: 2500
 
 greenwood_village_tavern:
   name:
@@ -465,6 +479,20 @@ dustmere_oasis_gate:
   neighbors:
     - target: bogmire_dustmere_road
       distance: 530000
+    - target: dustmere_orc_stronghold
+      distance: 6000
+
+dustmere_orc_stronghold:
+  name:
+    en: "Orc Stronghold"
+    ru: "Оплот орков"
+  region: dustmere
+  description:
+    en: "A crude fortress of lashed timber and hide tents around a dry ravine. Totems of skulls warn off intruders."
+    ru: "Грубая крепость из связанных брёвен и кожаных шатров вокруг сухого оврага. Грубые тотемы из черепов отпугивают чужаков."
+  neighbors:
+    - target: dustmere_oasis_gate
+      distance: 6000
 
 dustmere_oasis_home:
   name:
