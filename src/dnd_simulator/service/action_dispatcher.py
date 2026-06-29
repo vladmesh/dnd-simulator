@@ -24,10 +24,6 @@ from dnd_simulator.rules.action_provider import (
     ClassFeatureActionProvider,
     EquipmentActionProvider,
     InventoryActionProvider,
-    LootActionProvider,
-    MerchantActionProvider,
-    NearbyLootablesFn,
-    NearbyMerchantsFn,
     WeaponActionProvider,
 )
 from dnd_simulator.rules.actions import action_cost
@@ -67,6 +63,12 @@ from dnd_simulator.rules.handlers import (
     handle_wait,
 )
 from dnd_simulator.rules.validation import ActionContext, validate_action
+from dnd_simulator.service.contextual_providers import (
+    LootActionProvider,
+    MerchantActionProvider,
+    NearbyLootablesFn,
+    NearbyMerchantsFn,
+)
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Character, Creature

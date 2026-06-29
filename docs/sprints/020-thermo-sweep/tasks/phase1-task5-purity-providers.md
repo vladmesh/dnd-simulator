@@ -47,4 +47,12 @@ Gotcha: don't change which actions are offered or their order in a way that brea
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Went with Option B: moved `MerchantActionProvider` and `LootActionProvider` to the new `service/contextual_providers.py`. They still store callbacks (appropriate for service/), `rules/action_provider.py` is now callback-free. Removed `NearbyMerchantsFn` / `NearbyLootablesFn` type aliases from `rules/` as well — they now live in `service/contextual_providers`.
+
+`BaseActionProvider` converted to `@dataclass(frozen=True)` with field `action_types` (was `self._types`). Constructor call sites are unchanged — positional arg still works.
+
+Updated 3 test files that imported the moved classes (`test_take_loot`, `test_trade_handlers`, `test_action_provider_isolated`). No behavior change anywhere.
