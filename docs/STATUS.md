@@ -12,9 +12,11 @@
 **Sprint:** 020-control-interfaces
 **Goal:** Спроецировать control-ядро на три роли (worldbuilder/DM/админка) через минимальную identity-модель и spectator-listener; попутно закрыть кластер session/save-багов и i18n-лога.
 **Started:** 2026-06-29
-**Phase:** 3 — Spectator-listener + disconnect-debounce (task 1 done, task 2 pending) — 2026-06-29. Phase 1 + 2 COMPLETE.
+**Phase:** 3 — Spectator-listener + disconnect-debounce (task 2 done, task 3 pending) — 2026-06-29. Phase 1 + 2 COMPLETE.
 
-Phase 3 task 1 DONE (2026-06-29): spectator-listener primitive in `GameSession` — `add_spectator`/`remove_spectator` (read-only broadcast via `_fire`, never drive the round or `_on_empty`), `has_player_listeners()` predicate keys the "session empty" decision on player listeners only. 7 new unit tests; `make check` green (backend 2299, frontend 256).
+Phase 3 task 1 DONE (2026-06-29): spectator-listener primitive in `GameSession` — `add_spectator`/`remove_spectator` (read-only broadcast via `_fire`, never drive the round or `_on_empty`), `has_player_listeners()` predicate keys the "session empty" decision on player listeners only. 7 new unit tests.
+
+Phase 3 task 2 DONE (2026-06-29): disconnect grace-period — closes backlog `session-disconnect-debounce`. `remove_listener` arms a deferred `threading.Timer` (`_evict_grace_seconds`, default 1.5s, env `DND_EVICT_GRACE_SECONDS`) instead of stopping+evicting synchronously; `_run_evict_check` re-verifies player-empty before stop+`_on_empty`; `add_listener`/`stop_round` cancel the pending timer (reconnect/deliberate-stop cancels evict). 4 new unit tests + 1 integration; 2 task-1/characterization tests updated to the deferred contract. `make check` green (backend 2303, frontend 256); integration 161 passed.
 
 Phase 3 tasks (4): (1) spectator-listener primitive in `GameSession` (read-only broadcast, lifecycle keyed on player listeners); (2) disconnect grace-period — closes `session-disconnect-debounce` via deferred `threading.Timer` evict, reconnect cancels; (3) spectator WS endpoint (`?spectate=true`, no `start_round`, actions rejected); (4) frontend live observe feed in `SessionView` for DM/admin. Backend-first, then frontend. `player-xp-not-persisted` stays in Phase 4 (grace-period only removes the dev evict→restore that *triggers* it).
 

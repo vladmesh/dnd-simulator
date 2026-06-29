@@ -54,4 +54,18 @@ Gotchas:
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Implemented as planned: deferred the **whole** empty-handler (stop_round + `_on_empty`), not just the evict, so a reconnect inside the window finds the round still alive and `start_round` stays a true idempotent no-op (no thread churn, no combat-state reset).
+
+- `session.py`: added `_evict_timer: threading.Timer | None` and `_evict_grace_seconds` (default `1.5`, overridable per-instance; module constant reads `DND_EVICT_GRACE_SECONDS`). `remove_listener` now arms `_schedule_evict_check()` instead of stopping synchronously when player-empty. `_run_evict_check` (Timer thread) re-verifies player-empty under the lock and only then stops + fires `_on_empty`. `add_listener` and `stop_round` both call `_cancel_evict_check()` — a reconnect or a deliberate stop cancels the pending deferral. `_on_session_empty` in `game_service.py` untouched (no second re-check there, per task).
+- Lock discipline mirrors the existing pattern: compute flags under `_lock`, act (stop_round joins the round thread) after release. The timer runs on its own daemon thread, so joining there is safe. `_cancel_evict_check` is called only while holding the lock (non-reentrant).
+- **Old-test contract changes (intentional, this task changes the contract):**
+  - `TestEmptyListeners.test_removing_last_listener_fires_on_empty` → `..._schedules_deferred_evict`: now asserts a deferred timer is armed and `_on_empty` is *not* synchronous.
+  - `TestSpectatorListener.test_last_player_leaving_with_spectator_present_fires_on_empty` (added in task 1, assumed synchronous) → `..._is_player_empty`: asserts the predicate + deferred arming; the firing path moved to the new `TestEvictGracePeriod`.
+- New `TestEvictGracePeriod` (4 unit tests) sets `_evict_grace_seconds = 3600` so the real timer never fires mid-test, and drives `_run_evict_check()` directly for the firing/cancel paths — deterministic, no sleeps. New integration `test_quick_reconnect_keeps_session_live` exercises the real ~1.5s timer end-to-end (fast reconnect → player still gets a turn and the round accepts an action), tolerant like `test_end_turn`.
+- `test_reconnect_replays_last_turn` (0.5s gap) still green: 0.5s < 1.5s window, so the session now survives via the cached-turn replay instead of evict→restore. `ws_arena` teardown `DELETE` leaves a daemon round thread parked + a pending timer that self-cleans within the window; daemon, so it never blocks exit.
+
+Verified: 29 unit tests in `test_session_lifecycle.py` green; `make check` green (backend 2303, frontend 256); `make test-integration` green (161 passed, +1).

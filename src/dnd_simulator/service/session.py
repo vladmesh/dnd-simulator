@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import contextvars
 import dataclasses
+import os
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -29,6 +30,11 @@ from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.service.action_dispatcher import create_dispatcher
 
 logger = structlog.get_logger(domain="session")
+
+# Grace window before an emptied session is stopped + evicted. A disconnect+reconnect
+# inside this window (StrictMode remount, network blip) cancels the evict. Configurable
+# for ops/tests; overridable per-session via ``GameSession._evict_grace_seconds``.
+_DEFAULT_EVICT_GRACE_SECONDS = float(os.getenv("DND_EVICT_GRACE_SECONDS", "1.5"))
 
 
 # ---------------------------------------------------------------------------
@@ -284,6 +290,8 @@ class GameSession:
     _last_turn_msg: dict[str, Any] | None = field(default=None, init=False, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
     _on_empty: Callable[[GameSession], None] | None = field(default=None, init=False, repr=False)
+    _evict_timer: threading.Timer | None = field(default=None, init=False, repr=False)
+    _evict_grace_seconds: float = field(default=_DEFAULT_EVICT_GRACE_SECONDS, init=False, repr=False)
 
     # ---------------------------------------------------------------------------
     # Player queries
@@ -335,6 +343,8 @@ class GameSession:
     def add_listener(self, listener: SessionEventListener) -> None:
         self._bind_session_context()
         with self._lock:
+            # A (re)connecting player cancels any pending evict — this is the grace window.
+            self._cancel_evict_check()
             self._listeners.append(listener)
             count = len(self._listeners)
         logger.info("add_listener", listener_count=count)
@@ -362,20 +372,53 @@ class GameSession:
 
     def remove_listener(self, listener: SessionEventListener) -> None:
         self._bind_session_context()
-        stop_round = False
-        is_empty = False
+        scheduled = False
         with self._lock:
             with contextlib.suppress(ValueError):
                 self._listeners.remove(listener)
             count = len(self._listeners)
             if not self.has_player_listeners():
-                is_empty = True
-                if self._round is not None:
-                    stop_round = True
-        logger.info("remove_listener", listener_count=count, stop_round=stop_round)
+                # Defer stop+evict: a quick disconnect+reconnect (StrictMode remount,
+                # network blip) must not flash the session out of the registry. The
+                # deferred check (_run_evict_check) re-verifies emptiness before acting.
+                self._schedule_evict_check()
+                scheduled = True
+        logger.info("remove_listener", listener_count=count, scheduled_evict=scheduled)
+
+    def _schedule_evict_check(self) -> None:
+        """Arm the deferred empty-session check. Caller holds ``_lock``."""
+        if self._evict_timer is not None:
+            self._evict_timer.cancel()
+        timer = threading.Timer(self._evict_grace_seconds, self._run_evict_check)
+        timer.daemon = True
+        self._evict_timer = timer
+        timer.start()
+
+    def _cancel_evict_check(self) -> None:
+        """Cancel any pending deferred evict. Caller holds ``_lock``."""
+        if self._evict_timer is not None:
+            self._evict_timer.cancel()
+            self._evict_timer = None
+
+    def _run_evict_check(self) -> None:
+        """Timer callback: stop the round and fire ``_on_empty`` only if still player-empty.
+
+        Runs on a Timer thread after the grace window. A reconnect inside the window
+        adds a player and cancels this timer, so emptiness is re-verified under the lock.
+        """
+        self._bind_session_context()
+        stop_round = False
+        with self._lock:
+            self._evict_timer = None
+            if self.has_player_listeners():
+                logger.info("evict_check_skipped_reconnected")
+                return
+            if self._round is not None:
+                stop_round = True
+        logger.info("evict_check_firing", stop_round=stop_round)
         if stop_round:
             self.stop_round()
-        if is_empty and self._on_empty is not None:
+        if self._on_empty is not None:
             self._on_empty(self)
 
     def _fire(self, method: str, *args: object) -> None:
@@ -523,6 +566,7 @@ class GameSession:
         self._bind_session_context()
         logger.info("stop_round")
         with self._lock:
+            self._cancel_evict_check()
             game_round = self._round
             brain = self._player_brain
             thread = self._round_thread
