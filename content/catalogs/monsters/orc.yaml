@@ -1,0 +1,14 @@
+name: {en: Orc, ru: Орк}
+faction: orc_warband
+hp: 15
+ac: 13
+speed: 30
+ability_scores: {str: 16, dex: 12, con: 16, int: 7, wis: 11, cha: 10}
+attacks:
+  - name: greataxe
+    ability: str
+    damage:
+      - dice: "1d12"
+        type: slashing
+    reach: 5
+cr: 0.5

@@ -127,6 +127,12 @@ gretta:
       price: 200
     - ref: flaming_longsword
       price: 500
+    - ref: frost_dagger
+      price: 450
+    - ref: ring_of_protection
+      price: 600
+    - ref: boots_of_speed
+      price: 550
 
 rodrik:
   name:
@@ -173,6 +179,8 @@ rodrik:
     - ref: chain_mail
       equipped: true
     - ref: shield
+      equipped: true
+    - ref: circlet_of_aim
       equipped: true
 
 aldric:
@@ -255,6 +263,8 @@ lira:
     - ref: rapier
       equipped: true
     - ref: studded_leather
+      equipped: true
+    - ref: boots_of_speed
       equipped: true
 
 aldwyn:

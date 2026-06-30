@@ -1,0 +1,14 @@
+name: {en: Dire Wolf, ru: Лютоволк}
+faction: wildlife
+hp: 22
+ac: 14
+speed: 50
+ability_scores: {str: 17, dex: 15, con: 15, int: 3, wis: 12, cha: 7}
+attacks:
+  - name: bite
+    ability: str
+    damage:
+      - dice: "2d6"
+        type: piercing
+    reach: 5
+cr: 1.0

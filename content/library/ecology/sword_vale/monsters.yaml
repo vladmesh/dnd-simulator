@@ -2,14 +2,8 @@ templates:
   goblin:
     base: goblin
 
-  wolf:
-    base: wolf
-
-  bandit:
-    base: bandit
-
-  guard:
-    base: guard
+  goblin_boss:
+    base: goblin_boss
 
   goblin_chieftain:
     name: {en: Goblin Chieftain, ru: Гоблин-вожак}
@@ -27,6 +21,15 @@ templates:
         reach: 5
     cr: 1.0
 
+  wolf:
+    base: wolf
+
+  dire_wolf:
+    base: dire_wolf
+
+  bandit:
+    base: bandit
+
   bandit_leader:
     name: {en: Bandit Leader, ru: Главарь бандитов}
     faction: bandits
@@ -43,38 +46,18 @@ templates:
         reach: 5
     cr: 2.0
 
+  guard:
+    base: guard
+
   orc:
-    name: {en: Orc, ru: Орк}
-    faction: orc_warband
-    hp: 15
-    ac: 13
-    speed: 30
-    ability_scores: {str: 16, dex: 12, con: 16, int: 7, wis: 11, cha: 10}
-    attacks:
-      - name: greataxe
-        ability: str
-        damage:
-          - dice: "1d12"
-            type: slashing
-        reach: 5
-    cr: 0.5
+    base: orc
 
-  orc_warchief:
-    name: {en: Orc Warchief, ru: Орк-вождь}
-    faction: orc_warband
-    hp: 93
-    ac: 16
-    speed: 30
-    ability_scores: {str: 20, dex: 12, con: 18, int: 11, wis: 11, cha: 15}
-    attacks:
-      - name: greataxe
-        ability: str
-        damage:
-          - dice: "1d12"
-            type: slashing
-        reach: 5
-    cr: 4.0
+  orc_war_chief:
+    base: orc_war_chief
 
+# Per-location tables — the dangerous travel spaces between towns. Settlements
+# stay safe (no tables). Danger is fixed by place and time, never scaled to the
+# party (kenshi-style).
 encounters:
   silverport_greenwood_road:
     - template: goblin
@@ -83,26 +66,67 @@ encounters:
     - template: wolf
       chance: 0.2
       count: [2, 4]
-    - template: wolf
-      chance: 0.5
-      count: [3, 5]
+    - template: dire_wolf
+      chance: 0.25
+      count: [1, 1]
       time_of_day: night
+
+  silverport_highfield_road:
+    - template: bandit
+      chance: 0.2
+      count: [1, 2]
+
+  greenwood_highfield_road:
+    - template: wolf
+      chance: 0.3
+      count: [1, 3]
+    - template: goblin
+      chance: 0.2
+      count: [1, 2]
 
   highfield_iron_road:
     - template: bandit
       chance: 0.2
       count: [1, 2]
+    - template: orc
+      chance: 0.15
+      count: [1, 2]
 
   highfield_bogmire_road:
     - template: bandit
       chance: 0.3
-      count: [1, 3]
+      count: [1, 2]
+    - template: dire_wolf
+      chance: 0.2
+      count: [1, 1]
       time_of_day: night
+
+  highfield_town_fields:
+    - template: wolf
+      chance: 0.2
+      count: [1, 2]
 
   iron_peaks_north_pass:
     - template: orc
-      chance: 0.4
-      count: [2, 4]
+      chance: 0.3
+      count: [1, 3]
+    - template: dire_wolf
+      chance: 0.2
+      count: [1, 2]
+      time_of_day: night
+
+  bogmire_dustmere_road:
+    - template: bandit
+      chance: 0.2
+      count: [1, 2]
+    - template: orc
+      chance: 0.25
+      count: [1, 2]
+
+  fishing_hamlet_shore:
+    - template: wolf
+      chance: 0.15
+      count: [1, 2]
 
 region_encounters:
   greenwood:
@@ -119,3 +143,12 @@ region_encounters:
     - template: goblin
       chance: 0.15
       count: [1, 2]
+
+  frostholm:
+    - template: wolf
+      chance: 0.4
+      count: [2, 3]
+    - template: dire_wolf
+      chance: 0.3
+      count: [1, 2]
+      time_of_day: night

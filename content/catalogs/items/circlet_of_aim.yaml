@@ -1,0 +1,10 @@
+name: Circlet of Aim
+type: accessory
+accessory_id: circlet_of_aim
+slot: head
+is_magic: true
+modifiers:
+  - stat: attack_roll
+    op: add
+    value: 1
+    source: circlet_of_aim
