@@ -27,13 +27,13 @@ METADATA_REQUIRED_FIELDS = {"name", "layer_type", "version"}
 # Hardcoded counts from sword_vale original data
 SWORD_VALE_COUNTS = {
     "regions": 7,
-    "locations": 34,
+    "locations": 37,
     "nations": 3,
     "factions": 5,
-    "npcs": 7,
+    "npcs": 8,
     "settlements": 10,
     "squads": 3,
-    "monster_templates": 8,
+    "monster_templates": 10,
     "encounters": 9,
 }
 

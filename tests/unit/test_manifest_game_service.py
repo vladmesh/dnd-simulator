@@ -41,14 +41,14 @@ class TestStartGameSwordVale:
     def test_locations(self, tmp_path: Path) -> None:
         svc = _make_service(tmp_path)
         session = svc.start_game("sword_vale")
-        assert len(session.world.location_graph.all_ids()) == 34
+        assert len(session.world.location_graph.all_ids()) == 37
 
     def test_npcs(self, tmp_path: Path) -> None:
         svc = _make_service(tmp_path)
         session = svc.start_game("sword_vale")
         entities = session.world.layers[4]
         npcs = [e for e in entities._entities.values() if hasattr(e, "role")]  # type: ignore[attr-defined]
-        assert len(npcs) == 7
+        assert len(npcs) == 8
 
     def test_squads(self, tmp_path: Path) -> None:
         svc = _make_service(tmp_path)
