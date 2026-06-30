@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react"
+import { render, screen, within, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi } from "vitest"
 import { SchemaForm } from "../SchemaForm"
@@ -306,9 +306,11 @@ describe("SchemaForm", () => {
       // Should show a select that loads ref options
       const select = await screen.findByLabelText("Start Location")
       expect(select.tagName).toBe("SELECT")
+      // Wait for async fetchRefs to resolve and component to re-render with options
+      await waitFor(() => {
+        expect(within(select as HTMLSelectElement).getAllByRole("option")).toHaveLength(3)
+      })
       const options = within(select as HTMLSelectElement).getAllByRole("option")
-      // empty + 2 ref options
-      expect(options).toHaveLength(3)
       expect(options[1]).toHaveTextContent("Town Square")
     })
   })
