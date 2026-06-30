@@ -147,10 +147,14 @@ class AwarenessBuilder:
         battle_map_positions: dict[str, Position] = dict(combat.battle_map.positions) if combat else {}
         my_pos = battle_map_positions.get(creature.id)
 
-        # Build nearby list (exclude dead creatures)
+        # Build nearby list (exclude dead creatures and containers — containers are loot, not combatants)
+        from dnd_simulator.core.container import Container
+
         nearby: list[CombatEntity] = []
         for e in self._entities.values():
             if e.id == creature.id or not e.active or e.location_id != creature.location_id:
+                continue
+            if isinstance(e, Container):
                 continue
             if isinstance(e, Creature) and not e.is_alive:
                 continue
@@ -263,6 +267,7 @@ class AwarenessBuilder:
                     continue
             desc = creature.perceive(e) if isinstance(creature, Character) and isinstance(e, Entity) else e.name
             is_wounded = isinstance(e, Creature) and e.is_alive and e.current_hp < e.max_hp // 2
+            is_dead = isinstance(e, Creature) and not e.is_alive
             is_hostile = (not lootable) and self.check_faction_hostility(creature, e, query_fn)
             relation = self._resolve_relation(creature, e, query_fn)
             loot_items: list[ItemInfo] = []
@@ -299,6 +304,7 @@ class AwarenessBuilder:
                     description=desc,
                     is_wounded=is_wounded,
                     is_hostile=is_hostile,
+                    is_dead=is_dead,
                     name=name,
                     race=race,
                     role=role,

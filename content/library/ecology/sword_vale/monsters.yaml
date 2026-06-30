@@ -5,6 +5,22 @@ templates:
   goblin_boss:
     base: goblin_boss
 
+  goblin_chieftain:
+    name: {en: Goblin Chieftain, ru: Гоблин-вожак}
+    faction: goblin_tribe
+    hp: 21
+    ac: 15
+    speed: 30
+    ability_scores: {str: 15, dex: 14, con: 14, int: 10, wis: 9, cha: 10}
+    attacks:
+      - name: scimitar
+        ability: dex
+        damage:
+          - dice: "1d6"
+            type: slashing
+        reach: 5
+    cr: 1.0
+
   wolf:
     base: wolf
 
@@ -13,6 +29,22 @@ templates:
 
   bandit:
     base: bandit
+
+  bandit_leader:
+    name: {en: Bandit Leader, ru: Главарь бандитов}
+    faction: bandits
+    hp: 52
+    ac: 15
+    speed: 30
+    ability_scores: {str: 15, dex: 16, con: 14, int: 14, wis: 11, cha: 14}
+    attacks:
+      - name: shortsword
+        ability: dex
+        damage:
+          - dice: "1d6"
+            type: piercing
+        reach: 5
+    cr: 2.0
 
   guard:
     base: guard
@@ -96,9 +128,22 @@ encounters:
       chance: 0.15
       count: [1, 2]
 
-# Region-level fallback: any location in frostholm without its own table uses
-# this. The frozen tundra is wolf country; dire wolves hunt only after dark.
 region_encounters:
+  greenwood:
+    - template: wolf
+      chance: 0.2
+      count: [1, 2]
+
+  iron_peaks:
+    - template: orc
+      chance: 0.3
+      count: [1, 3]
+
+  bogmire:
+    - template: goblin
+      chance: 0.15
+      count: [1, 2]
+
   frostholm:
     - template: wolf
       chance: 0.4

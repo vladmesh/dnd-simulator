@@ -171,6 +171,11 @@ class ActivationManager:
             if e.location_id not in self._encounter_tables:
                 continue  # no encounters here
 
+            # Skip random encounters at locations with an active lair — the lair IS the encounter
+            if self._has_active_lair(e.location_id, query_fn):
+                logger.info("encounter_check_lair_skip", location=e.location_id, entity_id=e.id)
+                continue
+
             # Check cooldown
             last_roll = self._encounter_cooldowns.get(e.location_id, 0)
             if now - last_roll < ENCOUNTER_COOLDOWN_SECONDS:
@@ -179,6 +184,19 @@ class ActivationManager:
 
             self._encounter_cooldowns[e.location_id] = now
             self._roll_encounters(e.location_id, time, query_fn)
+
+    def _has_active_lair(self, location_id: str, query_fn: QueryFn | None) -> bool:
+        """Return True if an active lair occupies this location."""
+        if query_fn is None:
+            return False
+        from dnd_simulator.core.world import LayerError
+
+        try:
+            answer = query_fn("ecology", Query(QueryType.LAIRS_AT_LOCATION, params={"location_id": location_id}))
+            assert isinstance(answer.value, list)
+            return any(info["state"] == LairState.ACTIVE.value for info in answer.value)
+        except LayerError:
+            return False
 
     def _roll_encounters(self, location_id: str, time: GameDateTime, query_fn: QueryFn | None = None) -> None:
         """Roll each encounter entry for a location and spawn monsters.

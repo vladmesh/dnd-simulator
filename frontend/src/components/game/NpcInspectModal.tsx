@@ -140,8 +140,11 @@ export function NpcInspectModal({ entity, open, onClose, isCombat }: NpcInspectM
             </>
           )}
 
-          {/* Wounded indicator */}
-          {entity.is_wounded && (
+          {/* Dead / wounded indicator */}
+          {nearby?.is_dead && (
+            <p className="font-medium text-zinc-400">{t("game:dead")}</p>
+          )}
+          {entity.is_wounded && !nearby?.is_dead && (
             <p className="font-medium text-red-400">{t("game:wounded")}</p>
           )}
 
@@ -153,7 +156,7 @@ export function NpcInspectModal({ entity, open, onClose, isCombat }: NpcInspectM
           )}
 
           {/* Action buttons */}
-          {isMyTurn && (
+          {isMyTurn && !nearby?.is_dead && (
             <div className="flex flex-wrap gap-1 pt-1">
               <Button size="xs" variant="destructive" onClick={handleAttack}>
                 <Sword className="mr-1 size-3" /> {t("game:attack")}

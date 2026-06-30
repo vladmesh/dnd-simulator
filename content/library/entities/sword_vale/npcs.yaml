@@ -1,3 +1,41 @@
+zara:
+  name:
+    en: Zara the Wandering Sage
+    ru: Зара Странствующий Мудрец
+  start_location: greenwood_village_tavern
+  settlement_id: greenwood_village
+  faction: kingdom
+  role: commoner
+  ai: llm
+  hp: 12
+  ac: 11
+  ability_scores:
+    str: 8
+    dex: 12
+    con: 10
+    int: 18
+    wis: 16
+    cha: 14
+  description:
+    en: An elderly woman in travel-worn robes, nursing a cup of herbal tea. Her eyes hold quiet depths.
+    ru: Пожилая женщина в потрёпанных дорожных одеждах, потягивающая травяной чай. В её глазах скрыта тихая глубина.
+  personality:
+    en: >
+      A scholar who has wandered the Sword Vale for decades. Knows the history
+      of every ruin, the name of every monster den, and the old grievances between
+      factions. Speaks in riddles when bored, plainly when she trusts you.
+      Will trade information for interesting stories or rare items. Deeply curious
+      about the player — what drives them, where they come from, what they fear.
+    ru: >
+      Учёная, скитающаяся по Долине Мечей десятилетиями. Знает историю
+      каждой руины, название каждого логова монстров и давние обиды между
+      фракциями. Говорит загадками, когда скучает, прямо — когда доверяет.
+      Торгует информацией за интересные истории или редкие предметы.
+      Глубоко любопытна к игроку — что движет им, откуда он пришёл, чего боится.
+  items:
+    - ref: quarterstaff
+      equipped: true
+
 edgar:
   name:
     en: Edgar the Smith

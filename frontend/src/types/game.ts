@@ -85,6 +85,7 @@ export interface NearbyEntity {
   description: string
   is_wounded?: boolean
   is_hostile?: boolean
+  is_dead?: boolean
   name?: string
   race?: string
   role?: string
