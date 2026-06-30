@@ -26,6 +26,7 @@
 - [ ] **should** `theft` — Воровство как отдельный режим доступа к инвентарю: take у живого несогласного владельца, contested Sleight of Hand против Perception, crime/репутация; отдельная `validate_steal` поверх общего `transfer_items`
 - [ ] **should** `spawn-event-trigger` — Event-триггер спавна (спавн по мировому событию), в связке со спринтом квестов
 - [ ] **could** `container-hp-locks` — Сундуки с замком/HP: взлом (lockpicking) и «разбить» контейнер
+- [ ] **should** `lair-death-event` — смерти существ логова не фиксируются в `EcologyLayer` в реальном времени: `LairState`/`core_alive` обновляются только при dematerialize (когда игрок уходит). При рестарте сервера без сейва lair стартует как ACTIVE заново. Фикс: при `ENTITY_DIED` для temporary-существа эмитировать событие через `emit_fn`, ecology подписывается и сразу обновляет `core_alive`/`alive_members` — тогда состояние lair корректно даже если игрок остаётся на месте и при рестарте (через autosave). Направление зависимости: entities→ecology через emit_fn, не прямой импорт
 - [ ] **could** `lair-actions` — D&D lair actions на ядре логова
 - [ ] **could** `lair-new-leader` — После смерти ядра логово с шансом поднимает нового вожака вместо деплита (динамика мира)
 - [ ] **could** `lair-time-of-day` — Активность логова варьируется день/ночь (`active_at: day|night` гейтит материализацию ростера). Переиспользует `TimeOfDay`/`IS_DAYLIGHT`/`is_active_at_time` из Sprint 018 phase 4 (отложено при планировании фазы 4)
@@ -77,7 +78,7 @@
 
 ## Bugs
 
-- [ ] **could** `corpse-nearby-actions` — мёртвое существо показывается в Nearby-панели с кнопками Attack/Talk/Inspect (E2E sprint 018 phase 2). Лут идёт через отдельный LootPanel; атака трупа возвращает корректное «уже мертва», так что ничего не ломается — но Attack/Talk на трупе бессмысленны. Скрывать их для мёртвых (или убирать трупы из Nearby, раз есть LootPanel)
+- [x] `corpse-nearby-actions` — ~~мёртвое существо показывается в Nearby-панели с кнопками Attack/Talk/Inspect~~ FIXED: добавлен флаг `is_dead` в `NearbyEntity`; в `NpcInspectModal` кнопки действий скрыты для мёртвых, показывается метка «(мёртв)»
 - [ ] **should** `encounter-spawned-perceiver` — `EncounterSpawned` события не имеют перцептора в `perception.py` `_DISPATCH`, в логе игрока выводится мусорный фолбэк `Something happened (encounter_spawned)` (E2E post-audit sprint 018; срабатывает на каждый региональный/локационный спавн встречи). Добавить `_perceive_encounter_spawned` (напр. «Рядом что-то зашевелилось») и зарегистрировать в `_DISPATCH`
 - [x] `battle-map-configs-not-wired` — ~~`battle_map_configs` из `regions.yaml` не передаётся в `EntitiesLayer` при создании сессии в `game_service.py`. Все combat maps дефолтят в 60×60~~ FIXED Sprint 018 (verified Sprint 019 phase 3): `game_service.py:171-183` строит `battle_map_configs` через `_flatten_region_defaults(load_battle_maps(...))` и передаёт в `EntitiesLayer`
 - [x] `player-character-no-attacks` — ~~`POST /api/player/sessions/{id}/character` не принимает `attacks`; персонаж дерётся кулаками (1 урон)~~ FIXED Sprint 013 char-creation (verified Sprint 019 phase 3): `create_player` грузит `starting_equipment` оружие, игрок бьёт через `get_weapon_attack()`. Поле `attacks` в `CreatePlayerRequest` вестигиальное для игрока (raw `attacks` — путь монстра/спавна)

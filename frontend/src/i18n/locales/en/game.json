@@ -3,6 +3,7 @@
   "nearby": "Nearby",
   "enemies": "Enemies",
   "wounded": "(wounded)",
+  "dead": "(dead)",
   "attack": "Attack",
   "attack_target": "Attack {{target}}",
   "target_self": "Self",

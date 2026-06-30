@@ -3,6 +3,7 @@
   "nearby": "Поблизости",
   "enemies": "Противники",
   "wounded": "(ранен)",
+  "dead": "(мёртв)",
   "attack": "Атаковать",
   "attack_target": "Атаковать {{target}}",
   "target_self": "Себя",

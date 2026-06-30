@@ -149,6 +149,20 @@ silverport_greenwood_road:
       distance: 500
     - target: greenwood_village_edge
       distance: 125000
+    - target: goblin_cave
+      distance: 2000
+
+goblin_cave:
+  name:
+    en: "Goblin Cave"
+    ru: "Пещера гоблинов"
+  region: silverport
+  description:
+    en: "A dark cleft in the hillside reeking of smoke and rot. Crude totems mark the entrance."
+    ru: "Тёмная расщелина в склоне холма, пропахшая дымом и гнилью. У входа торчат грубые тотемы."
+  neighbors:
+    - target: silverport_greenwood_road
+      distance: 2000
 
 # === Highfield Town ===
 
@@ -256,6 +270,20 @@ highfield_bogmire_road:
       distance: 500
     - target: bogtown_entrance
       distance: 230000
+    - target: bandit_hideout
+      distance: 3000
+
+bandit_hideout:
+  name:
+    en: "Bandit Hideout"
+    ru: "Логово бандитов"
+  region: highfield
+  description:
+    en: "An abandoned barn half-sunken into the marsh. Stolen goods and empty bottles litter the floor."
+    ru: "Заброшенный амбар, наполовину ушедший в болото. Пол усыпан краденым добром и пустыми бутылками."
+  neighbors:
+    - target: highfield_bogmire_road
+      distance: 3000
 
 greenwood_highfield_road:
   name:
@@ -376,6 +404,20 @@ iron_peaks_north_pass:
       distance: 500
     - target: frostholm_outpost_camp
       distance: 800000
+    - target: orc_camp
+      distance: 5000
+
+orc_camp:
+  name:
+    en: "Orc War Camp"
+    ru: "Орочий военный лагерь"
+  region: iron_peaks
+  description:
+    en: "A crude camp of hide tents and sharpened stakes wedged into a mountain shelf. Firelight and guttural war-chants echo off the rocks."
+    ru: "Грубый лагерь из шкурных палаток и заострённых кольев на горном уступе. Свет костров и гортанные боевые кличи отражаются от скал."
+  neighbors:
+    - target: iron_peaks_north_pass
+      distance: 5000
 
 # === Frostholm ===
 

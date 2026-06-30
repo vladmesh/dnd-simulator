@@ -1,0 +1,44 @@
+goblin_cave:
+  name: {en: Goblin Cave, ru: Пещера гоблинов}
+  faction: goblin_tribe
+  location: goblin_cave
+  members: [goblin, goblin, goblin]
+  core: goblin_chieftain
+  respawn_interval: 259200
+  treasure:
+    items:
+      - ref: longsword
+      - ref: chain_shirt
+      - ref: health_potion
+    gold: 50
+    behind_core: true
+
+bandit_hideout:
+  name: {en: Bandit Hideout, ru: Логово бандитов}
+  faction: bandits
+  location: bandit_hideout
+  members: [bandit, bandit]
+  core: bandit_leader
+  respawn_interval: 172800
+  treasure:
+    items:
+      - ref: health_potion
+      - ref: health_potion
+      - ref: rapier
+    gold: 200
+    behind_core: true
+
+orc_camp:
+  name: {en: Orc War Camp, ru: Орочий военный лагерь}
+  faction: orc_warband
+  location: orc_camp
+  members: [orc, orc, orc, orc]
+  core: orc_warchief
+  respawn_interval: 432000
+  treasure:
+    items:
+      - ref: greataxe
+      - ref: half_plate
+      - ref: health_potion
+    gold: 150
+    behind_core: true

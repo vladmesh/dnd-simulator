@@ -27,6 +27,7 @@ class NearbyEntity:
     description: str
     is_wounded: bool = False
     is_hostile: bool = False
+    is_dead: bool = False
     name: str = ""
     race: str = ""
     role: str = ""
