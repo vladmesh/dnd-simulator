@@ -511,7 +511,7 @@ class TestCombatLogI18n:
         event = Event(
             event_type=EventType.ENTITY_EQUIP,
             source_layer="entities",
-            data={"entity_id": "player", "weapon_name": "Dagger"},
+            data={"entity_id": "player", "item_name": "Dagger"},
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, equipper))
         assert "[T]Dagger" in result

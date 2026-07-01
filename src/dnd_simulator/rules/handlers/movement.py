@@ -232,22 +232,25 @@ def handle_wait(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
     if travel_to:
         target_id = str(travel_to)
         graph = world.location_graph
+        resolved_id: str | None = None
         try:
-            seconds = graph.travel_seconds(actor.location_id, target_id)
-            actor.location_id = target_id
-            world.advance_time(TimeDelta(seconds=seconds))
+            graph.travel_seconds(actor.location_id, target_id)
+            resolved_id = target_id
         except ValueError:
             # No direct path — try by name match
             for loc_id in graph.all_ids():
                 loc = graph.get(loc_id)
                 if loc.name.lower() == target_id.lower():
-                    try:
-                        seconds = graph.travel_seconds(actor.location_id, loc_id)
-                        actor.location_id = loc_id
-                        world.advance_time(TimeDelta(seconds=seconds))
-                    except ValueError:
-                        pass
+                    resolved_id = loc_id
                     break
+        if resolved_id is None:
+            return ActionResult(success=False, error=_("Unknown travel destination"))
+        try:
+            seconds = graph.travel_seconds(actor.location_id, resolved_id)
+        except ValueError:
+            return ActionResult(success=False, error=_("No route to destination"))
+        actor.location_id = resolved_id
+        world.advance_time(TimeDelta(seconds=seconds))
     else:
         hours = int(str(action.params.get("hours", 1)))
         if hours > 0:

@@ -2,14 +2,26 @@
 
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
-**Last updated:** 2026-06-29
+**Last updated:** 2026-06-30
 **Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 закрыт (логова, лут/контейнеры, региональные таблицы встреч, время суток). Sprint 019 (control-plane-prep) закрыт — `GameService` раздроблён 1044 → 357 строк (миксины `WorldBuilderCommands`/`PlayerCommands`), core/adapter развязаны, видимые дырки (combat-log i18n, encounter-перцептор, труп-кнопки) закрыты; control-plane готов к разрезу на роли. По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), автономные тики NPC.
 **Next:** активного спринта нет. Топ-кандидат — `control-interfaces` (разрез control-plane на роли worldbuilder/DM/админка, ради чего готовился Sprint 019); далее `quest-system`. См. [BACKLOG](BACKLOG.md) / [ROADMAP](ROADMAP.md).
 **Blockers:** нет.
 
 ## Current Sprint
 
-Активного спринта нет. Sprint 019 (control-plane-prep) закрыт 2026-06-29 — см. Sprint History. Топ-кандидат на следующий — `control-interfaces`.
+**Sprint:** 020-thermo-sweep
+**Goal:** закрыть кластер структурного долга и багов из термоядерного ревью — чистота `rules/`, типизация межслойных границ, декомпозиция выросших модулей и фронтовых god-компонентов; поведение неизменно
+**Started:** 2026-06-30
+**Phase:** 1 — Корректность и инварианты (COMPLETE) — 2026-06-30
+
+Полный sweep (выбран пользователем), целится в `control-interfaces`. Источник — [thermo-nuclear-review.md](thermo-nuclear-review.md). Phase 1 закрыта (5 задач: data integrity / visible bugs / purity-determinism / purity-i18n / purity-providers). Ready for Phase 2 task generation.
+
+### Phases
+
+1. Корректность и инварианты — баги ревью (BLOCKER порчи данных, иконка, тихий travel, HTTP-статус) + чистота rules/ (structlog/I-O вон, gettext, RNG) под regression-тестами
+2. Типизация границ + enums — query-контракт, EntityType/BrainType/LayerSource, World.get_layer, exception handlers, player-status (фундамент под control-interfaces)
+3. Декомпозиция бэка — round/combat/ecology/activation split, реестр экипировки, дедуп сериализации, разрыв цикла core/player→content_loader
+4. Декомпозиция фронта — TargetDropdown/SchemaForm/EventLog/WorldOverview, общие типы, дедуп slice'ов
 
 ## Recent activity (non-sprint)
 

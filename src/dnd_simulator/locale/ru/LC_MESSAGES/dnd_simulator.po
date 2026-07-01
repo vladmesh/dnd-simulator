@@ -1008,3 +1008,83 @@ msgstr "Ты получаешь {amount} опыта за победу над {so
 
 msgid "{entity} gains {amount} XP for defeating {source}"
 msgstr "{entity} получает {amount} опыта за победу над {source}"
+
+# =========================================================================
+# rules/handlers/items.py — action errors
+# =========================================================================
+
+msgid "Nothing to say (text is empty)"
+msgstr "Нечего сказать (текст пуст)"
+
+msgid "Cannot use item of type '{item_type}', try equipping it instead"
+msgstr "Нельзя использовать предмет типа '{item_type}', попробуй экипировать его"
+
+msgid "Only Paladins can use Lay on Hands"
+msgstr "Только паладины могут использовать Возложение рук"
+
+msgid "Amount must be at least 1"
+msgstr "Количество должно быть не менее 1"
+
+msgid "No lay_on_hands pool"
+msgstr "Нет пула lay_on_hands"
+
+msgid "Insufficient pool: {current} remaining, need {amount}"
+msgstr "Недостаточно: осталось {current}, нужно {amount}"
+
+msgid "Cannot resolve target"
+msgstr "Не удалось определить цель"
+
+msgid "Target '{id}' not found"
+msgstr "Цель '{id}' не найдена"
+
+msgid "Only characters can use Second Wind"
+msgstr "Только персонажи могут использовать Второе дыхание"
+
+# =========================================================================
+# rules/handlers/equipment.py — action errors
+# =========================================================================
+
+msgid "Item {id} not in inventory"
+msgstr "Предмет {id} не в инвентаре"
+
+msgid "Item {id} is not a {item_type}"
+msgstr "Предмет {id} не является {item_type}"
+
+msgid "Item {id} is a {slot} accessory, not {expected}"
+msgstr "Предмет {id} является {slot} аксессуаром, а не {expected}"
+
+msgid "No {item_type} equipped"
+msgstr "Нет экипированного {item_type}"
+
+# =========================================================================
+# rules/handlers/trade.py — action errors
+# =========================================================================
+
+msgid "Merchant '{id}' not found"
+msgstr "Торговец '{id}' не найден"
+
+msgid "Only characters can trade"
+msgstr "Только персонажи могут торговать"
+
+# =========================================================================
+# rules/handlers/action_surge.py — action errors
+# =========================================================================
+
+msgid "Only characters can use Action Surge"
+msgstr "Только персонажи могут использовать Всплеск действий"
+
+msgid "Action Surge not available (requires Fighter L2+)"
+msgstr "Всплеск действий недоступен (требует Воин L2+)"
+
+msgid "Action Surge already used"
+msgstr "Всплеск действий уже использован"
+
+msgid "Action Surge requires an active turn"
+msgstr "Всплеск действий требует активного хода"
+
+# =========================================================================
+# rules/handlers/loot.py — action errors
+# =========================================================================
+
+msgid "Target '{id}' cannot be looted"
+msgstr "Цель '{id}' нельзя обыскать"

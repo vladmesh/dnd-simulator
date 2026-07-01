@@ -350,21 +350,21 @@ def _perceive_lay_on_hands(event: Event, observer: Character, get_entity: GetEnt
 def _perceive_equip(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     d = event.data
     entity_id = str(d["entity_id"])
-    weapon_name = _(str(d["weapon_name"]))
+    item_name = _(str(d["item_name"]))
     if entity_id == observer.id:
-        return _("You equip {weapon}").format(weapon=weapon_name)
+        return _("You equip {weapon}").format(weapon=item_name)
     desc = _describe(observer, entity_id, get_entity)
-    return _("{entity} equips {weapon}").format(entity=desc, weapon=weapon_name)
+    return _("{entity} equips {weapon}").format(entity=desc, weapon=item_name)
 
 
 def _perceive_unequip(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     d = event.data
     entity_id = str(d["entity_id"])
-    weapon_name = _(str(d["weapon_name"]))
+    item_name = _(str(d["item_name"]))
     if entity_id == observer.id:
-        return _("You put away {weapon}").format(weapon=weapon_name)
+        return _("You put away {weapon}").format(weapon=item_name)
     desc = _describe(observer, entity_id, get_entity)
-    return _("{entity} puts away {weapon}").format(entity=desc, weapon=weapon_name)
+    return _("{entity} puts away {weapon}").format(entity=desc, weapon=item_name)
 
 
 def _perceive_buy(event: Event, observer: Character, get_entity: GetEntityFn) -> str:

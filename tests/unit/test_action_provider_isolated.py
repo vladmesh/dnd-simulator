@@ -20,10 +20,10 @@ from dnd_simulator.rules.action_provider import (
     ClassFeatureActionProvider,
     EquipmentActionProvider,
     InventoryActionProvider,
-    MerchantActionProvider,
     WeaponActionProvider,
 )
 from dnd_simulator.rules.validation import ActionContext
+from dnd_simulator.service.contextual_providers import MerchantActionProvider
 
 # Base action types that are NOT provider-managed — matching how the real dispatcher builds them.
 _COMBAT_BASE = frozenset(

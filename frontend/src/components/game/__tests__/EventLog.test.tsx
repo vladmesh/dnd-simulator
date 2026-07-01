@@ -4,6 +4,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import "@/i18n"
 import { useGameStore } from "@/store/gameStore"
 import { EventLog } from "../EventLog"
+import { EVENT_ICONS } from "@/lib/logProcessing"
+import { ICON_MAP } from "@/lib/iconMap"
 import type { PerceivedEvent } from "@/types/game"
 import type { LogEntry } from "@/store/slices/logSlice"
 
@@ -61,6 +63,22 @@ describe("EventLog — icons", () => {
     expect(svgs.length).toBeGreaterThanOrEqual(1)
     // Description is still visible
     expect(screen.getByText("You attack the goblin")).toBeInTheDocument()
+  })
+
+  it("every EVENT_ICONS value resolves to a component in ICON_MAP", () => {
+    for (const [eventType, iconName] of Object.entries(EVENT_ICONS)) {
+      expect(ICON_MAP[iconName], `ICON_MAP missing entry for icon "${iconName}" (event_type: ${eventType})`).toBeDefined()
+    }
+  })
+
+  it("entity_lay_on_hands renders a non-null svg icon", () => {
+    setLog([makeLogEntry("entity_lay_on_hands", "Paladin heals 5 HP", "paladin_1")])
+    render(<EventLog compact onExpand={vi.fn()} />)
+
+    const entry = screen.getByTestId("compact-log")
+    const svgs = entry.querySelectorAll("svg")
+    expect(svgs.length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText("Paladin heals 5 HP")).toBeInTheDocument()
   })
 })
 

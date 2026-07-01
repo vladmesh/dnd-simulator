@@ -5,6 +5,7 @@ No state, no I/O. Takes actor + action + context, returns error or None.
 
 from __future__ import annotations
 
+import random
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -37,6 +38,7 @@ class ActionContext:
     combat_state: CombatState | None = None  # for reach checks via BattleMap
     get_entity: EntityLookup | None = field(default=None, repr=False)  # for target validation
     on_leave_reach: OnLeaveReachFn | None = field(default=None, repr=False)  # OA callback
+    rng: random.Random | None = field(default=None, repr=False)  # seeded rng for reproducible rolls
 
 
 @dataclass(frozen=True)

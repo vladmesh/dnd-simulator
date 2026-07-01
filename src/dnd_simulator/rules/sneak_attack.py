@@ -9,8 +9,6 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING
 
-import structlog
-
 from dnd_simulator.core.character import Attack, Character, Creature, DamageType
 from dnd_simulator.core.class_features import RogueFeatures
 from dnd_simulator.rules.combat import ExtraDamage
@@ -18,8 +16,6 @@ from dnd_simulator.rules.combat import ExtraDamage
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Entity
     from dnd_simulator.core.combat import BattleMap
-
-logger = structlog.get_logger(domain="sneak_attack")
 
 
 def sneak_attack_dice(creature: Creature) -> int:
@@ -135,10 +131,5 @@ def check_sneak_attack(
         return ()
 
     sa_expr = f"{sa_dice}d6"
-    logger.info(
-        "sneak_attack",
-        attacker=attacker.name,
-        dice=sa_expr,
-        reason="advantage" if advantage else "ally_adjacent",
-    )
-    return (ExtraDamage(dice=sa_expr, type=DamageType.PIERCING, source="sneak_attack"),)
+    reason = "advantage" if advantage else "ally_adjacent"
+    return (ExtraDamage(dice=sa_expr, type=DamageType.PIERCING, source="sneak_attack", reason=reason),)

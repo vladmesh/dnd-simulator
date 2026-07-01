@@ -9,7 +9,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import pytest
+from pydantic import ValidationError
+
 from dnd_simulator.content_loader import parse_player
+from dnd_simulator.content_loader.catalogs import load_catalog
 from dnd_simulator.content_loader.items import deserialize_item
 from dnd_simulator.content_loader.schemas import ItemContent
 from dnd_simulator.core.class_features import FighterFeatures, FightingStyle, PaladinFeatures, RogueFeatures
@@ -303,3 +307,89 @@ class TestClassFeaturesSaveRestore:
             f"AC dropped to {effective_ac(restored)} after save/restore — "
             f"Defense style lost? class_features: {restored.class_features}"
         )
+
+
+def _create_player_with_ring(item_catalog: dict[str, ItemContent]) -> PlayerCharacter:
+    """Create a fighter with ring_of_protection equipped."""
+    parse_data: dict[str, Any] = {
+        "name": "Ring Bearer",
+        "race": "human",
+        "class": "fighter",
+        "level": 1,
+        "alignment": "true_neutral",
+        "hp": 12,
+        "ac": 10,
+        "gold": 0,
+        "ability_scores": {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 12, "cha": 8},
+        "items": [
+            {"ref": "ring_of_protection", "equipped": True},
+        ],
+    }
+    return parse_player(parse_data, item_catalog=item_catalog)
+
+
+class TestAccessoryModifierRoundTrip:
+    """Accessory grant_modifiers must survive to_full_save_data → parse_player."""
+
+    def test_ring_modifier_survives_save_restore(self) -> None:
+        catalog = _load_item_catalog()
+        player = _create_player_with_ring(catalog)
+
+        assert player.equipped_ring is not None, "Ring not equipped"
+        assert player.equipped_ring.accessory_def is not None
+        assert len(player.equipped_ring.accessory_def.grant_modifiers) > 0, "Ring has no modifiers before save"
+
+        ac_before = effective_ac(player)
+
+        save_data = player.to_full_save_data()
+        restored = parse_player(save_data, item_catalog=catalog)
+
+        assert restored.equipped_ring is not None, "Ring lost after save/restore"
+        assert restored.equipped_ring.accessory_def is not None
+        assert len(restored.equipped_ring.accessory_def.grant_modifiers) > 0, (
+            "Ring modifiers dropped after save/restore — grant_modifiers key not accepted by ItemContent"
+        )
+        assert effective_ac(restored) == ac_before, (
+            f"AC changed after save/restore: {ac_before} → {effective_ac(restored)}"
+        )
+
+    def test_item_content_rejects_unknown_keys(self) -> None:
+        """ItemContent with extra="forbid" must raise on unknown fields."""
+        with pytest.raises(ValidationError):
+            ItemContent.model_validate({"name": "Test", "type": "accessory", "unknown_field": "oops"})
+
+    def test_all_catalog_items_validate(self) -> None:
+        """All authored catalog items must still validate after extra="forbid"."""
+        catalog_dir = Path(__file__).resolve().parents[2] / "content" / "catalogs" / "items"
+        catalog = load_catalog(catalog_dir, ItemContent)
+        assert len(catalog) > 0, "Catalog is empty"
+
+
+class TestXPRoundTrip:
+    """experience and level_up_available must survive to_full_save_data → parse_player."""
+
+    def test_xp_survives_round_trip(self) -> None:
+        catalog = _load_item_catalog()
+        player = _create_fighter(catalog)
+
+        player.experience = 300
+        player.level_up_available = True
+
+        save_data = player.to_full_save_data()
+        restored = parse_player(save_data, item_catalog=catalog)
+
+        assert restored.experience == 300, f"XP lost: got {restored.experience}"
+        assert restored.level_up_available is True, "level_up_available lost after save/restore"
+
+    def test_zero_xp_survives_round_trip(self) -> None:
+        catalog = _load_item_catalog()
+        player = _create_fighter(catalog)
+
+        player.experience = 0
+        player.level_up_available = False
+
+        save_data = player.to_full_save_data()
+        restored = parse_player(save_data, item_catalog=catalog)
+
+        assert restored.experience == 0
+        assert restored.level_up_available is False

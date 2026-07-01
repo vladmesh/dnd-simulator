@@ -141,11 +141,12 @@ class PlayerCommands(GameServiceProtocol):
         fighting_style argument is incompatible with the class/level transition.
         """
         from dnd_simulator.rules.perform_level_up import perform_level_up
+        from dnd_simulator.service.errors import PlayerNotFoundError
 
         session = self._get_session(session_id)
         player = session.get_player()
         if player is None:
-            raise ValueError("No player in this session")
+            raise PlayerNotFoundError("No player in this session")
         perform_level_up(player, fighting_style=fighting_style)
         return player
 
@@ -160,12 +161,13 @@ class PlayerCommands(GameServiceProtocol):
         from dnd_simulator.rules.leveling import xp_to_next_level
         from dnd_simulator.rules.modifiers import effective_ac
         from dnd_simulator.service.dto import PlayerStatusData, ResourcePoolView
+        from dnd_simulator.service.errors import PlayerNotFoundError
         from dnd_simulator.service.session import build_equipped_payload, build_inventory_payload
 
         session = self._get_session(session_id)
         player = session.get_player(player_id) if player_id else session.get_player()
         if player is None:
-            raise ValueError("No player in this session")
+            raise PlayerNotFoundError("No player in this session")
         scores = player.ability_scores
         return PlayerStatusData(
             player_id=player.id,

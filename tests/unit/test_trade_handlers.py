@@ -12,9 +12,9 @@ from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.perception import perceive_event
-from dnd_simulator.rules.action_provider import MerchantActionProvider
 from dnd_simulator.rules.handlers import handle_buy, handle_sell
 from dnd_simulator.rules.validation import ActionContext
+from dnd_simulator.service.contextual_providers import MerchantActionProvider
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Entity

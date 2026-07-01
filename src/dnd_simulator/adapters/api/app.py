@@ -23,6 +23,7 @@ from dnd_simulator.i18n import set_language
 from dnd_simulator.llm.client import LlmClient
 from dnd_simulator.logging_config import configure_logging
 from dnd_simulator.service import GameService
+from dnd_simulator.service.errors import PlayerNotFoundError, SessionNotFoundError
 from dnd_simulator.service.game_service import DEFAULT_CONTENT_DIR
 from dnd_simulator.storage.store import JsonFileStore
 
@@ -82,6 +83,22 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="D&D Simulator", version="0.1.0", lifespan=lifespan)
 app.add_middleware(I18nMiddleware)
+
+
+@app.exception_handler(SessionNotFoundError)
+async def _session_not_found(request: Request, exc: SessionNotFoundError) -> Response:
+    from fastapi.responses import JSONResponse
+
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+@app.exception_handler(PlayerNotFoundError)
+async def _player_not_found(request: Request, exc: PlayerNotFoundError) -> Response:
+    from fastapi.responses import JSONResponse
+
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
 _cors_raw = os.getenv("CORS_ALLOWED_ORIGINS", "*").strip()
 _cors_origins = ["*"] if _cors_raw == "*" else [o.strip() for o in _cors_raw.split(",") if o.strip()]
 app.add_middleware(

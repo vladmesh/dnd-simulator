@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.models import ActionResult, Event, EventType
+from dnd_simulator.i18n import _
 from dnd_simulator.rules.resources import has_resource, use_resource
 
 if TYPE_CHECKING:
@@ -26,16 +27,16 @@ def handle_action_surge(
     from dnd_simulator.core.character import Character
 
     if not isinstance(actor, Character):
-        return ActionResult(success=False, error="Only characters can use Action Surge")
+        return ActionResult(success=False, error=_("Only characters can use Action Surge"))
 
     has_pool = any(p.id == "action_surge" for p in actor.resource_pools)
     if not has_pool:
-        return ActionResult(success=False, error="Action Surge not available (requires Fighter L2+)")
+        return ActionResult(success=False, error=_("Action Surge not available (requires Fighter L2+)"))
     if not has_resource(actor, "action_surge"):
-        return ActionResult(success=False, error="Action Surge already used")
+        return ActionResult(success=False, error=_("Action Surge already used"))
 
     if ctx.turn_budget is None:
-        return ActionResult(success=False, error="Action Surge requires an active turn")
+        return ActionResult(success=False, error=_("Action Surge requires an active turn"))
 
     use_resource(actor, "action_surge")
     ctx.turn_budget.actions += 1

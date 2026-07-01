@@ -21,6 +21,7 @@ class ExtraDamage:
     dice: str
     type: DamageType
     source: str
+    reason: str | None = None
 
 
 @dataclass(frozen=True)

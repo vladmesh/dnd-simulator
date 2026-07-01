@@ -136,16 +136,11 @@ class EcologyLayer(Layer):
         # Anchor the respawn countdown to this visit so respawn waits a full interval afterwards.
         lair.last_respawn_time = int(event.data.get("at_seconds", lair.last_respawn_time))
 
-        # Depletion: a cored lair dies permanently when its core dies; a coreless lair
-        # may run dry by chance after a full wipe (roll only when wiped, via short-circuit).
-        core_died = lair.core is not None and not lair.core_alive
-        chance_ran_dry = (
-            lair.core is None
-            and not lair.alive_members
-            and lair.depletion_chance > 0.0
-            and get_global_rng().random() < lair.depletion_chance
-        )
-        if core_died or chance_ran_dry:
+        # Depletion decision is a pure rule; the roll is generated here and injected.
+        from dnd_simulator.rules.lairs import should_deplete
+
+        roll = get_global_rng().random()
+        if should_deplete(lair, roll):
             lair.state = LairState.DEPLETED
 
         logger.info(

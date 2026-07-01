@@ -17,10 +17,10 @@ from dnd_simulator.core.items import Item, ItemType
 from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
-from dnd_simulator.rules.action_provider import LootActionProvider
 from dnd_simulator.rules.handlers import handle_take
 from dnd_simulator.rules.validation import ActionContext, validate_action
 from dnd_simulator.service.action_dispatcher import create_dispatcher
+from dnd_simulator.service.contextual_providers import LootActionProvider
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Entity

@@ -9,8 +9,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-import structlog
-
 from dnd_simulator.core.action import END_TURN, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, CombatEntity, ItemInfo, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain
@@ -24,8 +22,6 @@ from dnd_simulator.rules.weapons import get_weapon_attack
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
-
-logger = structlog.get_logger(domain="brain")
 
 # --- RuleBrain threshold constants ---
 FLEE_HP_THRESHOLD = 0.15
@@ -101,13 +97,6 @@ class RuleBrain(Brain):
         """
         hostile = next((n for n in awareness.nearby if n.is_hostile), None)
         if hostile is not None:
-            logger.info(
-                "rule_hostile_attack",
-                creature=creature.id,
-                creature_faction=creature.faction_id,
-                target=hostile.id,
-                target_desc=hostile.description,
-            )
             return Action(name=ActionType.ATTACK, params={"target_id": hostile.id})
 
         response = creature.get_canned_response(awareness.hour)
@@ -118,7 +107,6 @@ class RuleBrain(Brain):
         if not heard_speech:
             return END_TURN
 
-        logger.info("rule_say", response=response)
         return Action(name=ActionType.SAY, params={"text": response})
 
     def _get_tags(self, creature: Creature) -> list[str]:
@@ -130,7 +118,6 @@ class RuleBrain(Brain):
             return Action(name=ActionType.IDLE)
 
         ctx = self._build_context(creature, awareness)
-        self._log_turn_start(ctx)
 
         rules = [
             self._try_equip,
@@ -174,22 +161,6 @@ class RuleBrain(Brain):
         )
 
     @staticmethod
-    def _log_turn_start(ctx: _CombatContext) -> None:
-        awareness = ctx.awareness
-        budget = awareness.turn_budget
-        logger.debug(
-            "rule_turn_start",
-            hp=awareness.self_hp,
-            max_hp=awareness.self_max_hp,
-            hp_pct=round(ctx.hp_ratio * 100),
-            speed=awareness.self_speed,
-            conditions=[c.value for c in awareness.self_conditions],
-            budget_actions=budget.actions if budget else 0,
-            budget_move=budget.movement_remaining if budget else 0,
-            enemies=len([e for e in awareness.nearby if e.is_hostile]),
-        )
-
-    @staticmethod
     def _try_equip(ctx: _CombatContext) -> Action | None:
         awareness = ctx.awareness
         creature = ctx.creature
@@ -209,7 +180,6 @@ class RuleBrain(Brain):
             )
         if weapon is None:
             return None
-        logger.info("rule_equip", weapon=weapon.name)
         return Action(name=ActionType.EQUIP, params={"weapon_id": weapon.id})
 
     @staticmethod
@@ -225,7 +195,6 @@ class RuleBrain(Brain):
         potion = next((i for i in awareness.available_items if "heal" in i.description.lower()), None)
         if potion is None:
             return None
-        logger.info("rule_use_item", item=potion.name, hp_pct=round(ctx.hp_ratio * 100))
         return Action(name=ActionType.USE_ITEM, params={"item_id": potion.id})
 
     def _try_retreat(self, ctx: _CombatContext) -> Action | None:
@@ -237,7 +206,6 @@ class RuleBrain(Brain):
         nearest_hostile = min((e for e in awareness.nearby if e.is_hostile), key=lambda e: e.distance_ft, default=None)
         if nearest_hostile is None:
             return None
-        logger.info("rule_retreat", hp_pct=round(ctx.hp_ratio * 100))
         return self._move_away_from(nearest_hostile, awareness)
 
     @staticmethod
@@ -247,7 +215,6 @@ class RuleBrain(Brain):
             return None
         nearest_dist = min(e.distance_ft for e in ctx.awareness.nearby)
         if ctx.hp_ratio < ctx.flee_threshold and nearest_dist > ctx.primary_reach:
-            logger.info("rule_flee", hp_pct=round(ctx.hp_ratio * 100))
             return Action(name=ActionType.FLEE)
         return None
 
@@ -257,7 +224,6 @@ class RuleBrain(Brain):
         has_actions = (budget.actions if budget else 0) > 0
         nearest_dist = min(e.distance_ft for e in ctx.awareness.nearby)
         if ctx.hp_ratio < ctx.dodge_threshold and nearest_dist <= ctx.primary_reach and has_actions:
-            logger.info("rule_disengage", hp_pct=round(ctx.hp_ratio * 100))
             return Action(name=ActionType.DISENGAGE)
         return None
 
@@ -267,7 +233,6 @@ class RuleBrain(Brain):
         if (budget.actions if budget else 0) <= 0:
             return None
         if ctx.hp_ratio < ctx.flee_threshold:
-            logger.info("rule_flee", hp_pct=round(ctx.hp_ratio * 100))
             return Action(name=ActionType.FLEE)
         return None
 
@@ -279,12 +244,6 @@ class RuleBrain(Brain):
             return None
         dist = ctx.target.distance_ft
         if dist <= ctx.primary_reach:
-            logger.info(
-                "rule_attack",
-                target=ctx.target.id,
-                distance_ft=dist,
-                ranged=ctx.is_ranged,
-            )
             params: dict[str, object] = {"target_id": ctx.target.id}
             # Divine Smite: always smite in melee when spell slots available.
             if not ctx.is_ranged:
@@ -314,7 +273,6 @@ class RuleBrain(Brain):
         budget = ctx.awareness.turn_budget
         movement_left = budget.movement_remaining if budget else 0
         if movement_left >= 5:
-            logger.info("rule_move_toward", target=ctx.target.id, distance_ft=ctx.target.distance_ft)
             return self.move_toward_target(ctx.target, ctx.awareness)
         return None
 
@@ -326,11 +284,9 @@ class RuleBrain(Brain):
         if dash_params.get("cost_mode") == "bonus_action":
             has_bonus = (budget.bonus_actions if budget else 0) > 0
             if has_bonus:
-                logger.info("rule_dash", distance_ft=ctx.target.distance_ft, cost_mode="bonus_action")
                 return Action(name=ActionType.DASH, params=dash_params)
         has_actions = (budget.actions if budget else 0) > 0
         if has_actions:
-            logger.info("rule_dash", distance_ft=ctx.target.distance_ft)
             return Action(name=ActionType.DASH)
         return None
 
@@ -400,15 +356,6 @@ class RuleBrain(Brain):
             if dist <= reach:
                 score += 30.0
             score += max(0.0, 20.0 - dist * 0.2)
-
-            logger.debug(
-                "rule_score_target",
-                target=eid,
-                distance_ft=dist,
-                wounded=enemy.is_wounded,
-                conditions=[c.value for c in enemy.conditions] if enemy.conditions else [],
-                score=round(score),
-            )
 
             if score > best_score:
                 best_score = score

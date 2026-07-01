@@ -5,25 +5,23 @@ are currently available. No state, no I/O.
 
 BaseActionProvider covers the static action set (idle, say, attack, etc.).
 InventoryActionProvider adds USE_ITEM when the creature has usable items.
+
+I/O-coupled providers (MerchantActionProvider, LootActionProvider) live in
+service/contextual_providers — they hold world-query callbacks and must not
+live in rules/.
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.rules.validation import validate_action
 
 if TYPE_CHECKING:
-    from dnd_simulator.core.character import Character, Creature, Entity
+    from dnd_simulator.core.character import Creature
     from dnd_simulator.rules.validation import ActionContext
-
-# Callable that returns merchant NPCs at a given location ID.
-NearbyMerchantsFn = Callable[[str], "list[Character]"]
-
-# Callable that returns lootable holders (corpses, open containers) at a location ID.
-NearbyLootablesFn = Callable[[str], "list[Entity]"]
 
 
 class ActionProvider(Protocol):
@@ -32,15 +30,15 @@ class ActionProvider(Protocol):
     def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]: ...
 
 
+@dataclass(frozen=True)
 class BaseActionProvider:
     """Provides static base actions — everything except provider-managed types."""
 
-    def __init__(self, action_types: frozenset[ActionType]) -> None:
-        self._types = action_types
+    action_types: frozenset[ActionType]
 
     def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
         result: list[ActionType] = []
-        for at in self._types:
+        for at in self.action_types:
             probe = Action(name=at)
             if validate_action(creature, probe, ctx) is None:
                 result.append(at)
@@ -128,39 +126,6 @@ class WeaponActionProvider:
             return []
         result: list[ActionType] = []
         for at in weapon.weapon_def.grant_actions:
-            probe = Action(name=at)
-            if validate_action(creature, probe, ctx) is None:
-                result.append(at)
-        return result
-
-
-class LootActionProvider:
-    """Provides TAKE when a lootable holder (corpse/container) is at the actor's location."""
-
-    def __init__(self, get_nearby_lootables: NearbyLootablesFn) -> None:
-        self._get_nearby_lootables = get_nearby_lootables
-
-    def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
-        if not self._get_nearby_lootables(creature.location_id):
-            return []
-        probe = Action(name=ActionType.TAKE)
-        if validate_action(creature, probe, ctx) is not None:
-            return []
-        return [ActionType.TAKE]
-
-
-class MerchantActionProvider:
-    """Provides BUY/SELL when creature is at the same location as a merchant."""
-
-    def __init__(self, get_nearby_merchants: NearbyMerchantsFn) -> None:
-        self._get_nearby_merchants = get_nearby_merchants
-
-    def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
-        merchants = self._get_nearby_merchants(creature.location_id)
-        if not merchants:
-            return []
-        result: list[ActionType] = []
-        for at in (ActionType.BUY, ActionType.SELL):
             probe = Action(name=at)
             if validate_action(creature, probe, ctx) is None:
                 result.append(at)
