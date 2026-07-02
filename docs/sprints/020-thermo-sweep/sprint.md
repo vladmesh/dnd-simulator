@@ -61,7 +61,10 @@ Scope OUT:
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Typed query accessors + payload dataclasses](tasks/phase2-task1-typed-query-contract.md) — `core/queries.py`: аксессор на QueryType, frozen payload-датаклассы, миграция ~28 cast-сайтов
+2. [SquadInfo/LairInfo на границе ecology→entities](tasks/phase2-task2-squad-lair-info.md) — bare-dict сквад/логово-payload'ы → frozen dataclasses, ActivationManager читает поля
+3. [Enum-добивка + World.get_layer](tasks/phase2-task3-enums-get-layer.md) — LayerSource/BrainType/EntityKind хвосты на границах; `get_layer`/`find_layer` вместо 6 isinstance-циклов
+4. [App-level exception handlers + единый player-status](tasks/phase2-task4-exception-handlers-player-status.md) — handlers для однозначных типов + дедуп content type-guard; `player_status` единственный источник (WS получает `appearance`)
 
 ## Phase 3: Декомпозиция бэкенд-модулей (отложенный 019-м sweep)
 
@@ -97,7 +100,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 1 COMPLETE — 2026-06-30. Ready for Phase 2 task generation.
+**Current:** Phase 2 — tasks generated 2026-07-02. Ready to start task 1.
 
 ## Decisions
 
