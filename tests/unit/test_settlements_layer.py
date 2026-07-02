@@ -13,6 +13,7 @@ from dnd_simulator.core.models import (
     QueryType,
     TimeDelta,
 )
+from dnd_simulator.core.queries import NationInfo, WeatherInfo
 from dnd_simulator.layers.settlements.layer import SettlementsLayer
 from dnd_simulator.layers.settlements.models import Settlement, SettlementType
 
@@ -70,11 +71,22 @@ def _make_query_fn(
 ) -> QueryFn:
     """Build a query_fn that simulates geography + politics layers below settlements."""
 
+    def _nation(nation_id: str, wealth: float, stability: float) -> NationInfo:
+        return NationInfo(
+            id=nation_id,
+            name=nation_id.title(),
+            regions=(),
+            wealth=wealth,
+            military=50.0,
+            stability=stability,
+            leader=None,
+        )
+
     def query_fn(layer: str, query: Query) -> Answer:
         if layer == "geography" and query.question is QueryType.WEATHER:
             region_id = query.params["region_id"]
             weather_map = {"region_a": weather_a, "region_b": weather_b}
-            return Answer(value={"condition": weather_map.get(region_id, "clear"), "temperature": 15})
+            return Answer(value=WeatherInfo(condition=weather_map.get(region_id, "clear"), temperature=15))
 
         if layer == "politics" and query.question is QueryType.REGION_OWNER:
             region_id = query.params["region_id"]
@@ -84,9 +96,9 @@ def _make_query_fn(
         if layer == "politics" and query.question is QueryType.NATION_INFO:
             nation_id = query.params["nation_id"]
             if nation_id == "alpha":
-                return Answer(value={"wealth": nation_wealth, "stability": nation_stability})
+                return Answer(value=_nation("alpha", nation_wealth, nation_stability))
             if nation_id == "beta":
-                return Answer(value={"wealth": 40.0, "stability": 60.0})
+                return Answer(value=_nation("beta", 40.0, 60.0))
             return Answer(value=None)
 
         raise RuntimeError(f"Unexpected query: {layer}/{query.question}")
@@ -133,14 +145,14 @@ class TestTick:
         layer.tick(TimeDelta.from_days(30), _TIME, _make_query_fn(), _noop_emit_fn)
         info = layer.query(Query(question=QueryType.SETTLEMENT_INFO, params={"settlement_id": "city_a"}))
         # prosperity 70 -> population should grow (2%)
-        assert info.value["population"] > 5000
+        assert info.value.population > 5000
 
     def test_bad_weather_hurts_village_prosperity(self) -> None:
         layer = _make_layer()
         layer.tick(TimeDelta.from_days(30), _TIME, _make_query_fn(weather_a="blizzard"), _noop_emit_fn)
         info = layer.query(Query(question=QueryType.SETTLEMENT_INFO, params={"settlement_id": "village_a"}))
         # Blizzard should hurt village prosperity significantly
-        assert info.value["prosperity"] < 50.0
+        assert info.value.prosperity < 50.0
 
     def test_bad_weather_barely_affects_city(self) -> None:
         layer = _make_layer()
@@ -148,7 +160,7 @@ class TestTick:
         info = layer.query(Query(question=QueryType.SETTLEMENT_INFO, params={"settlement_id": "city_a"}))
         # City barely affected by weather
         # Blizzard: -5.0 * 0.3 = -1.5 on prosperity, plus drift from wealth/stability
-        assert info.value["prosperity"] > 60.0
+        assert info.value.prosperity > 60.0
 
 
 class TestConquest:
@@ -165,9 +177,9 @@ class TestConquest:
         assert len(result.events) == 2
 
         info = layer.query(Query(question=QueryType.SETTLEMENT_INFO, params={"settlement_id": "city_a"}))
-        assert info.value["prosperity"] < 70.0  # was 70
-        assert info.value["defenses"] < 60.0  # was 60
-        assert info.value["population"] < 5000  # was 5000
+        assert info.value.prosperity < 70.0  # was 70
+        assert info.value.defenses < 60.0  # was 60
+        assert info.value.population < 5000  # was 5000
 
     def test_conquest_doesnt_affect_other_regions(self) -> None:
         layer = _make_layer()
@@ -179,7 +191,7 @@ class TestConquest:
         layer.handle_event(event, _make_query_fn(), _noop_emit_fn)
 
         info = layer.query(Query(question=QueryType.SETTLEMENT_INFO, params={"settlement_id": "town_b"}))
-        assert info.value["prosperity"] == 50.0  # unchanged
+        assert info.value.prosperity == 50.0  # unchanged
 
 
 class TestQueries:
@@ -191,15 +203,15 @@ class TestQueries:
     def test_settlement_info(self) -> None:
         layer = _make_layer()
         result = layer.query(Query(question=QueryType.SETTLEMENT_INFO, params={"settlement_id": "city_a"}))
-        assert result.value["name"] == "Port City"
-        assert result.value["type"] == "city"
-        assert result.value["population"] == 5000
+        assert result.value.name == "Port City"
+        assert result.value.type == "city"
+        assert result.value.population == 5000
 
     def test_region_settlements(self) -> None:
         layer = _make_layer()
         result = layer.query(Query(question=QueryType.REGION_SETTLEMENTS, params={"region_id": "region_a"}))
         assert len(result.value) == 2
-        names = {s["name"] for s in result.value}
+        names = {s.name for s in result.value}
         assert names == {"Port City", "Farm Village"}
 
     def test_region_income_query(self) -> None:
@@ -225,5 +237,5 @@ class TestSaveLoad:
         assert sorted(result.value) == ["city_a", "town_b", "village_a"]
 
         info = new_layer.query(Query(question=QueryType.SETTLEMENT_INFO, params={"settlement_id": "city_a"}))
-        assert info.value["name"] == "Port City"
-        assert info.value["population"] == 5000
+        assert info.value.name == "Port City"
+        assert info.value.population == 5000

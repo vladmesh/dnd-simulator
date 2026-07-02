@@ -117,7 +117,7 @@ class TestTick:
         layer.tick(TimeDelta.from_days(30), _TIME, _noop_query_fn, _noop_emit_fn)
         # Economy should have changed wealth
         info = layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "alpha"}))
-        assert info.value["wealth"] != 60.0  # Should have changed from income/upkeep
+        assert info.value.wealth != 60.0  # Should have changed from income/upkeep
 
     def test_multiple_months(self) -> None:
         layer = _make_layer()
@@ -125,7 +125,7 @@ class TestTick:
         # Should have processed 3 monthly ticks
         info = layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "alpha"}))
         # Wealth should have changed significantly over 3 months
-        assert info.value["wealth"] != 60.0
+        assert info.value.wealth != 60.0
 
 
 class TestWarResolution:
@@ -150,17 +150,16 @@ class TestWarResolution:
         layer = _make_layer(seed=42)
         layer.set_relation("alpha", "beta", DiplomaticStatus.WAR)
 
-        alpha_mil = layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "alpha"})).value["military"]
-        beta_mil = layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "beta"})).value["military"]
+        def military(nation_id: str) -> float:
+            return layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": nation_id})).value.military
+
+        alpha_mil = military("alpha")
+        beta_mil = military("beta")
 
         layer.tick(TimeDelta.from_days(30), _TIME, _noop_query_fn, _noop_emit_fn)
 
-        alpha_mil_after = layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "alpha"})).value[
-            "military"
-        ]
-        beta_mil_after = layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "beta"})).value[
-            "military"
-        ]
+        alpha_mil_after = military("alpha")
+        beta_mil_after = military("beta")
 
         # Both should lose military in war
         assert alpha_mil_after < alpha_mil
@@ -176,9 +175,10 @@ class TestQueries:
     def test_nation_info(self) -> None:
         layer = _make_layer()
         result = layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "alpha"}))
-        assert result.value["name"] == "Kingdom of Alpha"
-        assert result.value["wealth"] == 60.0
-        assert result.value["leader"]["trait"] == "merchant"
+        assert result.value.name == "Kingdom of Alpha"
+        assert result.value.wealth == 60.0
+        assert result.value.leader is not None
+        assert result.value.leader.trait == "merchant"
 
     def test_relations_query(self) -> None:
         layer = _make_layer()
@@ -226,5 +226,6 @@ class TestSaveLoad:
 
         # Check nation data restored
         info = new_layer.query(Query(question=QueryType.NATION_INFO, params={"nation_id": "alpha"}))
-        assert info.value["name"] == "Kingdom of Alpha"
-        assert info.value["leader"]["name"] == "King Test"
+        assert info.value.name == "Kingdom of Alpha"
+        assert info.value.leader is not None
+        assert info.value.leader.name == "King Test"

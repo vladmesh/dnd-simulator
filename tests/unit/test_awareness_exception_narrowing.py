@@ -5,7 +5,8 @@ from __future__ import annotations
 import pytest
 
 from dnd_simulator.core.character import Ability, Attack, Character, DamageComponent, DamageType
-from dnd_simulator.core.models import Answer, GameDateTime, Query, QueryType
+from dnd_simulator.core.models import Answer, FactionRelation, GameDateTime, Query, QueryType
+from dnd_simulator.core.queries import RegionInfo, WeatherInfo
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 
 _TIME = GameDateTime(year=1490, month=6, day=15, hour=14)
@@ -15,6 +16,20 @@ _SWORD = Attack(
     ability=Ability.STR,
     damage=(DamageComponent("1d8", DamageType.SLASHING),),
 )
+
+
+def _region_info(name: str) -> RegionInfo:
+    return RegionInfo(
+        id=name.lower().replace(" ", "_"),
+        name=name,
+        latitude=45.0,
+        longitude=0.0,
+        elevation=100.0,
+        terrain="forest",
+        water_proximity=0.0,
+        weather="clear",
+        temperature=15.0,
+    )
 
 
 class TestUnexpectedExceptionsPropagateInPeacefulAwareness:
@@ -40,7 +55,7 @@ class TestUnexpectedExceptionsPropagateInPeacefulAwareness:
             if target == "geography" and query.question == QueryType.LOCATION_REGION:
                 return Answer(value="northern_region")
             if target == "geography" and query.question == QueryType.REGION_INFO:
-                return Answer(value={"name": "North"})
+                return Answer(value=_region_info("North"))
             if target == "geography" and query.question == QueryType.WEATHER:
                 raise AttributeError("buggy attribute access")
             return Answer(value=None)
@@ -56,9 +71,9 @@ class TestUnexpectedExceptionsPropagateInPeacefulAwareness:
             if target == "geography" and query.question == QueryType.LOCATION_REGION:
                 return Answer(value="region1")
             if target == "geography" and query.question == QueryType.REGION_INFO:
-                return Answer(value={"name": "Region"})
+                return Answer(value=_region_info("Region"))
             if target == "geography" and query.question == QueryType.WEATHER:
-                return Answer(value={"condition": "clear", "temperature": 15})
+                return Answer(value=WeatherInfo(condition="clear", temperature=15))
             if target == "settlements":
                 raise RuntimeError("unexpected settlements bug")
             return Answer(value=None)
@@ -74,9 +89,9 @@ class TestUnexpectedExceptionsPropagateInPeacefulAwareness:
             if target == "geography" and query.question == QueryType.LOCATION_REGION:
                 return Answer(value="region1")
             if target == "geography" and query.question == QueryType.REGION_INFO:
-                return Answer(value={"name": "Region"})
+                return Answer(value=_region_info("Region"))
             if target == "geography" and query.question == QueryType.WEATHER:
-                return Answer(value={"condition": "clear", "temperature": 15})
+                return Answer(value=WeatherInfo(condition="clear", temperature=15))
             if target == "settlements":
                 return Answer(value=[])
             if target == "politics":
@@ -111,9 +126,11 @@ class TestExpectedExceptionsHandledGracefully:
             if target == "geography" and query.question == QueryType.LOCATION_REGION:
                 return Answer(value="region1")
             if target == "geography" and query.question == QueryType.REGION_INFO:
-                return Answer(value={"name": "Region"})
+                return Answer(value=_region_info("Region"))
             if target == "geography" and query.question == QueryType.WEATHER:
                 raise ValueError("unknown query type")
+            if target == "settlements" and query.question == QueryType.REGION_SETTLEMENTS:
+                return Answer(value=[])
             return Answer(value=None)
 
         awareness = layer.build_awareness(player, _TIME, query_fn)
@@ -129,9 +146,9 @@ class TestExpectedExceptionsHandledGracefully:
             if target == "geography" and query.question == QueryType.LOCATION_REGION:
                 return Answer(value="region1")
             if target == "geography" and query.question == QueryType.REGION_INFO:
-                return Answer(value={"name": "Region"})
+                return Answer(value=_region_info("Region"))
             if target == "geography" and query.question == QueryType.WEATHER:
-                return Answer(value={"condition": "clear", "temperature": 15})
+                return Answer(value=WeatherInfo(condition="clear", temperature=15))
             if target == "settlements":
                 return Answer(value=[])
             if target == "politics":
@@ -154,6 +171,8 @@ class TestFactionQueryExceptionNarrowing:
         def query_fn(target: str, query: Query) -> Answer:
             if query.question == QueryType.FACTION_NAME:
                 raise TypeError("unexpected bug")
+            if query.question == QueryType.FACTION_RELATION:
+                return Answer(value=FactionRelation.NEUTRAL)
             return Answer(value=None)
 
         with pytest.raises(TypeError, match="unexpected bug"):

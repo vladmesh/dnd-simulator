@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from typing import TYPE_CHECKING
 
 import structlog
@@ -14,7 +15,17 @@ from dnd_simulator.core.awareness import (
     ResourcePoolInfo,
 )
 from dnd_simulator.core.character import Character, Creature, Entity
-from dnd_simulator.core.models import Event, FactionRelation, Query, QueryType
+from dnd_simulator.core.models import Event, FactionRelation
+from dnd_simulator.core.queries import (
+    query_faction_name,
+    query_faction_relation,
+    query_location_region,
+    query_nation_info,
+    query_region_info,
+    query_region_owner,
+    query_region_settlements,
+    query_weather,
+)
 from dnd_simulator.core.world import LayerError
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.rules.combat_sides import are_allies
@@ -59,12 +70,7 @@ class AwarenessBuilder:
         # Resolve location → region (location may or may not belong to a region)
         region_id: str | None = None
         try:
-            loc_answer = query_fn(
-                "geography",
-                Query(question=QueryType.LOCATION_REGION, params={"location_id": creature.location_id}),
-            )
-            if loc_answer.value and isinstance(loc_answer.value, str):
-                region_id = loc_answer.value
+            region_id = query_location_region(query_fn, location_id=creature.location_id)
         except (KeyError, ValueError, LayerError):
             logger.warning("region_resolve_failed", location_id=creature.location_id, exc_info=True)
 
@@ -76,43 +82,24 @@ class AwarenessBuilder:
 
         if region_id is not None:
             try:
-                region_answer = query_fn(
-                    "geography", Query(question=QueryType.REGION_INFO, params={"region_id": region_id})
-                )
-                if region_answer.value and isinstance(region_answer.value, dict):
-                    region_name = str(region_answer.value.get("name", region_name))
+                region_name = query_region_info(query_fn, region_id=region_id).name
             except (KeyError, ValueError, LayerError):
                 logger.warning("region_info_query_failed", region_id=region_id, exc_info=True)
 
             try:
-                weather_answer = query_fn(
-                    "geography", Query(question=QueryType.WEATHER, params={"region_id": region_id})
-                )
-                if weather_answer.value and isinstance(weather_answer.value, dict):
-                    weather = dict(weather_answer.value)
+                weather = dataclasses.asdict(query_weather(query_fn, region_id=region_id))
             except (KeyError, ValueError, LayerError):
                 logger.warning("weather_query_failed", region_id=region_id, exc_info=True)
 
             try:
-                settlements_answer = query_fn(
-                    "settlements", Query(question=QueryType.REGION_SETTLEMENTS, params={"region_id": region_id})
-                )
-                if isinstance(settlements_answer.value, list):
-                    settlements = settlements_answer.value
+                settlements = [dataclasses.asdict(s) for s in query_region_settlements(query_fn, region_id=region_id)]
             except (KeyError, ValueError, LayerError):
                 logger.warning("settlements_query_failed", region_id=region_id, exc_info=True)
 
             try:
-                owner_answer = query_fn(
-                    "politics", Query(question=QueryType.REGION_OWNER, params={"region_id": region_id})
-                )
-                if owner_answer.value:
-                    territory_owner = str(owner_answer.value)
-                    nation_answer = query_fn(
-                        "politics", Query(question=QueryType.NATION_INFO, params={"nation_id": territory_owner})
-                    )
-                    if nation_answer.value and isinstance(nation_answer.value, dict):
-                        nation_info = dict(nation_answer.value)
+                territory_owner = query_region_owner(query_fn, region_id=region_id)
+                if territory_owner is not None:
+                    nation_info = dataclasses.asdict(query_nation_info(query_fn, nation_id=territory_owner))
             except (KeyError, ValueError, LayerError):
                 logger.warning("politics_query_failed", region_id=region_id, exc_info=True)
 
@@ -332,11 +319,7 @@ class AwarenessBuilder:
         if not faction_id or query_fn is None:
             return ""
         try:
-            answer = query_fn(
-                "politics",
-                Query(question=QueryType.FACTION_NAME, params={"faction_id": faction_id}),
-            )
-            return str(answer.value) if answer.value else ""
+            return query_faction_name(query_fn, faction_id) or ""
         except (KeyError, ValueError, LayerError):
             return ""
 
@@ -350,13 +333,7 @@ class AwarenessBuilder:
         try:
 
             def get_faction_relation(a: str, b: str) -> FactionRelation:
-                answer = query_fn(
-                    "politics",
-                    Query(question=QueryType.FACTION_RELATION, params={"a": a, "b": b}),
-                )
-                if isinstance(answer.value, FactionRelation):
-                    return answer.value
-                return FactionRelation.NEUTRAL
+                return query_faction_relation(query_fn, a, b)
 
             if isinstance(observer, Creature) and isinstance(other, Creature):
                 relation = effective_relation(observer, other, get_faction_relation)
@@ -379,13 +356,7 @@ class AwarenessBuilder:
         try:
 
             def get_faction_relation(a: str, b: str) -> FactionRelation:
-                answer = query_fn(
-                    "politics",
-                    Query(question=QueryType.FACTION_RELATION, params={"a": a, "b": b}),
-                )
-                if isinstance(answer.value, FactionRelation):
-                    return answer.value
-                return FactionRelation.NEUTRAL
+                return query_faction_relation(query_fn, a, b)
 
             if isinstance(observer, Creature) and isinstance(other, Creature):
                 relation = effective_relation(observer, other, get_faction_relation)

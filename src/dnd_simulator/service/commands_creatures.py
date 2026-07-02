@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.models import EntityKind, Query, QueryType
+from dnd_simulator.core.models import EntityKind
+from dnd_simulator.core.queries import query_all_creatures, query_entity_info
 from dnd_simulator.service.base import GameServiceProtocol
 
 if TYPE_CHECKING:
@@ -25,25 +26,14 @@ class CreatureCommands(GameServiceProtocol):
     ) -> list[dict[str, object]]:
         """List all creatures in a session with optional filters."""
         session = self._get_session(session_id)
-        params: dict[str, object] = {}
-        if entity_type:
-            params["entity_type"] = entity_type
-        if location_id:
-            params["location_id"] = location_id
-        if active is not None:
-            params["active"] = active
-        answer = session.world.query_layer("entities", Query(question=QueryType.ALL_CREATURES, params=params))
-        assert isinstance(answer.value, list)
-        return answer.value
+        return query_all_creatures(
+            session.world.query_layer, entity_type=entity_type, location_id=location_id, active=active
+        )
 
     def get_creature_info(self, session_id: str, entity_id: str) -> dict[str, object]:
         """Get single entity detail."""
         session = self._get_session(session_id)
-        answer = session.world.query_layer(
-            "entities", Query(question=QueryType.ENTITY_INFO, params={"entity_id": entity_id})
-        )
-        assert isinstance(answer.value, dict)
-        return answer.value
+        return query_entity_info(session.world.query_layer, entity_id)
 
     # -- Spawn --
 

@@ -11,6 +11,7 @@ from dnd_simulator.core.character import Creature, Entity
 from dnd_simulator.core.lair import LairState
 from dnd_simulator.core.models import Event, EventType, FactionRelation, Query, QueryType
 from dnd_simulator.core.monster import EncounterEntry
+from dnd_simulator.core.queries import query_faction_relation, query_is_daylight
 from dnd_simulator.rules.encounters import is_active_at_time
 
 if TYPE_CHECKING:
@@ -269,16 +270,9 @@ class ActivationManager:
         from dnd_simulator.core.world import LayerError
 
         try:
-            answer = query_fn(
-                "geography",
-                Query(
-                    question=QueryType.IS_DAYLIGHT,
-                    params={"location_id": location_id, "month": time.month, "hour": time.hour},
-                ),
-            )
+            return query_is_daylight(query_fn, location_id=location_id, month=time.month, hour=time.hour)
         except LayerError:
             return True  # no geography layer in this world
-        return bool(answer.value)
 
     def _maybe_start_combat(self, location_id: str, spawned: list[Creature], query_fn: QueryFn) -> None:
         """Start combat if any spawned creature is hostile to an existing creature at the location."""
@@ -294,11 +288,7 @@ class ActivationManager:
                 if not ex.faction_id:
                     continue
                 try:
-                    answer = query_fn(
-                        "politics",
-                        Query(question=QueryType.FACTION_RELATION, params={"a": sc.faction_id, "b": ex.faction_id}),
-                    )
-                    if answer.value == FactionRelation.HOSTILE:
+                    if query_faction_relation(query_fn, sc.faction_id, ex.faction_id) is FactionRelation.HOSTILE:
                         logger.info(
                             "encounter_auto_combat",
                             location=location_id,

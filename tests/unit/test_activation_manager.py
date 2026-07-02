@@ -39,6 +39,8 @@ _TIME_LATER = GameDateTime(year=1490, month=6, day=1, hour=12, minute=15)  # +15
 def _noop_query_fn(layer: str, query: Query) -> Answer:
     if layer == "ecology" and query.question in (QueryType.SQUADS_AT_LOCATION, QueryType.LAIRS_AT_LOCATION):
         return Answer(value=[])
+    if layer == "geography" and query.question is QueryType.IS_DAYLIGHT:
+        return Answer(value=True)
     return Answer(value=None)
 
 
@@ -211,6 +213,8 @@ class TestSquadMaterialization:
                 return Answer(value=[])
             if target == "ecology" and query.question == QueryType.LAIRS_AT_LOCATION:
                 return Answer(value=[])
+            if target == "geography" and query.question is QueryType.IS_DAYLIGHT:
+                return Answer(value=True)
             return Answer(value=None)
 
         return query_fn
@@ -302,6 +306,8 @@ class TestHostileEncounterAutoCombat:
                 QueryType.LAIRS_AT_LOCATION,
             ):
                 return Answer(value=[])
+            if target == "geography" and query.question is QueryType.IS_DAYLIGHT:
+                return Answer(value=True)
             return Answer(value=None)
 
         with patch("random.random", return_value=0.0), patch("random.randint", return_value=1):

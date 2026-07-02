@@ -15,11 +15,51 @@ from dnd_simulator.core.character import (
 from dnd_simulator.core.combat import BattleMap, CombatState, Position, Wall
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import Answer, FactionRelation, GameDateTime, Query, QueryType
+from dnd_simulator.core.queries import NationInfo, RegionInfo, SettlementInfo, WeatherInfo
 from dnd_simulator.core.world import LayerError
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc, NpcActivity, ScheduleEntry
 
 _TIME = GameDateTime(year=1490, month=6, day=15, hour=14)
+
+
+def _region_info(name: str) -> RegionInfo:
+    return RegionInfo(
+        id=name.lower().replace(" ", "_"),
+        name=name,
+        latitude=45.0,
+        longitude=0.0,
+        elevation=100.0,
+        terrain="forest",
+        water_proximity=0.0,
+        weather="clear",
+        temperature=15.0,
+    )
+
+
+def _nation_info(name: str) -> NationInfo:
+    return NationInfo(
+        id=name.lower().replace(" ", "_"),
+        name=name,
+        regions=(),
+        wealth=50.0,
+        military=50.0,
+        stability=70.0,
+        leader=None,
+    )
+
+
+def _settlement_info(name: str, population: int) -> SettlementInfo:
+    return SettlementInfo(
+        id=name.lower(),
+        name=name,
+        region_id="r",
+        type="village",
+        population=population,
+        prosperity=50.0,
+        defenses=10.0,
+    )
+
 
 _SWORD = Attack(
     name="longsword",
@@ -58,15 +98,15 @@ class TestPeacefulAwarenessLocationContext:
             if target == "geography" and query.question == QueryType.LOCATION_REGION:
                 return Answer(value="northern_region")
             if target == "geography" and query.question == QueryType.REGION_INFO:
-                return Answer(value={"name": "Northern Region", "terrain": "forest"})
+                return Answer(value=_region_info("Northern Region"))
             if target == "geography" and query.question == QueryType.WEATHER:
-                return Answer(value={"condition": "rainy", "temperature": 10})
+                return Answer(value=WeatherInfo(condition="rainy", temperature=10))
             if target == "settlements" and query.question == QueryType.REGION_SETTLEMENTS:
-                return Answer(value=[{"name": "Greendale", "population": 200}])
+                return Answer(value=[_settlement_info("Greendale", 200)])
             if target == "politics" and query.question == QueryType.REGION_OWNER:
                 return Answer(value="kingdom_a")
             if target == "politics" and query.question == QueryType.NATION_INFO:
-                return Answer(value={"name": "Kingdom A", "government": "monarchy"})
+                return Answer(value=_nation_info("Kingdom A"))
             return Answer(value=None)
 
         awareness = layer.build_awareness(player, _TIME, query_fn)
@@ -283,9 +323,11 @@ class TestPeacefulAwarenessQueryResilience:
             if target == "geography" and query.question == QueryType.LOCATION_REGION:
                 return Answer(value="northern_region")
             if target == "geography" and query.question == QueryType.REGION_INFO:
-                return Answer(value={"name": "Northern Region", "terrain": "forest"})
+                return Answer(value=_region_info("Northern Region"))
             if target == "geography" and query.question == QueryType.WEATHER:
                 raise KeyError("region_id")
+            if target == "settlements" and query.question == QueryType.REGION_SETTLEMENTS:
+                return Answer(value=[])
             return Answer(value=None)
 
         awareness = layer.build_awareness(player, _TIME, query_fn)
@@ -302,9 +344,9 @@ class TestPeacefulAwarenessQueryResilience:
             if target == "geography" and query.question == QueryType.LOCATION_REGION:
                 return Answer(value="empty_region")
             if target == "geography" and query.question == QueryType.REGION_INFO:
-                return Answer(value={"name": "Empty Region"})
+                return Answer(value=_region_info("Empty Region"))
             if target == "geography" and query.question == QueryType.WEATHER:
-                return Answer(value={"condition": "sunny", "temperature": 25})
+                return Answer(value=WeatherInfo(condition="sunny", temperature=25))
             if target == "settlements" and query.question == QueryType.REGION_SETTLEMENTS:
                 return Answer(value=[])
             return Answer(value=None)
@@ -321,9 +363,9 @@ class TestPeacefulAwarenessQueryResilience:
             if target == "geography" and query.question == QueryType.LOCATION_REGION:
                 return Answer(value="contested_region")
             if target == "geography" and query.question == QueryType.REGION_INFO:
-                return Answer(value={"name": "Contested Region"})
+                return Answer(value=_region_info("Contested Region"))
             if target == "geography" and query.question == QueryType.WEATHER:
-                return Answer(value={"condition": "stormy", "temperature": 5})
+                return Answer(value=WeatherInfo(condition="stormy", temperature=5))
             if target == "settlements":
                 return Answer(value=[])
             if target == "politics":
@@ -800,6 +842,8 @@ class TestNearbyEntityFactionName:
         def query_fn(target: str, query: Query) -> Answer:
             if target == "politics" and query.question == QueryType.FACTION_NAME:
                 return Answer(value=None)
+            if target == "politics" and query.question == QueryType.FACTION_RELATION:
+                return Answer(value=FactionRelation.NEUTRAL)
             return Answer(value=None)
 
         nearby = layer.build_nearby_entities(player, hour=12, query_fn=query_fn)

@@ -23,7 +23,8 @@ const SESSION_ID = "test-session-123"
 
 function setup() {
   const onCreated = vi.fn()
-  const user = userEvent.setup()
+  // delay: null skips the per-event wait; click-heavy tests otherwise flake on the 5s timeout under full-suite load
+  const user = userEvent.setup({ delay: null })
   render(<CharacterForm sessionId={SESSION_ID} onCreated={onCreated} />)
   return { onCreated, user }
 }
@@ -85,28 +86,14 @@ describe("CharacterForm — Point Buy", () => {
 
   it("disables + when not enough points remain", async () => {
     const { user } = setup()
-    // Max out STR to 15 (costs 9 total, from 2→9 = +7 spent) and DEX to 15 (+7)
-    // and CON to 15 (+7): 7+7+7 = 21 extra, total 12+21=33 > 27. Can't.
-    // Instead: set STR=15(9), DEX=15(9), CON=15(9) = 27 pts, others at 8(0)
-    // That exactly exhausts budget.
-    // Start: all at 10, total cost 12. Set str,dex,con each to 15: each 10→15 = 2→9 = +7.
-    // 12 + 7+7+7 = 33 > 27. Need to drop int,wis,cha to 8 to free 6 pts.
-    // Let's do: drop int,wis,cha to 8 first (-6 pts freed = remaining 21),
-    // then raise str,dex,con to 15 (+21 spent = remaining 0).
-
-    // Drop INT, WIS, CHA to 8 (each 10→8 = -2 clicks)
-    await clickTimes(user, screen.getByTestId("int-minus"), 2)
-    await clickTimes(user, screen.getByTestId("wis-minus"), 2)
-    await clickTimes(user, screen.getByTestId("cha-minus"), 2)
-
-    // Raise STR, DEX, CON to 15 (each 10→15 = 5 clicks)
+    // Start: all at 10 → 12 spent, 15 remaining.
+    // STR 10→15 (+7) and DEX 10→15 (+7) leave 1 point; CON 10→11 (+1) exhausts it.
     await clickTimes(user, screen.getByTestId("str-plus"), 5)
     await clickTimes(user, screen.getByTestId("dex-plus"), 5)
-    await clickTimes(user, screen.getByTestId("con-plus"), 5)
+    await clickTimes(user, screen.getByTestId("con-plus"), 1)
 
     expect(screen.getByTestId("remaining-points")).toHaveTextContent("0")
-    // All + buttons for scores at 8 should be disabled (can't afford to raise)
-    // INT is at 8, cost to go to 9 = 1 point, but 0 remaining → disabled
+    // INT is at 10, raising to 11 costs 1 point, but 0 remain → disabled
     expect(screen.getByTestId("int-plus")).toBeDisabled()
   })
 

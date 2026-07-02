@@ -55,4 +55,13 @@ Gotcha: `commands_world_state` кладёт результаты прямо в w
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `core/queries.py`: 17 аксессоров + 5 payload-датаклассов (`WeatherInfo`, `RegionInfo`, `LeaderInfo`, `NationInfo`, `SettlementInfo`), narrowing через `_expect`/`_expect_list_of` (RuntimeError с именем слоя и запроса). `_expect` из `commands_world_state` переехал сюда, сам модуль переписан на аксессоры + `dataclasses.asdict` на wire-границе.
+- Producer-ветки перевели на датаклассы: geography WEATHER/REGION_INFO, politics NATION_INFO, settlements SETTLEMENT_INFO/REGION_SETTLEMENTS (общий `_settlement_info` helper).
+- Мигрированы все consumer-сайты плана: awareness_builder (9), commands_world_state (7), combat_manager (3), activation_manager (IS_DAYLIGHT + FACTION_RELATION), settlements tick, session PLAYERS/PLAYER, commands_creatures, ecology `_are_hostile`. Squad/lair-сайты оставлены под task 2.
+- `NationInfo.regions: tuple` → в wire-ответе get_world_state конвертируется обратно в list (формат ответа неизменен).
+- Обновлены старые тесты, пиновавшие dict-контракт: fakes в test_activation_manager (IS_DAYLIGHT теперь обязан отвечать bool — стабы возвращают True), test_settlements/test_awareness_* (typed payload'ы вместо dict, FACTION_RELATION-стабы возвращают enum), assertions в test_politics/test_geography/test_settlements переведены на атрибуты. Контрактное изменение намеренное: fail-fast вместо тихой деградации при malformed answer; сценарии graceful degradation по KeyError/ValueError/LayerError сохранены и остаются под тестами.
+- Frontend flake починен попутно (по просьбе пользователя): `CharacterForm` point-buy тест делал 21 последовательный `user.click` с дефолтным `delay: 0` (лишний event-loop hop на каждое событие) и под полной нагрузкой suite вылезал за 5s-таймаут. Фикс: `userEvent.setup({ delay: null })` на весь файл + сценарий сокращён до 11 кликов (STR→15, DEX→15, CON→11 так же исчерпывают бюджет); файл ужался с ~22s до ~3.5s.

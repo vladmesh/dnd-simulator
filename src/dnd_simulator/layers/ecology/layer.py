@@ -11,6 +11,7 @@ import structlog
 from dnd_simulator.core.lair import Lair, LairState
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, FactionRelation, Query, QueryType
+from dnd_simulator.core.queries import query_faction_relation
 from dnd_simulator.core.squad import Squad, SquadBehavior
 from dnd_simulator.rules.abstract_combat import TriggeredEncounter, resolve_abstract_combat
 from dnd_simulator.rules.dice import get_global_rng
@@ -364,11 +365,7 @@ class EcologyLayer(Layer):
         """Check if two squads are hostile via faction relations."""
         if a.faction_id == b.faction_id:
             return False
-        answer = query_fn(
-            "politics",
-            Query(QueryType.FACTION_RELATION, params={"a": a.faction_id, "b": b.faction_id}),
-        )
-        return answer.value == FactionRelation.HOSTILE
+        return query_faction_relation(query_fn, a.faction_id, b.faction_id) is FactionRelation.HOSTILE
 
     def _fight_squads(self, a: Squad, b: Squad, location_id: str) -> Event:
         """Resolve combat between two squads. Loser retreats."""

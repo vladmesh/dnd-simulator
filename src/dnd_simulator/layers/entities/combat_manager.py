@@ -7,7 +7,8 @@ import structlog
 from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.models import ActionResult, Event, EventType, FactionRelation, Query, QueryFn, QueryType
+from dnd_simulator.core.models import ActionResult, Event, EventType, FactionRelation, QueryFn
+from dnd_simulator.core.queries import query_faction_relation
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.i18n import _
 from dnd_simulator.layers.entities.combat_serialization import deserialize_combats, serialize_combats
@@ -99,12 +100,7 @@ class CombatManager:
         if query_fn is not None:
 
             def get_faction_relation(a: str, b: str) -> FactionRelation:
-                answer = query_fn(
-                    "politics",
-                    Query(question=QueryType.FACTION_RELATION, params={"a": a, "b": b}),
-                )
-                assert isinstance(answer.value, FactionRelation)
-                return answer.value
+                return query_faction_relation(query_fn, a, b)
 
             def get_creature_relation(a: Creature, b: Creature) -> FactionRelation:
                 return effective_relation(a, b, get_faction_relation)
@@ -372,11 +368,8 @@ class CombatManager:
         candidate = self._entities.get(candidate_id)
         if not isinstance(candidate, Creature):
             return False
-        answer = query_fn(
-            "politics",
-            Query(question=QueryType.FACTION_RELATION, params={"a": attacker.faction_id, "b": candidate.faction_id}),
-        )
-        return answer.value == FactionRelation.FRIENDLY
+        relation = query_faction_relation(query_fn, attacker.faction_id, candidate.faction_id)
+        return relation is FactionRelation.FRIENDLY
 
     def _handle_death(
         self,
@@ -406,13 +399,7 @@ class CombatManager:
         if query_fn is not None:
 
             def get_faction_relation(a: str, b: str) -> FactionRelation:
-                answer = query_fn(
-                    "politics",
-                    Query(question=QueryType.FACTION_RELATION, params={"a": a, "b": b}),
-                )
-                if isinstance(answer.value, FactionRelation):
-                    return answer.value
-                return FactionRelation.NEUTRAL
+                return query_faction_relation(query_fn, a, b)
 
         # Compute old rep before mutation
         if target.faction_id:

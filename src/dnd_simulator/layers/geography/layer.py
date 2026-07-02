@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.location import LocationGraph
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
+from dnd_simulator.core.queries import RegionInfo, WeatherInfo
 from dnd_simulator.i18n import _
 from dnd_simulator.layers.geography.models import (
     Connection,
@@ -136,10 +137,7 @@ class GeographyLayer(Layer):
         if q is QueryType.WEATHER:
             region = self.get_region(params["region_id"])
             return Answer(
-                value={
-                    "condition": region.weather.value,
-                    "temperature": region.temperature,
-                },
+                value=WeatherInfo(condition=region.weather.value, temperature=region.temperature),
                 description=f"{region.name}: {region.weather.value}, {region.temperature}°C",
             )
 
@@ -179,17 +177,17 @@ class GeographyLayer(Layer):
         if q is QueryType.REGION_INFO:
             region = self.get_region(params["region_id"])
             return Answer(
-                value={
-                    "id": region.id,
-                    "name": region.name,
-                    "latitude": region.latitude,
-                    "longitude": region.longitude,
-                    "elevation": region.elevation,
-                    "terrain": region.terrain.value,
-                    "water_proximity": region.water_proximity,
-                    "weather": region.weather.value,
-                    "temperature": region.temperature,
-                }
+                value=RegionInfo(
+                    id=region.id,
+                    name=region.name,
+                    latitude=region.latitude,
+                    longitude=region.longitude,
+                    elevation=region.elevation,
+                    terrain=region.terrain.value,
+                    water_proximity=region.water_proximity,
+                    weather=region.weather.value,
+                    temperature=region.temperature,
+                )
             )
 
         if q is QueryType.REGIONS:

@@ -6,6 +6,12 @@ from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
+from dnd_simulator.core.queries import (
+    SettlementInfo,
+    query_nation_info,
+    query_region_owner,
+    query_weather,
+)
 from dnd_simulator.layers.settlements.models import Settlement, SettlementType
 from dnd_simulator.rules.settlements import (
     calculate_harvest_modifier,
@@ -75,32 +81,17 @@ class SettlementsLayer(Layer):
 
         for settlement in self._settlements.values():
             # 1. Weather -> harvest -> prosperity
-            weather_answer = query_fn(
-                "geography", Query(question=QueryType.WEATHER, params={"region_id": settlement.region_id})
-            )
-            weather_val = weather_answer.value
-            weather = str(weather_val.get("condition", "clear")) if isinstance(weather_val, dict) else "clear"
+            weather = query_weather(query_fn, region_id=settlement.region_id)
 
-            harvest_mod = calculate_harvest_modifier(weather, settlement.type.value)
+            harvest_mod = calculate_harvest_modifier(weather.condition, settlement.type.value)
             settlement.prosperity = clamp(settlement.prosperity + harvest_mod)
 
             # 2. Nation wealth/stability -> prosperity drift
-            owner_answer = query_fn(
-                "politics", Query(question=QueryType.REGION_OWNER, params={"region_id": settlement.region_id})
-            )
-            owner_val = owner_answer.value
-            if owner_val:
-                nation_answer = query_fn(
-                    "politics", Query(question=QueryType.NATION_INFO, params={"nation_id": str(owner_val)})
-                )
-                nation_val = nation_answer.value
-                if isinstance(nation_val, dict):
-                    drift = prosperity_drift(
-                        settlement.prosperity,
-                        float(nation_val.get("wealth", 50)),
-                        float(nation_val.get("stability", 50)),
-                    )
-                    settlement.prosperity = clamp(settlement.prosperity + drift)
+            owner = query_region_owner(query_fn, region_id=settlement.region_id)
+            if owner:
+                nation = query_nation_info(query_fn, nation_id=owner)
+                drift = prosperity_drift(settlement.prosperity, nation.wealth, nation.stability)
+                settlement.prosperity = clamp(settlement.prosperity + drift)
 
             # 3. Population change
             pop_change = calculate_population_change(settlement.population, settlement.prosperity)
@@ -163,40 +154,29 @@ class SettlementsLayer(Layer):
 
         if q is QueryType.SETTLEMENT_INFO:
             s = self._settlements[params["settlement_id"]]
-            return Answer(
-                value={
-                    "id": s.id,
-                    "name": s.name,
-                    "region_id": s.region_id,
-                    "type": s.type.value,
-                    "population": s.population,
-                    "prosperity": s.prosperity,
-                    "defenses": s.defenses,
-                },
-            )
+            return Answer(value=self._settlement_info(s))
 
         if q is QueryType.REGION_SETTLEMENTS:
             region_id = params["region_id"]
-            result = []
-            for s in self._settlements.values():
-                if s.region_id == region_id:
-                    result.append(
-                        {
-                            "id": s.id,
-                            "name": s.name,
-                            "region_id": s.region_id,
-                            "type": s.type.value,
-                            "population": s.population,
-                            "prosperity": s.prosperity,
-                            "defenses": s.defenses,
-                        }
-                    )
+            result = [self._settlement_info(s) for s in self._settlements.values() if s.region_id == region_id]
             return Answer(value=result)
 
         if q is QueryType.REGION_INCOME:
             return Answer(value=self.get_region_income(params["region_id"]))
 
         raise ValueError(f"Unknown settlements query: {q}")
+
+    @staticmethod
+    def _settlement_info(s: Settlement) -> SettlementInfo:
+        return SettlementInfo(
+            id=s.id,
+            name=s.name,
+            region_id=s.region_id,
+            type=s.type.value,
+            population=s.population,
+            prosperity=s.prosperity,
+            defenses=s.defenses,
+        )
 
     def get_state(self) -> dict[str, object]:
         """Serialize settlements state."""

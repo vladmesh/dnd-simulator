@@ -103,8 +103,8 @@ class TestGeographyLayer:
         layer = GeographyLayer(regions=regions)
 
         answer = layer.query(Query(question=QueryType.WEATHER, params={"region_id": "forest_vale"}))
-        assert answer.value["condition"] == "light_rain"
-        assert answer.value["temperature"] == 18.5
+        assert answer.value.condition == "light_rain"
+        assert answer.value.temperature == 18.5
 
     def test_query_connections(self) -> None:
         layer = GeographyLayer(regions=_make_test_regions())

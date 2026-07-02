@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
+from dnd_simulator.core.queries import LeaderInfo, NationInfo
 from dnd_simulator.layers.politics.diplomacy import process_diplomacy
 from dnd_simulator.layers.politics.economy import process_economy
 from dnd_simulator.layers.politics.models import (
@@ -299,21 +300,21 @@ class PoliticsLayer(Layer):
         if q is QueryType.NATION_INFO:
             nation = self._nations[params["nation_id"]]
             return Answer(
-                value={
-                    "id": nation.id,
-                    "name": nation.name,
-                    "regions": list(nation.regions),
-                    "wealth": nation.wealth,
-                    "military": nation.military,
-                    "stability": nation.stability,
-                    "leader": {
-                        "name": nation.leader.name,
-                        "age": nation.leader.age,
-                        "trait": nation.leader.trait.value,
-                    }
+                value=NationInfo(
+                    id=nation.id,
+                    name=nation.name,
+                    regions=tuple(nation.regions),
+                    wealth=nation.wealth,
+                    military=nation.military,
+                    stability=nation.stability,
+                    leader=LeaderInfo(
+                        name=nation.leader.name,
+                        age=nation.leader.age,
+                        trait=nation.leader.trait.value,
+                    )
                     if nation.leader
                     else None,
-                },
+                ),
             )
 
         if q is QueryType.RELATIONS:
