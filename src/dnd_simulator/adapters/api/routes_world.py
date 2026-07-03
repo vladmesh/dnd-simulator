@@ -119,16 +119,11 @@ def assemble_world(req: AssembleWorldRequest) -> WorldListItem:
 def fork_world(world_id: str, req: ForkWorldRequest) -> WorldListItem:
     """Fork a world, optionally truncating layers from a given type upward."""
     service = get_service()
-    try:
-        result = service.fork_world(
-            source_world_id=world_id,
-            new_world_id=req.new_id,
-            from_layer=req.from_layer,
-        )
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    except FileExistsError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    result = service.fork_world(
+        source_world_id=world_id,
+        new_world_id=req.new_id,
+        from_layer=req.from_layer,
+    )
     return WorldListItem(
         id=str(result["id"]),
         name=str(result["name"]),
@@ -144,8 +139,6 @@ def delete_world(world_id: str) -> MessageResponse:
     service = get_service()
     try:
         service.delete_world(world_id)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except RuntimeError as exc:
@@ -184,10 +177,7 @@ def get_world_manifest(world_id: str, lang: str = "en") -> WorldManifestResponse
 def get_layer_files(world_id: str, layer_type: LayerType) -> LayerFilesResponse:
     """List all data YAML files in a layer with their contents."""
     service = get_service()
-    try:
-        files = service.get_layer_files(world_id, layer_type)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    files = service.get_layer_files(world_id, layer_type)
     return LayerFilesResponse(files=files)
 
 
@@ -197,8 +187,6 @@ def get_layer_file(world_id: str, layer_type: LayerType, filename: str) -> Layer
     service = get_service()
     try:
         content = service.get_layer_file(world_id, layer_type, filename)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return LayerFileResponse(filename=filename, content=content)
@@ -212,8 +200,6 @@ def update_layer_file(
     service = get_service()
     try:
         service.update_layer_file(world_id, layer_type, filename, body.content)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         detail = str(exc)
         status = 422 if "YAML" in detail else 400
@@ -227,8 +213,6 @@ def scaffold_layer(world_id: str, layer_type: LayerType) -> MessageResponse:
     service = get_service()
     try:
         service.scaffold_layer(world_id, layer_type)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return MessageResponse(message=_("Layer '{}' scaffolded in world '{}'").format(layer_type.value, world_id))
@@ -240,8 +224,6 @@ def fork_world_layer(world_id: str, layer_type: LayerType) -> MessageResponse:
     service = get_service()
     try:
         service.fork_layer(world_id, layer_type)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return MessageResponse(message=_("Layer '{}' forked to custom in world '{}'").format(layer_type.value, world_id))

@@ -27,6 +27,7 @@ from dnd_simulator.rules.actions import collect_cost_overrides
 from dnd_simulator.rules.leveling import xp_to_next_level
 from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.service.action_dispatcher import create_dispatcher
+from dnd_simulator.service.dto import PlayerStatusData, ResourcePoolView
 
 logger = structlog.get_logger(domain="session")
 
@@ -161,26 +162,29 @@ def build_inventory_payload(player: PlayerCharacter) -> list[dict[str, object]]:
     return inventory
 
 
-def _player_to_dict(player: PlayerCharacter) -> dict[str, Any]:
+def build_player_status(player: PlayerCharacter) -> PlayerStatusData:
+    """Build the full player status snapshot — single source shared by REST and WS.
+
+    All derived fields (AC from equipment+modifiers, XP to next level) are computed here.
+    """
     scores = player.ability_scores
-    equipped = build_equipped_payload(player)
-    inventory = build_inventory_payload(player)
-    return {
-        "player_id": player.id,
-        "name": player.name,
-        "race": player.race.value,
-        "char_class": player.char_class.value,
-        "level": player.level,
-        "experience": player.experience,
-        "level_up_available": player.level_up_available,
-        "xp_to_next_level": xp_to_next_level(player.experience),
-        "alignment": player.alignment.value,
-        "hp": player.current_hp,
-        "max_hp": player.max_hp,
-        "ac": effective_ac(player),
-        "gold": player.gold,
-        "location_id": player.location_id,
-        "ability_scores": {
+    return PlayerStatusData(
+        player_id=player.id,
+        name=player.name,
+        race=player.race.value,
+        char_class=player.char_class.value,
+        level=player.level,
+        experience=player.experience,
+        level_up_available=player.level_up_available,
+        xp_to_next_level=xp_to_next_level(player.experience),
+        alignment=player.alignment.value,
+        hp=player.current_hp,
+        max_hp=player.max_hp,
+        ac=effective_ac(player),
+        gold=player.gold,
+        location_id=player.location_id,
+        appearance=player.appearance,
+        ability_scores={
             "str": scores[Ability.STR],
             "dex": scores[Ability.DEX],
             "con": scores[Ability.CON],
@@ -188,12 +192,12 @@ def _player_to_dict(player: PlayerCharacter) -> dict[str, Any]:
             "wis": scores[Ability.WIS],
             "cha": scores[Ability.CHA],
         },
-        "equipped": equipped,
-        "inventory": inventory,
-        "resource_pools": [
-            {"id": p.id, "max_uses": p.max_uses, "current_uses": p.current_uses} for p in player.resource_pools
+        resource_pools=[
+            ResourcePoolView(id=p.id, max_uses=p.max_uses, current_uses=p.current_uses) for p in player.resource_pools
         ],
-    }
+        equipped=build_equipped_payload(player),
+        inventory=build_inventory_payload(player),
+    )
 
 
 def _location_data(world: World, location_id: str) -> dict[str, Any]:
@@ -372,7 +376,7 @@ class GameSession:
             "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
             "awareness": _awareness_to_dict(awareness, creature=player),
             "events": _events_to_list(perceived),
-            "player": _player_to_dict(player),
+            "player": dataclasses.asdict(build_player_status(player)),
             "location": _location_data(self.world, player.location_id),
         }
 
@@ -410,7 +414,7 @@ class GameSession:
                     "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
                     "awareness": _awareness_to_dict(awareness, creature=creature),
                     "events": _events_to_list(events),
-                    "player": _player_to_dict(player),
+                    "player": dataclasses.asdict(build_player_status(player)),
                     "location": _location_data(self.world, player.location_id),
                 }
                 if awareness.turn_budget is not None:

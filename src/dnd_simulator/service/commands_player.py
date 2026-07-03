@@ -157,46 +157,11 @@ class PlayerCommands(GameServiceProtocol):
         already computed. When ``player_id`` is None, returns the first player
         in the session. Raises ValueError if no matching player exists.
         """
-        from dnd_simulator.core.character import Ability
-        from dnd_simulator.rules.leveling import xp_to_next_level
-        from dnd_simulator.rules.modifiers import effective_ac
-        from dnd_simulator.service.dto import PlayerStatusData, ResourcePoolView
         from dnd_simulator.service.errors import PlayerNotFoundError
-        from dnd_simulator.service.session import build_equipped_payload, build_inventory_payload
+        from dnd_simulator.service.session import build_player_status
 
         session = self._get_session(session_id)
         player = session.get_player(player_id) if player_id else session.get_player()
         if player is None:
             raise PlayerNotFoundError("No player in this session")
-        scores = player.ability_scores
-        return PlayerStatusData(
-            player_id=player.id,
-            name=player.name,
-            race=player.race.value,
-            char_class=player.char_class.value,
-            level=player.level,
-            experience=player.experience,
-            level_up_available=player.level_up_available,
-            xp_to_next_level=xp_to_next_level(player.experience),
-            alignment=player.alignment.value,
-            hp=player.current_hp,
-            max_hp=player.max_hp,
-            ac=effective_ac(player),
-            gold=player.gold,
-            location_id=player.location_id,
-            appearance=player.appearance,
-            ability_scores={
-                "str": scores[Ability.STR],
-                "dex": scores[Ability.DEX],
-                "con": scores[Ability.CON],
-                "int": scores[Ability.INT],
-                "wis": scores[Ability.WIS],
-                "cha": scores[Ability.CHA],
-            },
-            resource_pools=[
-                ResourcePoolView(id=p.id, max_uses=p.max_uses, current_uses=p.current_uses)
-                for p in player.resource_pools
-            ],
-            equipped=build_equipped_payload(player),
-            inventory=build_inventory_payload(player),
-        )
+        return build_player_status(player)

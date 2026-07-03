@@ -94,7 +94,7 @@ def get_creature(session_id: str, entity_id: str) -> CreatureResponse:
     service = get_service()
     try:
         info = service.get_creature_info(session_id, entity_id)
-    except (ValueError, KeyError) as e:
+    except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     return CreatureResponse.model_validate(info)
 
@@ -175,7 +175,7 @@ def patch_nation(session_id: str, nation_id: str, body: PatchNationRequest) -> M
         raise HTTPException(status_code=400, detail=_("No fields to update"))
     try:
         service.patch_nation(session_id, nation_id, updates)
-    except (ValueError, KeyError) as e:
+    except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     return MessageResponse(message=_("Nation {} updated").format(nation_id))
 
@@ -189,7 +189,7 @@ def patch_settlement(session_id: str, settlement_id: str, body: PatchSettlementR
         raise HTTPException(status_code=400, detail=_("No fields to update"))
     try:
         service.patch_settlement(session_id, settlement_id, updates)
-    except (ValueError, KeyError) as e:
+    except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     return MessageResponse(message=_("Settlement {} updated").format(settlement_id))
 
@@ -254,8 +254,6 @@ def load_save(session_id: str, save_name: str) -> MessageResponse:
         service.load_game(session_id, save_name)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
     return MessageResponse(message=_("Loaded '{}'").format(save_name))
 
 
@@ -266,8 +264,6 @@ def delete_save(session_id: str, save_name: str) -> MessageResponse:
     try:
         service.delete_save(session_id, save_name)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
-    except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     return MessageResponse(message=_("Deleted '{}'").format(save_name))
 

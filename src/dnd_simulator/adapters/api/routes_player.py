@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from http import HTTPStatus
 
 from fastapi import APIRouter, HTTPException
@@ -74,26 +75,4 @@ def level_up(session_id: str, body: LevelUpRequest) -> PlayerStatusResponse:
 
 
 def _to_response(data: PlayerStatusData) -> PlayerStatusResponse:
-    return PlayerStatusResponse(
-        player_id=data.player_id,
-        name=data.name,
-        race=data.race,
-        char_class=data.char_class,
-        level=data.level,
-        experience=data.experience,
-        level_up_available=data.level_up_available,
-        xp_to_next_level=data.xp_to_next_level,
-        alignment=data.alignment,
-        hp=data.hp,
-        max_hp=data.max_hp,
-        ac=data.ac,
-        gold=data.gold,
-        location_id=data.location_id,
-        appearance=data.appearance,
-        ability_scores=data.ability_scores,
-        resource_pools=[
-            {"id": p.id, "max_uses": p.max_uses, "current_uses": p.current_uses} for p in data.resource_pools
-        ],
-        equipped=data.equipped,
-        inventory=data.inventory,
-    )
+    return PlayerStatusResponse.model_validate(dataclasses.asdict(data))

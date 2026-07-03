@@ -205,19 +205,17 @@ class TestPlayerToDict:
             inventory=[potion],
         )
 
-        from dnd_simulator.service.session import _player_to_dict
+        from dnd_simulator.service.session import build_player_status
 
-        d = _player_to_dict(player)
+        status = build_player_status(player)
         # Must have equipped list
-        assert "equipped" in d
-        assert any(e["slot"] == "armor" for e in d["equipped"])
-        assert d["equipped"][0]["name"] == "Chain Mail"
+        assert any(e["slot"] == "armor" for e in status.equipped)
+        assert status.equipped[0]["name"] == "Chain Mail"
 
         # Must have inventory list
-        assert "inventory" in d
-        assert len(d["inventory"]) == 1
-        assert d["inventory"][0]["name"] == "Healing Potion"
-        assert d["inventory"][0]["price"] == 50
+        assert len(status.inventory) == 1
+        assert status.inventory[0]["name"] == "Healing Potion"
+        assert status.inventory[0]["price"] == 50
 
 
 # ---------------------------------------------------------------------------
