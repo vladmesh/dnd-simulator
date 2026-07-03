@@ -18,6 +18,13 @@ class LayerError(Exception):
     """Raised when a layer violates isolation rules."""
 
 
+class LayerNotFoundError(RuntimeError):
+    """Raised when a requested layer type is not present in the World.
+
+    Subclasses ``RuntimeError`` so existing fail-fast handlers keep catching it.
+    """
+
+
 class World:
     """Container for all simulation layers. Manages time and event propagation."""
 
@@ -42,10 +49,28 @@ class World:
     @property
     def creature_host(self) -> CreatureHost:
         """Return the registered CreatureHost (entities layer). Fail-fast if missing."""
+        # CreatureHost is a runtime_checkable Protocol — isinstance works, but mypy
+        # rejects a Protocol where a concrete type[...] is expected.
+        return self.get_layer(CreatureHost)  # type: ignore[type-abstract]
+
+    def find_layer[L](self, kind: type[L]) -> L | None:
+        """Return the first layer that is an instance of ``kind``, or None.
+
+        ``kind`` may be a concrete layer class or a runtime-checkable Protocol
+        (e.g. ``CreatureHost``). Use this for partial worlds where the layer may
+        legitimately be absent; use ``get_layer`` when absence is a bug.
+        """
         for layer in self._layers:
-            if isinstance(layer, CreatureHost):
+            if isinstance(layer, kind):
                 return layer
-        raise RuntimeError("World has no CreatureHost — entities layer must be registered")
+        return None
+
+    def get_layer[L](self, kind: type[L]) -> L:
+        """Return the single layer of type ``kind``. Fail-fast if absent."""
+        layer = self.find_layer(kind)
+        if layer is None:
+            raise LayerNotFoundError(f"World has no layer of type {kind.__name__}")
+        return layer
 
     def advance_time(self, delta: TimeDelta) -> list[Event]:
         """Advance world time. Only ticks layers whose tick_interval has elapsed."""

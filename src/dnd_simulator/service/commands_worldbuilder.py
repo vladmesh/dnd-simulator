@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from dnd_simulator.content_loader import (
+    LayerSource,
     LayerType,
     load_catalog,
     load_locations,
@@ -295,9 +296,8 @@ class WorldBuilderCommands(GameServiceProtocol):
 
     # -- Layer files (read/write YAML) --
 
-    def _resolve_layer_path(self, world_id: str, layer_type: LayerType) -> tuple[Path, str]:
+    def _resolve_layer_path(self, world_id: str, layer_type: LayerType) -> tuple[Path, LayerSource]:
         """Resolve the directory for a layer and return (path, source)."""
-        from dnd_simulator.content_loader.manifest import LayerSource
         from dnd_simulator.content_loader.utils import _read_yaml
 
         self._validate_world_id(world_id)
@@ -310,7 +310,7 @@ class WorldBuilderCommands(GameServiceProtocol):
         source = LayerSource(layer_config["source"])
 
         layer_paths = resolve_manifest(world_path, self._content_dir)
-        return layer_paths[layer_type.value], source.value
+        return layer_paths[layer_type.value], source
 
     _SAFE_ID_RE = __import__("re").compile(r"^[a-z0-9][a-z0-9_-]*$")
 
@@ -365,7 +365,7 @@ class WorldBuilderCommands(GameServiceProtocol):
         self._validate_filename(filename)
         layer_path, source = self._resolve_layer_path(world_id, layer_type)
 
-        if source == "library":
+        if source is LayerSource.LIBRARY:
             raise ValueError(f"Cannot write to library layer '{layer_type.value}' — fork it first")
 
         try:
@@ -381,7 +381,7 @@ class WorldBuilderCommands(GameServiceProtocol):
         self,
         world_id: str,
         entity_type: ContentEntityType,
-    ) -> tuple[Path, str]:
+    ) -> tuple[Path, LayerSource]:
         """Resolve the layer directory for a content entity type. Returns (path, source)."""
         from dnd_simulator.content_loader.crud import get_registry_entry
 
@@ -425,7 +425,7 @@ class WorldBuilderCommands(GameServiceProtocol):
         from dnd_simulator.content_loader.crud import create_entity
 
         layer_path, source = self._resolve_entity_layer_path(world_id, entity_type)
-        if source == "library":
+        if source is LayerSource.LIBRARY:
             raise ValueError("Cannot write to library layer — fork it first")
         model = create_entity(entity_type, entity_id, data, layer_path)
         return {"id": entity_id, "data": model.model_dump(mode="json", by_alias=True)}
@@ -441,7 +441,7 @@ class WorldBuilderCommands(GameServiceProtocol):
         from dnd_simulator.content_loader.crud import update_entity
 
         layer_path, source = self._resolve_entity_layer_path(world_id, entity_type)
-        if source == "library":
+        if source is LayerSource.LIBRARY:
             raise ValueError("Cannot write to library layer — fork it first")
         model = update_entity(entity_type, entity_id, data, layer_path)
         return {"id": entity_id, "data": model.model_dump(mode="json", by_alias=True)}
@@ -456,7 +456,7 @@ class WorldBuilderCommands(GameServiceProtocol):
         from dnd_simulator.content_loader.crud import delete_entity
 
         layer_path, source = self._resolve_entity_layer_path(world_id, entity_type)
-        if source == "library":
+        if source is LayerSource.LIBRARY:
             raise ValueError("Cannot write to library layer — fork it first")
         delete_entity(entity_type, entity_id, layer_path)
 

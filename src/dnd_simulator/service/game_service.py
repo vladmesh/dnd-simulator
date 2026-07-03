@@ -249,22 +249,13 @@ class GameService(
     # -- Layer accessors --
 
     def _get_entities_layer(self, session: GameSession) -> EntitiesLayer:
-        for layer in session.world.layers:
-            if isinstance(layer, EntitiesLayer):
-                return layer
-        raise RuntimeError("EntitiesLayer not found")
+        return session.world.get_layer(EntitiesLayer)
 
     def _get_politics_layer(self, session: GameSession) -> PoliticsLayer:
-        for layer in session.world.layers:
-            if isinstance(layer, PoliticsLayer):
-                return layer
-        raise RuntimeError("PoliticsLayer not found")
+        return session.world.get_layer(PoliticsLayer)
 
     def _get_settlements_layer(self, session: GameSession) -> SettlementsLayer:
-        for layer in session.world.layers:
-            if isinstance(layer, SettlementsLayer):
-                return layer
-        raise RuntimeError("SettlementsLayer not found")
+        return session.world.get_layer(SettlementsLayer)
 
     def _assign_brains(self, entities_layer: EntitiesLayer) -> None:
         """Assign brains to all creatures via BrainFactory based on ai_type.

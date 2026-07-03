@@ -78,7 +78,9 @@ def _capture_emit() -> tuple[list[Event], EmitFn]:
 
 # Stub world for handler/dispatcher tests — handlers don't use it yet.
 # MagicMock so that accidental attribute access fails with a clear trace, not AttributeError on None.
+# find_layer → None mirrors an empty world (no entities layer), so merchant/lootable providers stay inert.
 _WORLD = cast(World, MagicMock(spec=World))
+cast(MagicMock, _WORLD).find_layer.return_value = None
 
 _COMBAT = ActionContext(is_combat=True, current_turn_entity_id="test", get_entity=_get_entity)
 _PEACEFUL = ActionContext(is_combat=False, current_turn_entity_id="test", get_entity=_get_entity)

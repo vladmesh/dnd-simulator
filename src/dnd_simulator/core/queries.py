@@ -13,7 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from dnd_simulator.core.models import FactionRelation, Query, QueryType
+from dnd_simulator.core.models import EntityKind, FactionRelation, Query, QueryType
 from dnd_simulator.core.player import PlayerCharacter
 
 if TYPE_CHECKING:
@@ -256,13 +256,13 @@ def query_all_entities(query_fn: QueryFn) -> list[dict[str, object]]:
 
 def query_all_creatures(
     query_fn: QueryFn,
-    entity_type: str | None = None,
+    entity_type: EntityKind | None = None,
     location_id: str | None = None,
     active: bool | None = None,
 ) -> list[dict[str, object]]:
     params: dict[str, object] = {}
-    if entity_type:
-        params["entity_type"] = entity_type
+    if entity_type is not None:
+        params["entity_type"] = entity_type.value
     if location_id:
         params["location_id"] = location_id
     if active is not None:
