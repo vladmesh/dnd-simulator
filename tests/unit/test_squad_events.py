@@ -18,6 +18,8 @@ from dnd_simulator.core.character import (
 )
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.core.monster import MonsterTemplate
+from dnd_simulator.core.queries import SquadInfo
+from dnd_simulator.core.squad import SquadBehavior, SquadType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.perception import perceive_event
 
@@ -174,15 +176,17 @@ class TestSquadMaterializationEvent:
         )
         layer = EntitiesLayer(entities=[player], monster_templates={"orc": template})
 
-        squad_info = {
-            "id": "orc_patrol",
-            "name": "Orc Patrol",
-            "faction_id": "orcs",
-            "current_location_id": "forest_road",
-            "member_templates": ["orc", "orc"],
-            "strength": 4,
-            "max_strength": 4,
-        }
+        squad_info = SquadInfo(
+            id="orc_patrol",
+            name="Orc Patrol",
+            faction_id="orcs",
+            squad_type=SquadType.WAR_PARTY,
+            behavior=SquadBehavior.PATROL,
+            current_location_id="forest_road",
+            strength=4,
+            max_strength=4,
+            member_templates=("orc", "orc"),
+        )
 
         layer._activation._materialize_squad("orc_patrol", squad_info, type(None))  # brain_cls unused in this test path
 

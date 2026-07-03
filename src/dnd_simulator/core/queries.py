@@ -17,12 +17,16 @@ from dnd_simulator.core.models import FactionRelation, Query, QueryType
 from dnd_simulator.core.player import PlayerCharacter
 
 if TYPE_CHECKING:
+    from dnd_simulator.core.items import Item
+    from dnd_simulator.core.lair import LairState
     from dnd_simulator.core.models import QueryFn
+    from dnd_simulator.core.squad import SquadBehavior, SquadType
 
 _GEOGRAPHY = "geography"
 _POLITICS = "politics"
 _SETTLEMENTS = "settlements"
 _ENTITIES = "entities"
+_ECOLOGY = "ecology"
 
 
 # ---------------------------------------------------------------------------
@@ -86,6 +90,43 @@ class SettlementInfo:
     population: int
     prosperity: float
     defenses: float
+
+
+@dataclass(frozen=True)
+class SquadInfo:
+    """Materialization view of a squad (QueryType.SQUADS_AT_LOCATION / SQUAD_INFO)."""
+
+    id: str
+    name: str
+    faction_id: str
+    squad_type: SquadType
+    behavior: SquadBehavior
+    current_location_id: str
+    strength: int
+    max_strength: int
+    member_templates: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class LairInfo:
+    """Materialization view of a lair (QueryType.LAIRS_AT_LOCATION).
+
+    ``members``/``core`` reflect the current alive roster, not the full template
+    list. Treasury fields are in-memory only (never serialized).
+    """
+
+    id: str
+    name: str
+    faction_id: str
+    location_id: str
+    members: tuple[str, ...]
+    core: str | None
+    state: LairState
+    has_core: bool
+    core_alive: bool
+    treasure_items: tuple[Item, ...]
+    treasure_gold: int
+    treasure_behind_core: bool
 
 
 # ---------------------------------------------------------------------------
@@ -233,3 +274,23 @@ def query_all_creatures(
 def query_entity_info(query_fn: QueryFn, entity_id: str) -> dict[str, object]:
     answer = query_fn(_ENTITIES, Query(question=QueryType.ENTITY_INFO, params={"entity_id": entity_id}))
     return _expect(answer.value, dict, layer=_ENTITIES, query=QueryType.ENTITY_INFO)
+
+
+# ---------------------------------------------------------------------------
+# Ecology
+# ---------------------------------------------------------------------------
+
+
+def query_squads_at_location(query_fn: QueryFn, location_id: str) -> list[SquadInfo]:
+    answer = query_fn(_ECOLOGY, Query(question=QueryType.SQUADS_AT_LOCATION, params={"location_id": location_id}))
+    return _expect_list_of(answer.value, SquadInfo, layer=_ECOLOGY, query=QueryType.SQUADS_AT_LOCATION)
+
+
+def query_squad_info(query_fn: QueryFn, squad_id: str) -> SquadInfo:
+    answer = query_fn(_ECOLOGY, Query(question=QueryType.SQUAD_INFO, params={"squad_id": squad_id}))
+    return _expect(answer.value, SquadInfo, layer=_ECOLOGY, query=QueryType.SQUAD_INFO)
+
+
+def query_lairs_at_location(query_fn: QueryFn, location_id: str) -> list[LairInfo]:
+    answer = query_fn(_ECOLOGY, Query(question=QueryType.LAIRS_AT_LOCATION, params={"location_id": location_id}))
+    return _expect_list_of(answer.value, LairInfo, layer=_ECOLOGY, query=QueryType.LAIRS_AT_LOCATION)

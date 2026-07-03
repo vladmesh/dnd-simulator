@@ -237,7 +237,7 @@ class TestSquadVsSquadCombat:
 
         # Weak squad should be destroyed (strength 0) and removed
         answer = layer.query(Query(QueryType.SQUADS_AT_LOCATION, params={"location_id": "B"}))
-        squad_ids = {s["id"] for s in answer.value}
+        squad_ids = {s.id for s in answer.value}
         assert "strong" in squad_ids
         assert "weak" not in squad_ids
 

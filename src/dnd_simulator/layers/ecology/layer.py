@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import random
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import structlog
 
 from dnd_simulator.core.lair import Lair, LairState
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, FactionRelation, Query, QueryType
-from dnd_simulator.core.queries import query_faction_relation
+from dnd_simulator.core.queries import LairInfo, SquadInfo, query_faction_relation
 from dnd_simulator.core.squad import Squad, SquadBehavior
 from dnd_simulator.rules.abstract_combat import TriggeredEncounter, resolve_abstract_combat
 from dnd_simulator.rules.dice import get_global_rng
@@ -177,20 +177,19 @@ class EcologyLayer(Layer):
 
         if q is QueryType.SQUADS_AT_LOCATION:
             location_id = str(params["location_id"])
-            result: list[dict[str, Any]] = []
-            for squad in self._squads.values():
-                if squad.current_location_id == location_id:
-                    result.append(self._squad_to_dict(squad))
+            result = [
+                self._squad_info(squad) for squad in self._squads.values() if squad.current_location_id == location_id
+            ]
             return Answer(value=result)
 
         if q is QueryType.SQUAD_INFO:
             squad_id = str(params["squad_id"])
             squad = self._squads[squad_id]  # KeyError if not found
-            return Answer(value=self._squad_to_dict(squad))
+            return Answer(value=self._squad_info(squad))
 
         if q is QueryType.LAIRS_AT_LOCATION:
             location_id = str(params["location_id"])
-            lairs = [self._lair_to_dict(lair) for lair in self._lairs.values() if lair.location_id == location_id]
+            lairs = [self._lair_info(lair) for lair in self._lairs.values() if lair.location_id == location_id]
             return Answer(value=lairs)
 
         raise ValueError(f"Unknown ecology query: {q}")
@@ -415,35 +414,37 @@ class EcologyLayer(Layer):
         )
 
     @staticmethod
-    def _squad_to_dict(squad: Squad) -> dict[str, Any]:
-        return {
-            "id": squad.id,
-            "name": squad.name,
-            "faction_id": squad.faction_id,
-            "squad_type": squad.squad_type.value,
-            "behavior": squad.behavior.value,
-            "current_location_id": squad.current_location_id,
-            "strength": squad.strength,
-            "max_strength": squad.max_strength,
-            "member_templates": list(squad.member_templates),
-        }
+    def _squad_info(squad: Squad) -> SquadInfo:
+        return SquadInfo(
+            id=squad.id,
+            name=squad.name,
+            faction_id=squad.faction_id,
+            squad_type=squad.squad_type,
+            behavior=squad.behavior,
+            current_location_id=squad.current_location_id,
+            strength=squad.strength,
+            max_strength=squad.max_strength,
+            member_templates=tuple(squad.member_templates),
+        )
 
     @staticmethod
-    def _lair_to_dict(lair: Lair) -> dict[str, Any]:
-        """Materialization view: current alive roster, not the full template list."""
-        current_minions = list(lair.alive_members) if lair.alive_members is not None else list(lair.members)
-        return {
-            "id": lair.id,
-            "name": lair.name,
-            "faction_id": lair.faction_id,
-            "location_id": lair.location_id,
-            "members": current_minions,
-            "core": lair.core if lair.core_alive else None,
-            "state": lair.state.value,
-            # Treasury inputs (in-memory only — consumed by ActivationManager, never serialized)
-            "has_core": lair.core is not None,
-            "core_alive": lair.core_alive,
-            "treasure_items": lair.treasure_items,
-            "treasure_gold": lair.treasure_gold,
-            "treasure_behind_core": lair.treasure_behind_core,
-        }
+    def _lair_info(lair: Lair) -> LairInfo:
+        """Materialization view: current alive roster, not the full template list.
+
+        Treasury fields are in-memory only — consumed by ActivationManager, never serialized.
+        """
+        current_minions = tuple(lair.alive_members) if lair.alive_members is not None else tuple(lair.members)
+        return LairInfo(
+            id=lair.id,
+            name=lair.name,
+            faction_id=lair.faction_id,
+            location_id=lair.location_id,
+            members=current_minions,
+            core=lair.core if lair.core_alive else None,
+            state=lair.state,
+            has_core=lair.core is not None,
+            core_alive=lair.core_alive,
+            treasure_items=tuple(lair.treasure_items),
+            treasure_gold=lair.treasure_gold,
+            treasure_behind_core=lair.treasure_behind_core,
+        )

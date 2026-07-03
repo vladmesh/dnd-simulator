@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from dnd_simulator.core.models import GameDateTime, Query, QueryType, TimeDelta
+from dnd_simulator.core.lair import Lair, LairState
+from dnd_simulator.core.models import Answer, GameDateTime, Query, QueryType, TimeDelta
+from dnd_simulator.core.queries import LairInfo, SquadInfo, query_lairs_at_location
 from dnd_simulator.core.squad import Squad, SquadBehavior, SquadType
 from dnd_simulator.layers.ecology.layer import EcologyLayer
 
@@ -42,9 +44,9 @@ class TestEcologyLayerQueries:
         squads = answer.value
         assert isinstance(squads, list)
         assert len(squads) == 1
-        assert squads[0]["id"] == "patrol_1"
-        assert squads[0]["faction_id"] == "kingdom"
-        assert squads[0]["strength"] == 5
+        assert squads[0].id == "patrol_1"
+        assert squads[0].faction_id == "kingdom"
+        assert squads[0].strength == 5
 
     def test_squads_at_location_empty_for_no_squads(self) -> None:
         squad = _make_squad("patrol_1", location="road_north")
@@ -59,11 +61,11 @@ class TestEcologyLayerQueries:
 
         answer = layer.query(Query(QueryType.SQUAD_INFO, params={"squad_id": "patrol_1"}))
         info = answer.value
-        assert isinstance(info, dict)
-        assert info["id"] == "patrol_1"
-        assert info["current_location_id"] == "road_north"
-        assert info["strength"] == 7
-        assert info["member_templates"] == ["bandit", "bandit"]
+        assert isinstance(info, SquadInfo)
+        assert info.id == "patrol_1"
+        assert info.current_location_id == "road_north"
+        assert info.strength == 7
+        assert info.member_templates == ("bandit", "bandit")
 
     def test_squad_info_raises_for_unknown_squad(self) -> None:
         layer = EcologyLayer(squads=[])
@@ -79,7 +81,7 @@ class TestEcologyLayerQueries:
 
         answer = layer.query(Query(QueryType.SQUADS_AT_LOCATION, params={"location_id": "crossroads"}))
         assert len(answer.value) == 2
-        ids = {s["id"] for s in answer.value}
+        ids = {s.id for s in answer.value}
         assert ids == {"patrol_1", "wolves_1"}
 
 
@@ -111,16 +113,16 @@ class TestEcologyLayerSerialization:
 
         # Verify mutation happened
         answer = layer.query(Query(QueryType.SQUAD_INFO, params={"squad_id": "patrol_1"}))
-        assert answer.value["current_location_id"] == "road_south"
-        assert answer.value["strength"] == 2
+        assert answer.value.current_location_id == "road_south"
+        assert answer.value.strength == 2
 
         # Restore
         layer.load_state(saved)
 
         # Verify restoration
         answer = layer.query(Query(QueryType.SQUAD_INFO, params={"squad_id": "patrol_1"}))
-        assert answer.value["current_location_id"] == "road_north"
-        assert answer.value["strength"] == 5
+        assert answer.value.current_location_id == "road_north"
+        assert answer.value.strength == 5
 
 
 class TestEcologyLayerWorldIntegration:
@@ -159,7 +161,7 @@ class TestEcologyLayerWorldIntegration:
         # Query via world to verify layer integration
         answer = world.query_layer("ecology", Query(QueryType.SQUADS_AT_LOCATION, params={"location_id": "road_north"}))
         assert len(answer.value) == 1
-        assert answer.value[0]["id"] == "patrol_1"
+        assert answer.value[0].id == "patrol_1"
 
     def test_ecology_layer_name_is_ecology(self) -> None:
         layer = EcologyLayer(squads=[])
@@ -168,3 +170,30 @@ class TestEcologyLayerWorldIntegration:
     def test_ecology_layer_tick_interval_is_3600(self) -> None:
         layer = EcologyLayer(squads=[])
         assert layer.tick_interval == 3600
+
+
+class TestTypedAccessors:
+    """Ecology query accessors narrow answers to typed payloads."""
+
+    def test_query_lairs_at_location_returns_lair_info_with_enum_state(self) -> None:
+        lair = Lair(
+            id="warren",
+            name="Goblin Warren",
+            faction_id="goblins",
+            location_id="cave",
+            members=["goblin", "goblin"],
+            core="chieftain",
+        )
+        layer = EcologyLayer(lairs=[lair])
+
+        def query_fn(layer_name: str, query: Query) -> Answer:
+            return layer.query(query)
+
+        lairs = query_lairs_at_location(query_fn, "cave")
+        assert len(lairs) == 1
+        info = lairs[0]
+        assert isinstance(info, LairInfo)
+        assert info.id == "warren"
+        assert info.state is LairState.ACTIVE
+        assert info.core == "chieftain"
+        assert info.members == ("goblin", "goblin")
