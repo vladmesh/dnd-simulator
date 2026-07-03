@@ -48,9 +48,11 @@ Scope OUT:
 4. [rules/ purity — i18n handler errors](tasks/phase1-task4-handler-i18n.md) — обернуть `ActionResult(error=...)` в `_()` (items/equipment/trade/action_surge/loot) + RU перевод
 5. [rules/ purity — provider I/O & state](tasks/phase1-task5-purity-providers.md) — merchant/loot провайдеры без world-query в rules; `BaseActionProvider` без состояния
 
-## Phase 2: Типизация границ + enums (фундамент под control-interfaces)
+## Phase 2: Типизация границ + enums (фундамент под control-interfaces) ✓
 
 Межслойные контракты типизированы, строковые сравнения заменены enum'ами, единая точка поиска слоя. Верификация: mypy strict чисто, integration зелёный, поведение неизменно.
+
+**Закрыта 2026-07-04.** Все 4 задачи done. `make check` зелёный, integration 154 passed, E2E зелёный (см. [e2e/phase2-report.md](e2e/phase2-report.md)) — блокеров нет. Task 4 подтверждён через UI: player-status с `appearance` течёт через WS корректно, дубль-fork → 409 через app-level handler.
 
 - Типизированный query-контракт: результат на `QueryType` (типизированные dataclasses / аксессоры) → схлопывает касты `Answer.value`/`isinstance` (`any-to-object-sweep`, `dict-str-object-overuse`); типизировать `Query.params`.
 - `SquadInfo`/`LairInfo` frozen dataclasses вместо bare-dict на границе ecology→entities.
@@ -100,7 +102,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 2 — tasks generated 2026-07-02. Ready to start task 1.
+**Current:** Phase 2 COMPLETE (2026-07-04). Ready for Phase 3 task generation.
 
 ## Decisions
 

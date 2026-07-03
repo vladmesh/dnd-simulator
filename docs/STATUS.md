@@ -12,7 +12,9 @@
 **Sprint:** 020-thermo-sweep
 **Goal:** закрыть кластер структурного долга и багов из термоядерного ревью — чистота `rules/`, типизация межслойных границ, декомпозиция выросших модулей и фронтовых god-компонентов; поведение неизменно
 **Started:** 2026-06-30
-**Phase:** 2 — Типизация границ + enums (все 4 задачи done) — 2026-07-04
+**Phase:** 2 — Типизация границ + enums (COMPLETE) — 2026-07-04
+
+Ready for Phase 3 (Декомпозиция бэка) task generation.
 
 Полный sweep (выбран пользователем), целится в `control-interfaces`. Источник — [thermo-nuclear-review.md](thermo-nuclear-review.md). Phase 1 закрыта (5 задач). Phase 2 разбита на 4 задачи: typed query contract / SquadInfo-LairInfo / enum-добивка + get_layer / exception handlers + player-status. Ready to start task 1.
 
