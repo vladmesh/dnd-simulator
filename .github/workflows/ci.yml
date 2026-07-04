@@ -7,29 +7,73 @@ on:
     branches: [main]
 
 jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      scope: ${{ steps.classify.outputs.scope }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify changed paths
+        id: classify
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${{ github.base_ref }}" --depth=1
+            base=$(git merge-base HEAD "origin/${{ github.base_ref }}") || base=""
+          else
+            base="${{ github.event.before }}"
+          fi
+
+          zero_sha="0000000000000000000000000000000000000000"
+          if [ -z "$base" ] || [ "$base" = "$zero_sha" ] || ! git cat-file -e "$base" 2>/dev/null; then
+            scope="mixed"
+          else
+            changed=$(git diff --name-only "$base" HEAD || true)
+            if [ -z "$changed" ]; then
+              scope="mixed"
+            else
+              scope=$(printf '%s\n' "$changed" | scripts/classify-scope.sh) || scope="mixed"
+            fi
+          fi
+
+          echo "Detected scope: $scope"
+          echo "scope=$scope" >> "$GITHUB_OUTPUT"
+
   check:
     runs-on: ubuntu-latest
+    needs: detect-changes
     steps:
       - uses: actions/checkout@v4
 
       - uses: astral-sh/setup-uv@v4
 
       - name: Install dependencies
+        if: needs.detect-changes.outputs.scope == 'backend' || needs.detect-changes.outputs.scope == 'mixed'
         run: uv sync
 
       - name: Lint
+        if: needs.detect-changes.outputs.scope == 'backend' || needs.detect-changes.outputs.scope == 'mixed'
         run: |
           uv run ruff check src/ tests/
           uv run ruff format --check src/ tests/
 
       - name: Type check
+        if: needs.detect-changes.outputs.scope == 'backend' || needs.detect-changes.outputs.scope == 'mixed'
         run: uv run mypy src/
 
       - name: Test
+        if: needs.detect-changes.outputs.scope == 'backend' || needs.detect-changes.outputs.scope == 'mixed'
         run: uv run pytest --cov=src/dnd_simulator
+
+      - name: Skipped (out of scope)
+        if: needs.detect-changes.outputs.scope != 'backend' && needs.detect-changes.outputs.scope != 'mixed'
+        run: echo "Backend scope not touched (scope=${{ needs.detect-changes.outputs.scope }}) — skipping."
 
   frontend:
     runs-on: ubuntu-latest
+    needs: detect-changes
     defaults:
       run:
         working-directory: frontend
@@ -43,21 +87,35 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
+        if: needs.detect-changes.outputs.scope == 'frontend' || needs.detect-changes.outputs.scope == 'mixed'
         run: npm ci
 
       - name: Lint
+        if: needs.detect-changes.outputs.scope == 'frontend' || needs.detect-changes.outputs.scope == 'mixed'
         run: npx eslint src/
 
       - name: Type check
+        if: needs.detect-changes.outputs.scope == 'frontend' || needs.detect-changes.outputs.scope == 'mixed'
         run: npx tsc --noEmit
 
       - name: Test
+        if: needs.detect-changes.outputs.scope == 'frontend' || needs.detect-changes.outputs.scope == 'mixed'
         run: npx vitest run
+
+      - name: Skipped (out of scope)
+        if: needs.detect-changes.outputs.scope != 'frontend' && needs.detect-changes.outputs.scope != 'mixed'
+        run: echo "Frontend scope not touched (scope=${{ needs.detect-changes.outputs.scope }}) — skipping."
 
   integration:
     runs-on: ubuntu-latest
+    needs: detect-changes
     steps:
       - uses: actions/checkout@v4
 
       - name: Run integration tests
+        if: needs.detect-changes.outputs.scope == 'backend' || needs.detect-changes.outputs.scope == 'mixed'
         run: make test-integration
+
+      - name: Skipped (out of scope)
+        if: needs.detect-changes.outputs.scope != 'backend' && needs.detect-changes.outputs.scope != 'mixed'
+        run: echo "Backend scope not touched (scope=${{ needs.detect-changes.outputs.scope }}) — skipping integration tests."
