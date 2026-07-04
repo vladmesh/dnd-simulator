@@ -81,7 +81,12 @@ Scope OUT:
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Дедуп сериализации (предусловие save-schema)](tasks/phase3-task1-serialization-dedup.md) — `GameDateTime.to_dict/from_dict`, `entity_serialization.py`, разрыв цикла `core/player→content_loader`; формат неизменен
+2. [combat_manager split + make_relation_fn](tasks/phase3-task2-combat-manager-split.md) — `make_relation_fn(query_fn)` в `rules/reputation.py` (6 closures), резолверы/death вынесены из combat-state
+3. [round.py cleanup](tasks/phase3-task3-round-cleanup.md) — awareness-билдеры → `AwarenessBuilder`, `resolve_abstract_move` → `rules/movement`, одна активация за итерацию, dead-параметр вон
+4. [activation_manager split](tasks/phase3-task4-activation-manager-split.md) — `encounters.py`/`materialization.py` + общий трекер материализации; activation-логику только изолируем, не полируем
+5. [ecology/layer split](tasks/phase3-task5-ecology-layer-split.md) — `movement`/`squad_combat`/`lairs` сабмодули (паттерн politics)
+6. [Реестр экипировки](tasks/phase3-task6-equipment-registry.md) — `equipped: dict[EquipmentSlot, Item]` + фабрика-хендлеры + action_defs циклом (скоуп по decision_gate; вариант A — фронт-контракт сохранён)
 
 ## Phase 4: Декомпозиция фронта
 
@@ -102,7 +107,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 2 COMPLETE (2026-07-04). Ready for Phase 3 task generation.
+**Current:** Phase 3 tasks generated (2026-07-04). 6 задач, старт с task 1 (сериализация-дедуп, приоритет/предусловие). Скоуп task 6 (реестр экипировки) на подтверждении координатора через decision_gate — по умолчанию вариант A (бэкенд-internal, фронт не трогаем).
 
 ## Decisions
 
