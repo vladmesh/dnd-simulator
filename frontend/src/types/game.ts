@@ -254,6 +254,12 @@ export interface AbilityScores {
   cha: number
 }
 
+/**
+ * Player status — single source for both the REST `player_status` response and
+ * the WS status payload (backend `PlayerStatusData`). `appearance`/`equipped`/
+ * `inventory`/`resource_pools` are optional because not every payload includes
+ * them. Aliased as `PlayerStatusResponse` in `types/api.ts`.
+ */
 export interface PlayerStatus {
   player_id: string
   name: string
@@ -269,6 +275,7 @@ export interface PlayerStatus {
   ac: number
   gold: number
   location_id: string
+  appearance?: string
   ability_scores: AbilityScores
   equipped?: EquippedInfo[]
   inventory?: ItemInfo[]

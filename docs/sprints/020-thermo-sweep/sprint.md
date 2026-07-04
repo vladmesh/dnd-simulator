@@ -88,7 +88,9 @@ Scope OUT:
 5. [ecology/layer split](tasks/phase3-task5-ecology-layer-split.md) — `movement`/`squad_combat`/`lairs` сабмодули (паттерн politics)
 6. [Реестр экипировки](tasks/phase3-task6-equipment-registry.md) — `equipped: dict[EquipmentSlot, Item]` + фабрика-хендлеры + action_defs циклом (скоуп по decision_gate; вариант A — фронт-контракт сохранён)
 
-## Phase 4: Декомпозиция фронта
+## Phase 4: Декомпозиция фронта ✓
+
+**Закрыта 2026-07-04.** Все 6 задач done. `npx vitest run` 270 passed (35 файлов), `tsc --noEmit` + `eslint src/` зелёные, `tsc -b` без новых ошибок (снял одну pre-existing). E2E зелёный (см. [e2e-reports/2026-07-04-sprint020-phase4.md](../../e2e-reports/2026-07-04-sprint020-phase4.md)) — 12/12 сценариев, блокеров нет: подтверждены smite/lay-on-hands через `<SmiteChoice>`, EventLog, EditableStatsTable (edit+save), SchemaForm, level-up, connect-reset.
 
 God-компоненты разбиты, типы перестали быть ручными близнецами, дубли убраны. Верификация: vitest зелёный, E2E без регрессий.
 
@@ -101,7 +103,12 @@ God-компоненты разбиты, типы перестали быть р
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [TargetDropdown decomposition](tasks/phase4-task1-target-dropdown.md) — `<SmiteChoice>` вместо инлайн-копии, `buildAttackParams` shared, LayOnHands amount-picker выделен
+2. [SchemaForm decomposition](tasks/phase4-task2-schema-form.md) — `FieldShell` + `localizedCodec` + один `buildDefaults`; схемо-резолв в свой модуль
+3. [EventLog hooks](tasks/phase4-task3-event-log.md) — `useStickyScroll` / `useLogInteraction`; Compact/Full различаются только виртуализацией
+4. [WorldOverview](tasks/phase4-task4-world-overview.md) — generic `EditableStatsTable<T>` + типизированные строки (+ пиновочные тесты)
+5. [Shared types](tasks/phase4-task5-shared-types.md) — свести близнецов `PlayerStatus`/`PlayerStatusResponse`; `Region`/`Nation`/`Settlement` вместо `Record<string, unknown>`
+6. [Store/transport dedup](tasks/phase4-task6-store-dedup.md) — `turnSlice` `applyCommon`/`extractGameTime`/reset-state, `ApiError.detailMessage()`
 
 ---
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { ChevronDown, ChevronRight } from "lucide-react"
@@ -11,7 +11,8 @@ import {
 import { ICON_MAP } from "@/lib/iconMap"
 import type { DisplayEntry, EventDisplayEntry } from "@/lib/logProcessing"
 import { AttackCardModal } from "./AttackCardModal"
-import { extractAttackCardData } from "./attackCard"
+import { useStickyScroll } from "./useStickyScroll"
+import { useLogInteraction } from "./useLogInteraction"
 
 function EventIcon({ name, className }: { name: string; className?: string }) {
   const Icon = ICON_MAP[name]
@@ -155,29 +156,15 @@ function CompactLog({
   onExpand?: () => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const [expandedEntries, setExpandedEntries] = useState<Set<number>>(new Set())
-  const [modalEntry, setModalEntry] = useState<EventDisplayEntry | null>(null)
-  const stickyRef = useRef(true)
-
-  // Track whether user is scrolled to bottom
-  const handleScroll = useCallback(() => {
-    const el = scrollRef.current
-    if (!el) return
-    stickyRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 8
-  }, [])
+  const { expandedEntries, toggleExpand, modalEntry, setModalEntry, cardData } = useLogInteraction()
+  const { stickyRef, handleScroll } = useStickyScroll(scrollRef, 8)
 
   // Auto-scroll to bottom only when sticky
   const entryCount = displayEntries.length
   useEffect(() => {
     const el = scrollRef.current
-    if (el && stickyRef.current) {
-      el.scrollTop = el.scrollHeight
-    }
-  }, [entryCount])
-
-  const cardData = modalEntry?.entry.event.data
-    ? extractAttackCardData(modalEntry.entry.event.data)
-    : null
+    if (el && stickyRef.current) el.scrollTop = el.scrollHeight
+  }, [entryCount, stickyRef])
 
   return (
     <div className="flex items-stretch border-b border-border">
@@ -192,14 +179,7 @@ function CompactLog({
             key={entry.kind === "event" ? entry.entry.id : `${entry.kind}-${idx}`}
             entry={entry}
             expanded={expandedEntries.has(idx)}
-            onToggleExpand={() => {
-              setExpandedEntries((prev) => {
-                const next = new Set(prev)
-                if (next.has(idx)) next.delete(idx)
-                else next.add(idx)
-                return next
-              })
-            }}
+            onToggleExpand={() => toggleExpand(idx)}
             onAttackClick={setModalEntry}
           />
         ))}
@@ -236,9 +216,7 @@ function FullLog({
   emptyMessage: string
 }) {
   const parentRef = useRef<HTMLDivElement>(null)
-  const [expandedEntries, setExpandedEntries] = useState<Set<number>>(new Set())
-  const [modalEntry, setModalEntry] = useState<EventDisplayEntry | null>(null)
-  const stickyRef = useRef(true)
+  const { expandedEntries, toggleExpand, modalEntry, setModalEntry, cardData } = useLogInteraction()
 
   const virtualizer = useVirtualizer({
     count: displayEntries.length,
@@ -255,25 +233,16 @@ function FullLog({
     overscan: 10,
   })
 
-  // Track whether user is scrolled to bottom
-  const handleScroll = useCallback(() => {
-    const el = parentRef.current
-    if (!el) return
-    stickyRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 16
-  }, [])
+  const entryCount = displayEntries.length
+  const { stickyRef, handleScroll } = useStickyScroll(parentRef, 16)
 
   // Auto-scroll to bottom only when sticky
-  const entryCount = displayEntries.length
   useEffect(() => {
     if (entryCount > 0 && stickyRef.current) {
       virtualizer.scrollToIndex(entryCount - 1, { align: "end" })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entryCount])
-
-  const cardData = modalEntry?.entry.event.data
-    ? extractAttackCardData(modalEntry.entry.event.data)
-    : null
 
   return (
     <div ref={parentRef} onScroll={handleScroll} className="h-full overflow-y-auto font-mono text-xs">
@@ -297,14 +266,7 @@ function FullLog({
                 <DisplayEntryRow
                   entry={entry}
                   expanded={expandedEntries.has(vRow.index)}
-                  onToggleExpand={() => {
-                    setExpandedEntries((prev) => {
-                      const next = new Set(prev)
-                      if (next.has(vRow.index)) next.delete(vRow.index)
-                      else next.add(vRow.index)
-                      return next
-                    })
-                  }}
+                  onToggleExpand={() => toggleExpand(vRow.index)}
                   onAttackClick={setModalEntry}
                 />
               </div>

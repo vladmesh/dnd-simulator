@@ -4,6 +4,7 @@ import i18next from "i18next"
 import { wsClient } from "@/transport/wsClient"
 import type { WsStatus } from "@/transport/wsClient"
 import type { GameStore } from "../gameStore"
+import { turnSliceResetState } from "./turnSlice"
 
 export interface ConnectionSlice {
   wsStatus: WsStatus
@@ -73,19 +74,10 @@ export const createConnectionSlice: StateCreator<
       // Reset all game state before connecting to a new session (BUG-43)
       get().clearLog()
       set({
+        ...turnSliceResetState,
         sessionId,
         playerId: playerId ?? null,
         player: null,
-        mode: "peaceful",
-        awareness: null,
-        location: null,
-        budget: null,
-        gameTime: null,
-        isMyTurn: false,
-        waitingForAction: false,
-        gameOver: false,
-        lastError: null,
-        reactionPrompt: null,
       })
       wsClient.connect(sessionId, playerId)
     },

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { api } from "@/transport/apiClient"
+import { api, ApiError } from "@/transport/apiClient"
 import { Button } from "@/components/ui/button"
 import { Loader2, X } from "lucide-react"
 
@@ -57,8 +57,7 @@ export function LayerEditor({ worldId, layerType, readOnly, onClose }: Props) {
         setFiles((prev) => ({ ...prev, [selectedFile]: content }))
       })
       .catch((err) => {
-        const detail = (err as { body?: { detail?: string } }).body?.detail
-        setError(detail ?? String(err))
+        setError(err instanceof ApiError ? err.detailMessage() : String(err))
       })
       .finally(() => setSaving(false))
   }

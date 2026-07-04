@@ -7,13 +7,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 make install      # uv sync — install all dependencies
 make check        # backend + frontend lint/typecheck/test (mirrors CI minus integration)
+make check-backend    # lint + typecheck + test (backend half of `check`)
+make check-frontend   # lint-frontend + typecheck-frontend + test-frontend (frontend half of `check`)
 make test         # uv run pytest (all tests)
 make test-unit    # uv run pytest tests/unit/ (fast, no I/O)
 make test-integration  # docker compose — backend + integration tests
 make lint         # ruff check + format check
 make format       # auto-fix formatting and lint issues
 make typecheck    # uv run mypy src/
-make setup-hooks  # install pre-commit (auto-format) and pre-push (check) hooks
+make setup-hooks  # install pre-commit (auto-format) and pre-push (scope-filtered check) hooks
 make messages     # extract translatable strings to .pot
 make compile-messages  # compile .po → .mo
 make serve        # uvicorn API server on :8001 with --reload
@@ -40,6 +42,10 @@ make check 2>&1 | tee /tmp/check.log
 ```
 
 Then use the Read tool on the log file to inspect any section. If nothing changed, don't rerun — re-read the saved log.
+
+## Pre-push hook scope filter
+
+`.githooks/pre-push` classifies the files being pushed via `scripts/classify-scope.sh` (the same classifier CI's `detect-changes` job uses) and runs only the relevant half: frontend-only changes run `make check-frontend`, backend-only run `make check-backend`, docs-only run nothing, anything mixed or touching infra (Makefile, scripts/, .github/, orca.yaml, docker*, ...) runs the full `make check`. Any classification error or empty input also falls back to the full `make check`. After pulling changes to the hook scripts, re-run `make setup-hooks` to pick them up.
 
 ## Product Vision
 
