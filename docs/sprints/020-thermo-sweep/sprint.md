@@ -83,7 +83,9 @@ Scope OUT:
 
 _(генерируются отдельно перед началом фазы)_
 
-## Phase 4: Декомпозиция фронта
+## Phase 4: Декомпозиция фронта ✓
+
+**Закрыта 2026-07-04.** Все 6 задач done. `npx vitest run` 270 passed (35 файлов), `tsc --noEmit` + `eslint src/` зелёные, `tsc -b` без новых ошибок (снял одну pre-existing). E2E зелёный (см. [e2e-reports/2026-07-04-sprint020-phase4.md](../../e2e-reports/2026-07-04-sprint020-phase4.md)) — 12/12 сценариев, блокеров нет: подтверждены smite/lay-on-hands через `<SmiteChoice>`, EventLog, EditableStatsTable (edit+save), SchemaForm, level-up, connect-reset.
 
 God-компоненты разбиты, типы перестали быть ручными близнецами, дубли убраны. Верификация: vitest зелёный, E2E без регрессий.
 
