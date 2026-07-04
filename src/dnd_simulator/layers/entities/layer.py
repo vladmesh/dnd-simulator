@@ -9,6 +9,9 @@ import structlog
 
 from dnd_simulator.core.awareness import (
     CombatAwareness,
+    EquippedInfo,
+    ItemInfo,
+    MerchantInfo,
     NearbyEntity,
     PeacefulAwareness,
     PerceivedEvent,
@@ -23,8 +26,9 @@ from dnd_simulator.core.models import ActionResult, Answer, EntityKind, Event, E
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.core.player import PlayerCharacter
+from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.layers.entities.activation_manager import ActivationManager
-from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder
+from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder, active_merchants_at
 from dnd_simulator.layers.entities.combat_manager import CombatManager
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.perception import perceive_event
@@ -138,15 +142,7 @@ class EntitiesLayer(Layer):
 
     def get_merchants_at(self, location_id: str, hour: int) -> list[Npc]:
         """Return active, alive merchants at a given location."""
-        return [
-            e
-            for e in self._entities.values()
-            if isinstance(e, Npc)
-            and e.is_merchant
-            and e.current_location(hour) == location_id
-            and e.active
-            and e.is_alive
-        ]
+        return active_merchants_at(self._entities, location_id, hour)
 
     def get_nearest_wake_time(self) -> int | None:
         """Return the minimum wake_at_seconds across all creatures, or None."""
@@ -218,6 +214,24 @@ class EntitiesLayer(Layer):
     ) -> list[NearbyEntity]:
         """Build list of nearby entities for peaceful awareness."""
         return self._awareness.build_nearby_entities(creature, hour, query_fn)
+
+    def build_available_items(self, creature: Creature) -> list[ItemInfo]:
+        """Build the creature's available-items list for awareness."""
+        return self._awareness.build_available_items(creature)
+
+    def build_equipped(self, creature: Creature) -> list[EquippedInfo]:
+        """Build the creature's equipped-items list for awareness."""
+        return self._awareness.build_equipped(creature)
+
+    def compute_reachable(
+        self, creature: Creature, combat_state: CombatState | None, budget: TurnBudget
+    ) -> frozenset[tuple[int, int]]:
+        """Compute reachable battle-map cells for the current turn-taker."""
+        return self._awareness.compute_reachable(creature, combat_state, budget)
+
+    def build_merchants(self, creature: Creature, hour: int) -> list[MerchantInfo]:
+        """Build merchant info for merchant NPCs at the creature's location."""
+        return self._awareness.build_merchants(creature, hour)
 
     def get_perceived_events(self, creature: Creature) -> list[PerceivedEvent]:
         """Get new events perceived by this creature as structured data.

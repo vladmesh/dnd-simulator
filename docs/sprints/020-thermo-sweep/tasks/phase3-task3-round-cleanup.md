@@ -44,4 +44,14 @@ Gotcha: `AwarenessBuilder` уже владеет `build_awareness/build_combat_a
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- **Awareness builders → AwarenessBuilder**: moved `_build_available_items` (dead `available_actions` param dropped), `_build_equipped` (in-loop `Item` re-import + assert gone), `_compute_reachable`, `_build_merchants` out of `Round` into `AwarenessBuilder` as `build_available_items`/`build_equipped`/`compute_reachable`/`build_merchants`. Exposed on the `CreatureHost` protocol + `EntitiesLayer` delegation so `Round` stays layer-agnostic (it can't import the concrete layer). `Round` now calls `self._host.build_*`; the two `replace()` assembly sites keep only the dispatcher-sourced `available_actions`/`turn_budget` (legitimately Round's — the dispatcher is Round-owned).
+- **Merchant filter dedup**: extracted `active_merchants_at(entities, location_id, hour)` (module-level in `awareness_builder.py`); both `EntitiesLayer.get_merchants_at` and `AwarenessBuilder.build_merchants` call it.
+- **resolve_abstract_move → rules/movement**: pure version takes `combat: CombatState | None` directly. `service.session.resolve_abstract_move` kept as a host-aware compat wrapper (delegates after `host.get_combat`), so `session.py:522` and `test_session_lifecycle` are unchanged. `round.py` imports the rules version top-level and passes `self._host.get_combat(...)` — no more reaching up into `service.session`.
+- **One activation per loop iteration**: `run_round(*, skip_activation=False)`; `run_loop` passes `skip_activation=True` (it already `_activate()`d for the active/fast-forward check). Standalone `run_round()` callers (many tests) still activate. Pinned by new `test_round_activation_once` (standalone→1, skip→0, one loop iteration→1; was 2 before).
+- **Hidden caller**: `session.build_equipped_payload` used `Round._build_equipped` → repointed to `AwarenessBuilder.build_equipped`. Tests `test_inventory_awareness` updated (Round static methods → AwarenessBuilder).
+- **Not done (per re-scope)**: combat/peaceful `_run_turn_loop` merge — explicitly cancelled. `round.py` 623 → ~548.
+- `make check` green.

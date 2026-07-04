@@ -10,11 +10,17 @@ import structlog
 from dnd_simulator.core.awareness import (
     CombatAwareness,
     CombatEntity,
+    EquippedInfo,
+    ItemInfo,
+    MerchantInfo,
     NearbyEntity,
     PeacefulAwareness,
     ResourcePoolInfo,
+    describe_item,
 )
 from dnd_simulator.core.character import Character, Creature, Entity
+from dnd_simulator.core.combat import CombatState
+from dnd_simulator.core.items import EquipmentSlot, Item
 from dnd_simulator.core.models import Event, FactionRelation
 from dnd_simulator.core.queries import (
     query_faction_name,
@@ -28,13 +34,24 @@ from dnd_simulator.core.queries import (
 from dnd_simulator.core.world import LayerError
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.rules.combat_sides import are_allies
+from dnd_simulator.rules.movement import compute_reachable as compute_reachable_cells
 from dnd_simulator.rules.reputation import effective_relation, make_relation_fn
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import GameDateTime, QueryFn
+    from dnd_simulator.core.turn_budget import TurnBudget
     from dnd_simulator.layers.entities.combat_manager import CombatManager
 
 logger = structlog.get_logger(domain="entity")
+
+
+def active_merchants_at(entities: dict[str, Entity], location_id: str, hour: int) -> list[Npc]:
+    """Active, alive merchant NPCs whose scheduled location matches at the given hour."""
+    return [
+        e
+        for e in entities.values()
+        if isinstance(e, Npc) and e.is_merchant and e.current_location(hour) == location_id and e.active and e.is_alive
+    ]
 
 
 class AwarenessBuilder:
@@ -60,6 +77,68 @@ class AwarenessBuilder:
         if creature.in_combat:
             return self.build_combat_awareness(creature, query_fn)
         return self.build_peaceful_awareness(creature, time, query_fn)
+
+    @staticmethod
+    def build_available_items(creature: Creature) -> list[ItemInfo]:
+        """Build item info list for awareness — full inventory."""
+        return [
+            ItemInfo(
+                id=item.id,
+                name=item.name,
+                description=describe_item(item),
+                item_type=str(item.item_type),
+                price=item.price,
+            )
+            for item in creature.inventory
+        ]
+
+    @staticmethod
+    def build_equipped(creature: Creature) -> list[EquippedInfo]:
+        """Build equipped item info from all six equipment slots."""
+        slots: list[tuple[EquipmentSlot, Item | None]] = [
+            (EquipmentSlot.WEAPON, creature.equipped_weapon),
+            (EquipmentSlot.ARMOR, creature.equipped_armor),
+            (EquipmentSlot.SHIELD, creature.equipped_shield),
+            (EquipmentSlot.HEAD, creature.equipped_head),
+            (EquipmentSlot.FEET, creature.equipped_feet),
+            (EquipmentSlot.RING, creature.equipped_ring),
+        ]
+        return [
+            EquippedInfo(slot=slot, item_id=item.id, name=item.name, description=describe_item(item))
+            for slot, item in slots
+            if item is not None
+        ]
+
+    @staticmethod
+    def compute_reachable(
+        creature: Creature, combat_state: CombatState | None, budget: TurnBudget
+    ) -> frozenset[tuple[int, int]]:
+        """Compute reachable cells for the current turn-taker."""
+        if combat_state is None or budget.movement_remaining <= 0:
+            return frozenset()
+        my_pos = combat_state.battle_map.positions.get(creature.id)
+        if my_pos is None:
+            return frozenset()
+        reachable_map = compute_reachable_cells(my_pos, budget.movement_remaining, combat_state.battle_map, creature.id)
+        return frozenset((p.x, p.y) for p in reachable_map if p != my_pos)
+
+    def build_merchants(self, creature: Creature, hour: int) -> list[MerchantInfo]:
+        """Build merchant info for merchant NPCs at the creature's location."""
+        result: list[MerchantInfo] = []
+        for npc in active_merchants_at(self._entities, creature.location_id, hour):
+            items = [
+                ItemInfo(
+                    id=item.id,
+                    name=item.name,
+                    description=describe_item(item),
+                    item_type=str(item.item_type),
+                    price=item.price,
+                )
+                for item in npc.inventory
+                if item.price is not None
+            ]
+            result.append(MerchantInfo(id=npc.id, name=npc.name, gold=npc.gold, items=items))
+        return result
 
     def build_peaceful_awareness(self, creature: Creature, time: GameDateTime, query_fn: QueryFn) -> PeacefulAwareness:
         """Build peaceful awareness using query_fn + internal data."""

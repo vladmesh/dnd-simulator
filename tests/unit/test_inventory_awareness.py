@@ -8,7 +8,7 @@ from dnd_simulator.core.awareness import (
     describe_item,
 )
 from dnd_simulator.core.items import EquipmentSlot, Item, ItemType
-from dnd_simulator.round import Round
+from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder
 
 # ---------------------------------------------------------------------------
 # Test 1: Item with price round-trips through content loader
@@ -89,7 +89,7 @@ class TestEquippedAwareness:
         from dnd_simulator.core.character import Creature
 
         assert isinstance(creature, Creature)
-        equipped = Round._build_equipped(creature)
+        equipped = AwarenessBuilder.build_equipped(creature)
         assert len(equipped) == 2
         slots = {e.slot for e in equipped}
         assert EquipmentSlot.WEAPON in slots
@@ -111,7 +111,7 @@ class TestEquippedAwareness:
             current_hp=10,
             ac=10,
         )
-        equipped = Round._build_equipped(creature)
+        equipped = AwarenessBuilder.build_equipped(creature)
         assert equipped == []
 
 
@@ -154,7 +154,7 @@ class TestFullInventoryAwareness:
             inventory=[potion, sword, scroll],
         )
         # No USE_ITEM or EQUIP in available_actions — should still return all items
-        items = Round._build_available_items(creature, [])
+        items = AwarenessBuilder.build_available_items(creature)
         assert len(items) == 3
         assert all(isinstance(i, ItemInfo) for i in items)
 

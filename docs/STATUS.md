@@ -12,9 +12,9 @@
 **Sprint:** 020-thermo-sweep
 **Goal:** закрыть кластер структурного долга и багов из термоядерного ревью — чистота `rules/`, типизация межслойных границ, декомпозиция выросших модулей и фронтовых god-компонентов; поведение неизменно
 **Started:** 2026-06-30
-**Phase:** 3 — Декомпозиция бэка (task 2 done, task 3 pending) — 2026-07-04
+**Phase:** 3 — Декомпозиция бэка (task 3 done, task 4 pending) — 2026-07-04
 
-Task 1 (дедуп сериализации) + task 2 (combat_manager split + make_relation_fn) закрыты. Task 2: make_relation_fn в rules/reputation (4 closures), combat_manager 481→241 (резолверы/death → combat_resolution.py). make check зелёный. Скоуп task 6 (реестр экипировки) — на подтверждении координатора (decision_gate), дефолт вариант A.
+Tasks 1-3 закрыты. Task 3 (round.py cleanup): awareness-билдеры → AwarenessBuilder (via CreatureHost), resolve_abstract_move → rules/movement, одна активация за итерацию loop, dead-параметр вон; round.py 623→~548. make check зелёный. Скоуп task 6 (реестр экипировки) — на подтверждении координатора (decision_gate), дефолт вариант A.
 
 Полный sweep (выбран пользователем). Источник — [thermo-nuclear-review.md](thermo-nuclear-review.md). Phase 1 закрыта (5 задач), Phase 2 закрыта (4 задачи, E2E зелёный). Фазы 3-4 сверены с брейнштормом [simulation-core](brainstorms/simulation-core.md): activation-логику только изолируем (заменится намерениями/триггерами), слияние combat/peaceful turn-loop отменено, дедуп сериализации повышен до предусловия новой модели (стартовый кусок эпика `save-schema`). Детали — в Decisions спринта.
 
