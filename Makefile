@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test test-unit test-integration check setup-hooks messages compile-messages serve stop frontend up clean test-frontend lint-frontend typecheck-frontend
+.PHONY: install lint format typecheck test test-unit test-integration check check-backend check-frontend setup-hooks messages compile-messages serve stop frontend up clean test-frontend lint-frontend typecheck-frontend
 
 install:
 	uv sync
@@ -32,7 +32,11 @@ lint-frontend:
 typecheck-frontend:
 	cd frontend && npx tsc --noEmit
 
-check: lint typecheck test lint-frontend typecheck-frontend test-frontend
+check-backend: lint typecheck test
+
+check-frontend: lint-frontend typecheck-frontend test-frontend
+
+check: check-backend check-frontend
 
 setup-hooks:
 	@bash scripts/setup-hooks.sh

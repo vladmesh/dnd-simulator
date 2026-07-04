@@ -6,7 +6,7 @@ set -e
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 cd "$REPO_ROOT"
 
-chmod +x .githooks/pre-commit .githooks/pre-push
+chmod +x .githooks/pre-commit .githooks/pre-push scripts/classify-scope.sh
 
 GIT_HOOKS_DIR=$(git rev-parse --git-path hooks)
 mkdir -p "$GIT_HOOKS_DIR"
