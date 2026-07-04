@@ -38,4 +38,10 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Схемо-резолв (`resolveRef`/`resolveProperty`/`isLocalizedText`/`buildDefaults`) вынесен в `schemaResolve.ts`; localized-логика — в `localizedCodec.ts` (`decodeLocalized`/`encodeLocalized`); label-обёртка — `FieldShell.tsx`. `SchemaForm.tsx`: 488 → 388 строк.
+- `ArrayOfObjectsField` теперь строит новую строку через общий `buildDefaults(itemSchema, rootDefs)` — поведение эквивалентно (array-поля инициализируются `[]`, что совпадает с `val ?? []` на сабмите).
+- `SchemaForm.test.tsx` зелёный без правок (22); новые `schemaResolve.test.ts` + `localizedCodec.test.ts`. `tsc -b` без новых ошибок, `eslint` чисто.
