@@ -11,6 +11,7 @@ import structlog
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import ValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from dnd_simulator.adapters.api.deps import get_service, set_service
@@ -97,6 +98,24 @@ async def _player_not_found(request: Request, exc: PlayerNotFoundError) -> Respo
     from fastapi.responses import JSONResponse
 
     return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+
+# App-level handlers for unambiguous exception types. Routes that need a
+# non-standard status or a custom (localized) detail keep their own local
+# try/except — those take precedence over these.
+def _status_handler(status_code: int) -> Callable[[Request, Exception], Awaitable[Response]]:
+    async def handler(request: Request, exc: Exception) -> Response:
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse(status_code=status_code, content={"detail": str(exc)})
+
+    return handler
+
+
+app.add_exception_handler(FileNotFoundError, _status_handler(404))
+app.add_exception_handler(KeyError, _status_handler(404))
+app.add_exception_handler(FileExistsError, _status_handler(409))
+app.add_exception_handler(ValidationError, _status_handler(422))
 
 
 _cors_raw = os.getenv("CORS_ALLOWED_ORIGINS", "*").strip()

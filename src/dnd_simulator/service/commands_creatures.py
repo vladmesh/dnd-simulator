@@ -20,7 +20,7 @@ class CreatureCommands(GameServiceProtocol):
     def list_creatures(
         self,
         session_id: str,
-        entity_type: str | None = None,
+        entity_type: EntityKind | None = None,
         location_id: str | None = None,
         active: bool | None = None,
     ) -> list[dict[str, object]]:
@@ -162,7 +162,7 @@ class CreatureCommands(GameServiceProtocol):
 
     # -- Brain --
 
-    def set_creature_brain(self, session_id: str, entity_id: str, brain_type: BrainType, model: str = "") -> str:
+    def set_creature_brain(self, session_id: str, entity_id: str, brain_type: BrainType, model: str = "") -> BrainType:
         """Switch creature brain (rule_based or llm). Returns actual brain type set."""
         from dnd_simulator.core.character import Creature
         from dnd_simulator.layers.entities.models import Npc
@@ -176,7 +176,7 @@ class CreatureCommands(GameServiceProtocol):
         actual_type = BrainType.LLM if isinstance(entity.brain, LlmBrain) else BrainType.RULE_BASED
         if isinstance(entity, Npc):
             entity.ai_type = actual_type
-        return actual_type.value
+        return actual_type
 
 
 def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) -> Entity:

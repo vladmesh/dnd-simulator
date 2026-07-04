@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import fields
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -10,6 +11,7 @@ from dnd_simulator.core.models import Answer, GameDateTime, Query
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
+from dnd_simulator.service.dto import PlayerStatusData
 from dnd_simulator.service.session import GameSession
 
 _SWORD = Attack(
@@ -94,6 +96,38 @@ class TestBuildRoundState:
         assert "events" in result
         assert "player" in result
         assert "location" in result
+
+    def test_player_dict_matches_status_data(self) -> None:
+        """The WS player payload has the same field set as PlayerStatusData, incl. appearance."""
+        player = PlayerCharacter(
+            id="p1",
+            name="Hero",
+            location_id="village",
+            appearance="a scarred veteran",
+            ability_scores=_scores(STR=16),
+            attacks=(_SWORD,),
+        )
+
+        entities_layer = EntitiesLayer([player])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            return Answer(value=None)
+
+        world = MagicMock(spec=World)
+        world.time = GameDateTime(year=1490, month=6, day=15, hour=14)
+        world.make_query_fn.return_value = query_fn
+        world.location_graph = MagicMock()
+        world.location_graph.has.return_value = False
+
+        session = GameSession(session_id="test", world=world)
+        game_round = MagicMock()
+        game_round.get_perceived_events.return_value = []
+
+        result = session._build_round_state("turn", player, game_round, entities_layer)
+
+        expected_keys = {f.name for f in fields(PlayerStatusData)}
+        assert set(result["player"].keys()) == expected_keys
+        assert result["player"]["appearance"] == "a scarred veteran"
 
 
 class TestCallbackFieldConsistency:

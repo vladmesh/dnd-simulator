@@ -3,15 +3,22 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import structlog
 
 from dnd_simulator.core.character import Creature, Entity
 from dnd_simulator.core.lair import LairState
-from dnd_simulator.core.models import Event, EventType, FactionRelation, Query, QueryType
+from dnd_simulator.core.models import Event, EventType, FactionRelation
 from dnd_simulator.core.monster import EncounterEntry
-from dnd_simulator.core.queries import query_faction_relation, query_is_daylight
+from dnd_simulator.core.queries import (
+    LairInfo,
+    SquadInfo,
+    query_faction_relation,
+    query_is_daylight,
+    query_lairs_at_location,
+    query_squads_at_location,
+)
 from dnd_simulator.rules.encounters import is_active_at_time
 
 if TYPE_CHECKING:
@@ -193,9 +200,8 @@ class ActivationManager:
         from dnd_simulator.core.world import LayerError
 
         try:
-            answer = query_fn("ecology", Query(QueryType.LAIRS_AT_LOCATION, params={"location_id": location_id}))
-            assert isinstance(answer.value, list)
-            return any(info["state"] == LairState.ACTIVE.value for info in answer.value)
+            lairs = query_lairs_at_location(query_fn, location_id)
+            return any(info.state is LairState.ACTIVE for info in lairs)
         except LayerError:
             return False
 
@@ -312,15 +318,14 @@ class ActivationManager:
         from dnd_simulator.core.world import LayerError
         from dnd_simulator.rules.rule_brain import RuleBrain
 
-        squads_at_active: dict[str, dict[str, Any]] = {}
+        squads_at_active: dict[str, SquadInfo] = {}
         for loc in active_locations:
             try:
-                answer = query_fn("ecology", Query(QueryType.SQUADS_AT_LOCATION, params={"location_id": loc}))
+                squads = query_squads_at_location(query_fn, loc)
             except LayerError:
                 return  # No ecology layer in this world — skip materialization
-            assert isinstance(answer.value, list)
-            for squad_info in answer.value:
-                squads_at_active[str(squad_info["id"])] = squad_info
+            for squad_info in squads:
+                squads_at_active[squad_info.id] = squad_info
 
         # Materialize new squads
         for squad_id, info in squads_at_active.items():
@@ -328,7 +333,7 @@ class ActivationManager:
                 continue  # already materialized
             self._materialize_squad(squad_id, info, RuleBrain)
             # Auto-start combat if materialized creatures are hostile to someone here
-            location_id = str(info["current_location_id"])
+            location_id = info.current_location_id
             creature_ids = self._materialized_squads[squad_id][0]
             spawned = [
                 e for cid in creature_ids if cid in self._entities and isinstance((e := self._entities[cid]), Creature)
@@ -358,15 +363,15 @@ class ActivationManager:
     def _materialize_squad(
         self,
         squad_id: str,
-        info: dict[str, Any],
+        info: SquadInfo,
         brain_cls: type,
     ) -> None:
         """Spawn creatures from a squad's member templates."""
-        templates: list[str] = list(info["member_templates"])
-        strength: int = int(info["strength"])
-        max_strength: int = int(info["max_strength"])
-        faction_id = str(info["faction_id"])
-        location = str(info["current_location_id"])
+        templates: list[str] = list(info.member_templates)
+        strength = info.strength
+        max_strength = info.max_strength
+        faction_id = info.faction_id
+        location = info.current_location_id
 
         # Scale creature count by strength ratio
         count = max(1, round(len(templates) * strength / max_strength)) if max_strength > 0 else len(templates)
@@ -389,7 +394,7 @@ class ActivationManager:
         self._materialized_squads[squad_id] = (creature_ids, strength, len(templates_to_spawn))
 
         # Log materialization event so players at this location see it
-        squad_name = str(info.get("name", squad_id))
+        squad_name = info.name
         mat_event = Event(
             event_type=EventType.SQUAD_MATERIALIZED,
             source_layer="entities",
@@ -468,15 +473,14 @@ class ActivationManager:
         """Materialize active lairs at active locations; dematerialize lairs the player left."""
         from dnd_simulator.core.world import LayerError
 
-        lairs_at_active: dict[str, dict[str, Any]] = {}
+        lairs_at_active: dict[str, LairInfo] = {}
         for loc in active_locations:
             try:
-                answer = query_fn("ecology", Query(QueryType.LAIRS_AT_LOCATION, params={"location_id": loc}))
+                lairs = query_lairs_at_location(query_fn, loc)
             except LayerError:
                 return  # No ecology layer in this world — skip lair materialization
-            assert isinstance(answer.value, list)
-            for lair_info in answer.value:
-                lairs_at_active[str(lair_info["id"])] = lair_info
+            for lair_info in lairs:
+                lairs_at_active[lair_info.id] = lair_info
 
         # Materialize new lairs (skip depleted — terminal, nothing spawns)
         for lair_id, info in lairs_at_active.items():
@@ -485,10 +489,10 @@ class ActivationManager:
             self._sync_lair_treasury(lair_id, info)
             if lair_id in self._materialized_lairs:
                 continue
-            if info["state"] != LairState.ACTIVE.value:
+            if info.state is not LairState.ACTIVE:
                 continue
             self._materialize_lair(lair_id, info)
-            location_id = str(info["location_id"])
+            location_id = info.location_id
             creature_ids = self._materialized_lairs[lair_id][0]
             spawned = [
                 e for cid in creature_ids if cid in self._entities and isinstance((e := self._entities[cid]), Creature)
@@ -508,15 +512,15 @@ class ActivationManager:
                 continue
             self._dematerialize_lair(lair_id, now, emit_fn)
 
-    def _materialize_lair(self, lair_id: str, info: dict[str, Any]) -> None:
+    def _materialize_lair(self, lair_id: str, info: LairInfo) -> None:
         """Spawn a lair's current roster (core if alive + alive minions) as concrete creatures."""
         from dnd_simulator.rules.rule_brain import RuleBrain
 
-        core_tid = info.get("core")
-        minion_templates = [str(t) for t in info["members"]]
-        roster: list[str] = ([str(core_tid)] if core_tid else []) + minion_templates
-        faction_id = str(info["faction_id"])
-        location = str(info["location_id"])
+        core_tid = info.core
+        minion_templates = list(info.members)
+        roster: list[str] = ([core_tid] if core_tid else []) + minion_templates
+        faction_id = info.faction_id
+        location = info.location_id
 
         creature_ids: list[str] = []
         core_creature_id: str | None = None
@@ -530,13 +534,13 @@ class ActivationManager:
             creature.active = True
             self._entities[creature.id] = creature
             creature_ids.append(instance_id)
-            if core_tid and core_creature_id is None and tid == str(core_tid):
+            if core_tid and core_creature_id is None and tid == core_tid:
                 core_creature_id = instance_id
             logger.info("lair_materialize", lair_id=lair_id, creature_id=instance_id)
 
         self._materialized_lairs[lair_id] = (creature_ids, core_creature_id, minion_templates)
 
-    def _treasury_core_alive(self, lair_id: str, info: dict[str, Any]) -> bool:
+    def _treasury_core_alive(self, lair_id: str, info: LairInfo) -> bool:
         """Current core status for the treasury gate.
 
         Prefer the live materialized core creature (so killing the core unlocks the
@@ -546,11 +550,11 @@ class ActivationManager:
         """
         if lair_id in self._materialized_lairs:
             return self._is_alive(self._materialized_lairs[lair_id][1])
-        if not info.get("has_core"):
+        if not info.has_core:
             return False
-        return bool(info.get("core_alive", True))
+        return info.core_alive
 
-    def _sync_lair_treasury(self, lair_id: str, info: dict[str, Any]) -> None:
+    def _sync_lair_treasury(self, lair_id: str, info: LairInfo) -> None:
         """Spawn the lair's persistent treasury once, then keep its open-state in sync.
 
         Skips lairs with no treasure block. Spawn is idempotent (deterministic id,
@@ -560,12 +564,12 @@ class ActivationManager:
         from dnd_simulator.core.container import Container
         from dnd_simulator.i18n import _
 
-        treasure_items = info.get("treasure_items") or []
-        treasure_gold = int(info.get("treasure_gold", 0))
+        treasure_items = info.treasure_items
+        treasure_gold = info.treasure_gold
         if not treasure_items and not treasure_gold:
             return
 
-        behind_core = bool(info.get("treasure_behind_core", True))
+        behind_core = info.treasure_behind_core
         is_open = (not behind_core) or (not self._treasury_core_alive(lair_id, info))
 
         container_id = f"{lair_id}_treasury"
@@ -577,7 +581,7 @@ class ActivationManager:
         container = Container(
             id=container_id,
             name=_("Treasure"),
-            location_id=str(info["location_id"]),
+            location_id=info.location_id,
             temporary=False,
             inventory=list(treasure_items),
             gold=treasure_gold,

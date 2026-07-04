@@ -217,12 +217,8 @@ def _build_nearby_merchants_fn(world: World) -> NearbyMerchantsFn:
     from dnd_simulator.layers.entities.layer import EntitiesLayer
     from dnd_simulator.layers.entities.models import Npc
 
-    # Resolve the entities layer once at creation time
-    entities_layer: EntitiesLayer | None = None
-    for layer in world.layers:
-        if isinstance(layer, EntitiesLayer):
-            entities_layer = layer
-            break
+    # Resolve the entities layer once at creation time (partial worlds may lack it)
+    entities_layer = world.find_layer(EntitiesLayer)
 
     def get_nearby_merchants(location_id: str) -> list[Character]:
         if entities_layer is None:
@@ -247,11 +243,7 @@ def _build_nearby_lootables_fn(world: World) -> NearbyLootablesFn:
     from dnd_simulator.layers.entities.layer import EntitiesLayer
     from dnd_simulator.rules.loot import is_lootable
 
-    entities_layer: EntitiesLayer | None = None
-    for layer in world.layers:
-        if isinstance(layer, EntitiesLayer):
-            entities_layer = layer
-            break
+    entities_layer = world.find_layer(EntitiesLayer)
 
     def get_nearby_lootables(location_id: str) -> list[Entity]:
         if entities_layer is None:

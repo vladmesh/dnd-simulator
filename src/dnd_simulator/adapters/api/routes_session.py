@@ -20,6 +20,7 @@ from dnd_simulator.adapters.api.schemas import (
     WorldStateResponse,
 )
 from dnd_simulator.core.brain import BrainType
+from dnd_simulator.core.models import EntityKind
 from dnd_simulator.i18n import _
 from dnd_simulator.service.game_service import GameService
 from dnd_simulator.service.session import GameSession
@@ -77,7 +78,7 @@ def delete_session(session_id: str) -> MessageResponse:
 @router.get("/sessions/{session_id}/creatures", response_model=list[CreatureResponse])
 def list_creatures(
     session_id: str,
-    entity_type: str | None = None,
+    entity_type: EntityKind | None = None,
     location_id: str | None = None,
     active: bool | None = None,
 ) -> list[CreatureResponse]:
@@ -93,7 +94,7 @@ def get_creature(session_id: str, entity_id: str) -> CreatureResponse:
     service = get_service()
     try:
         info = service.get_creature_info(session_id, entity_id)
-    except (ValueError, KeyError) as e:
+    except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     return CreatureResponse.model_validate(info)
 
@@ -154,7 +155,7 @@ def set_brain(session_id: str, entity_id: str, body: SetBrainRequest) -> SetBrai
         actual_type = service.set_creature_brain(session_id, entity_id, body.type, body.model)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    warning = "no_llm_key" if body.type is BrainType.LLM and actual_type != BrainType.LLM.value else None
+    warning = "no_llm_key" if body.type is BrainType.LLM and actual_type is not BrainType.LLM else None
     return SetBrainResponse(
         message=_("Creature {} brain set to {}").format(entity_id, actual_type),
         brain_type=actual_type,
@@ -174,7 +175,7 @@ def patch_nation(session_id: str, nation_id: str, body: PatchNationRequest) -> M
         raise HTTPException(status_code=400, detail=_("No fields to update"))
     try:
         service.patch_nation(session_id, nation_id, updates)
-    except (ValueError, KeyError) as e:
+    except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     return MessageResponse(message=_("Nation {} updated").format(nation_id))
 
@@ -188,7 +189,7 @@ def patch_settlement(session_id: str, settlement_id: str, body: PatchSettlementR
         raise HTTPException(status_code=400, detail=_("No fields to update"))
     try:
         service.patch_settlement(session_id, settlement_id, updates)
-    except (ValueError, KeyError) as e:
+    except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     return MessageResponse(message=_("Settlement {} updated").format(settlement_id))
 
@@ -253,8 +254,6 @@ def load_save(session_id: str, save_name: str) -> MessageResponse:
         service.load_game(session_id, save_name)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
     return MessageResponse(message=_("Loaded '{}'").format(save_name))
 
 
@@ -265,8 +264,6 @@ def delete_save(session_id: str, save_name: str) -> MessageResponse:
     try:
         service.delete_save(session_id, save_name)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e)) from e
-    except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     return MessageResponse(message=_("Deleted '{}'").format(save_name))
 

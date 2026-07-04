@@ -24,6 +24,8 @@ from dnd_simulator.core.models import (
 )
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.player import PlayerCharacter
+from dnd_simulator.core.queries import SquadInfo
+from dnd_simulator.core.squad import SquadBehavior, SquadType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 
 _SWORD = Attack(
@@ -199,15 +201,17 @@ class TestSquadMaterialization:
                 if active_squad and query.params.get("location_id") == "camp":
                     return Answer(
                         value=[
-                            {
-                                "id": "squad_1",
-                                "name": "Wolf Pack",
-                                "member_templates": ["wolf", "wolf", "wolf"],
-                                "strength": 100,
-                                "max_strength": 100,
-                                "faction_id": "wild_beasts",
-                                "current_location_id": "camp",
-                            }
+                            SquadInfo(
+                                id="squad_1",
+                                name="Wolf Pack",
+                                faction_id="wild_beasts",
+                                squad_type=SquadType.MONSTER_PACK,
+                                behavior=SquadBehavior.ROAM,
+                                current_location_id="camp",
+                                strength=100,
+                                max_strength=100,
+                                member_templates=("wolf", "wolf", "wolf"),
+                            )
                         ]
                     )
                 return Answer(value=[])

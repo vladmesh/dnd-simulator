@@ -187,7 +187,7 @@ class TestDematerialization:
 
         # Squad strength updated: 2/3 survived → strength = round(6 * 2/3) = 4
         info = ecology.query(Query(QueryType.SQUAD_INFO, params={"squad_id": "wolves"}))
-        assert info.value["strength"] == 4
+        assert info.value.strength == 4
 
     def test_combat_prevents_dematerialization(self) -> None:
         squad = _squad("wolves", location="forest")

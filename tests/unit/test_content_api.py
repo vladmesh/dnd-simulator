@@ -246,6 +246,30 @@ class TestNotFound:
         assert resp.status_code == HTTPStatus.NOT_FOUND
 
 
+class TestEntityTypeGuards:
+    """Type-guard status pinning: layer vs catalog routes reject the wrong kind (400)."""
+
+    def test_catalog_type_on_layer_route_400(self, tmp_path: Path) -> None:
+        client, _, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/worlds/test_world/entities/monster_catalog")
+        assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+    def test_layer_type_on_catalog_route_400(self, tmp_path: Path) -> None:
+        client, _, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/catalogs/npc")
+        assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+    def test_unknown_type_on_layer_route_422(self, tmp_path: Path) -> None:
+        client, _, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/worlds/test_world/entities/not_real")
+        assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+    def test_unknown_type_on_catalog_route_422(self, tmp_path: Path) -> None:
+        client, _, _ = _make_client(tmp_path)
+        resp = client.get("/api/master/catalogs/not_real")
+        assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
+
 # ---------------------------------------------------------------------------
 # Schema endpoints
 # ---------------------------------------------------------------------------

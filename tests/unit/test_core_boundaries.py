@@ -68,6 +68,35 @@ class TestCreatureHostProtocol:
             _ = world.creature_host
 
 
+class TestWorldGetLayer:
+    """World.get_layer/find_layer resolve a layer by type with fail-fast semantics."""
+
+    def test_get_layer_returns_matching_layer(self) -> None:
+        from dnd_simulator.core.models import GameDateTime
+        from dnd_simulator.core.world import World
+
+        layer = EntitiesLayer(entities=[])
+        world = World(layers=[layer], time=GameDateTime(year=1, month=1, day=1))
+        assert world.get_layer(EntitiesLayer) is layer
+
+    def test_get_layer_raises_with_type_name_when_missing(self) -> None:
+        import pytest
+
+        from dnd_simulator.core.models import GameDateTime
+        from dnd_simulator.core.world import LayerNotFoundError, World
+
+        world = World(layers=[], time=GameDateTime(year=1, month=1, day=1))
+        with pytest.raises(LayerNotFoundError, match="EntitiesLayer"):
+            world.get_layer(EntitiesLayer)
+
+    def test_find_layer_returns_none_when_missing(self) -> None:
+        from dnd_simulator.core.models import GameDateTime
+        from dnd_simulator.core.world import World
+
+        world = World(layers=[], time=GameDateTime(year=1, month=1, day=1))
+        assert world.find_layer(EntitiesLayer) is None
+
+
 class TestLlmDoesNotImportLayers:
     """llm/ must not import from layers/ — use core types and Protocols instead."""
 

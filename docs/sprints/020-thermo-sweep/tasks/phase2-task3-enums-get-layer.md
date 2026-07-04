@@ -47,4 +47,13 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- **World.get_layer/find_layer** (`core/world.py`): generic `get_layer[L](kind: type[L]) -> L` (fail-fast `LayerNotFoundError`, subclasses `RuntimeError` so existing handlers keep catching) + `find_layer[L] -> L | None` for partial worlds. Migrated all 6 sites: `creature_host` property, three `_get_*_layer` in game_service (now one-liners; `service/base.py` protocol untouched), two `_build_nearby_*_fn` in action_dispatcher (use `find_layer`, silent `[]` for partial worlds preserved). `creature_host` passes the runtime_checkable `CreatureHost` Protocol → one narrow `# type: ignore[type-abstract]` (mypy rejects a Protocol as `type[...]`, but isinstance works).
+- **LayerSource** (`commands_worldbuilder.py`): `_resolve_layer_path`/`_resolve_entity_layer_path` now return `tuple[Path, LayerSource]`; four `if source == "library"` → `is LayerSource.LIBRARY`. Import lifted to module top (was function-local).
+- **BrainType**: `set_creature_brain` returns `BrainType` (was `.value` str); route warning check `actual_type is not BrainType.LLM`; `SetBrainResponse.brain_type: BrainType`. Wire JSON unchanged (StrEnum serializes to its value).
+- **EntityKind at API**: `SpawnCreatureRequest.entity_type: EntityKind`, `list_creatures` route + command param `EntityKind | None`, `query_all_creatures` accessor param `EntityKind | None` (stores `.value`). Invalid `?entity_type=bogus` now 422 from FastAPI instead of a deep ValueError. `CreatureResponse.entity_type` left `str` (wire format, "" legal). New RED→GREEN test for the 422.
+- **Test fix**: `test_action_dispatcher._WORLD` (a `MagicMock(spec=World)`) — old code iterated `world.layers` (mock `__iter__` → empty), new code calls `world.find_layer()` which returned a truthy Mock, so the merchant/lootable providers activated and hit `world.time` (an instance attr absent from spec). Set `find_layer.return_value = None` to mirror an empty world. 15 get_available_actions tests were failing on this; now green.
+- Pre-existing frontend flake (`CreatureForm.test.tsx`, userEvent 5s timeout under full-suite load) tripped once in `make check`; passes reliably in isolation. Out of scope (backend-only task), not touched.

@@ -152,6 +152,12 @@ class TestCreatureHotControls:
         creatures = resp.json()
         assert all(c["entity_type"] == "npc" for c in creatures)
 
+    def test_list_creatures_invalid_entity_type_is_422(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        sid = _create_session(client)
+        resp = client.get(f"/api/master/sessions/{sid}/creatures?entity_type=bogus")
+        assert resp.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+
     def test_list_creatures_filter_player(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
         sid = _create_session_with_player(client)

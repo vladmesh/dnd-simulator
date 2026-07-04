@@ -3,6 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from dnd_simulator.core.brain import BrainType
+from dnd_simulator.core.models import EntityKind
 
 # -- Requests --
 
@@ -29,7 +30,7 @@ class SpawnCreatureRequest(BaseModel):
 
     id: str
     name: str
-    entity_type: str  # "npc" or "monster"
+    entity_type: EntityKind  # EntityKind.NPC or EntityKind.MONSTER
     # Location
     start_location: str
     # Creature stats
@@ -99,7 +100,7 @@ class SetBrainRequest(BaseModel):
 
 class SetBrainResponse(BaseModel):
     message: str
-    brain_type: str
+    brain_type: BrainType
     warning: str | None = None
 
 

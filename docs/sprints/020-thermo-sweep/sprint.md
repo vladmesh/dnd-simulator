@@ -48,9 +48,11 @@ Scope OUT:
 4. [rules/ purity — i18n handler errors](tasks/phase1-task4-handler-i18n.md) — обернуть `ActionResult(error=...)` в `_()` (items/equipment/trade/action_surge/loot) + RU перевод
 5. [rules/ purity — provider I/O & state](tasks/phase1-task5-purity-providers.md) — merchant/loot провайдеры без world-query в rules; `BaseActionProvider` без состояния
 
-## Phase 2: Типизация границ + enums (фундамент под control-interfaces)
+## Phase 2: Типизация границ + enums (фундамент под control-interfaces) ✓
 
 Межслойные контракты типизированы, строковые сравнения заменены enum'ами, единая точка поиска слоя. Верификация: mypy strict чисто, integration зелёный, поведение неизменно.
+
+**Закрыта 2026-07-04.** Все 4 задачи done. `make check` зелёный, integration 154 passed, E2E зелёный (см. [e2e/phase2-report.md](e2e/phase2-report.md)) — блокеров нет. Task 4 подтверждён через UI: player-status с `appearance` течёт через WS корректно, дубль-fork → 409 через app-level handler.
 
 - Типизированный query-контракт: результат на `QueryType` (типизированные dataclasses / аксессоры) → схлопывает касты `Answer.value`/`isinstance` (`any-to-object-sweep`, `dict-str-object-overuse`); типизировать `Query.params`.
 - `SquadInfo`/`LairInfo` frozen dataclasses вместо bare-dict на границе ecology→entities.
@@ -70,12 +72,12 @@ Scope OUT:
 
 Выросшие модули раздроблены, поведение неизменно, под полной тест-сеткой фаз 1-3. Верификация: integration 154+ зелёный, combat E2E без изменений, дельты размеров файлов.
 
-- `activation_manager` (614) → `activation` / `encounters` / `materialization` + общий трекер материализации (squad и lair — один алгоритм).
-- `round.py` (619) → единый `_run_turn_loop` (combat/peaceful), сборка awareness в `AwarenessBuilder`, одна активация за итерацию loop, `resolve_abstract_move` → `rules/movement`, выкинуть dead-параметр.
+- `activation_manager` (614) → вынести `encounters` / `materialization` + общий трекер материализации (squad и lair — один алгоритм). Саму activation-логику **не полировать** — она будет заменена машиной намерений/триггеров ([simulation-core](../../brainstorms/simulation-core.md)); цель фазы — изолировать её, а не улучшать.
+- `round.py` (619) → сборка awareness в `AwarenessBuilder`, `resolve_abstract_move` → `rules/movement`, одна активация за итерацию loop, выкинуть dead-параметр. Слияние combat/peaceful в единый `_run_turn_loop` — **отменено**: peaceful-ход будет переписан намерениями (simulation-core), боевой останется как есть.
 - `combat_manager` (491) → `make_relation_fn` helper (6 hand-rolled closures), split initiative/turn от combat-state.
 - `ecology/layer` (457) → `movement` / `squad_combat` / `lairs` (паттерн politics).
 - Реестр экипировки: `equipped: dict[EquipmentSlot, Item]` + один EQUIP/UNEQUIP со `slot`-параметром + factory-хендлеры вместо 6 полей / 12 ActionType / 12 обёрток (ужимает `action_defs`).
-- Дедуп сериализации: `GameDateTime.to_dict/from_dict`, per-layer `_x_to_dict` (или `DictBackedLayer` база), `entity_serialization.py` (зеркало `combat_serialization`); разрыв цикла `core/player → content_loader` (сериализация предмета в content_loader).
+- Дедуп сериализации (**повышен**: предусловие simulation-core — «мир заморожен на полушаге» требует lossless-сейва, это стартовый кусок бэклог-эпика `save-schema`): `GameDateTime.to_dict/from_dict`, per-layer `_x_to_dict` (или `DictBackedLayer` база), `entity_serialization.py` (зеркало `combat_serialization`); разрыв цикла `core/player → content_loader` (сериализация предмета в content_loader).
 
 **Tasks:**
 
@@ -100,7 +102,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 2 — tasks generated 2026-07-02. Ready to start task 1.
+**Current:** Phase 2 COMPLETE (2026-07-04). Ready for Phase 3 task generation.
 
 ## Decisions
 
@@ -109,6 +111,7 @@ _(генерируются отдельно перед началом фазы)_
 - **Корректность и инварианты — до рефактора.** BLOCKER порчи данных, видимые баги и чистота `rules/` чинятся первой фазой под тестами; вся декомпозиция — поверх зелёной сетки.
 - **Сериализационную половину `player-xp-not-persisted` берём, WS-race — нет.** Та же дыра `to_full_save_data`, что и BLOCKER; сам `session-disconnect-debounce` остаётся отдельным багом в бэклоге.
 - **Принятые core→rules lazy-импорты не трогаем.** `class_features`/`combat`/`monster` — by-design композиция (решение `core-brain-imports-rules`). В скоупе только цикл `core/player → content_loader`.
+- **Фазы 3-4 сверены с брейнштормом [simulation-core](../../brainstorms/simulation-core.md) (2026-07-04).** Спринт достраиваем: почти всё переживает будущий rework активации. Ре-скоуп фазы 3: activation-логику только изолируем (заменится намерениями/триггерами), слияние combat/peaceful turn-loop отменено, дедуп сериализации повышен до предусловия новой модели. Фаза 4 ортогональна, без изменений.
 
 ## Deferred
 

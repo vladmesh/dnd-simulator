@@ -35,6 +35,19 @@ def _parse_entity_type(raw: str) -> EntityType:
         ) from None
 
 
+def _require_entity_type(raw: str, *, catalog: bool) -> EntityType:
+    """Parse an entity type and enforce it belongs to the requested kind (layer vs catalog)."""
+    et = _parse_entity_type(raw)
+    if catalog and et not in _CATALOG_ENTITY_TYPES:
+        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{et.value} is not a catalog type")
+    if not catalog and et not in _LAYER_ENTITY_TYPES:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST,
+            detail=f"{et.value} is a catalog type, not a layer entity",
+        )
+    return et
+
+
 # ---------------------------------------------------------------------------
 # World entity endpoints
 # ---------------------------------------------------------------------------
@@ -42,29 +55,14 @@ def _parse_entity_type(raw: str) -> EntityType:
 
 @content_router.get("/worlds/{world_id}/entities/{entity_type}")
 def list_entities(world_id: str, entity_type: str) -> list[dict[str, Any]]:
-    et = _parse_entity_type(entity_type)
-    if et not in _LAYER_ENTITY_TYPES:
-        raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST,
-            detail=f"{et.value} is a catalog type, not a layer entity",
-        )
-    try:
-        return get_service().list_content_entities(world_id, et)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
+    et = _require_entity_type(entity_type, catalog=False)
+    return get_service().list_content_entities(world_id, et)
 
 
 @content_router.get("/worlds/{world_id}/entities/{entity_type}/{entity_id}")
 def get_entity(world_id: str, entity_type: str, entity_id: str) -> dict[str, Any]:
-    et = _parse_entity_type(entity_type)
-    if et not in _LAYER_ENTITY_TYPES:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{et.value} is a catalog type")
-    try:
-        return get_service().get_content_entity(world_id, et, entity_id)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
-    except KeyError as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
+    et = _require_entity_type(entity_type, catalog=False)
+    return get_service().get_content_entity(world_id, et, entity_id)
 
 
 @content_router.post(
@@ -72,13 +70,9 @@ def get_entity(world_id: str, entity_type: str, entity_id: str) -> dict[str, Any
     status_code=HTTPStatus.CREATED,
 )
 def create_entity(world_id: str, entity_type: str, entity_id: str, body: dict[str, Any]) -> dict[str, Any]:
-    et = _parse_entity_type(entity_type)
-    if et not in _LAYER_ENTITY_TYPES:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{et.value} is a catalog type")
+    et = _require_entity_type(entity_type, catalog=False)
     try:
         return get_service().create_content_entity(world_id, et, entity_id, body)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
     except ValidationError as e:
         raise HTTPException(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, detail=str(e)) from e
     except ValueError as e:
@@ -87,15 +81,9 @@ def create_entity(world_id: str, entity_type: str, entity_id: str, body: dict[st
 
 @content_router.put("/worlds/{world_id}/entities/{entity_type}/{entity_id}")
 def update_entity(world_id: str, entity_type: str, entity_id: str, body: dict[str, Any]) -> dict[str, Any]:
-    et = _parse_entity_type(entity_type)
-    if et not in _LAYER_ENTITY_TYPES:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{et.value} is a catalog type")
+    et = _require_entity_type(entity_type, catalog=False)
     try:
         return get_service().update_content_entity(world_id, et, entity_id, body)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
-    except KeyError as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
     except ValidationError as e:
         raise HTTPException(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, detail=str(e)) from e
     except ValueError as e:
@@ -104,16 +92,10 @@ def update_entity(world_id: str, entity_type: str, entity_id: str, body: dict[st
 
 @content_router.delete("/worlds/{world_id}/entities/{entity_type}/{entity_id}")
 def delete_entity(world_id: str, entity_type: str, entity_id: str) -> dict[str, str]:
-    et = _parse_entity_type(entity_type)
-    if et not in _LAYER_ENTITY_TYPES:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{et.value} is a catalog type")
+    et = _require_entity_type(entity_type, catalog=False)
     try:
         get_service().delete_content_entity(world_id, et, entity_id)
         return {"message": "deleted"}
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
-    except KeyError as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
     except ValueError as e:
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e)) from e
 
@@ -125,28 +107,19 @@ def delete_entity(world_id: str, entity_type: str, entity_id: str) -> dict[str, 
 
 @content_router.get("/catalogs/{catalog_type}")
 def list_catalog_entries(catalog_type: str) -> list[dict[str, Any]]:
-    et = _parse_entity_type(catalog_type)
-    if et not in _CATALOG_ENTITY_TYPES:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{et.value} is not a catalog type")
+    et = _require_entity_type(catalog_type, catalog=True)
     return get_service().list_catalog_entries(et)
 
 
 @content_router.get("/catalogs/{catalog_type}/{entry_id}")
 def get_catalog_entry(catalog_type: str, entry_id: str) -> dict[str, Any]:
-    et = _parse_entity_type(catalog_type)
-    if et not in _CATALOG_ENTITY_TYPES:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{et.value} is not a catalog type")
-    try:
-        return get_service().get_catalog_entry(et, entry_id)
-    except KeyError as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
+    et = _require_entity_type(catalog_type, catalog=True)
+    return get_service().get_catalog_entry(et, entry_id)
 
 
 @content_router.post("/catalogs/{catalog_type}/{entry_id}", status_code=HTTPStatus.CREATED)
 def create_catalog_entry(catalog_type: str, entry_id: str, body: dict[str, Any]) -> dict[str, Any]:
-    et = _parse_entity_type(catalog_type)
-    if et not in _CATALOG_ENTITY_TYPES:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{et.value} is not a catalog type")
+    et = _require_entity_type(catalog_type, catalog=True)
     try:
         return get_service().create_catalog_entry(et, entry_id, body)
     except ValidationError as e:
@@ -157,27 +130,15 @@ def create_catalog_entry(catalog_type: str, entry_id: str, body: dict[str, Any])
 
 @content_router.put("/catalogs/{catalog_type}/{entry_id}")
 def update_catalog_entry(catalog_type: str, entry_id: str, body: dict[str, Any]) -> dict[str, Any]:
-    et = _parse_entity_type(catalog_type)
-    if et not in _CATALOG_ENTITY_TYPES:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{et.value} is not a catalog type")
-    try:
-        return get_service().update_catalog_entry(et, entry_id, body)
-    except KeyError as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
-    except ValidationError as e:
-        raise HTTPException(status_code=HTTPStatus.UNPROCESSABLE_ENTITY, detail=str(e)) from e
+    et = _require_entity_type(catalog_type, catalog=True)
+    return get_service().update_catalog_entry(et, entry_id, body)
 
 
 @content_router.delete("/catalogs/{catalog_type}/{entry_id}")
 def delete_catalog_entry(catalog_type: str, entry_id: str) -> dict[str, str]:
-    et = _parse_entity_type(catalog_type)
-    if et not in _CATALOG_ENTITY_TYPES:
-        raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=f"{et.value} is not a catalog type")
-    try:
-        get_service().delete_catalog_entry(et, entry_id)
-        return {"message": "deleted"}
-    except KeyError as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
+    et = _require_entity_type(catalog_type, catalog=True)
+    get_service().delete_catalog_entry(et, entry_id)
+    return {"message": "deleted"}
 
 
 # ---------------------------------------------------------------------------
@@ -215,7 +176,4 @@ def _parse_ref_type(raw: str) -> RefType:
 @content_router.get("/worlds/{world_id}/refs/{ref_type}")
 def list_refs(world_id: str, ref_type: str) -> list[dict[str, str]]:
     rt = _parse_ref_type(ref_type)
-    try:
-        return get_service().list_refs(world_id, rt.value)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
+    return get_service().list_refs(world_id, rt.value)

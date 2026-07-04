@@ -42,4 +42,12 @@ Gotcha: `get_state`/`load_state` ecology-слоя сериализуют скв�
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Added `SquadInfo` / `LairInfo` frozen dataclasses + accessors (`query_squads_at_location`, `query_squad_info`, `query_lairs_at_location`) to `core/queries.py`, next to task-1 payloads. `LairInfo.state` is `LairState` (enum), not a `.value` string; `treasure_items`/`members`/`member_templates` are tuples (frozen-friendly).
+- Ecology producers: `_squad_to_dict`/`_lair_to_dict` → `_squad_info`/`_lair_info` returning the dataclasses. `get_state`/`load_state` build their own dicts inline and were left untouched — save format unchanged (no docker run needed; task added no integration tests).
+- `ActivationManager` now reads typed fields throughout (`_has_active_lair`, `_update_materialization`, `_materialize_squad`, `_update_lair_materialization`, `_materialize_lair`, `_treasury_core_alive`, `_sync_lair_treasury`). Dropped the `assert isinstance(answer.value, list)` guards and the `info["state"] == LairState.ACTIVE.value` string compare (now `info.state is LairState.ACTIVE`). `Query`/`QueryType`/`Any` imports removed from the consumer; `Any` removed from ecology.
+- Contract change to pinning tests (intentional, mirrors task 1): dict-index assertions in test_ecology_layer / test_squad_movement / test_materialization → attribute access; dict fakes in test_activation_manager / test_squad_events → `SquadInfo`. Positional `_materialized_squads`/`_materialized_lairs` tuples left as-is (fase 3 scope).
+- New RED→GREEN test: `query_lairs_at_location` through a real `EcologyLayer` returns `LairInfo` with `state is LairState.ACTIVE`.
