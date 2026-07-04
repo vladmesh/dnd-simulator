@@ -68,9 +68,11 @@ Scope OUT:
 3. [Enum-добивка + World.get_layer](tasks/phase2-task3-enums-get-layer.md) — LayerSource/BrainType/EntityKind хвосты на границах; `get_layer`/`find_layer` вместо 6 isinstance-циклов
 4. [App-level exception handlers + единый player-status](tasks/phase2-task4-exception-handlers-player-status.md) — handlers для однозначных типов + дедуп content type-guard; `player_status` единственный источник (WS получает `appearance`)
 
-## Phase 3: Декомпозиция бэкенд-модулей (отложенный 019-м sweep)
+## Phase 3: Декомпозиция бэкенд-модулей (отложенный 019-м sweep) ✓
 
 Выросшие модули раздроблены, поведение неизменно, под полной тест-сеткой фаз 1-3. Верификация: integration 154+ зелёный, combat E2E без изменений, дельты размеров файлов.
+
+**Закрыта 2026-07-04.** Все 6 задач done. `make check` зелёный на каждой; integration 154 passed; E2E зелёный (см. [e2e/phase3-report.md](e2e/phase3-report.md), 9 сценариев секций 2/3/5, 0 блокеров). Дельты: combat_manager 481→241, activation_manager 626→150, ecology 450→256, round.py 623→~540; новые модули combat_resolution/encounters/materialization/entity_serialization + ecology movement/squad_combat/lairs. Единственная находка E2E — известный out-of-scope WS-reconnect race (`session-disconnect-debounce`), не регрессия фазы 3.
 
 - `activation_manager` (614) → вынести `encounters` / `materialization` + общий трекер материализации (squad и lair — один алгоритм). Саму activation-логику **не полировать** — она будет заменена машиной намерений/триггеров ([simulation-core](../../brainstorms/simulation-core.md)); цель фазы — изолировать её, а не улучшать.
 - `round.py` (619) → сборка awareness в `AwarenessBuilder`, `resolve_abstract_move` → `rules/movement`, одна активация за итерацию loop, выкинуть dead-параметр. Слияние combat/peaceful в единый `_run_turn_loop` — **отменено**: peaceful-ход будет переписан намерениями (simulation-core), боевой останется как есть.
@@ -114,7 +116,7 @@ God-компоненты разбиты, типы перестали быть р
 
 ## Status
 
-**Current:** Phase 3 — все 6 задач done (2026-07-04). Декомпозиция бэка завершена: сериализация-дедуп (предусловие save-schema), combat_manager split, round cleanup, activation split, ecology split, реестр экипировки (вариант A). `make check` зелёный на каждой задаче. Готово к close-phase (integration + E2E).
+**Current:** Phase 3 COMPLETE (2026-07-04) — close-phase зелёный (integration 154, E2E 9/9, 0 блокеров). Остаётся Phase 4 (декомпозиция фронта) — уже выполнена параллельным воркером и влита в main (PR #26). После слияния фаз 3+4 спринт 020 close-ready.
 
 ## Decisions
 
