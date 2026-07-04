@@ -28,6 +28,7 @@ from dnd_simulator.rules.action_provider import (
 )
 from dnd_simulator.rules.actions import action_cost
 from dnd_simulator.rules.handlers import (
+    EQUIPMENT_HANDLERS,
     handle_action_surge,
     handle_attack,
     handle_bless,
@@ -35,12 +36,6 @@ from dnd_simulator.rules.handlers import (
     handle_dash,
     handle_disengage,
     handle_dodge,
-    handle_equip,
-    handle_equip_armor,
-    handle_equip_feet,
-    handle_equip_head,
-    handle_equip_ring,
-    handle_equip_shield,
     handle_flee,
     handle_idle,
     handle_lay_on_hands,
@@ -53,12 +48,6 @@ from dnd_simulator.rules.handlers import (
     handle_sell,
     handle_short_rest,
     handle_take,
-    handle_unequip,
-    handle_unequip_armor,
-    handle_unequip_feet,
-    handle_unequip_head,
-    handle_unequip_ring,
-    handle_unequip_shield,
     handle_use_item,
     handle_wait,
 )
@@ -177,18 +166,8 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.register(ActionType.WAIT, handle_wait)
     dispatcher.register(ActionType.USE_ITEM, handle_use_item)
     dispatcher.register(ActionType.BLESS, handle_bless)
-    dispatcher.register(ActionType.EQUIP, handle_equip)
-    dispatcher.register(ActionType.UNEQUIP, handle_unequip)
-    dispatcher.register(ActionType.EQUIP_ARMOR, handle_equip_armor)
-    dispatcher.register(ActionType.UNEQUIP_ARMOR, handle_unequip_armor)
-    dispatcher.register(ActionType.EQUIP_SHIELD, handle_equip_shield)
-    dispatcher.register(ActionType.UNEQUIP_SHIELD, handle_unequip_shield)
-    dispatcher.register(ActionType.EQUIP_HEAD, handle_equip_head)
-    dispatcher.register(ActionType.UNEQUIP_HEAD, handle_unequip_head)
-    dispatcher.register(ActionType.EQUIP_FEET, handle_equip_feet)
-    dispatcher.register(ActionType.UNEQUIP_FEET, handle_unequip_feet)
-    dispatcher.register(ActionType.EQUIP_RING, handle_equip_ring)
-    dispatcher.register(ActionType.UNEQUIP_RING, handle_unequip_ring)
+    for _equip_action, _equip_handler in EQUIPMENT_HANDLERS.items():
+        dispatcher.register(_equip_action, _equip_handler)
     dispatcher.register(ActionType.SECOND_WIND, handle_second_wind)
     dispatcher.register(ActionType.ACTION_SURGE, handle_action_surge)
     dispatcher.register(ActionType.LAY_ON_HANDS, handle_lay_on_hands)

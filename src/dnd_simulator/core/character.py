@@ -10,7 +10,7 @@ import structlog
 
 from dnd_simulator.core.class_features import ClassFeatures
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.items import Item
+from dnd_simulator.core.items import EquipmentSlot, Item
 from dnd_simulator.core.resource import ResourcePool
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.i18n import _
@@ -223,12 +223,7 @@ class Creature(Entity):
     conditions: dict[Condition, int | None] = field(default_factory=dict)
     inventory: list[Item] = field(default_factory=list)
     gold: int = 0
-    equipped_weapon: Item | None = None
-    equipped_armor: Item | None = None
-    equipped_shield: Item | None = None
-    equipped_head: Item | None = None
-    equipped_feet: Item | None = None
-    equipped_ring: Item | None = None
+    equipped: dict[EquipmentSlot, Item] = field(default_factory=dict)
     resource_pools: list[ResourcePool] = field(default_factory=list)
     reputation: dict[str, int] = field(default_factory=dict)  # sparse: faction_id → rep score
     xp_value: int = 0  # XP awarded to Character attacker on kill (0 for most creatures, set from CR for monsters)
@@ -236,6 +231,66 @@ class Creature(Entity):
     wake_at_seconds: int | None = None  # absolute game-time seconds; None = not waiting
     combat_position: tuple[int, int] | None = None  # fixed starting position on battle map (x, y in feet)
     brain: Brain | None = field(default=None, repr=False)
+
+    # Compat accessors over the `equipped` slot registry. Readers/writers across the codebase
+    # (weapons, modifiers, awareness, serialization, equip handlers) use these named slots;
+    # `equipped` is the single source of truth.
+    def _get_slot(self, slot: EquipmentSlot) -> Item | None:
+        return self.equipped.get(slot)
+
+    def _set_slot(self, slot: EquipmentSlot, item: Item | None) -> None:
+        if item is None:
+            self.equipped.pop(slot, None)
+        else:
+            self.equipped[slot] = item
+
+    @property
+    def equipped_weapon(self) -> Item | None:
+        return self._get_slot(EquipmentSlot.WEAPON)
+
+    @equipped_weapon.setter
+    def equipped_weapon(self, item: Item | None) -> None:
+        self._set_slot(EquipmentSlot.WEAPON, item)
+
+    @property
+    def equipped_armor(self) -> Item | None:
+        return self._get_slot(EquipmentSlot.ARMOR)
+
+    @equipped_armor.setter
+    def equipped_armor(self, item: Item | None) -> None:
+        self._set_slot(EquipmentSlot.ARMOR, item)
+
+    @property
+    def equipped_shield(self) -> Item | None:
+        return self._get_slot(EquipmentSlot.SHIELD)
+
+    @equipped_shield.setter
+    def equipped_shield(self, item: Item | None) -> None:
+        self._set_slot(EquipmentSlot.SHIELD, item)
+
+    @property
+    def equipped_head(self) -> Item | None:
+        return self._get_slot(EquipmentSlot.HEAD)
+
+    @equipped_head.setter
+    def equipped_head(self, item: Item | None) -> None:
+        self._set_slot(EquipmentSlot.HEAD, item)
+
+    @property
+    def equipped_feet(self) -> Item | None:
+        return self._get_slot(EquipmentSlot.FEET)
+
+    @equipped_feet.setter
+    def equipped_feet(self, item: Item | None) -> None:
+        self._set_slot(EquipmentSlot.FEET, item)
+
+    @property
+    def equipped_ring(self) -> Item | None:
+        return self._get_slot(EquipmentSlot.RING)
+
+    @equipped_ring.setter
+    def equipped_ring(self, item: Item | None) -> None:
+        self._set_slot(EquipmentSlot.RING, item)
 
     @property
     def memory_tags(self) -> list[str]:

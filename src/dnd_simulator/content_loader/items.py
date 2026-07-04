@@ -301,19 +301,21 @@ def parse_equipped_weapon(items: list[Item]) -> Item | None:
     return _parse_equipped(items, ItemType.WEAPON)
 
 
-def extract_all_equipped(inventory: list[Item]) -> tuple[dict[str, Item | None], list[Item]]:
-    """Extract all equipped items from inventory, returning (equipped_dict, remaining_inventory).
+def extract_all_equipped(inventory: list[Item]) -> tuple[dict[EquipmentSlot, Item], list[Item]]:
+    """Extract equipped items from inventory, returning (equipped_by_slot, remaining_inventory).
 
-    equipped_dict keys match Creature field names: equipped_weapon, equipped_armor, etc.
+    The map is keyed by ``EquipmentSlot`` and holds only occupied slots — ready to pass as
+    ``Creature.equipped``.
     """
-    equipped: dict[str, Item | None] = {
-        "equipped_weapon": _parse_equipped(inventory, ItemType.WEAPON),
-        "equipped_armor": _parse_equipped(inventory, ItemType.ARMOR),
-        "equipped_shield": _parse_equipped(inventory, ItemType.SHIELD),
-        "equipped_head": _parse_equipped(inventory, ItemType.ACCESSORY, EquipmentSlot.HEAD),
-        "equipped_feet": _parse_equipped(inventory, ItemType.ACCESSORY, EquipmentSlot.FEET),
-        "equipped_ring": _parse_equipped(inventory, ItemType.ACCESSORY, EquipmentSlot.RING),
+    by_slot_source: dict[EquipmentSlot, Item | None] = {
+        EquipmentSlot.WEAPON: _parse_equipped(inventory, ItemType.WEAPON),
+        EquipmentSlot.ARMOR: _parse_equipped(inventory, ItemType.ARMOR),
+        EquipmentSlot.SHIELD: _parse_equipped(inventory, ItemType.SHIELD),
+        EquipmentSlot.HEAD: _parse_equipped(inventory, ItemType.ACCESSORY, EquipmentSlot.HEAD),
+        EquipmentSlot.FEET: _parse_equipped(inventory, ItemType.ACCESSORY, EquipmentSlot.FEET),
+        EquipmentSlot.RING: _parse_equipped(inventory, ItemType.ACCESSORY, EquipmentSlot.RING),
     }
-    equipped_ids = {item.id for item in equipped.values() if item is not None}
+    equipped: dict[EquipmentSlot, Item] = {slot: item for slot, item in by_slot_source.items() if item is not None}
+    equipped_ids = {item.id for item in equipped.values()}
     remaining = [i for i in inventory if i.id not in equipped_ids]
     return equipped, remaining

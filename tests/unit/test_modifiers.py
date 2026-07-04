@@ -14,7 +14,7 @@ from dnd_simulator.core.character import (
 )
 from dnd_simulator.core.class_features import FighterFeatures, FightingStyle, PaladinFeatures, RogueFeatures
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.items import ArmorCategory, ArmorDef, Item, ItemType, WeaponCategory, WeaponDef
+from dnd_simulator.core.items import ArmorCategory, ArmorDef, EquipmentSlot, Item, ItemType, WeaponCategory, WeaponDef
 from dnd_simulator.core.modifiers import Modifier, ModifierOp, StatType
 from dnd_simulator.rules.modifiers import (
     _CONDITION_DEFENSE_MODIFIERS,
@@ -51,7 +51,7 @@ def _creature(
         speed=speed,
         conditions=conditions or {},
         ability_scores=scores,
-        equipped_weapon=equipped_weapon,
+        equipped={EquipmentSlot.WEAPON: equipped_weapon} if equipped_weapon else {},
     )
 
 

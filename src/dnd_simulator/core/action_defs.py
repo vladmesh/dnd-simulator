@@ -85,6 +85,20 @@ class ActionDef:
         return self.target_mode == TargetMode.SINGLE
 
 
+@dataclass(frozen=True)
+class EquipActionSpec:
+    """Per-slot metadata for generating the equip + unequip ActionDefs in a loop."""
+
+    equip_action: ActionType
+    equip_description: str
+    param_key: str
+    param_description: str
+    unequip_action: ActionType
+    unequip_description: str
+    ends_peaceful_turn: bool = False
+    equip_llm_hint: str = ""
+
+
 # ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
@@ -296,126 +310,87 @@ _reg(
     )
 )
 
-_reg(
-    ActionDef(
-        action_type=ActionType.EQUIP,
-        description=N_("Equip a weapon from your inventory."),
-        cost_type=CostType.FREE,
+# Equip/unequip ActionDefs — one per slot per direction, registered via a loop.
+# Each spec keeps its exact N_() msgid (i18n) and per-slot flags. The weapon slot is the
+# only one that ends a peaceful turn and carries an llm_hint (it existed before the others).
+_EQUIP_ACTION_SPECS: tuple[EquipActionSpec, ...] = (
+    EquipActionSpec(
+        equip_action=ActionType.EQUIP,
+        equip_description=N_("Equip a weapon from your inventory."),
+        param_key="weapon_id",
+        param_description=N_("ID of the weapon to equip"),
+        unequip_action=ActionType.UNEQUIP,
+        unequip_description=N_("Put away your equipped weapon. You will fight with fists."),
         ends_peaceful_turn=True,
-        provider_managed=True,
-        params=(ParamDef("weapon_id", "string", N_("ID of the weapon to equip"), required=True),),
-        llm_hint=(
+        equip_llm_hint=(
             "Equip a weapon from your inventory. Free action. "
             "Attacking with a weapon deals more damage than fists. "
             "Your current weapon (if any) goes back to inventory."
         ),
-    )
+    ),
+    EquipActionSpec(
+        equip_action=ActionType.EQUIP_ARMOR,
+        equip_description=N_("Equip armor from your inventory."),
+        param_key="armor_id",
+        param_description=N_("ID of the armor to equip"),
+        unequip_action=ActionType.UNEQUIP_ARMOR,
+        unequip_description=N_("Remove your equipped armor."),
+    ),
+    EquipActionSpec(
+        equip_action=ActionType.EQUIP_SHIELD,
+        equip_description=N_("Equip a shield from your inventory. +2 AC."),
+        param_key="shield_id",
+        param_description=N_("ID of the shield to equip"),
+        unequip_action=ActionType.UNEQUIP_SHIELD,
+        unequip_description=N_("Remove your equipped shield."),
+    ),
+    EquipActionSpec(
+        equip_action=ActionType.EQUIP_HEAD,
+        equip_description=N_("Equip headgear from your inventory."),
+        param_key="head_id",
+        param_description=N_("ID of the headgear to equip"),
+        unequip_action=ActionType.UNEQUIP_HEAD,
+        unequip_description=N_("Remove your equipped headgear."),
+    ),
+    EquipActionSpec(
+        equip_action=ActionType.EQUIP_FEET,
+        equip_description=N_("Equip footwear from your inventory."),
+        param_key="feet_id",
+        param_description=N_("ID of the footwear to equip"),
+        unequip_action=ActionType.UNEQUIP_FEET,
+        unequip_description=N_("Remove your equipped footwear."),
+    ),
+    EquipActionSpec(
+        equip_action=ActionType.EQUIP_RING,
+        equip_description=N_("Equip a ring from your inventory."),
+        param_key="ring_id",
+        param_description=N_("ID of the ring to equip"),
+        unequip_action=ActionType.UNEQUIP_RING,
+        unequip_description=N_("Remove your equipped ring."),
+    ),
 )
 
-_reg(
-    ActionDef(
-        action_type=ActionType.UNEQUIP,
-        description=N_("Put away your equipped weapon. You will fight with fists."),
-        cost_type=CostType.FREE,
-        ends_peaceful_turn=True,
-        provider_managed=True,
+for _spec in _EQUIP_ACTION_SPECS:
+    _reg(
+        ActionDef(
+            action_type=_spec.equip_action,
+            description=_spec.equip_description,
+            cost_type=CostType.FREE,
+            ends_peaceful_turn=_spec.ends_peaceful_turn,
+            provider_managed=True,
+            params=(ParamDef(_spec.param_key, "string", _spec.param_description, required=True),),
+            llm_hint=_spec.equip_llm_hint,
+        )
     )
-)
-
-_reg(
-    ActionDef(
-        action_type=ActionType.EQUIP_ARMOR,
-        description=N_("Equip armor from your inventory."),
-        cost_type=CostType.FREE,
-        provider_managed=True,
-        params=(ParamDef("armor_id", "string", N_("ID of the armor to equip"), required=True),),
+    _reg(
+        ActionDef(
+            action_type=_spec.unequip_action,
+            description=_spec.unequip_description,
+            cost_type=CostType.FREE,
+            ends_peaceful_turn=_spec.ends_peaceful_turn,
+            provider_managed=True,
+        )
     )
-)
-
-_reg(
-    ActionDef(
-        action_type=ActionType.UNEQUIP_ARMOR,
-        description=N_("Remove your equipped armor."),
-        cost_type=CostType.FREE,
-        provider_managed=True,
-    )
-)
-
-_reg(
-    ActionDef(
-        action_type=ActionType.EQUIP_SHIELD,
-        description=N_("Equip a shield from your inventory. +2 AC."),
-        cost_type=CostType.FREE,
-        provider_managed=True,
-        params=(ParamDef("shield_id", "string", N_("ID of the shield to equip"), required=True),),
-    )
-)
-
-_reg(
-    ActionDef(
-        action_type=ActionType.UNEQUIP_SHIELD,
-        description=N_("Remove your equipped shield."),
-        cost_type=CostType.FREE,
-        provider_managed=True,
-    )
-)
-
-_reg(
-    ActionDef(
-        action_type=ActionType.EQUIP_HEAD,
-        description=N_("Equip headgear from your inventory."),
-        cost_type=CostType.FREE,
-        provider_managed=True,
-        params=(ParamDef("head_id", "string", N_("ID of the headgear to equip"), required=True),),
-    )
-)
-
-_reg(
-    ActionDef(
-        action_type=ActionType.UNEQUIP_HEAD,
-        description=N_("Remove your equipped headgear."),
-        cost_type=CostType.FREE,
-        provider_managed=True,
-    )
-)
-
-_reg(
-    ActionDef(
-        action_type=ActionType.EQUIP_FEET,
-        description=N_("Equip footwear from your inventory."),
-        cost_type=CostType.FREE,
-        provider_managed=True,
-        params=(ParamDef("feet_id", "string", N_("ID of the footwear to equip"), required=True),),
-    )
-)
-
-_reg(
-    ActionDef(
-        action_type=ActionType.UNEQUIP_FEET,
-        description=N_("Remove your equipped footwear."),
-        cost_type=CostType.FREE,
-        provider_managed=True,
-    )
-)
-
-_reg(
-    ActionDef(
-        action_type=ActionType.EQUIP_RING,
-        description=N_("Equip a ring from your inventory."),
-        cost_type=CostType.FREE,
-        provider_managed=True,
-        params=(ParamDef("ring_id", "string", N_("ID of the ring to equip"), required=True),),
-    )
-)
-
-_reg(
-    ActionDef(
-        action_type=ActionType.UNEQUIP_RING,
-        description=N_("Remove your equipped ring."),
-        cost_type=CostType.FREE,
-        provider_managed=True,
-    )
-)
 
 _reg(
     ActionDef(

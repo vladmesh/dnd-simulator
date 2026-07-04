@@ -3,20 +3,11 @@
 from dnd_simulator.rules.handlers.action_surge import handle_action_surge
 from dnd_simulator.rules.handlers.combat import handle_attack, handle_dodge, handle_flee
 from dnd_simulator.rules.handlers.equipment import (
+    EQUIPMENT_HANDLERS,
     SLOT_CONFIGS,
     SlotConfig,
     handle_equip,
-    handle_equip_armor,
-    handle_equip_feet,
-    handle_equip_head,
-    handle_equip_ring,
-    handle_equip_shield,
     handle_unequip,
-    handle_unequip_armor,
-    handle_unequip_feet,
-    handle_unequip_head,
-    handle_unequip_ring,
-    handle_unequip_shield,
 )
 from dnd_simulator.rules.handlers.items import (
     handle_bless,
@@ -39,6 +30,7 @@ from dnd_simulator.rules.handlers.rest import handle_long_rest, handle_short_res
 from dnd_simulator.rules.handlers.trade import handle_buy, handle_sell
 
 __all__ = [
+    "EQUIPMENT_HANDLERS",
     "SLOT_CONFIGS",
     "SlotConfig",
     "handle_action_surge",
@@ -49,11 +41,6 @@ __all__ = [
     "handle_disengage",
     "handle_dodge",
     "handle_equip",
-    "handle_equip_armor",
-    "handle_equip_feet",
-    "handle_equip_head",
-    "handle_equip_ring",
-    "handle_equip_shield",
     "handle_flee",
     "handle_idle",
     "handle_lay_on_hands",
@@ -67,11 +54,6 @@ __all__ = [
     "handle_short_rest",
     "handle_take",
     "handle_unequip",
-    "handle_unequip_armor",
-    "handle_unequip_feet",
-    "handle_unequip_head",
-    "handle_unequip_ring",
-    "handle_unequip_shield",
     "handle_use_item",
     "handle_wait",
 ]

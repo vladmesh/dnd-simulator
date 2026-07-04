@@ -50,4 +50,16 @@ Gotcha: `equipped_*` compat-свойства должны поддерживат
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Variant A, confirmed by coordinator via decision_gate. 12 ActionType + wire contract preserved; frontend untouched (phase 4 already merged, PR #26).
+
+- **Model** (`core/character.py`): 6 `equipped_*` dataclass fields → `equipped: dict[EquipmentSlot, Item]` (single source) + six read/write compat properties (`equipped_weapon` etc.) over `_get_slot`/`_set_slot`. Setter with `None` pops the slot. All ~15 readers unchanged; `setattr(creature, "equipped_weapon", item)` in the equip handler and `entity.equipped_weapon = weapon` in commands go through the setter.
+- **Construction migration**: `extract_all_equipped` now returns `dict[EquipmentSlot, Item]` (occupied slots only); `_to_player`/`_to_npc` pass `equipped=...`. ~10 test files migrated `Creature(equipped_weapon=x)` → `equipped={EquipmentSlot.WEAPON: x}` (the property can't be a dataclass init kwarg).
+- **Handlers** (`rules/handlers/equipment.py`): 12 hand-written wrapper functions → `make_equip_handler(cfg)`/`make_unequip_handler(cfg)` factories + `EQUIPMENT_HANDLERS: dict[ActionType, handler]` built by looping `SLOT_CONFIGS`. `handle_equip`/`handle_unequip` (weapon) kept as named compat aliases for tests. Dispatcher registers via a loop over `EQUIPMENT_HANDLERS` (12 register lines → 2).
+- **action_defs** (`core/action_defs.py`): 12 `_reg(ActionDef(...))` blocks → `_EQUIP_ACTION_SPECS` table (frozen `EquipActionSpec`) + a loop. Every N_() msgid and per-slot flag preserved verbatim (weapon slot keeps `ends_peaceful_turn=True` + `llm_hint`; others don't). i18n msgids unchanged (N_() literals still extractable from the table).
+- **Serialization**: unchanged — `EQUIPMENT_FIELDS` iteration via the compat properties (getattr) produces byte-identical JSON keys (`equipped_weapon` etc.). No rewrite needed.
+- **Deferral documented**: sprint.md Deferred + backlog `equip-action-collapse` (could, Tech Debt) + NB updated in `action-bar-unequip-i18n`.
+- **Pins**: new `test_equipment_registry` (compat props read/write/clear; all 12 ActionDefs + factory registry present; weapon-slot special flags). `make check` green (backend 2369, mypy 160 files, frontend).

@@ -22,6 +22,7 @@ from dnd_simulator.core.class_features import FighterFeatures, FightingStyle, Ro
 from dnd_simulator.core.items import (
     ArmorCategory,
     ArmorDef,
+    EquipmentSlot,
     Item,
     ItemType,
     WeaponCategory,
@@ -447,7 +448,9 @@ class TestFinesseAbilitySelection:
             location_id="arena",
             ac=10,
             ability_scores=scores,
-            equipped_weapon=Item(id="rapier_0", name="Rapier", item_type=ItemType.WEAPON, weapon_def=_RAPIER),
+            equipped={
+                EquipmentSlot.WEAPON: Item(id="rapier_0", name="Rapier", item_type=ItemType.WEAPON, weapon_def=_RAPIER)
+            },
         )
         attack = get_weapon_attack(creature)
         assert attack.ability == Ability.DEX
@@ -460,7 +463,9 @@ class TestFinesseAbilitySelection:
             location_id="arena",
             ac=10,
             ability_scores=scores,
-            equipped_weapon=Item(id="rapier_0", name="Rapier", item_type=ItemType.WEAPON, weapon_def=_RAPIER),
+            equipped={
+                EquipmentSlot.WEAPON: Item(id="rapier_0", name="Rapier", item_type=ItemType.WEAPON, weapon_def=_RAPIER)
+            },
         )
         attack = get_weapon_attack(creature)
         assert attack.ability == Ability.STR
@@ -474,7 +479,9 @@ class TestFinesseAbilitySelection:
             location_id="arena",
             ac=10,
             ability_scores=scores,
-            equipped_weapon=Item(id="rapier_0", name="Rapier", item_type=ItemType.WEAPON, weapon_def=_RAPIER),
+            equipped={
+                EquipmentSlot.WEAPON: Item(id="rapier_0", name="Rapier", item_type=ItemType.WEAPON, weapon_def=_RAPIER)
+            },
         )
         attack = get_weapon_attack(creature)
         assert attack.ability == Ability.STR
@@ -488,17 +495,19 @@ class TestFinesseAbilitySelection:
             location_id="arena",
             ac=10,
             ability_scores=scores,
-            equipped_weapon=Item(
-                id="sword_0",
-                name="Longsword",
-                item_type=ItemType.WEAPON,
-                weapon_def=WeaponDef(
-                    weapon_id="longsword",
-                    attack_name="slash",
-                    category=WeaponCategory.MARTIAL,
-                    damage=(DamageComponent("1d8", DamageType.SLASHING),),
-                ),
-            ),
+            equipped={
+                EquipmentSlot.WEAPON: Item(
+                    id="sword_0",
+                    name="Longsword",
+                    item_type=ItemType.WEAPON,
+                    weapon_def=WeaponDef(
+                        weapon_id="longsword",
+                        attack_name="slash",
+                        category=WeaponCategory.MARTIAL,
+                        damage=(DamageComponent("1d8", DamageType.SLASHING),),
+                    ),
+                )
+            },
         )
         attack = get_weapon_attack(creature)
         assert attack.ability == Ability.STR

@@ -12,9 +12,9 @@
 **Sprint:** 020-thermo-sweep
 **Goal:** закрыть кластер структурного долга и багов из термоядерного ревью — чистота `rules/`, типизация межслойных границ, декомпозиция выросших модулей и фронтовых god-компонентов; поведение неизменно
 **Started:** 2026-06-30
-**Phase:** 3 — Декомпозиция бэка (tasks 1-5 done, task 6 pending decision) — 2026-07-04
+**Phase:** 3 — Декомпозиция бэка (все 6 задач done) — 2026-07-04
 
-Tasks 1-5 закрыты (сериализация-дедуп, combat_manager split, round cleanup, activation split, ecology split). Task 5: ecology 450→256, movement/squad_combat/lairs вынесены (паттерн politics). make check зелёный. Task 6 (реестр экипировки) ждёт решения координатора по фронт-развилке (decision_gate A/B/C) — без ответа буду решать консервативно.
+Tasks 1-6 закрыты. Task 6 (реестр экипировки, вариант A по decision_gate координатора): `Creature.equipped: dict[EquipmentSlot, Item]` + compat-свойства, фабричные хендлеры, action_defs циклом; 12 ActionType + wire сохранены (коллапс 12→2 отложен в бэклог `equip-action-collapse`). make check зелёный. Дальше: close-phase (integration + E2E), влить origin/main, PR.
 
 Полный sweep (выбран пользователем). Источник — [thermo-nuclear-review.md](thermo-nuclear-review.md). Phase 1 закрыта (5 задач), Phase 2 закрыта (4 задачи, E2E зелёный). Фазы 3-4 сверены с брейнштормом [simulation-core](brainstorms/simulation-core.md): activation-логику только изолируем (заменится намерениями/триггерами), слияние combat/peaceful turn-loop отменено, дедуп сериализации повышен до предусловия новой модели (стартовый кусок эпика `save-schema`). Детали — в Decisions спринта.
 

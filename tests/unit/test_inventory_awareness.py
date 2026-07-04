@@ -76,8 +76,7 @@ def _make_creature_with_equipment() -> object:
         max_hp=20,
         current_hp=20,
         ac=10,
-        equipped_weapon=sword,
-        equipped_ring=ring,
+        equipped={EquipmentSlot.WEAPON: sword, EquipmentSlot.RING: ring},
     )
     return creature
 
@@ -201,7 +200,7 @@ class TestPlayerToDict:
             max_hp=20,
             current_hp=20,
             ac=16,
-            equipped_armor=chain_mail,
+            equipped={EquipmentSlot.ARMOR: chain_mail},
             inventory=[potion],
         )
 

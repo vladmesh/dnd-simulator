@@ -114,7 +114,7 @@ God-компоненты разбиты, типы перестали быть р
 
 ## Status
 
-**Current:** Phase 3 tasks generated (2026-07-04). 6 задач, старт с task 1 (сериализация-дедуп, приоритет/предусловие). Скоуп task 6 (реестр экипировки) на подтверждении координатора через decision_gate — по умолчанию вариант A (бэкенд-internal, фронт не трогаем).
+**Current:** Phase 3 — все 6 задач done (2026-07-04). Декомпозиция бэка завершена: сериализация-дедуп (предусловие save-schema), combat_manager split, round cleanup, activation split, ecology split, реестр экипировки (вариант A). `make check` зелёный на каждой задаче. Готово к close-phase (integration + E2E).
 
 ## Decisions
 
@@ -127,7 +127,9 @@ God-компоненты разбиты, типы перестали быть р
 
 ## Deferred
 
-_(заполняется по ходу спринта)_
+- **Полный коллапс 12→2 экипировочных ActionType** (phase 3 task 6). Реестр экипировки сделан бэкенд-internal (вариант A по решению координатора через decision_gate): `Creature.equipped: dict[EquipmentSlot, Item]` + compat-свойства, фабричные хендлеры, `action_defs` циклом. 12 ActionType и wire-контракт **сохранены** — фронт не тронут. Полный коллапс в один `EQUIP`/`UNEQUIP` со `slot`-параметром отложен: это скоординированное бэк+фронт+wire+i18n-изменение → бэклог `equip-action-collapse` (could, Tech Debt). См. NB в `action-bar-unequip-i18n`.
+- **Общий трекер материализации squad+lair** (phase 3 task 4) не унифицирован в один тип: трекеры несут разную roster-метадату и читаются ещё и `QueryHandler`; unification оставлен будущей машине намерений/триггеров (simulation-core). Изоляция (encounters/materialization модули) выполнена.
+- **Слияние combat/peaceful turn-loop** — отменено ре-скоупом (peaceful-ход перепишется намерениями по simulation-core).
 
 ## Results
 
