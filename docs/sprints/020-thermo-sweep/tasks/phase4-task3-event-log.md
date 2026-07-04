@@ -38,4 +38,10 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `useLogInteraction()` — общий expand-set + modal-entry + производный `cardData`; `useStickyScroll(scrollRef, threshold)` — трекинг «прижат к низу» + `handleScroll`, возвращает `{ stickyRef, handleScroll }`.
+- Auto-scroll `useEffect` оставлен в каждом режиме (тела различаются: Compact `scrollTop = scrollHeight`, Full `virtualizer.scrollToIndex`) — вынос колбэка в хук триггерил новый lint-warning `react-hooks/incompatible-library` на `useVirtualizer`, поэтому хук отдаёт `stickyRef`, а не гоняет эффект сам. Дедуп: stickyRef + threshold-логика + interaction-стейт.
+- `EventLog.tsx`: 324 → 279 строк. `EventLog.test.tsx` зелёный без правок (8). `tsc -b` 28 (без новых), `eslint src/` без warnings.
