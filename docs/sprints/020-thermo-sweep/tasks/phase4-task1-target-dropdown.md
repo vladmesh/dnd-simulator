@@ -41,4 +41,10 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `attackParams.ts`: `buildAttackParams(targetId, slotLevel)` — единственная сборка `{target_id, smite_slot_level?}`; заменила три ручных копии (`TargetDropdown`, `Perception`, `NpcInspectModal`).
+- Инлайн smite-панель (~54 строки) в `TargetDropdown` заменена на `<SmiteChoice>` (тот же `data-testid="smite-choice"`, aria-label). `LayOnHandsAmountPicker` вынесен в `action-bar/LayOnHandsAmountPicker.tsx`. `TargetDropdown.tsx`: 354 → 236 строк.
+- Тесты: `attackParams.test.ts` новый; `ActionButton`/`ActionBar`/`Perception` зелёные без правок (50 passed). `tsc -b` без новых ошибок, `eslint` чисто.
