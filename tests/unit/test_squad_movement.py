@@ -137,7 +137,7 @@ class TestRoamMovement:
         graph = _linear_graph()
         layer = EcologyLayer(squads=[squad], location_graph=graph)
 
-        with patch("dnd_simulator.layers.ecology.layer.random") as mock_random:
+        with patch("dnd_simulator.layers.ecology.movement.random") as mock_random:
             mock_random.choice.return_value = "B"
             _tick_layer(layer, seconds=3600, hour=1)
 

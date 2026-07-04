@@ -1,32 +1,29 @@
-"""EcologyLayer — tick-based squad movement, abstract combat, world ecology."""
+"""EcologyLayer — tick-based squad movement, abstract combat, world ecology.
+
+The mechanics live in sibling submodules (``movement``, ``squad_combat``, ``lairs``); this
+layer is the thin facade that ticks them and answers queries (politics-package pattern).
+"""
 
 from __future__ import annotations
 
-import random
-from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import structlog
 
 from dnd_simulator.core.lair import Lair, LairState
 from dnd_simulator.core.layer import Layer
-from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, FactionRelation, Query, QueryType
-from dnd_simulator.core.queries import LairInfo, SquadInfo, query_faction_relation
-from dnd_simulator.core.squad import Squad, SquadBehavior
-from dnd_simulator.rules.abstract_combat import TriggeredEncounter, resolve_abstract_combat
-from dnd_simulator.rules.dice import get_global_rng
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
+from dnd_simulator.core.queries import LairInfo, SquadInfo
+from dnd_simulator.core.squad import Squad
+from dnd_simulator.layers.ecology.lairs import apply_lair_dematerialize, respawn_lairs
+from dnd_simulator.layers.ecology.movement import move_squad
+from dnd_simulator.layers.ecology.squad_combat import resolve_squad_combat
 
 if TYPE_CHECKING:
     from dnd_simulator.core.location import LocationGraph
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn, TimeDelta
 
 logger = structlog.get_logger(domain="ecology")
-
-# Behaviors that follow a fixed route
-_ROUTE_BEHAVIORS = {SquadBehavior.PATROL, SquadBehavior.TRADE}
-
-# Behaviors that roam randomly within territory
-_ROAM_BEHAVIORS = {SquadBehavior.ROAM, SquadBehavior.HUNT, SquadBehavior.RAID}
 
 
 class EcologyLayer(Layer):
@@ -71,7 +68,7 @@ class EcologyLayer(Layer):
             if now - last < squad.tick_interval:
                 logger.debug("squad_skip", squad_id=squad.id, cooldown_remaining=squad.tick_interval - (now - last))
                 continue
-            moved = self._move_squad(squad)
+            moved = move_squad(squad, self._route_index, self._route_direction, self._location_graph)
             logger.info(
                 "squad_tick",
                 squad_id=squad.id,
@@ -97,10 +94,19 @@ class EcologyLayer(Layer):
             self._last_move_time[squad.id] = now
 
         # Phase 2: Resolve squad-vs-squad combat at shared locations
-        events.extend(self._resolve_squad_combat(query_fn))
+        events.extend(
+            resolve_squad_combat(
+                self._squads,
+                self._location_graph,
+                self._last_move_time,
+                self._route_index,
+                self._route_direction,
+                query_fn,
+            )
+        )
 
         # Phase 3: Respawn lair populations
-        self._respawn_lairs(now)
+        respawn_lairs(self._lairs, now)
 
         if events:
             logger.info(
@@ -122,48 +128,8 @@ class EcologyLayer(Layer):
                 self._squads[squad_id].strength = new_strength
                 logger.info("squad_strength_updated", squad_id=squad_id, new_strength=new_strength)
         elif event.event_type is EventType.LAIR_DEMATERIALIZED:
-            self._apply_lair_dematerialize(event)
+            apply_lair_dematerialize(self._lairs, event)
         return ActionResult()
-
-    def _apply_lair_dematerialize(self, event: Event) -> None:
-        """Sync a lair's surviving population from a finished visit."""
-        lair_id = str(event.data["lair_id"])
-        lair = self._lairs.get(lair_id)
-        if lair is None:
-            return
-        alive_members = event.data.get("alive_members")
-        lair.alive_members = [str(m) for m in alive_members] if isinstance(alive_members, list) else []
-        lair.core_alive = bool(event.data.get("core_alive", lair.core_alive))
-        # Anchor the respawn countdown to this visit so respawn waits a full interval afterwards.
-        lair.last_respawn_time = int(event.data.get("at_seconds", lair.last_respawn_time))
-
-        # Depletion decision is a pure rule; the roll is generated here and injected.
-        from dnd_simulator.rules.lairs import should_deplete
-
-        roll = get_global_rng().random()
-        if should_deplete(lair, roll):
-            lair.state = LairState.DEPLETED
-
-        logger.info(
-            "lair_population_updated",
-            lair_id=lair_id,
-            alive_members=len(lair.alive_members),
-            core_alive=lair.core_alive,
-            state=lair.state.value,
-        )
-
-    def _respawn_lairs(self, now: int) -> None:
-        """Refill ACTIVE lairs to their full roster once respawn_interval has elapsed since the last visit."""
-        for lair in self._lairs.values():
-            if lair.state is not LairState.ACTIVE:
-                continue
-            if lair.alive_members is None or len(lair.alive_members) >= len(lair.members):
-                continue  # already at full roster
-            if now - lair.last_respawn_time < lair.respawn_interval:
-                continue
-            lair.alive_members = None  # back to full roster
-            lair.last_respawn_time = now
-            logger.info("lair_respawn", lair_id=lair.id)
 
     def query(self, query: Query) -> Answer:
         """Answer queries about squads.
@@ -252,166 +218,6 @@ class EcologyLayer(Layer):
         rd = state.get("route_direction")
         if isinstance(rd, dict):
             self._route_direction = {str(k): int(v) for k, v in rd.items()}
-
-    # ------------------------------------------------------------------
-    # Movement
-    # ------------------------------------------------------------------
-
-    def _move_squad(self, squad: Squad) -> tuple[str, str] | None:
-        """Move a squad according to its behavior. Returns (from, to) or None if no move."""
-        if squad.behavior is SquadBehavior.GUARD:
-            return None
-
-        if squad.behavior in _ROUTE_BEHAVIORS:
-            return self._move_route(squad)
-
-        if squad.behavior in _ROAM_BEHAVIORS:
-            return self._move_roam(squad)
-
-        return None
-
-    def _move_route(self, squad: Squad) -> tuple[str, str] | None:
-        """Move along route, reversing at endpoints."""
-        if not squad.route:
-            return None
-
-        # Initialize route tracking
-        if squad.id not in self._route_index:
-            try:
-                self._route_index[squad.id] = squad.route.index(squad.current_location_id)
-            except ValueError:
-                self._route_index[squad.id] = 0
-            self._route_direction[squad.id] = 1
-
-        idx = self._route_index[squad.id]
-        direction = self._route_direction[squad.id]
-        next_idx = idx + direction
-
-        # Reverse at endpoints
-        if next_idx < 0 or next_idx >= len(squad.route):
-            direction = -direction
-            self._route_direction[squad.id] = direction
-            next_idx = idx + direction
-
-        if next_idx < 0 or next_idx >= len(squad.route):
-            return None  # single-location route
-
-        old = squad.current_location_id
-        self._route_index[squad.id] = next_idx
-        squad.current_location_id = squad.route[next_idx]
-        return (old, squad.current_location_id)
-
-    def _move_roam(self, squad: Squad) -> tuple[str, str] | None:
-        """Move to a random neighbor within territory."""
-        if self._location_graph is None:
-            return None
-
-        edges = self._location_graph.neighbors(squad.current_location_id)
-        candidates = [e.target_id for e in edges if e.target_id in squad.territory]
-        if not candidates:
-            return None
-
-        old = squad.current_location_id
-        squad.current_location_id = random.choice(candidates)
-        return (old, squad.current_location_id)
-
-    # ------------------------------------------------------------------
-    # Squad-vs-squad combat
-    # ------------------------------------------------------------------
-
-    def _resolve_squad_combat(self, query_fn: QueryFn) -> list[Event]:
-        """Find hostile squads at same location and resolve combat."""
-        events: list[Event] = []
-
-        # Group squads by location
-        by_location: dict[str, list[Squad]] = defaultdict(list)
-        for squad in self._squads.values():
-            by_location[squad.current_location_id].append(squad)
-
-        # Check each location with multiple squads
-        fought: set[str] = set()
-        for location_id, squads in by_location.items():
-            if len(squads) < 2:
-                continue
-
-            for i, a in enumerate(squads):
-                if a.id in fought:
-                    continue
-                for b in squads[i + 1 :]:
-                    if b.id in fought:
-                        continue
-                    if not self._are_hostile(a, b, query_fn):
-                        continue
-
-                    event = self._fight_squads(a, b, location_id)
-                    events.append(event)
-                    fought.add(a.id)
-                    fought.add(b.id)
-                    break  # each squad fights at most once per tick
-
-        # Remove destroyed squads
-        destroyed = [sid for sid, s in self._squads.items() if s.strength <= 0]
-        for sid in destroyed:
-            logger.info("squad_destroyed", squad_id=sid)
-            del self._squads[sid]
-            self._last_move_time.pop(sid, None)
-            self._route_index.pop(sid, None)
-            self._route_direction.pop(sid, None)
-
-        return events
-
-    def _are_hostile(self, a: Squad, b: Squad, query_fn: QueryFn) -> bool:
-        """Check if two squads are hostile via faction relations."""
-        if a.faction_id == b.faction_id:
-            return False
-        return query_faction_relation(query_fn, a.faction_id, b.faction_id) is FactionRelation.HOSTILE
-
-    def _fight_squads(self, a: Squad, b: Squad, location_id: str) -> Event:
-        """Resolve combat between two squads. Loser retreats."""
-        # Model squad B as encounters for squad A
-        b_encounters = [TriggeredEncounter(cr=cr, count=1) for cr in b.member_crs] if b.member_crs else []
-        a_encounters = [TriggeredEncounter(cr=cr, count=1) for cr in a.member_crs] if a.member_crs else []
-
-        result_a = resolve_abstract_combat(a.strength, b_encounters)
-        result_b = resolve_abstract_combat(b.strength, a_encounters)
-
-        a.strength = max(0, a.strength - result_a.strength_lost)
-        b.strength = max(0, b.strength - result_b.strength_lost)
-
-        # Determine winner/loser
-        if result_a.won:
-            winner, loser = a, b
-        else:
-            winner, loser = b, a
-
-        # Loser retreats to a random neighbor (if alive and graph available)
-        if loser.strength > 0 and self._location_graph is not None:
-            edges = self._location_graph.neighbors(location_id)
-            if edges:
-                loser.current_location_id = random.choice(edges).target_id
-
-        logger.info(
-            "squad_combat",
-            winner=winner.id,
-            loser=loser.id,
-            winner_strength=winner.strength,
-            loser_strength=loser.strength,
-        )
-
-        return Event(
-            event_type=EventType.SQUAD_COMBAT,
-            source_layer=self.name,
-            data={
-                "location_id": location_id,
-                "winner_id": winner.id,
-                "winner_name": winner.name,
-                "loser_id": loser.id,
-                "loser_name": loser.name,
-                "winner_strength": winner.strength,
-                "loser_strength": loser.strength,
-            },
-            description=f"{winner.name} defeated {loser.name} at {location_id}",
-        )
 
     @staticmethod
     def _squad_info(squad: Squad) -> SquadInfo:

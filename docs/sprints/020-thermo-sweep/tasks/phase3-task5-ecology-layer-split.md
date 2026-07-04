@@ -45,4 +45,14 @@ Gotcha: `politics/` — эталон структуры (слой тонкий, 
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Split `ecology/layer.py` (450 → 256), following the politics-package pattern (submodule functions take explicit state, not the layer object):
+  - **`ecology/movement.py`** (84): `move_squad(squad, route_index, route_direction, location_graph)` + `_move_route`/`_move_roam`; `_ROUTE_BEHAVIORS`/`_ROAM_BEHAVIORS` moved here.
+  - **`ecology/squad_combat.py`** (129): `resolve_squad_combat(squads, location_graph, last_move_time, route_index, route_direction, query_fn)` + `_are_hostile`/`_fight_squads`. Destroyed-squad cleanup mutates the passed dicts.
+  - **`ecology/lairs.py`** (57): `apply_lair_dematerialize(lairs, event)`, `respawn_lairs(lairs, now)`. Calls the existing pure `rules.lairs.should_deplete` (not duplicated).
+- `EcologyLayer` is now a thin Layer facade: `tick`/`handle_event`/`query`/`get_state`/`load_state` + `_squad_info`/`_lair_info` payload builders. `get_state`/`load_state` format untouched (ecology save round-trip unchanged).
+- **Test contract change**: `test_squad_movement` patched `ecology.layer.random` (roam) → `ecology.movement.random`. No test called the private methods directly, so nothing else changed.
+- `make check` green.
