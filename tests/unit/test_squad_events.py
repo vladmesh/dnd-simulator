@@ -21,6 +21,7 @@ from dnd_simulator.core.monster import MonsterTemplate
 from dnd_simulator.core.queries import SquadInfo
 from dnd_simulator.core.squad import SquadBehavior, SquadType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
+from dnd_simulator.layers.entities.materialization import materialize_squad
 from dnd_simulator.layers.entities.perception import perceive_event
 
 
@@ -188,7 +189,8 @@ class TestSquadMaterializationEvent:
             member_templates=("orc", "orc"),
         )
 
-        layer._activation._materialize_squad("orc_patrol", squad_info, type(None))  # brain_cls unused in this test path
+        # brain_cls unused in this test path
+        materialize_squad(layer._activation, "orc_patrol", squad_info, type(None))
 
         perceived = layer.get_perceived_events(player)
         assert len(perceived) == 1

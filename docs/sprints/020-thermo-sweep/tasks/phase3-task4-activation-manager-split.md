@@ -49,4 +49,14 @@ Gotcha: `_materialized_squads`/`_materialized_lairs` могут сериализ
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Split `activation_manager.py` (626 → 150). `ActivationManager` now owns only the activation passes (anchor players, activate/dormify creatures) + `update_activation`, which delegates to the two new sibling modules.
+- **`encounters.py`** (191): `check_encounters`, `has_active_lair`, `roll_encounters`, `is_daylight_at`, `maybe_start_combat` — free functions taking the manager (`mgr`), same pattern as `combat_resolution`. `ENCOUNTER_COOLDOWN_SECONDS` moved here.
+- **`materialization.py`** (344): squad + lair materialize/dematerialize (`update_squad_materialization`, `materialize_squad`, `dematerialize_squad`, `update_lair_materialization`, `materialize_lair`, `treasury_core_alive`, `sync_lair_treasury`, `dematerialize_lair`, `is_alive`) + shared `_any_in_combat` helper (dedups the "don't dematerialize mid-combat" guard the squad and lair paths both had).
+- **Common materialization tracker — intentionally NOT unified.** The two trackers carry different roster metadata (squad: `(ids, strength, spawn_count)`; lair: `(ids, core_id, minion_templates)`) and are also read by `QueryHandler` (`_materialized_squads`) — forcing one union type would ripple there for a cosmetic gain. The shared *algorithm* is captured by the parallel function structure + `_any_in_combat`/`is_alive` helpers. Full unification is best done when the intents/triggers machine replaces this module (per [simulation-core](../../brainstorms/simulation-core.md)); the re-scope mandate is "isolate, don't polish."
+- Activation logic itself untouched (behaviour-preserving move only).
+- **Test contract change**: `test_spawn_engine` patched `activation_manager.random` → repointed to `encounters.random` (rolling moved there). `test_squad_events` called `_activation._materialize_squad(...)` → `materialization.materialize_squad(_activation, ...)`. All activation/materialization/encounter/lair pins green.
+- `make check` green.

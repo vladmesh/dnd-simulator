@@ -74,7 +74,7 @@ class TestSpawnOnPlayerArrival:
         player.location_id = "forest"
 
         # Roll succeeds (0.1 < 0.5 chance), count=2 (fixed)
-        with patch("dnd_simulator.layers.entities.activation_manager.random") as mock_rng:
+        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
             mock_rng.random.return_value = 0.1  # below 0.5 → success
             mock_rng.randint.return_value = 2
             layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
@@ -100,7 +100,7 @@ class TestSpawnOnPlayerArrival:
 
         player.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.activation_manager.random") as mock_rng:
+        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
             mock_rng.random.return_value = 0.9  # above 0.3 → fail
             layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
 
@@ -130,7 +130,7 @@ class TestSpawnedCreatureStats:
 
         player.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.activation_manager.random") as mock_rng:
+        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
             mock_rng.random.return_value = 0.0
             mock_rng.randint.return_value = 1
             layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
@@ -223,7 +223,7 @@ class TestEncounterCooldown:
 
         player.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.activation_manager.random") as mock_rng:
+        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
             mock_rng.random.return_value = 0.0
             mock_rng.randint.return_value = 1
             time = GameDateTime(year=1490, month=6, day=1, hour=10)
@@ -237,7 +237,7 @@ class TestEncounterCooldown:
         layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10, minute=0, second=6))
         player.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.activation_manager.random") as mock_rng:
+        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
             mock_rng.random.return_value = 0.0
             mock_rng.randint.return_value = 1
             layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10, minute=0, second=12))
@@ -255,7 +255,7 @@ class TestEncounterCooldown:
 
         player.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.activation_manager.random") as mock_rng:
+        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
             mock_rng.random.return_value = 0.0
             mock_rng.randint.return_value = 1
             time_first = GameDateTime(year=1490, month=6, day=1, hour=10)
@@ -272,7 +272,7 @@ class TestEncounterCooldown:
         # Come back after cooldown (10+ minutes later)
         player.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.activation_manager.random") as mock_rng:
+        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
             mock_rng.random.return_value = 0.0
             mock_rng.randint.return_value = 1
             time_after = GameDateTime(year=1490, month=6, day=1, hour=11, minute=15)
@@ -310,7 +310,7 @@ class TestGeneralizedEncounterTriggers:
         # Guard moves to forest (dangerous location)
         guard.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.activation_manager.random") as mock_rng:
+        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
             mock_rng.random.return_value = 0.0
             mock_rng.randint.return_value = 2
             layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10, minute=0, second=6))
@@ -347,7 +347,7 @@ class TestGeneralizedEncounterTriggers:
         # Wanderer moves to forest while dormant
         creature.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.activation_manager.random") as mock_rng:
+        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
             mock_rng.random.return_value = 0.0
             mock_rng.randint.return_value = 1
             layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
@@ -378,7 +378,7 @@ class TestGeneralizedEncounterTriggers:
 
         # Player moves to forest → triggers encounter
         player.location_id = "forest"
-        with patch("dnd_simulator.layers.entities.activation_manager.random") as mock_rng:
+        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
             mock_rng.random.return_value = 0.0
             mock_rng.randint.return_value = 1
             layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
@@ -388,7 +388,7 @@ class TestGeneralizedEncounterTriggers:
 
         # Guard moves to forest within cooldown
         guard.location_id = "forest"
-        with patch("dnd_simulator.layers.entities.activation_manager.random") as mock_rng:
+        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
             mock_rng.random.return_value = 0.0
             mock_rng.randint.return_value = 1
             layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10, minute=1))
@@ -414,7 +414,7 @@ class TestGeneralizedEncounterTriggers:
 
         # Player enters forest → spawns 1 goblin
         player.location_id = "forest"
-        with patch("dnd_simulator.layers.entities.activation_manager.random") as mock_rng:
+        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
             mock_rng.random.return_value = 0.0
             mock_rng.randint.return_value = 1
             layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
@@ -427,7 +427,7 @@ class TestGeneralizedEncounterTriggers:
         goblin.location_id = "swamp"
         goblin.active = True
 
-        with patch("dnd_simulator.layers.entities.activation_manager.random") as mock_rng:
+        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
             mock_rng.random.return_value = 0.0
             mock_rng.randint.return_value = 1
             layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10, minute=0, second=6))
