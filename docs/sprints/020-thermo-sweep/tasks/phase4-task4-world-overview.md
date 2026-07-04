@@ -40,4 +40,10 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `EditableStatsTable<T>` (generic): колонки-дескрипторы (`key`/`label`/`render`/`parse`/`inputProps`/`width`/`mono`), optimistic-save с revert. `patch` опционален — без него таблица read-only без actions-колонки. Заменил `RegionsTable` (read-only), `NationsTable`, `SettlementsTable` — три копии одного паттерна свёрнуты в один компонент + три набора колонок в `WorldOverview`.
+- `WorldOverview.tsx`: 331 → 89 строк. Строки типизированы `Region`/`Nation`/`Settlement` (task 5); `String(...)`-касты убраны. `patchNation`/`patchSettlement` payload неизменны (wealth/military/stability parseFloat, population parseInt, prosperity/defenses parseFloat).
+- Пиновочные тесты `WorldOverview.test.tsx` (4) написаны до рефактора, зелёные и до, и после. `tsc -b` = 28 (baseline), `eslint` чисто.
