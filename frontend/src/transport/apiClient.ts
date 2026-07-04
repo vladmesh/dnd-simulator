@@ -43,6 +43,25 @@ class ApiError extends Error {
     this.status = status
     this.body = body
   }
+
+  /**
+   * Human-readable message from the response `detail`: a plain string, a joined
+   * list of pydantic `{loc, msg}` errors, or the generic message as a fallback.
+   */
+  detailMessage(): string {
+    const detail = (this.body as { detail?: unknown } | null | undefined)?.detail
+    if (Array.isArray(detail)) {
+      return detail
+        .map((e) => {
+          const item = e as { loc?: unknown[]; msg?: string }
+          const loc = Array.isArray(item.loc) ? item.loc.slice(-1).join(".") : ""
+          return `${loc}: ${item.msg}`
+        })
+        .join("; ")
+    }
+    if (detail != null) return String(detail)
+    return this.message
+  }
 }
 
 async function request<T>(

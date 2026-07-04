@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
-import { api } from "@/transport/apiClient"
+import { api, ApiError } from "@/transport/apiClient"
 import type { GiveItemRequest } from "@/types/api"
 import {
   Dialog,
@@ -69,7 +69,7 @@ export function GiveItemDialog({ sessionId, entityId, onClose, onGiven }: Props)
         onGiven()
         toast.success(t("master:item_given"))
       })
-      .catch((err) => setError(String(err.body?.detail ?? err.message)))
+      .catch((err) => setError(err instanceof ApiError ? err.detailMessage() : String(err?.message ?? err)))
       .finally(() => setSaving(false))
   }
 

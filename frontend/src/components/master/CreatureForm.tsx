@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
-import { api } from "@/transport/apiClient"
+import { api, ApiError } from "@/transport/apiClient"
 import type { CreatureResponse } from "@/types/api"
 import {
   Dialog,
@@ -93,14 +93,7 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
         toast.success(isEdit ? t("master:creature_updated") : t("master:creature_spawned"))
       })
       .catch((err) => {
-          const detail = err.body?.detail
-          if (Array.isArray(detail)) {
-            setError(detail.map((e: { loc?: string[]; msg?: string }) =>
-              `${(e.loc ?? []).slice(-1).join(".")}: ${e.msg}`
-            ).join("; "))
-          } else {
-            setError(String(detail ?? err.message))
-          }
+          setError(err instanceof ApiError ? err.detailMessage() : String(err?.message ?? err))
         })
       .finally(() => setSaving(false))
   }

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { MerchantView } from "./TradePanel"
 import { Sword, MessageCircle, ShoppingBag, Send } from "lucide-react"
 import { SmiteChoice } from "./SmiteChoice"
+import { buildAttackParams } from "./attackParams"
 import { getSpellSlots } from "./spellSlots"
 
 interface NpcInspectModalProps {
@@ -188,9 +189,7 @@ export function NpcInspectModal({ entity, open, onClose, isCombat }: NpcInspectM
               slots={spellSlots}
               targetName={entity.id}
               onChoice={(slotLevel) => {
-                const params: Record<string, unknown> = { target_id: entity.id }
-                if (slotLevel != null) params.smite_slot_level = slotLevel
-                sendAction("attack", params)
+                sendAction("attack", buildAttackParams(entity.id, slotLevel))
                 setShowSmite(false)
                 onClose()
               }}

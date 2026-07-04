@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Eye, Sword, MessageCircle, Send } from "lucide-react"
 import { NpcInspectModal } from "./NpcInspectModal"
 import { SmiteChoice } from "./SmiteChoice"
+import { buildAttackParams } from "./attackParams"
 import { getSpellSlots } from "./spellSlots"
 
 export function Perception() {
@@ -99,9 +100,7 @@ export function Perception() {
                   slots={spellSlots}
                   targetName={entity.id}
                   onChoice={(slotLevel) => {
-                    const params: Record<string, unknown> = { target_id: entity.id }
-                    if (slotLevel != null) params.smite_slot_level = slotLevel
-                    sendAction("attack", params)
+                    sendAction("attack", buildAttackParams(entity.id, slotLevel))
                     setSmiteTarget(null)
                   }}
                   onCancel={() => setSmiteTarget(null)}
