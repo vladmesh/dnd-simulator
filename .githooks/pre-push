@@ -1,9 +1,11 @@
 #!/bin/bash
-# Pre-push hook: full local gate (make check) must pass before pushing.
-# Mirrors CI (backend + frontend lint/typecheck/tests); integration runs in
-# CI and at /close-phase, not here (too heavy for a hook).
+# Pre-push hook: scope-filtered gate. Full `make check` is the fail-safe
+# default; single-scope changes (backend-only / frontend-only) run only
+# their half via scripts/classify-scope.sh (shared with CI). docs-only
+# changes run nothing. Integration runs in CI and at /close-phase, not
+# here (too heavy for a hook).
 
-set -e
+set -u
 
 REPO_ROOT=$(git rev-parse --show-toplevel)
 cd "$REPO_ROOT"
@@ -18,9 +20,82 @@ if ! command -v npx &> /dev/null; then
     exit 1
 fi
 
-echo "Running pre-push checks (make check)..."
+ZERO_SHA="0000000000000000000000000000000000000000"
+CHANGED_FILES=$(mktemp)
+trap 'rm -f "$CHANGED_FILES"' EXIT
 
-if ! make check; then
+had_input=0
+classify_error=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    had_input=1
+
+    # Deleting the remote ref — nothing pushed, nothing to check.
+    if [ "$local_sha" = "$ZERO_SHA" ]; then
+        continue
+    fi
+
+    if [ "$remote_sha" = "$ZERO_SHA" ]; then
+        # New branch on the remote: diff against merge-base with origin/main.
+        base=$(git merge-base "$local_sha" origin/main 2>/dev/null) || { classify_error=1; break; }
+    else
+        base="$remote_sha"
+    fi
+
+    if ! git diff --name-only "$base" "$local_sha" >> "$CHANGED_FILES" 2>/dev/null; then
+        classify_error=1
+        break
+    fi
+done
+
+run_full_check() {
+    if ! make check; then
+        echo "Checks failed. Fix before pushing."
+        exit 1
+    fi
+    echo "All checks passed."
+    exit 0
+}
+
+if [ "$had_input" -eq 0 ]; then
+    echo "Pre-push: empty stdin — running full make check (fail-safe)."
+    run_full_check
+fi
+
+if [ "$classify_error" -eq 1 ]; then
+    echo "Pre-push: could not classify changed paths — running full make check (fail-safe)."
+    run_full_check
+fi
+
+if [ ! -s "$CHANGED_FILES" ]; then
+    # Nothing changed across the pushed refs (e.g. only ref deletions).
+    scope="mixed"
+else
+    scope=$(sort -u "$CHANGED_FILES" | scripts/classify-scope.sh) || scope="mixed"
+fi
+
+case "$scope" in
+    docs)
+        echo "Pre-push: docs-only changes detected — skipping checks."
+        exit 0
+        ;;
+    frontend)
+        echo "Pre-push: frontend-only changes detected — running make check-frontend."
+        target="check-frontend"
+        ;;
+    backend)
+        echo "Pre-push: backend-only changes detected — running make check-backend."
+        target="check-backend"
+        ;;
+    *)
+        echo "Pre-push: mixed/infra changes detected — running full make check."
+        target="check"
+        ;;
+esac
+
+echo "Running pre-push checks (make $target)..."
+
+if ! make "$target"; then
     echo "Checks failed. Fix before pushing."
     exit 1
 fi
