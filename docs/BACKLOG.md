@@ -3,30 +3,46 @@
 Приоритеты: **must** — блокирует следующие уровни или играбельность, **should** — заметно улучшает качество, **could** — nice to have.
 
 Механики и контент с зависимостями — в [ecs-and-content.md](brainstorms/ecs-and-content.md).
+Направление симуляционного ядра (время, активность, внутреннее я, детализация) — в [simulation-core.md](brainstorms/simulation-core.md).
 Валидация и инварианты — в [world-state-machine.md](brainstorms/world-state-machine.md).
 Что сделано — в [ROADMAP.md](ROADMAP.md).
 Свежие находки аудита живут в [audit.md](audit.md) до триажа; `/audit-triage` переносит их сюда.
 
 ---
 
+## Simulation Core (брейншторм 2026-07-04)
+
+Эпики новой модели из [simulation-core.md](brainstorms/simulation-core.md). Порядок зависимостей: `save-schema` → `anchor-as-property` + `intents` → `trigger-table` → `inner-self` → `detail-ladder` → `quest-system`.
+
+- [ ] **must** `save-schema` — единая схема сейва (Pydantic по образцу контента) вместо рукописного формата в нескольких местах. Предусловие всей модели: «мир заморожен на полушаге» требует lossless-сейва (намерения, планы мозгов, триггеры, лог мыслей, зародыши субъектности). Стартовый кусок — «дедуп сериализации» в Sprint 020 phase 3, добивается отдельным спринтом
+- [ ] **must** `anchor-as-property` — якорь материализации как свойство существа, не тип: активация без `isinstance(PlayerCharacter)`. Player-agnostic движок (идея 1 вижна). Дешёвый первый шаг, можно брать рано
+- [ ] **must** `intents` — намерение как первоклассная сущность на Creature: спит/идёт/ждёт, каждое действие несёт длительность, встроенные прерывания (телесное, втягивание в сцену, прибытие, таймер), wake-точки как обобщение `wake_at_seconds`. Убивает travel-as-wait хак; входной таск — `travel-action-type`
+- [ ] **must** `trigger-table` — парные декларативные триггеры `{on, until}` на существе (YAML + ручка ГМ), матчинг при эмиссии событий, активация/гашение dormant↔active, самогашение «моя роль сыграна» как действие мозга. Требует типизированной таксономии событий (фундамент заложен Sprint 020 phase 2). Поглощает `spawn-event-trigger`
+- [ ] **should** `brain-gate-decide` — контракт Brain: дешёвый гейт (чистые ифы, «продолжаю намерение?», хоть каждый раунд) + дорогое решение (только границы: завершение, прерывание, триггер, ГМ). Инвариант: LLM никогда не вызывается на 6-секундном пути
+- [ ] **should** `llm-turn-plan` — план хода внутри LlmBrain: 1 вызов на ход вместо 3-5, шаги плана со сверкой awareness дешёвой проверкой, перепланирование при сюрпризе. Плюс иерархия командир/исполнитель для сцен: LLM-стратегия на входе, правила разыгрывают раунды, reassess-триггеры (союзник упал, HP < 1/2, враг сдаётся, появился поименованный) поднимают момент до сюжетного решения. Поглощает `combat-reassess`. Движок не меняется — всё внутренности мозга
+- [ ] **should** `inner-self` — внутреннее я NPC: цели одним списком (типизированный словарь kill/protect/reach/... исполним RuleBrain + свободные строки только для LLM), типизированные отношения (не путать с reputation), живой alignment (переваривание свидетельствует, правило применяет сдвиг по накоплению с гистерезисом), mood-enum; лог мыслей (только LLM); контракт переваривания «обнови ядро + перепиши дневник»; правиловый близнец суммаризатора (5-8 детерминированных правил — нужен Classic и CI)
+- [ ] **should** `detail-ladder` — лестница детализации для поселений: материализация анонимной массы из чисел (детерминированный seed), храповик субъектности (первое взаимодействие → персистентный зародыш, копится с каждой материализацией), событийная запись значимого вверх через emit_fn (смерть/кража/пожар — немедленно; дрейф — сверка при дематериализации). Тот же механизм чинит `lair-death-event`
+- [ ] **should** `gm-interlude` — интерлюдия ГМ («прошло три месяца»): fast-forward по wake-точкам и тикам слоёв, по умолчанию совсем без LLM (правиловое переваривание); LLM для ключевых NPC на укрупнённых чекпоинтах — настройка, расширение параметров позже
+- [ ] **could** `gm-actives-panel` — панель активных для ГМ: кто, с какого момента, почему, чего ждёт для гашения. Видимые призраки вместо невидимой утечки
+
 ## Gameplay
 
 - [x] `monster-spawn` — ~~Система спавна монстров: триггеры (proximity, time, event), таблицы встреч по региону/локации, CR-бюджет~~ FIXED Sprint 018: логова (`core/lair.py`, core-death depletion), региональные encounter-таблицы (region→location fallthrough), time-of-day гейт (day/night). CR-бюджет/авто-скейлинг сознательно отброшен (кенши-стиль). Event-триггер вынесен в `spawn-event-trigger`
-- [ ] **must** `quest-system` — Система квестов: цели, триггеры завершения, награды. Минимум: fetch/kill/escort
-- [ ] **should** `key-npcs` — Ключевые NPC (антагонист, компаньон): глубокая память, реакция на мировые события, персональные цели
-- [ ] **should** `npc-wandering` — Динамические маршруты NPC между поселениями (сейчас только статичные расписания)
-- [ ] **should** `npc-death-on-war` — NPC гибнут/исчезают при захвате поселения, войне
+- [ ] **must** `quest-system` — Система квестов. НЕ отдельный движок: квест разлагается на типизированные цели + парные триггеры + награды-события ([simulation-core](brainstorms/simulation-core.md)). Планировать после `trigger-table` и `inner-self` (цели), иначе построим параллельную систему под снос. Минимум: fetch/kill/escort. Мир не прогибается: квест может быть уничтожен самим миром
+- [x] `key-npcs` — ~~Ключевые NPC (антагонист, компаньон): глубокая память, реакция на мировые события, персональные цели~~ ПОГЛОЩЁН simulation-core: это `always_active` + `inner-self` + `trigger-table`. После эпиков остаётся только контент (прописать самих NPC в YAML)
+- [ ] **should** `npc-wandering` — Динамические маршруты NPC между поселениями (сейчас только статичные расписания). Реализуется как travel-намерения у NPC — после `intents`
+- [ ] **should** `npc-death-on-war` — NPC гибнут/исчезают при захвате поселения, войне. Реализуется через `detail-ladder` (индивиды поселений) + событийную запись; для именных — событие войны как триггер
 - [ ] **should** `divine-sense` — Divine Sense (Paladin): detect celestial/fiend/undead. Требует `CreatureType` enum на Creature, creature_type в каталогах монстров, resource pool (1 + CHA mod / long rest)
 - [ ] **should** `divine-smite-scaling` — Divine Smite масштабирование: slot 2 → +3d8, +1d8 vs undead/fiend. Когда будет система уровней и `CreatureType`
-- [ ] **should** `combat-reassess` — NPC переоценивает стратегию при смене ситуации (союзник упал, новый враг появился)
+- [x] `combat-reassess` — ~~NPC переоценивает стратегию при смене ситуации (союзник упал, новый враг появился)~~ ПОГЛОЩЁН `llm-turn-plan`: reassess-триггеры иерархии командир/исполнитель
 - [ ] **should** `versatile-weapons` — Versatile weapon property: переключение одноручный/двуручный хват, разный урон (longsword 1d8/1d10, warhammer 1d8/1d10, quarterstaff 1d6/1d8). WeaponDef.versatile_damage, автовыбор хвата по наличию щита
 - [ ] **should** `hit-dice-short-rest` — Hit Dice spending на коротком отдыхе: ResourcePool(hit_dice, max=level, reset_on=LONG_REST), игрок выбирает сколько тратить, за каждую кость roll(class_hit_die)+CON_mod HP. Long rest восстанавливает max(1, level//2) костей (partial reset). Нужен PlayerBrain callback для выбора количества + UI
-- [ ] **could** `conversation-costs-time` — Каждая реплика разговора тратит 6 секунд игрового времени (частично)
+- [x] `conversation-costs-time` — ~~Каждая реплика разговора тратит 6 секунд игрового времени (частично)~~ ПОГЛОЩЁН `intents`: «каждое действие несёт длительность» — реплика 6с, часть модели времени
 - [ ] **should** `loot-drops-monsters` — Общемонстровый дроп: loot-таблицы на шаблонах монстров, корпс-лут с обычных мобов поверх action `take` (Sprint 018 закладывает примитив `Lootable`/`transfer_items`)
 - [ ] **should** `theft` — Воровство как отдельный режим доступа к инвентарю: take у живого несогласного владельца, contested Sleight of Hand против Perception, crime/репутация; отдельная `validate_steal` поверх общего `transfer_items`
-- [ ] **should** `spawn-event-trigger` — Event-триггер спавна (спавн по мировому событию), в связке со спринтом квестов
+- [x] `spawn-event-trigger` — ~~Event-триггер спавна (спавн по мировому событию), в связке со спринтом квестов~~ ПОГЛОЩЁН `trigger-table`: спавн — одно из действий сработавшего триггера
 - [ ] **could** `container-hp-locks` — Сундуки с замком/HP: взлом (lockpicking) и «разбить» контейнер
-- [ ] **should** `lair-death-event` — смерти существ логова не фиксируются в `EcologyLayer` в реальном времени: `LairState`/`core_alive` обновляются только при dematerialize (когда игрок уходит). При рестарте сервера без сейва lair стартует как ACTIVE заново. Фикс: при `ENTITY_DIED` для temporary-существа эмитировать событие через `emit_fn`, ecology подписывается и сразу обновляет `core_alive`/`alive_members` — тогда состояние lair корректно даже если игрок остаётся на месте и при рестарте (через autosave). Направление зависимости: entities→ecology через emit_fn, не прямой импорт
+- [ ] **should** `lair-death-event` — смерти существ логова не фиксируются в `EcologyLayer` в реальном времени: `LairState`/`core_alive` обновляются только при dematerialize. При рестарте сервера без сейва lair стартует как ACTIVE заново. Фикс-механизм подтверждён брейнштормом simulation-core: событийная запись (`ENTITY_DIED` через emit_fn, ecology подписывается) — это **прототип write-back всей `detail-ladder`**, кандидат в ближайший спринт как первая проба механизма. Направление зависимости: entities→ecology через emit_fn, не прямой импорт
 - [ ] **could** `lair-actions` — D&D lair actions на ядре логова
 - [ ] **could** `lair-new-leader` — После смерти ядра логово с шансом поднимает нового вожака вместо деплита (динамика мира)
 - [ ] **could** `lair-time-of-day` — Активность логова варьируется день/ночь (`active_at: day|night` гейтит материализацию ростера). Переиспользует `TimeOfDay`/`IS_DAYLIGHT`/`is_active_at_time` из Sprint 018 phase 4 (отложено при планировании фазы 4)
@@ -41,10 +57,11 @@
 - [ ] **could** `trade-routes` — Торговые маршруты между конкретными поселениями
 - [ ] **could** `seasonal-travel` — Сезонные эффекты на путешествия
 - [ ] **could** `procedural-gen` — Процедурная генерация регионов/мира
+- [ ] **could** `rumor-propagation` — Слухи ползут между поселениями с задержкой: реалистичная доставка информации поверх всеведущих триггеров (simulation-core: «механизм всеведущий, реализм — надстройка»)
 
 ## LLM
 
-- [ ] **should** `llm-model-tiering` — Выбор модели по важности NPC: дорогая для ключевых, дешёвая для фоновых
+- [ ] **should** `llm-model-tiering` — Выбор модели по важности NPC и наблюдению: дорогая для реплик в лицо игроку, дешёвая для фоновых и ненаблюдаемых решений. Теперь явная часть модели simulation-core (экономия структурная, не выключением)
 - [ ] **could** `llm-narrator` — Интерпретация абстрактных изменений мира в нарративные описания
 - [ ] **could** `npc-language` — Динамический выбор языка NPC (из настроек или по языку игрока)
 
@@ -62,11 +79,11 @@
 
 ## Engine & Session
 
-- [ ] **should** `travel-action-type` — `go`/travel реализован как хак: `LocationPanel` шлёт `Action(WAIT, {hours: 0, travel_to})`. Нужен отдельный `ActionType.TRAVEL` с хендлером, валидацией маршрута и расчётом времени
-- [ ] **should** `npc-instant-say-response` — после `say` тикнуть NPC в локации (1 раунд), чтобы RuleBrain/LlmBrain ответил в том же запросе. Сейчас NPC отвечают только при `advance_time`
+- [ ] **must** `travel-action-type` — Отдельный `ActionType.TRAVEL` с длительностью и по-рёберным движением по графу локаций: путешественник всегда в конкретной локации, пути активных пересекаются (дорожные встречи), прерывание — всегда в конкретной точке. Первый кирпич эпика `intents` (повышен should→must). Текущий хак: `LocationPanel` шлёт `Action(WAIT, {hours: 0, travel_to})` с телепортом в конце
+- [ ] **should** `npc-instant-say-response` — dormant отвечает пассивно, не просыпаясь (simulation-core): после `say` дать существам в локации отреагировать в том же запросе (1 раунд). Сейчас NPC отвечают только при `advance_time`
 - [ ] **could** `list-npcs-iterate-entities` — `list_npcs` итерирует по регионам; NPC в несуществующем регионе выпадает из списка. Итерировать по entities напрямую
-- [ ] **could** `periodic-autosave-scheduler` — фоновый asyncio таск в FastAPI lifespan каждые ~2 мин вызывает `autosave_all_sessions()`; cancel на shutdown перед финальным autosave. Дополняет per-action и shutdown автосейв
-- [ ] **should?** `wait-no-fastforward-with-npc` — **требует проверки: баг или медленно-но-корректно.** `wait` не делает fast-forward, когда в локации игрока сидит активный rule-NPC — вместо прыжка к `wake_at` раунд тикает по 6 c, и управление к игроку возвращается только через ~600 раундов (1 час игрового времени). Ожидание (playbook 2.3): время сдвигается на 1 час, ход быстро возвращается. **Repro (E2E sprint 020 phase 2):** мир «Долина Мечей», сессия 283d42a2, локация «Солёный Якорь» (`silverport_city_tavern`) с co-located rule-NPC «Марта»; игрок Grimwald QA (Fighter L1) жмёт «Ждать» → action bar застревает на «Ожидание хода…». Бэклог: `wait_sleep` hours=1, `wake_at=46326855600`, но `round_end` показывает `game_time` сдвинутым лишь на 6 c (`second=6`) — fast-forward «нет активных существ → прыжок к ближайшему wake_at» не срабатывает, т.к. Марта остаётся активной. Гипотеза: при `wait` игрок получает `wake_at` и перестаёт быть anchor'ом, значит co-located NPC тоже должен уйти в dormant и включить fast-forward — но не уходит. Проверить `ActivationManager.update_activation` / anchor-логику и путь fast-forward в `Round.run_loop`. NB: наблюдалось после evict→reconnect (см. `session-disconnect-debounce`), но поведение `wait` от этого не зависит. Смежно: `test-gap-ws-fastforward`
+- [ ] **should** `periodic-autosave-scheduler` — фоновый asyncio таск в FastAPI lifespan каждые ~2 мин вызывает `autosave_all_sessions()`; cancel на shutdown перед финальным autosave. Дополняет per-action и shutdown автосейв. Повышен could→should: «мир заморожен на полушаге» (simulation-core) требует надёжного автосейва
+- [ ] **should?** `wait-no-fastforward-with-npc` — **требует проверки: баг или медленно-но-корректно.** `wait` не делает fast-forward, когда в локации игрока сидит активный rule-NPC — вместо прыжка к `wake_at` раунд тикает по 6 c, и управление к игроку возвращается только через ~600 раундов (1 час игрового времени). Ожидание (playbook 2.3): время сдвигается на 1 час, ход быстро возвращается. **Repro (E2E sprint 020 phase 2):** мир «Долина Мечей», сессия 283d42a2, локация «Солёный Якорь» (`silverport_city_tavern`) с co-located rule-NPC «Марта»; игрок Grimwald QA (Fighter L1) жмёт «Ждать» → action bar застревает на «Ожидание хода…». Бэклог: `wait_sleep` hours=1, `wake_at=46326855600`, но `round_end` показывает `game_time` сдвинутым лишь на 6 c (`second=6`) — fast-forward «нет активных существ → прыжок к ближайшему wake_at» не срабатывает, т.к. Марта остаётся активной. Гипотеза: при `wait` игрок получает `wake_at` и перестаёт быть anchor'ом, значит co-located NPC тоже должен уйти в dormant и включить fast-forward — но не уходит. Проверить `ActivationManager.update_activation` / anchor-логику и путь fast-forward в `Round.run_loop`. NB: наблюдалось после evict→reconnect (см. `session-disconnect-debounce`), но поведение `wait` от этого не зависит. Смежно: `test-gap-ws-fastforward`. По simulation-core гипотеза корректна: расписание-NPC без якоря рядом не должен оставаться активным; тот самый путь, который перепишут `intents`/`anchor-as-property`, — но проверить/починить стоит уже сейчас
 - [ ] **could** `saved-session-accumulation` — Master → Sessions грузит ВСЕ сохранённые сессии без пагинации/очистки; за прогоны integration-тестов в общий `saves/` накопилось ~900 сессий (E2E sprint 020 phase 2), вкладка Sessions раздувается, ручной поиск конкретной сессии непрактичен (снимок дерева перевалил за токен-лимит). Две стороны: (1) тест-гигиена — integration-тесты не чистят созданные сейв-сессии в `saves/`; (2) UX/масштаб — в списке нет пагинации/фильтра/TTL. Мин. фикс: чистка `saves/` в teardown интеграционных тестов; долгий — пагинация + фильтр в Sessions-вкладке
 - [ ] **should** `session-disconnect-debounce` — быстрый disconnect+reconnect (React StrictMode remount, сетевой блип) гонит лишний evict: `remove_listener` останавливает раунд и `_on_session_empty` выселяет сессию из реестра. Симптом GAME OVER устранён в post-audit sprint 018 (раунд-луп больше не шлёт `on_game_over` при административном `stop()` — `Round.is_stopped`), но сессия всё равно выселяется и живёт орфаном на reconnect-WS (прогресс может не попасть в реестровый autosave; reload поднимает старый autosave). Простой re-check `has_listeners()` в `_on_session_empty` пробовали и откатили: на module-scoped WS-тестах он сохранял сессию вместо evict→reload-reset, и арена-бой накапливался до `game_over` (5 падений `test_websocket.py` в CI, timing-зависимо). Полноценный фикс — grace-period: при опустошении не выселять сразу, а отложенно (1–2с через `threading.Timer`) перепроверить пустоту и только тогда `stop_round`+evict; reconnect внутри окна отменяет (+ переработать module-scoped арена-фикстуру, чтобы не зависеть от evict-reset). Прод (без StrictMode-двумаунта) почти не задет, поэтому not-must
 
@@ -76,7 +93,7 @@
 
 ## Performance
 
-- [ ] **could** `awareness-rebuild-cache` — `build_awareness()` делает 4-5 query к нижним слоям на каждый ход каждого существа (O(N)/раунд), bottleneck при >20 LlmBrain NPC. Решение: WorldSnapshot per (region, tick) для weather/region/settlements/politics + dirty-flag per location для nearby entities. Делать когда начнёт тормозить
+- [ ] **could** `awareness-rebuild-cache` — `build_awareness()` делает 4-5 query к нижним слоям на каждый ход каждого существа (O(N)/раунд), bottleneck при >20 LlmBrain NPC. Решение: WorldSnapshot per (region, tick) для weather/region/settlements/politics + dirty-flag per location для nearby entities. `llm-turn-plan` снизит частоту пересборок для LLM-мозгов; остаётся актуально для сцен. Делать когда начнёт тормозить
 
 ## Bugs
 
@@ -85,11 +102,11 @@
 - [x] `battle-map-configs-not-wired` — ~~`battle_map_configs` из `regions.yaml` не передаётся в `EntitiesLayer` при создании сессии в `game_service.py`. Все combat maps дефолтят в 60×60~~ FIXED Sprint 018 (verified Sprint 019 phase 3): `game_service.py:171-183` строит `battle_map_configs` через `_flatten_region_defaults(load_battle_maps(...))` и передаёт в `EntitiesLayer`
 - [x] `player-character-no-attacks` — ~~`POST /api/player/sessions/{id}/character` не принимает `attacks`; персонаж дерётся кулаками (1 урон)~~ FIXED Sprint 013 char-creation (verified Sprint 019 phase 3): `create_player` грузит `starting_equipment` оружие, игрок бьёт через `get_weapon_attack()`. Поле `attacks` в `CreatePlayerRequest` вестигиальное для игрока (raw `attacks` — путь монстра/спавна)
 - [x] `look-action-i18n-hardcode` — ~~`_cmd_look` в GameService хардкодит строки «Terrain:»/«Weather:» вместо `_()`~~ OBSOLETE Sprint 019 phase 3: `_cmd_look` удалён в раннем рефакторе, строк «Terrain:»/«Weather:» в `service/` нет (остались только устаревшие msgid в `.po`, помечены obsolete в phase 3 task 1)
-- [ ] **should** `player-xp-not-persisted` — XP и `level_up_available` игрока НЕ переживают save/reload через современный путь (обнаружено Sprint 019 phase 3 task 3 при удалении dead-`to_save_data`). `save_game`/`autosave_session` пишут `{"world": ...}`; `to_full_save_data()` (`core/player.py`) НЕ сериализует `experience`/`level_up_available`, а `PlayerContent`/`_to_player`/`parse_player` их не читают. На reload XP сбрасывается к значению из контента (0). Старый round-trip жил в `to_save_data`+`load_save_data`, но тот завязан только на backward-compat ветку `load_game` для СТАРЫХ сейвов. Фикс: добавить `experience`/`level_up_available` в `to_full_save_data()` и в `PlayerContent`+`_to_player`. **Подтверждено в post-audit E2E (Sprint 019, `e2e-reports/2026-06-29-sprint019-post-audit.md`):** в dev ломает не только save/reload, а live level-up целиком — dev-only WS StrictMode evict→restore (см. `session-disconnect-debounce`) гоняет игрока через этот же save-путь, XP теряется, `player_status` отдаёт `experience=0`, `POST /level-up` → 400. В prod (без StrictMode-двумаунта) проявляется на рестарте/ручном load. Чинить вместе с/после `session-disconnect-debounce`
+- [x] `player-xp-not-persisted` — ~~XP и `level_up_available` игрока не переживают save/reload через современный путь~~ FIXED Sprint 020 phase 1 task 1 (сериализационная половина): `experience`/`level_up_available` в `to_full_save_data()` + `PlayerContent`/`_to_player`, round-trip regression-тест. Dev-симптом с WS StrictMode evict→restore остаётся в `session-disconnect-debounce` (транспортная половина)
 - [ ] **could** `spawn-role-freetext-enum` — мастерский Spawn Creature диалог (`CreatureForm`) рендерит Role как свободный textbox, но бэкенд `NpcContent.role` — enum (`commoner`/`blacksmith`/`tavern_keeper`/`guard`/`merchant`/`farmer`/`gladiator`). Пустой/произвольный role → HTTP 400 с сырым Pydantic-сообщением прямо в диалоге (E2E sprint 019 phase 1). Сделать Role дропдауном `NpcRole` (и/или маппить ошибку в дружелюбный i18n-тост). Сосед `corpse-nearby-actions` по теме visible-gaps
-- [ ] **should** `action-bar-unequip-i18n` — кнопки снятия экипировки в боевом action bar показывают сырые ID и английские описания (E2E sprint 020 phase 1). Оружие: метка «Снять» (RU ✓), но описание «Put away your equipped weapon. You will fight with fists.» (EN ✗). Броня/щит: метки `unequip_armor`/`unequip_shield` — сырые `ActionType`-строки (EN ✗), описания тоже английские. Только weapon-unequip переведён. Фикс: добавить `unequip_armor`/`unequip_shield` в таблицу локализации фронта рядом с `unequip`; перевести описания в `.po`.
+- [ ] **should** `action-bar-unequip-i18n` — кнопки снятия экипировки в боевом action bar показывают сырые ID и английские описания (E2E sprint 020 phase 1). Оружие: метка «Снять» (RU ✓), но описание «Put away your equipped weapon. You will fight with fists.» (EN ✗). Броня/щит: метки `unequip_armor`/`unequip_shield` — сырые `ActionType`-строки (EN ✗), описания тоже английские. Только weapon-unequip переведён. Фикс: добавить `unequip_armor`/`unequip_shield` в таблицу локализации фронта рядом с `unequip`; перевести описания в `.po`. NB: Sprint 020 phase 3 (реестр экипировки, один UNEQUIP со slot-параметром) поменяет сами ActionType — синхронизировать
 - [ ] **could** `second-wind-zero-heal` — Second Wind показывает «восстанавливаешь 0 ОЗ» когда игрок уже при максимальных HP (E2E sprint 020 phase 1). Сообщение корректно с механической точки зрения (ресурс потрачен, лечение = 0), но выглядит как баг. Подавлять или заменять на «ты уже в полном здравии» когда `healed == 0`.
-- [ ] **should** `combat-log-i18n-gaps` — при дефолтном `DND_LANGUAGE=ru` боевой лог наполовину английский (E2E post-audit sprint 018). Три причины: (1) дрейф каталога — msgid в коде несут лишний `{oa}` (`perception.py:141,145`), не совпадают с записью в `.po` («You attack {target}{weapon}{roll}{outcome}») → фолбэк на английский; нужен `make messages` + перевод + `make compile-messages`; (2) непереведены строки репутации (`perception.py:505`) и «moved (X ft)»; (3) код-баг: `rules/handlers/movement.py:52,56` возвращают сырой английский `error=...` не обёрнутый в `_()` («Not on the battle map», «Cannot move there — blocked» — последняя ещё и с em-dash) → никогда не локализуется. В основном преэкзистинг (строки спринтов 012/014), но очень заметно
+- [x] `combat-log-i18n-gaps` — ~~при дефолтном `DND_LANGUAGE=ru` боевой лог наполовину английский~~ FIXED: movement-ошибки обёрнуты в `_()` Sprint 019 phase 3; остальные хендлеры (items/equipment/trade/action_surge/loot/combat) + прогон каталога и RU-перевод Sprint 020 phase 1 task 4. Остаточные фронтовые метки — в `action-bar-unequip-i18n`
 - [x] `sneak-attack-faction-check` — ~~SA ally-adjacency считала союзником любое живое существо в 5ft без учёта фракции~~ FIXED Sprint 011/014: ally detection через faction relations
 - [x] `flaky-initiative-test` — ~~`test_second_attack_does_not_reroll_initiative` падал рандомно~~ FIXED: AC=30 чтобы атаки всегда мазали, c2 не удаляется из turn_order
 - [ ] **could** `flaky-schemaform-ref-select` — `frontend/src/components/master/__tests__/SchemaForm.test.tsx > renders ref field as select with fetched options` флапает в полном `npx vitest run` (ждёт 3 option, видит 1), но зелёный при изоляции файла и на повторе. Похоже на гонку мока fetch ref-опций / async-рендера select. Замечен на Sprint 018 phase 3 (бэкенд-only коммит, влиять не мог). Стабилизировать ожидание опций (`findBy`/`waitFor`) или изолировать fetch-мок между тестами
@@ -101,9 +118,6 @@
 - [x] `god-class-politics` — ~~PoliticsLayer 609 строк~~ FIXED Sprint 014 phase 0: split into diplomacy.py, warfare.py, economy.py submodules
 - [x] `test-gaps-critical` — ~~rules/action_handlers.py без unit-тестов~~ FIXED Sprint 005: action_provider, awareness_builder, brain_factory, world isolation tests
 - [x] `test-gaps` — ~~Нет тестов: action_provider, awareness, world, brain_factory~~ FIXED Sprint 005 (commands_*, session, store remain)
-- [x] `rules-imports-layers` — ~~rules/trade.py импортирует из layers/~~ FIXED Sprint 005: merchant protocol extracted to core
-- [x] `round-direct-layer-access` — ~~round.py напрямую импортирует EntitiesLayer~~ FIXED Sprint 005: public delegated methods
-- [x] `mixin-type-ignores` — ~~27x type: ignore в service command mixins~~ FIXED Sprint 005: Protocol base added
 - [ ] **should** `llm-client-type-ignores` — `# type: ignore[arg-type]` в llm/client.py на вызовах OpenAI SDK
 - [x] `any-in-query-answer` — ~~Answer.value: Any~~ FIXED Sprint 005: Answer.value → object
 - [x] `action-handlers-growing` — ~~action_handlers.py 605 строк~~ FIXED Sprint 005: split into rules/handlers/ (combat, equipment, items, movement, trade)
@@ -115,48 +129,48 @@
 - [ ] **could** `npc-behaviors-yaml-loading` — layers/entities/npc_behaviors.py загружает YAML на уровне модуля с global state mutation. Перенести в content_loader
 - [x] `action-parsing-in-adapter` — ~~Adapter (routes_ws) парсит Action из JSON, должен service layer~~ FIXED Sprint 019 phase 2 task 3: `parse_action`/`ActionParseError` в `service/action_parsing.py`; routes_ws больше не импортирует Action/ActionType из core
 - [x] `magic-number-trade` — ~~Magic number 0.08 в politics/layer.py:338~~ FIXED 2026-03-24
-- [ ] **should** `thick-adapter-world-state` — routes_master.py:290-330 оркестрирует 7+ layer queries напрямую + assert-based validation (500 при плохих данных). Вынести в GameService.get_world_state()
+- [ ] **should** `thick-adapter-world-state` — routes_master.py оркестрирует 7+ layer queries напрямую. Assert-половина закрыта Sprint 019 phase 1 (fail-fast вместо assert); вынос оркестрации в GameService.get_world_state() остаётся
 - [ ] **should** `routes-master-growing` — routes_master.py 560 строк, 34 роута. Разделить content-editing и session-control роуты
 - [ ] **should** `test-gap-content-loader` — content_loader/refs, utils, creatures без выделенных unit-тестов (частично покрыты интеграционными)
 - [x] `core-brain-imports-rules` — ~~core/brain.py:50,63,141 lazy-imports из rules/~~ FIXED: `RuleBrain` вынесен в `rules/rule_brain.py`, `core/brain.py` больше не импортирует rules (verified audit 2026-06-29). Оставшиеся lazy-import `core/`→`rules/` в `class_features`/`combat`/`monster` — by-design композиция (frozen core делегирует чистую математику в pure rules), не runtime-цикл; принято
-- [ ] **should** `test-gap-session` — service/session.py 457 строк, 27 методов без выделенных unit-тестов. Round lifecycle, listener dispatch, resolve_abstract_move непокрыты
-- [ ] **should** `god-class-combat-manager` — layers/entities/combat_manager.py 535 строк. Выделить initiative/turn logic от combat state management
+- [ ] **should** `test-gap-session` — service/session.py 27+ методов без полного unit-покрытия. Round lifecycle и listener dispatch частично закрыты characterization-сеткой Sprint 019 phase 1; resolve_abstract_move остаётся
+- [ ] **should** `god-class-combat-manager` — layers/entities/combat_manager.py 481 строка. Выделить initiative/turn logic от combat state management. В скоупе Sprint 020 phase 3
 - [ ] **could** `entities-layer-imports-content-loader` — layers/entities/layer.py:465,484,490 lazy-imports из content_loader в load_state. Layers → core only, content_loader — peer module
-- [ ] **could** `player-status-in-adapter` — routes_player._player_status() маппит Ability enum → строки, presentation logic в адаптере
-- [ ] **should** `merchant-provider-in-rules` — MerchantActionProvider в rules/ хранит world-query callback (I/O в pure rules). Перенести в service/ или передавать данные аргументом
+- [ ] **could** `player-status-in-adapter` — routes_player._player_status() маппит Ability enum → строки, presentation logic в адаптере. Частично закрыто Sprint 020 phase 2 task 4 (единый источник `player_status` → `PlayerStatusData`); остаток — enum-маппинг в адаптере
+- [x] `merchant-provider-in-rules` — ~~MerchantActionProvider в rules/ хранит world-query callback (I/O в pure rules)~~ FIXED Sprint 020 phase 1 task 5: merchant/loot провайдеры без world-query в rules
 - [x] `dice-os-import` — ~~rules/dice.py import os~~ FIXED audit 2026-03-31: set_global_seed() function
-- [ ] **should** `base-action-provider-stateful` — BaseActionProvider в rules/ — stateful class с self._types. Сделать standalone функцией или frozen dataclass
+- [x] `base-action-provider-stateful` — ~~BaseActionProvider в rules/ — stateful class с self._types~~ FIXED Sprint 020 phase 1 task 5: standalone-функция / frozen dataclass
 - [x] `adapter-imports-core-directly` — ~~routes_player импортирует PlayerCharacter/Ability, routes_master — Query/QueryType напрямую из core~~ FIXED Sprint 019 phase 2 task 3: старые PlayerCharacter/Ability/Query/QueryType импорты убраны при routes_master split (Sprint 016); Action/ActionType вынесены в `service/action_parsing.py` (task 3). Оставшиеся BrainType/FightingStyle — enum-at-boundary в Pydantic-схемах, приняты (аудит 2026-06-28: 0 арх-нарушений, адаптерам можно импортировать enum)
-- [ ] **should** `any-to-object-sweep` — 15+ файлов используют dict[str, Any] вместо dict[str, object] (core/models, layers, llm, adapters)
-- [ ] **should** `entity-type-enum` — "player"/"npc"/"creature" строковые сравнения в 5+ файлах. Добавить EntityType(StrEnum)
-- [ ] **should** `brain-type-enum` — ai_type == "rule_based" строковые сравнения. Добавить BrainType(StrEnum)
-- [ ] **should** `layer-source-string-cmp` — game_service.py L535,595,611,626 source == "library" вместо LayerSource.LIBRARY enum
+- [ ] **should** `any-to-object-sweep` — dict[str, Any] вместо dict[str, object] (core/models, layers, llm, adapters). Частично закрыт Sprint 020 phase 2 (typed query contract, ~28 cast-сайтов); остатки в llm/ и adapters/
+- [x] `entity-type-enum` — ~~"player"/"npc"/"creature" строковые сравнения в 5+ файлах~~ FIXED Sprint 016 (`EntityKind(StrEnum)`) + добивка на границах Sprint 020 phase 2 task 3
+- [x] `brain-type-enum` — ~~ai_type == "rule_based" строковые сравнения~~ FIXED Sprint 016 (`BrainType(StrEnum)`) + границы Sprint 020 phase 2
+- [x] `layer-source-string-cmp` — ~~game_service.py source == "library" вместо enum~~ FIXED Sprint 020 phase 2 task 3: `LayerSource`
 - [x] `long-func-run-combat-turn` — ~~round.py run_combat_turn 132 строки~~ FIXED Sprint 012 phase 4: extracted _prepare_combat_turn() + _build_combat_awareness()
 - [x] `long-func-choose-combat-action` — ~~core/brain.py _choose_combat_action 114 строк~~ FIXED Sprint 014 phase 0: decomposed into _CombatContext + per-action helpers
-- [ ] **should** `round-growing` — round.py 612 строк. Extract combat-turn and awareness-building into helpers
-- [ ] **could** `action-defs-growing` — core/action_defs.py 541 строка. Рассмотреть data-driven YAML формат для action registry
+- [ ] **should** `round-growing` — round.py 623 строки. В скоупе Sprint 020 phase 3 (ре-скоуп по simulation-core: awareness → builder, `resolve_abstract_move` → rules/movement; слияние combat/peaceful отменено — peaceful будет переписан `intents`)
+- [ ] **could** `action-defs-growing` — core/action_defs.py 570 строк. Sprint 020 phase 3 (реестр экипировки) ужмёт на ~10 ActionDef; data-driven YAML формат — отдельно
 - [ ] **should** `perception-fail-fast` — layers/entities/perception.py 54x .get() с silent defaults. Маскирует отсутствие данных в событиях
 - [ ] **could** `test-bare-status-codes` — test_api.py, test_trade_ws.py используют bare 200/404 вместо HTTPStatus
 - [ ] **should** `long-func-start-round` — service/session.py start_round 103 строки. Extract closures into named methods
 - [x] `perception-dispatch-chain` — ~~perception.py if-elif chain~~ FIXED Sprint 012 phase 4: dict[EventType, handler] dispatch
-- [ ] **should** `activation-manager-growing` — activation_manager.py 614 строк (406 на 2026-04-13; вырос на encounter-rolling в Sprint 018). Extract EncounterRoller (_roll_encounters, _is_daylight_at) + _materialize_squads()
+- [ ] **should** `activation-manager-growing` — activation_manager.py 626 строк. В скоупе Sprint 020 phase 3 с ре-скоупом по simulation-core: вынести EncounterRoller + materialization (переживут rework), activation-логику только изолировать — заменяется `intents`/`trigger-table`/`anchor-as-property`
 - [ ] **could** `deep-nesting-diplomacy` — politics/layer.py _process_diplomacy 7 уровней вложенности
 - [ ] **should** `silent-failure-autosave` — 3x contextlib.suppress(Exception) вокруг autosave. Логировать ошибки, не глушить
 - [x] `silent-failure-awareness` — ~~awareness_builder.py 6x broad except Exception~~ FIXED Sprint 012 phase 4: narrowed to KeyError/LookupError
-- [ ] **should** `silent-failure-movement` — handle_wait except ValueError: pass. Возвращать ошибку в ActionResult
-- [ ] **could** `schema-form-growing` — frontend SchemaForm.tsx 488 строк, 30+ nested helpers
+- [x] `silent-failure-movement` — ~~handle_wait except ValueError: pass~~ FIXED Sprint 020 phase 1 task 2: недостижимый/несуществующий travel-таргет → `ActionResult(success=False)`
+- [ ] **could** `schema-form-growing` — frontend SchemaForm.tsx 488 строк, 30+ nested helpers. В скоупе Sprint 020 phase 4
 - [ ] **should** `llm-imports-layer-models` — llm/brain.py и llm/summarizer.py импортируют из layers.entities.models (Npc, NpcMemory). llm не должен зависеть от layers
 - [ ] **should** `round-imports-entities-layer-v2` — round.py:31 напрямую импортирует EntitiesLayer (sprint 012 re-introduced coupling). Взаимодействовать через World/Layer interface
 - [ ] **should** `mutable-dataclass-models` — Region, Nation, Settlement, Leader — @dataclass без frozen=True. Аудит: мутируются ли in-place или можно frozen
 - [ ] **should** `proficiency-hardcoded-weapons` — rules/proficiency.py:33-34 хардкоженные строки оружия ("rapier", "shortsword"). Использовать enum или catalog ref
 - [ ] **should** `perception-hardcoded-weapons` — perception.py:29-31 дублирует названия оружия из YAML каталогов
 - [ ] **should** `content-loader-fail-fast` — 31 .get() с дефолтами в content_loader/. Некоторые оправданы (YAML boundary), но bm_data.get("width", 60) молча дефолтит размер карты
-- [ ] **should** `dict-str-object-overuse` — 57+ dict[str, object] вместо TypedDict/dataclass в query_handler, game_service, combat_manager, schemas
+- [ ] **should** `dict-str-object-overuse` — dict[str, object] вместо TypedDict/dataclass в query_handler, game_service, combat_manager, schemas. Частично закрыт Sprint 020 phase 2 task 1 (query payload dataclasses); остатки в game_service/schemas
 - [x] `world-private-method-access` — ~~world._make_query_fn() вызывается из session.py и round.py~~ FIXED Sprint 019 phase 2 task 3: `World.make_query_fn`/`make_emit_fn` теперь public API
 - [ ] **could** `event-log-eslint-suppress` — EventLog.tsx eslint-disable-next-line react-hooks/exhaustive-deps
 - [ ] **could** `api-client-growing` — apiClient.ts 365 строк, 35+ методов. Разделить по домену
-- [ ] **could** `world-overview-growing` — WorldOverview.tsx 331 строка. Split sub-components
-- [ ] **should** `class-features-hardcoded` — ClassFeatures/proficiency system hardcoded в Python. Adding new class requires code, not YAML. Vision drift.
+- [ ] **could** `world-overview-growing` — WorldOverview.tsx 331 строка. В скоупе Sprint 020 phase 4 (generic `EditableStatsTable<T>`)
+- [ ] **should** `class-features-hardcoded` — ClassFeatures/proficiency system hardcoded в Python. Adding new class requires code, not YAML. Vision drift ([ecs-and-content](brainstorms/ecs-and-content.md)); упрётся в рост при заклинаниях (Level 3)
 
 ## Security (from audits 2026-03-25)
 
@@ -168,12 +182,13 @@
 - [ ] **could** `frontend-error-endpoint` — POST /api/frontend-error принимает произвольный JSON без валидации
 - [ ] **could** `rest-rate-limiting` — Нет rate limiting на REST эндпоинтах (WS имеет token bucket)
 - [ ] **could** `action-params-validation` — Action params из клиента без schema validation
-- [ ] **could** `llm-prompt-injection` — Player say() текст попадает в NPC memory → system prompt
+- [ ] **could** `llm-prompt-injection` — Player say() текст попадает в NPC memory → system prompt. NB: `inner-self` расширит поверхность (лог мыслей, цели) — учесть при проектировании
 - [ ] **could** `ws-stall-vector` — routes_ws.py future.result(timeout=30) блокирует Round thread если клиент не читает
 - [ ] **could** `layer-file-max-length` — UpdateLayerFileRequest.content без max_length — произвольный YAML на диск
 - [ ] **could** `llm-prompt-no-separation` — NPC memory, entity descriptions интерполируются в system prompt без разделительной границы
 - [ ] **could** `ability-scores-no-bounds` — ability_scores и attacks принимают произвольные значения без bounds validation
 - [ ] **could** `world-name-path-traversal` — game_service.py:81 world_name from request used in path construction without regex guard at call site
+- [ ] **could** `item-create-bounds` — `adapters/api/schemas.py:87` поля создания/выдачи предметов (`base_ac`, `max_dex_bonus`, `strength_req`, `ac_bonus`, `reach`) без `Field(ge=, le=)`, в отличие от player HP/AC. Master-only, game-data. Сосед `ability-scores-no-bounds`
 
 ## Dead Code (from audit 2026-03-25)
 
@@ -185,17 +200,17 @@
 - [x] `dead-prone-stand-cost` — ~~rules/conditions.py:27, tested but never integrated into movement handler~~ FIXED Sprint 019 phase 3: removed `prone_stand_cost()` + tests
 - [x] `dead-reset-resources` — ~~rules/resources.py, 12 test refs, 0 prod~~ FIXED Sprint 015 phase 1: wired into rest handlers
 - [x] `dead-walk-path` — ~~rules/movement.py:201, 12 test refs, 0 prod. Budget-aware path walking~~ FIXED Sprint 019 phase 3: removed `walk_path()`; cost-assertion tests re-expressed via prod `step_cost()` (handler uses `compute_reachable`+`step_cost`)
-- [x] `dead-to-save-data` — ~~core/player.py:73, 1 test ref, 0 prod~~ FIXED Sprint 019 phase 3: removed `to_save_data()` + tests. NB: surfaced `player-xp-not-persisted` (modern save path via `to_full_save_data` drops experience)
+- [x] `dead-to-save-data` — ~~core/player.py:73, 1 test ref, 0 prod~~ FIXED Sprint 019 phase 3: removed `to_save_data()` + tests. NB: surfaced `player-xp-not-persisted` (закрыт Sprint 020 phase 1)
 - [x] `dead-can-opportunity-attack` — ~~rules/reactions.py:15, 0 prod callers, дублирует inline check в find_oa_triggers()~~ FIXED Sprint 019 phase 3 (removed earlier in commit 67f057b audit triage); `rules/reactions.py` now only defines `find_oa_triggers`
 
 ## Test Gaps (from audit 2026-03-29)
 
-- [ ] **should** `test-gap-equipment-handlers` — rules/handlers/equipment.py только indirect coverage через test_accessories.py
+- [ ] **should** `test-gap-equipment-handlers` — rules/handlers/equipment.py только indirect coverage через test_accessories.py. NB: Sprint 020 phase 3 (реестр экипировки) перепишет хендлеры — тесты писать на новую форму
 - [ ] **should** `test-gap-entities-layer` — нет integration test для EntitiesLayer (activation, awareness, combat state, materialization)
-- [ ] **should** `test-gap-save-commands` — autosave_all_sessions, delete_save, list_saves без unit-тестов
+- [ ] **should** `test-gap-save-commands` — autosave_all_sessions, delete_save, list_saves без unit-тестов (commands_save round-trip частично закрыт Sprint 019 phase 1)
 - [ ] **should** `test-gap-content-routes` — list_catalog_entries, list_schemas, get_schema, list_refs без тестов
 - [ ] **should** `test-gap-master-routes` — list_library_templates, fork_world_layer без тестов
-- [ ] **could** `test-gap-ws-fastforward` — player wait → time skip → NPC resume не тестируется
+- [ ] **could** `test-gap-ws-fastforward` — player wait → time skip → NPC resume не тестируется (см. живой repro в `wait-no-fastforward-with-npc`)
 - [ ] **could** `test-gap-ws-disconnect-npc` — disconnect during NPC turn + reconnect не тестируется
 - [ ] **could** `test-gap-ws-npc-combat-turn` — NPC full multi-action RuleBrain combat turn только indirect
 - [ ] **should** `test-gap-action-provider` — rules/action_provider.py без unit-тестов
@@ -225,8 +240,7 @@
 
 - [x] `any-treasure-items` — ~~`content_loader/monsters.py:207` `treasure_items: list[Any]`, хотя `parse_items()` отдаёт `list[Item]`~~ FIXED в триаже 2026-06-28: аннотация `list[Item]` + импорт `Item`
 - [x] `test-gap-encounters-rule` — ~~`rules/encounters.py:8` `is_active_at_time` покрыт только косвенно через integration `test_time_of_day_encounters.py`~~ FIXED в триаже 2026-06-28: `tests/unit/test_encounters.py` (3 теста, truth-table)
-- [ ] **could** `item-create-bounds` — `adapters/api/schemas.py:87` поля создания/выдачи предметов (`base_ac`, `max_dex_bonus`, `strength_req`, `ac_bonus`, `reach`) без `Field(ge=, le=)`, в отличие от player HP/AC. Master-only, game-data. Сосед `ability-scores-no-bounds`
 - [ ] **could** `any-encounter-entries` — `content_loader/monsters.py:128` `_parse_encounter_entries(entries: Any)` на raw-YAML границе. `object`/`list[object]` строже (часть общего `any-to-object-sweep`)
-- [ ] **could** `entities-layer-regrowth` — `layers/entities/layer.py` снова 629 строк после декомпозиции Sprint 005 (`god-class-entities`). Следить за ростом по мере ecology-фич
+- [ ] **could** `entities-layer-regrowth` — `layers/entities/layer.py` снова 629 строк после декомпозиции Sprint 005 (`god-class-entities`). Sprint 020 phase 3 выносит `entity_serialization.py`. Следить за ростом по мере ecology-фич
 - [ ] **should** `test-gap-leveling` — `rules/leveling.py` без выделенных unit-тестов (косвенно через level-up тесты)
 - [ ] **could** `schema-form-eslint-suppress` — `frontend SchemaForm.tsx:137` eslint-disable-next-line react-hooks/exhaustive-deps (намеренная зависимость эффекта; см. также `event-log-eslint-suppress`, `schema-form-growing`)

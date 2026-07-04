@@ -2,9 +2,9 @@
 
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
-**Last updated:** 2026-06-30
-**Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 закрыт (логова, лут/контейнеры, региональные таблицы встреч, время суток). Sprint 019 (control-plane-prep) закрыт — `GameService` раздроблён 1044 → 357 строк (миксины `WorldBuilderCommands`/`PlayerCommands`), core/adapter развязаны, видимые дырки (combat-log i18n, encounter-перцептор, труп-кнопки) закрыты; control-plane готов к разрезу на роли. По [ROADMAP](ROADMAP.md) дальше: Level 2 (расходуемые ресурсы), Level 3 (заклинания, интерактивные объекты), автономные тики NPC.
-**Next:** активного спринта нет. Топ-кандидат — `control-interfaces` (разрез control-plane на роли worldbuilder/DM/админка, ради чего готовился Sprint 019); далее `quest-system`. См. [BACKLOG](BACKLOG.md) / [ROADMAP](ROADMAP.md).
+**Last updated:** 2026-07-04
+**Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 закрыт (логова, лут, встречи, время суток), Sprint 019 закрыт (control-plane готов к разрезу на роли). Sprint 020 (thermo-sweep): фазы 1-2 закрыты (корректность + чистота rules/, типизация границ + enums). 2026-07-04 проведён большой брейншторм [simulation-core](brainstorms/simulation-core.md) (время, активность, внутреннее я, лестница детализации): VISION переписан, бэклог реструктурирован (секция Simulation Core с цепочкой эпиков), фазы 3-4 спринта 020 сверены и ре-скоуплены.
+**Next:** Sprint 020 фазы 3-4 (декомпозиция бэка и фронта, с ре-скоупом по simulation-core). После закрытия — выбор направления при `/new-sprint`: цепочка simulation-core (`save-schema` → `anchor-as-property`/`intents` → `trigger-table` → ...) или `control-interfaces`. `quest-system` — только после триггеров и целей. См. [BACKLOG](BACKLOG.md) / [ROADMAP](ROADMAP.md).
 **Blockers:** нет.
 
 ## Current Sprint
@@ -16,7 +16,7 @@
 
 Ready for Phase 3 (Декомпозиция бэка) task generation.
 
-Полный sweep (выбран пользователем), целится в `control-interfaces`. Источник — [thermo-nuclear-review.md](thermo-nuclear-review.md). Phase 1 закрыта (5 задач). Phase 2 разбита на 4 задачи: typed query contract / SquadInfo-LairInfo / enum-добивка + get_layer / exception handlers + player-status. Ready to start task 1.
+Полный sweep (выбран пользователем). Источник — [thermo-nuclear-review.md](thermo-nuclear-review.md). Phase 1 закрыта (5 задач), Phase 2 закрыта (4 задачи, E2E зелёный). Фазы 3-4 сверены с брейнштормом [simulation-core](brainstorms/simulation-core.md): activation-логику только изолируем (заменится намерениями/триггерами), слияние combat/peaceful turn-loop отменено, дедуп сериализации повышен до предусловия новой модели (стартовый кусок эпика `save-schema`). Детали — в Decisions спринта.
 
 ### Phases
 
@@ -27,6 +27,7 @@ Ready for Phase 3 (Декомпозиция бэка) task generation.
 
 ## Recent activity (non-sprint)
 
+- 2026-07-04 — брейншторм [simulation-core](brainstorms/simulation-core.md): консенсус-модель времени/активности/внутреннего я/лестницы детализации. VISION.md переписан, BACKLOG реструктурирован (секция Simulation Core, поглощённые/переформулированные айтемы, чекбоксы фаз 1-2 спринта 020), ROADMAP Planned обновлён, указатели-актуализации в старых брейнштормах.
 - 2026-06-20 — CORS origins сделаны конфигурируемыми (`CORS_ALLOWED_ORIGINS`); Docker base-image запинен по digest.
 - 2026-04-24 — post-017 cleanup: `perceive()` без вшитых ран в имя, REST `player_status` отдаёт equipped + inventory, убрана Cancel-кнопка в LevelUpModal.
 
