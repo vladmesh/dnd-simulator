@@ -39,4 +39,11 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `turnSlice`: `extractGameTime(awareness)` (экспортирован) + локальный `applyCommon(msg, events, extra)` — три хендлера свёрнуты к общему блоку (player/events/mode/awareness/location/gameTime). `turnSliceResetState` экспортирован; используется и в дефолтах слайса, и в `connectionSlice.connect()` (десять полей больше не перечисляются вручную).
+- `ReactionMessage`-каст на строке 158 убран (типизированный литерал) — снял pre-existing `tsc -b` ошибку (28 → 27).
+- `ApiError.detailMessage()` — строка / массив pydantic `{loc,msg}` / fallback на message; три сайта (`CreatureForm`, `LayerEditor`, `GiveItemDialog`) переведены на него.
+- Тесты: `turnSlice.test.ts` (extractGameTime + onTurn budget-fallback + onRoundResult combat + connect-reset), `apiClient.test.ts` (detailMessage). `eslint` чисто.
