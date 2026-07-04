@@ -43,4 +43,10 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `PlayerStatus` (в `types/game.ts`) — единственный источник; `appearance?` добавлен (опционален: не каждый payload его несёт). `types/api.ts`: `export type PlayerStatusResponse = PlayerStatus` вместо ручного близнеца. `ability_scores` единый (`AbilityScores`).
+- Введены `Region`/`Nation`/`Settlement`/`WeatherSummary`/`LeaderInfo` по wire-контракту `get_world_state`; `WorldStateResponse` строки типизированы. Единственный потребитель строк — `WorldOverview` (миграция `String(...)`-кастов сделана в [task 4](phase4-task4-world-overview.md)).
+- `tsc -b`: pre-existing test-mock ошибки лишь переименовались (`PlayerStatusResponse`→`PlayerStatus`, тот же счёт); новые ошибки WorldOverview закрыты task 4. Player-тесты (PlayerStats/LevelUpModal) зелёные.

@@ -1,3 +1,5 @@
+import type { PlayerStatus } from "./game"
+
 // --- Request models ---
 
 export interface CreateSessionRequest {
@@ -125,31 +127,61 @@ export interface ForkWorldRequest {
   new_id: string
 }
 
-export interface PlayerStatusResponse {
-  player_id: string
+// REST `player_status` and the WS status payload are the same backend contract
+// (`PlayerStatusData`) — one type, no hand-maintained twin.
+export type PlayerStatusResponse = PlayerStatus
+
+// --- World-state rows (wire shape of get_world_state) ---
+
+export interface WeatherSummary {
+  condition: string
+  temperature: number
+}
+
+export interface Region {
+  id: string
   name: string
-  race: string
-  char_class: string
-  level: number
-  experience: number
-  level_up_available: boolean
-  xp_to_next_level: number
-  alignment: string
-  hp: number
-  max_hp: number
-  ac: number
-  gold: number
-  location_id: string
-  appearance: string
-  ability_scores: Record<string, number>
+  latitude: number
+  longitude: number
+  elevation: number
+  terrain: string
+  water_proximity: number
+  weather: WeatherSummary
+  temperature: number
+}
+
+export interface LeaderInfo {
+  name: string
+  age: number
+  trait: string
+}
+
+export interface Nation {
+  id: string
+  name: string
+  regions: string[]
+  wealth: number
+  military: number
+  stability: number
+  leader: LeaderInfo | null
+}
+
+export interface Settlement {
+  id: string
+  name: string
+  region_id: string
+  type: string
+  population: number
+  prosperity: number
+  defenses: number
 }
 
 export interface WorldStateResponse {
   session_id: string
   time: string
-  regions: Array<Record<string, unknown>>
-  nations: Array<Record<string, unknown>>
-  settlements: Array<Record<string, unknown>>
+  regions: Region[]
+  nations: Nation[]
+  settlements: Settlement[]
   entities: Array<Record<string, unknown>>
 }
 
