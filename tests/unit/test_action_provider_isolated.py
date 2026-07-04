@@ -7,6 +7,7 @@ from dnd_simulator.core.character import Character, CharClass, Creature
 from dnd_simulator.core.items import (
     ArmorCategory,
     ArmorDef,
+    EquipmentSlot,
     Item,
     ItemType,
     ShieldDef,
@@ -121,7 +122,7 @@ class TestEquipmentActionProvider:
 
     def test_equipped_weapon_offers_unequip(self) -> None:
         weapon = Item(id="w1", name="Longsword", item_type=ItemType.WEAPON)
-        creature = Character(id="c1", name="Fighter", location_id="arena", equipped_weapon=weapon)
+        creature = Character(id="c1", name="Fighter", location_id="arena", equipped={EquipmentSlot.WEAPON: weapon})
         ctx = ActionContext(is_combat=False)
         provider = EquipmentActionProvider()
         actions = provider.get_action_types(creature, ctx)
@@ -144,7 +145,7 @@ class TestEquipmentActionProvider:
         shield = Item(
             id="s1", name="Shield", item_type=ItemType.SHIELD, shield_def=ShieldDef(shield_id="shield", ac_bonus=2)
         )
-        creature = Character(id="c1", name="Fighter", location_id="arena", equipped_shield=shield)
+        creature = Character(id="c1", name="Fighter", location_id="arena", equipped={EquipmentSlot.SHIELD: shield})
         ctx = ActionContext(is_combat=False)
         provider = EquipmentActionProvider()
         actions = provider.get_action_types(creature, ctx)
@@ -212,7 +213,7 @@ class TestWeaponActionProvider:
             grant_actions=(ActionType.BLESS,),
         )
         weapon = Item(id="w1", name="Holy Sword", item_type=ItemType.WEAPON, weapon_def=weapon_def)
-        creature = Character(id="c1", name="Paladin", location_id="arena", equipped_weapon=weapon)
+        creature = Character(id="c1", name="Paladin", location_id="arena", equipped={EquipmentSlot.WEAPON: weapon})
         ctx = ActionContext(is_combat=False)
         provider = WeaponActionProvider()
         actions = provider.get_action_types(creature, ctx)
@@ -227,7 +228,7 @@ class TestWeaponActionProvider:
             reach=5,
         )
         weapon = Item(id="w1", name="Plain Sword", item_type=ItemType.WEAPON, weapon_def=weapon_def)
-        creature = Character(id="c1", name="Fighter", location_id="arena", equipped_weapon=weapon)
+        creature = Character(id="c1", name="Fighter", location_id="arena", equipped={EquipmentSlot.WEAPON: weapon})
         ctx = ActionContext(is_combat=False)
         provider = WeaponActionProvider()
         assert provider.get_action_types(creature, ctx) == []

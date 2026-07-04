@@ -12,13 +12,13 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from dnd_simulator.content_loader import parse_player
+from dnd_simulator.content_loader import parse_player, player_to_full_save_data
 from dnd_simulator.content_loader.catalogs import load_catalog
-from dnd_simulator.content_loader.items import deserialize_item
+from dnd_simulator.content_loader.items import EQUIPMENT_FIELDS, deserialize_item, serialize_item
 from dnd_simulator.content_loader.schemas import ItemContent
 from dnd_simulator.core.class_features import FighterFeatures, FightingStyle, PaladinFeatures, RogueFeatures
 from dnd_simulator.core.items import ItemType
-from dnd_simulator.core.player import _EQUIPMENT_FIELDS, PlayerCharacter, _serialize_item
+from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.rules.weapons import get_weapon_attack
 
@@ -135,7 +135,7 @@ class TestEquipmentRoundTripSerialization:
         weapon = player.equipped_weapon
         assert weapon is not None
 
-        serialized = _serialize_item(weapon)
+        serialized = serialize_item(weapon)
         restored = deserialize_item(serialized)
 
         assert restored.item_type == ItemType.WEAPON
@@ -149,7 +149,7 @@ class TestEquipmentRoundTripSerialization:
         armor = player.equipped_armor
         assert armor is not None
 
-        serialized = _serialize_item(armor)
+        serialized = serialize_item(armor)
         restored = deserialize_item(serialized)
 
         assert restored.item_type == ItemType.ARMOR
@@ -169,7 +169,7 @@ class TestPlayerFullSaveRestore:
         assert player.equipped_weapon is not None
 
         # Save
-        save_data = player.to_full_save_data()
+        save_data = player_to_full_save_data(player)
 
         # Restore via parse_player (same path as load_state for new players)
         restored = parse_player(save_data, item_catalog=catalog)
@@ -186,7 +186,7 @@ class TestPlayerFullSaveRestore:
         catalog = _load_item_catalog()
         player = _create_fighter(catalog)
 
-        save_data = player.to_full_save_data()
+        save_data = player_to_full_save_data(player)
         restored = parse_player(save_data, item_catalog=catalog)
 
         assert restored.equipped_armor is not None, "Armor lost after save/restore"
@@ -197,7 +197,7 @@ class TestPlayerFullSaveRestore:
         catalog = _load_item_catalog()
         player = _create_fighter(catalog)
 
-        save_data = player.to_full_save_data()
+        save_data = player_to_full_save_data(player)
         restored = parse_player(save_data, item_catalog=catalog)
 
         attack = get_weapon_attack(restored)
@@ -215,12 +215,12 @@ class TestEntitiesLayerSaveRestore:
         # Simulate get_state serialization (what entities layer does)
         edata: dict[str, Any] = {"entity_type": "player"}
         # Creature-level equipment serialization
-        for field_name in _EQUIPMENT_FIELDS:
+        for field_name in EQUIPMENT_FIELDS:
             eq_item = getattr(player, field_name)
             if eq_item is not None:
-                edata[field_name] = _serialize_item(eq_item)
+                edata[field_name] = serialize_item(eq_item)
         # Player-level full save
-        edata.update(player.to_full_save_data())
+        edata.update(player_to_full_save_data(player))
 
         # Simulate load_state: parse_player path (entity doesn't exist in template)
         restored = parse_player(edata)
@@ -251,7 +251,7 @@ class TestClassFeaturesSaveRestore:
         assert fighter_feat.fighting_style == FightingStyle.DEFENSE
 
         # Save → load
-        save_data = player.to_full_save_data()
+        save_data = player_to_full_save_data(player)
         restored = parse_player(save_data, item_catalog=catalog)
 
         # Must survive
@@ -268,7 +268,7 @@ class TestClassFeaturesSaveRestore:
         assert rogue_feat is not None
         assert rogue_feat.sneak_attack_dice == 1
 
-        save_data = player.to_full_save_data()
+        save_data = player_to_full_save_data(player)
         restored = parse_player(save_data, item_catalog=catalog)
 
         restored_feat = restored.get_feature(RogueFeatures)
@@ -283,7 +283,7 @@ class TestClassFeaturesSaveRestore:
         paladin_feat = player.get_feature(PaladinFeatures)
         assert paladin_feat is not None
 
-        save_data = player.to_full_save_data()
+        save_data = player_to_full_save_data(player)
         restored = parse_player(save_data, item_catalog=catalog)
 
         restored_feat = restored.get_feature(PaladinFeatures)
@@ -300,7 +300,7 @@ class TestClassFeaturesSaveRestore:
 
         assert effective_ac(player) == 19, f"Original AC wrong: {effective_ac(player)}"
 
-        save_data = player.to_full_save_data()
+        save_data = player_to_full_save_data(player)
         restored = parse_player(save_data, item_catalog=catalog)
 
         assert effective_ac(restored) == 19, (
@@ -341,7 +341,7 @@ class TestAccessoryModifierRoundTrip:
 
         ac_before = effective_ac(player)
 
-        save_data = player.to_full_save_data()
+        save_data = player_to_full_save_data(player)
         restored = parse_player(save_data, item_catalog=catalog)
 
         assert restored.equipped_ring is not None, "Ring lost after save/restore"
@@ -375,7 +375,7 @@ class TestXPRoundTrip:
         player.experience = 300
         player.level_up_available = True
 
-        save_data = player.to_full_save_data()
+        save_data = player_to_full_save_data(player)
         restored = parse_player(save_data, item_catalog=catalog)
 
         assert restored.experience == 300, f"XP lost: got {restored.experience}"
@@ -388,7 +388,7 @@ class TestXPRoundTrip:
         player.experience = 0
         player.level_up_available = False
 
-        save_data = player.to_full_save_data()
+        save_data = player_to_full_save_data(player)
         restored = parse_player(save_data, item_catalog=catalog)
 
         assert restored.experience == 0

@@ -21,7 +21,7 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.class_features import FighterFeatures, FightingStyle, PaladinFeatures
-from dnd_simulator.core.items import Item, ItemType, WeaponCategory, WeaponDef
+from dnd_simulator.core.items import EquipmentSlot, Item, ItemType, WeaponCategory, WeaponDef
 from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.core.turn_budget import TurnBudget
@@ -66,7 +66,7 @@ def _paladin(
         ability_scores=AbilityScores(
             {Ability.STR: 16, Ability.DEX: 10, Ability.CON: 14, Ability.INT: 10, Ability.WIS: 12, Ability.CHA: 14}
         ),
-        equipped_weapon=weapon,
+        equipped={EquipmentSlot.WEAPON: weapon},
         faction_id="heroes",
     )
 
@@ -87,7 +87,7 @@ def _fighter(*, hp: int = 20) -> Character:
         ability_scores=AbilityScores(
             {Ability.STR: 16, Ability.DEX: 10, Ability.CON: 14, Ability.INT: 10, Ability.WIS: 12, Ability.CHA: 8}
         ),
-        equipped_weapon=weapon,
+        equipped={EquipmentSlot.WEAPON: weapon},
         faction_id="heroes",
     )
 

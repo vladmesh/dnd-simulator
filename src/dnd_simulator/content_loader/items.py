@@ -226,6 +226,60 @@ def _parse_equipped(items: list[Item], item_type: ItemType, slot: EquipmentSlot 
     return None
 
 
+#: Creature attribute names for the six equipment slots, in serialization order.
+EQUIPMENT_FIELDS = (
+    "equipped_weapon",
+    "equipped_armor",
+    "equipped_shield",
+    "equipped_head",
+    "equipped_feet",
+    "equipped_ring",
+)
+
+
+def serialize_item(item: Item) -> dict[str, Any]:
+    """Serialize an Item to a flat dict compatible with ``deserialize_item`` / ``parse_items``."""
+    d: dict[str, Any] = {"id": item.id, "name": item.name, "type": item.item_type.value, **item.params}
+    if item.weapon_def:
+        w = item.weapon_def
+        d["weapon_id"] = w.weapon_id
+        d["attack_name"] = w.attack_name
+        d["category"] = w.category.value
+        d["damage"] = [{"dice": dc.dice, "type": dc.type.value} for dc in w.damage]
+        d["reach"] = w.reach
+        if w.ability:
+            d["ability"] = w.ability.value
+        d["modifier"] = w.modifier
+        d["is_magic"] = w.is_magic
+        d["is_finesse"] = w.is_finesse
+        if w.grant_conditions:
+            d["grant_conditions"] = [c.value for c in w.grant_conditions]
+        if w.grant_actions:
+            d["grant_actions"] = [a.value for a in w.grant_actions]
+    if item.armor_def:
+        a = item.armor_def
+        d["armor_id"] = a.armor_id
+        d["category"] = a.category.value
+        d["base_ac"] = a.base_ac
+        d["max_dex_bonus"] = a.max_dex_bonus
+    if item.shield_def:
+        s = item.shield_def
+        d["shield_id"] = s.shield_id
+        d["ac_bonus"] = s.ac_bonus
+    if item.accessory_def:
+        acc = item.accessory_def
+        d["accessory_id"] = acc.accessory_id
+        d["slot"] = acc.slot.value
+        if acc.grant_modifiers:
+            d["grant_modifiers"] = [
+                {"stat": m.stat.value, "op": m.op.value, "value": m.value, "source": m.source}
+                for m in acc.grant_modifiers
+            ]
+    if item.price is not None:
+        d["price"] = item.price
+    return d
+
+
 def deserialize_item(data: dict[str, Any]) -> Item:
     """Deserialize an item dict (from ``_serialize_item``) back to a runtime Item with typed defs.
 
@@ -247,19 +301,21 @@ def parse_equipped_weapon(items: list[Item]) -> Item | None:
     return _parse_equipped(items, ItemType.WEAPON)
 
 
-def extract_all_equipped(inventory: list[Item]) -> tuple[dict[str, Item | None], list[Item]]:
-    """Extract all equipped items from inventory, returning (equipped_dict, remaining_inventory).
+def extract_all_equipped(inventory: list[Item]) -> tuple[dict[EquipmentSlot, Item], list[Item]]:
+    """Extract equipped items from inventory, returning (equipped_by_slot, remaining_inventory).
 
-    equipped_dict keys match Creature field names: equipped_weapon, equipped_armor, etc.
+    The map is keyed by ``EquipmentSlot`` and holds only occupied slots — ready to pass as
+    ``Creature.equipped``.
     """
-    equipped: dict[str, Item | None] = {
-        "equipped_weapon": _parse_equipped(inventory, ItemType.WEAPON),
-        "equipped_armor": _parse_equipped(inventory, ItemType.ARMOR),
-        "equipped_shield": _parse_equipped(inventory, ItemType.SHIELD),
-        "equipped_head": _parse_equipped(inventory, ItemType.ACCESSORY, EquipmentSlot.HEAD),
-        "equipped_feet": _parse_equipped(inventory, ItemType.ACCESSORY, EquipmentSlot.FEET),
-        "equipped_ring": _parse_equipped(inventory, ItemType.ACCESSORY, EquipmentSlot.RING),
+    by_slot_source: dict[EquipmentSlot, Item | None] = {
+        EquipmentSlot.WEAPON: _parse_equipped(inventory, ItemType.WEAPON),
+        EquipmentSlot.ARMOR: _parse_equipped(inventory, ItemType.ARMOR),
+        EquipmentSlot.SHIELD: _parse_equipped(inventory, ItemType.SHIELD),
+        EquipmentSlot.HEAD: _parse_equipped(inventory, ItemType.ACCESSORY, EquipmentSlot.HEAD),
+        EquipmentSlot.FEET: _parse_equipped(inventory, ItemType.ACCESSORY, EquipmentSlot.FEET),
+        EquipmentSlot.RING: _parse_equipped(inventory, ItemType.ACCESSORY, EquipmentSlot.RING),
     }
-    equipped_ids = {item.id for item in equipped.values() if item is not None}
+    equipped: dict[EquipmentSlot, Item] = {slot: item for slot, item in by_slot_source.items() if item is not None}
+    equipped_ids = {item.id for item in equipped.values()}
     remaining = [i for i in inventory if i.id not in equipped_ids]
     return equipped, remaining

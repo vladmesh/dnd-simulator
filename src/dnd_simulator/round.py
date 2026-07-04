@@ -16,12 +16,8 @@ import structlog
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.awareness import (
     CombatAwareness,
-    EquippedInfo,
-    ItemInfo,
-    MerchantInfo,
     PeacefulAwareness,
     PerceivedEvent,
-    describe_item,
 )
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.combat import CombatState, Position
@@ -38,6 +34,7 @@ from dnd_simulator.rules.actions import (
 from dnd_simulator.rules.conditions import is_incapacitated, tick_conditions
 from dnd_simulator.rules.dice import get_global_rng
 from dnd_simulator.rules.modifiers import effective_speed
+from dnd_simulator.rules.movement import resolve_abstract_move
 from dnd_simulator.rules.validation import ActionContext
 
 if TYPE_CHECKING:
@@ -98,81 +95,6 @@ class Round:
     def set_on_action(self, callback: OnActionCallback) -> None:
         """Set callback invoked after each action within a turn."""
         self._on_action = callback
-
-    @staticmethod
-    def _build_available_items(creature: Creature, available_actions: list[ActionType]) -> list[ItemInfo]:
-        """Build item info list for awareness — always returns full inventory."""
-        return [
-            ItemInfo(
-                id=item.id,
-                name=item.name,
-                description=describe_item(item),
-                item_type=str(item.item_type),
-                price=item.price,
-            )
-            for item in creature.inventory
-        ]
-
-    @staticmethod
-    def _build_equipped(creature: Creature) -> list[EquippedInfo]:
-        """Build equipped item info from all 6 equipment slots."""
-        from dnd_simulator.core.items import EquipmentSlot
-
-        slots: list[tuple[EquipmentSlot, object | None]] = [
-            (EquipmentSlot.WEAPON, creature.equipped_weapon),
-            (EquipmentSlot.ARMOR, creature.equipped_armor),
-            (EquipmentSlot.SHIELD, creature.equipped_shield),
-            (EquipmentSlot.HEAD, creature.equipped_head),
-            (EquipmentSlot.FEET, creature.equipped_feet),
-            (EquipmentSlot.RING, creature.equipped_ring),
-        ]
-        result: list[EquippedInfo] = []
-        for slot, item in slots:
-            if item is not None:
-                from dnd_simulator.core.items import Item
-
-                assert isinstance(item, Item)
-                result.append(EquippedInfo(slot=slot, item_id=item.id, name=item.name, description=describe_item(item)))
-        return result
-
-    @staticmethod
-    def _compute_reachable(
-        creature: Creature,
-        combat_state: object | None,
-        budget: TurnBudget,
-    ) -> frozenset[tuple[int, int]]:
-        """Compute reachable cells for the current turn-taker."""
-        if combat_state is None or budget.movement_remaining <= 0:
-            return frozenset()
-        from dnd_simulator.core.combat import CombatState
-
-        assert isinstance(combat_state, CombatState)
-        my_pos = combat_state.battle_map.positions.get(creature.id)
-        if my_pos is None:
-            return frozenset()
-        from dnd_simulator.rules.movement import compute_reachable
-
-        reachable_map = compute_reachable(my_pos, budget.movement_remaining, combat_state.battle_map, creature.id)
-        return frozenset((p.x, p.y) for p in reachable_map if p != my_pos)
-
-    def _build_merchants(self, creature: Creature) -> list[MerchantInfo]:
-        """Build merchant info for creatures at the same location."""
-        hour = self._world.time.hour
-        result: list[MerchantInfo] = []
-        for npc in self._host.get_merchants_at(creature.location_id, hour):
-            items = [
-                ItemInfo(
-                    id=item.id,
-                    name=item.name,
-                    description=describe_item(item),
-                    item_type=str(item.item_type),
-                    price=item.price,
-                )
-                for item in npc.inventory
-                if item.price is not None
-            ]
-            result.append(MerchantInfo(id=npc.id, name=npc.name, gold=npc.gold, items=items))
-        return result
 
     def _execute_action(
         self,
@@ -277,14 +199,13 @@ class Round:
         """Build awareness for a combat turn iteration."""
         assert creature.turn_budget is not None
         available = self._dispatcher.get_available_actions(creature, ctx)
-        reachable = self._compute_reachable(creature, ctx.combat_state, creature.turn_budget)
         awareness = replace(
             self._host.build_awareness(creature, time, query_fn),
             turn_budget=creature.turn_budget,
             available_actions=available,
-            available_items=self._build_available_items(creature, available),
-            equipped=self._build_equipped(creature),
-            reachable=reachable,
+            available_items=self._host.build_available_items(creature),
+            equipped=self._host.build_equipped(creature),
+            reachable=self._host.compute_reachable(creature, ctx.combat_state, creature.turn_budget),
         )
 
         if isinstance(awareness, CombatAwareness):
@@ -338,9 +259,7 @@ class Round:
 
             # Resolve abstract move (toward/away_from) to concrete direction for any creature
             if action.name == ActionType.MOVE and ("toward" in action.params or "away_from" in action.params):
-                from dnd_simulator.service.session import resolve_abstract_move
-
-                action = resolve_abstract_move(action, creature, self._host)
+                action = resolve_abstract_move(action, creature, self._host.get_combat(creature.location_id))
 
             result = self._execute_action(creature, action, ctx, emit_fn)
 
@@ -398,9 +317,9 @@ class Round:
             awareness = replace(
                 self._host.build_peaceful_awareness(creature, time, query_fn),
                 available_actions=available,
-                available_items=self._build_available_items(creature, available),
-                equipped=self._build_equipped(creature),
-                merchants=self._build_merchants(creature),
+                available_items=self._host.build_available_items(creature),
+                equipped=self._host.build_equipped(creature),
+                merchants=self._host.build_merchants(creature, self._world.time.hour),
             )
             events = self._host.get_perceived_events(creature)
 
@@ -520,14 +439,19 @@ class Round:
 
         return on_leave_reach
 
-    def run_round(self) -> RoundResult:
-        """Execute one round: combat turns (initiative order), then peaceful turns, then advance time."""
+    def run_round(self, *, skip_activation: bool = False) -> RoundResult:
+        """Execute one round: combat turns (initiative order), then peaceful turns, then advance time.
+
+        ``skip_activation`` is set by ``run_loop``, which already activated this iteration —
+        avoids running activation (and its materialization) twice per loop step.
+        """
         query_fn = self._world.make_query_fn("entities")
         emit_fn = self._world.make_emit_fn("entities")
         time = self._world.time
 
         # Activate creatures near players, dormify the rest, materialize squads
-        self._host.update_activation(time, query_fn=query_fn, emit_fn=emit_fn)
+        if not skip_activation:
+            self._host.update_activation(time, query_fn=query_fn, emit_fn=emit_fn)
 
         active_count = len(self._host.get_active_creatures())
         combat_locations = list(self._host.get_combat_locations())
@@ -586,7 +510,8 @@ class Round:
                     logger.debug("loop_exit_no_active")
                     break
                 continue  # re-check active after fast-forward
-            result = self.run_round()
+            # run_loop already activated this iteration — don't re-run it inside run_round.
+            result = self.run_round(skip_activation=True)
             rounds_run += 1
             if self._on_round_end:
                 self._on_round_end(result)

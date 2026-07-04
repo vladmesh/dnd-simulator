@@ -21,7 +21,7 @@ from dnd_simulator.core.class_features import (
     PaladinFeatures,
     RogueFeatures,
 )
-from dnd_simulator.core.items import Item, ItemType, WeaponCategory, WeaponDef
+from dnd_simulator.core.items import EquipmentSlot, Item, ItemType, WeaponCategory, WeaponDef
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.rules.divine_smite import validate_smite
 from dnd_simulator.rules.modifiers import attack_modifiers
@@ -55,7 +55,7 @@ def _paladin(*, level: int, fighting_style: FightingStyle | None = FightingStyle
         level=level,
         ability_scores=_scores(),
         class_features=[PaladinFeatures(fighting_style=fighting_style, level=level)],
-        equipped_weapon=weapon,
+        equipped={EquipmentSlot.WEAPON: weapon},
     )
 
 

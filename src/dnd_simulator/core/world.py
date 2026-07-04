@@ -152,26 +152,10 @@ class World:
 
     def save(self) -> dict[str, object]:
         """Serialize entire world state."""
-        last_ticks: dict[str, dict[str, int]] = {}
-        for name, t in self._last_tick_time.items():
-            last_ticks[name] = {
-                "year": t.year,
-                "month": t.month,
-                "day": t.day,
-                "hour": t.hour,
-                "minute": t.minute,
-                "second": t.second,
-            }
+        last_ticks: dict[str, dict[str, int]] = {name: t.to_dict() for name, t in self._last_tick_time.items()}
 
         return {
-            "time": {
-                "year": self.time.year,
-                "month": self.time.month,
-                "day": self.time.day,
-                "hour": self.time.hour,
-                "minute": self.time.minute,
-                "second": self.time.second,
-            },
+            "time": self.time.to_dict(),
             "last_tick_times": last_ticks,
             "layers": {layer.name: layer.get_state() for layer in self._layers},
         }
@@ -180,15 +164,8 @@ class World:
         """Restore world from saved data."""
         time_data = data["time"]
         assert isinstance(time_data, dict)
-        # Backward compat: old saves may lack 'second'
-        self.time = GameDateTime(
-            year=int(time_data.get("year", 1)),
-            month=int(time_data.get("month", 1)),
-            day=int(time_data.get("day", 1)),
-            hour=int(time_data.get("hour", 0)),
-            minute=int(time_data.get("minute", 0)),
-            second=int(time_data.get("second", 0)),
-        )
+        # Backward compat handled in from_dict (old saves may lack 'second')
+        self.time = GameDateTime.from_dict(time_data)
 
         # Restore last tick times (fallback to current time for old saves)
         last_ticks_data = data.get("last_tick_times", {})
@@ -196,14 +173,7 @@ class World:
         for layer in self._layers:
             lt = last_ticks_data.get(layer.name)
             if lt and isinstance(lt, dict):
-                self._last_tick_time[layer.name] = GameDateTime(
-                    year=int(lt.get("year", 1)),
-                    month=int(lt.get("month", 1)),
-                    day=int(lt.get("day", 1)),
-                    hour=int(lt.get("hour", 0)),
-                    minute=int(lt.get("minute", 0)),
-                    second=int(lt.get("second", 0)),
-                )
+                self._last_tick_time[layer.name] = GameDateTime.from_dict(lt)
             else:
                 self._last_tick_time[layer.name] = self.time
 

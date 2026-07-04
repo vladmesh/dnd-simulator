@@ -8,7 +8,7 @@ from dnd_simulator.core.awareness import (
     describe_item,
 )
 from dnd_simulator.core.items import EquipmentSlot, Item, ItemType
-from dnd_simulator.round import Round
+from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder
 
 # ---------------------------------------------------------------------------
 # Test 1: Item with price round-trips through content loader
@@ -76,8 +76,7 @@ def _make_creature_with_equipment() -> object:
         max_hp=20,
         current_hp=20,
         ac=10,
-        equipped_weapon=sword,
-        equipped_ring=ring,
+        equipped={EquipmentSlot.WEAPON: sword, EquipmentSlot.RING: ring},
     )
     return creature
 
@@ -89,7 +88,7 @@ class TestEquippedAwareness:
         from dnd_simulator.core.character import Creature
 
         assert isinstance(creature, Creature)
-        equipped = Round._build_equipped(creature)
+        equipped = AwarenessBuilder.build_equipped(creature)
         assert len(equipped) == 2
         slots = {e.slot for e in equipped}
         assert EquipmentSlot.WEAPON in slots
@@ -111,7 +110,7 @@ class TestEquippedAwareness:
             current_hp=10,
             ac=10,
         )
-        equipped = Round._build_equipped(creature)
+        equipped = AwarenessBuilder.build_equipped(creature)
         assert equipped == []
 
 
@@ -154,7 +153,7 @@ class TestFullInventoryAwareness:
             inventory=[potion, sword, scroll],
         )
         # No USE_ITEM or EQUIP in available_actions — should still return all items
-        items = Round._build_available_items(creature, [])
+        items = AwarenessBuilder.build_available_items(creature)
         assert len(items) == 3
         assert all(isinstance(i, ItemInfo) for i in items)
 
@@ -201,7 +200,7 @@ class TestPlayerToDict:
             max_hp=20,
             current_hp=20,
             ac=16,
-            equipped_armor=chain_mail,
+            equipped={EquipmentSlot.ARMOR: chain_mail},
             inventory=[potion],
         )
 

@@ -13,11 +13,15 @@ from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from dnd_simulator.core.action import Action
     from dnd_simulator.core.character import Creature
     from dnd_simulator.core.models import EmitFn
     from dnd_simulator.core.world import World
     from dnd_simulator.rules.validation import ActionContext
+
+    EquipmentHandler = Callable[[Creature, Action, EmitFn, ActionContext, World], ActionResult]
 
 logger = structlog.get_logger(domain="action")
 
@@ -150,91 +154,34 @@ def _handle_unequip_slot(cfg: SlotConfig, actor: Creature, action: Action, emit_
     return ActionResult()
 
 
-# Public wrappers — thin delegates to the generic mechanism.
-
-_WEAPON_CFG = SLOT_CONFIGS[EquipmentSlot.WEAPON]
-_ARMOR_CFG = SLOT_CONFIGS[EquipmentSlot.ARMOR]
-_SHIELD_CFG = SLOT_CONFIGS[EquipmentSlot.SHIELD]
-_HEAD_CFG = SLOT_CONFIGS[EquipmentSlot.HEAD]
-_FEET_CFG = SLOT_CONFIGS[EquipmentSlot.FEET]
-_RING_CFG = SLOT_CONFIGS[EquipmentSlot.RING]
+# Factory-built handlers — one per slot per direction, generated from SLOT_CONFIGS.
+# Each adapts the 5-arg dispatcher signature to the 4-arg generic mechanism.
 
 
-def handle_equip(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
-    """Equip a weapon from inventory. Free action (D&D 5e object interaction)."""
-    return _handle_equip_slot(_WEAPON_CFG, actor, action, emit_fn)
+def make_equip_handler(cfg: SlotConfig) -> EquipmentHandler:
+    """Build the equip handler for a slot. Free action (D&D 5e object interaction)."""
+
+    def handler(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
+        return _handle_equip_slot(cfg, actor, action, emit_fn)
+
+    return handler
 
 
-def handle_unequip(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
-    """Unequip current weapon → back to inventory. Free action."""
-    return _handle_unequip_slot(_WEAPON_CFG, actor, action, emit_fn)
+def make_unequip_handler(cfg: SlotConfig) -> EquipmentHandler:
+    """Build the unequip handler for a slot. Free action."""
+
+    def handler(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
+        return _handle_unequip_slot(cfg, actor, action, emit_fn)
+
+    return handler
 
 
-def handle_equip_armor(
-    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
-) -> ActionResult:
-    """Equip armor from inventory. Free action."""
-    return _handle_equip_slot(_ARMOR_CFG, actor, action, emit_fn)
+#: ActionType → handler for all equip/unequip slots. Consumed by the dispatcher's register loop.
+EQUIPMENT_HANDLERS: dict[ActionType, EquipmentHandler] = {}
+for _cfg in SLOT_CONFIGS.values():
+    EQUIPMENT_HANDLERS[_cfg.equip_action] = make_equip_handler(_cfg)
+    EQUIPMENT_HANDLERS[_cfg.unequip_action] = make_unequip_handler(_cfg)
 
-
-def handle_unequip_armor(
-    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
-) -> ActionResult:
-    """Unequip armor → back to inventory. Free action."""
-    return _handle_unequip_slot(_ARMOR_CFG, actor, action, emit_fn)
-
-
-def handle_equip_shield(
-    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
-) -> ActionResult:
-    """Equip shield from inventory. Free action."""
-    return _handle_equip_slot(_SHIELD_CFG, actor, action, emit_fn)
-
-
-def handle_unequip_shield(
-    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
-) -> ActionResult:
-    """Unequip shield → back to inventory. Free action."""
-    return _handle_unequip_slot(_SHIELD_CFG, actor, action, emit_fn)
-
-
-def handle_equip_head(
-    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
-) -> ActionResult:
-    """Equip headgear from inventory. Free action."""
-    return _handle_equip_slot(_HEAD_CFG, actor, action, emit_fn)
-
-
-def handle_unequip_head(
-    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
-) -> ActionResult:
-    """Unequip headgear → back to inventory. Free action."""
-    return _handle_unequip_slot(_HEAD_CFG, actor, action, emit_fn)
-
-
-def handle_equip_feet(
-    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
-) -> ActionResult:
-    """Equip footwear from inventory. Free action."""
-    return _handle_equip_slot(_FEET_CFG, actor, action, emit_fn)
-
-
-def handle_unequip_feet(
-    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
-) -> ActionResult:
-    """Unequip footwear → back to inventory. Free action."""
-    return _handle_unequip_slot(_FEET_CFG, actor, action, emit_fn)
-
-
-def handle_equip_ring(
-    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
-) -> ActionResult:
-    """Equip ring from inventory. Free action."""
-    return _handle_equip_slot(_RING_CFG, actor, action, emit_fn)
-
-
-def handle_unequip_ring(
-    actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
-) -> ActionResult:
-    """Unequip ring → back to inventory. Free action."""
-    return _handle_unequip_slot(_RING_CFG, actor, action, emit_fn)
+# Backward-compat named handlers for the weapon slot (used directly in tests).
+handle_equip = EQUIPMENT_HANDLERS[ActionType.EQUIP]
+handle_unequip = EQUIPMENT_HANDLERS[ActionType.UNEQUIP]

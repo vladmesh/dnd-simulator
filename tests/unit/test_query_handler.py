@@ -14,7 +14,7 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.combat import BattleMap
-from dnd_simulator.core.items import Item, ItemType, WeaponCategory, WeaponDef
+from dnd_simulator.core.items import EquipmentSlot, Item, ItemType, WeaponCategory, WeaponDef
 from dnd_simulator.core.models import Event, EventType, Query, QueryType
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -209,7 +209,7 @@ class TestCreatureInventoryInDetail:
             char_class=CharClass.FIGHTER,
             level=3,
             inventory=[self._POTION_ITEM],
-            equipped_weapon=self._WEAPON_ITEM,
+            equipped={EquipmentSlot.WEAPON: self._WEAPON_ITEM},
         )
         layer = EntitiesLayer([player])
 
@@ -253,7 +253,7 @@ class TestCreatureInventoryInDetail:
             location_id="camp",
             ability_scores=_scores(STR=14),
             inventory=[self._POTION_ITEM],
-            equipped_weapon=self._WEAPON_ITEM,
+            equipped={EquipmentSlot.WEAPON: self._WEAPON_ITEM},
         )
         layer = EntitiesLayer([char])
 

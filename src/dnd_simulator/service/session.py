@@ -137,9 +137,11 @@ def _reaction_to_dict(trigger: ReactionTrigger, options: list[ReactionOption]) -
 
 def build_equipped_payload(player: PlayerCharacter) -> list[dict[str, str]]:
     """Build the equipped-items list for player payloads (WS + REST share this shape)."""
+    from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder
+
     return [
         {"slot": e.slot.value, "item_id": e.item_id, "name": e.name, "description": e.description}
-        for e in Round._build_equipped(player)
+        for e in AwarenessBuilder.build_equipped(player)
     ]
 
 
@@ -232,29 +234,14 @@ def _location_data(world: World, location_id: str) -> dict[str, Any]:
 
 
 def resolve_abstract_move(action: Action, player: Creature, creature_host: CreatureHost) -> Action:
-    """Translate toward/away_from into concrete direction + ft for a move action."""
-    from dnd_simulator.rules.movement import calculate_away_direction, calculate_direction
+    """Translate toward/away_from into a concrete direction + ft (host-aware compat wrapper).
 
-    combat = creature_host.get_combat(player.location_id)
-    if not combat:
-        return action
+    The resolution rule lives in ``rules.movement``; this wrapper looks up the player's
+    active combat from the host and delegates.
+    """
+    from dnd_simulator.rules.movement import resolve_abstract_move as _resolve
 
-    bm = combat.battle_map
-    my_pos = bm.get_position(player.id)
-    if my_pos is None:
-        return action
-
-    toward = action.params.get("toward")
-    away_from = action.params.get("away_from")
-    target_id = str(toward or away_from or "")
-    target_pos = bm.get_position(target_id)
-    if target_pos is None:
-        return action
-
-    direction = calculate_direction(my_pos, target_pos) if toward else calculate_away_direction(my_pos, target_pos)
-
-    ft = int(str(action.params.get("ft", 5)))
-    return Action(name=ActionType.MOVE, params={"direction": direction, "ft": ft})
+    return _resolve(action, player, creature_host.get_combat(player.location_id))
 
 
 # ---------------------------------------------------------------------------

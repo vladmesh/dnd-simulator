@@ -9,7 +9,9 @@ from __future__ import annotations
 import heapq
 from itertools import count
 
-from dnd_simulator.core.combat import BattleMap, Position
+from dnd_simulator.core.action import Action, ActionType
+from dnd_simulator.core.character import Creature
+from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.i18n import _
 
 # Compass direction vectors (dx, dy).  North = +y.
@@ -99,6 +101,31 @@ def calculate_away_direction(origin: Position, target: Position) -> str:
         (-1, -1): "southwest",
     }
     return _reverse.get((sx, sy), "north")
+
+
+def resolve_abstract_move(action: Action, mover: Creature, combat: CombatState | None) -> Action:
+    """Translate a toward/away_from move into a concrete direction + ft, using the battle map.
+
+    Returns the action unchanged when there is no combat, no position, or no resolvable target.
+    """
+    if not combat:
+        return action
+
+    bm = combat.battle_map
+    my_pos = bm.get_position(mover.id)
+    if my_pos is None:
+        return action
+
+    toward = action.params.get("toward")
+    away_from = action.params.get("away_from")
+    target_id = str(toward or away_from or "")
+    target_pos = bm.get_position(target_id)
+    if target_pos is None:
+        return action
+
+    direction = calculate_direction(my_pos, target_pos) if toward else calculate_away_direction(my_pos, target_pos)
+    ft = int(str(action.params.get("ft", 5)))
+    return Action(name=ActionType.MOVE, params={"direction": direction, "ft": ft})
 
 
 def move_direction(origin: Position, direction: str, speed: int, battle_map: BattleMap, mover_id: str = "") -> Position:

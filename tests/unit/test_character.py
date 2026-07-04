@@ -1,5 +1,6 @@
 """Tests for entity hierarchy, ability scores, and perception."""
 
+from dnd_simulator.content_loader import load_player_save_data
 from dnd_simulator.core.character import (
     Ability,
     AbilityScores,
@@ -318,7 +319,7 @@ class TestPlayerSaveLoad:
             max_hp=12,
             gold=50,
         )
-        p.load_save_data({"location_id": "r2", "current_hp": 3, "gold": 10})
+        load_player_save_data(p, {"location_id": "r2", "current_hp": 3, "gold": 10})
         assert p.location_id == "r2"
         assert p.current_hp == 3
         assert p.gold == 10
@@ -332,7 +333,7 @@ class TestPlayerSaveLoad:
             max_hp=12,
             gold=50,
         )
-        p.load_save_data({"location_id": "r2"})
+        load_player_save_data(p, {"location_id": "r2"})
         assert p.location_id == "r2"
         assert p.current_hp == 12  # unchanged
         assert p.gold == 50  # unchanged

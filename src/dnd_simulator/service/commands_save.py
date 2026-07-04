@@ -67,7 +67,9 @@ class SaveCommands(GameServiceProtocol):
             if player_data:
                 player = session.get_player()
                 if player:
-                    player.load_save_data(player_data)
+                    from dnd_simulator.content_loader import load_player_save_data
+
+                    load_player_save_data(player, player_data)
 
     def delete_save(self, session_id: str, name: str) -> None:
         """Delete a save file."""

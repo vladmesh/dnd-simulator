@@ -14,10 +14,18 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
+    from dnd_simulator.core.awareness import (
+        CombatAwareness,
+        EquippedInfo,
+        ItemInfo,
+        MerchantInfo,
+        PeacefulAwareness,
+        PerceivedEvent,
+    )
     from dnd_simulator.core.character import Character, Creature, Entity
     from dnd_simulator.core.combat import CombatState
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn
+    from dnd_simulator.core.turn_budget import TurnBudget
 
 
 @runtime_checkable
@@ -85,6 +93,24 @@ class CreatureHost(Protocol):
         query_fn: QueryFn,
     ) -> PeacefulAwareness:
         """Build peaceful awareness explicitly (used on peaceful turns)."""
+        ...
+
+    def build_available_items(self, creature: Creature) -> list[ItemInfo]:
+        """Build the creature's available-items list for awareness."""
+        ...
+
+    def build_equipped(self, creature: Creature) -> list[EquippedInfo]:
+        """Build the creature's equipped-items list for awareness."""
+        ...
+
+    def compute_reachable(
+        self, creature: Creature, combat_state: CombatState | None, budget: TurnBudget
+    ) -> frozenset[tuple[int, int]]:
+        """Compute reachable battle-map cells for the current turn-taker."""
+        ...
+
+    def build_merchants(self, creature: Creature, hour: int) -> list[MerchantInfo]:
+        """Build merchant info for merchant NPCs at the creature's location."""
         ...
 
     def get_perceived_events(self, creature: Creature) -> list[PerceivedEvent]:
