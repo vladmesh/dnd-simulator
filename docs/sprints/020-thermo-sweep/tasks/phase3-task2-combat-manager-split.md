@@ -41,4 +41,11 @@ Gotcha: `make_relation_fn` живёт в `rules/` (чистая, без I/O — 
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- **make_relation_fn** in `rules/reputation.py`: `make_relation_fn(query_fn) -> FactionRelationFn` wraps `query_faction_relation`. Deduped the 4 identical hand-rolled `def get_faction_relation(a, b): return query_faction_relation(query_fn, a, b)` closures — `combat_manager.start_combat` + `_handle_death`, `awareness_builder._resolve_relation` + `check_faction_hostility`. The `activation_manager._maybe_start_combat` "site" from the review is a one-off inline `query_faction_relation(...)` call (already the phase-2 typed accessor), not a closure — left as-is. All 4 deduped sites already guarded `query_fn is not None`, so `make_relation_fn` takes a non-optional `QueryFn`.
+- **Split** `combat_manager` (481 → 241 lines): moved the action resolvers (`resolve_dodge`/`resolve_flee`/`resolve_move`/`resolve_attack`), `handle_death`, and `is_faction_friendly` into new `combat_resolution.py` (284 lines) as free functions taking the `CombatManager` as their state owner (`mgr`) — same relationship the layer submodules have with their layer. `CombatManager` keeps combat-state lifecycle (start/end/remove/sides, `_has_opposing_factions`, serialize/load, `_active_creatures_at_location`, `_event_location`) and delegates the four `resolve_*` methods with one-line calls, so external callers (query_handler) are unchanged. `combat_resolution` imports `CombatManager` only under `TYPE_CHECKING` (combat_manager imports combat_resolution at runtime — no cycle).
+- **Test contract change** (intentional): `test_xp_grant_on_kill` called the private `cm._handle_death(...)` directly → updated to `combat_resolution.handle_death(cm, ...)`. New `test_make_relation_fn` pins the adapter. All combat pins (attack/xp/kill-rep/sides/dodge/flee/move/sneak/smite/OA) green.
+- `make check` green (backend 2359, mypy 155 files, frontend). ruff auto-dropped 23 now-unused imports from combat_manager.

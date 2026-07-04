@@ -6,8 +6,23 @@ No state, no I/O. The single source of truth for how two creatures relate.
 from __future__ import annotations
 
 from dnd_simulator.core.character import Creature
-from dnd_simulator.core.models import FactionRelation
+from dnd_simulator.core.models import FactionRelation, QueryFn
+from dnd_simulator.core.queries import query_faction_relation
 from dnd_simulator.rules.combat_sides import FactionRelationFn
+
+
+def make_relation_fn(query_fn: QueryFn) -> FactionRelationFn:
+    """Adapt a raw ``query_fn`` into a ``(faction_a, faction_b) -> FactionRelation`` callback.
+
+    Single source for the closure that combat, awareness, and activation all hand-rolled
+    identically. Callers guard ``query_fn is not None`` before building the callback.
+    """
+
+    def get_faction_relation(a: str, b: str) -> FactionRelation:
+        return query_faction_relation(query_fn, a, b)
+
+    return get_faction_relation
+
 
 FRIENDLY_THRESHOLD = 75
 HOSTILE_THRESHOLD = 25

@@ -1,4 +1,4 @@
-"""Unit tests for XP grant on kill in CombatManager._handle_death.
+"""Unit tests for XP grant on kill in combat_resolution.handle_death.
 
 Sprint 017, Phase 1, Task 2.
 """
@@ -16,6 +16,7 @@ from dnd_simulator.core.character import (
 )
 from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.core.monster import MonsterTemplate
+from dnd_simulator.layers.entities import combat_resolution
 from dnd_simulator.layers.entities.combat_manager import CombatManager
 from dnd_simulator.rules.checks import CheckResult
 from dnd_simulator.rules.combat import AttackResult
@@ -83,7 +84,7 @@ class TestXpGrantOnKill:
         goblin = _monster(xp_value=50)
         cm, log = _make_cm(hero, goblin)
 
-        cm._handle_death(hero, goblin, goblin.id, _hit_result())
+        combat_resolution.handle_death(cm, hero, goblin, goblin.id, _hit_result())
 
         assert hero.experience == 50
         assert hero.level_up_available is False
@@ -101,7 +102,7 @@ class TestXpGrantOnKill:
         goblin = _monster(xp_value=50)
         cm, log = _make_cm(hero, goblin)
 
-        cm._handle_death(hero, goblin, goblin.id, _hit_result())
+        combat_resolution.handle_death(cm, hero, goblin, goblin.id, _hit_result())
 
         assert hero.experience == 330
         assert hero.level_up_available is True
@@ -115,7 +116,7 @@ class TestXpGrantOnKill:
         rival.current_hp = 0
         cm, log = _make_cm(hero, rival)
 
-        cm._handle_death(hero, rival, rival.id, _hit_result())
+        combat_resolution.handle_death(cm, hero, rival, rival.id, _hit_result())
 
         assert hero.experience == 0
         assert not any(e.event_type == EventType.XP_GAINED for e in log["arena"])
@@ -135,7 +136,7 @@ class TestXpGrantOnKill:
         victim.xp_value = 100  # even if target had xp_value, beast is not Character
         cm, log = _make_cm(beast, victim)
 
-        cm._handle_death(beast, victim, victim.id, _hit_result())
+        combat_resolution.handle_death(cm, beast, victim, victim.id, _hit_result())
 
         assert not hasattr(beast, "experience")
         assert not any(e.event_type == EventType.XP_GAINED for e in log["arena"])

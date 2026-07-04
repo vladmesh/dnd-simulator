@@ -18,7 +18,6 @@ from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.models import Event, FactionRelation
 from dnd_simulator.core.queries import (
     query_faction_name,
-    query_faction_relation,
     query_location_region,
     query_nation_info,
     query_region_info,
@@ -29,7 +28,7 @@ from dnd_simulator.core.queries import (
 from dnd_simulator.core.world import LayerError
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.rules.combat_sides import are_allies
-from dnd_simulator.rules.reputation import effective_relation
+from dnd_simulator.rules.reputation import effective_relation, make_relation_fn
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import GameDateTime, QueryFn
@@ -331,9 +330,7 @@ class AwarenessBuilder:
             return FactionRelation.NEUTRAL.value
 
         try:
-
-            def get_faction_relation(a: str, b: str) -> FactionRelation:
-                return query_faction_relation(query_fn, a, b)
+            get_faction_relation = make_relation_fn(query_fn)
 
             if isinstance(observer, Creature) and isinstance(other, Creature):
                 relation = effective_relation(observer, other, get_faction_relation)
@@ -354,9 +351,7 @@ class AwarenessBuilder:
             return False
 
         try:
-
-            def get_faction_relation(a: str, b: str) -> FactionRelation:
-                return query_faction_relation(query_fn, a, b)
+            get_faction_relation = make_relation_fn(query_fn)
 
             if isinstance(observer, Creature) and isinstance(other, Creature):
                 relation = effective_relation(observer, other, get_faction_relation)
