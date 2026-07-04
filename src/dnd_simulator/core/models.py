@@ -180,6 +180,29 @@ class GameDateTime:
 
         return GameDateTime(year=year, month=month, day=day, hour=hour, minute=minute, second=second)
 
+    def to_dict(self) -> dict[str, int]:
+        """Serialize to a plain dict (save format)."""
+        return {
+            "year": self.year,
+            "month": self.month,
+            "day": self.day,
+            "hour": self.hour,
+            "minute": self.minute,
+            "second": self.second,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> GameDateTime:
+        """Restore from a save dict. Missing fields fall back to defaults (backward compat)."""
+        return cls(
+            year=int(data.get("year", 1)),
+            month=int(data.get("month", 1)),
+            day=int(data.get("day", 1)),
+            hour=int(data.get("hour", 0)),
+            minute=int(data.get("minute", 0)),
+            second=int(data.get("second", 0)),
+        )
+
     def to_total_seconds(self) -> int:
         """Convert to absolute seconds since epoch (year 1, month 1, day 1)."""
         return (

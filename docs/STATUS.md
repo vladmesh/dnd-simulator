@@ -12,9 +12,9 @@
 **Sprint:** 020-thermo-sweep
 **Goal:** закрыть кластер структурного долга и багов из термоядерного ревью — чистота `rules/`, типизация межслойных границ, декомпозиция выросших модулей и фронтовых god-компонентов; поведение неизменно
 **Started:** 2026-06-30
-**Phase:** 3 — Декомпозиция бэка (tasks generated) — 2026-07-04
+**Phase:** 3 — Декомпозиция бэка (task 1 done, task 2 pending) — 2026-07-04
 
-6 задач сгенерированы. Старт с task 1 (дедуп сериализации — приоритет/предусловие save-schema). Скоуп task 6 (реестр экипировки) — на подтверждении координатора (decision_gate), дефолт вариант A.
+Task 1 (дедуп сериализации) закрыт: GameDateTime.to_dict/from_dict, item-сериализация в content_loader (цикл core/player→content_loader разорван), entity_serialization.py. make check зелёный. Скоуп task 6 (реестр экипировки) — на подтверждении координатора (decision_gate), дефолт вариант A.
 
 Полный sweep (выбран пользователем). Источник — [thermo-nuclear-review.md](thermo-nuclear-review.md). Phase 1 закрыта (5 задач), Phase 2 закрыта (4 задачи, E2E зелёный). Фазы 3-4 сверены с брейнштормом [simulation-core](brainstorms/simulation-core.md): activation-логику только изолируем (заменится намерениями/триггерами), слияние combat/peaceful turn-loop отменено, дедуп сериализации повышен до предусловия новой модели (стартовый кусок эпика `save-schema`). Детали — в Decisions спринта.
 

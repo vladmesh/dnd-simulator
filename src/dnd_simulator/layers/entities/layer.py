@@ -22,6 +22,7 @@ from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, EntityKind, Event, EventType, Query
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.npc_memory import NpcMemory
+from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.activation_manager import ActivationManager
 from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder
 from dnd_simulator.layers.entities.combat_manager import CombatManager
@@ -400,94 +401,9 @@ class EntitiesLayer(Layer):
 
     def get_state(self) -> dict[str, object]:
         """Serialize entities state."""
-        from dnd_simulator.core.player import PlayerCharacter
+        from dnd_simulator.layers.entities.entity_serialization import serialize_entity
 
-        entities: dict[str, Any] = {}
-        for eid, e in self._entities.items():
-            data: dict[str, Any] = {
-                "id": e.id,
-                "name": e.name,
-                "location_id": e.location_id,
-                "active": e.active,
-            }
-            if isinstance(e, Creature):
-                # Structural fields needed to reconstruct spawned creatures from save data
-                data.update(
-                    {
-                        "max_hp": e.max_hp,
-                        "ac": e.ac,
-                        "speed": e.speed,
-                        "ability_scores": e.ability_scores.to_dict(),
-                    }
-                )
-                if e.attacks:
-                    data["attacks"] = [
-                        {
-                            "name": a.name,
-                            "ability": a.ability.value,
-                            "damage": [{"dice": d.dice, "type": d.type.value} for d in a.damage],
-                            "reach": a.reach,
-                        }
-                        for a in e.attacks
-                    ]
-                if e.wake_at_seconds is not None:
-                    data["wake_at_seconds"] = e.wake_at_seconds
-                if e.conditions:
-                    data["conditions"] = {c.value: r for c, r in e.conditions.items()}
-                from dnd_simulator.core.player import _EQUIPMENT_FIELDS, _serialize_item
-
-                if e.inventory:
-                    data["inventory"] = [_serialize_item(item) for item in e.inventory]
-                for field_name in _EQUIPMENT_FIELDS:
-                    eq_item = getattr(e, field_name)
-                    if eq_item is not None:
-                        data[field_name] = _serialize_item(eq_item)
-                if e.reputation:
-                    data["reputation"] = dict(e.reputation)
-                if e.resource_pools:
-                    data["resource_pools"] = [
-                        {
-                            "id": pool.id,
-                            "max_uses": pool.max_uses,
-                            "current_uses": pool.current_uses,
-                            "reset_on": pool.reset_on.value,
-                        }
-                        for pool in e.resource_pools
-                    ]
-            if isinstance(e, PlayerCharacter):
-                data["entity_type"] = EntityKind.PLAYER.value
-                data.update(e.to_full_save_data())
-            elif isinstance(e, Npc):
-                data["entity_type"] = EntityKind.NPC.value
-                data.update(
-                    {
-                        "current_hp": e.current_hp,
-                        "role": e.role.value,
-                        "personality": e.personality,
-                        "settlement_id": e.settlement_id,
-                        "location_override": e.location_override,
-                        "memory": e.memory.to_dict(),
-                        "ai_type": e.ai_type,
-                        # Aliases for parse_npc compatibility (used to reconstruct spawned NPCs)
-                        "hp": e.max_hp,
-                        "ai": e.ai_type,
-                        "start_location": e.location_id,
-                        "race": e.race.value,
-                        "class": e.char_class.value,
-                    }
-                )
-            elif isinstance(e, Creature):
-                data["entity_type"] = EntityKind.CREATURE.value
-                data["current_hp"] = e.current_hp
-            elif isinstance(e, Container):
-                from dnd_simulator.core.player import _serialize_item
-
-                data["entity_type"] = EntityKind.CONTAINER.value
-                data["is_open"] = e.is_open
-                data["gold"] = e.gold
-                if e.inventory:
-                    data["inventory"] = [_serialize_item(item) for item in e.inventory]
-            entities[eid] = data
+        entities: dict[str, Any] = {eid: serialize_entity(e) for eid, e in self._entities.items()}
         combats = self._combat.get_combats_state()
         result: dict[str, object] = {"entities": entities}
         if combats:
@@ -497,7 +413,7 @@ class EntitiesLayer(Layer):
     def load_state(self, state: dict[str, object]) -> None:
         """Restore mutable entity state from saved data."""
         from dnd_simulator.content_loader import parse_player
-        from dnd_simulator.core.player import PlayerCharacter
+        from dnd_simulator.content_loader.items import EQUIPMENT_FIELDS, deserialize_item
 
         entities_data = state["entities"]
         assert isinstance(entities_data, dict)
@@ -565,16 +481,11 @@ class EntitiesLayer(Layer):
                         entity.conditions = {Condition(str(c)): None for c in conditions_raw}
                     inv_raw = edata.get("inventory")
                     if isinstance(inv_raw, list):
-                        from dnd_simulator.content_loader.items import deserialize_item
-
                         entity.inventory = [deserialize_item(d) for d in inv_raw]
-                    from dnd_simulator.content_loader.items import deserialize_item as _deser
-                    from dnd_simulator.core.player import _EQUIPMENT_FIELDS
-
-                    for field_name in _EQUIPMENT_FIELDS:
+                    for field_name in EQUIPMENT_FIELDS:
                         eq_data = edata.get(field_name)
                         if isinstance(eq_data, dict):
-                            setattr(entity, field_name, _deser(eq_data))
+                            setattr(entity, field_name, deserialize_item(eq_data))
                     pools_raw = edata.get("resource_pools")
                     if isinstance(pools_raw, list):
                         from dnd_simulator.core.resource import ResourcePool, RestType
@@ -620,8 +531,6 @@ class EntitiesLayer(Layer):
                     entity.is_open = bool(edata.get("is_open", entity.is_open))
                     inv_raw = edata.get("inventory")
                     if isinstance(inv_raw, list):
-                        from dnd_simulator.content_loader.items import deserialize_item
-
                         entity.inventory = [deserialize_item(d) for d in inv_raw]
 
         combats_data = state.get("combats")

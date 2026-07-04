@@ -9,8 +9,11 @@ from pathlib import Path
 from typing import Any
 
 from dnd_simulator.content_loader.items import (
+    EQUIPMENT_FIELDS,
+    deserialize_item,
     extract_all_equipped,
     parse_items,
+    serialize_item,
 )
 from dnd_simulator.content_loader.schemas import (
     AttackContent,
@@ -310,3 +313,68 @@ def parse_ability_scores(data: dict[str, Any], key: str = "ability_scores") -> A
             }
         )
     return AbilityScores()
+
+
+# ---------------------------------------------------------------------------
+# Player save/load (kept here so core/player has no content_loader dependency)
+# ---------------------------------------------------------------------------
+
+
+def player_to_full_save_data(player: PlayerCharacter) -> dict[str, Any]:
+    """Serialize full player definition for autosave restore."""
+    data: dict[str, Any] = {
+        "name": player.name,
+        "race": player.race.value,
+        "class": player.char_class.value,
+        "level": player.level,
+        "alignment": player.alignment.value,
+        "appearance": player.appearance,
+        "ability_scores": {a.value: s for a, s in player.ability_scores.scores.items()},
+        "hp": player.max_hp,
+        "ac": player.ac,
+        "gold": player.gold,
+        "start_location": player.location_id,
+        "current_hp": player.current_hp,
+        "experience": player.experience,
+        "level_up_available": player.level_up_available,
+    }
+    # Unified items list: inventory + equipped items. Equipped items get "equipped": true
+    # so parse_player can re-equip them.
+    all_items: list[dict[str, Any]] = [serialize_item(item) for item in player.inventory]
+    for field_name in EQUIPMENT_FIELDS:
+        item = getattr(player, field_name)
+        if item is not None:
+            d = serialize_item(item)
+            d["equipped"] = True
+            all_items.append(d)
+            data[field_name] = d
+    if all_items:
+        data["items"] = all_items
+    # class_features so parse_class_features() can reconstruct them
+    cf: dict[str, Any] = {}
+    for feat in player.class_features:
+        if isinstance(feat, FighterFeatures):
+            cf["fighting_style"] = feat.fighting_style.value
+        elif isinstance(feat, RogueFeatures):
+            cf["sneak_attack_dice"] = feat.sneak_attack_dice
+        elif isinstance(feat, PaladinFeatures) and feat.fighting_style is not None:
+            cf["fighting_style"] = feat.fighting_style.value
+    if cf:
+        data["class_features"] = cf
+    return data
+
+
+def load_player_save_data(player: PlayerCharacter, data: dict[str, Any]) -> None:
+    """Restore a player's mutable state from a save dict."""
+    player.location_id = str(data.get("location_id", data.get("region_id", player.location_id)))
+    player.current_hp = int(data.get("current_hp", player.current_hp))
+    player.gold = int(data.get("gold", player.gold))
+    player.experience = int(data.get("experience", player.experience))
+    player.level_up_available = bool(data.get("level_up_available", player.level_up_available))
+    items_data = data.get("items")
+    if isinstance(items_data, list):
+        player.inventory = [deserialize_item(d) for d in items_data]
+    for field_name in EQUIPMENT_FIELDS:
+        eq_data = data.get(field_name)
+        if isinstance(eq_data, dict):
+            setattr(player, field_name, deserialize_item(eq_data))

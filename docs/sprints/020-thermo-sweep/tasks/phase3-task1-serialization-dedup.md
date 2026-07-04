@@ -46,4 +46,13 @@ Gotcha: формат байт-в-байт неизменен — любые из
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- **GameDateTime.to_dict/from_dict** (`core/models.py`): replaced the 4 hand-rolled year/month/day/hour/minute/second dict-builds in `world.py` (save time, save last_ticks, load time, load last_ticks). `from_dict` keeps the backward-compat defaulting (old saves lacking `second` → 0). Signature is `dict[str, Any]` at the deserialization boundary (avoids `int(object)` overload noise).
+- **Cycle break `core/player → content_loader`**: done the sprint-intended way — item (de)serialization now lives in `content_loader`, and `core/player` no longer imports `content_loader` at all. Moved `_serialize_item` → `content_loader.items.serialize_item` (public) and `_EQUIPMENT_FIELDS` → `content_loader.items.EQUIPMENT_FIELDS`; moved `PlayerCharacter.to_full_save_data`/`load_save_data` → free functions `player_to_full_save_data(player)` / `load_player_save_data(player, data)` in `content_loader.creatures` (next to `parse_player`). `core/player.py` is now a thin dataclass. `deserialize_item` stayed in `content_loader.items` (it legitimately uses `ItemContent`).
+- **entity_serialization.py** (mirror of `combat_serialization.py`): extracted the get_state per-entity build into `serialize_entity(entity)`; `EntitiesLayer.get_state` is now a one-line dict-comp. The load/restore half stays in `load_state` — it dispatches entity *construction* against the live layer, so it isn't a clean pure-function extraction. Documented in the module docstring.
+- **Import-cycle gotcha**: `content_loader.__init__` imports `creatures` → `layers.entities.models` → `layers.entities.__init__` → `layer.py`. So `layer.py` (and `entity_serialization.py`) must import `content_loader` *lazily* inside functions — this is the pre-existing pattern, not new debt. The core-level cycle (the actual deliverable) is gone: `core/player` has zero `content_loader` imports.
+- **Callers updated**: `commands_save.py`, `game_service.py` (`player.load_save_data` → `load_player_save_data(player, ...)`); tests `test_character.py`, `test_starting_equipment.py` (import from `content_loader`, method→function). Contract change is intentional (methods became free functions to break the cycle).
+- **Pins**: new `test_serialization_dedup.py` (GameDateTime to/from dict incl. missing-`second` backward compat; item round-trip deep-equality for weapon/finesse-weapon/armor/shield/accessory-with-grant_modifiers/potion). Existing `test_entities_serialization`, `test_starting_equipment`, `test_autosave_all`, `test_commands_save` all still green. `make check` green (backend 2358, frontend 242). Integration `test_save_roundtrip` deferred to `/close-phase` (task changed no integration tests; save format is byte-for-byte unchanged).
