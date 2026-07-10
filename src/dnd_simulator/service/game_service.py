@@ -70,6 +70,11 @@ def _derive_layer_seeds(world_seed: int) -> dict[str, int]:
     return {layer_name: rng.getrandbits(64) for layer_name in _LAYER_SEED_ORDER}
 
 
+def _create_dice_rng() -> random.Random:
+    raw = os.getenv("DND_DICE_SEED")
+    return random.Random(int(raw)) if raw is not None else random.Random()
+
+
 def _flatten_region_defaults[T](
     locations: list[Location],
     by_region: dict[str, T],
@@ -131,6 +136,7 @@ class GameService(
         meta = load_world_meta_from_manifest(world_path, lang=lang)
         world_seed = _resolve_world_seed()
         layer_seeds = _derive_layer_seeds(world_seed)
+        dice_rng = _create_dice_rng()
         regions = load_world(layer_paths["geography"], lang=lang)
         nations = load_nations(layer_paths["politics"], lang=lang)
         settlements = load_settlements(layer_paths["settlements"], lang=lang)
@@ -209,6 +215,7 @@ class GameService(
             encounter_tables=effective_encounters,
             battle_map_configs=battle_map_configs,
             seed=layer_seeds["entities"],
+            dice_rng=dice_rng,
         )
 
         # Assign brains via factory (content_loader only parses data, not brains)
@@ -230,6 +237,7 @@ class GameService(
             lang=lang,
             world_name=world_name,
             default_player_faction=meta.get("default_player_faction", ""),
+            dice_rng=dice_rng,
         )
         session._on_empty = self._on_session_empty
         self._sessions[session_id] = session
@@ -343,7 +351,6 @@ class GameService(
                 return
 
         from dnd_simulator.layers.common.rng_state import load_rng_state
-        from dnd_simulator.rules.dice import get_global_rng
         from dnd_simulator.storage.save_schema import SaveGame
 
         try:
@@ -367,7 +374,7 @@ class GameService(
         del self._sessions[session.session_id]
         session.session_id = session_id
 
-        load_rng_state(get_global_rng(), save.world.dice_rng_state)
+        load_rng_state(session.dice_rng, save.world.dice_rng_state)
         session.world.load(save.world.to_world_dict())
         self._assign_brains(self._get_entities_layer(session))
 

@@ -14,7 +14,7 @@ import pytest
 
 from dnd_simulator.core.brain import BrainType
 from dnd_simulator.layers.entities.models import Npc
-from dnd_simulator.rules.dice import roll, set_global_seed
+from dnd_simulator.rules.dice import roll
 from dnd_simulator.rules.rule_brain import RuleBrain
 from dnd_simulator.service import GameService
 from dnd_simulator.storage.store import JsonFileStore
@@ -69,15 +69,27 @@ class TestLoadGameRoundTrip:
         svc = _make_service(tmp_path)
         session = svc.start_game("sword_vale")
         sid = session.session_id
-        set_global_seed(77)
-        roll("1d20")
+        session.dice_rng.seed(77)
+        roll("1d20", rng=session.dice_rng)
         svc.save_game(sid, "dice")
-        expected = roll("1d20").total
-        roll("1d20")
+        expected = roll("1d20", rng=session.dice_rng).total
+        roll("1d20", rng=session.dice_rng)
 
         svc.load_game(sid, "dice")
 
-        assert roll("1d20").total == expected
+        assert roll("1d20", rng=session.dice_rng).total == expected
+
+    def test_sessions_own_independent_dice_sequences(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("DND_DICE_SEED", "91")
+        svc = _make_service(tmp_path)
+        first = svc.start_game("sword_vale")
+        second = svc.start_game("sword_vale")
+
+        first_initial = roll("1d20", rng=first.dice_rng).total
+        roll("5d20", rng=first.dice_rng)
+        second_initial = roll("1d20", rng=second.dice_rng).total
+
+        assert first_initial == second_initial
 
     def test_state_restored_to_saved_snapshot(self, tmp_path: Path) -> None:
         svc = _make_service(tmp_path)

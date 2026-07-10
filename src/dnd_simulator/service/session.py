@@ -4,6 +4,7 @@ import contextlib
 import contextvars
 import dataclasses
 import os
+import random
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -268,6 +269,7 @@ class GameSession:
     lang: str = "en"
     world_name: str = ""
     default_player_faction: str = ""
+    dice_rng: random.Random = field(default_factory=random.Random, repr=False)
 
     # Round lifecycle (managed, not serialized)
     _round: Round | None = field(default=None, init=False, repr=False)
@@ -508,7 +510,7 @@ class GameSession:
             player.brain = brain
 
             dispatcher = create_dispatcher(self.world)
-            game_round = Round(self.world, creature_host, dispatcher=dispatcher)
+            game_round = Round(self.world, creature_host, dispatcher=dispatcher, rng=self.dice_rng)
 
             # Wire on_action: fires after each action by any creature
             def on_action(creature: Creature, action: Action, budget: TurnBudget | None, error: str) -> None:

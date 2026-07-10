@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import random
+
 import structlog
 
 from dnd_simulator.core.character import Creature, Entity
@@ -34,6 +36,7 @@ class CombatManager:
         entities: dict[str, Entity],
         location_log: dict[str, list[Event]],
         battle_map_configs: dict[str, BattleMap] | None = None,
+        rng: random.Random | None = None,
     ) -> None:
         self._entities = entities
         self._location_log = location_log
@@ -41,6 +44,7 @@ class CombatManager:
         self._attack_this_round: dict[str, bool] = {}
         self._sneak_attack_used: set[str] = set()  # creature IDs that used SA this round
         self._battle_map_configs: dict[str, BattleMap] = battle_map_configs or {}
+        self._rng = rng or random.Random()
 
     def get_combat_locations(self) -> list[str]:
         """Return location IDs with active combats."""
@@ -60,7 +64,7 @@ class CombatManager:
         creatures = self._active_creatures_at_location(location_id)
         if len(creatures) < 2:
             return None
-        ordered = roll_initiative(creatures)
+        ordered = roll_initiative(creatures, rng=self._rng)
 
         if location_id in self._battle_map_configs:
             template = self._battle_map_configs[location_id]
@@ -74,7 +78,7 @@ class CombatManager:
                 fixed_ids.add(c.id)
         remaining = [c.id for c in creatures if c.id not in fixed_ids]
         if remaining:
-            battle_map.place_randomly(remaining)
+            battle_map.place_randomly(remaining, rng=self._rng)
 
         combat = CombatState(
             location_id=location_id,

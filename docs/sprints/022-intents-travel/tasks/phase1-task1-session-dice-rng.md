@@ -33,4 +33,13 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+`GameSession` теперь владеет отдельным `random.Random`, инициализированным из `DND_DICE_SEED`. Тот же объект
+используют `Round`, initiative, battle-map placement и attack resolution. Save/load и восстановление autosave
+сохраняют состояние RNG конкретной сессии. Глобальный RNG остался fallback для изолированных rules-тестов.
+
+Существующий helper reaction-тестов дополнен явным RNG, потому что он создаёт `Round` через `__new__` в обход
+runtime-конструктора.

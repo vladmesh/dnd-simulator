@@ -82,6 +82,7 @@ class EntitiesLayer(Layer):
         monster_templates: dict[str, MonsterTemplate] | None = None,
         encounter_tables: dict[str, list[EncounterEntry]] | None = None,
         seed: int | None = None,
+        dice_rng: random.Random | None = None,
     ) -> None:
         self._entities: dict[str, Entity] = {}
         self._location_log: dict[str, list[Event]] = defaultdict(list)
@@ -99,7 +100,7 @@ class EntitiesLayer(Layer):
         if entities:
             for e in entities:
                 self._entities[e.id] = e
-        self._combat = CombatManager(self._entities, self._location_log, battle_map_configs)
+        self._combat = CombatManager(self._entities, self._location_log, battle_map_configs, rng=dice_rng)
         self._awareness = AwarenessBuilder(self._entities, self._location_log, self._combat)
         self._activation = ActivationManager(
             self._entities,

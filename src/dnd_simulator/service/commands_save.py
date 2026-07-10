@@ -4,7 +4,6 @@ import structlog
 from pydantic import ValidationError
 
 from dnd_simulator.layers.common.rng_state import dump_rng_state, load_rng_state
-from dnd_simulator.rules.dice import get_global_rng
 from dnd_simulator.service.base import GameServiceProtocol
 from dnd_simulator.service.session import GameSession
 from dnd_simulator.storage.save_schema import SCHEMA_VERSION, SaveGame, SaveMeta
@@ -18,7 +17,7 @@ class SaveCommands(GameServiceProtocol):
     def _build_save_game(self, session_id: str) -> SaveGame:
         session: GameSession = self._get_session(session_id)
         world_data = session.world.save()
-        world_data["dice_rng_state"] = dump_rng_state(get_global_rng())
+        world_data["dice_rng_state"] = dump_rng_state(session.dice_rng)
         return SaveGame.model_validate(
             {
                 "schema_version": SCHEMA_VERSION,
@@ -68,7 +67,7 @@ class SaveCommands(GameServiceProtocol):
         data = self._store.load(name, world=session.world_name)
         save = self._validate_save(data)
 
-        load_rng_state(get_global_rng(), save.world.dice_rng_state)
+        load_rng_state(session.dice_rng, save.world.dice_rng_state)
         session.world.load(save.world.to_world_dict())
 
         # Reassign brains based on restored ai_type (may differ from pre-load state)

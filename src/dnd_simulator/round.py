@@ -7,6 +7,7 @@ while queries (look/status/map) loop without ending.
 
 from __future__ import annotations
 
+import random
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
@@ -32,7 +33,6 @@ from dnd_simulator.rules.actions import (
     get_num_bonus_actions,
 )
 from dnd_simulator.rules.conditions import is_incapacitated, tick_conditions
-from dnd_simulator.rules.dice import get_global_rng
 from dnd_simulator.rules.modifiers import effective_speed
 from dnd_simulator.rules.movement import resolve_abstract_move
 from dnd_simulator.rules.validation import ActionContext
@@ -67,6 +67,7 @@ class Round:
         world: World,
         creature_host: CreatureHost | None = None,
         dispatcher: ActionDispatcher | None = None,
+        rng: random.Random | None = None,
     ) -> None:
         self._world = world
         self._host = creature_host or world.creature_host
@@ -75,6 +76,7 @@ class Round:
 
             dispatcher = create_dispatcher(world)
         self._dispatcher = dispatcher
+        self._rng = rng or random.Random()
         self._stop_flag = False
         self._on_round_end: Callable[[RoundResult], None] | None = None
         self._on_action: OnActionCallback | None = None
@@ -186,7 +188,7 @@ class Round:
             turn_budget=creature.turn_budget,
             combat_state=combat_state,
             get_entity=self._host.get_entity,
-            rng=get_global_rng(),
+            rng=self._rng,
         )
 
     def _build_combat_awareness(
@@ -306,7 +308,7 @@ class Round:
             is_combat=False,
             current_turn_entity_id=creature.id,
             get_entity=self._host.get_entity,
-            rng=get_global_rng(),
+            rng=self._rng,
         )
 
         while True:
@@ -387,7 +389,7 @@ class Round:
                 turn_budget=creature.turn_budget,
                 combat_state=combat_state,
                 get_entity=self._host.get_entity,
-                rng=get_global_rng(),
+                rng=self._rng,
             )
             result = self._execute_action(creature, action, ctx, _emit)
             if result.success:

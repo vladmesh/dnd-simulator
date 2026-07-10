@@ -12,7 +12,7 @@
 **Sprint:** 022-intents-travel
 **Goal:** Любое существо может быть якорем и сохраняемым носителем намерения; ожидание, сон и путешествие исполняются во времени, travel движется по графу без телепортации, а save/load согласован с жизненным циклом раунда.
 **Started:** 2026-07-10
-**Phase:** 1 — Safe session lifecycle (tasks generated) — 2026-07-10
+**Phase:** 1 — Safe session lifecycle (task 1 done, task 2 pending) — 2026-07-10
 
 Ready to start task 1.
 

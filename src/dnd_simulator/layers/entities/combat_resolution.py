@@ -118,7 +118,7 @@ def resolve_attack(mgr: CombatManager, event: Event, query_fn: QueryFn | None = 
     attack = get_weapon_attack(attacker)
     atk_mods = attack_modifiers(attacker, target, melee=attack.reach <= 10)
 
-    rolled_dice, dice_total = roll_attack_dice(atk_mods)
+    rolled_dice, dice_total = roll_attack_dice(atk_mods, rng=mgr._rng)
     modifier = atk_mods.modifier + dice_total
 
     ally_adjacent = False
@@ -177,6 +177,7 @@ def resolve_attack(mgr: CombatManager, event: Event, query_fn: QueryFn | None = 
         disadvantage=atk_mods.disadvantage,
         force_crit=atk_mods.force_crit,
         gwf_reroll=atk_mods.gwf_reroll,
+        rng=mgr._rng,
     )
     logger.info(
         "attack_result",
