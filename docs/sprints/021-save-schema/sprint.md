@@ -34,7 +34,9 @@ Pydantic-модели сейва (`SaveGame`: `schema_version`, `meta`, `world{t
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Типизированные state-модели простых слоёв + RNG в состоянии](tasks/phase2-task1-layer-state-models.md)
+2. [Entities-слой на Pydantic-моделях сейва](tasks/phase2-task2-entities-state-model.md)
+3. [SaveGame-конверт, schema_version=1, единый путь загрузки](tasks/phase2-task3-save-envelope.md)
 
 ## Phase 3: Autosave hardening
 
