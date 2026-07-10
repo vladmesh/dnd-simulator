@@ -2,7 +2,7 @@
 
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
-**Last updated:** 2026-07-10
+**Last updated:** 2026-07-11
 **Position:** Sprint 020 закрыл thermo-sweep (корректность, чистота `rules/`, типизация границ, decomposition). Sprint 021 закрыл первый эпик simulation-core: версионированная Pydantic-схема сейва (`SaveGame`, schema_version=1), воспроизводимость мира от `DND_WORLD_SEED` (слоевые RNG, их состояние в сейве), периодический автосейв. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
 **Next:** Sprint 022 исполняет цепочку simulation-core: safe session lifecycle → anchors/intents → travel → interruptible journeys.
 **Blockers:** нет.
@@ -12,9 +12,9 @@
 **Sprint:** 022-intents-travel
 **Goal:** Любое существо может быть якорем и сохраняемым носителем намерения; ожидание, сон и путешествие исполняются во времени, travel движется по графу без телепортации, а save/load согласован с жизненным циклом раунда.
 **Started:** 2026-07-10
-**Phase:** 1 — Safe session lifecycle (COMPLETE) — 2026-07-10
+**Phase:** 2 — Anchors, wait and sleep intents (tasks generated) — 2026-07-11
 
-Блокер connection-driven resume закрыт вне последовательности sprint-задач: listener lifecycle сериализован с round transitions, stale cleanup стал no-op. Backend check: 2441 passed; live save/load + WS integration: 8 passed; reconnect stress: 20/20. Ready for Phase 2 task generation.
+Phase 2 разбита на три задачи: сохраняемая модель anchor/intent, player-agnostic activation + fast-forward и lifecycle wait/sleep через save/load/reconnect. Ready to start task 1.
 
 ### Phases
 

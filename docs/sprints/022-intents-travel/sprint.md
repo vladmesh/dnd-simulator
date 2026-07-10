@@ -35,7 +35,9 @@ Save, load, autosave, evict и round loop согласованы одной sess
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Persisted anchors and timed intents](tasks/phase2-task1-persisted-anchors-intents.md)
+2. [Anchor-driven activation and fast-forward](tasks/phase2-task2-anchor-activation-fast-forward.md)
+3. [Wait and sleep intent lifecycle](tasks/phase2-task3-wait-sleep-lifecycle.md)
 
 ## Phase 3: Travel as an intent
 
@@ -61,7 +63,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 1 complete. Ready for Phase 2 task generation.
+**Current:** Phase 2 tasks generated. Ready to start task 1.
 
 ## Decisions
 
