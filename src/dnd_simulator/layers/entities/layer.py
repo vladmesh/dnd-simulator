@@ -28,12 +28,14 @@ from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.turn_budget import TurnBudget
+from dnd_simulator.layers.common.rng_state import dump_rng_state, load_rng_state
 from dnd_simulator.layers.entities.activation_manager import ActivationManager
 from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder, active_merchants_at
 from dnd_simulator.layers.entities.combat_manager import CombatManager
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.layers.entities.query_handler import QueryHandler
+from dnd_simulator.layers.entities.save_models import EntitiesState
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn, TimeDelta
@@ -423,21 +425,22 @@ class EntitiesLayer(Layer):
 
         entities: dict[str, Any] = {eid: serialize_entity(e) for eid, e in self._entities.items()}
         combats = self._combat.get_combats_state()
-        result: dict[str, object] = {"entities": entities}
-        if combats:
-            result["combats"] = combats
-        return result
+        state = EntitiesState.model_validate(
+            {"entities": entities, "combats": combats, "rng_state": dump_rng_state(self._rng)}
+        )
+        return state.model_dump(mode="json", by_alias=True)
 
     def load_state(self, state: dict[str, object]) -> None:
         """Restore mutable entity state from saved data."""
         from dnd_simulator.content_loader import parse_player
         from dnd_simulator.content_loader.items import EQUIPMENT_FIELDS, deserialize_item
 
-        entities_data = state["entities"]
-        assert isinstance(entities_data, dict)
+        save_state = EntitiesState.model_validate(state)
+        load_rng_state(self._rng, save_state.rng_state)
+        state_data = save_state.model_dump(mode="json", by_alias=True)
+        entities_data = state_data["entities"]
 
         for eid, edata in entities_data.items():
-            assert isinstance(edata, dict)
             entity = self._entities.get(str(eid))
 
             # Recreate missing entities from save data (spawned at runtime or player)
@@ -551,6 +554,4 @@ class EntitiesLayer(Layer):
                     if isinstance(inv_raw, list):
                         entity.inventory = [deserialize_item(d) for d in inv_raw]
 
-        combats_data = state.get("combats")
-        if isinstance(combats_data, dict):
-            self._combat.load_combats_state(combats_data)
+        self._combat.load_combats_state(state_data["combats"])

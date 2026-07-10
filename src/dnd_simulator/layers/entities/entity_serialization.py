@@ -8,11 +8,14 @@ the live layer. Item (de)serialization lives in ``content_loader`` (imported laz
 
 from __future__ import annotations
 
+from typing import cast
+
 from dnd_simulator.core.character import Creature, Entity
 from dnd_simulator.core.container import Container
 from dnd_simulator.core.models import EntityKind
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.models import Npc
+from dnd_simulator.layers.entities.save_models import EntitySave, EntitySaveAdapter
 
 
 def serialize_entity(entity: Entity) -> dict[str, object]:
@@ -100,4 +103,5 @@ def serialize_entity(entity: Entity) -> dict[str, object]:
         data["gold"] = e.gold
         if e.inventory:
             data["inventory"] = [serialize_item(item) for item in e.inventory]
-    return data
+    entity_save: EntitySave = EntitySaveAdapter.validate_python(data)
+    return cast(dict[str, object], EntitySaveAdapter.dump_python(entity_save, mode="json", by_alias=True))

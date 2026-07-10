@@ -35,4 +35,8 @@ Lossless-инвариант (ключевое требование simulation-co
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added `EntitiesState` with discriminated Pydantic entity models, typed combat submodels, and entities-layer RNG state. `EntitiesLayer.get_state()` now always emits `entities`, `combats`, and `rng_state`; `load_state()` validates through `EntitiesState` before reconstruction. The old NPC `conversation_summary` save fallback is now invalid, matching the sprint decision to drop legacy save formats.

@@ -12,9 +12,9 @@
 **Sprint:** 021-save-schema
 **Goal:** Единая версионированная Pydantic-схема сейва + воспроизводимость мира от явного сида + периодический автосейв.
 **Started:** 2026-07-10
-**Phase:** 2 — Unified Pydantic save schema (task 1 done, task 2 pending) — 2026-07-10
+**Phase:** 2 — Unified Pydantic save schema (task 2 done, task 3 pending) — 2026-07-10
 
-Phase 2 task 1 is done. Task 2 is pending.
+Phase 2 task 2 is done. Task 3 is pending.
 
 ### Phases
 

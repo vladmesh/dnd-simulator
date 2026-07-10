@@ -1,5 +1,10 @@
 """Tests for entities layer serialization — resource pools, NPC ai_type, and combat state round-trip."""
 
+import json
+
+import pytest
+from pydantic import ValidationError
+
 from dnd_simulator.core.character import Creature, NpcRole
 from dnd_simulator.core.combat import BattleMap, CombatState, Position, Wall
 from dnd_simulator.core.resource import ResourcePool, RestType
@@ -278,3 +283,41 @@ class TestCombatStateRoundTrip:
         assert r2.turn_order == ["d", "c"]
         assert r2.battle_map.width == 80
         assert r2.battle_map.get_position("c") == Position(10, 10)
+
+
+class TestEntitiesStateModel:
+    def test_state_round_trips_through_json_and_preserves_rng(self) -> None:
+        creature = _make_creature("wanderer")
+        creature.wake_at_seconds = 123
+        layer = EntitiesLayer(entities=[creature], seed=19)
+        _ = layer._rng.random()
+
+        state = layer.get_state()
+        assert "rng_state" in state
+        assert "combats" in state
+
+        saved = json.loads(json.dumps(state))
+        expected = layer._rng.random()
+
+        restored = EntitiesLayer(entities=[_make_creature("wanderer")])
+        restored.load_state(saved)
+
+        assert restored.get_state()["entities"] == state["entities"]
+        assert restored._rng.random() == expected
+
+    def test_invalid_entity_payload_raises_validation_error(self) -> None:
+        layer = EntitiesLayer()
+        with pytest.raises(ValidationError):
+            layer.load_state(
+                {
+                    "entities": {
+                        "broken": {
+                            "entity_type": "creature",
+                            "id": "broken",
+                            "name": "Broken",
+                        }
+                    },
+                    "combats": {},
+                    "rng_state": [],
+                }
+            )
