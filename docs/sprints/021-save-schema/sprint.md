@@ -26,7 +26,7 @@
 2. [Миграция bare-random сайтов на слоевой RNG](tasks/phase1-task2-bare-random-migration.md)
 3. [Сквозной тест воспроизводимости мира](tasks/phase1-task3-world-determinism-test.md)
 
-## Phase 2: Unified Pydantic save schema
+## Phase 2: Unified Pydantic save schema ✓
 
 Pydantic-модели сейва (`SaveGame`: `schema_version`, `meta`, `world{time, last_tick_times, layers}`) как единый source of truth. Слои отдают/принимают типизированные модели вместо сырых dict-ов; `entity_serialization` переезжает на модели. Состояние RNG (dice + per-layer) сериализуется в сейв — загрузка продолжает ту же случайную последовательность. Единый путь загрузки в `commands_save`: `schema_version=1`, legacy-фолбэки (три исторических формата) удаляются — сейвы dev-артефакты. Round-trip тесты перепиниваются на новый формат.
 
