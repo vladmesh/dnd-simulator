@@ -10,8 +10,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from dnd_simulator.core.brain import BrainType
 from dnd_simulator.layers.entities.models import Npc
+from dnd_simulator.rules.dice import roll, set_global_seed
 from dnd_simulator.rules.rule_brain import RuleBrain
 from dnd_simulator.service import GameService
 from dnd_simulator.storage.store import JsonFileStore
@@ -22,6 +25,60 @@ def _make_service(tmp_path: Path) -> GameService:
 
 
 class TestLoadGameRoundTrip:
+    def test_save_game_writes_versioned_envelope_with_meta(self, tmp_path: Path) -> None:
+        svc = _make_service(tmp_path)
+        session = svc.start_game("sword_vale")
+        sid = session.session_id
+
+        svc.save_game(sid, "snap")
+
+        data = svc._store.load("snap", world=session.world_name)
+        assert data["schema_version"] == 1
+        assert data["meta"] == {
+            "session_id": sid,
+            "world_name": "sword_vale",
+            "lang": session.lang,
+            "default_player_faction": session.default_player_faction,
+        }
+        assert "dice_rng_state" in data["world"]
+
+    def test_save_game_and_autosave_use_same_envelope_shape(self, tmp_path: Path) -> None:
+        svc = _make_service(tmp_path)
+        session = svc.start_game("sword_vale")
+        sid = session.session_id
+
+        svc.save_game(sid, "manual")
+        svc.autosave_session(sid)
+
+        manual = svc._store.load("manual", world=session.world_name)
+        autosave = svc._store.load(f"session_{sid}", world=session.world_name)
+        assert manual.keys() == autosave.keys() == {"schema_version", "meta", "world"}
+        assert manual["meta"].keys() == autosave["meta"].keys()
+        assert manual["world"].keys() == autosave["world"].keys()
+
+    def test_legacy_save_without_schema_version_is_rejected(self, tmp_path: Path) -> None:
+        svc = _make_service(tmp_path)
+        session = svc.start_game("sword_vale")
+        sid = session.session_id
+        svc._store.save("legacy", {"world": session.world.save()}, world=session.world_name)
+
+        with pytest.raises(ValueError, match=r"несовместимый сейв|incompatible save"):
+            svc.load_game(sid, "legacy")
+
+    def test_dice_rng_state_restored_on_load(self, tmp_path: Path) -> None:
+        svc = _make_service(tmp_path)
+        session = svc.start_game("sword_vale")
+        sid = session.session_id
+        set_global_seed(77)
+        roll("1d20")
+        svc.save_game(sid, "dice")
+        expected = roll("1d20").total
+        roll("1d20")
+
+        svc.load_game(sid, "dice")
+
+        assert roll("1d20").total == expected
+
     def test_state_restored_to_saved_snapshot(self, tmp_path: Path) -> None:
         svc = _make_service(tmp_path)
         session = svc.start_game("sword_vale")

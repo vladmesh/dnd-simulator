@@ -336,10 +336,17 @@ class GameService(
             except KeyError:
                 return
 
-        meta = data.get("meta", {})
-        assert isinstance(meta, dict)
-        world_name = str(meta.get("world_name", ""))
-        lang = str(meta.get("lang", "en"))
+        from dnd_simulator.layers.common.rng_state import load_rng_state
+        from dnd_simulator.rules.dice import get_global_rng
+        from dnd_simulator.storage.save_schema import SaveGame
+
+        try:
+            save = SaveGame.model_validate(data)
+        except ValueError:
+            return
+
+        world_name = save.meta.world_name
+        lang = save.meta.lang
 
         if not world_name:
             return
@@ -354,29 +361,8 @@ class GameService(
         del self._sessions[session.session_id]
         session.session_id = session_id
 
-        # Load saved world state (player state is restored as part of entities layer)
-        if "world" in data:
-            world_data = data["world"]
-            assert isinstance(world_data, dict)
-            session.world.load(world_data)
-
-            # Reassign brains based on restored ai_type (may differ from template)
-            self._assign_brains(self._get_entities_layer(session))
-
-            # Backward compat: old saves have separate "player" block
-            player_data = data.get("player", {})
-            assert isinstance(player_data, dict)
-            if player_data:
-                player = session.get_player()
-                if player:
-                    from dnd_simulator.content_loader import load_player_save_data
-
-                    load_player_save_data(player, player_data)
-                else:
-                    # Player was created after session start — recreate
-                    from dnd_simulator.content_loader import parse_player
-
-                    new_player = parse_player(player_data)
-                    self._get_entities_layer(session).add_entity(new_player)
+        load_rng_state(get_global_rng(), save.world.dice_rng_state)
+        session.world.load(save.world.to_world_dict())
+        self._assign_brains(self._get_entities_layer(session))
 
         self._sessions[session_id] = session

@@ -33,4 +33,8 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added the versioned `SaveGame` envelope in `storage/save_schema.py` with `schema_version=1`, meta, typed layer states, and dice RNG state. `save_game()` and `autosave_session()` now use the same envelope builder; `load_game()` validates the envelope and rejects legacy saves without `schema_version`. Autosave restore now validates the same schema and restores dice RNG before loading world state.
