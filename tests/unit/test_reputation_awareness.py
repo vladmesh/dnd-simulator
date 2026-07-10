@@ -160,7 +160,7 @@ class TestReputationSerialization:
 
         assert creature2.reputation == {"goblin": 30, "human": 90}
 
-    def test_empty_reputation_not_serialized(self) -> None:
+    def test_empty_reputation_serialized_as_empty_dict(self) -> None:
         creature = Character(
             id="c1",
             name="Plain",
@@ -171,7 +171,7 @@ class TestReputationSerialization:
         state = layer.get_state()
 
         entities_data: dict[str, Any] = state["entities"]  # type: ignore[assignment]
-        assert "reputation" not in entities_data["c1"]
+        assert entities_data["c1"]["reputation"] == {}
 
 
 # ---------------------------------------------------------------------------

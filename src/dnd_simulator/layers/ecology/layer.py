@@ -6,18 +6,21 @@ layer is the thin facade that ticks them and answers queries (politics-package p
 
 from __future__ import annotations
 
+import random
 from typing import TYPE_CHECKING
 
 import structlog
 
-from dnd_simulator.core.lair import Lair, LairState
+from dnd_simulator.core.lair import Lair
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
 from dnd_simulator.core.queries import LairInfo, SquadInfo
 from dnd_simulator.core.squad import Squad
+from dnd_simulator.layers.common.rng_state import dump_rng_state, load_rng_state
 from dnd_simulator.layers.ecology.lairs import apply_lair_dematerialize, respawn_lairs
 from dnd_simulator.layers.ecology.movement import move_squad
 from dnd_simulator.layers.ecology.squad_combat import resolve_squad_combat
+from dnd_simulator.layers.ecology.state import EcologyState, LairRuntimeState, SquadRuntimeState
 
 if TYPE_CHECKING:
     from dnd_simulator.core.location import LocationGraph
@@ -34,6 +37,7 @@ class EcologyLayer(Layer):
         squads: list[Squad] | None = None,
         location_graph: LocationGraph | None = None,
         lairs: list[Lair] | None = None,
+        seed: int | None = None,
     ) -> None:
         self._squads: dict[str, Squad] = {}
         if squads:
@@ -47,6 +51,7 @@ class EcologyLayer(Layer):
         self._last_move_time: dict[str, int] = {}  # squad_id → game-time seconds of last move
         self._route_index: dict[str, int] = {}  # squad_id → current index in route
         self._route_direction: dict[str, int] = {}  # squad_id → +1 forward, -1 reverse
+        self._rng = random.Random(seed)
 
     @property
     def name(self) -> str:
@@ -68,7 +73,7 @@ class EcologyLayer(Layer):
             if now - last < squad.tick_interval:
                 logger.debug("squad_skip", squad_id=squad.id, cooldown_remaining=squad.tick_interval - (now - last))
                 continue
-            moved = move_squad(squad, self._route_index, self._route_direction, self._location_graph)
+            moved = move_squad(squad, self._route_index, self._route_direction, self._location_graph, self._rng)
             logger.info(
                 "squad_tick",
                 squad_id=squad.id,
@@ -102,6 +107,7 @@ class EcologyLayer(Layer):
                 self._route_index,
                 self._route_direction,
                 query_fn,
+                self._rng,
             )
         )
 
@@ -128,7 +134,7 @@ class EcologyLayer(Layer):
                 self._squads[squad_id].strength = new_strength
                 logger.info("squad_strength_updated", squad_id=squad_id, new_strength=new_strength)
         elif event.event_type is EventType.LAIR_DEMATERIALIZED:
-            apply_lair_dematerialize(self._lairs, event)
+            apply_lair_dematerialize(self._lairs, event, self._rng)
         return ActionResult()
 
     def query(self, query: Query) -> Answer:
@@ -162,62 +168,49 @@ class EcologyLayer(Layer):
 
     def get_state(self) -> dict[str, object]:
         """Serialize mutable squad state."""
-        squads: dict[str, dict[str, object]] = {}
-        for sid, s in self._squads.items():
-            squads[sid] = {
-                "current_location_id": s.current_location_id,
-                "strength": s.strength,
-            }
-        lairs: dict[str, dict[str, object]] = {}
-        for lid, lair in self._lairs.items():
-            lairs[lid] = {
-                "state": lair.state.value,
-                "alive_members": lair.alive_members,
-                "core_alive": lair.core_alive,
-                "last_respawn_time": lair.last_respawn_time,
-            }
-        return {
-            "squads": squads,
-            "lairs": lairs,
-            "last_move_time": dict(self._last_move_time),
-            "route_index": dict(self._route_index),
-            "route_direction": dict(self._route_direction),
-        }
+        state = EcologyState(
+            squads={
+                sid: SquadRuntimeState(current_location_id=s.current_location_id, strength=s.strength)
+                for sid, s in self._squads.items()
+            },
+            lairs={
+                lid: LairRuntimeState(
+                    state=lair.state,
+                    alive_members=lair.alive_members,
+                    core_alive=lair.core_alive,
+                    last_respawn_time=lair.last_respawn_time,
+                )
+                for lid, lair in self._lairs.items()
+            },
+            last_move_time=dict(self._last_move_time),
+            route_index=dict(self._route_index),
+            route_direction=dict(self._route_direction),
+            rng_state=dump_rng_state(self._rng),
+        )
+        return state.model_dump(mode="json")
 
     def load_state(self, state: dict[str, object]) -> None:
         """Restore mutable squad fields from saved state."""
-        squads_data = state["squads"]
-        assert isinstance(squads_data, dict)
-        for sid, sdata in squads_data.items():
-            assert isinstance(sdata, dict)
+        data = EcologyState.model_validate(state)
+        load_rng_state(self._rng, data.rng_state)
+
+        for sid, sdata in data.squads.items():
             if sid in self._squads:
-                self._squads[sid].current_location_id = str(sdata["current_location_id"])
-                self._squads[sid].strength = int(sdata["strength"])
+                self._squads[sid].current_location_id = sdata.current_location_id
+                self._squads[sid].strength = sdata.strength
 
-        lairs_data = state.get("lairs")
-        if isinstance(lairs_data, dict):
-            for lid, ldata in lairs_data.items():
-                assert isinstance(ldata, dict)
-                lair = self._lairs.get(str(lid))
-                if lair is None:
-                    continue
-                lair.state = LairState(str(ldata["state"]))
-                am = ldata.get("alive_members")
-                lair.alive_members = [str(m) for m in am] if isinstance(am, list) else None
-                lair.core_alive = bool(ldata.get("core_alive", True))
-                lair.last_respawn_time = int(ldata.get("last_respawn_time", 0))
+        for lid, ldata in data.lairs.items():
+            lair = self._lairs.get(lid)
+            if lair is None:
+                continue
+            lair.state = ldata.state
+            lair.alive_members = ldata.alive_members
+            lair.core_alive = ldata.core_alive
+            lair.last_respawn_time = ldata.last_respawn_time
 
-        lmt = state.get("last_move_time")
-        if isinstance(lmt, dict):
-            self._last_move_time = {str(k): int(v) for k, v in lmt.items()}
-
-        ri = state.get("route_index")
-        if isinstance(ri, dict):
-            self._route_index = {str(k): int(v) for k, v in ri.items()}
-
-        rd = state.get("route_direction")
-        if isinstance(rd, dict):
-            self._route_direction = {str(k): int(v) for k, v in rd.items()}
+        self._last_move_time = dict(data.last_move_time)
+        self._route_index = dict(data.route_index)
+        self._route_direction = dict(data.route_direction)
 
     @staticmethod
     def _squad_info(squad: Squad) -> SquadInfo:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
@@ -27,12 +28,14 @@ from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.turn_budget import TurnBudget
+from dnd_simulator.layers.common.rng_state import dump_rng_state, load_rng_state
 from dnd_simulator.layers.entities.activation_manager import ActivationManager
 from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder, active_merchants_at
 from dnd_simulator.layers.entities.combat_manager import CombatManager
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.layers.entities.query_handler import QueryHandler
+from dnd_simulator.layers.entities.save_models import EntitiesState
 
 if TYPE_CHECKING:
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn, TimeDelta
@@ -78,6 +81,7 @@ class EntitiesLayer(Layer):
         summarizer: MemorySummarizer | None = None,
         monster_templates: dict[str, MonsterTemplate] | None = None,
         encounter_tables: dict[str, list[EncounterEntry]] | None = None,
+        seed: int | None = None,
     ) -> None:
         self._entities: dict[str, Entity] = {}
         self._location_log: dict[str, list[Event]] = defaultdict(list)
@@ -87,6 +91,7 @@ class EntitiesLayer(Layer):
         self._encounter_cooldowns: dict[str, int] = {}  # location_id → last spawn time (seconds)
         self._creature_locations: dict[str, str] = {}  # creature_id → last known location_id
         self._spawn_counter = 0
+        self._rng = random.Random(seed)
         # Materialization tracking: squad_id → (creature_ids, original_strength, spawn_count)
         self._materialized_squads: dict[str, tuple[list[str], int, int]] = {}
         # Lair materialization tracking: lair_id -> (creature_ids, core_creature_id, minion_templates)
@@ -106,6 +111,7 @@ class EntitiesLayer(Layer):
             self._creature_locations,
             self._materialized_squads,
             self._materialized_lairs,
+            self._rng,
         )
         self._query_handler = QueryHandler(
             self._entities,
@@ -419,21 +425,23 @@ class EntitiesLayer(Layer):
 
         entities: dict[str, Any] = {eid: serialize_entity(e) for eid, e in self._entities.items()}
         combats = self._combat.get_combats_state()
-        result: dict[str, object] = {"entities": entities}
-        if combats:
-            result["combats"] = combats
-        return result
+        state = EntitiesState.model_validate(
+            {"entities": entities, "combats": combats, "rng_state": dump_rng_state(self._rng)}
+        )
+        return state.model_dump(mode="json", by_alias=True)
 
     def load_state(self, state: dict[str, object]) -> None:
         """Restore mutable entity state from saved data."""
         from dnd_simulator.content_loader import parse_player
         from dnd_simulator.content_loader.items import EQUIPMENT_FIELDS, deserialize_item
 
-        entities_data = state["entities"]
-        assert isinstance(entities_data, dict)
+        save_state = EntitiesState.model_validate(state)
+        load_rng_state(self._rng, save_state.rng_state)
+        state_data = save_state.model_dump(mode="json", by_alias=True)
+        entities_data = save_state.entities
 
-        for eid, edata in entities_data.items():
-            assert isinstance(edata, dict)
+        for eid, esave in entities_data.items():
+            edata = esave.model_dump(mode="json", by_alias=True)
             entity = self._entities.get(str(eid))
 
             # Recreate missing entities from save data (spawned at runtime or player)
@@ -479,12 +487,36 @@ class EntitiesLayer(Layer):
 
             if entity:
                 entity.active = bool(edata.get("active", True))
+                entity.temporary = bool(edata.get("temporary", entity.temporary))
+                entity.faction_id = str(edata.get("faction_id", entity.faction_id))
                 loc = edata.get("location_id") or edata.get("region_id")
                 if loc:
                     entity.location_id = str(loc)
                 if isinstance(entity, Creature):
+                    entity.in_combat = bool(edata.get("in_combat", entity.in_combat))
+                    entity.is_dodging = bool(edata.get("is_dodging", entity.is_dodging))
+                    entity.is_disengaging = bool(edata.get("is_disengaging", entity.is_disengaging))
+                    budget_raw = edata.get("turn_budget")
+                    if isinstance(budget_raw, dict):
+                        entity.turn_budget = TurnBudget(
+                            actions=int(budget_raw["actions"]),
+                            bonus_actions=int(budget_raw["bonus_actions"]),
+                            movement_remaining=int(budget_raw["movement_remaining"]),
+                            reaction=int(budget_raw["reaction"]),
+                        )
+                    elif budget_raw is None:
+                        entity.turn_budget = None
                     wake_at = edata.get("wake_at_seconds")
                     entity.wake_at_seconds = int(wake_at) if wake_at is not None else None
+                    position_raw = edata.get("combat_position")
+                    if isinstance(position_raw, list | tuple) and len(position_raw) == 2:
+                        entity.combat_position = (int(position_raw[0]), int(position_raw[1]))
+                    else:
+                        entity.combat_position = None
+                    squad_id = edata.get("squad_id")
+                    entity.squad_id = str(squad_id) if squad_id else None
+                    entity.xp_value = int(edata.get("xp_value", entity.xp_value))
+                    entity.gold = int(edata.get("gold", entity.gold))
                     conditions_raw = edata.get("conditions")
                     if isinstance(conditions_raw, dict):
                         entity.conditions = {
@@ -525,6 +557,8 @@ class EntitiesLayer(Layer):
                 if isinstance(entity, PlayerCharacter):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
                     entity.gold = int(edata.get("gold", entity.gold))
+                    entity.experience = int(edata.get("experience", entity.experience))
+                    entity.level_up_available = bool(edata.get("level_up_available", entity.level_up_available))
                 elif isinstance(entity, Npc):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
                     ai_type = edata.get("ai_type")
@@ -547,6 +581,4 @@ class EntitiesLayer(Layer):
                     if isinstance(inv_raw, list):
                         entity.inventory = [deserialize_item(d) for d in inv_raw]
 
-        combats_data = state.get("combats")
-        if isinstance(combats_data, dict):
-            self._combat.load_combats_state(combats_data)
+        self._combat.load_combats_state(state_data["combats"])

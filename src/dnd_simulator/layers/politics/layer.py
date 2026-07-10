@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import random
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
 from dnd_simulator.core.queries import LeaderInfo, NationInfo
+from dnd_simulator.layers.common.rng_state import dump_rng_state, load_rng_state
 from dnd_simulator.layers.politics.diplomacy import process_diplomacy
 from dnd_simulator.layers.politics.economy import process_economy
 from dnd_simulator.layers.politics.models import (
@@ -17,6 +18,14 @@ from dnd_simulator.layers.politics.models import (
     Leader,
     LeaderTrait,
     Nation,
+)
+from dnd_simulator.layers.politics.state import (
+    DiplomaticRelationState,
+    FactionRelationState,
+    LeaderState,
+    NationState,
+    PoliticsState,
+    WarDurationState,
 )
 from dnd_simulator.layers.politics.warfare import process_wars
 from dnd_simulator.rules.politics import (
@@ -342,79 +351,60 @@ class PoliticsLayer(Layer):
 
     def get_state(self) -> dict[str, object]:
         """Serialize politics state."""
-        nations: dict[str, Any] = {}
-        for nid, n in self._nations.items():
-            nations[nid] = {
-                "id": n.id,
-                "name": n.name,
-                "regions": list(n.regions),
-                "wealth": n.wealth,
-                "military": n.military,
-                "stability": n.stability,
-                "leader": {
-                    "name": n.leader.name,
-                    "age": n.leader.age,
-                    "trait": n.leader.trait.value,
-                }
-                if n.leader
-                else None,
-            }
-
-        relations: dict[str, str] = {}
-        for key, status in self._relations.items():
-            relations[f"{key[0]}:{key[1]}"] = status.value
-
-        war_durations: dict[str, int] = {}
-        for key, months in self._war_durations.items():
-            war_durations[f"{key[0]}:{key[1]}"] = months
-
-        return {
-            "nations": nations,
-            "relations": relations,
-            "war_durations": war_durations,
-        }
+        state = PoliticsState(
+            nations={
+                nid: NationState(
+                    id=n.id,
+                    name=n.name,
+                    regions=list(n.regions),
+                    wealth=n.wealth,
+                    military=n.military,
+                    stability=n.stability,
+                    leader=LeaderState(name=n.leader.name, age=n.leader.age, trait=n.leader.trait)
+                    if n.leader
+                    else None,
+                )
+                for nid, n in self._nations.items()
+            },
+            relations=[DiplomaticRelationState(a=a, b=b, status=status) for (a, b), status in self._relations.items()],
+            war_durations=[WarDurationState(a=a, b=b, months=months) for (a, b), months in self._war_durations.items()],
+            faction_relations=[
+                FactionRelationState(a=a, b=b, relation=relation)
+                for (a, b), relation in self._faction_relations.items()
+            ],
+            faction_names=dict(self._faction_names),
+            rng_state=dump_rng_state(self._rng),
+        )
+        return state.model_dump(mode="json")
 
     def load_state(self, state: dict[str, object]) -> None:
         """Restore politics from saved state."""
-        nations_data = state["nations"]
-        assert isinstance(nations_data, dict)
+        data = PoliticsState.model_validate(state)
         self._nations.clear()
+        load_rng_state(self._rng, data.rng_state)
 
-        for nid, ndata in nations_data.items():
-            assert isinstance(ndata, dict)
-            leader_data = ndata.get("leader")
-            leader = None
-            if leader_data:
-                assert isinstance(leader_data, dict)
-                leader = Leader(
-                    name=str(leader_data["name"]),
-                    age=int(leader_data["age"]),
-                    trait=LeaderTrait(str(leader_data["trait"])),
-                )
-
-            regions = ndata.get("regions", [])
-            assert isinstance(regions, list)
-
-            self._nations[str(nid)] = Nation(
-                id=str(nid),
-                name=str(ndata["name"]),
-                regions=[str(r) for r in regions],
-                wealth=float(ndata.get("wealth", 50.0)),
-                military=float(ndata.get("military", 50.0)),
-                stability=float(ndata.get("stability", 70.0)),
-                leader=leader,
+        for nid, ndata in data.nations.items():
+            self._nations[nid] = Nation(
+                id=ndata.id,
+                name=ndata.name,
+                regions=list(ndata.regions),
+                wealth=ndata.wealth,
+                military=ndata.military,
+                stability=ndata.stability,
+                leader=Leader(name=ndata.leader.name, age=ndata.leader.age, trait=ndata.leader.trait)
+                if ndata.leader
+                else None,
             )
 
-        relations_data = state.get("relations", {})
-        assert isinstance(relations_data, dict)
         self._relations.clear()
-        for key_str, status_str in relations_data.items():
-            parts = str(key_str).split(":")
-            self._relations[(parts[0], parts[1])] = DiplomaticStatus(str(status_str))
+        for relation in data.relations:
+            self._relations[_relation_key(relation.a, relation.b)] = relation.status
 
-        war_data = state.get("war_durations", {})
-        assert isinstance(war_data, dict)
         self._war_durations.clear()
-        for key_str, months in war_data.items():
-            parts = str(key_str).split(":")
-            self._war_durations[(parts[0], parts[1])] = int(months)
+        for war in data.war_durations:
+            self._war_durations[_relation_key(war.a, war.b)] = war.months
+
+        self._faction_relations = {
+            _relation_key(relation.a, relation.b): relation.relation for relation in data.faction_relations
+        }
+        self._faction_names = dict(data.faction_names)

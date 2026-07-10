@@ -6,14 +6,36 @@ Backend runs with DND_DICE_SEED=42 and test content (no LLM).
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest
 import requests
 import websocket
+
+SAVES_DIR = Path("/app/saves")
+
+
+def _save_files_snapshot() -> set[Path]:
+    if not SAVES_DIR.exists():
+        return set()
+    return {path.relative_to(SAVES_DIR) for path in SAVES_DIR.rglob("*") if path.is_file()}
+
+
+@pytest.fixture(scope="session", autouse=True)
+def cleanup_new_save_files() -> Iterator[None]:
+    """Remove save files created by the docker integration run."""
+    before = _save_files_snapshot()
+    yield
+    for relative_path in _save_files_snapshot() - before:
+        (SAVES_DIR / relative_path).unlink(missing_ok=True)
+    for path in sorted((p for p in SAVES_DIR.rglob("*") if p.is_dir()), reverse=True):
+        with contextlib.suppress(OSError):
+            path.rmdir()
 
 
 @pytest.fixture(scope="session")

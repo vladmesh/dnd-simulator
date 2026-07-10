@@ -7,8 +7,8 @@ region default (no merge). The resolution happens at load time in ``GameService`
 the runtime activation path is unchanged — these tests drive that real path and
 observe the spawn in the world rather than poking internals.
 
-``random`` is mocked so the roll is deterministic: ``random.random() -> 0.0``
-always clears the chance gate and ``random.randint -> 1`` fixes the count at one.
+The entities layer RNG is replaced with a deterministic test RNG so the roll always
+clears the chance gate and fixes the count at one.
 
 The world is ``test_vale``:
 - region ``crossroads`` carries a regional goblin table;
@@ -19,7 +19,6 @@ The world is ``test_vale``:
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch
 
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.player import PlayerCharacter
@@ -31,6 +30,14 @@ from dnd_simulator.storage.store import JsonFileStore
 
 CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
 FIGHTER_SCORES = {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 12, "cha": 8}
+
+
+class _EncounterHitRng:
+    def random(self) -> float:
+        return 0.0
+
+    def randint(self, start: int, end: int) -> int:
+        return start
 
 
 def _session_with_player(tmp_path: Path, location: str) -> GameSession:
@@ -60,10 +67,12 @@ def _entities(session: GameSession) -> EntitiesLayer:
 def _activate(session: GameSession) -> None:
     """Run one activation pass with a guaranteed encounter hit (count fixed at 1)."""
     ents = _entities(session)
+    rng = _EncounterHitRng()
+    ents._rng = rng  # type: ignore[assignment]
+    ents._activation._rng = rng  # type: ignore[assignment]
     qfn = session.world.make_query_fn("entities")
     efn = session.world.make_emit_fn("entities")
-    with patch("random.random", return_value=0.0), patch("random.randint", return_value=1):
-        ents.update_activation(session.world.time, query_fn=qfn, emit_fn=efn)
+    ents.update_activation(session.world.time, query_fn=qfn, emit_fn=efn)
 
 
 def _monster_names_at(session: GameSession, location_id: str) -> list[str]:

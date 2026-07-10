@@ -243,8 +243,8 @@ class TestSaveLoad:
         assert restored.memory.inner_state == "worried about iron supply"
         assert restored.memory.current_conversation == "Player asked about iron supply."
 
-    def test_legacy_conversation_summary_migrates(self) -> None:
-        """Old saves with conversation_summary should migrate to memory."""
+    def test_legacy_conversation_summary_without_memory_is_invalid(self) -> None:
+        """Old saves without structured NPC memory fail validation."""
         layer = _make_layer()
         # Simulate old save format
         state = layer.get_state()
@@ -257,12 +257,8 @@ class TestSaveLoad:
         smith_data["conversation_summary"] = "Old conversation data."
 
         new_layer = EntitiesLayer(entities=_make_npcs())
-        new_layer.load_state(state)
-
-        restored = new_layer.get_entity("smith")
-        assert isinstance(restored, Npc)
-        assert restored.memory.current_conversation == "Old conversation data."
-        assert restored.memory.tags == []
+        with pytest.raises(ValueError, match="memory"):
+            new_layer.load_state(state)
 
     def test_activation_persists(self) -> None:
         layer = _make_layer()

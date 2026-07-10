@@ -1,103 +1,249 @@
-"""Entity save serialization — the get_state half, split out of EntitiesLayer.
-
-Mirror of ``combat_serialization`` (which owns the combat-state half). The load/restore
-half stays in ``EntitiesLayer.load_state`` because it dispatches entity construction against
-the live layer. Item (de)serialization lives in ``content_loader`` (imported lazily here:
-``content_loader.__init__`` pulls in this package, so a top-level import would cycle).
-"""
+"""Entity save serialization — the get_state half, split out of EntitiesLayer."""
 
 from __future__ import annotations
 
-from dnd_simulator.core.character import Creature, Entity
+from typing import cast
+
+from dnd_simulator.core.character import Character, Creature, Entity
+from dnd_simulator.core.class_features import FighterFeatures, PaladinFeatures, RogueFeatures
 from dnd_simulator.core.container import Container
+from dnd_simulator.core.items import Item
 from dnd_simulator.core.models import EntityKind
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.models import Npc
+from dnd_simulator.layers.entities.save_models import (
+    AbilityScoresSave,
+    AttackSave,
+    ClassFeaturesSave,
+    ContainerSave,
+    CreatureSave,
+    DamageComponentSave,
+    EntitySave,
+    ItemSave,
+    NpcMemorySave,
+    NpcSave,
+    PlayerSave,
+    ResourcePoolSave,
+    TurnBudgetSave,
+)
 
 
 def serialize_entity(entity: Entity) -> dict[str, object]:
-    """Serialize a single entity to a save dict (inverse of the reconstruction in load_state)."""
-    from dnd_simulator.content_loader.creatures import player_to_full_save_data
+    """Serialize a single entity to a save dict."""
+    save = entity_to_save_model(entity)
+    return cast(dict[str, object], save.model_dump(mode="json", by_alias=True))
+
+
+def player_to_save_data(player: PlayerCharacter) -> dict[str, object]:
+    """Return the parse_player-compatible subset of PlayerSave."""
+    save = _player_save(player)
+    return cast(
+        dict[str, object],
+        save.model_dump(
+            mode="json",
+            by_alias=True,
+            exclude_none=True,
+            include={
+                "id",
+                "name",
+                "race",
+                "class_",
+                "level",
+                "alignment",
+                "appearance",
+                "ability_scores",
+                "hp",
+                "ac",
+                "gold",
+                "speed",
+                "start_location",
+                "current_hp",
+                "experience",
+                "level_up_available",
+                "items",
+                "class_features",
+                "combat_position",
+                "reputation",
+                "faction_id",
+                "attacks",
+            },
+        ),
+    )
+
+
+def entity_to_save_model(entity: Entity) -> EntitySave:
+    if isinstance(entity, PlayerCharacter):
+        return _player_save(entity)
+    if isinstance(entity, Npc):
+        return _npc_save(entity)
+    if isinstance(entity, Creature):
+        return _creature_save(entity)
+    if isinstance(entity, Container):
+        return _container_save(entity)
+    raise TypeError(f"Unsupported entity type for save: {type(entity).__name__}")
+
+
+def _creature_save(entity: Creature) -> CreatureSave:
+    return CreatureSave.model_validate({"entity_type": EntityKind.CREATURE, **_creature_fields(entity)})
+
+
+def _player_save(player: PlayerCharacter) -> PlayerSave:
+    items = _items_for_parse(player)
+    return PlayerSave.model_validate(
+        {
+            "entity_type": EntityKind.PLAYER,
+            **_creature_fields(player),
+            "race": player.race,
+            "class": player.char_class,
+            "level": player.level,
+            "alignment": player.alignment,
+            "appearance": player.appearance,
+            "hp": player.max_hp,
+            "start_location": player.location_id,
+            "experience": player.experience,
+            "level_up_available": player.level_up_available,
+            "items": items,
+            "class_features": _class_features(player),
+        }
+    )
+
+
+def _npc_save(npc: Npc) -> NpcSave:
+    return NpcSave.model_validate(
+        {
+            "entity_type": EntityKind.NPC,
+            **_creature_fields(npc),
+            "race": npc.race,
+            "class": npc.char_class,
+            "level": npc.level,
+            "role": npc.role,
+            "personality": npc.personality,
+            "description": npc.description,
+            "settlement_id": npc.settlement_id,
+            "location_override": npc.location_override,
+            "memory": NpcMemorySave.model_validate(npc.memory.to_dict()),
+            "ai_type": npc.ai_type,
+            "hp": npc.max_hp,
+            "ai": npc.ai_type,
+            "start_location": npc.location_id,
+            "items": _items_for_parse(npc),
+            "class_features": _class_features(npc),
+        }
+    )
+
+
+def _container_save(container: Container) -> ContainerSave:
+    from dnd_simulator.content_loader.items import serialize_item
+
+    return ContainerSave(
+        entity_type=EntityKind.CONTAINER,
+        id=container.id,
+        name=container.name,
+        location_id=container.location_id,
+        active=container.active,
+        temporary=container.temporary,
+        faction_id=container.faction_id,
+        is_open=container.is_open,
+        gold=container.gold,
+        inventory=[ItemSave.model_validate(serialize_item(item)) for item in container.inventory],
+    )
+
+
+def _creature_fields(entity: Creature) -> dict[str, object]:
+    from dnd_simulator.content_loader.items import serialize_item
+
+    data: dict[str, object] = {
+        "id": entity.id,
+        "name": entity.name,
+        "location_id": entity.location_id,
+        "active": entity.active,
+        "temporary": entity.temporary,
+        "faction_id": entity.faction_id,
+        "max_hp": entity.max_hp,
+        "current_hp": entity.current_hp,
+        "ac": entity.ac,
+        "speed": entity.speed,
+        "ability_scores": AbilityScoresSave.model_validate(entity.ability_scores.to_dict()),
+        "attacks": [
+            AttackSave(
+                name=attack.name,
+                ability=attack.ability,
+                damage=[DamageComponentSave(dice=damage.dice, type=damage.type) for damage in attack.damage],
+                reach=attack.reach,
+                is_finesse=attack.is_finesse,
+            )
+            for attack in entity.attacks
+        ],
+        "in_combat": entity.in_combat,
+        "is_dodging": entity.is_dodging,
+        "is_disengaging": entity.is_disengaging,
+        "turn_budget": _turn_budget(entity),
+        "conditions": dict(entity.conditions),
+        "inventory": [ItemSave.model_validate(serialize_item(item)) for item in entity.inventory],
+        "gold": entity.gold,
+        "equipped_weapon": _item_save(entity.equipped_weapon),
+        "equipped_armor": _item_save(entity.equipped_armor),
+        "equipped_shield": _item_save(entity.equipped_shield),
+        "equipped_head": _item_save(entity.equipped_head),
+        "equipped_feet": _item_save(entity.equipped_feet),
+        "equipped_ring": _item_save(entity.equipped_ring),
+        "resource_pools": [
+            ResourcePoolSave(
+                id=pool.id,
+                max_uses=pool.max_uses,
+                current_uses=pool.current_uses,
+                reset_on=pool.reset_on,
+            )
+            for pool in entity.resource_pools
+        ],
+        "reputation": dict(entity.reputation),
+        "xp_value": entity.xp_value,
+        "squad_id": entity.squad_id,
+        "wake_at_seconds": entity.wake_at_seconds,
+        "combat_position": entity.combat_position,
+    }
+    return data
+
+
+def _item_save(item: Item | None) -> ItemSave | None:
+    if item is None:
+        return None
+    from dnd_simulator.content_loader.items import serialize_item
+
+    return ItemSave.model_validate(serialize_item(item))
+
+
+def _items_for_parse(entity: Creature) -> list[ItemSave]:
     from dnd_simulator.content_loader.items import EQUIPMENT_FIELDS, serialize_item
 
-    e = entity
-    data: dict[str, object] = {
-        "id": e.id,
-        "name": e.name,
-        "location_id": e.location_id,
-        "active": e.active,
-    }
-    if isinstance(e, Creature):
-        # Structural fields needed to reconstruct spawned creatures from save data
-        data.update(
-            {
-                "max_hp": e.max_hp,
-                "ac": e.ac,
-                "speed": e.speed,
-                "ability_scores": e.ability_scores.to_dict(),
-            }
-        )
-        if e.attacks:
-            data["attacks"] = [
-                {
-                    "name": a.name,
-                    "ability": a.ability.value,
-                    "damage": [{"dice": d.dice, "type": d.type.value} for d in a.damage],
-                    "reach": a.reach,
-                }
-                for a in e.attacks
-            ]
-        if e.wake_at_seconds is not None:
-            data["wake_at_seconds"] = e.wake_at_seconds
-        if e.conditions:
-            data["conditions"] = {c.value: r for c, r in e.conditions.items()}
-        if e.inventory:
-            data["inventory"] = [serialize_item(item) for item in e.inventory]
-        for field_name in EQUIPMENT_FIELDS:
-            eq_item = getattr(e, field_name)
-            if eq_item is not None:
-                data[field_name] = serialize_item(eq_item)
-        if e.reputation:
-            data["reputation"] = dict(e.reputation)
-        if e.resource_pools:
-            data["resource_pools"] = [
-                {
-                    "id": pool.id,
-                    "max_uses": pool.max_uses,
-                    "current_uses": pool.current_uses,
-                    "reset_on": pool.reset_on.value,
-                }
-                for pool in e.resource_pools
-            ]
-    if isinstance(e, PlayerCharacter):
-        data["entity_type"] = EntityKind.PLAYER.value
-        data.update(player_to_full_save_data(e))
-    elif isinstance(e, Npc):
-        data["entity_type"] = EntityKind.NPC.value
-        data.update(
-            {
-                "current_hp": e.current_hp,
-                "role": e.role.value,
-                "personality": e.personality,
-                "settlement_id": e.settlement_id,
-                "location_override": e.location_override,
-                "memory": e.memory.to_dict(),
-                "ai_type": e.ai_type,
-                # Aliases for parse_npc compatibility (used to reconstruct spawned NPCs)
-                "hp": e.max_hp,
-                "ai": e.ai_type,
-                "start_location": e.location_id,
-                "race": e.race.value,
-                "class": e.char_class.value,
-            }
-        )
-    elif isinstance(e, Creature):
-        data["entity_type"] = EntityKind.CREATURE.value
-        data["current_hp"] = e.current_hp
-    elif isinstance(e, Container):
-        data["entity_type"] = EntityKind.CONTAINER.value
-        data["is_open"] = e.is_open
-        data["gold"] = e.gold
-        if e.inventory:
-            data["inventory"] = [serialize_item(item) for item in e.inventory]
+    items = [ItemSave.model_validate(serialize_item(item)) for item in entity.inventory]
+    for field_name in EQUIPMENT_FIELDS:
+        item = getattr(entity, field_name)
+        if item is not None:
+            item_data = serialize_item(item)
+            item_data["equipped"] = True
+            items.append(ItemSave.model_validate(item_data))
+    return items
+
+
+def _turn_budget(entity: Creature) -> TurnBudgetSave | None:
+    if entity.turn_budget is None:
+        return None
+    return TurnBudgetSave(
+        actions=entity.turn_budget.actions,
+        bonus_actions=entity.turn_budget.bonus_actions,
+        movement_remaining=entity.turn_budget.movement_remaining,
+        reaction=entity.turn_budget.reaction,
+    )
+
+
+def _class_features(entity: Character) -> ClassFeaturesSave:
+    data = ClassFeaturesSave()
+    for feat in entity.class_features:
+        if isinstance(feat, FighterFeatures):
+            data.fighting_style = feat.fighting_style.value
+        elif isinstance(feat, RogueFeatures):
+            data.sneak_attack_dice = feat.sneak_attack_dice
+        elif isinstance(feat, PaladinFeatures) and feat.fighting_style is not None:
+            data.fighting_style = feat.fighting_style.value
     return data

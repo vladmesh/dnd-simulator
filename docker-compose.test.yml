@@ -8,6 +8,7 @@ services:
       UV_CACHE_DIR: /tmp/uv-cache
     volumes:
       - ./tests/integration/content:/app/test-content
+      - ./saves:/app/saves
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 2s
@@ -23,4 +24,6 @@ services:
         condition: service_healthy
     environment:
       BACKEND_URL: http://backend:8001
+    volumes:
+      - ./saves:/app/saves
     entrypoint: ["uv", "run", "pytest", "tests/integration/", "-v"]

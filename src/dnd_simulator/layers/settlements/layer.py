@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
@@ -12,7 +12,8 @@ from dnd_simulator.core.queries import (
     query_region_owner,
     query_weather,
 )
-from dnd_simulator.layers.settlements.models import Settlement, SettlementType
+from dnd_simulator.layers.settlements.models import Settlement
+from dnd_simulator.layers.settlements.state import SettlementsState, SettlementState
 from dnd_simulator.rules.settlements import (
     calculate_harvest_modifier,
     calculate_population_change,
@@ -180,33 +181,34 @@ class SettlementsLayer(Layer):
 
     def get_state(self) -> dict[str, object]:
         """Serialize settlements state."""
-        settlements: dict[str, Any] = {}
-        for sid, s in self._settlements.items():
-            settlements[sid] = {
-                "id": s.id,
-                "name": s.name,
-                "region_id": s.region_id,
-                "type": s.type.value,
-                "population": s.population,
-                "prosperity": s.prosperity,
-                "defenses": s.defenses,
+        state = SettlementsState(
+            settlements={
+                sid: SettlementState(
+                    id=s.id,
+                    name=s.name,
+                    region_id=s.region_id,
+                    type=s.type,
+                    population=s.population,
+                    prosperity=s.prosperity,
+                    defenses=s.defenses,
+                )
+                for sid, s in self._settlements.items()
             }
-        return {"settlements": settlements}
+        )
+        return state.model_dump(mode="json")
 
     def load_state(self, state: dict[str, object]) -> None:
         """Restore settlements from saved state."""
-        settlements_data = state["settlements"]
-        assert isinstance(settlements_data, dict)
+        data = SettlementsState.model_validate(state)
         self._settlements.clear()
 
-        for sid, sdata in settlements_data.items():
-            assert isinstance(sdata, dict)
-            self._settlements[str(sid)] = Settlement(
-                id=str(sdata["id"]),
-                name=str(sdata["name"]),
-                region_id=str(sdata["region_id"]),
-                type=SettlementType(str(sdata["type"])),
-                population=int(sdata.get("population", 100)),
-                prosperity=float(sdata.get("prosperity", 50.0)),
-                defenses=float(sdata.get("defenses", 30.0)),
+        for sid, sdata in data.settlements.items():
+            self._settlements[sid] = Settlement(
+                id=sdata.id,
+                name=sdata.name,
+                region_id=sdata.region_id,
+                type=sdata.type,
+                population=sdata.population,
+                prosperity=sdata.prosperity,
+                defenses=sdata.defenses,
             )

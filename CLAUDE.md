@@ -77,7 +77,7 @@ adapters/          — FastAPI REST + WebSocket API
 
 rules/             — pure D&D mechanics: combat, validation, conditions, weapons, modifiers, proficiency, sneak attack, divine smite, fighting style, resources, character creation (point buy, HP, starting equipment), leveling (XP-by-CR, thresholds, perform_level_up), action providers, handlers/ package, reputation, combat_sides, encounters (time-of-day gate), inventory (transfer_items), loot, rule_brain (no deps)
 llm/               — LLM client, prompt builders, tool schemas (OpenRouter)
-storage/           — SaveStore interface, JsonFileStore
+storage/           — SaveStore interface, JsonFileStore, versioned save schema (SaveGame, schema_version=1, world seed + RNG state в сейве)
 content_loader/    — loads worlds, nations, settlements, NPCs, player from YAML; Pydantic content schemas, JSON Schema generation, entity CRUD, manifest resolver, library catalog, world assembly, catalog loader (monsters/items)
 content/           — YAML world definitions (data, not code); library/ (reusable layer templates), worlds/ (manifest + optional custom layers)
 frontend/          — React + TypeScript SPA (Vite, shadcn/ui, Zustand)
@@ -164,6 +164,8 @@ Kill reputation drop (`rules/reputation.py`): omniscient, delta scaled by victim
 - Requires `.env` with `OPENROUTER_API_KEY` for LLM features (only if NPCs use `ai: llm`)
 - `LLM_MODEL` env var selects model (required if `OPENROUTER_API_KEY` is set, no default)
 - `DND_LANGUAGE` env var selects game language (default: `ru`); locale files in `src/dnd_simulator/locale/`
+- `DND_WORLD_SEED` env var seeds world simulation layers; when absent, `GameService` logs the generated seed.
+- `DND_AUTOSAVE_SECONDS` env var controls periodic autosave interval (default: `120`; must be greater than `0`).
 - Save files: `saves/` directory (JSON)
 - Backend API: `make serve` → http://localhost:8001/docs (Swagger UI)
 - Frontend: `make frontend` → http://localhost:5173 (entry point, proxies /api to :8001)

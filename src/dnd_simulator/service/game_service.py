@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import contextlib
+import os
+import random
 import uuid
 from pathlib import Path
 
@@ -51,6 +52,22 @@ from .session import GameSession
 DEFAULT_CONTENT_DIR = Path(__file__).resolve().parents[3] / "content"
 
 logger = structlog.get_logger(domain="service")
+
+_LAYER_SEED_ORDER = ("geography", "politics", "ecology", "entities")
+
+
+def _resolve_world_seed() -> int:
+    raw = os.getenv("DND_WORLD_SEED")
+    if raw is not None:
+        return int(raw)
+    seed = random.SystemRandom().getrandbits(64)
+    logger.info("world_seed_generated", world_seed=seed)
+    return seed
+
+
+def _derive_layer_seeds(world_seed: int) -> dict[str, int]:
+    rng = random.Random(world_seed)
+    return {layer_name: rng.getrandbits(64) for layer_name in _LAYER_SEED_ORDER}
 
 
 def _flatten_region_defaults[T](
@@ -112,6 +129,8 @@ class GameService(
                 "All 5 layers must be defined before starting a session."
             )
         meta = load_world_meta_from_manifest(world_path, lang=lang)
+        world_seed = _resolve_world_seed()
+        layer_seeds = _derive_layer_seeds(world_seed)
         regions = load_world(layer_paths["geography"], lang=lang)
         nations = load_nations(layer_paths["politics"], lang=lang)
         settlements = load_settlements(layer_paths["settlements"], lang=lang)
@@ -143,7 +162,11 @@ class GameService(
         # Players are created via API (create_player), not from templates
         entities: list[Entity] = [*npcs]
 
-        geography = GeographyLayer(regions=regions, location_graph=location_graph)
+        geography = GeographyLayer(
+            regions=regions,
+            weather_seed=layer_seeds["geography"],
+            location_graph=location_graph,
+        )
         settlements_layer = SettlementsLayer(settlements=settlements, region_terrains=region_terrains)
         politics = PoliticsLayer(
             nations=nations,
@@ -152,6 +175,7 @@ class GameService(
             region_income_fn=settlements_layer.get_region_income,
             faction_relations=faction_data.relations,
             faction_names=faction_data.names,
+            seed=layer_seeds["politics"],
         )
         summarizer = None
         if self._llm:
@@ -162,7 +186,10 @@ class GameService(
         for squad in squads.values():
             squad.member_crs = [monster_templates[tid].cr for tid in squad.member_templates]
         ecology_layer = EcologyLayer(
-            squads=list(squads.values()), location_graph=location_graph, lairs=list(lairs.values())
+            squads=list(squads.values()),
+            location_graph=location_graph,
+            lairs=list(lairs.values()),
+            seed=layer_seeds["ecology"],
         )
         # Battle maps and encounter tables both resolve region → location at load
         # time: a region-level declaration is the default for every location in
@@ -181,6 +208,7 @@ class GameService(
             monster_templates=monster_templates,
             encounter_tables=effective_encounters,
             battle_map_configs=battle_map_configs,
+            seed=layer_seeds["entities"],
         )
 
         # Assign brains via factory (content_loader only parses data, not brains)
@@ -190,6 +218,7 @@ class GameService(
             layers=[geography, politics, settlements_layer, ecology_layer, entities_layer],
             time=GameDateTime(year=1490, month=6, day=1, hour=10),
             location_graph=location_graph,
+            seed=world_seed,
         )
 
         # Initial tick to set weather/temperature
@@ -241,9 +270,16 @@ class GameService(
     def _on_session_empty(self, session: GameSession) -> None:
         """Called when all listeners disconnect. Autosave and evict from memory."""
         sid = session.session_id
+        if sid not in self._sessions:
+            # Explicit DELETE already evicted it; autosaving here would fail or
+            # resurrect the session from its stale autosave via _get_session.
+            logger.info("session_empty_evict_skipped", session_id=sid)
+            return
         logger.info("session_empty_evict", session_id=sid)
-        with contextlib.suppress(Exception):
+        try:
             self.autosave_session(sid)
+        except Exception:
+            logger.exception("session_empty_autosave_failed", session_id=sid)
         self._sessions.pop(sid, None)
 
     # -- Layer accessors --
@@ -306,10 +342,17 @@ class GameService(
             except KeyError:
                 return
 
-        meta = data.get("meta", {})
-        assert isinstance(meta, dict)
-        world_name = str(meta.get("world_name", ""))
-        lang = str(meta.get("lang", "en"))
+        from dnd_simulator.layers.common.rng_state import load_rng_state
+        from dnd_simulator.rules.dice import get_global_rng
+        from dnd_simulator.storage.save_schema import SaveGame
+
+        try:
+            save = SaveGame.model_validate(data)
+        except ValueError:
+            return
+
+        world_name = save.meta.world_name
+        lang = save.meta.lang
 
         if not world_name:
             return
@@ -324,29 +367,8 @@ class GameService(
         del self._sessions[session.session_id]
         session.session_id = session_id
 
-        # Load saved world state (player state is restored as part of entities layer)
-        if "world" in data:
-            world_data = data["world"]
-            assert isinstance(world_data, dict)
-            session.world.load(world_data)
-
-            # Reassign brains based on restored ai_type (may differ from template)
-            self._assign_brains(self._get_entities_layer(session))
-
-            # Backward compat: old saves have separate "player" block
-            player_data = data.get("player", {})
-            assert isinstance(player_data, dict)
-            if player_data:
-                player = session.get_player()
-                if player:
-                    from dnd_simulator.content_loader import load_player_save_data
-
-                    load_player_save_data(player, player_data)
-                else:
-                    # Player was created after session start — recreate
-                    from dnd_simulator.content_loader import parse_player
-
-                    new_player = parse_player(player_data)
-                    self._get_entities_layer(session).add_entity(new_player)
+        load_rng_state(get_global_rng(), save.world.dice_rng_state)
+        session.world.load(save.world.to_world_dict())
+        self._assign_brains(self._get_entities_layer(session))
 
         self._sessions[session_id] = session

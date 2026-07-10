@@ -7,7 +7,6 @@ on ActivationManager; this module owns only the "did someone arrive → roll mon
 
 from __future__ import annotations
 
-import random
 from typing import TYPE_CHECKING
 
 import structlog
@@ -109,7 +108,7 @@ def roll_encounters(
                 is_day=is_day,
             )
             continue
-        roll = random.random()
+        roll = mgr._rng.random()
         if roll >= entry.chance:
             logger.info(
                 "encounter_roll_miss",
@@ -120,7 +119,7 @@ def roll_encounters(
             )
             continue
         template = mgr._monster_templates[entry.template_id]
-        count = random.randint(entry.count_min, entry.count_max)
+        count = mgr._rng.randint(entry.count_min, entry.count_max)
         for _ in range(count):
             mgr._spawn_counter += 1
             instance_id = f"{template.id}_{mgr._spawn_counter}"

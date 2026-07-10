@@ -17,6 +17,8 @@ def serialize_combats(combats: dict[str, CombatState]) -> dict[str, object]:
             "turn_order": list(combat.turn_order),
             "round_number": combat.round_number,
             "rounds_without_attack": combat.rounds_without_attack,
+            "sides": {side: sorted(members) for side, members in combat.sides.items()},
+            "entity_to_side": dict(combat.entity_to_side),
             "battle_map": {
                 "width": bm.width,
                 "height": bm.height,
@@ -52,5 +54,7 @@ def deserialize_combats(data: dict[str, object]) -> dict[str, CombatState]:
             round_number=int(cdata["round_number"]),
             rounds_without_attack=int(cdata.get("rounds_without_attack", 0)),
             battle_map=bm,
+            sides={int(side): {str(member) for member in members} for side, members in cdata.get("sides", {}).items()},
+            entity_to_side={str(entity_id): int(side) for entity_id, side in cdata.get("entity_to_side", {}).items()},
         )
     return combats

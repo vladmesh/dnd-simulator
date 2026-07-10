@@ -1,8 +1,15 @@
 """Tests for entities layer serialization — resource pools, NPC ai_type, and combat state round-trip."""
 
+import json
+
+import pytest
+from pydantic import ValidationError
+
 from dnd_simulator.core.character import Creature, NpcRole
 from dnd_simulator.core.combat import BattleMap, CombatState, Position, Wall
+from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.resource import ResourcePool, RestType
+from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
 
@@ -278,3 +285,137 @@ class TestCombatStateRoundTrip:
         assert r2.turn_order == ["d", "c"]
         assert r2.battle_map.width == 80
         assert r2.battle_map.get_position("c") == Position(10, 10)
+
+    def test_combat_sides_survive_round_trip(self) -> None:
+        """Combat sides are part of the save, not recomputed or dropped."""
+        c1 = _make_creature("guard_a")
+        c2 = _make_creature("guard_b")
+        c3 = _make_creature("raider_a")
+        c4 = _make_creature("raider_b")
+        for c in (c1, c2, c3, c4):
+            c.in_combat = True
+
+        layer = EntitiesLayer(entities=[c1, c2, c3, c4])
+        bm = BattleMap(width=60, height=60)
+        combat = CombatState(
+            location_id="arena",
+            turn_order=["guard_a", "raider_a", "guard_b", "raider_b"],
+            battle_map=bm,
+            sides={0: {"guard_a", "guard_b"}, 1: {"raider_a", "raider_b"}},
+            entity_to_side={"guard_a": 0, "guard_b": 0, "raider_a": 1, "raider_b": 1},
+        )
+        layer._combat._combats["arena"] = combat
+
+        fresh_layer = EntitiesLayer(
+            entities=[
+                _make_creature("guard_a"),
+                _make_creature("guard_b"),
+                _make_creature("raider_a"),
+                _make_creature("raider_b"),
+            ]
+        )
+        fresh_layer.load_state(layer.get_state())
+
+        restored = fresh_layer.get_combat("arena")
+        assert restored is not None
+        assert restored.sides == {0: {"guard_a", "guard_b"}, 1: {"raider_a", "raider_b"}}
+        assert restored.entity_to_side == {"guard_a": 0, "guard_b": 0, "raider_a": 1, "raider_b": 1}
+
+
+class TestEntitiesStateModel:
+    def test_state_round_trips_through_json_and_preserves_rng(self) -> None:
+        creature = _make_creature("wanderer")
+        creature.wake_at_seconds = 123
+        layer = EntitiesLayer(entities=[creature], seed=19)
+        _ = layer._rng.random()
+
+        state = layer.get_state()
+        assert "rng_state" in state
+        assert "combats" in state
+
+        saved = json.loads(json.dumps(state))
+        expected = layer._rng.random()
+
+        restored = EntitiesLayer(entities=[_make_creature("wanderer")])
+        restored.load_state(saved)
+
+        assert restored.get_state()["entities"] == state["entities"]
+        assert restored._rng.random() == expected
+
+    def test_invalid_entity_payload_raises_validation_error(self) -> None:
+        layer = EntitiesLayer()
+        with pytest.raises(ValidationError):
+            layer.load_state(
+                {
+                    "entities": {
+                        "broken": {
+                            "entity_type": "creature",
+                            "id": "broken",
+                            "name": "Broken",
+                        }
+                    },
+                    "combats": {},
+                    "rng_state": [],
+                }
+            )
+
+    def test_unknown_entity_payload_field_raises_validation_error(self) -> None:
+        layer = EntitiesLayer()
+        with pytest.raises(ValidationError):
+            layer.load_state(
+                {
+                    "entities": {
+                        "broken": {
+                            "entity_type": "creature",
+                            "id": "broken",
+                            "name": "Broken",
+                            "location_id": "arena",
+                            "active": True,
+                            "max_hp": 4,
+                            "current_hp": 4,
+                            "ac": 10,
+                            "speed": 30,
+                            "ability_scores": {},
+                            "unexpected": "must fail",
+                        }
+                    },
+                    "combats": {},
+                    "rng_state": [],
+                }
+            )
+
+    def test_runtime_creature_fields_survive_save_load(self) -> None:
+        creature = _make_creature("scout")
+        creature.active = False
+        creature.faction_id = "guards"
+        creature.in_combat = True
+        creature.is_dodging = True
+        creature.is_disengaging = True
+        creature.turn_budget = TurnBudget(actions=0, bonus_actions=1, movement_remaining=15, reaction=0)
+        creature.conditions = {Condition.PRONE: 2}
+        creature.gold = 7
+        creature.reputation = {"guards": 5}
+        creature.xp_value = 25
+        creature.squad_id = "patrol_1"
+        creature.wake_at_seconds = 321
+        creature.combat_position = (10, 15)
+
+        layer = EntitiesLayer(entities=[creature])
+        restored_layer = EntitiesLayer()
+        restored_layer.load_state(layer.get_state())
+
+        restored = restored_layer.get_entity("scout")
+        assert isinstance(restored, Creature)
+        assert restored.active is False
+        assert restored.faction_id == "guards"
+        assert restored.in_combat is True
+        assert restored.is_dodging is True
+        assert restored.is_disengaging is True
+        assert restored.turn_budget == TurnBudget(actions=0, bonus_actions=1, movement_remaining=15, reaction=0)
+        assert restored.conditions == {Condition.PRONE: 2}
+        assert restored.gold == 7
+        assert restored.reputation == {"guards": 5}
+        assert restored.xp_value == 25
+        assert restored.squad_id == "patrol_1"
+        assert restored.wake_at_seconds == 321
+        assert restored.combat_position == (10, 15)

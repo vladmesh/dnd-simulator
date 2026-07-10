@@ -33,6 +33,7 @@ def resolve_squad_combat(
     route_index: dict[str, int],
     route_direction: dict[str, int],
     query_fn: QueryFn,
+    rng: random.Random,
 ) -> list[Event]:
     """Find hostile squads at the same location and resolve combat; remove destroyed squads."""
     events: list[Event] = []
@@ -57,7 +58,7 @@ def resolve_squad_combat(
                 if not _are_hostile(a, b, query_fn):
                     continue
 
-                events.append(_fight_squads(a, b, location_id, location_graph))
+                events.append(_fight_squads(a, b, location_id, location_graph, rng))
                 fought.add(a.id)
                 fought.add(b.id)
                 break  # each squad fights at most once per tick
@@ -81,7 +82,13 @@ def _are_hostile(a: Squad, b: Squad, query_fn: QueryFn) -> bool:
     return query_faction_relation(query_fn, a.faction_id, b.faction_id) is FactionRelation.HOSTILE
 
 
-def _fight_squads(a: Squad, b: Squad, location_id: str, location_graph: LocationGraph | None) -> Event:
+def _fight_squads(
+    a: Squad,
+    b: Squad,
+    location_id: str,
+    location_graph: LocationGraph | None,
+    rng: random.Random,
+) -> Event:
     """Resolve combat between two squads. Loser retreats."""
     # Model each squad as encounters for the other
     b_encounters = [TriggeredEncounter(cr=cr, count=1) for cr in b.member_crs] if b.member_crs else []
@@ -103,7 +110,7 @@ def _fight_squads(a: Squad, b: Squad, location_id: str, location_graph: Location
     if loser.strength > 0 and location_graph is not None:
         edges = location_graph.neighbors(location_id)
         if edges:
-            loser.current_location_id = random.choice(edges).target_id
+            loser.current_location_id = rng.choice(edges).target_id
 
     logger.info(
         "squad_combat",

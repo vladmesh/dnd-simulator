@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
+import random
 
 from dnd_simulator.core.location import Location, LocationEdge, LocationGraph
 from dnd_simulator.core.models import Answer, EventType, FactionRelation, GameDateTime, Query, QueryType, TimeDelta
@@ -26,6 +26,17 @@ def _linear_graph() -> LocationGraph:
             _make_location("A", ["B"]),
             _make_location("B", ["A", "C"]),
             _make_location("C", ["B"]),
+        ]
+    )
+
+
+def _branching_graph() -> LocationGraph:
+    return LocationGraph(
+        [
+            _make_location("A", ["B", "C", "D"]),
+            _make_location("B", ["A", "C", "D"]),
+            _make_location("C", ["A", "B", "D"]),
+            _make_location("D", ["A", "B", "C"]),
         ]
     )
 
@@ -137,9 +148,7 @@ class TestRoamMovement:
         graph = _linear_graph()
         layer = EcologyLayer(squads=[squad], location_graph=graph)
 
-        with patch("dnd_simulator.layers.ecology.movement.random") as mock_random:
-            mock_random.choice.return_value = "B"
-            _tick_layer(layer, seconds=3600, hour=1)
+        _tick_layer(layer, seconds=3600, hour=1)
 
         assert squad.current_location_id == "B"
 
@@ -157,6 +166,45 @@ class TestRoamMovement:
 
         _tick_layer(layer, seconds=3600, hour=1)
         assert squad.current_location_id == "C"
+
+    def test_seeded_roam_route_replays_and_different_seed_diverges(self) -> None:
+        def route(seed: int) -> list[str]:
+            squad = _make_squad(
+                "wolves_1",
+                location="A",
+                behavior=SquadBehavior.ROAM,
+                territory=["A", "B", "C", "D"],
+            )
+            layer = EcologyLayer(squads=[squad], location_graph=_branching_graph(), seed=seed)
+            result: list[str] = []
+            for hour in range(1, 10):
+                _tick_layer(layer, seconds=3600, hour=hour)
+                result.append(squad.current_location_id)
+            return result
+
+        assert route(42) == route(42)
+        assert route(42) != route(43)
+
+    def test_roam_ignores_global_random_state(self) -> None:
+        def route(*, perturb_global: bool) -> list[str]:
+            squad = _make_squad(
+                "wolves_1",
+                location="A",
+                behavior=SquadBehavior.ROAM,
+                territory=["A", "B", "C", "D"],
+            )
+            layer = EcologyLayer(squads=[squad], location_graph=_branching_graph(), seed=42)
+            result: list[str] = []
+            for hour in range(1, 10):
+                _tick_layer(layer, seconds=3600, hour=hour)
+                result.append(squad.current_location_id)
+                if perturb_global:
+                    random.seed(20_000 + hour)
+                    for _ in range(5):
+                        random.random()
+            return result
+
+        assert route(perturb_global=False) == route(perturb_global=True)
 
 
 class TestGuardMovement:
@@ -210,6 +258,36 @@ class TestSquadVsSquadCombat:
         # Squad combat event emitted
         combat_events = [e for e in events if e.event_type is EventType.SQUAD_COMBAT]
         assert len(combat_events) >= 1
+
+    def test_seeded_retreat_replays_and_ignores_global_random_state(self) -> None:
+        def retreat(seed: int, *, perturb_global: bool) -> str:
+            strong = _make_squad(
+                "strong",
+                location="A",
+                faction="kingdom",
+                strength=6,
+                behavior=SquadBehavior.GUARD,
+                member_crs=[0.5, 0.5],
+            )
+            weak = _make_squad(
+                "weak",
+                location="A",
+                faction="bandits",
+                strength=2,
+                behavior=SquadBehavior.GUARD,
+                member_crs=[0.25, 0.25],
+            )
+            if perturb_global:
+                random.seed(30_000 + seed)
+                for _ in range(7):
+                    random.random()
+            layer = EcologyLayer(squads=[strong, weak], location_graph=_branching_graph(), seed=seed)
+            _tick_layer(layer, seconds=3600, hour=1, query_fn=_faction_query_fn({("bandits", "kingdom")}))
+            return weak.current_location_id
+
+        assert retreat(42, perturb_global=False) == retreat(42, perturb_global=False)
+        assert retreat(42, perturb_global=False) == retreat(42, perturb_global=True)
+        assert retreat(42, perturb_global=False) != retreat(43, perturb_global=False)
 
     def test_destroyed_squad_is_removed(self) -> None:
         strong = _make_squad(

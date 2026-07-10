@@ -6,8 +6,9 @@ applies pending level-ups, and renders the full status DTO consumed by ``routes_
 
 from __future__ import annotations
 
-import contextlib
 from typing import TYPE_CHECKING, Any
+
+import structlog
 
 from dnd_simulator.content_loader import load_catalog
 from dnd_simulator.core.player import PlayerCharacter
@@ -16,6 +17,8 @@ from dnd_simulator.service.base import GameServiceProtocol
 if TYPE_CHECKING:
     from dnd_simulator.core.class_features import FightingStyle
     from dnd_simulator.service.dto import PlayerStatusData
+
+logger = structlog.get_logger(domain="service.player")
 
 
 class PlayerCommands(GameServiceProtocol):
@@ -125,8 +128,10 @@ class PlayerCommands(GameServiceProtocol):
                 player.location_id = ids[0]
 
         self._get_entities_layer(session).add_entity(player)
-        with contextlib.suppress(Exception):
+        try:
             self.autosave_session(session_id)
+        except Exception:
+            logger.exception("create_player_autosave_failed", session_id=session_id)
         return player
 
     def level_up_player(

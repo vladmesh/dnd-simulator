@@ -9,13 +9,12 @@ from dnd_simulator.core.location import LocationGraph
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
 from dnd_simulator.core.queries import RegionInfo, WeatherInfo
 from dnd_simulator.i18n import _
+from dnd_simulator.layers.common.rng_state import dump_rng_state, load_rng_state
 from dnd_simulator.layers.geography.models import (
     Connection,
-    Direction,
     Region,
-    TerrainType,
-    WeatherCondition,
 )
+from dnd_simulator.layers.geography.state import ConnectionState, GeographyState, RegionState
 from dnd_simulator.layers.geography.weather import WeatherEngine
 from dnd_simulator.rules.geography import (
     apply_weather_temperature_modifier,
@@ -207,53 +206,42 @@ class GeographyLayer(Layer):
 
     def get_state(self) -> dict[str, object]:
         """Serialize geography state."""
-        regions: dict[str, Any] = {}
-        for rid, r in self._regions.items():
-            regions[rid] = {
-                "id": r.id,
-                "name": r.name,
-                "latitude": r.latitude,
-                "longitude": r.longitude,
-                "elevation": r.elevation,
-                "terrain": r.terrain.value,
-                "water_proximity": r.water_proximity,
-                "connections": [{"target_id": c.target_id, "direction": c.direction.value} for c in r.connections],
-                "weather": r.weather.value,
-                "temperature": r.temperature,
-            }
-        return {"regions": regions}
+        state = GeographyState(
+            regions={
+                rid: RegionState(
+                    id=r.id,
+                    name=r.name,
+                    latitude=r.latitude,
+                    longitude=r.longitude,
+                    elevation=r.elevation,
+                    terrain=r.terrain,
+                    water_proximity=r.water_proximity,
+                    connections=[ConnectionState(target_id=c.target_id, direction=c.direction) for c in r.connections],
+                    weather=r.weather,
+                    temperature=r.temperature,
+                )
+                for rid, r in self._regions.items()
+            },
+            rng_state=dump_rng_state(self._weather._rng),
+        )
+        return state.model_dump(mode="json")
 
     def load_state(self, state: dict[str, object]) -> None:
         """Restore geography from saved state."""
-        regions_data = state["regions"]
-        assert isinstance(regions_data, dict)
+        data = GeographyState.model_validate(state)
         self._regions.clear()
+        load_rng_state(self._weather._rng, data.rng_state)
 
-        for rid, rdata in regions_data.items():
-            assert isinstance(rdata, dict)
-
-            connections: list[Connection] = []
-            conn_list = rdata.get("connections", [])
-            assert isinstance(conn_list, list)
-            for c in conn_list:
-                assert isinstance(c, dict)
-                connections.append(
-                    Connection(
-                        target_id=str(c["target_id"]),
-                        direction=Direction(str(c["direction"])),
-                    )
-                )
-
-            region = Region(
-                id=str(rid),
-                name=str(rdata["name"]),
-                latitude=float(rdata["latitude"]),
-                longitude=float(rdata["longitude"]),
-                elevation=float(rdata["elevation"]),
-                terrain=TerrainType(str(rdata["terrain"])),
-                water_proximity=float(rdata["water_proximity"]),
-                connections=connections,
-                weather=WeatherCondition(str(rdata.get("weather", "clear"))),
-                temperature=float(rdata.get("temperature", 15.0)),
+        for rid, rdata in data.regions.items():
+            self._regions[rid] = Region(
+                id=rdata.id,
+                name=rdata.name,
+                latitude=rdata.latitude,
+                longitude=rdata.longitude,
+                elevation=rdata.elevation,
+                terrain=rdata.terrain,
+                water_proximity=rdata.water_proximity,
+                connections=[Connection(target_id=c.target_id, direction=c.direction) for c in rdata.connections],
+                weather=rdata.weather,
+                temperature=rdata.temperature,
             )
-            self._regions[rid] = region

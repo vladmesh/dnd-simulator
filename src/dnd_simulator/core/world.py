@@ -33,10 +33,12 @@ class World:
         layers: list[Layer],
         time: GameDateTime | None = None,
         location_graph: LocationGraph | None = None,
+        seed: int | None = None,
     ) -> None:
         from dnd_simulator.core.location import LocationGraph as _LocationGraph
 
         self.time = time or GameDateTime()
+        self.seed = seed
         self._layers = layers
         self.location_graph = location_graph or _LocationGraph()
         self._last_tick_time: dict[str, GameDateTime] = {layer.name: self.time for layer in layers}
@@ -155,6 +157,7 @@ class World:
         last_ticks: dict[str, dict[str, int]] = {name: t.to_dict() for name, t in self._last_tick_time.items()}
 
         return {
+            "seed": self.seed,
             "time": self.time.to_dict(),
             "last_tick_times": last_ticks,
             "layers": {layer.name: layer.get_state() for layer in self._layers},
@@ -164,23 +167,21 @@ class World:
         """Restore world from saved data."""
         time_data = data["time"]
         assert isinstance(time_data, dict)
-        # Backward compat handled in from_dict (old saves may lack 'second')
         self.time = GameDateTime.from_dict(time_data)
+        seed_data = data["seed"]
+        self.seed = int(seed_data) if isinstance(seed_data, int | str) else None
 
-        # Restore last tick times (fallback to current time for old saves)
-        last_ticks_data = data.get("last_tick_times", {})
+        # Restore last tick times. SaveGame validation guarantees one entry per saved layer.
+        last_ticks_data = data["last_tick_times"]
         assert isinstance(last_ticks_data, dict)
         for layer in self._layers:
-            lt = last_ticks_data.get(layer.name)
-            if lt and isinstance(lt, dict):
-                self._last_tick_time[layer.name] = GameDateTime.from_dict(lt)
-            else:
-                self._last_tick_time[layer.name] = self.time
+            lt = last_ticks_data[layer.name]
+            assert isinstance(lt, dict)
+            self._last_tick_time[layer.name] = GameDateTime.from_dict(lt)
 
-        layers_data = data.get("layers", {})
+        layers_data = data["layers"]
         assert isinstance(layers_data, dict)
         for layer in self._layers:
-            if layer.name in layers_data:
-                state = layers_data[layer.name]
-                assert isinstance(state, dict)
-                layer.load_state(state)
+            state = layers_data[layer.name]
+            assert isinstance(state, dict)
+            layer.load_state(state)

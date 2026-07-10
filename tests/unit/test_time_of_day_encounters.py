@@ -6,8 +6,8 @@ untagged entry always (the pre-phase-4 behaviour). Day/night comes from the
 geography layer via the ``IS_DAYLIGHT`` query, so these tests drive the real
 activation path and just vary ``world.time`` to switch phase.
 
-``random`` is mocked so the chance gate always clears and the count is fixed at
-one; the only variable under test is the clock. The world is ``test_vale``:
+The entities layer RNG is replaced with a deterministic test RNG so the chance
+gate always clears and the count is fixed at one; the only variable under test is the clock. The world is ``test_vale``:
 - ``night_hollow`` (darkwood, latitude 45) has a night-only bandit table;
 - ``crossroads`` carries an untagged regional goblin table.
 
@@ -19,7 +19,6 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
-from unittest.mock import patch
 
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.player import PlayerCharacter
@@ -31,6 +30,14 @@ from dnd_simulator.storage.store import JsonFileStore
 
 CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
 FIGHTER_SCORES = {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 12, "cha": 8}
+
+
+class _EncounterHitRng:
+    def random(self) -> float:
+        return 0.0
+
+    def randint(self, start: int, end: int) -> int:
+        return start
 
 
 def _session_with_player(tmp_path: Path, location: str) -> GameSession:
@@ -65,10 +72,12 @@ def _set_hour(session: GameSession, hour: int) -> None:
 def _activate(session: GameSession) -> None:
     """Run one activation pass with a guaranteed chance hit (count fixed at 1)."""
     ents = _entities(session)
+    rng = _EncounterHitRng()
+    ents._rng = rng  # type: ignore[assignment]
+    ents._activation._rng = rng  # type: ignore[assignment]
     qfn = session.world.make_query_fn("entities")
     efn = session.world.make_emit_fn("entities")
-    with patch("random.random", return_value=0.0), patch("random.randint", return_value=1):
-        ents.update_activation(session.world.time, query_fn=qfn, emit_fn=efn)
+    ents.update_activation(session.world.time, query_fn=qfn, emit_fn=efn)
 
 
 def _monster_names_at(session: GameSession, location_id: str) -> list[str]:

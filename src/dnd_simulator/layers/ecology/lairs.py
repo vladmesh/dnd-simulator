@@ -7,17 +7,18 @@ here and injected.
 
 from __future__ import annotations
 
+import random
+
 import structlog
 
 from dnd_simulator.core.lair import Lair, LairState
 from dnd_simulator.core.models import Event
-from dnd_simulator.rules.dice import get_global_rng
 from dnd_simulator.rules.lairs import should_deplete
 
 logger = structlog.get_logger(domain="ecology")
 
 
-def apply_lair_dematerialize(lairs: dict[str, Lair], event: Event) -> None:
+def apply_lair_dematerialize(lairs: dict[str, Lair], event: Event, rng: random.Random) -> None:
     """Sync a lair's surviving population from a finished visit."""
     lair_id = str(event.data["lair_id"])
     lair = lairs.get(lair_id)
@@ -30,7 +31,7 @@ def apply_lair_dematerialize(lairs: dict[str, Lair], event: Event) -> None:
     lair.last_respawn_time = int(event.data.get("at_seconds", lair.last_respawn_time))
 
     # Depletion decision is a pure rule; the roll is generated here and injected.
-    roll = get_global_rng().random()
+    roll = rng.random()
     if should_deplete(lair, roll):
         lair.state = LairState.DEPLETED
 
