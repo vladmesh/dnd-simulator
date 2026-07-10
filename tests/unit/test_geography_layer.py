@@ -173,7 +173,8 @@ class TestGeographySaveLoad:
             assert len(orig.connections) == len(rest.connections)
 
     def test_load_empty_state(self) -> None:
+        source = GeographyLayer()
         layer = GeographyLayer()
-        layer.load_state({"regions": {}})
+        layer.load_state(source.get_state())
         answer = layer.query(Query(question=QueryType.REGIONS, params={}))
         assert answer.value == []

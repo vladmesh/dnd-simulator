@@ -33,4 +33,8 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added Pydantic state models for geography, politics, settlements, and ecology while keeping the Layer ABC dict interface unchanged. RNG state now uses a shared JSON-safe helper and is restored for geography weather, politics, and ecology. Politics relation tuple keys are saved as typed `{a,b,...}` lists instead of colon-joined strings to avoid lossy key encoding.
