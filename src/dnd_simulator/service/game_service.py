@@ -270,6 +270,11 @@ class GameService(
     def _on_session_empty(self, session: GameSession) -> None:
         """Called when all listeners disconnect. Autosave and evict from memory."""
         sid = session.session_id
+        if sid not in self._sessions:
+            # Explicit DELETE already evicted it; autosaving here would fail or
+            # resurrect the session from its stale autosave via _get_session.
+            logger.info("session_empty_evict_skipped", session_id=sid)
+            return
         logger.info("session_empty_evict", session_id=sid)
         try:
             self.autosave_session(sid)

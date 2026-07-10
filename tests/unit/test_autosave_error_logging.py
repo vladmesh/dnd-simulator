@@ -62,3 +62,18 @@ def test_empty_session_evict_logs_autosave_failure_and_still_removes_session(tmp
     failed = [entry for entry in logs if entry.get("event") == "session_empty_autosave_failed"]
     assert len(failed) == 1
     assert failed[0]["session_id"] == session.session_id
+
+
+def test_empty_session_evict_after_delete_is_noop(tmp_path: Path) -> None:
+    """Evict timer firing after an explicit DELETE must not autosave, resurrect, or log an error."""
+    service = GameService(store=JsonFileStore(tmp_path / "saves"))
+    session = service.start_game()
+    service.autosave_session(session.session_id)  # autosave exists on disk — resurrect bait
+    service.delete_session(session.session_id)
+
+    with structlog.testing.capture_logs() as logs:
+        service._on_session_empty(session)
+
+    assert session.session_id not in service._sessions
+    assert not [e for e in logs if e.get("event") == "session_empty_autosave_failed"]
+    assert [e for e in logs if e.get("event") == "session_empty_evict_skipped"]
