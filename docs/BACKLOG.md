@@ -41,6 +41,7 @@
 - [ ] **should** `loot-drops-monsters` — Общемонстровый дроп: loot-таблицы на шаблонах монстров, корпс-лут с обычных мобов поверх action `take` (Sprint 018 закладывает примитив `Lootable`/`transfer_items`)
 - [ ] **should** `theft` — Воровство как отдельный режим доступа к инвентарю: take у живого несогласного владельца, contested Sleight of Hand против Perception, crime/репутация; отдельная `validate_steal` поверх общего `transfer_items`
 - [x] `spawn-event-trigger` — ~~Event-триггер спавна (спавн по мировому событию), в связке со спринтом квестов~~ ПОГЛОЩЁН `trigger-table`: спавн — одно из действий сработавшего триггера
+- [ ] **could** `spawn-api-xp-value` — master spawn API не принимает `xp_value` для generic-монстров: XP-смоук возможен только на фикстурном мире. E2E sprint 021 close
 - [ ] **could** `container-hp-locks` — Сундуки с замком/HP: взлом (lockpicking) и «разбить» контейнер
 - [ ] **should** `lair-death-event` — смерти существ логова не фиксируются в `EcologyLayer` в реальном времени: `LairState`/`core_alive` обновляются только при dematerialize. При рестарте сервера без сейва lair стартует как ACTIVE заново. Фикс-механизм подтверждён брейнштормом simulation-core: событийная запись (`ENTITY_DIED` через emit_fn, ecology подписывается) — это **прототип write-back всей `detail-ladder`**, кандидат в ближайший спринт как первая проба механизма. Направление зависимости: entities→ecology через emit_fn, не прямой импорт
 - [ ] **could** `lair-actions` — D&D lair actions на ядре логова
@@ -72,6 +73,7 @@
 - [ ] **could** `drag-resize-panels` — Drag-and-drop / resizable панели на dashboard
 - [ ] **could** `mobile-layout` — Мобильная адаптация dashboard
 - [ ] **could** `log-filter-tabs` — Фильтрация лога табами (Все/Бой/Диалоги)
+- [ ] **should** `attack-buttons-accessible-names` — кнопки Attack в nearby-списке и action bar имеют одинаковые accessible names: цели неразличимы для автоматизации и скринридеров — E2E-смоук бил не в ту цель (убил торговку Гретту). Добавить aria-label с именем цели. Побочная аномалия того прогона (не отрепрожена чисто): свежая сессия в том же процессе увидела пустой рынок и зависла в «Waiting for turn…» — если всплывёт снова, разбирать отдельно. E2E sprint 021 close
 - [ ] **should** `master-panel-creature-inventory` — `CreatureResponse` / `all_entities` query не включают inventory/equipped_weapon; мастер не видит предметы существ. Добавить поля в схему и query
 - [x] `master-give-item-ui` — ~~endpoint для give_item есть, кнопки нет~~ FIXED Sprint 007 phase 2: кнопка «Выдать предмет» в карточке существа
 - [x] `inspect-as-idle-param` — ~~inspect шёл как `Action(IDLE, {inspect_target})`~~ FIXED Sprint 009 phase 4: клиентская NpcInspectModal из awareness
@@ -91,6 +93,7 @@
 
 ## DevOps / Infra
 
+- [ ] **could** `saves-dir-env` — каталог сейвов захардкожен (`DEFAULT_SAVES_DIR` в app.py); env-переопределение (напр. `DND_SAVES_DIR`) нужно E2E/тестам для изоляции от рабочего saves/. E2E sprint 021 close
 - [ ] **should** `containerized-stack` — Воспроизводимый контейнерный сетап для подъёма всего стека (фронт + бэк) одной командой. Двойная польза: локально быстро поднять перед E2E и переиспользовать на проде. Сейчас `docker-compose.test.yml` — только `backend` + `integration-tests` (pytest), без фронта и без проброса портов наружу, поэтому браузерный E2E гоняется на хостовых `uvicorn`/`vite`: ловит убийство процесса песочницей при бинде порта и зависит от хостовых Node/uv. План: добавить сервис `frontend` (собранный бандл через `vite build` + `vite preview` или nginx со статикой, не dev-сервер — заодно тестируем прод-бандл), пробросить `8001`/`5173`, оформить профилем `--profile e2e` чтобы не мешать `integration-tests`, и перевести шаг «Start the stack» в скилле `/e2e` на `docker compose --profile e2e up`. Прод-вариант: тот же образ фронта (nginx) + бэкенд, общий базовый compose. Не закрывает E2E-в-CI (нужен отдельно Playwright-в-контейнере + написанные спеки) — это про воспроизводимость стека, не про сами тесты
 - [ ] **could** `pnpm-shared-store` — Перевести frontend с npm на pnpm: общий content-addressable store делает `node_modules` в свежем git-ворктри почти мгновенным (hardlink из стора) вместо ~1-2 мин `npm ci` на каждый Orca-воркер. Возникло из оркестрации 2026-07-04: `orca.yaml` setup ставит только uv-зависимости, фронт каждый воркер ставит сам. Дешёвый первый шаг без смены менеджера — добавить `cd frontend && npm ci` в `orca.yaml` setup. Полный переход = правки CI, Makefile, docker, доков
 
