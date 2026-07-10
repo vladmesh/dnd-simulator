@@ -14,7 +14,7 @@
 
 **Ссылки:** [simulation-core](../../brainstorms/simulation-core.md), [BACKLOG](../../BACKLOG.md#simulation-core-брейншторм-2026-07-04), [020 phase3 serialization dedup](../020-thermo-sweep/tasks/phase3-task1-serialization-dedup.md)
 
-## Phase 1: RNG threading & determinism
+## Phase 1: RNG threading & determinism ✓
 
 Единый world-seed: RNG создаётся на уровне World/сессии и прокидывается в слои через конструкторы (расширение существующего паттерна `PoliticsLayer(seed)` / `WeatherEngine(seed)`; `EcologyLayer` получает seed впервые). Три bare-`random` сайта (encounters, roam movement, retreat) переводятся на слоевой RNG. `game_service` реально передаёт сиды (env `DND_WORLD_SEED`, по умолчанию случайный). Тесты детерминизма: одинаковый сид → идентичная эволюция мира (encounter rolls, движение сквадов, retreat), разный сид → расходится.
 
@@ -52,6 +52,7 @@ _(генерируются отдельно перед началом фазы)_
 
 - Legacy-форматы сейва (без `meta`, flat-world, top-level `player`) удаляются без миграции: сейвы — dev-артефакты, `schema_version=1` стартует с чистого листа (2026-07-10).
 - RNG-паттерн: унифицируем на layer-constructor-owned `random.Random(seed)` (существующий Pattern B), сиды раздаёт World/сессия из одного world-seed; dice-RNG (`rules/dice.py`) остаётся отдельным потоком, но его состояние тоже попадает в сейв (2026-07-10).
+- Phase 1 закрыта без отдельного E2E: пользовательской поверхности нет (RNG plumbing), integration 160 passed; браузерный E2E идёт на закрытии phase 2/3 (2026-07-10).
 - Legacy `World.save()` уже пишет `seed`, чтобы разные world-seed snapshots различались до ввода Pydantic save schema; полное состояние RNG остаётся задачей phase 2 (2026-07-10).
 
 ## Deferred
