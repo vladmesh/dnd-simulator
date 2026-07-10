@@ -12,7 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from dnd_simulator.core.brain import BrainType
+from dnd_simulator.core.brain import BrainType, PlayerBrain
+from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.rules.dice import roll
 from dnd_simulator.rules.rule_brain import RuleBrain
@@ -127,6 +128,81 @@ class TestLoadGameRoundTrip:
         restored = layer._entities[npc_id]
         assert isinstance(restored, Npc)
         assert isinstance(restored.brain, RuleBrain)
+
+    def test_load_stops_old_round_and_resumes_once_for_restored_player(self, tmp_path: Path) -> None:
+        svc = _make_service(tmp_path)
+        session = svc.start_game("sword_vale")
+        sid = session.session_id
+        player = svc.create_player(
+            sid,
+            {
+                "name": "Loader",
+                "race": "human",
+                "class": "fighter",
+                "ability_scores": {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 12, "cha": 8},
+                "fighting_style": "defense",
+            },
+        )
+        layer = svc._get_entities_layer(session)
+        player.in_combat = True
+        player.active = True
+        layer._combat._combats[player.location_id] = CombatState(
+            location_id=player.location_id,
+            turn_order=[player.id],
+            round_number=1,
+            battle_map=BattleMap(width=60, height=60),
+        )
+        svc.save_game(sid, "combat")
+        session._last_turn_msg = {"type": "stale"}
+        session.start_round(player)
+        old_thread = session._round_thread
+        assert old_thread is not None
+
+        svc.load_game(sid, "combat")
+
+        assert not old_thread.is_alive()
+        assert session._round is None
+        assert session._round_thread is None
+        assert session._player_brain is None
+        assert session.get_last_turn_msg() is None
+        restored_combat = svc._get_entities_layer(session).get_combat(player.location_id)
+        assert restored_combat is not None
+        assert restored_combat.round_number == 1
+
+        restored_player = session.get_player()
+        assert restored_player is not None
+        first_round = session.start_round(restored_player)
+        first_thread = session._round_thread
+        second_round = session.start_round(restored_player)
+        try:
+            assert first_round is second_round
+            assert session._round_thread is first_thread
+            assert isinstance(restored_player.brain, PlayerBrain)
+        finally:
+            session.stop_round()
+
+    def test_autosave_restore_is_paused_until_player_connection(self, tmp_path: Path) -> None:
+        svc = _make_service(tmp_path)
+        session = svc.start_game("sword_vale")
+        sid = session.session_id
+        svc.create_player(
+            sid,
+            {
+                "name": "Restored",
+                "race": "human",
+                "class": "fighter",
+                "ability_scores": {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 12, "cha": 8},
+                "fighting_style": "defense",
+            },
+        )
+        svc.autosave_session(sid)
+        svc._sessions.pop(sid)
+
+        restored = svc.get_session(sid)
+
+        assert restored._round is None
+        assert restored._round_thread is None
+        assert restored._player_brain is None
 
 
 class TestListAndDeleteSaves:

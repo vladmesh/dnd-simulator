@@ -317,11 +317,14 @@ class GameService(
         match the (possibly restored) ai_type field.
         """
         from dnd_simulator.core.character import Creature
+        from dnd_simulator.core.player import PlayerCharacter
         from dnd_simulator.layers.entities.models import Npc
 
         for entity in entities_layer._entities.values():
             if isinstance(entity, Npc):
                 entity.brain = self._brain_factory.create(entity.ai_type)
+            elif isinstance(entity, PlayerCharacter):
+                entity.brain = None
             elif isinstance(entity, Creature) and entity.brain is None:
                 entity.brain = self._brain_factory.create(BrainType.RULE_BASED)
 
@@ -388,9 +391,10 @@ class GameService(
             del self._sessions[session.session_id]
         session.session_id = session_id
 
-        load_rng_state(session.dice_rng, save.world.dice_rng_state)
-        session.world.load(save.world.to_world_dict())
-        self._assign_brains(self._get_entities_layer(session))
+        with session.mutate_world():
+            load_rng_state(session.dice_rng, save.world.dice_rng_state)
+            session.world.load(save.world.to_world_dict())
+            self._assign_brains(self._get_entities_layer(session))
 
         with self._sessions_lock:
             self._sessions[session_id] = session

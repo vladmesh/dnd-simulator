@@ -284,6 +284,7 @@ class GameSession:
     _spectators: list[SessionEventListener] = field(default_factory=list, init=False, repr=False)
     _last_turn_msg: dict[str, Any] | None = field(default=None, init=False, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+    _round_transition_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
     _world_state_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
     _on_empty: Callable[[GameSession], None] | None = field(default=None, init=False, repr=False)
     _evict_timer: threading.Timer | None = field(default=None, init=False, repr=False)
@@ -495,6 +496,11 @@ class GameSession:
     # ---------------------------------------------------------------------------
 
     def start_round(self, player: PlayerCharacter) -> Round:
+        """Start or return the round while excluding load/stop transitions."""
+        with self._round_transition_lock:
+            return self._start_round(player)
+
+    def _start_round(self, player: PlayerCharacter) -> Round:
         """Start the round loop if not already running. Idempotent.
 
         Wires PlayerBrain, creates Round, starts background thread.
@@ -602,7 +608,12 @@ class GameSession:
 
             return game_round
 
-    def stop_round(self) -> None:
+    def stop_round(self, *, discard_events: bool = False) -> None:
+        """Stop the round while excluding concurrent start/load transitions."""
+        with self._round_transition_lock:
+            self._stop_round(discard_events=discard_events)
+
+    def _stop_round(self, *, discard_events: bool = False) -> None:
         """Stop the round loop and clean up."""
         self._bind_session_context()
         logger.info("stop_round")
@@ -616,11 +627,26 @@ class GameSession:
             self._round_thread = None
 
         if game_round is not None:
+            if discard_events:
+                game_round.clear_callbacks()
             game_round.stop()
         if brain is not None:
             brain.submit_action(Action(name=ActionType.END_TURN))  # unblock queue
+            brain.submit_reaction(Action(name=ActionType.SKIP))
         if thread is not None:
-            thread.join(timeout=5)
+            thread.join()
+
+    def clear_cached_turn(self) -> None:
+        """Discard transport state tied to the world that was just replaced."""
+        self._last_turn_msg = None
+
+    def replace_world_state(self, loader: Callable[[], None]) -> None:
+        """Pause the round and atomically replace state before another start can win."""
+        with self._round_transition_lock:
+            self._stop_round(discard_events=True)
+            self.clear_cached_turn()
+            with self.mutate_world():
+                loader()
 
     def submit_player_action(self, action: Action) -> None:
         """Submit a player action to the brain queue.

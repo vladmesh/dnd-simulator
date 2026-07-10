@@ -36,4 +36,14 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+`GameSession` сериализует start/stop/load через отдельный round-transition lock. Load отключает callbacks старого
+раунда, полностью завершает thread, очищает cached turn и под world-state gate восстанавливает world, session RNG
+и brains. Player после load остаётся без brain до следующего player connection; spectator по-прежнему не запускает
+симуляцию. Autosave restore использует тот же gated restore и публикуется в registry в паузированном состоянии.
+
+Два существующих lair integration-сценария обновлены под новый контракт: после REST load они переподключают player
+WebSocket перед продолжением. Полный integration suite: 160 passed.

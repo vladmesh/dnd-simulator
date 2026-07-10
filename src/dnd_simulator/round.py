@@ -101,6 +101,11 @@ class Round:
         """Set callback invoked after each action within a turn."""
         self._on_action = callback
 
+    def clear_callbacks(self) -> None:
+        """Detach transport callbacks before discarding a live round."""
+        self._on_action = None
+        self._on_round_end = None
+
     def _execute_action(
         self,
         creature: Creature,

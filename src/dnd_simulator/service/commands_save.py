@@ -64,11 +64,14 @@ class SaveCommands(GameServiceProtocol):
         data = self._store.load(name, world=session.world_name)
         save = self._validate_save(data)
 
-        load_rng_state(session.dice_rng, save.world.dice_rng_state)
-        session.world.load(save.world.to_world_dict())
+        def restore() -> None:
+            load_rng_state(session.dice_rng, save.world.dice_rng_state)
+            session.world.load(save.world.to_world_dict())
 
-        # Reassign brains based on restored ai_type (may differ from pre-load state)
-        self._assign_brains(self._get_entities_layer(session))
+            # Reassign brains based on restored ai_type (may differ from pre-load state)
+            self._assign_brains(self._get_entities_layer(session))
+
+        session.replace_world_state(restore)
 
     def delete_save(self, session_id: str, name: str) -> None:
         """Delete a save file."""

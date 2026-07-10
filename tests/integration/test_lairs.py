@@ -224,6 +224,12 @@ class TestLairSaveLoad:
             resp = requests.post(f"{api_url}/sessions/{sid}/saves/lair_depleted/load", timeout=10)
             assert resp.status_code == HTTPStatus.OK
 
+            # Load pauses the old round. Reconnect is the only lifecycle edge that
+            # starts the restored round and binds a fresh PlayerBrain.
+            sock.close()
+            sock = ws_connect(ws_base, sid, pid)
+            _get_turn(sock)
+
             # Return after load: depletion persisted, nothing spawns.
             _move_player(api_url, sid, pid, "cave")
             _advance_turn(sock)
@@ -321,7 +327,9 @@ class TestLairTreasury:
             resp = requests.post(f"{api_url}/sessions/{sid}/saves/lair_looted/load", timeout=10)
             assert resp.status_code == HTTPStatus.OK
 
-            turn = _advance_turn(sock)
+            sock.close()
+            sock = ws_connect(ws_base, sid, pid)
+            turn = _get_turn(sock)
             chest = _nearby(turn, TREASURY_ID)
             assert chest is not None
             assert chest["loot_gold"] == 0
