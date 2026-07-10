@@ -356,18 +356,30 @@ class GameSession:
 
     def remove_listener(self, listener: SessionEventListener) -> None:
         self._bind_session_context()
-        scheduled = False
+        stop_round = False
         with self._lock:
             with contextlib.suppress(ValueError):
                 self._listeners.remove(listener)
             count = len(self._listeners)
-            if not self.has_player_listeners():
-                # Defer stop+evict: a quick disconnect+reconnect (StrictMode remount,
-                # network blip) must not flash the session out of the registry. The
-                # deferred check (_run_evict_check) re-verifies emptiness before acting.
+            player_empty = not self.has_player_listeners()
+            if player_empty and self._round is not None:
+                stop_round = True
+        logger.info("remove_listener", listener_count=count, player_empty=player_empty, stop_round=stop_round)
+        if stop_round:
+            # Pause the simulation immediately when no player drives it. A lingering round
+            # thread would keep advancing NPC turns during the grace window: for a real
+            # player a network blip would silently cost them combat turns, and because all
+            # sessions share one process-global dice RNG, overlapping player-less rounds make
+            # seeded integration tests nondeterministic. stop_round() cancels any stale timer,
+            # so the evict is (re)armed after it returns.
+            self.stop_round()
+        if player_empty:
+            # Defer only the registry eviction: a quick disconnect+reconnect (StrictMode
+            # remount, network blip) must not flash the session out of the registry, and the
+            # reconnecting player restarts the round via start_round. The deferred check
+            # (_run_evict_check) re-verifies emptiness before firing _on_empty.
+            with self._lock:
                 self._schedule_evict_check()
-                scheduled = True
-        logger.info("remove_listener", listener_count=count, scheduled_evict=scheduled)
 
     def _schedule_evict_check(self) -> None:
         """Arm the deferred empty-session check. Caller holds ``_lock``."""

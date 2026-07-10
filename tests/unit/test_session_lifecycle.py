@@ -488,6 +488,36 @@ class TestStartRound:
         session.submit_player_action(Action(name=ActionType.END_TURN))
 
 
+class TestDisconnectStopsRound:
+    """Disconnect debounce (refined): the last player leaving pauses the round *immediately*
+    while deferring only the registry eviction.
+
+    A round left running with no player would keep advancing NPC turns during the grace
+    window — silently costing a blipped player combat turns — and, because every session
+    draws from one process-global dice RNG, overlapping player-less rounds make seeded
+    integration tests nondeterministic (observed: test_player_state_xp flaked in CI)."""
+
+    def test_last_listener_disconnect_stops_round_now_defers_evict(self, session_with_player: Any) -> None:
+        session, player = session_with_player
+        session._evict_grace_seconds = 3600  # keep the real timer from firing mid-test
+        fired: list[GameSession] = []
+        session._on_empty = lambda s: fired.append(s)
+        listener = RecordingListener()
+        session.add_listener(listener)
+        session.start_round(player)
+        assert session._round is not None
+
+        session.remove_listener(listener)
+
+        # Round paused at once: no lingering thread advancing NPC turns / draining the RNG.
+        assert session._round is None
+        assert session._round_thread is None
+        # Eviction is still deferred: a quick reconnect can cancel it.
+        assert fired == []
+        assert session._evict_timer is not None
+        session._evict_timer.cancel()
+
+
 class TestStopRound:
     def test_stop_clears_state_and_joins_thread(self, session_with_player: Any) -> None:
         session, player = session_with_player
