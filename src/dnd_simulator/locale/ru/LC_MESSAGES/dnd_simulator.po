@@ -360,6 +360,9 @@ msgstr "Слегка ранен."
 msgid "They look healthy."
 msgstr "Выглядит здоровым."
 
+msgid "Conditions: {list}."
+msgstr "Состояния: {list}."
+
 #: Turn skipped
 msgid "You can't act ({conditions}) — turn skipped"
 msgstr "Ты не можешь действовать ({conditions}) — ход пропущен"
@@ -380,6 +383,26 @@ msgstr "Ты переводишь дух и восстанавливаешь {hp
 
 msgid "{entity} catches their breath, regaining {hp} HP"
 msgstr "{entity} переводит дух и восстанавливает {hp} ОЗ"
+
+#: Action Surge
+msgid "You surge with energy, gaining an extra action"
+msgstr "Ты наполняешься энергией и получаешь дополнительное действие"
+
+msgid "{entity} surges with energy, gaining an extra action"
+msgstr "{entity} наполняется энергией и получает дополнительное действие"
+
+#: Lay on Hands
+msgid "You lay hands on yourself, restoring {hp} HP (pool {before}→{after})"
+msgstr "Ты возлагаешь руки на себя, восстанавливая {hp} ОЗ (запас {before}→{after})"
+
+msgid "You lay hands on {target}, restoring {hp} HP (pool {before}→{after})"
+msgstr "Ты возлагаешь руки на {target}, восстанавливая {hp} ОЗ (запас {before}→{after})"
+
+msgid "{entity} lays hands on you, restoring {hp} HP"
+msgstr "{entity} возлагает руки на тебя, восстанавливая {hp} ОЗ"
+
+msgid "{entity} lays hands on {target}, restoring {hp} HP"
+msgstr "{entity} возлагает руки на {target}, восстанавливая {hp} ОЗ"
 
 #: Equip / Unequip
 msgid "You equip {weapon}"
@@ -406,6 +429,19 @@ msgstr "Ты продаёшь {item} {merchant} за {price} золота"
 
 msgid "{seller} sells {item} to {merchant} for {price} gold"
 msgstr "{seller} продаёт {item} {merchant} за {price} золота"
+
+#: Loot / take
+msgid "You loot {target} ({loot})"
+msgstr "Ты обираешь {target} ({loot})"
+
+msgid "{actor} loots {target} ({loot})"
+msgstr "{actor} обирает {target} ({loot})"
+
+msgid "{gold} gold"
+msgstr "{gold} золота"
+
+msgid "nothing"
+msgstr "ничего"
 
 #: Combat started
 msgid "Combat started! Initiative order: {order}"
