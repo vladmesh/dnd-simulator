@@ -22,7 +22,10 @@ Save, load, autosave, evict и round loop согласованы одной sess
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Session-owned dice RNG](tasks/phase1-task1-session-dice-rng.md)
+2. [World-state mutation gate](tasks/phase1-task2-world-state-gate.md)
+3. [Consistent save and eviction paths](tasks/phase1-task3-consistent-save-paths.md)
+4. [Atomic load and connection-driven resume](tasks/phase1-task4-atomic-load-resume.md)
 
 ## Phase 2: Anchors, wait and sleep intents
 
@@ -64,6 +67,7 @@ _(генерируются отдельно перед началом фазы)_
 
 - Граница Sprint 022: anchors + сохраняемые intents для wait/sleep/travel + встроенные прерывания. Декларативные trigger-table, Brain gate/decide, NPC wandering, LLM-планирование, цели и квесты остаются за пределами спринта (2026-07-10).
 - Связанные lifecycle-дефекты `save-round-concurrency`, `load-combat-round-resume` и `wait-no-fastforward-with-npc` входят в основной scope; `attack-buttons-accessible-names` закрывается как E2E-polish (2026-07-10).
+- Phase 1: session-level world gate недостаточен, пока dice RNG process-global. Dice RNG переводится во владение сессии до синхронизации snapshot; модульный fallback остаётся только для изолированных правиловых тестов (2026-07-10).
 
 ## Deferred
 
