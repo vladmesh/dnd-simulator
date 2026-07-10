@@ -45,6 +45,11 @@ Pydantic-модели сейва (`SaveGame`: `schema_version`, `meta`, `world{t
 
 Проверка: unit-тест шедулера (старт/останов/интервал), `make test-integration`, `saves/` не растёт после прогона. Почему последним: частый автосейв имеет смысл только поверх надёжной схемы.
 
+**Tasks:**
+
+1. [Периодический автосейв в FastAPI lifespan](tasks/phase3-task1-periodic-autosave.md)
+2. [Ошибки автосейва в лог + чистка saves/ в интеграционных тестах](tasks/phase3-task2-autosave-errors-and-saves-hygiene.md)
+
 ---
 
 ## Status
