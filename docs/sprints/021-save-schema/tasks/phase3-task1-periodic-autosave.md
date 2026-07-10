@@ -31,4 +31,8 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Добавлен `_periodic_autosave` в FastAPI lifespan: интервал берётся из `DND_AUTOSAVE_SECONDS`, проходы выполняются через `asyncio.to_thread`, ошибки логируются и не убивают задачу. На shutdown периодический task отменяется и дожидается до финального `autosave_all_sessions()`. Unit-тесты покрывают env parsing, invalid fail-fast, свежую запись save-файла, продолжение после ошибки и порядок остановки.

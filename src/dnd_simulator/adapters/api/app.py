@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 import os
 import re
@@ -29,8 +31,33 @@ from dnd_simulator.service.game_service import DEFAULT_CONTENT_DIR
 from dnd_simulator.storage.store import JsonFileStore
 
 DEFAULT_SAVES_DIR = Path(__file__).resolve().parents[4] / "saves"
+DEFAULT_AUTOSAVE_SECONDS = 120.0
 
 _SESSION_ID_RE = re.compile(r"/api/(?:master|player)/sessions/([^/]+)")
+logger = structlog.get_logger(domain="transport.api")
+
+
+def _autosave_interval_from_env() -> float:
+    raw = os.getenv("DND_AUTOSAVE_SECONDS")
+    if raw is None:
+        return DEFAULT_AUTOSAVE_SECONDS
+    interval = float(raw)
+    if interval <= 0:
+        raise ValueError("DND_AUTOSAVE_SECONDS must be greater than 0")
+    return interval
+
+
+async def _periodic_autosave(service: GameService, interval: float) -> None:
+    while True:
+        await asyncio.sleep(interval)
+        save_task = asyncio.create_task(asyncio.to_thread(service.autosave_all_sessions))
+        try:
+            await asyncio.shield(save_task)
+        except asyncio.CancelledError:
+            await save_task
+            raise
+        except Exception:
+            logger.exception("periodic_autosave_failed")
 
 
 class I18nMiddleware(BaseHTTPMiddleware):
@@ -76,9 +103,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     content_dir = Path(content_dir_env) if content_dir_env else DEFAULT_CONTENT_DIR
     service = GameService(store=store, llm=llm, content_dir=content_dir)
     set_service(service)
+    autosave_interval = _autosave_interval_from_env()
+    autosave_task = asyncio.create_task(_periodic_autosave(service, autosave_interval))
     try:
         yield
     finally:
+        autosave_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await autosave_task
         service.autosave_all_sessions()
 
 

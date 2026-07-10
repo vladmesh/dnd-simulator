@@ -12,9 +12,9 @@
 **Sprint:** 021-save-schema
 **Goal:** Единая версионированная Pydantic-схема сейва + воспроизводимость мира от явного сида + периодический автосейв.
 **Started:** 2026-07-10
-**Phase:** 3 — Autosave hardening (tasks generated) — 2026-07-10
+**Phase:** 3 — Autosave hardening (task 1 done, task 2 pending) — 2026-07-10
 
-Phase 2 закрыта (e2e 6/7, находки в бэклоге). Ready to start phase 3 task 1.
+Phase 2 закрыта (e2e 6/7, находки в бэклоге). Phase 3 task 1 done, task 2 pending.
 
 ### Phases
 
