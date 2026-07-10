@@ -6,15 +6,23 @@ from pathlib import Path
 
 import pytest
 
+from dnd_simulator.core.character import Creature
 from dnd_simulator.core.models import GameDateTime, TimeDelta
+from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.ecology.layer import EcologyLayer
 from dnd_simulator.layers.entities.layer import EntitiesLayer
+from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.geography.models import Region, Season, TerrainType, WeatherCondition
 from dnd_simulator.layers.geography.weather import WeatherEngine
 from dnd_simulator.layers.politics.layer import PoliticsLayer
 from dnd_simulator.layers.politics.models import Leader, LeaderTrait, Nation
+from dnd_simulator.rules.dice import set_global_seed
 from dnd_simulator.service.game_service import GameService
+from dnd_simulator.service.session import GameSession
 from dnd_simulator.storage.store import JsonFileStore
+
+CONTENT_DIR = Path(__file__).resolve().parents[2] / "content"
+FIGHTER_SCORES = {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 12, "cha": 8}
 
 
 def _make_nations() -> list[Nation]:
@@ -125,3 +133,84 @@ def test_game_service_threads_world_seed_to_layer_streams(monkeypatch: pytest.Mo
 
     assert samples_a == samples_b
     assert len(set(samples_a.values())) == len(samples_a)
+
+
+def _world_save_after_month(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, world_seed: int) -> dict[str, object]:
+    monkeypatch.setenv("DND_WORLD_SEED", str(world_seed))
+    set_global_seed(123)
+    service = GameService(store=JsonFileStore(tmp_path / f"saves-{world_seed}"), content_dir=CONTENT_DIR)
+    session = service.start_game("test_vale")
+    for _ in range(31 * 24):
+        session.world.advance_time(TimeDelta(seconds=3600))
+    return session.world.save()
+
+
+def test_same_world_seed_replays_full_world_save(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    save_a = _world_save_after_month(tmp_path / "a", monkeypatch, world_seed=42)
+    save_b = _world_save_after_month(tmp_path / "b", monkeypatch, world_seed=42)
+
+    assert save_a == save_b
+
+
+def test_different_world_seed_changes_full_world_save(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    save_a = _world_save_after_month(tmp_path / "a", monkeypatch, world_seed=42)
+    save_b = _world_save_after_month(tmp_path / "b", monkeypatch, world_seed=43)
+
+    assert save_a != save_b
+
+
+def _session_with_player(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    world_seed: int,
+    location: str,
+) -> GameSession:
+    monkeypatch.setenv("DND_WORLD_SEED", str(world_seed))
+    set_global_seed(123)
+    service = GameService(store=JsonFileStore(tmp_path / f"saves-{world_seed}"), content_dir=CONTENT_DIR)
+    session = service.start_game("test_vale")
+    service.create_player(
+        session.session_id,
+        {
+            "name": "Scout",
+            "race": "human",
+            "class": "fighter",
+            "alignment": "true_neutral",
+            "ability_scores": FIGHTER_SCORES,
+            "fighting_style": "defense",
+            "start_location": location,
+        },
+    )
+    return session
+
+
+def _activate(session: GameSession) -> None:
+    entities = session.world.get_layer(EntitiesLayer)
+    entities.update_activation(
+        session.world.time,
+        query_fn=session.world.make_query_fn("entities"),
+        emit_fn=session.world.make_emit_fn("entities"),
+    )
+
+
+def _spawned_names_at(session: GameSession, location_id: str) -> list[str]:
+    entities = session.world.get_layer(EntitiesLayer)
+    return sorted(
+        entity.name
+        for entity in entities._entities.values()
+        if isinstance(entity, Creature)
+        and not isinstance(entity, (PlayerCharacter, Npc))
+        and entity.location_id == location_id
+        and entity.is_alive
+    )
+
+
+def test_same_world_seed_replays_encounter_spawns(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    session_a = _session_with_player(tmp_path / "a", monkeypatch, world_seed=42, location="crossroads_tavern")
+    session_b = _session_with_player(tmp_path / "b", monkeypatch, world_seed=42, location="crossroads_tavern")
+
+    _activate(session_a)
+    _activate(session_b)
+
+    assert _spawned_names_at(session_a, "crossroads_tavern") == _spawned_names_at(session_b, "crossroads_tavern")

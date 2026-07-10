@@ -157,6 +157,7 @@ class World:
         last_ticks: dict[str, dict[str, int]] = {name: t.to_dict() for name, t in self._last_tick_time.items()}
 
         return {
+            "seed": self.seed,
             "time": self.time.to_dict(),
             "last_tick_times": last_ticks,
             "layers": {layer.name: layer.get_state() for layer in self._layers},
@@ -168,6 +169,8 @@ class World:
         assert isinstance(time_data, dict)
         # Backward compat handled in from_dict (old saves may lack 'second')
         self.time = GameDateTime.from_dict(time_data)
+        seed_data = data.get("seed")
+        self.seed = int(seed_data) if isinstance(seed_data, int | str) else None
 
         # Restore last tick times (fallback to current time for old saves)
         last_ticks_data = data.get("last_tick_times", {})

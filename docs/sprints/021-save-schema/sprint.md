@@ -52,6 +52,7 @@ _(генерируются отдельно перед началом фазы)_
 
 - Legacy-форматы сейва (без `meta`, flat-world, top-level `player`) удаляются без миграции: сейвы — dev-артефакты, `schema_version=1` стартует с чистого листа (2026-07-10).
 - RNG-паттерн: унифицируем на layer-constructor-owned `random.Random(seed)` (существующий Pattern B), сиды раздаёт World/сессия из одного world-seed; dice-RNG (`rules/dice.py`) остаётся отдельным потоком, но его состояние тоже попадает в сейв (2026-07-10).
+- Legacy `World.save()` уже пишет `seed`, чтобы разные world-seed snapshots различались до ввода Pydantic save schema; полное состояние RNG остаётся задачей phase 2 (2026-07-10).
 
 ## Deferred
 

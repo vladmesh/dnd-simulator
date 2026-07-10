@@ -29,4 +29,10 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added capstone unit tests through real `GameService` assembly: same world seed plus dice seed gives identical month-long `World.save()`, different world seeds diverge, and same-seed encounter activation replays spawns.
+The new different-seed save test initially failed on `test_vale`: the evolved persisted state could be identical because `World.save()` did not include the world seed.
+Fixed that by adding `seed` to the legacy world save dict and restoring it in `World.load()`; full RNG state remains phase 2 schema work.
