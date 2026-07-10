@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import contextlib
+import os
+import random
 import uuid
 from pathlib import Path
 
@@ -51,6 +53,22 @@ from .session import GameSession
 DEFAULT_CONTENT_DIR = Path(__file__).resolve().parents[3] / "content"
 
 logger = structlog.get_logger(domain="service")
+
+_LAYER_SEED_ORDER = ("geography", "politics", "ecology", "entities")
+
+
+def _resolve_world_seed() -> int:
+    raw = os.getenv("DND_WORLD_SEED")
+    if raw is not None:
+        return int(raw)
+    seed = random.SystemRandom().getrandbits(64)
+    logger.info("world_seed_generated", world_seed=seed)
+    return seed
+
+
+def _derive_layer_seeds(world_seed: int) -> dict[str, int]:
+    rng = random.Random(world_seed)
+    return {layer_name: rng.getrandbits(64) for layer_name in _LAYER_SEED_ORDER}
 
 
 def _flatten_region_defaults[T](
@@ -112,6 +130,8 @@ class GameService(
                 "All 5 layers must be defined before starting a session."
             )
         meta = load_world_meta_from_manifest(world_path, lang=lang)
+        world_seed = _resolve_world_seed()
+        layer_seeds = _derive_layer_seeds(world_seed)
         regions = load_world(layer_paths["geography"], lang=lang)
         nations = load_nations(layer_paths["politics"], lang=lang)
         settlements = load_settlements(layer_paths["settlements"], lang=lang)
@@ -143,7 +163,11 @@ class GameService(
         # Players are created via API (create_player), not from templates
         entities: list[Entity] = [*npcs]
 
-        geography = GeographyLayer(regions=regions, location_graph=location_graph)
+        geography = GeographyLayer(
+            regions=regions,
+            weather_seed=layer_seeds["geography"],
+            location_graph=location_graph,
+        )
         settlements_layer = SettlementsLayer(settlements=settlements, region_terrains=region_terrains)
         politics = PoliticsLayer(
             nations=nations,
@@ -152,6 +176,7 @@ class GameService(
             region_income_fn=settlements_layer.get_region_income,
             faction_relations=faction_data.relations,
             faction_names=faction_data.names,
+            seed=layer_seeds["politics"],
         )
         summarizer = None
         if self._llm:
@@ -162,7 +187,10 @@ class GameService(
         for squad in squads.values():
             squad.member_crs = [monster_templates[tid].cr for tid in squad.member_templates]
         ecology_layer = EcologyLayer(
-            squads=list(squads.values()), location_graph=location_graph, lairs=list(lairs.values())
+            squads=list(squads.values()),
+            location_graph=location_graph,
+            lairs=list(lairs.values()),
+            seed=layer_seeds["ecology"],
         )
         # Battle maps and encounter tables both resolve region → location at load
         # time: a region-level declaration is the default for every location in
@@ -181,6 +209,7 @@ class GameService(
             monster_templates=monster_templates,
             encounter_tables=effective_encounters,
             battle_map_configs=battle_map_configs,
+            seed=layer_seeds["entities"],
         )
 
         # Assign brains via factory (content_loader only parses data, not brains)
@@ -190,6 +219,7 @@ class GameService(
             layers=[geography, politics, settlements_layer, ecology_layer, entities_layer],
             time=GameDateTime(year=1490, month=6, day=1, hour=10),
             location_graph=location_graph,
+            seed=world_seed,
         )
 
         # Initial tick to set weather/temperature

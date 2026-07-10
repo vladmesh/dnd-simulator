@@ -38,4 +38,10 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added `DND_WORLD_SEED` handling in `GameService`, deterministic layer seed derivation, and `World.seed`.
+`EcologyLayer` and `EntitiesLayer` now own constructor-seeded RNGs; politics/weather receive derived seeds through the existing constructors.
+The RED point was the service-built world lacking `World.seed` and layer RNG plumbing; existing politics/weather seed behavior was already deterministic.

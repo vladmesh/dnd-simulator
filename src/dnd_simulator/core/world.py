@@ -33,10 +33,12 @@ class World:
         layers: list[Layer],
         time: GameDateTime | None = None,
         location_graph: LocationGraph | None = None,
+        seed: int | None = None,
     ) -> None:
         from dnd_simulator.core.location import LocationGraph as _LocationGraph
 
         self.time = time or GameDateTime()
+        self.seed = seed
         self._layers = layers
         self.location_graph = location_graph or _LocationGraph()
         self._last_tick_time: dict[str, GameDateTime] = {layer.name: self.time for layer in layers}

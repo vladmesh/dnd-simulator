@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
@@ -78,6 +79,7 @@ class EntitiesLayer(Layer):
         summarizer: MemorySummarizer | None = None,
         monster_templates: dict[str, MonsterTemplate] | None = None,
         encounter_tables: dict[str, list[EncounterEntry]] | None = None,
+        seed: int | None = None,
     ) -> None:
         self._entities: dict[str, Entity] = {}
         self._location_log: dict[str, list[Event]] = defaultdict(list)
@@ -87,6 +89,7 @@ class EntitiesLayer(Layer):
         self._encounter_cooldowns: dict[str, int] = {}  # location_id → last spawn time (seconds)
         self._creature_locations: dict[str, str] = {}  # creature_id → last known location_id
         self._spawn_counter = 0
+        self._rng = random.Random(seed)
         # Materialization tracking: squad_id → (creature_ids, original_strength, spawn_count)
         self._materialized_squads: dict[str, tuple[list[str], int, int]] = {}
         # Lair materialization tracking: lair_id -> (creature_ids, core_creature_id, minion_templates)

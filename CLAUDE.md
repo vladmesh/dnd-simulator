@@ -164,6 +164,7 @@ Kill reputation drop (`rules/reputation.py`): omniscient, delta scaled by victim
 - Requires `.env` with `OPENROUTER_API_KEY` for LLM features (only if NPCs use `ai: llm`)
 - `LLM_MODEL` env var selects model (required if `OPENROUTER_API_KEY` is set, no default)
 - `DND_LANGUAGE` env var selects game language (default: `ru`); locale files in `src/dnd_simulator/locale/`
+- `DND_WORLD_SEED` env var seeds world simulation layers; when absent, `GameService` logs the generated seed.
 - Save files: `saves/` directory (JSON)
 - Backend API: `make serve` → http://localhost:8001/docs (Swagger UI)
 - Frontend: `make frontend` → http://localhost:5173 (entry point, proxies /api to :8001)

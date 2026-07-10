@@ -6,6 +6,7 @@ layer is the thin facade that ticks them and answers queries (politics-package p
 
 from __future__ import annotations
 
+import random
 from typing import TYPE_CHECKING
 
 import structlog
@@ -34,6 +35,7 @@ class EcologyLayer(Layer):
         squads: list[Squad] | None = None,
         location_graph: LocationGraph | None = None,
         lairs: list[Lair] | None = None,
+        seed: int | None = None,
     ) -> None:
         self._squads: dict[str, Squad] = {}
         if squads:
@@ -47,6 +49,7 @@ class EcologyLayer(Layer):
         self._last_move_time: dict[str, int] = {}  # squad_id → game-time seconds of last move
         self._route_index: dict[str, int] = {}  # squad_id → current index in route
         self._route_direction: dict[str, int] = {}  # squad_id → +1 forward, -1 reverse
+        self._rng = random.Random(seed)
 
     @property
     def name(self) -> str:
