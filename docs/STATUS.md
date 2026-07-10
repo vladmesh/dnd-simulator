@@ -9,7 +9,19 @@
 
 ## Current Sprint
 
-No active sprint.
+**Sprint:** 022-intents-travel
+**Goal:** Любое существо может быть якорем и сохраняемым носителем намерения; ожидание, сон и путешествие исполняются во времени, travel движется по графу без телепортации, а save/load согласован с жизненным циклом раунда.
+**Started:** 2026-07-10
+**Phase:** Planning (COMPLETE) — 2026-07-10
+
+Ready for Phase 1 task generation.
+
+### Phases
+
+1. Safe session lifecycle
+2. Anchors, wait and sleep intents
+3. Travel as an intent
+4. Interruptible journeys and E2E closure
 
 ## Recent activity (non-sprint)
 
