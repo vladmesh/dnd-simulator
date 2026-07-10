@@ -1,6 +1,6 @@
 """Proximity-based activation for the entities layer.
 
-The activation passes (anchor players, activate/dormify creatures) live here. Encounter
+The activation passes (anchor creatures, activate/dormify creatures) live here. Encounter
 rolling and squad/lair materialization are isolated in sibling modules (``encounters``,
 ``materialization``) — this class owns only the activation loop and delegates the rest.
 """
@@ -27,7 +27,7 @@ logger = structlog.get_logger(domain="entity")
 
 
 class ActivationManager:
-    """Proximity-based activation: anchor players activate nearby creatures, the rest go dormant.
+    """Proximity-based activation: anchors activate nearby creatures, the rest go dormant.
 
     Operates on shared entity and state references owned by EntitiesLayer. Encounter rolling and
     materialization are delegated to the ``encounters`` / ``materialization`` sibling modules.
@@ -64,89 +64,68 @@ class ActivationManager:
         query_fn: QueryFn | None = None,
         emit_fn: EmitFn | None = None,
     ) -> None:
-        """Activate creatures near players, dormify the rest.
+        """Activate creatures near awake anchors, dormify the rest.
 
         Rules:
-        - PlayerCharacter without a timed intent is always active (anchor).
-        - PlayerCharacter with a timed intent is dormant until its timer expires.
+        - Any living creature explicitly marked as an anchor holds its location active.
+        - An anchor with a timed intent is dormant until its timer expires.
         - Creatures at an anchor's location are active.
         - Creatures in combat are active (don't interrupt fights).
-        - Creatures activated by proximity have timed intents cleared (woken early).
+        - Proximity never cancels a timed intent.
         - Everyone else is dormant (active=False).
 
         When query_fn/emit_fn are provided, also handles squad materialization:
         squads at active locations are spawned as creatures, squads no longer
         at active locations are dematerialized with strength updates.
 
-        No-op if no players exist (e.g. in tests without PlayerCharacter).
         """
-        from dnd_simulator.core.player import PlayerCharacter
         from dnd_simulator.layers.entities.models import Npc
 
         now = time.to_total_seconds()
+        hour = time.hour
 
-        # First pass: expire wake_at timers, collect anchor locations
-        player_locations: set[str] = set()
-        has_players = False
-        for e in self._entities.values():
-            if not isinstance(e, PlayerCharacter):
-                continue
-            has_players = True
-            if not e.is_alive:
-                e.active = False
-                e.current_intent = None
-                continue
-            # Check timed intent expiry
-            if e.current_intent is not None and now >= e.current_intent.wake_at_seconds:
-                e.current_intent = None
-                logger.info("activation_wake_timer", entity_id=e.id)
-            # Player is anchor only if not waiting
-            if e.current_intent is None:
-                e.active = True
-                player_locations.add(e.location_id)
-            else:
-                e.active = False
-
-        if not has_players:
-            return
-
-        # Snapshot active creature IDs before re-evaluation (for encounter checks)
+        # Snapshot active creature IDs before re-evaluation (for encounter checks).
         previously_active: set[str] = {e.id for e in self._entities.values() if isinstance(e, Creature) and e.active}
 
-        # Second pass: activate/dormify non-player creatures
-        hour = time.hour
+        # First pass: expire timers and collect locations held by awake anchors.
+        anchor_locations: set[str] = set()
         for e in self._entities.values():
-            if not isinstance(e, Creature) or isinstance(e, PlayerCharacter):
+            if not isinstance(e, Creature):
+                continue
+            if not e.is_alive:
+                e.active = False
+                e.current_intent = None
+                continue
+            if e.current_intent is not None and now >= e.current_intent.wake_at_seconds:
+                e.current_intent = None
+                logger.info("activation_wake_timer", entity_id=e.id)
+            if e.is_anchor and e.current_intent is None:
+                effective_location = e.current_location(hour) if isinstance(e, Npc) else e.location_id
+                anchor_locations.add(effective_location)
+
+        # Second pass: recompute every creature from anchors, intents, and combat.
+        for e in self._entities.values():
+            if not isinstance(e, Creature):
                 continue
             if not e.is_alive:
                 e.active = False
                 continue
-
-            # Expire timed intents for non-players too
-            if e.current_intent is not None and now >= e.current_intent.wake_at_seconds:
-                e.current_intent = None
-                logger.info("activation_wake_timer", entity_id=e.id)
 
             effective_location = e.location_id
             if isinstance(e, Npc):
                 effective_location = e.current_location(hour)
 
-            should_activate = effective_location in player_locations or e.in_combat
+            should_activate = e.in_combat or (e.current_intent is None and effective_location in anchor_locations)
             e.active = should_activate
 
             # Move NPC to their scheduled location when activated
             if should_activate and effective_location != e.location_id:
                 e.location_id = effective_location
 
-            # Proximity wakeup: clear pending wait timer
-            if should_activate and e.current_intent is not None:
-                logger.info("activation_wake_proximity", entity_id=e.id)
-                e.current_intent = None
-
         # Third pass: check for encounter spawns from creatures that were active
         check_encounters(self, time, previously_active, query_fn)
 
         # Fourth pass: squad + lair materialization/dematerialization
         if query_fn is not None:
-            update_squad_materialization(self, player_locations, query_fn, emit_fn)
-            update_lair_materialization(self, now, player_locations, query_fn, emit_fn)
+            update_squad_materialization(self, anchor_locations, query_fn, emit_fn)
+            update_lair_materialization(self, now, anchor_locations, query_fn, emit_fn)

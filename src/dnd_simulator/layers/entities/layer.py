@@ -166,7 +166,7 @@ class EntitiesLayer(Layer):
         query_fn: QueryFn | None = None,
         emit_fn: EmitFn | None = None,
     ) -> None:
-        """Activate creatures near players, dormify the rest."""
+        """Activate creatures near awake anchors, dormify the rest."""
         self._activation.update_activation(time, query_fn, emit_fn)
 
     # -- Combat (delegated to CombatManager) --

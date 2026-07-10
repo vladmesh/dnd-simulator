@@ -539,7 +539,7 @@ class Round:
                 break
 
     def _fast_forward(self) -> bool:
-        """Advance time to the nearest wake_at when no creatures are active.
+        """Advance time to the nearest intent wake point when no creatures are active.
 
         Returns True if time was advanced (loop should continue), False if
         there's nobody to wake up (loop should exit).

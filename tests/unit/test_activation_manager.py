@@ -12,6 +12,7 @@ from dnd_simulator.core.character import (
     DamageComponent,
     DamageType,
 )
+from dnd_simulator.core.intent import IntentType, TimedIntent
 from dnd_simulator.core.models import (
     ActionResult,
     Answer,
@@ -105,6 +106,54 @@ class TestProximityActivation:
         layer.update_activation(_TIME_0)
         assert npc_a.active is False
         assert npc_b.active is True
+
+    def test_generic_anchor_activates_scene_without_player(self) -> None:
+        anchor = Creature(id="anchor", name="Oracle", location_id="temple", is_anchor=True)
+        nearby = Creature(id="nearby", name="Acolyte", location_id="temple", active=False)
+        distant = Creature(id="distant", name="Farmer", location_id="farm", active=True)
+
+        EntitiesLayer([anchor, nearby, distant]).update_activation(_TIME_0)
+
+        assert anchor.active is True
+        assert nearby.active is True
+        assert distant.active is False
+
+    def test_player_without_anchor_capability_does_not_activate_scene(self) -> None:
+        player = PlayerCharacter(id="p1", name="Hero", location_id="village", is_anchor=False)
+        nearby = Creature(id="nearby", name="Guard", location_id="village", active=True)
+
+        EntitiesLayer([player, nearby]).update_activation(_TIME_0)
+
+        assert player.active is False
+        assert nearby.active is False
+
+    def test_active_non_anchor_does_not_activate_another_location(self) -> None:
+        anchor = Creature(id="anchor", name="Anchor", location_id="square", is_anchor=True)
+        nearby = Creature(id="nearby", name="Courier", location_id="square", active=True)
+        elsewhere = Creature(id="elsewhere", name="Friend", location_id="gate", active=True)
+
+        EntitiesLayer([anchor, nearby, elsewhere]).update_activation(_TIME_0)
+
+        assert nearby.active is True
+        assert elsewhere.active is False
+
+    def test_proximity_does_not_cancel_timed_intent(self) -> None:
+        now = _TIME_0.to_total_seconds()
+        anchor = Creature(id="anchor", name="Anchor", location_id="square", is_anchor=True)
+        sleeper = Creature(id="sleeper", name="Sleeper", location_id="square", active=True)
+        sleeper.current_intent = TimedIntent(IntentType.SLEEP, now, now + 3600)
+
+        EntitiesLayer([anchor, sleeper]).update_activation(_TIME_0)
+
+        assert sleeper.active is False
+        assert sleeper.current_intent == TimedIntent(IntentType.SLEEP, now, now + 3600)
+
+    def test_combat_stays_active_without_anchor(self) -> None:
+        fighter = Creature(id="fighter", name="Fighter", location_id="arena", active=False, in_combat=True)
+
+        EntitiesLayer([fighter]).update_activation(_TIME_0)
+
+        assert fighter.active is True
 
 
 class TestEncounterCooldown:

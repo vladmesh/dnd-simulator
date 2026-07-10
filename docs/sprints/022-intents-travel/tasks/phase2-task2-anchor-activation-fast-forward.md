@@ -28,14 +28,18 @@ Likely files: `layers/entities/activation_manager.py`, `layers/entities/layer.py
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Activation contains no `PlayerCharacter` type check or player-presence early return.
-- [ ] Active creatures do not activate further creatures transitively.
-- [ ] Waiting beside an ordinary NPC reaches the nearest wake point without per-round churn.
-- [ ] Combat activity and materialization behavior remain covered.
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Activation contains no `PlayerCharacter` type check or player-presence early return.
+- [x] Active creatures do not activate further creatures transitively.
+- [x] Waiting beside an ordinary NPC reaches the nearest wake point without per-round churn.
+- [x] Combat activity and materialization behavior remain covered.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Activation now recomputes every creature from explicit anchor locations, timed intents, and combat state. Awake anchors of any creature class hold a scene active; ordinary active creatures do not propagate activation. Proximity no longer clears timed intents, so fast-forward wakes only the earliest timer and preserves later ones. Tests that previously treated `active=True` as a lasting mandate now assign `is_anchor=True` explicitly. One full-check attempt ended with pytest code 139 after all 2451 tests passed; the clean retry completed backend and frontend gates.

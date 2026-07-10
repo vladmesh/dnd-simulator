@@ -6,6 +6,7 @@ from dnd_simulator.core.action import END_TURN, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain, PlayerBrain
 from dnd_simulator.core.character import Creature
+from dnd_simulator.core.intent import IntentType, TimedIntent
 from dnd_simulator.core.location import Location, LocationGraph
 from dnd_simulator.core.models import GameDateTime
 from dnd_simulator.core.player import PlayerCharacter
@@ -77,7 +78,7 @@ def _make_player_brain(action: Action) -> PlayerBrain:
 class TestRoundTimeAdvancement:
     def test_time_advances_by_one_round_per_round(self) -> None:
         """After all creatures act, world time advances by 6 seconds."""
-        npc = Creature(id="npc1", name="Guard", location_id="r1", brain=_EndTurnBrain())
+        npc = Creature(id="npc1", name="Guard", location_id="r1", is_anchor=True, brain=_EndTurnBrain())
         world = _make_world([npc])
         entities_layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
 
@@ -90,7 +91,7 @@ class TestRoundTimeAdvancement:
 
     def test_multiple_creatures_still_one_round(self) -> None:
         """Multiple creatures acting in one round = still only 6 seconds."""
-        c1 = Creature(id="c1", name="A", location_id="r1", brain=_EndTurnBrain())
+        c1 = Creature(id="c1", name="A", location_id="r1", is_anchor=True, brain=_EndTurnBrain())
         c2 = Creature(id="c2", name="B", location_id="r1", brain=_EndTurnBrain())
         world = _make_world([c1, c2])
         entities_layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
@@ -254,8 +255,8 @@ class TestProximityActivation:
         assert player.active is False
         assert npc.active is False
 
-    def test_no_player_no_change(self) -> None:
-        """Without a PlayerCharacter, activation is unchanged (tests still work)."""
+    def test_no_anchor_dormifies_noncombat_creature(self) -> None:
+        """Without an anchor, an ordinary peaceful creature does not keep the loop alive."""
         npc = Creature(id="npc", name="Guard", location_id="r1", active=True, brain=_EndTurnBrain())
         world = _make_world([npc])
         entities_layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
@@ -263,7 +264,7 @@ class TestProximityActivation:
         game_round = Round(world, entities_layer)
         game_round.run_round()
 
-        assert npc.active is True
+        assert npc.active is False
 
 
 class TestRoundStopFlag:
@@ -364,12 +365,31 @@ class TestWaitAndFastForward:
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
 
         game_round = Round(world, el)
+        initial = world.time.to_total_seconds()
         game_round.run_loop(max_rounds=2)
 
         # After fast-forward and wake, both should be active
         assert player.active is True
         assert npc.active is True
         assert call_count == 2  # called once for wait, once after waking
+        assert world.time.to_total_seconds() - initial == 3600 + 6
+
+    def test_fast_forward_stops_at_earliest_intent(self) -> None:
+        now = GameDateTime(year=1, month=1, day=1, hour=10).to_total_seconds()
+        early = Creature(id="early", name="Early", location_id="r1", is_anchor=True, brain=_EndTurnBrain())
+        late = Creature(id="late", name="Late", location_id="r1", is_anchor=True, brain=_EndTurnBrain())
+        early.current_intent = TimedIntent(IntentType.WAIT, now, now + 60)
+        late.current_intent = TimedIntent(IntentType.SLEEP, now, now + 120)
+        world = _make_world([early, late], hour=10)
+        el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+
+        Round(world, el).run_loop(max_rounds=1)
+
+        assert world.time.to_total_seconds() - now == 60 + 6
+        assert early.current_intent is None
+        assert early.active is True
+        assert late.current_intent == TimedIntent(IntentType.SLEEP, now, now + 120)
+        assert late.active is False
 
     def test_no_wake_at_means_loop_exits(self) -> None:
         """Without any wake_at, run_loop exits when no active creatures."""

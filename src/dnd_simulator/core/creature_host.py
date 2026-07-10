@@ -54,7 +54,7 @@ class CreatureHost(Protocol):
         query_fn: QueryFn | None = None,
         emit_fn: EmitFn | None = None,
     ) -> None:
-        """Refresh active/dormant state based on proximity to player anchors."""
+        """Refresh active/dormant state based on proximity to awake anchors."""
         ...
 
     def get_combat_locations(self) -> list[str]:
