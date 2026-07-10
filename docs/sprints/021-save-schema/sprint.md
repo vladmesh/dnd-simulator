@@ -39,7 +39,7 @@ Pydantic-модели сейва (`SaveGame`: `schema_version`, `meta`, `world{t
 3. [SaveGame-конверт, schema_version=1, единый путь загрузки](tasks/phase2-task3-save-envelope.md)
 4. [Entities save-модели — source of truth, не обёртка](tasks/phase2-task4-entities-models-source-of-truth.md)
 
-## Phase 3: Autosave hardening
+## Phase 3: Autosave hardening ✓
 
 Периодический автосейв: фоновый asyncio-таск в FastAPI lifespan (интервал env `DND_AUTOSAVE_SECONDS`, default ~120), cancel на shutdown перед финальным autosave. Ошибки автосейва логируются вместо `contextlib.suppress(Exception)` (3 сайта). Минимальный фикс накопления: интеграционные тесты чистят созданные сессии в `saves/` в teardown.
 
@@ -63,6 +63,8 @@ Pydantic-модели сейва (`SaveGame`: `schema_version`, `meta`, `world{t
 - Ревью phase 2 task 2: принятая воркером обёртка (`extra="allow"` + рукописный `serialize_entity`) отклонена — модели обязаны быть source of truth (иначе intents/триггеры снова допишут рукописный формат); переработка выделена в task 4. Там же закрывается найденный на ревью lossless-пробел: `CombatState.sides` не сериализуется (2026-07-10).
 - Phase 1 закрыта без отдельного E2E: пользовательской поверхности нет (RNG plumbing), integration 160 passed; браузерный E2E идёт на закрытии phase 2/3 (2026-07-10).
 - Legacy `World.save()` уже пишет `seed`, чтобы разные world-seed snapshots различались до ввода Pydantic save schema; полное состояние RNG остаётся задачей phase 2 (2026-07-10).
+
+- Phase 3 закрыта без отдельного E2E (фоновый шедулер и логирование, UI-поверхности нет); де-глушение сразу окупилось: evict-таймер после явного DELETE сессии падал автосейвом «session not found» 37 раз за integration-прогон (раньше глоталось) — починено гвардом в `_on_session_empty`, который заодно закрывает воскрешение удалённой сессии из stale-автосейва (2026-07-10).
 
 ## Deferred
 
