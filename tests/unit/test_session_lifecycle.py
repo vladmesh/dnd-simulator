@@ -322,12 +322,12 @@ class TestEvictGracePeriod:
         session.add_listener(p2)  # reconnect cancels the timer
         assert session._evict_timer is None
 
-        # A stale check that runs anyway must no-op — a player is present.
+        # A stale check that runs anyway must no-op because a player is present.
         session._run_evict_check()
         assert fired == []
 
     def test_lingering_spectator_does_not_save_abandoned_session(self) -> None:
-        """Only a spectator left → still player-empty → the deferred check evicts."""
+        """Only a spectator left means still player-empty, so the deferred check evicts."""
         session = _session()
         session._evict_grace_seconds = 3600
         player = RecordingListener()

@@ -327,7 +327,7 @@ class GameSession:
     def add_listener(self, listener: SessionEventListener) -> None:
         self._bind_session_context()
         with self._lock:
-            # A (re)connecting player cancels any pending evict — this is the grace window.
+            # A (re)connecting player cancels any pending evict during the grace window.
             self._cancel_evict_check()
             self._listeners.append(listener)
             count = len(self._listeners)

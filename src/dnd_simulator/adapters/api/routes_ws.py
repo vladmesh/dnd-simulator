@@ -134,7 +134,7 @@ async def _run_spectator(ws: WebSocket, session: GameSession, session_id: str) -
         logger.exception("ws_spectator_error", session_id=session_id)
     finally:
         # Symmetric with the player path's to_thread, though remove_spectator never
-        # joins the round thread — a spectator leaving never stops the round.
+        # joins the round thread because a spectator leaving never stops the round.
         await asyncio.to_thread(session.remove_spectator, listener)
 
 

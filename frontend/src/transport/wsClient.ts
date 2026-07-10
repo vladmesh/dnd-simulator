@@ -114,9 +114,9 @@ export class WsClient {
     }
 
     ws.onclose = (ev) => {
-      if (this.ws !== ws) return // stale — a newer WS replaced us
+      if (this.ws !== ws) return // stale; a newer WS replaced us
       this.ws = null
-      // 4004 = session not found or no player — don't reconnect
+      // 4004 = session not found or no player; don't reconnect
       if (ev.code === 4004) {
         this.setStatus("error")
         return

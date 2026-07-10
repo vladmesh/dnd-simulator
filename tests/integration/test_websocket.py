@@ -33,8 +33,8 @@ def _urls(backend_url: str) -> tuple[str, str, str]:
 # round loop advances combat on a background thread whenever a WS is connected. A shared
 # module session accumulated combat across tests until the player died, leaving the session
 # in a terminal `game_over` state that broke every later test (flaky: depended on how many
-# rounds elapsed per connect). A fresh session per test starts combat at round 1 — player
-# and all enemies alive — which is exactly the ongoing-combat state these tests assert on.
+# rounds elapsed per connect). A fresh session per test starts combat at round 1 with the
+# player and all enemies alive, which is exactly the ongoing-combat state these tests assert on.
 @pytest.fixture
 def ws_arena(_urls: tuple[str, str, str]) -> Iterator[tuple[str, str, str]]:
     """Fresh arena session per test. Yields (ws_base_url, session_id, player_id)."""
@@ -129,7 +129,7 @@ class TestConnection:
             sock.close()
 
     def test_reconnect_replays_last_turn(self, ws_arena: tuple[str, str, str]) -> None:
-        """Disconnect and reconnect — should receive last turn message."""
+        """Disconnect and reconnect should receive last turn message."""
         ws_base, sid, pid = ws_arena
 
         sock1 = ws_connect(ws_base, sid, pid)
@@ -158,7 +158,7 @@ class TestConnection:
         assert _recv_until(sock1, "turn") is not None
         sock1.close()
 
-        # Reconnect well within the default grace window (~1.5s) — no sleep.
+        # Reconnect well within the default grace window (~1.5s), no sleep.
         sock2 = ws_connect(ws_base, sid, pid)
         try:
             msg = _recv_until(sock2, "turn")
@@ -204,7 +204,7 @@ class TestSpectator:
         """`?spectate=true` with no player_id connects (no 4004 no_player) and works.
 
         The spectator never calls start_round, so the session stays dormant until a
-        player joins; once one does, the spectator receives the broadcast — proving it
+        player joins; once one does, the spectator receives the broadcast, proving it
         registered correctly without a player_id.
         """
         ws_base, sid, pid = ws_arena
@@ -227,7 +227,7 @@ class TestSpectator:
             assert _recv_until(player, "turn") is not None  # round running, last-turn cached
             spec = _spectate_connect(ws_base, sid)
             try:
-                # No send from the spectator — the replay arrives on connect.
+                # No send from the spectator; the replay arrives on connect.
                 assert _recv_until(spec, "turn") is not None, "spectator never got the replayed turn"
             finally:
                 spec.close()
@@ -295,7 +295,7 @@ class TestSpectator:
             resp.raise_for_status()
             assert sid in {s["session_id"] for s in resp.json()}
 
-            # Strong signal: the round is still live — the player socket keeps advancing.
+            # Strong signal: the round is still live because the player socket keeps advancing.
             ws_send_action(player, "end_turn")
             got = None
             for _ in range(20):
