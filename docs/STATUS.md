@@ -2,31 +2,18 @@
 
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
-**Last updated:** 2026-07-04
-**Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 закрыт (логова, лут, встречи, время суток), Sprint 019 закрыт (control-plane готов к разрезу на роли). Sprint 020 (thermo-sweep): фазы 1-2 закрыты (корректность + чистота rules/, типизация границ + enums). 2026-07-04 проведён большой брейншторм [simulation-core](brainstorms/simulation-core.md) (время, активность, внутреннее я, лестница детализации): VISION переписан, бэклог реструктурирован (секция Simulation Core с цепочкой эпиков), фазы 3-4 спринта 020 сверены и ре-скоуплены.
-**Next:** Sprint 020 фазы 3-4 (декомпозиция бэка и фронта, с ре-скоупом по simulation-core). После закрытия — выбор направления при `/new-sprint`: цепочка simulation-core (`save-schema` → `anchor-as-property`/`intents` → `trigger-table` → ...) или `control-interfaces`. `quest-system` — только после триггеров и целей. См. [BACKLOG](BACKLOG.md) / [ROADMAP](ROADMAP.md).
+**Last updated:** 2026-07-10
+**Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 закрыл логова, лут, встречи и время суток. Sprint 019 отвердел control-plane под будущий разрез на роли. Sprint 020 закрыл thermo-sweep: корректностные баги, чистота `rules/`, типизация границ, backend/frontend decomposition и сверка с новым [simulation-core](brainstorms/simulation-core.md).
+**Next:** активного спринта нет. Следующий `/new-sprint` должен выбрать направление: цепочка simulation-core (`save-schema` → `anchor-as-property` / `intents` → `trigger-table` → ...), `control-interfaces`, либо точечный debt из свежего audit (`layer-rng-threading`, `test-gap-world-rng-determinism`). `quest-system` планировать только после триггеров и целей.
 **Blockers:** нет.
 
 ## Current Sprint
 
-**Sprint:** 020-thermo-sweep
-**Goal:** закрыть кластер структурного долга и багов из термоядерного ревью — чистота `rules/`, типизация межслойных границ, декомпозиция выросших модулей и фронтовых god-компонентов; поведение неизменно
-**Started:** 2026-06-30
-**Phase:** 3 — Декомпозиция бэка (COMPLETE) — 2026-07-04
-
-Все 6 задач done, close-phase зелёный: `make check` на каждой, integration 154 passed, E2E 9/9 секций 2/3/5, 0 блокеров ([e2e/phase3-report.md](sprints/020-thermo-sweep/e2e/phase3-report.md)). Реестр экипировки — вариант A (12 ActionType сохранены, коллапс отложен в бэклог `equip-action-collapse`). Phase 4 (фронт) уже влита в main (PR #26). Дальше: влить origin/main в ветку phase-3, PR в main (координатор мержит).
-
-Полный sweep (выбран пользователем). Источник — [thermo-nuclear-review.md](thermo-nuclear-review.md). Phase 1 закрыта (5 задач), Phase 2 закрыта (4 задачи, E2E зелёный). Фазы 3-4 сверены с брейнштормом [simulation-core](brainstorms/simulation-core.md): activation-логику только изолируем (заменится намерениями/триггерами), слияние combat/peaceful turn-loop отменено, дедуп сериализации повышен до предусловия новой модели (стартовый кусок эпика `save-schema`). Детали — в Decisions спринта.
-
-### Phases
-
-1. Корректность и инварианты — баги ревью (BLOCKER порчи данных, иконка, тихий travel, HTTP-статус) + чистота rules/ (structlog/I-O вон, gettext, RNG) под regression-тестами
-2. Типизация границ + enums — query-контракт, EntityType/BrainType/LayerSource, World.get_layer, exception handlers, player-status (фундамент под control-interfaces)
-3. Декомпозиция бэка — round/combat/ecology/activation split, реестр экипировки, дедуп сериализации, разрыв цикла core/player→content_loader
-4. Декомпозиция фронта — TargetDropdown/SchemaForm/EventLog/WorldOverview, общие типы, дедуп slice'ов
+No active sprint.
 
 ## Recent activity (non-sprint)
 
+- 2026-07-10 — Sprint 020 thermo-sweep закрыт: integration 154 passed, post-audit E2E smoke 5/5, audit triaged, PR opened to main.
 - 2026-07-04 — брейншторм [simulation-core](brainstorms/simulation-core.md): консенсус-модель времени/активности/внутреннего я/лестницы детализации. VISION.md переписан, BACKLOG реструктурирован (секция Simulation Core, поглощённые/переформулированные айтемы, чекбоксы фаз 1-2 спринта 020), ROADMAP Planned обновлён, указатели-актуализации в старых брейнштормах.
 - 2026-06-20 — CORS origins сделаны конфигурируемыми (`CORS_ALLOWED_ORIGINS`); Docker base-image запинен по digest.
 - 2026-04-24 — post-017 cleanup: `perceive()` без вшитых ран в имя, REST `player_status` отдаёт equipped + inventory, убрана Cancel-кнопка в LevelUpModal.
@@ -35,6 +22,7 @@
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 020-thermo-sweep | Закрыть структурный долг из термоядерного ревью: корректность + чистота rules, типизация границ, backend/frontend decomposition, сверка с simulation-core | 2026-06-30 | 2026-07-10 |
 | 019-control-plane-prep | Отвердить control-plane под разрез на роли: GameService 1044→357 (миксины WorldBuilderCommands/PlayerCommands), тест-сетка на session, развязка core/adapter (action_parsing seam, public World query API), видимые дырки (combat-log i18n, encounter-перцептор, труп-кнопки) | 2026-06-28 | 2026-06-29 |
 | 018-lairs-encounters-loot | Логова (active→depleted), лут/контейнеры (`take`, `transfer_items`), региональные таблицы встреч, время суток; закрыт `monster-spawn` | 2026-06-28 | 2026-06-28 |
 | 017-xp-leveling | XP-by-CR и система уровней, level-up модалка; Paladin L1→L2 fix, Fighter Action Surge, Rogue L2 HP | 2026-04-13 | 2026-04-13 |
