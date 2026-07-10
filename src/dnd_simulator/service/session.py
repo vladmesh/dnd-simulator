@@ -366,8 +366,10 @@ class GameSession:
 
     def add_listener(self, listener: SessionEventListener) -> None:
         self._bind_session_context()
-        with self._lock:
-            # A (re)connecting player cancels any pending evict during the grace window.
+        with self._round_transition_lock, self._lock:
+            # Serialize listener arrival with disconnect-driven stop_round. Otherwise an
+            # old connection can observe an empty listener list, a reconnect can start a
+            # new round, and the old connection can then stop that new round.
             self._cancel_evict_check()
             self._listeners.append(listener)
             count = len(self._listeners)
@@ -396,30 +398,26 @@ class GameSession:
 
     def remove_listener(self, listener: SessionEventListener) -> None:
         self._bind_session_context()
-        stop_round = False
-        with self._lock:
-            with contextlib.suppress(ValueError):
-                self._listeners.remove(listener)
-            count = len(self._listeners)
-            player_empty = not self.has_player_listeners()
-            if player_empty and self._round is not None:
-                stop_round = True
-        logger.info("remove_listener", listener_count=count, player_empty=player_empty, stop_round=stop_round)
-        if stop_round:
-            # Pause the simulation immediately when no player drives it. A lingering round
-            # thread would keep advancing NPC turns during the grace window: for a real
-            # player a network blip would silently cost them combat turns, and because all
-            # sessions share one process-global dice RNG, overlapping player-less rounds make
-            # seeded integration tests nondeterministic. stop_round() cancels any stale timer,
-            # so the evict is (re)armed after it returns.
-            self.stop_round()
-        if player_empty:
-            # Defer only the registry eviction: a quick disconnect+reconnect (StrictMode
-            # remount, network blip) must not flash the session out of the registry, and the
-            # reconnecting player restarts the round via start_round. The deferred check
-            # (_run_evict_check) re-verifies emptiness before firing _on_empty.
+        player_empty = False
+        with self._round_transition_lock:
             with self._lock:
-                self._schedule_evict_check()
+                try:
+                    self._listeners.remove(listener)
+                except ValueError:
+                    logger.info("remove_listener_ignored", listener_count=len(self._listeners))
+                    return
+                count = len(self._listeners)
+                player_empty = not self.has_player_listeners()
+                stop_round = player_empty and self._round is not None
+            logger.info("remove_listener", listener_count=count, player_empty=player_empty, stop_round=stop_round)
+            if stop_round:
+                # Pause before a reconnect can enter add_listener/start_round.
+                self._stop_round()
+            if player_empty:
+                # Arm eviction before allowing add_listener to enter; a reconnect then
+                # cancels this exact timer while it starts the next round.
+                with self._lock:
+                    self._schedule_evict_check()
 
     def _schedule_evict_check(self) -> None:
         """Arm the deferred empty-session check. Caller holds ``_lock``."""

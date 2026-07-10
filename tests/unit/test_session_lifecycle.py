@@ -9,6 +9,7 @@ failure means a real bug, not a missing feature.
 
 from __future__ import annotations
 
+import threading
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -175,6 +176,45 @@ class TestEmptyListeners:
 
         assert fired == []
         assert session._listeners == [registered]
+
+    def test_stale_remove_does_not_arm_evict_when_already_empty(self) -> None:
+        session = _session()
+
+        session.remove_listener(RecordingListener())
+
+        assert session._evict_timer is None
+
+    def test_reconnect_cannot_interleave_with_disconnect_stop(self) -> None:
+        session = _session()
+        old_listener = RecordingListener()
+        new_listener = RecordingListener()
+        session.add_listener(old_listener)
+        session._round = MagicMock(spec=Round)
+
+        stop_entered = threading.Event()
+        allow_stop = threading.Event()
+
+        def blocking_stop(*, discard_events: bool = False) -> None:
+            stop_entered.set()
+            assert allow_stop.wait(timeout=1)
+            session._round = None
+
+        session._stop_round = blocking_stop  # type: ignore[method-assign]
+        disconnect = threading.Thread(target=session.remove_listener, args=(old_listener,))
+        reconnect = threading.Thread(target=session.add_listener, args=(new_listener,))
+
+        disconnect.start()
+        assert stop_entered.wait(timeout=1)
+        reconnect.start()
+        assert new_listener not in session._listeners
+
+        allow_stop.set()
+        disconnect.join(timeout=1)
+        reconnect.join(timeout=1)
+
+        assert not disconnect.is_alive()
+        assert not reconnect.is_alive()
+        assert session._listeners == [new_listener]
 
 
 class TestSpectatorListener:

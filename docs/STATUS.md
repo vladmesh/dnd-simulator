@@ -12,9 +12,9 @@
 **Sprint:** 022-intents-travel
 **Goal:** Любое существо может быть якорем и сохраняемым носителем намерения; ожидание, сон и путешествие исполняются во времени, travel движется по графу без телепортации, а save/load согласован с жизненным циклом раунда.
 **Started:** 2026-07-10
-**Phase:** 1 — Safe session lifecycle (all tasks done, ready for close-phase) — 2026-07-10
+**Phase:** 1 — Safe session lifecycle (COMPLETE) — 2026-07-10
 
-Ready to close Phase 1.
+Блокер connection-driven resume закрыт вне последовательности sprint-задач: listener lifecycle сериализован с round transitions, stale cleanup стал no-op. Backend check: 2441 passed; live save/load + WS integration: 8 passed; reconnect stress: 20/20. Ready for Phase 2 task generation.
 
 ### Phases
 

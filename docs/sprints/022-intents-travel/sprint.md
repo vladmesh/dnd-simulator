@@ -14,7 +14,7 @@
 
 **Ссылки:** [simulation-core](../../brainstorms/simulation-core.md), [BACKLOG](../../BACKLOG.md#simulation-core-брейншторм-2026-07-04), [Sprint 021](../021-save-schema/sprint.md)
 
-## Phase 1: Safe session lifecycle
+## Phase 1: Safe session lifecycle ✓
 
 Save, load, autosave, evict и round loop согласованы одной session-level критической секцией. Загруженная посреди боя сессия остаётся на сохранённом ходе и запускается только после подключения игрока. Проверка: конкурентный autosave не получает порванный мир; сохранённый Round 1 после load остаётся Round 1 до реконнекта.
 
@@ -61,7 +61,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 1 tasks complete. Ready for phase closure.
+**Current:** Phase 1 complete. Ready for Phase 2 task generation.
 
 ## Decisions
 
