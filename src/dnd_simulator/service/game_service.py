@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 import os
 import random
 import uuid
@@ -272,8 +271,10 @@ class GameService(
         """Called when all listeners disconnect. Autosave and evict from memory."""
         sid = session.session_id
         logger.info("session_empty_evict", session_id=sid)
-        with contextlib.suppress(Exception):
+        try:
             self.autosave_session(sid)
+        except Exception:
+            logger.exception("session_empty_autosave_failed", session_id=sid)
         self._sessions.pop(sid, None)
 
     # -- Layer accessors --

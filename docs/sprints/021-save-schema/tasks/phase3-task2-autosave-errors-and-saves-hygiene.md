@@ -31,4 +31,8 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Два silent autosave сайта заменены на `logger.exception(...)`: `create_player_autosave_failed` и `session_empty_autosave_failed`; вызовы по-прежнему не падают наружу. Integration docker stack получил общий `./saves:/app/saves` volume для backend и test runner, а session-scope fixture удаляет файлы, появившиеся за время suite. Перед чисткой `saves/` выполнен grep по именам файлов: ссылки есть только на `000_phase2_midcombat_9119f459.json` и `phase2_current_c2132f2b.json` в phase2 e2e report, поэтому они оставлены; остальные save-файлы оказались ignored/untracked локальными артефактами, не git-tracked.
