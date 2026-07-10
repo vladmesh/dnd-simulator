@@ -152,11 +152,11 @@ class EntitiesLayer(Layer):
         return active_merchants_at(self._entities, location_id, hour)
 
     def get_nearest_wake_time(self) -> int | None:
-        """Return the minimum wake_at_seconds across all creatures, or None."""
+        """Return the minimum intent wake time across all creatures, or None."""
         wake_times = [
-            e.wake_at_seconds
+            e.current_intent.wake_at_seconds
             for e in self._entities.values()
-            if isinstance(e, Creature) and e.wake_at_seconds is not None
+            if isinstance(e, Creature) and e.current_intent is not None
         ]
         return min(wake_times) if wake_times else None
 
@@ -507,8 +507,18 @@ class EntitiesLayer(Layer):
                         )
                     elif budget_raw is None:
                         entity.turn_budget = None
-                    wake_at = edata.get("wake_at_seconds")
-                    entity.wake_at_seconds = int(wake_at) if wake_at is not None else None
+                    from dnd_simulator.core.intent import IntentType, TimedIntent
+
+                    entity.is_anchor = bool(edata.get("is_anchor", entity.is_anchor))
+                    intent_raw = edata.get("current_intent")
+                    if isinstance(intent_raw, dict):
+                        entity.current_intent = TimedIntent(
+                            kind=IntentType(str(intent_raw["kind"])),
+                            started_at_seconds=int(intent_raw["started_at_seconds"]),
+                            wake_at_seconds=int(intent_raw["wake_at_seconds"]),
+                        )
+                    else:
+                        entity.current_intent = None
                     position_raw = edata.get("combat_position")
                     if isinstance(position_raw, list | tuple) and len(position_raw) == 2:
                         entity.combat_position = (int(position_raw[0]), int(position_raw[1]))

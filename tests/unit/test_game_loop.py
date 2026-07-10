@@ -124,7 +124,7 @@ class TestPlayerWaitViaRound:
         elapsed = world.time.to_total_seconds() - initial_seconds
         assert elapsed == 3600 + 6
         assert player.active is True
-        assert player.wake_at_seconds is None
+        assert player.current_intent is None
 
     def test_wait_custom_hours(self) -> None:
         """Wait 3 hours: fast-forward advances 3 hours."""
@@ -317,7 +317,7 @@ class TestWaitAndFastForward:
         # Player went dormant, wake_at is set
         assert player.active is False
         # wake_at was set before the 6s advance
-        assert player.wake_at_seconds is not None
+        assert player.current_intent is not None
 
     def test_fast_forward_advances_to_wake_at(self) -> None:
         """Fast-forward skips time to nearest wake_at when no active creatures."""
@@ -338,7 +338,7 @@ class TestWaitAndFastForward:
         elapsed = world.time.to_total_seconds() - initial
         assert elapsed == 2 * 3600 + 6
         assert player.active is True
-        assert player.wake_at_seconds is None
+        assert player.current_intent is None
 
     def test_nearby_npc_dormifies_when_player_waits(self) -> None:
         """NPC near player goes dormant when player waits, reactivates on wake."""

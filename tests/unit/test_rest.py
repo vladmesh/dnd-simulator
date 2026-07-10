@@ -55,7 +55,7 @@ class TestLongRestHandler:
         assert creature.current_hp == creature.max_hp
 
     def test_long_rest_advances_8_hours(self) -> None:
-        """Long rest sets wake_at_seconds 8 hours ahead and marks dormant."""
+        """Long rest sets a sleep intent 8 hours ahead and marks dormant."""
         from dnd_simulator.rules.handlers.rest import handle_long_rest
 
         creature = _creature()
@@ -63,7 +63,8 @@ class TestLongRestHandler:
         world = _stub_world(time_seconds=10000)
         handle_long_rest(creature, Action(name=ActionType.LONG_REST), lambda *a: None, ctx, world)
 
-        assert creature.wake_at_seconds == 10000 + 8 * 3600
+        assert creature.current_intent is not None
+        assert creature.current_intent.wake_at_seconds == 10000 + 8 * 3600
         assert creature.active is False
 
 
@@ -96,7 +97,7 @@ class TestShortRestHandler:
         assert creature.current_hp == 5
 
     def test_short_rest_advances_1_hour(self) -> None:
-        """Short rest sets wake_at_seconds 1 hour ahead and marks dormant."""
+        """Short rest sets a sleep intent 1 hour ahead and marks dormant."""
         from dnd_simulator.rules.handlers.rest import handle_short_rest
 
         creature = _creature()
@@ -104,7 +105,8 @@ class TestShortRestHandler:
         world = _stub_world(time_seconds=10000)
         handle_short_rest(creature, Action(name=ActionType.SHORT_REST), lambda *a: None, ctx, world)
 
-        assert creature.wake_at_seconds == 10000 + 3600
+        assert creature.current_intent is not None
+        assert creature.current_intent.wake_at_seconds == 10000 + 3600
         assert creature.active is False
 
 

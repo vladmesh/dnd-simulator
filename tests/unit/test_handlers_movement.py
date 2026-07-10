@@ -265,7 +265,7 @@ class TestHandleDisengage:
 
 class TestHandleWait:
     def test_sets_wake_at_and_dormant(self) -> None:
-        """Wait sets wake_at_seconds and marks creature dormant."""
+        """Wait sets a timed intent and marks creature dormant."""
         mover = _creature("mover")
         world = MagicMock()
         world.time.to_total_seconds.return_value = 10000
@@ -276,7 +276,8 @@ class TestHandleWait:
         result = handle_wait(mover, action, emit_fn, ctx, world)
 
         assert result.success
-        assert mover.wake_at_seconds == 10000 + 2 * 3600
+        assert mover.current_intent is not None
+        assert mover.current_intent.wake_at_seconds == 10000 + 2 * 3600
         assert mover.active is False
 
     def test_wait_default_one_hour(self) -> None:
@@ -290,7 +291,8 @@ class TestHandleWait:
 
         handle_wait(mover, action, emit_fn, ctx, world)
 
-        assert mover.wake_at_seconds == 5000 + 3600
+        assert mover.current_intent is not None
+        assert mover.current_intent.wake_at_seconds == 5000 + 3600
 
     def test_wait_travel(self) -> None:
         """Wait with travel_to changes location and advances time."""

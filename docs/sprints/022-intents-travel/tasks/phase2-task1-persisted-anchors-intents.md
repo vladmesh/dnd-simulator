@@ -24,13 +24,17 @@ Likely files: `core/character.py`, a focused `core/intent.py`, `layers/entities/
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Anchor status is explicit on every `Creature`, not inferred from `PlayerCharacter`.
-- [ ] Wait and sleep use a typed persisted intent with one authoritative wake time.
-- [ ] All `EntitySave` creature variants preserve the new fields under `extra="forbid"`.
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Anchor status is explicit on every `Creature`, not inferred from `PlayerCharacter`.
+- [x] Wait and sleep use a typed persisted intent with one authoritative wake time.
+- [x] All `EntitySave` creature variants preserve the new fields under `extra="forbid"`.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added `TimedIntent` with strict wait/sleep kinds and absolute start/wake timestamps. `Creature.current_intent` is the only runtime wake source; the old standalone field was removed. Existing activation and action callers were migrated mechanically to the new field without changing their behavior, leaving the player-agnostic activation rewrite for task 2. `PlayerCharacter` defaults to an anchor while other creatures default to non-anchor, and save payloads persist the explicit value for every creature kind.

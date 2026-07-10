@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.action import Action
+from dnd_simulator.core.intent import IntentType, TimedIntent
 from dnd_simulator.core.models import ActionResult
 from dnd_simulator.core.resource import RestType
 from dnd_simulator.rules.resources import reset_resources
@@ -31,10 +32,10 @@ def handle_long_rest(
     healed = actor.heal(actor.max_hp)
 
     now = world.time.to_total_seconds()
-    actor.wake_at_seconds = now + _LONG_REST_SECONDS
+    actor.current_intent = TimedIntent(IntentType.SLEEP, now, now + _LONG_REST_SECONDS)
     actor.active = False
 
-    logger.info("long_rest", healed=healed, reset_pools=reset_ids, wake_at=actor.wake_at_seconds)
+    logger.info("long_rest", healed=healed, reset_pools=reset_ids, wake_at=actor.current_intent.wake_at_seconds)
     return ActionResult()
 
 
@@ -45,8 +46,8 @@ def handle_short_rest(
     reset_ids = reset_resources(actor, RestType.SHORT_REST)
 
     now = world.time.to_total_seconds()
-    actor.wake_at_seconds = now + _SHORT_REST_SECONDS
+    actor.current_intent = TimedIntent(IntentType.SLEEP, now, now + _SHORT_REST_SECONDS)
     actor.active = False
 
-    logger.info("short_rest", reset_pools=reset_ids, wake_at=actor.wake_at_seconds)
+    logger.info("short_rest", reset_pools=reset_ids, wake_at=actor.current_intent.wake_at_seconds)
     return ActionResult()

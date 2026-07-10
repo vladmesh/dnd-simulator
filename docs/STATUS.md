@@ -12,9 +12,9 @@
 **Sprint:** 022-intents-travel
 **Goal:** Любое существо может быть якорем и сохраняемым носителем намерения; ожидание, сон и путешествие исполняются во времени, travel движется по графу без телепортации, а save/load согласован с жизненным циклом раунда.
 **Started:** 2026-07-10
-**Phase:** 2 — Anchors, wait and sleep intents (tasks generated) — 2026-07-11
+**Phase:** 2 — Anchors, wait and sleep intents (task 1 done, task 2 pending) — 2026-07-11
 
-Phase 2 разбита на три задачи: сохраняемая модель anchor/intent, player-agnostic activation + fast-forward и lifecycle wait/sleep через save/load/reconnect. Ready to start task 1.
+Task 1 завершена: `Creature` получил явный anchor и типизированный сохраняемый timed intent без параллельного `wake_at_seconds`. Full check: backend 2445 passed, frontend 274 passed. Ready for task 2.
 
 ### Phases
 

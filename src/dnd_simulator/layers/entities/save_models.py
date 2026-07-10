@@ -10,6 +10,7 @@ from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.character import Ability, Alignment, CharClass, DamageType, NpcRole, Race
 from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.intent import IntentType
 from dnd_simulator.core.items import ArmorCategory, EquipmentSlot, ItemType, WeaponCategory
 from dnd_simulator.core.models import EntityKind
 from dnd_simulator.core.modifiers import ModifierOp, StatType
@@ -107,6 +108,12 @@ class TurnBudgetSave(SaveModel):
     reaction: int
 
 
+class TimedIntentSave(SaveModel):
+    kind: IntentType
+    started_at_seconds: int
+    wake_at_seconds: int
+
+
 class EntitySaveBase(SaveModel):
     id: str
     name: str
@@ -140,7 +147,8 @@ class CreatureFields(EntitySaveBase):
     reputation: dict[str, int] = Field(default_factory=dict)
     xp_value: int = 0
     squad_id: str | None = None
-    wake_at_seconds: int | None = None
+    is_anchor: bool = False
+    current_intent: TimedIntentSave | None = None
     combat_position: tuple[int, int] | None = None
 
 

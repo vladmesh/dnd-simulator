@@ -67,11 +67,11 @@ class ActivationManager:
         """Activate creatures near players, dormify the rest.
 
         Rules:
-        - PlayerCharacter without wake_at is always active (anchor).
-        - PlayerCharacter with wake_at is dormant (not an anchor) until timer expires.
+        - PlayerCharacter without a timed intent is always active (anchor).
+        - PlayerCharacter with a timed intent is dormant until its timer expires.
         - Creatures at an anchor's location are active.
         - Creatures in combat are active (don't interrupt fights).
-        - Creatures activated by proximity get wake_at cleared (woken early).
+        - Creatures activated by proximity have timed intents cleared (woken early).
         - Everyone else is dormant (active=False).
 
         When query_fn/emit_fn are provided, also handles squad materialization:
@@ -94,14 +94,14 @@ class ActivationManager:
             has_players = True
             if not e.is_alive:
                 e.active = False
-                e.wake_at_seconds = None
+                e.current_intent = None
                 continue
-            # Check wake_at expiry
-            if e.wake_at_seconds is not None and now >= e.wake_at_seconds:
-                e.wake_at_seconds = None
+            # Check timed intent expiry
+            if e.current_intent is not None and now >= e.current_intent.wake_at_seconds:
+                e.current_intent = None
                 logger.info("activation_wake_timer", entity_id=e.id)
             # Player is anchor only if not waiting
-            if e.wake_at_seconds is None:
+            if e.current_intent is None:
                 e.active = True
                 player_locations.add(e.location_id)
             else:
@@ -122,9 +122,9 @@ class ActivationManager:
                 e.active = False
                 continue
 
-            # Expire wake_at for non-players too
-            if e.wake_at_seconds is not None and now >= e.wake_at_seconds:
-                e.wake_at_seconds = None
+            # Expire timed intents for non-players too
+            if e.current_intent is not None and now >= e.current_intent.wake_at_seconds:
+                e.current_intent = None
                 logger.info("activation_wake_timer", entity_id=e.id)
 
             effective_location = e.location_id
@@ -139,9 +139,9 @@ class ActivationManager:
                 e.location_id = effective_location
 
             # Proximity wakeup: clear pending wait timer
-            if should_activate and e.wake_at_seconds is not None:
+            if should_activate and e.current_intent is not None:
                 logger.info("activation_wake_proximity", entity_id=e.id)
-                e.wake_at_seconds = None
+                e.current_intent = None
 
         # Third pass: check for encounter spawns from creatures that were active
         check_encounters(self, time, previously_active, query_fn)

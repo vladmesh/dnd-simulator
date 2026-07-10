@@ -335,7 +335,8 @@ class TestHandleWait:
         action = Action(name=ActionType.WAIT, params={"hours": 2})
         result = handle_wait(creature, action, _noop_emit, _PEACEFUL, world)
         assert result.success
-        assert creature.wake_at_seconds == 10000 + 2 * 3600
+        assert creature.current_intent is not None
+        assert creature.current_intent.wake_at_seconds == 10000 + 2 * 3600
         assert creature.active is False
 
     def test_wait_default_1_hour(self) -> None:
@@ -345,7 +346,8 @@ class TestHandleWait:
         action = Action(name=ActionType.WAIT)
         result = handle_wait(creature, action, _noop_emit, _PEACEFUL, world)
         assert result.success
-        assert creature.wake_at_seconds == 5000 + 3600
+        assert creature.current_intent is not None
+        assert creature.current_intent.wake_at_seconds == 5000 + 3600
 
     def test_wait_emits_no_event(self) -> None:
         world = MagicMock()

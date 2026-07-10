@@ -223,9 +223,10 @@ def handle_wait(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
     """Wait: creature goes dormant until wake_at, or travels to a location.
 
     Travel: immediate move + time advance.
-    Plain wait: set wake_at_seconds, mark dormant. Fast-forward in run_loop
+    Plain wait: set a timed intent and mark dormant. Fast-forward in run_loop
     handles the actual time advancement.
     """
+    from dnd_simulator.core.intent import IntentType, TimedIntent
     from dnd_simulator.core.models import TimeDelta
 
     travel_to = action.params.get("travel_to")
@@ -255,7 +256,7 @@ def handle_wait(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
         hours = int(str(action.params.get("hours", 1)))
         if hours > 0:
             now = world.time.to_total_seconds()
-            actor.wake_at_seconds = now + hours * 3600
+            actor.current_intent = TimedIntent(IntentType.WAIT, now, now + hours * 3600)
             actor.active = False
-            logger.info("wait_sleep", hours=hours, wake_at=actor.wake_at_seconds)
+            logger.info("wait_sleep", hours=hours, wake_at=actor.current_intent.wake_at_seconds)
     return ActionResult()

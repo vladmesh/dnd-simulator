@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dnd_simulator.core.character import Creature
+from dnd_simulator.core.intent import IntentType, TimedIntent
 from dnd_simulator.core.items import Item, ItemType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc, NpcRole
@@ -35,7 +36,8 @@ def _make_creature(cid: str, *, wake_at: int | None = None) -> Creature:
         speed=30,
         attacks=[],
     )
-    c.wake_at_seconds = wake_at
+    if wake_at is not None:
+        c.current_intent = TimedIntent(IntentType.WAIT, started_at_seconds=0, wake_at_seconds=wake_at)
     return c
 
 

@@ -45,7 +45,7 @@ class CreatureHost(Protocol):
         ...
 
     def get_nearest_wake_time(self) -> int | None:
-        """Return the earliest `wake_at_seconds` across dormant creatures, or None."""
+        """Return the earliest timed-intent wake point, or None."""
         ...
 
     def update_activation(

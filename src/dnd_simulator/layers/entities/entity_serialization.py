@@ -24,6 +24,7 @@ from dnd_simulator.layers.entities.save_models import (
     NpcSave,
     PlayerSave,
     ResourcePoolSave,
+    TimedIntentSave,
     TurnBudgetSave,
 )
 
@@ -199,7 +200,16 @@ def _creature_fields(entity: Creature) -> dict[str, object]:
         "reputation": dict(entity.reputation),
         "xp_value": entity.xp_value,
         "squad_id": entity.squad_id,
-        "wake_at_seconds": entity.wake_at_seconds,
+        "is_anchor": entity.is_anchor,
+        "current_intent": (
+            TimedIntentSave(
+                kind=entity.current_intent.kind,
+                started_at_seconds=entity.current_intent.started_at_seconds,
+                wake_at_seconds=entity.current_intent.wake_at_seconds,
+            )
+            if entity.current_intent is not None
+            else None
+        ),
         "combat_position": entity.combat_position,
     }
     return data
