@@ -1,0 +1,34 @@
+{
+  "steps": [
+    {
+      "name": "session + character",
+      "status": "pass",
+      "notes": "Created Smoke UI Fighter, AC 19",
+      "screenshot": "docs/e2e-reports/2026-07-10-sprint020-close-artifacts/01-session-character.png"
+    },
+    {
+      "name": "combat attack",
+      "status": "pass",
+      "notes": "Mode combat; log entries 6",
+      "screenshot": "docs/e2e-reports/2026-07-10-sprint020-close-artifacts/02-combat-attack.png"
+    },
+    {
+      "name": "equipment",
+      "status": "pass",
+      "notes": "Equipped Smoke Rapier from bag through UI",
+      "screenshot": "docs/e2e-reports/2026-07-10-sprint020-close-artifacts/03-equipment.png"
+    },
+    {
+      "name": "level-up",
+      "status": "pass",
+      "notes": "Level 2, HP 20, resources 2",
+      "screenshot": "docs/e2e-reports/2026-07-10-sprint020-close-artifacts/04-level-up.png"
+    },
+    {
+      "name": "wait / time",
+      "status": "pass",
+      "notes": "Time changed from {\"hour\":10,\"day\":1,\"month\":6,\"year\":1490} to {\"hour\":11,\"day\":1,\"month\":6,\"year\":1490}",
+      "screenshot": "docs/e2e-reports/2026-07-10-sprint020-close-artifacts/05-wait-time.png"
+    }
+  ]
+}

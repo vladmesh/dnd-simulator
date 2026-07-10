@@ -8,8 +8,6 @@ the live layer. Item (de)serialization lives in ``content_loader`` (imported laz
 
 from __future__ import annotations
 
-from typing import Any
-
 from dnd_simulator.core.character import Creature, Entity
 from dnd_simulator.core.container import Container
 from dnd_simulator.core.models import EntityKind
@@ -17,13 +15,13 @@ from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.models import Npc
 
 
-def serialize_entity(entity: Entity) -> dict[str, Any]:
+def serialize_entity(entity: Entity) -> dict[str, object]:
     """Serialize a single entity to a save dict (inverse of the reconstruction in load_state)."""
     from dnd_simulator.content_loader.creatures import player_to_full_save_data
     from dnd_simulator.content_loader.items import EQUIPMENT_FIELDS, serialize_item
 
     e = entity
-    data: dict[str, Any] = {
+    data: dict[str, object] = {
         "id": e.id,
         "name": e.name,
         "location_id": e.location_id,

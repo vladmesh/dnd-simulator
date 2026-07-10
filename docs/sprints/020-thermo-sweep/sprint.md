@@ -116,7 +116,7 @@ God-компоненты разбиты, типы перестали быть р
 
 ## Status
 
-**Current:** Phase 3 COMPLETE (2026-07-04) — close-phase зелёный (integration 154, E2E 9/9, 0 блокеров). Остаётся Phase 4 (декомпозиция фронта) — уже выполнена параллельным воркером и влита в main (PR #26). После слияния фаз 3+4 спринт 020 close-ready.
+**Current:** CLOSED (2026-07-10) — все 4 фазы done, audit triaged, integration 154 passed, post-audit E2E smoke 5/5, 0 блокеров.
 
 ## Decisions
 
@@ -132,7 +132,16 @@ God-компоненты разбиты, типы перестали быть р
 - **Полный коллапс 12→2 экипировочных ActionType** (phase 3 task 6). Реестр экипировки сделан бэкенд-internal (вариант A по решению координатора через decision_gate): `Creature.equipped: dict[EquipmentSlot, Item]` + compat-свойства, фабричные хендлеры, `action_defs` циклом. 12 ActionType и wire-контракт **сохранены** — фронт не тронут. Полный коллапс в один `EQUIP`/`UNEQUIP` со `slot`-параметром отложен: это скоординированное бэк+фронт+wire+i18n-изменение → бэклог `equip-action-collapse` (could, Tech Debt). См. NB в `action-bar-unequip-i18n`.
 - **Общий трекер материализации squad+lair** (phase 3 task 4) не унифицирован в один тип: трекеры несут разную roster-метадату и читаются ещё и `QueryHandler`; unification оставлен будущей машине намерений/триггеров (simulation-core). Изоляция (encounters/materialization модули) выполнена.
 - **Слияние combat/peaceful turn-loop** — отменено ре-скоупом (peaceful-ход перепишется намерениями по simulation-core).
+- **World simulation RNG threading** — audit 2026-07-10 нашёл process-global `random` в encounter rolls / squad roam / retreat selection. Не блокер закрытия; перенесено в `layer-rng-threading` + `test-gap-world-rng-determinism`.
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-07-10
+
+Спринт закрыл весь thermo-sweep: Phase 1 исправила поведенческие баги и восстановила чистоту `rules/`; Phase 2 типизировала границы и enum-контракты; Phase 3 разрезала backend-модули (`combat_manager`, `activation_manager`, `ecology`, `round` helpers, entity serialization) и сделала backend equipment registry; Phase 4 разложила фронтовые god-компоненты (`TargetDropdown`, `SchemaForm`, `EventLog`, `WorldOverview`) и схлопнула типовые дубли.
+
+Верификация закрытия:
+- `make test-integration 2>&1 | tee /tmp/integration.log` — 154 passed.
+- `make check-backend 2>&1 | tee /tmp/check-backend.log` после audit quick-fix — ruff/format/mypy + 2369 unit tests passed.
+- Post-audit E2E: [2026-07-10-sprint020-close-smoke.md](../../e2e-reports/2026-07-10-sprint020-close-smoke.md) — 5/5 smoke scenarios, 0 blockers.
+- Audit: [docs/audit.md](../../audit.md) — no blockers; one quick-fix applied (`entity_serialization.py` `Any` → `object`), deferred RNG determinism work filed in backlog.
