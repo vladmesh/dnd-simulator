@@ -3,26 +3,17 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-10
-**Position:** Классовые механики и система уровней доведены до D&D L2 (Fighter / Rogue / Paladin; XP & leveling — Sprint 017). Sprint 018 закрыл логова, лут, встречи и время суток. Sprint 019 отвердел control-plane под будущий разрез на роли. Sprint 020 закрыл thermo-sweep: корректностные баги, чистота `rules/`, типизация границ, backend/frontend decomposition и сверка с новым [simulation-core](brainstorms/simulation-core.md).
-**Next:** активного спринта нет. Следующий `/new-sprint` должен выбрать направление: цепочка simulation-core (`save-schema` → `anchor-as-property` / `intents` → `trigger-table` → ...), `control-interfaces`, либо точечный debt из свежего audit (`layer-rng-threading`, `test-gap-world-rng-determinism`). `quest-system` планировать только после триггеров и целей.
+**Position:** Sprint 020 закрыл thermo-sweep (корректность, чистота `rules/`, типизация границ, decomposition). Sprint 021 закрыл первый эпик simulation-core: версионированная Pydantic-схема сейва (`SaveGame`, schema_version=1), воспроизводимость мира от `DND_WORLD_SEED` (слоевые RNG, их состояние в сейве), периодический автосейв. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
+**Next:** активного спринта нет. Следующий `/new-sprint`: продолжение цепочки simulation-core (`anchor-as-property` / `intents` + `travel-action-type` → `trigger-table` → ...), при этом `save-round-concurrency` из свежего audit — top-кандидат на включение (сейв гоняется с живым раунд-тредом без синхронизации). Альтернатива — `control-interfaces`. `quest-system` планировать только после триггеров и целей.
 **Blockers:** нет.
 
 ## Current Sprint
 
-**Sprint:** 021-save-schema
-**Goal:** Единая версионированная Pydantic-схема сейва + воспроизводимость мира от явного сида + периодический автосейв.
-**Started:** 2026-07-10
-**Phase:** 3 — Autosave hardening (task 2 done, phase ready to close) — 2026-07-10
-
-Phase 2 закрыта (e2e 6/7, находки в бэклоге). Phase 3 tasks 1-2 done; ready to close phase 3.
-
-### Phases
-
-1. RNG threading & determinism
-2. Unified Pydantic save schema
-3. Autosave hardening
+No active sprint.
 
 ## Recent activity (non-sprint)
+
+- 2026-07-10 — Sprint 021 save-schema закрыт: unit 2429, integration 160, два E2E-прогона, audit triaged (свежий риск `save-round-concurrency` в бэклоге), PR в main.
 
 - 2026-07-10: перенесены ценные фичи из `sprint/020-control-interfaces`: disconnect grace-period закрыл `session-disconnect-debounce`, spectator-listener добавил read-only WS `?spectate=true` и live-вкладку в master session view.
 - 2026-07-10 — Sprint 020 thermo-sweep закрыт: integration 154 passed, post-audit E2E smoke 5/5, audit triaged, PR opened to main.
@@ -34,6 +25,7 @@ Phase 2 закрыта (e2e 6/7, находки в бэклоге). Phase 3 task
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 021-save-schema | Версионированная Pydantic-схема сейва (schema_version=1, RNG в сейве, combat sides), воспроизводимость мира от DND_WORLD_SEED, периодический автосейв | 2026-07-10 | 2026-07-10 |
 | 020-thermo-sweep | Закрыть структурный долг из термоядерного ревью: корректность + чистота rules, типизация границ, backend/frontend decomposition, сверка с simulation-core | 2026-06-30 | 2026-07-10 |
 | 019-control-plane-prep | Отвердить control-plane под разрез на роли: GameService 1044→357 (миксины WorldBuilderCommands/PlayerCommands), тест-сетка на session, развязка core/adapter (action_parsing seam, public World query API), видимые дырки (combat-log i18n, encounter-перцептор, труп-кнопки) | 2026-06-28 | 2026-06-29 |
 | 018-lairs-encounters-loot | Логова (active→depleted), лут/контейнеры (`take`, `transfer_items`), региональные таблицы встреч, время суток; закрыт `monster-spawn` | 2026-06-28 | 2026-06-28 |

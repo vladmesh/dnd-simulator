@@ -74,4 +74,10 @@ _(заполняется по ходу спринта)_
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-07-10
+
+Спринт закрыл первый эпик цепочки simulation-core. Мир воспроизводим от одного сида: `DND_WORLD_SEED` детерминированно раздаёт слоевые сиды, слои владеют своими RNG (в `layers/` не осталось процесс-глобального `random`), пин `test_world_seed.py` — один сид → идентичный `World.save()`. Сейв — единый версионированный конверт `SaveGame(schema_version=1)`: типизированные state-модели слоёв и entity-сейвов (`extra="forbid"`, discriminated union, построение напрямую из объектов), состояние всех RNG в сейве (загрузка продолжает те же последовательности), combat sides сериализуются (закрыт lossless-пробел), legacy-форматы отклоняются. Автосейв периодический (`DND_AUTOSAVE_SECONDS`), ошибки логируются; попутно починен evict-после-DELETE (падал автосейвом 37 раз за integration-прогон и мог воскресить удалённую сессию).
+
+Метрики: 24 коммита, 65 файлов (+2808/−586), unit 2382→2429, integration 160 зелёные, два E2E-прогона (phase 2: 6/7; close smoke: продуктовые сценарии зелёные). Аудит: 16 находок, 0 архитектурных нарушений, 0 vision-дрифта. Закрыты backlog: `save-schema` (must), `layer-rng-threading`, `test-gap-world-rng-determinism`, `periodic-autosave-scheduler`, `silent-failure-autosave`, тест-половина `saved-session-accumulation`.
+
+**Deferred:** `save-round-concurrency` (should, top-кандидат следующего спринта — сейв без синхронизации с живым раунд-тредом), `load-combat-round-resume` (should), `attack-buttons-accessible-names` (should), `ui-language-mixing`, `saves-dir-env`, `spawn-api-xp-value`, `test-gap-shutdown-autosave-failure`, `player-save-bridge-removal` (could).
