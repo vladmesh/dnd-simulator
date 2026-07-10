@@ -9,7 +9,18 @@
 
 ## Current Sprint
 
-No active sprint.
+**Sprint:** 021-save-schema
+**Goal:** Единая версионированная Pydantic-схема сейва + воспроизводимость мира от явного сида + периодический автосейв.
+**Started:** 2026-07-10
+**Phase:** Planning (COMPLETE) — 2026-07-10
+
+Ready for Phase 1 task generation.
+
+### Phases
+
+1. RNG threading & determinism
+2. Unified Pydantic save schema
+3. Autosave hardening
 
 ## Recent activity (non-sprint)
 
