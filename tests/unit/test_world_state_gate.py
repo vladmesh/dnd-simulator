@@ -152,3 +152,34 @@ def test_stop_round_and_concurrent_snapshot_finish_without_deadlock(tmp_path: Pa
 
     assert not snapshot_thread.is_alive()
     assert not stop_thread.is_alive()
+
+
+def test_slow_store_write_does_not_hold_world_gate() -> None:
+    store = MagicMock()
+    save_started = threading.Event()
+    release_save = threading.Event()
+
+    def slow_save(*args: object, **kwargs: object) -> None:
+        save_started.set()
+        assert release_save.wait(timeout=2)
+
+    store.save.side_effect = slow_save
+    service = GameService(store=store)
+    session = service.start_game("sword_vale")
+    save_thread = threading.Thread(target=service.autosave_session, args=(session.session_id,))
+    save_thread.start()
+    assert save_started.wait(timeout=2)
+
+    mutation_acquired = threading.Event()
+
+    def mutate() -> None:
+        with session.mutate_world():
+            mutation_acquired.set()
+
+    mutation_thread = threading.Thread(target=mutate)
+    mutation_thread.start()
+    assert mutation_acquired.wait(timeout=2)
+
+    release_save.set()
+    save_thread.join(timeout=2)
+    mutation_thread.join(timeout=2)

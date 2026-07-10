@@ -8,9 +8,12 @@ import random
 import threading
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 import structlog
+
+if TYPE_CHECKING:
+    from dnd_simulator.storage.save_schema import SaveGame
 
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.action_defs import get_action_def
@@ -301,6 +304,27 @@ class GameSession:
         """Hold the re-entrant session gate while mutating world state."""
         with self._world_state_lock:
             yield
+
+    def build_save_game(self) -> SaveGame:
+        """Build an immutable save snapshot under the world-state gate."""
+        from dnd_simulator.layers.common.rng_state import dump_rng_state
+        from dnd_simulator.storage.save_schema import SCHEMA_VERSION, SaveGame, SaveMeta
+
+        with self.read_world():
+            world_data = self.world.save()
+            world_data["dice_rng_state"] = dump_rng_state(self.dice_rng)
+            return SaveGame.model_validate(
+                {
+                    "schema_version": SCHEMA_VERSION,
+                    "meta": SaveMeta(
+                        session_id=self.session_id,
+                        world_name=self.world_name,
+                        lang=self.lang,
+                        default_player_faction=self.default_player_faction,
+                    ).model_dump(mode="json"),
+                    "world": world_data,
+                }
+            )
 
     def get_players(self) -> list[PlayerCharacter]:
         return query_players(self.world.query_layer)

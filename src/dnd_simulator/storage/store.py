@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
 from pathlib import Path
@@ -42,8 +44,19 @@ class JsonFileStore(SaveStore):
     def save(self, name: str, data: dict[str, Any], *, world: str = "") -> None:
         path = self._path_for(name, world=world)
         path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("w") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+        temporary_path: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                "w", encoding="utf-8", dir=path.parent, prefix=f".{path.name}.", suffix=".tmp", delete=False
+            ) as file:
+                temporary_path = Path(file.name)
+                json.dump(data, file, indent=2, ensure_ascii=False)
+                file.flush()
+                os.fsync(file.fileno())
+            temporary_path.replace(path)
+        finally:
+            if temporary_path is not None:
+                temporary_path.unlink(missing_ok=True)
 
     def load(self, name: str, *, world: str = "") -> dict[str, Any]:
         path = self._path_for(name, world=world)

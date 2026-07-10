@@ -35,4 +35,15 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+`GameSession.build_save_game()` стал единственным builder для согласованного Pydantic snapshot мира и dice RNG.
+Manual save и все autosave paths получают готовый snapshot до записи. `JsonFileStore` пишет во временный файл,
+делает `fsync` и атомарно заменяет целевой JSON.
+
+Реестр сессий защищён отдельным `RLock`. Autosave проверяет identity активной сессии перед записью, concurrent
+evict выполняется один раз, а explicit delete удаляет session autosave и не оставляет источник восстановления.
+Существующие autosave error tests переведены с monkeypatch публичного метода на сбой store boundary, потому что
+evict теперь сохраняет уже захваченный объект сессии без повторного registry lookup.
