@@ -14,7 +14,7 @@ from dnd_simulator.core.character import (
     DamageComponent,
     DamageType,
 )
-from dnd_simulator.core.models import Event, EventType
+from dnd_simulator.core.models import Answer, Event, EventType, FactionRelation, Query, QueryType
 from dnd_simulator.core.monster import MonsterTemplate
 from dnd_simulator.layers.entities import combat_resolution
 from dnd_simulator.layers.entities.combat_manager import CombatManager
@@ -140,6 +140,39 @@ class TestXpGrantOnKill:
 
         assert not hasattr(beast, "experience")
         assert not any(e.event_type == EventType.XP_GAINED for e in log["arena"])
+
+
+class TestReputationEventFactionName:
+    def _query_fn(self, faction_name: str | None):
+        def qf(layer: str, query: Query) -> Answer:
+            if query.question is QueryType.FACTION_NAME:
+                return Answer(value=faction_name)
+            if query.question is QueryType.FACTION_RELATION:
+                return Answer(value=FactionRelation.NEUTRAL)
+            return Answer(value=None)
+
+        return qf
+
+    def test_event_carries_display_name_not_slug(self) -> None:
+        hero = _character("hero")
+        goblin = _monster("goblin")
+        cm, log = _make_cm(hero, goblin)
+
+        combat_resolution.handle_death(cm, hero, goblin, goblin.id, _hit_result(), self._query_fn("Royal Court"))
+
+        rep_ev = next(e for e in log["arena"] if e.event_type == EventType.REPUTATION_CHANGED)
+        assert rep_ev.data["faction_id"] == "goblins"
+        assert rep_ev.data["faction_name"] == "Royal Court"
+
+    def test_unresolvable_faction_name_omitted(self) -> None:
+        hero = _character("hero")
+        goblin = _monster("goblin")
+        cm, log = _make_cm(hero, goblin)
+
+        combat_resolution.handle_death(cm, hero, goblin, goblin.id, _hit_result(), self._query_fn(None))
+
+        rep_ev = next(e for e in log["arena"] if e.event_type == EventType.REPUTATION_CHANGED)
+        assert "faction_name" not in rep_ev.data
 
 
 class TestMonsterTemplateSpawnXp:
