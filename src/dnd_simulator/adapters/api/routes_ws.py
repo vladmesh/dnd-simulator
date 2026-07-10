@@ -28,6 +28,7 @@ from starlette.websockets import WebSocketDisconnect as _StarletteDisconnect
 from dnd_simulator.adapters.api.deps import get_service
 from dnd_simulator.i18n import _
 from dnd_simulator.service.action_parsing import ActionParseError, parse_action
+from dnd_simulator.service.session import GameSession
 
 logger = structlog.get_logger(domain="transport")
 
@@ -80,12 +81,70 @@ class WsEventListener:
 # ---------------------------------------------------------------------------
 
 
+async def _run_spectator(ws: WebSocket, session: GameSession, session_id: str) -> None:
+    """Read-only observe loop for a `?spectate=true` connection.
+
+    Registers a spectator listener (never drives the round, never counts toward the
+    session-empty decision), replays the last turn on connect, and rejects any
+    `action`/`reaction` the client sends. The receive loop exists only to detect
+    disconnect; on exit the spectator is removed without ever evicting the session.
+    """
+    listener = WsEventListener(ws, asyncio.get_running_loop())
+
+    # Replay last turn so a mid-session joiner sees current state immediately.
+    last_turn = session.get_last_turn_msg()
+    if last_turn is not None:
+        await ws.send_json(last_turn)
+
+    session.add_spectator(listener)
+
+    # Rate limiting: token bucket (same shape as the player path)
+    rl_budget = 20.0
+    rl_last = time.monotonic()
+    rl_max_burst = 20.0
+    rl_per_sec = 5.0
+
+    try:
+        while True:
+            raw = await ws.receive_text()
+
+            now = time.monotonic()
+            rl_budget = min(rl_max_burst, rl_budget + (now - rl_last) * rl_per_sec)
+            rl_last = now
+            if rl_budget < 1.0:
+                await ws.send_json({"type": "error", "message": _("Rate limited, slow down")})
+                continue
+            rl_budget -= 1.0
+
+            try:
+                msg = json.loads(raw)
+            except json.JSONDecodeError:
+                await ws.send_json({"type": "error", "message": _("Invalid JSON")})
+                continue
+            msg_type = msg.get("type")
+
+            if msg_type in ("action", "reaction"):
+                await ws.send_json({"type": "error", "message": _("Spectators cannot submit actions")})
+            else:
+                await ws.send_json({"type": "error", "message": _("Unknown message type: {}").format(msg_type)})
+
+    except WebSocketDisconnect:
+        logger.info("ws_spectator_disconnected", session_id=session_id)
+    except Exception:
+        logger.exception("ws_spectator_error", session_id=session_id)
+    finally:
+        # Symmetric with the player path's to_thread, though remove_spectator never
+        # joins the round thread because a spectator leaving never stops the round.
+        await asyncio.to_thread(session.remove_spectator, listener)
+
+
 @router.websocket("/api/ws/{session_id}")
-async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None = None) -> None:
+async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None = None, spectate: bool = False) -> None:
     """WebSocket game loop for a session.
 
     Thin bridge: validates session, registers as listener, forwards actions.
-    Round lifecycle is owned by GameSession.
+    Round lifecycle is owned by GameSession. With `?spectate=true` the connection
+    is a read-only observer (no player, no start_round, actions rejected).
     """
     # Origin check
     allowed_raw = os.getenv("WS_ALLOWED_ORIGINS", "")
@@ -97,15 +156,20 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
             return
 
     await ws.accept()
-    logger.info("ws_connected", session_id=session_id, player_id=player_id)
+    logger.info("ws_connected", session_id=session_id, player_id=player_id, spectate=spectate)
     service = get_service()
 
-    # Validate session and player
+    # Validate session
     try:
         session = service.get_session(session_id)
     except ValueError:
         await ws.send_json({"type": "error", "message": _("Session '{}' not found").format(session_id)})
         await ws.close(code=4004, reason="session_not_found")
+        return
+
+    # Spectator branch: read-only, no player resolution, no start_round.
+    if spectate:
+        await _run_spectator(ws, session, session_id)
         return
 
     player = session.get_player(player_id)

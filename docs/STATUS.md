@@ -13,6 +13,7 @@ No active sprint.
 
 ## Recent activity (non-sprint)
 
+- 2026-07-10: перенесены ценные фичи из `sprint/020-control-interfaces`: disconnect grace-period закрыл `session-disconnect-debounce`, spectator-listener добавил read-only WS `?spectate=true` и live-вкладку в master session view.
 - 2026-07-10 — Sprint 020 thermo-sweep закрыт: integration 154 passed, post-audit E2E smoke 5/5, audit triaged, PR opened to main.
 - 2026-07-04 — брейншторм [simulation-core](brainstorms/simulation-core.md): консенсус-модель времени/активности/внутреннего я/лестницы детализации. VISION.md переписан, BACKLOG реструктурирован (секция Simulation Core, поглощённые/переформулированные айтемы, чекбоксы фаз 1-2 спринта 020), ROADMAP Planned обновлён, указатели-актуализации в старых брейнштормах.
 - 2026-06-20 — CORS origins сделаны конфигурируемыми (`CORS_ALLOWED_ORIGINS`); Docker base-image запинен по digest.

@@ -144,9 +144,11 @@ class TestListenerDispatch:
 
 
 class TestEmptyListeners:
-    def test_removing_last_listener_fires_on_empty(self) -> None:
-        """With no round running, removing the last listener calls _on_empty once."""
+    def test_removing_last_listener_schedules_deferred_evict(self) -> None:
+        """Grace-period (Sprint 020 phase 3): removing the last player arms a deferred
+        check rather than firing _on_empty synchronously. A reconnect can still cancel it."""
         session = _session()
+        session._evict_grace_seconds = 3600  # don't let the real timer fire mid-test
         listener = RecordingListener()
         session.add_listener(listener)
 
@@ -155,7 +157,9 @@ class TestEmptyListeners:
 
         session.remove_listener(listener)
 
-        assert seen == [session]
+        assert seen == []  # not fired synchronously
+        assert session._evict_timer is not None  # deferred check armed
+        session._evict_timer.cancel()
 
     def test_remove_unregistered_listener_is_noop(self) -> None:
         """Removing a listener that was never registered does not raise or drop others."""
@@ -171,6 +175,175 @@ class TestEmptyListeners:
 
         assert fired == []
         assert session._listeners == [registered]
+
+
+class TestSpectatorListener:
+    """Read-only spectators (Sprint 020 phase 3): receive the broadcast, never drive lifecycle."""
+
+    def test_spectator_receives_broadcast(self) -> None:
+        """A spectator gets the same events fired to player listeners."""
+        session = _session()
+        player = RecordingListener()
+        spectator = RecordingListener()
+        session.add_listener(player)
+        session.add_spectator(spectator)
+
+        msg = {"x": 1}
+        session._fire("on_turn", msg)
+        session._fire("on_action_result", msg)
+
+        assert player.calls == [("on_turn", (msg,)), ("on_action_result", (msg,))]
+        assert spectator.calls == [("on_turn", (msg,)), ("on_action_result", (msg,))]
+
+    def test_spectator_added_after_player_receives_later_events(self) -> None:
+        """Joining mid-stream, a spectator gets subsequent events (not the ones it missed)."""
+        session = _session()
+        player = RecordingListener()
+        session.add_listener(player)
+        session._fire("on_turn", {"first": 1})
+
+        spectator = RecordingListener()
+        session.add_spectator(spectator)
+        session._fire("on_turn", {"second": 2})
+
+        assert spectator.calls == [("on_turn", ({"second": 2},))]
+        assert player.calls == [("on_turn", ({"first": 1},)), ("on_turn", ({"second": 2},))]
+
+    def test_spectator_alone_is_player_empty(self) -> None:
+        """A session with only spectators counts as player-empty (lifecycle keys on players)."""
+        session = _session()
+        session.add_spectator(RecordingListener())
+        assert session.has_player_listeners() is False
+
+    def test_player_present_has_player_listeners(self) -> None:
+        session = _session()
+        session.add_listener(RecordingListener())
+        assert session.has_player_listeners() is True
+
+    def test_remove_only_spectator_does_not_fire_on_empty(self) -> None:
+        """Removing a spectator never triggers the empty handler, even with no players present."""
+        session = _session()
+        spectator = RecordingListener()
+        session.add_spectator(spectator)
+
+        fired: list[GameSession] = []
+        session._on_empty = lambda s: fired.append(s)
+
+        session.remove_spectator(spectator)
+
+        assert fired == []
+
+    def test_remove_spectator_keeps_player_in_broadcast(self) -> None:
+        """After a spectator leaves, the remaining player listener still gets events."""
+        session = _session()
+        player = RecordingListener()
+        spectator = RecordingListener()
+        session.add_listener(player)
+        session.add_spectator(spectator)
+
+        session.remove_spectator(spectator)
+        session._fire("on_turn", {"z": 9})
+
+        assert player.calls == [("on_turn", ({"z": 9},))]
+
+    def test_last_player_leaving_with_spectator_present_is_player_empty(self) -> None:
+        """The session is player-empty when the last player goes, even if a spectator remains:
+        remove_listener arms the deferred evict (grace-period), the predicate reports empty.
+        The firing path is covered by TestEvictGracePeriod."""
+        session = _session()
+        session._evict_grace_seconds = 3600  # don't let the real timer fire mid-test
+        player = RecordingListener()
+        spectator = RecordingListener()
+        session.add_listener(player)
+        session.add_spectator(spectator)
+
+        seen: list[GameSession] = []
+        session._on_empty = lambda s: seen.append(s)
+
+        session.remove_listener(player)
+
+        assert session.has_player_listeners() is False
+        assert seen == []  # deferred, not synchronous
+        assert session._evict_timer is not None
+        session._evict_timer.cancel()
+
+
+class TestEvictGracePeriod:
+    """Disconnect debounce (Sprint 020 phase 3): defer stop+evict, reconnect cancels.
+
+    The timer fires on a background thread after the grace window; these tests set a
+    huge window so it never fires mid-test and drive _run_evict_check directly.
+    """
+
+    def test_last_player_leaving_schedules_not_synchronous(self) -> None:
+        session = _session()
+        session._evict_grace_seconds = 3600
+        player = RecordingListener()
+        session.add_listener(player)
+        fired: list[GameSession] = []
+        session._on_empty = lambda s: fired.append(s)
+
+        session.remove_listener(player)
+
+        assert fired == []  # deferred, not synchronous
+        assert session._evict_timer is not None
+        session._evict_timer.cancel()
+
+    def test_deferred_check_evicts_when_still_empty(self) -> None:
+        """When the window elapses with the session still player-empty, _on_empty fires once."""
+        session = _session()
+        session._evict_grace_seconds = 3600
+        player = RecordingListener()
+        session.add_listener(player)
+        fired: list[GameSession] = []
+        session._on_empty = lambda s: fired.append(s)
+
+        session.remove_listener(player)
+        assert session._evict_timer is not None
+        session._evict_timer.cancel()  # we drive the check by hand
+
+        session._run_evict_check()
+
+        assert fired == [session]
+
+    def test_reconnect_within_window_cancels_evict(self) -> None:
+        """A player reconnecting inside the window cancels the pending evict."""
+        session = _session()
+        session._evict_grace_seconds = 3600
+        p1 = RecordingListener()
+        session.add_listener(p1)
+        fired: list[GameSession] = []
+        session._on_empty = lambda s: fired.append(s)
+
+        session.remove_listener(p1)
+        assert session._evict_timer is not None
+
+        p2 = RecordingListener()
+        session.add_listener(p2)  # reconnect cancels the timer
+        assert session._evict_timer is None
+
+        # A stale check that runs anyway must no-op because a player is present.
+        session._run_evict_check()
+        assert fired == []
+
+    def test_lingering_spectator_does_not_save_abandoned_session(self) -> None:
+        """Only a spectator left means still player-empty, so the deferred check evicts."""
+        session = _session()
+        session._evict_grace_seconds = 3600
+        player = RecordingListener()
+        spectator = RecordingListener()
+        session.add_listener(player)
+        session.add_spectator(spectator)
+        fired: list[GameSession] = []
+        session._on_empty = lambda s: fired.append(s)
+
+        session.remove_listener(player)
+        assert session._evict_timer is not None
+        session._evict_timer.cancel()
+
+        session._run_evict_check()
+
+        assert fired == [session]
 
 
 # ---------------------------------------------------------------------------
@@ -313,6 +486,36 @@ class TestStartRound:
 
         # Reaches the live brain (no RuntimeError); ends the parked player turn.
         session.submit_player_action(Action(name=ActionType.END_TURN))
+
+
+class TestDisconnectStopsRound:
+    """Disconnect debounce (refined): the last player leaving pauses the round *immediately*
+    while deferring only the registry eviction.
+
+    A round left running with no player would keep advancing NPC turns during the grace
+    window — silently costing a blipped player combat turns — and, because every session
+    draws from one process-global dice RNG, overlapping player-less rounds make seeded
+    integration tests nondeterministic (observed: test_player_state_xp flaked in CI)."""
+
+    def test_last_listener_disconnect_stops_round_now_defers_evict(self, session_with_player: Any) -> None:
+        session, player = session_with_player
+        session._evict_grace_seconds = 3600  # keep the real timer from firing mid-test
+        fired: list[GameSession] = []
+        session._on_empty = lambda s: fired.append(s)
+        listener = RecordingListener()
+        session.add_listener(listener)
+        session.start_round(player)
+        assert session._round is not None
+
+        session.remove_listener(listener)
+
+        # Round paused at once: no lingering thread advancing NPC turns / draining the RNG.
+        assert session._round is None
+        assert session._round_thread is None
+        # Eviction is still deferred: a quick reconnect can cancel it.
+        assert fired == []
+        assert session._evict_timer is not None
+        session._evict_timer.cancel()
 
 
 class TestStopRound:

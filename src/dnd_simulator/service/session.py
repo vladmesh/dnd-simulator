@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import contextvars
 import dataclasses
+import os
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -30,6 +31,11 @@ from dnd_simulator.service.action_dispatcher import create_dispatcher
 from dnd_simulator.service.dto import PlayerStatusData, ResourcePoolView
 
 logger = structlog.get_logger(domain="session")
+
+# Grace window before an emptied session is stopped + evicted. A disconnect+reconnect
+# inside this window (StrictMode remount, network blip) cancels the evict. Configurable
+# for ops/tests; overridable per-session via ``GameSession._evict_grace_seconds``.
+_DEFAULT_EVICT_GRACE_SECONDS = float(os.getenv("DND_EVICT_GRACE_SECONDS", "1.5"))
 
 
 # ---------------------------------------------------------------------------
@@ -268,9 +274,14 @@ class GameSession:
     _round_thread: threading.Thread | None = field(default=None, init=False, repr=False)
     _player_brain: PlayerBrain | None = field(default=None, init=False, repr=False)
     _listeners: list[SessionEventListener] = field(default_factory=list, init=False, repr=False)
+    # Read-only observers (DM/admin/future spectators). Receive the broadcast, never drive
+    # the round and never count toward the "session empty" lifecycle decision.
+    _spectators: list[SessionEventListener] = field(default_factory=list, init=False, repr=False)
     _last_turn_msg: dict[str, Any] | None = field(default=None, init=False, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
     _on_empty: Callable[[GameSession], None] | None = field(default=None, init=False, repr=False)
+    _evict_timer: threading.Timer | None = field(default=None, init=False, repr=False)
+    _evict_grace_seconds: float = field(default=_DEFAULT_EVICT_GRACE_SECONDS, init=False, repr=False)
 
     # ---------------------------------------------------------------------------
     # Player queries
@@ -304,12 +315,40 @@ class GameSession:
         """Ensure session_id is bound in contextvars for all log calls."""
         structlog.contextvars.bind_contextvars(session_id=self.session_id)
 
+    def has_player_listeners(self) -> bool:
+        """Whether any player (round-driving) listener is connected.
+
+        Single source of truth for the "session empty" decision: spectators are
+        excluded, so a session watched only by spectators counts as empty. Lock-free
+        read (atomic under the GIL); callers needing a consistent snapshot hold ``_lock``.
+        """
+        return bool(self._listeners)
+
     def add_listener(self, listener: SessionEventListener) -> None:
         self._bind_session_context()
         with self._lock:
+            # A (re)connecting player cancels any pending evict during the grace window.
+            self._cancel_evict_check()
             self._listeners.append(listener)
             count = len(self._listeners)
         logger.info("add_listener", listener_count=count)
+
+    def add_spectator(self, listener: SessionEventListener) -> None:
+        """Register a read-only observer. Receives the broadcast; never drives lifecycle."""
+        self._bind_session_context()
+        with self._lock:
+            self._spectators.append(listener)
+            count = len(self._spectators)
+        logger.info("add_spectator", spectator_count=count)
+
+    def remove_spectator(self, listener: SessionEventListener) -> None:
+        """Remove a read-only observer. Never stops the round, never fires ``_on_empty``."""
+        self._bind_session_context()
+        with self._lock:
+            with contextlib.suppress(ValueError):
+                self._spectators.remove(listener)
+            count = len(self._spectators)
+        logger.info("remove_spectator", spectator_count=count)
 
     def get_last_turn_msg(self) -> dict[str, Any] | None:
         """Return the last turn message for replay by the caller."""
@@ -318,25 +357,70 @@ class GameSession:
     def remove_listener(self, listener: SessionEventListener) -> None:
         self._bind_session_context()
         stop_round = False
-        is_empty = False
         with self._lock:
             with contextlib.suppress(ValueError):
                 self._listeners.remove(listener)
             count = len(self._listeners)
-            if not self._listeners:
-                is_empty = True
-                if self._round is not None:
-                    stop_round = True
-        logger.info("remove_listener", listener_count=count, stop_round=stop_round)
+            player_empty = not self.has_player_listeners()
+            if player_empty and self._round is not None:
+                stop_round = True
+        logger.info("remove_listener", listener_count=count, player_empty=player_empty, stop_round=stop_round)
+        if stop_round:
+            # Pause the simulation immediately when no player drives it. A lingering round
+            # thread would keep advancing NPC turns during the grace window: for a real
+            # player a network blip would silently cost them combat turns, and because all
+            # sessions share one process-global dice RNG, overlapping player-less rounds make
+            # seeded integration tests nondeterministic. stop_round() cancels any stale timer,
+            # so the evict is (re)armed after it returns.
+            self.stop_round()
+        if player_empty:
+            # Defer only the registry eviction: a quick disconnect+reconnect (StrictMode
+            # remount, network blip) must not flash the session out of the registry, and the
+            # reconnecting player restarts the round via start_round. The deferred check
+            # (_run_evict_check) re-verifies emptiness before firing _on_empty.
+            with self._lock:
+                self._schedule_evict_check()
+
+    def _schedule_evict_check(self) -> None:
+        """Arm the deferred empty-session check. Caller holds ``_lock``."""
+        if self._evict_timer is not None:
+            self._evict_timer.cancel()
+        timer = threading.Timer(self._evict_grace_seconds, self._run_evict_check)
+        timer.daemon = True
+        self._evict_timer = timer
+        timer.start()
+
+    def _cancel_evict_check(self) -> None:
+        """Cancel any pending deferred evict. Caller holds ``_lock``."""
+        if self._evict_timer is not None:
+            self._evict_timer.cancel()
+            self._evict_timer = None
+
+    def _run_evict_check(self) -> None:
+        """Timer callback: stop the round and fire ``_on_empty`` only if still player-empty.
+
+        Runs on a Timer thread after the grace window. A reconnect inside the window
+        adds a player and cancels this timer, so emptiness is re-verified under the lock.
+        """
+        self._bind_session_context()
+        stop_round = False
+        with self._lock:
+            self._evict_timer = None
+            if self.has_player_listeners():
+                logger.info("evict_check_skipped_reconnected")
+                return
+            if self._round is not None:
+                stop_round = True
+        logger.info("evict_check_firing", stop_round=stop_round)
         if stop_round:
             self.stop_round()
-        if is_empty and self._on_empty is not None:
+        if self._on_empty is not None:
             self._on_empty(self)
 
     def _fire(self, method: str, *args: object) -> None:
-        """Call a method on all listeners, swallowing individual errors."""
+        """Call a method on all listeners and spectators, swallowing individual errors."""
         with self._lock:
-            listeners = list(self._listeners)
+            listeners = self._listeners + self._spectators
         for listener in listeners:
             try:
                 getattr(listener, method)(*args)
@@ -478,6 +562,7 @@ class GameSession:
         self._bind_session_context()
         logger.info("stop_round")
         with self._lock:
+            self._cancel_evict_check()
             game_round = self._round
             brain = self._player_brain
             thread = self._round_thread

@@ -12,6 +12,7 @@ export class WsClient {
   private ws: WebSocket | null = null
   private sessionId: string | null = null
   private playerId: string | null = null
+  private spectate = false
   private messageHandlers = new Set<MessageHandler>()
   private statusHandlers = new Set<StatusHandler>()
   private status: WsStatus = "disconnected"
@@ -23,10 +24,17 @@ export class WsClient {
     return this.status
   }
 
-  connect(sessionId: string, playerId?: string): void {
+  // Player screens pass a player id. Master live feed passes a spectator option.
+  connect(sessionId: string, opts?: string | { playerId?: string; spectate?: boolean }): void {
     this.intentionalClose = false
     this.sessionId = sessionId
-    this.playerId = playerId ?? null
+    if (typeof opts === "string" || opts === undefined) {
+      this.playerId = opts ?? null
+      this.spectate = false
+    } else {
+      this.playerId = opts.playerId ?? null
+      this.spectate = opts.spectate ?? false
+    }
     this.retryMs = INITIAL_RETRY_MS
     this.doConnect()
   }
@@ -78,9 +86,11 @@ export class WsClient {
 
     const proto = location.protocol === "https:" ? "wss:" : "ws:"
     let url = `${proto}//${location.host}/api/ws/${this.sessionId}`
-    if (this.playerId) {
-      url += `?player_id=${encodeURIComponent(this.playerId)}`
-    }
+    const params = new URLSearchParams()
+    if (this.playerId) params.set("player_id", this.playerId)
+    if (this.spectate) params.set("spectate", "true")
+    const qs = params.toString()
+    if (qs) url += `?${qs}`
 
     const ws = new WebSocket(url)
     this.ws = ws
@@ -104,9 +114,9 @@ export class WsClient {
     }
 
     ws.onclose = (ev) => {
-      if (this.ws !== ws) return // stale — a newer WS replaced us
+      if (this.ws !== ws) return // stale; a newer WS replaced us
       this.ws = null
-      // 4004 = session not found or no player — don't reconnect
+      // 4004 = session not found or no player; don't reconnect
       if (ev.code === 4004) {
         this.setStatus("error")
         return
