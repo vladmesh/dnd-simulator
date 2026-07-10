@@ -26,6 +26,7 @@ def move_squad(
     route_index: dict[str, int],
     route_direction: dict[str, int],
     location_graph: LocationGraph | None,
+    rng: random.Random,
 ) -> tuple[str, str] | None:
     """Move a squad according to its behavior. Returns (from, to) or None if no move."""
     if squad.behavior is SquadBehavior.GUARD:
@@ -33,7 +34,7 @@ def move_squad(
     if squad.behavior in _ROUTE_BEHAVIORS:
         return _move_route(squad, route_index, route_direction)
     if squad.behavior in _ROAM_BEHAVIORS:
-        return _move_roam(squad, location_graph)
+        return _move_roam(squad, location_graph, rng)
     return None
 
 
@@ -69,7 +70,7 @@ def _move_route(squad: Squad, route_index: dict[str, int], route_direction: dict
     return (old, squad.current_location_id)
 
 
-def _move_roam(squad: Squad, location_graph: LocationGraph | None) -> tuple[str, str] | None:
+def _move_roam(squad: Squad, location_graph: LocationGraph | None, rng: random.Random) -> tuple[str, str] | None:
     """Move to a random neighbor within territory."""
     if location_graph is None:
         return None
@@ -80,5 +81,5 @@ def _move_roam(squad: Squad, location_graph: LocationGraph | None) -> tuple[str,
         return None
 
     old = squad.current_location_id
-    squad.current_location_id = random.choice(candidates)
+    squad.current_location_id = rng.choice(candidates)
     return (old, squad.current_location_id)

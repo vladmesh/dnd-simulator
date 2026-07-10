@@ -109,6 +109,7 @@ class EntitiesLayer(Layer):
             self._creature_locations,
             self._materialized_squads,
             self._materialized_lairs,
+            self._rng,
         )
         self._query_handler = QueryHandler(
             self._entities,

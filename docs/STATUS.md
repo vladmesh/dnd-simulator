@@ -12,9 +12,9 @@
 **Sprint:** 021-save-schema
 **Goal:** Единая версионированная Pydantic-схема сейва + воспроизводимость мира от явного сида + периодический автосейв.
 **Started:** 2026-07-10
-**Phase:** 1 — RNG threading & determinism (task 1 done, task 2 pending) — 2026-07-10
+**Phase:** 1 — RNG threading & determinism (task 2 done, task 3 pending) — 2026-07-10
 
-Task 1 is done. Ready to start task 2.
+Task 2 is done. Ready to start task 3.
 
 ### Phases
 

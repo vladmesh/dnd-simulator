@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
+import random
 
 from dnd_simulator.core.character import (
     Ability,
@@ -52,12 +52,50 @@ def _make_layer(
     player: PlayerCharacter,
     templates: dict[str, MonsterTemplate] | None = None,
     encounters: dict[str, list[EncounterEntry]] | None = None,
+    seed: int | None = None,
 ) -> EntitiesLayer:
     return EntitiesLayer(
         entities=[player],
         monster_templates=templates or {},
         encounter_tables=encounters or {},
+        seed=seed,
     )
+
+
+def _encounter_sequence(seed: int, *, perturb_global: bool = False) -> list[int]:
+    template = _make_template()
+    encounters = {"forest": [EncounterEntry(template_id="goblin", chance=0.65, count_min=1, count_max=3)]}
+    player = _make_player(location="tavern")
+    layer = _make_layer(player, templates={"goblin": template}, encounters=encounters, seed=seed)
+    spawned_counts: list[int] = []
+
+    for step in range(8):
+        player.location_id = "forest"
+        layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10 + step, minute=15))
+        spawned = [
+            e for e in layer._entities.values() if isinstance(e, Creature) and e.temporary and e.location_id == "forest"
+        ]
+        spawned_counts.append(len(spawned))
+        for creature in spawned:
+            layer.remove_entity(creature.id)
+
+        player.location_id = "tavern"
+        layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10 + step, minute=30))
+        if perturb_global:
+            random.seed(10_000 + step)
+            for _ in range(5):
+                random.random()
+
+    return spawned_counts
+
+
+class TestEncounterSeededRng:
+    def test_seeded_encounter_rolls_replay_and_different_seed_diverges(self) -> None:
+        assert _encounter_sequence(42) == _encounter_sequence(42)
+        assert _encounter_sequence(42) != _encounter_sequence(43)
+
+    def test_encounter_rolls_ignore_global_random_state(self) -> None:
+        assert _encounter_sequence(42) == _encounter_sequence(42, perturb_global=True)
 
 
 class TestSpawnOnPlayerArrival:
@@ -66,18 +104,14 @@ class TestSpawnOnPlayerArrival:
     def test_spawn_on_successful_roll(self) -> None:
         """RNG success → creatures spawned at player location with template stats."""
         template = _make_template()
-        encounters = {"forest": [EncounterEntry(template_id="goblin", chance=0.5, count_min=2, count_max=2)]}
+        encounters = {"forest": [EncounterEntry(template_id="goblin", chance=1.0, count_min=2, count_max=2)]}
         player = _make_player(location="tavern")
         layer = _make_layer(player, templates={"goblin": template}, encounters=encounters)
 
         # Player travels to forest
         player.location_id = "forest"
 
-        # Roll succeeds (0.1 < 0.5 chance), count=2 (fixed)
-        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
-            mock_rng.random.return_value = 0.1  # below 0.5 → success
-            mock_rng.randint.return_value = 2
-            layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
+        layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
 
         # Should have player + 2 goblins
         creatures = [e for e in layer.get_active_creatures() if e.id != "player1"]
@@ -94,15 +128,13 @@ class TestSpawnOnPlayerArrival:
     def test_no_spawn_on_failed_roll(self) -> None:
         """RNG failure → no creatures spawned."""
         template = _make_template()
-        encounters = {"forest": [EncounterEntry(template_id="goblin", chance=0.3, count_min=1, count_max=3)]}
+        encounters = {"forest": [EncounterEntry(template_id="goblin", chance=0.0, count_min=1, count_max=3)]}
         player = _make_player(location="tavern")
         layer = _make_layer(player, templates={"goblin": template}, encounters=encounters)
 
         player.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
-            mock_rng.random.return_value = 0.9  # above 0.3 → fail
-            layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
+        layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
 
         creatures = [e for e in layer.get_active_creatures() if e.id != "player1"]
         assert len(creatures) == 0
@@ -130,10 +162,7 @@ class TestSpawnedCreatureStats:
 
         player.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
-            mock_rng.random.return_value = 0.0
-            mock_rng.randint.return_value = 1
-            layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
+        layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
 
         creatures = [e for e in layer.get_active_creatures() if e.id != "player1"]
         assert len(creatures) == 1
@@ -223,11 +252,8 @@ class TestEncounterCooldown:
 
         player.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
-            mock_rng.random.return_value = 0.0
-            mock_rng.randint.return_value = 1
-            time = GameDateTime(year=1490, month=6, day=1, hour=10)
-            layer.update_activation(time)
+        time = GameDateTime(year=1490, month=6, day=1, hour=10)
+        layer.update_activation(time)
 
         spawned_1 = [e for e in layer.get_active_creatures() if e.id != "player1"]
         assert len(spawned_1) == 1
@@ -237,10 +263,7 @@ class TestEncounterCooldown:
         layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10, minute=0, second=6))
         player.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
-            mock_rng.random.return_value = 0.0
-            mock_rng.randint.return_value = 1
-            layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10, minute=0, second=12))
+        layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10, minute=0, second=12))
 
         # Still only 1 spawned (no re-roll)
         spawned_2 = [e for e in layer.get_active_creatures() if e.id != "player1"]
@@ -255,11 +278,8 @@ class TestEncounterCooldown:
 
         player.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
-            mock_rng.random.return_value = 0.0
-            mock_rng.randint.return_value = 1
-            time_first = GameDateTime(year=1490, month=6, day=1, hour=10)
-            layer.update_activation(time_first)
+        time_first = GameDateTime(year=1490, month=6, day=1, hour=10)
+        layer.update_activation(time_first)
 
         spawned_1 = [e for e in layer.get_active_creatures() if e.id != "player1"]
         assert len(spawned_1) == 1
@@ -272,11 +292,8 @@ class TestEncounterCooldown:
         # Come back after cooldown (10+ minutes later)
         player.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
-            mock_rng.random.return_value = 0.0
-            mock_rng.randint.return_value = 1
-            time_after = GameDateTime(year=1490, month=6, day=1, hour=11, minute=15)
-            layer.update_activation(time_after)
+        time_after = GameDateTime(year=1490, month=6, day=1, hour=11, minute=15)
+        layer.update_activation(time_after)
 
         spawned_2 = [e for e in layer.get_active_creatures() if e.id != "player1"]
         assert len(spawned_2) == 1
@@ -310,10 +327,7 @@ class TestGeneralizedEncounterTriggers:
         # Guard moves to forest (dangerous location)
         guard.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
-            mock_rng.random.return_value = 0.0
-            mock_rng.randint.return_value = 2
-            layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10, minute=0, second=6))
+        layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10, minute=0, second=6))
 
         # Guard is now dormant (no player at forest), but encounters should have spawned
         spawned = [
@@ -347,10 +361,7 @@ class TestGeneralizedEncounterTriggers:
         # Wanderer moves to forest while dormant
         creature.location_id = "forest"
 
-        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
-            mock_rng.random.return_value = 0.0
-            mock_rng.randint.return_value = 1
-            layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
+        layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
 
         # No encounter spawned (dormant creature shouldn't trigger)
         spawned = [
@@ -378,20 +389,14 @@ class TestGeneralizedEncounterTriggers:
 
         # Player moves to forest → triggers encounter
         player.location_id = "forest"
-        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
-            mock_rng.random.return_value = 0.0
-            mock_rng.randint.return_value = 1
-            layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
+        layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
 
         spawned_count_1 = sum(1 for e in layer._entities.values() if isinstance(e, Creature) and e.temporary)
         assert spawned_count_1 == 1
 
         # Guard moves to forest within cooldown
         guard.location_id = "forest"
-        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
-            mock_rng.random.return_value = 0.0
-            mock_rng.randint.return_value = 1
-            layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10, minute=1))
+        layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10, minute=1))
 
         # Still only 1 spawned (cooldown blocks second roll)
         spawned_count_2 = sum(1 for e in layer._entities.values() if isinstance(e, Creature) and e.temporary)
@@ -414,10 +419,7 @@ class TestGeneralizedEncounterTriggers:
 
         # Player enters forest → spawns 1 goblin
         player.location_id = "forest"
-        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
-            mock_rng.random.return_value = 0.0
-            mock_rng.randint.return_value = 1
-            layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
+        layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10))
 
         spawned = [e for e in layer._entities.values() if isinstance(e, Creature) and e.temporary]
         assert len(spawned) == 1
@@ -427,10 +429,7 @@ class TestGeneralizedEncounterTriggers:
         goblin.location_id = "swamp"
         goblin.active = True
 
-        with patch("dnd_simulator.layers.entities.encounters.random") as mock_rng:
-            mock_rng.random.return_value = 0.0
-            mock_rng.randint.return_value = 1
-            layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10, minute=0, second=6))
+        layer.update_activation(GameDateTime(year=1490, month=6, day=1, hour=10, minute=0, second=6))
 
         # No new spawns at swamp — temporary creatures don't trigger encounters
         swamp_spawns = [

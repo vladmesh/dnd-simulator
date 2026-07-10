@@ -36,4 +36,10 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Encounter rolls, squad roam movement, squad retreat, and lair depletion now consume the owning layer RNG instead of process-global `random` or dice RNG.
+Existing spawn tests that mocked module-level `random` were updated to use deterministic encounter thresholds and fixed counts.
+The lair depletion tests now seed `EcologyLayer` directly; this is the intended contract after moving world simulation off `rules.dice`.

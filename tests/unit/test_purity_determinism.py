@@ -332,13 +332,11 @@ class TestEcologyLairDepletion:
 
     def test_depletion_transitions_active_to_depleted(self) -> None:
         from dnd_simulator.layers.ecology.layer import EcologyLayer
-        from dnd_simulator.rules.dice import set_global_seed
 
-        # Seed so the roll is below 0.5
-        set_global_seed(1)  # random.Random(1).random() ≈ 0.134 — below 0.5
+        # Seed so the ecology-layer roll is below 0.5.
 
         lair = _coreless_lair(alive_members=[], depletion_chance=0.5)
-        layer = EcologyLayer(lairs=[lair])
+        layer = EcologyLayer(lairs=[lair], seed=1)
         event = self._dematerialize_event()
 
         layer.handle_event(event, lambda q: None, lambda e: None)  # type: ignore[arg-type]
@@ -346,16 +344,11 @@ class TestEcologyLairDepletion:
 
     def test_no_depletion_when_roll_above_chance(self) -> None:
         from dnd_simulator.layers.ecology.layer import EcologyLayer
-        from dnd_simulator.rules.dice import set_global_seed
 
-        # Seed so the roll is above 0.5
-        set_global_seed(0)  # random.Random(0).random() ≈ 0.844 — above 0.5
-        import random as _random
-
-        _random.Random(0).random()  # just to confirm seed behaviour
+        # Seed so the ecology-layer roll is above 0.5.
 
         lair = _coreless_lair(alive_members=[], depletion_chance=0.5)
-        layer = EcologyLayer(lairs=[lair])
+        layer = EcologyLayer(lairs=[lair], seed=0)
         event = self._dematerialize_event()
 
         layer.handle_event(event, lambda q: None, lambda e: None)  # type: ignore[arg-type]
@@ -363,12 +356,9 @@ class TestEcologyLairDepletion:
 
     def test_depletion_survives_save_load(self) -> None:
         from dnd_simulator.layers.ecology.layer import EcologyLayer
-        from dnd_simulator.rules.dice import set_global_seed
-
-        set_global_seed(1)  # below 0.5
 
         lair = _coreless_lair(alive_members=[], depletion_chance=0.5)
-        layer = EcologyLayer(lairs=[lair])
+        layer = EcologyLayer(lairs=[lair], seed=1)
         event = self._dematerialize_event()
         layer.handle_event(event, lambda q: None, lambda e: None)  # type: ignore[arg-type]
         assert lair.state is LairState.DEPLETED

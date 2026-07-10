@@ -7,6 +7,7 @@ rolling and squad/lair materialization are isolated in sibling modules (``encoun
 
 from __future__ import annotations
 
+import random
 from typing import TYPE_CHECKING
 
 import structlog
@@ -43,6 +44,7 @@ class ActivationManager:
         creature_locations: dict[str, str],
         materialized_squads: dict[str, tuple[list[str], int, int]],
         materialized_lairs: dict[str, tuple[list[str], str | None, list[str]]],
+        rng: random.Random,
     ) -> None:
         self._entities = entities
         self._location_log = location_log
@@ -53,6 +55,7 @@ class ActivationManager:
         self._creature_locations = creature_locations
         self._materialized_squads = materialized_squads
         self._materialized_lairs = materialized_lairs
+        self._rng = rng
         self._spawn_counter = 0
 
     def update_activation(

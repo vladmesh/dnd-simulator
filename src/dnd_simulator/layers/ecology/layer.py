@@ -71,7 +71,7 @@ class EcologyLayer(Layer):
             if now - last < squad.tick_interval:
                 logger.debug("squad_skip", squad_id=squad.id, cooldown_remaining=squad.tick_interval - (now - last))
                 continue
-            moved = move_squad(squad, self._route_index, self._route_direction, self._location_graph)
+            moved = move_squad(squad, self._route_index, self._route_direction, self._location_graph, self._rng)
             logger.info(
                 "squad_tick",
                 squad_id=squad.id,
@@ -105,6 +105,7 @@ class EcologyLayer(Layer):
                 self._route_index,
                 self._route_direction,
                 query_fn,
+                self._rng,
             )
         )
 
@@ -131,7 +132,7 @@ class EcologyLayer(Layer):
                 self._squads[squad_id].strength = new_strength
                 logger.info("squad_strength_updated", squad_id=squad_id, new_strength=new_strength)
         elif event.event_type is EventType.LAIR_DEMATERIALIZED:
-            apply_lair_dematerialize(self._lairs, event)
+            apply_lair_dematerialize(self._lairs, event, self._rng)
         return ActionResult()
 
     def query(self, query: Query) -> Answer:
