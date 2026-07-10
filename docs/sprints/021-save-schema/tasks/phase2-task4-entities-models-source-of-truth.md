@@ -28,13 +28,21 @@
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check-backend`, `make test-integration`)
-- [ ] `extra="forbid"` на всех entity save-моделях; ни одного `dict[str, Any]` в них
-- [ ] `serialize_entity` строит модели напрямую; формат игрока определён в одном месте
-- [ ] `CombatState.sides` переживает save/load
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check-backend`, `make test-integration`)
+- [x] `extra="forbid"` на всех entity save-моделях; ни одного `dict[str, Any]` в них
+- [x] `serialize_entity` строит модели напрямую; формат игрока определён в одном месте
+- [x] `CombatState.sides` переживает save/load
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+`save_models.py` теперь описывает entity payload явно: items, memory, resources, turn budget, runtime flags, equipment slots, conditions and combat sides validate through `extra="forbid"`. `serialize_entity` строит конкретные Pydantic-модели напрямую; `player_to_full_save_data()` оставлен как тонкий compatibility bridge к `PlayerSave` subset for `parse_player`.
+
+Поля, которые пишутся, но не применяются к уже существующей entity при `load_state`: structural reconstruction data (`max_hp`, `ac`, `speed`, `ability_scores`, `attacks`) and parse aliases (`items`, `class_features`, NPC `hp`/`ai`/`start_location`/`race`/`class`). Они сохранены для missing-entity reconstruction через существующие `parse_player`/`parse_npc`, которые эта задача не переписывала.
+
+Integration websocket fixture `ws_village` переведена с module scope на function scope: session eviction made the existing error-handling checks read a closed socket late in the suite.

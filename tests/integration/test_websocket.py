@@ -62,7 +62,7 @@ def ws_arena(_urls: tuple[str, str, str]) -> Iterator[tuple[str, str, str]]:
     requests.delete(f"{api}/sessions/{sid}", timeout=5)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def ws_village(_urls: tuple[str, str, str]) -> Iterator[tuple[str, str, str]]:
     """Fresh village session for WS tests. Yields (ws_base_url, session_id, player_id)."""
     api, player_api, ws_base = _urls

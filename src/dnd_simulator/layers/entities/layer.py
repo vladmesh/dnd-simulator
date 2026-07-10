@@ -438,9 +438,10 @@ class EntitiesLayer(Layer):
         save_state = EntitiesState.model_validate(state)
         load_rng_state(self._rng, save_state.rng_state)
         state_data = save_state.model_dump(mode="json", by_alias=True)
-        entities_data = state_data["entities"]
+        entities_data = save_state.entities
 
-        for eid, edata in entities_data.items():
+        for eid, esave in entities_data.items():
+            edata = esave.model_dump(mode="json", by_alias=True)
             entity = self._entities.get(str(eid))
 
             # Recreate missing entities from save data (spawned at runtime or player)
@@ -486,12 +487,36 @@ class EntitiesLayer(Layer):
 
             if entity:
                 entity.active = bool(edata.get("active", True))
+                entity.temporary = bool(edata.get("temporary", entity.temporary))
+                entity.faction_id = str(edata.get("faction_id", entity.faction_id))
                 loc = edata.get("location_id") or edata.get("region_id")
                 if loc:
                     entity.location_id = str(loc)
                 if isinstance(entity, Creature):
+                    entity.in_combat = bool(edata.get("in_combat", entity.in_combat))
+                    entity.is_dodging = bool(edata.get("is_dodging", entity.is_dodging))
+                    entity.is_disengaging = bool(edata.get("is_disengaging", entity.is_disengaging))
+                    budget_raw = edata.get("turn_budget")
+                    if isinstance(budget_raw, dict):
+                        entity.turn_budget = TurnBudget(
+                            actions=int(budget_raw["actions"]),
+                            bonus_actions=int(budget_raw["bonus_actions"]),
+                            movement_remaining=int(budget_raw["movement_remaining"]),
+                            reaction=int(budget_raw["reaction"]),
+                        )
+                    elif budget_raw is None:
+                        entity.turn_budget = None
                     wake_at = edata.get("wake_at_seconds")
                     entity.wake_at_seconds = int(wake_at) if wake_at is not None else None
+                    position_raw = edata.get("combat_position")
+                    if isinstance(position_raw, list | tuple) and len(position_raw) == 2:
+                        entity.combat_position = (int(position_raw[0]), int(position_raw[1]))
+                    else:
+                        entity.combat_position = None
+                    squad_id = edata.get("squad_id")
+                    entity.squad_id = str(squad_id) if squad_id else None
+                    entity.xp_value = int(edata.get("xp_value", entity.xp_value))
+                    entity.gold = int(edata.get("gold", entity.gold))
                     conditions_raw = edata.get("conditions")
                     if isinstance(conditions_raw, dict):
                         entity.conditions = {
@@ -532,6 +557,8 @@ class EntitiesLayer(Layer):
                 if isinstance(entity, PlayerCharacter):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
                     entity.gold = int(edata.get("gold", entity.gold))
+                    entity.experience = int(edata.get("experience", entity.experience))
+                    entity.level_up_available = bool(edata.get("level_up_available", entity.level_up_available))
                 elif isinstance(entity, Npc):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
                     ai_type = edata.get("ai_type")
