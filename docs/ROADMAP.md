@@ -123,6 +123,10 @@ Paladin L1-L2 как первый caster-класс. Phase 1: spell slots как
 Техспринт по результатам термоядерного ревью. Phase 1: save/load integrity (accessory modifiers, XP), visible bugs, deterministic handlers, i18n errors, pure action providers. Phase 2: typed query accessors, SquadInfo/LairInfo payloads, LayerSource/BrainType/EntityKind cleanup, `World.get_layer`, app-level exception handlers, unified player-status. Phase 3: backend decomposition — `combat_manager` lifecycle vs `combat_resolution`, `activation_manager` → encounters/materialization, ecology submodules, `AwarenessBuilder`, entity serialization split, backend equipment registry. Phase 4: frontend decomposition — `TargetDropdown`, `SchemaForm`, `EventLog`, `WorldOverview`, shared `PlayerStatus`, typed world-state rows, store/transport dedup. Audit closed with no blockers; deferred RNG threading filed for simulation-core determinism.
 → [план спринта](sprints/020-thermo-sweep/sprint.md)
 
+### Sprint 021 — Save Schema & World Reproducibility (фазы 1-3)
+Первый эпик цепочки simulation-core. Phase 1: единый `DND_WORLD_SEED` — слоевые сиды выводятся детерминированно в `game_service`, слои владеют своими `random.Random` (погода, политика, roam/retreat/деплит логова, encounter rolls), процесс-глобальный `random` из `layers/` убран, сквозной пин детерминизма (`test_world_seed.py`: один сид → идентичный `World.save()`). Phase 2: версионированная Pydantic-схема сейва — `SaveGame(schema_version=1)` в `storage/save_schema.py`, типизированные state-модели слоёв (`extra="forbid"`), entity-сейвы как discriminated union, построение напрямую из объектов, combat sides в сейве (закрыт lossless-пробел), состояние RNG (слоевые + dice) сериализуется и продолжает последовательности после load, legacy-форматы отклоняются. Phase 3: периодический автосейв (`DND_AUTOSAVE_SECONDS`, cancel до финального сейва), ошибки автосейва логируются вместо suppress, гвард на evict-после-DELETE (заодно закрыл воскрешение удалённой сессии), интеграционный стек чистит `saves/`. Закрыты backlog: `save-schema`, `layer-rng-threading`, `test-gap-world-rng-determinism`, `periodic-autosave-scheduler`, `silent-failure-autosave`.
+→ [план спринта](sprints/021-save-schema/sprint.md)
+
 ## Planned
 
 ### Level 2 — Расходуемые ресурсы
@@ -134,7 +138,7 @@ Spell slots, ki, rage. Дополнительные типы брони и ор�
 → [брейншторм](brainstorms/ecs-and-content.md)
 
 ### Simulation Core — намерения, триггеры, внутреннее я, лестница детализации
-Заменяет прежний план «Phase 3 — Автономные тики» (периодические тики отброшены в пользу decision-точек). Цепочка эпиков: единая схема сейва → якорь-как-свойство + намерения (спит/идёт/ждёт, travel по рёбрам) → парные триггеры `{on, until}` активации/гашения → внутреннее я NPC (цели, отношения, живой alignment, переваривание + правиловый близнец) → лестница детализации поселений (событийная запись, храповик субъектности) → квесты как контент поверх целей и триггеров.
+Заменяет прежний план «Phase 3 — Автономные тики» (периодические тики отброшены в пользу decision-точек). Первый эпик (единая схема сейва + воспроизводимость) закрыт Sprint 021. Цепочка эпиков: ~~единая схема сейва~~ → якорь-как-свойство + намерения (спит/идёт/ждёт, travel по рёбрам) → парные триггеры `{on, until}` активации/гашения → внутреннее я NPC (цели, отношения, живой alignment, переваривание + правиловый близнец) → лестница детализации поселений (событийная запись, храповик субъектности) → квесты как контент поверх целей и триггеров.
 → [брейншторм](brainstorms/simulation-core.md), эпики в [BACKLOG](BACKLOG.md#simulation-core-брейншторм-2026-07-04)
 
 ### World Builder (advanced)

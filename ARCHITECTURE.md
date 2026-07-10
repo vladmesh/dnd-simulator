@@ -273,6 +273,14 @@ Centralized derived stat computation replacing ad-hoc logic scattered across com
 
 **Convenience API:** `effective_speed(creature)`, `effective_ac(creature)`, `attack_modifiers(attacker, target, melee)`.
 
+## Save Schema & Reproducibility
+
+**Save format** (Sprint 021): one versioned Pydantic envelope — `SaveGame(schema_version=1, meta, world)` in `storage/save_schema.py`. `WorldSave` carries the world seed, dice RNG state, time, last tick times, and typed layer states: each layer owns a state model (`layers/*/state.py`, `layers/entities/save_models.py`) that is the authoritative format (`extra="forbid"`), while the `Layer` ABC keeps its dict-facing `get_state()/load_state()` signatures (core stays pydantic-free). Entity payloads are a discriminated union on `entity_type` (`PlayerSave`/`NpcSave`/`CreatureSave`/`ContainerSave`) built directly from live objects in `entity_serialization.py`; combat state persists turn order, round, battle map, and sides. `save_game()` and `autosave_session()` build the same envelope; `load_game()` validates it and rejects legacy saves without `schema_version`.
+
+**Reproducibility**: `DND_WORLD_SEED` (env; random + logged when absent) seeds the world in `game_service` — per-layer seeds are derived deterministically and passed to layer constructors, which own their `random.Random` streams (weather, politics, ecology roam/retreat/lair depletion, entity encounters). The dice RNG (`rules/dice.py`, `DND_DICE_SEED`) is a separate stream. All RNG states are serialized into the save, so a loaded game continues the same random sequences — same seed, same content → identical world evolution (pinned by `tests/unit/test_world_seed.py`).
+
+**Autosave**: per-action (create_player), on session evict, on shutdown, plus a periodic lifespan task every `DND_AUTOSAVE_SECONDS` (default 120, cancelled before the final shutdown autosave). Autosave failures are logged, never suppressed.
+
 ## Logging
 
 Structured logging via `structlog` (`logging_config.py`, `logging_file_dispatch.py`). `LOG_LEVEL` env var controls verbosity (default: WARNING). When `LOG_LEVEL=DEBUG` and stderr is a TTY, uses pretty console renderer; otherwise JSON. `LOG_DIR` enables denormalized JSONL file dispatch per domain tag. See [docs/LOGGING.md](docs/LOGGING.md).

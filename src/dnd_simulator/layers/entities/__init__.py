@@ -10,6 +10,9 @@ ai_type); decision-making is delegated to the brain field on Creature. NpcMemory
 holds structured tags (NpcTag), recent events, inner state, and conversation
 context. MemorySummarizer (in llm/) compresses events into memory after combat
 ends. Direct access: get_entity, add_entity, remove_entity for hot controls.
+Save format is defined by Pydantic models in save_models.py (EntitiesState:
+discriminated entity union, combat state incl. sides, layer RNG state);
+entity_serialization.py builds them directly from live objects.
 """
 
 from dnd_simulator.layers.entities.layer import EntitiesLayer
