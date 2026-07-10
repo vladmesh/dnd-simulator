@@ -61,7 +61,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 1 task 1 complete. Task 2 pending.
+**Current:** Phase 1 tasks 1-2 complete. Task 3 pending.
 
 ## Decisions
 

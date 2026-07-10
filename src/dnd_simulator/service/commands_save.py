@@ -16,8 +16,9 @@ class SaveCommands(GameServiceProtocol):
 
     def _build_save_game(self, session_id: str) -> SaveGame:
         session: GameSession = self._get_session(session_id)
-        world_data = session.world.save()
-        world_data["dice_rng_state"] = dump_rng_state(session.dice_rng)
+        with session.read_world():
+            world_data = session.world.save()
+            world_data["dice_rng_state"] = dump_rng_state(session.dice_rng)
         return SaveGame.model_validate(
             {
                 "schema_version": SCHEMA_VERSION,

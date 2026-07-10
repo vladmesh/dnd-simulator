@@ -34,4 +34,14 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+`GameSession` получил отдельный re-entrant world-state lock с явными `read_world()` и `mutate_world()` scopes.
+`Round` получает mutation scope через инъекцию и удерживает его только на activation/materialization, подготовке
+хода, action dispatch с вложенными реакциями, завершении боя и продвижении времени. Ожидание `PlayerBrain` и
+listener callbacks выполняются вне gate. Save snapshot читает world и dice RNG под тем же lock.
+
+Существующий reaction helper создаёт `Round` через `__new__`, поэтому в нём добавлен no-op mutation scope для
+нового обязательного runtime-состояния.

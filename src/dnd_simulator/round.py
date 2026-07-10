@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import random
 from collections.abc import Callable
+from contextlib import AbstractContextManager, nullcontext
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 
@@ -68,6 +69,7 @@ class Round:
         creature_host: CreatureHost | None = None,
         dispatcher: ActionDispatcher | None = None,
         rng: random.Random | None = None,
+        mutation_scope: Callable[[], AbstractContextManager[None]] | None = None,
     ) -> None:
         self._world = world
         self._host = creature_host or world.creature_host
@@ -77,6 +79,7 @@ class Round:
             dispatcher = create_dispatcher(world)
         self._dispatcher = dispatcher
         self._rng = rng or random.Random()
+        self._mutation_scope = mutation_scope or nullcontext
         self._stop_flag = False
         self._on_round_end: Callable[[RoundResult], None] | None = None
         self._on_action: OnActionCallback | None = None
@@ -106,7 +109,8 @@ class Round:
         emit_fn: EmitFn,
     ) -> ActionResult:
         """Execute action via dispatcher. Validates, checks budget, executes, consumes budget."""
-        return self._dispatcher.dispatch(creature, action, ctx, emit_fn)
+        with self._mutation_scope():
+            return self._dispatcher.dispatch(creature, action, ctx, emit_fn)
 
     def get_perceived_events(self, creature: Creature) -> list[PerceivedEvent]:
         """Return perceived events for a creature (delegates to CreatureHost)."""
@@ -139,23 +143,24 @@ class Round:
 
         Returns an ActionContext if the creature can act, or None if the turn is skipped.
         """
-        self._host.reset_combat_turn_state(creature.id)
+        with self._mutation_scope():
+            self._host.reset_combat_turn_state(creature.id)
 
-        expired = tick_conditions(creature.conditions)
-        if expired:
-            logger.info("conditions_expired", conditions=[c.value for c in expired])
+            expired = tick_conditions(creature.conditions)
+            if expired:
+                logger.info("conditions_expired", conditions=[c.value for c in expired])
 
-        if is_incapacitated(creature.conditions):
-            logger.info("turn_skipped_incapacitated")
-            reasons = sorted(c.value for c in creature.conditions if is_incapacitated({c: None}))
-            emit_fn(
-                Event(
-                    event_type=EventType.TURN_SKIPPED,
-                    source_layer="entities",
-                    data={"entity_id": creature.id, "reason": "incapacitated", "conditions": reasons},
+            if is_incapacitated(creature.conditions):
+                logger.info("turn_skipped_incapacitated")
+                reasons = sorted(c.value for c in creature.conditions if is_incapacitated({c: None}))
+                emit_fn(
+                    Event(
+                        event_type=EventType.TURN_SKIPPED,
+                        source_layer="entities",
+                        data={"entity_id": creature.id, "reason": "incapacitated", "conditions": reasons},
+                    )
                 )
-            )
-            return None
+                return None
 
         weapon_info = "fists"
         if creature.equipped_weapon and creature.equipped_weapon.weapon_def:
@@ -165,21 +170,22 @@ class Round:
         conds_info = {c.value: r for c, r in creature.conditions.items()} if creature.conditions else {}
         logger.debug("combat_turn_start", weapon=weapon_info, conditions=conds_info)
 
-        speed = effective_speed(creature)
-        if speed != creature.speed:
-            logger.debug(
-                "speed_reduced",
-                base_speed=creature.speed,
-                effective_speed=speed,
-                conditions=[c.value for c in creature.conditions],
+        with self._mutation_scope():
+            speed = effective_speed(creature)
+            if speed != creature.speed:
+                logger.debug(
+                    "speed_reduced",
+                    base_speed=creature.speed,
+                    effective_speed=speed,
+                    conditions=[c.value for c in creature.conditions],
+                )
+            creature.turn_budget = TurnBudget(
+                actions=get_num_actions(creature),
+                bonus_actions=get_num_bonus_actions(creature),
+                movement_remaining=speed,
+                reaction=1,
             )
-        creature.turn_budget = TurnBudget(
-            actions=get_num_actions(creature),
-            bonus_actions=get_num_bonus_actions(creature),
-            movement_remaining=speed,
-            reaction=1,
-        )
-        creature.is_disengaging = False
+            creature.is_disengaging = False
 
         combat_state = self._host.get_combat(creature.location_id)
         return ActionContext(
@@ -234,7 +240,8 @@ class Round:
         if creature.brain is None:
             return []
 
-        ctx = self._prepare_combat_turn(creature, emit_fn)
+        with self._mutation_scope():
+            ctx = self._prepare_combat_turn(creature, emit_fn)
         if ctx is None:
             return []
 
@@ -470,11 +477,13 @@ class Round:
             for entity_id in list(combat.turn_order):
                 entity = self._host.get_entity(entity_id)
                 if isinstance(entity, Creature) and entity.is_alive and entity.active and entity.in_combat:
-                    entity.is_dodging = False  # dodge lasts until start of next turn
-                    entity.is_disengaging = False
+                    with self._mutation_scope():
+                        entity.is_dodging = False  # dodge lasts until start of next turn
+                        entity.is_disengaging = False
                     self.run_creature_turn(entity, time, query_fn, emit_fn)
             # End of round — check for combat exit
-            self._host.end_combat_round(location_id)
+            with self._mutation_scope():
+                self._host.end_combat_round(location_id)
 
         # Peaceful turns: creatures not in combat
         for creature in self._host.get_active_creatures():
@@ -483,7 +492,8 @@ class Round:
             self.run_creature_turn(creature, time, query_fn, emit_fn)
 
         # Advance time by one round (6 seconds)
-        tick_events = self._world.advance_time(TimeDelta.from_rounds(1))
+        with self._mutation_scope():
+            tick_events = self._world.advance_time(TimeDelta.from_rounds(1))
 
         logger.info("round_end", game_time=str(self._world.time), tick_events=len(tick_events))
         return RoundResult(events=tick_events)
@@ -492,7 +502,8 @@ class Round:
         """Update activation with materialization support."""
         qfn = self._world.make_query_fn("entities")
         efn = self._world.make_emit_fn("entities")
-        self._host.update_activation(self._world.time, query_fn=qfn, emit_fn=efn)
+        with self._mutation_scope():
+            self._host.update_activation(self._world.time, query_fn=qfn, emit_fn=efn)
 
     def run_loop(self, max_rounds: int | None = None) -> None:
         """Run rounds until no active creatures remain or stop() is called."""
@@ -528,21 +539,22 @@ class Round:
         Returns True if time was advanced (loop should continue), False if
         there's nobody to wake up (loop should exit).
         """
-        nearest_wake = self._host.get_nearest_wake_time()
+        with self._mutation_scope():
+            nearest_wake = self._host.get_nearest_wake_time()
 
-        if nearest_wake is None:
-            return False
+            if nearest_wake is None:
+                return False
 
-        now = self._world.time.to_total_seconds()
-        delta_seconds = nearest_wake - now
-        if delta_seconds <= 0:
-            # Timer already expired — just run update_activation
+            now = self._world.time.to_total_seconds()
+            delta_seconds = nearest_wake - now
+            if delta_seconds <= 0:
+                # Timer already expired — just run update_activation
+                self._activate()
+                return True
+
+            logger.info("fast_forward", delta_seconds=delta_seconds)
+            tick_events = self._world.advance_time(TimeDelta(seconds=delta_seconds))
             self._activate()
-            return True
-
-        logger.info("fast_forward", delta_seconds=delta_seconds)
-        tick_events = self._world.advance_time(TimeDelta(seconds=delta_seconds))
-        self._activate()
 
         if self._on_round_end:
             self._on_round_end(RoundResult(events=tick_events))

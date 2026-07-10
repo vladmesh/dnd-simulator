@@ -6,7 +6,7 @@ import dataclasses
 import os
 import random
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -281,6 +281,7 @@ class GameSession:
     _spectators: list[SessionEventListener] = field(default_factory=list, init=False, repr=False)
     _last_turn_msg: dict[str, Any] | None = field(default=None, init=False, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+    _world_state_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
     _on_empty: Callable[[GameSession], None] | None = field(default=None, init=False, repr=False)
     _evict_timer: threading.Timer | None = field(default=None, init=False, repr=False)
     _evict_grace_seconds: float = field(default=_DEFAULT_EVICT_GRACE_SECONDS, init=False, repr=False)
@@ -288,6 +289,18 @@ class GameSession:
     # ---------------------------------------------------------------------------
     # Player queries
     # ---------------------------------------------------------------------------
+
+    @contextlib.contextmanager
+    def read_world(self) -> Iterator[None]:
+        """Hold the session gate while reading a consistent world snapshot."""
+        with self._world_state_lock:
+            yield
+
+    @contextlib.contextmanager
+    def mutate_world(self) -> Iterator[None]:
+        """Hold the re-entrant session gate while mutating world state."""
+        with self._world_state_lock:
+            yield
 
     def get_players(self) -> list[PlayerCharacter]:
         return query_players(self.world.query_layer)
@@ -510,7 +523,13 @@ class GameSession:
             player.brain = brain
 
             dispatcher = create_dispatcher(self.world)
-            game_round = Round(self.world, creature_host, dispatcher=dispatcher, rng=self.dice_rng)
+            game_round = Round(
+                self.world,
+                creature_host,
+                dispatcher=dispatcher,
+                rng=self.dice_rng,
+                mutation_scope=self.mutate_world,
+            )
 
             # Wire on_action: fires after each action by any creature
             def on_action(creature: Creature, action: Action, budget: TurnBudget | None, error: str) -> None:
