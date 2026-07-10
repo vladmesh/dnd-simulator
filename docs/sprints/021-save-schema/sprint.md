@@ -22,7 +22,9 @@
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [World seed plumbing](tasks/phase1-task1-world-seed-plumbing.md)
+2. [Миграция bare-random сайтов на слоевой RNG](tasks/phase1-task2-bare-random-migration.md)
+3. [Сквозной тест воспроизводимости мира](tasks/phase1-task3-world-determinism-test.md)
 
 ## Phase 2: Unified Pydantic save schema
 
