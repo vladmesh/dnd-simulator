@@ -12,9 +12,9 @@
 **Sprint:** 022-intents-travel
 **Goal:** Любое существо может быть якорем и сохраняемым носителем намерения; ожидание, сон и путешествие исполняются во времени, travel движется по графу без телепортации, а save/load согласован с жизненным циклом раунда.
 **Started:** 2026-07-10
-**Phase:** 2 — Anchors, wait and sleep intents (all tasks done, ready to close) — 2026-07-11
+**Phase:** 2 — Anchors, wait and sleep intents (COMPLETE) — 2026-07-11
 
-Task 3 завершена: WAIT и sleep используют сохраняемый timed intent, эффекты отдыха применяются один раз при wake boundary. WebSocket wait рядом с RuleBrain NPC возвращает следующий ход через fast-forward. Full check: backend 2453 passed, frontend 274 passed. Phase 2 ready to close.
+WAIT и sleep используют сохраняемый timed intent, эффекты отдыха применяются один раз при wake boundary. Integration: 160 passed. Phase-scoped E2E: 4/4 passed. Ready for Phase 3 task generation.
 
 ### Phases
 

@@ -27,7 +27,7 @@ Save, load, autosave, evict и round loop согласованы одной sess
 3. [Consistent save and eviction paths](tasks/phase1-task3-consistent-save-paths.md)
 4. [Atomic load and connection-driven resume](tasks/phase1-task4-atomic-load-resume.md)
 
-## Phase 2: Anchors, wait and sleep intents
+## Phase 2: Anchors, wait and sleep intents ✓
 
 Якорь становится свойством существа, активация больше не проверяет `PlayerCharacter`. Wait и sleep представлены сохраняемыми намерениями с длительностью и wake-точкой. Проверка: любое назначенное якорем существо удерживает локальную сцену активной; wait/sleep переживает save/load; без бодрствующего якоря мир быстро переходит к ближайшему пробуждению.
 
@@ -63,7 +63,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 2 implementation complete. Ready to close phase.
+**Current:** Phase 2 complete. Ready for Phase 3 task generation.
 
 ## Decisions
 
