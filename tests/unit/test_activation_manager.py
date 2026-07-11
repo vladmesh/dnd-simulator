@@ -12,7 +12,8 @@ from dnd_simulator.core.character import (
     DamageComponent,
     DamageType,
 )
-from dnd_simulator.core.intent import IntentType, TimedIntent
+from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
+from dnd_simulator.core.location import Location, LocationEdge, LocationGraph
 from dnd_simulator.core.models import (
     ActionResult,
     Answer,
@@ -186,6 +187,44 @@ class TestProximityActivation:
         layer.update_activation(_TIME_0)
         assert sleeper.current_hp == 10
         assert pool.current_uses == 0
+
+    def test_traveler_stops_when_intermediate_location_has_awake_anchor(self) -> None:
+        now = _TIME_0.to_total_seconds()
+        traveler = Creature(id="traveler", name="Traveler", location_id="start", is_anchor=True)
+        traveler.current_intent = TravelIntent(now, "goal", ("road", "goal"), now)
+        scene_anchor = Creature(id="host", name="Host", location_id="road", is_anchor=True)
+        graph = LocationGraph(
+            [
+                Location("start", "Start", "r1", edges=(LocationEdge("road", 1000),)),
+                Location("road", "Road", "r1", edges=(LocationEdge("goal", 2000),)),
+                Location("goal", "Goal", "r1"),
+            ]
+        )
+
+        EntitiesLayer([traveler, scene_anchor]).update_activation(_TIME_0, location_graph=graph)
+
+        assert traveler.location_id == "road"
+        assert traveler.current_intent is None
+        assert traveler.active is True
+
+    def test_traveler_continues_through_dormant_intermediate_location(self) -> None:
+        now = _TIME_0.to_total_seconds()
+        traveler = Creature(id="traveler", name="Traveler", location_id="start", is_anchor=True)
+        traveler.current_intent = TravelIntent(now, "goal", ("road", "goal"), now)
+        dormant = Creature(id="local", name="Local", location_id="road", is_anchor=False)
+        graph = LocationGraph(
+            [
+                Location("start", "Start", "r1", edges=(LocationEdge("road", 1000),)),
+                Location("road", "Road", "r1", edges=(LocationEdge("goal", 2000),)),
+                Location("goal", "Goal", "r1"),
+            ]
+        )
+
+        EntitiesLayer([traveler, dormant]).update_activation(_TIME_0, location_graph=graph)
+
+        assert traveler.location_id == "road"
+        assert traveler.current_intent == TravelIntent(now, "goal", ("goal",), now + 1440)
+        assert traveler.active is False
 
 
 class TestEncounterCooldown:

@@ -14,9 +14,11 @@ import structlog
 
 from dnd_simulator.core.character import Character, Creature
 from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.intent import IntentInterruptReason
 from dnd_simulator.core.models import ActionResult, Event, EventType, FactionRelation, QueryFn
 from dnd_simulator.core.queries import query_faction_name, query_faction_relation
 from dnd_simulator.i18n import _
+from dnd_simulator.layers.entities.intent_completion import interrupt_intent
 from dnd_simulator.rules.combat import AttackResult
 from dnd_simulator.rules.combat import resolve_attack as roll_resolve_attack
 from dnd_simulator.rules.combat_sides import are_allies
@@ -192,6 +194,8 @@ def resolve_attack(mgr: CombatManager, event: Event, query_fn: QueryFn | None = 
 
     if result.hit:
         actual_damage = target.take_damage(result.total_damage)
+        if actual_damage > 0:
+            interrupt_intent(target, IntentInterruptReason.DAMAGE)
         log_data["damage"] = actual_damage
         log_data["total_damage"] = result.total_damage
         log_data["damage_components"] = build_damage_components(result, atk_mods.damage_components)

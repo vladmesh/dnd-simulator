@@ -12,9 +12,9 @@
 **Sprint:** 022-intents-travel
 **Goal:** Любое существо может быть якорем и сохраняемым носителем намерения; ожидание, сон и путешествие исполняются во времени, travel движется по графу без телепортации, а save/load согласован с жизненным циклом раунда.
 **Started:** 2026-07-10
-**Phase:** 4 — Interruptible journeys and E2E closure (tasks generated) — 2026-07-11
+**Phase:** 4 — Interruptible journeys and E2E closure (task 1 done, task 2 pending) — 2026-07-11
 
-Фаза разбита на встроенную политику прерываний, проверку save/load/reconnect lifecycle и финальный accessibility/E2E проход. Ready to start task 1.
+Урон, вход в бой и прибытие в активную сцену прерывают intent через единый idempotent helper. Обычные leg/timer completion сохранены. Ready to start task 2.
 
 ### Phases
 

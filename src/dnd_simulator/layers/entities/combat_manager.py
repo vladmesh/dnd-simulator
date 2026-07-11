@@ -8,10 +8,12 @@ import structlog
 
 from dnd_simulator.core.character import Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
+from dnd_simulator.core.intent import IntentInterruptReason
 from dnd_simulator.core.models import ActionResult, Event, EventType, FactionRelation, QueryFn
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.layers.entities import combat_resolution
 from dnd_simulator.layers.entities.combat_serialization import deserialize_combats, serialize_combats
+from dnd_simulator.layers.entities.intent_completion import interrupt_intent
 from dnd_simulator.rules.combat import roll_initiative
 from dnd_simulator.rules.combat_sides import build_combat_sides
 from dnd_simulator.rules.reputation import (
@@ -98,6 +100,7 @@ class CombatManager:
         self._combats[location_id] = combat
         self._attack_this_round[location_id] = False
         for c in creatures:
+            interrupt_intent(c, IntentInterruptReason.COMBAT)
             c.in_combat = True
             if c.turn_budget is None:  # reaction-only budget for OA before first turn
                 c.turn_budget = TurnBudget(

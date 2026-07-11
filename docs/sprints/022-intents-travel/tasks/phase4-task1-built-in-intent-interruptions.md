@@ -25,13 +25,21 @@ Likely files: `core/intent.py`, `layers/entities/intent_completion.py`, `layers/
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Damage, combat entry, and arrival into an awake scene interrupt through one idempotent operation.
-- [ ] Interrupted rest grants no completion effects and interrupted travel remains at the last reached location.
-- [ ] Timer completion, ordinary leg progression, and final arrival retain their existing successful behavior.
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Damage, combat entry, and arrival into an awake scene interrupt through one idempotent operation.
+- [x] Interrupted rest grants no completion effects and interrupted travel remains at the last reached location.
+- [x] Timer completion, ordinary leg progression, and final arrival retain their existing successful behavior.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added one idempotent interruption helper with built-in damage, combat, and scene reasons. Combat entry interrupts
+all participants before their combat state is initialized; positive attack damage uses the same helper without
+granting rest completion. Activation now commits travel one leg at a time, so arrival at a location already held by
+an awake anchor stops the traveler there, while dormant locations, final arrival, and timed completion keep their
+existing behavior. Full backend and frontend checks passed.

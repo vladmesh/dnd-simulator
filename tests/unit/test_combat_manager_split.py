@@ -22,7 +22,9 @@ from dnd_simulator.core.character import (
 )
 from dnd_simulator.core.class_features import RogueFeatures
 from dnd_simulator.core.combat import BattleMap, Position
-from dnd_simulator.core.models import Event
+from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
+from dnd_simulator.core.models import Event, EventType
+from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.layers.entities.combat_manager import (
     IDLE_ROUNDS_TO_END_COMBAT,
     INITIAL_REACTION_BUDGET,
@@ -341,6 +343,54 @@ class TestCombatStalemate:
         # Round 2: no attacks → stalemate
         cm.end_combat_round("arena")
         assert cm.get_combat("arena") is None
+
+
+class TestIntentInterruption:
+    def test_entering_combat_interrupts_all_participant_intents_in_place(self) -> None:
+        now = 100
+        sleeper = Creature(id="sleeper", name="Sleeper", location_id="arena", active=True, faction_id="a")
+        traveler = Creature(id="traveler", name="Traveler", location_id="arena", active=True, faction_id="b")
+        sleeper.current_intent = TimedIntent(IntentType.SLEEP, now, now + 3600)
+        traveler.current_intent = TravelIntent(now, "goal", ("road", "goal"), now + 600)
+        cm = CombatManager({"sleeper": sleeper, "traveler": traveler}, defaultdict(list))  # type: ignore[arg-type]
+
+        combat = cm.start_combat("arena")
+
+        assert combat is not None
+        assert sleeper.current_intent is None
+        assert traveler.current_intent is None
+        assert traveler.location_id == "arena"
+        assert combat.turn_order.count("sleeper") == 1
+        assert combat.turn_order.count("traveler") == 1
+
+    def test_damage_interrupts_sleep_without_applying_rest_rewards(self) -> None:
+        attacker = _fighter()
+        target = _goblin()
+        attacker.active = target.active = True
+        pool = ResourcePool("spell_slot_1", 2, 0, RestType.LONG_REST)
+        target.resource_pools.append(pool)
+        cm = CombatManager(
+            {attacker.id: attacker, target.id: target},
+            defaultdict(list),
+            rng=random.Random(0),
+        )  # type: ignore[arg-type]
+        cm.start_combat("loc")
+        target.current_intent = TimedIntent(IntentType.SLEEP, 100, 3700, rest_type=RestType.LONG_REST)
+        hp_before = target.current_hp
+        cm._rng.randint = lambda a, b: b  # type: ignore[method-assign]
+
+        result = cm.resolve_attack(
+            Event(
+                event_type=EventType.ENTITY_ATTACK,
+                source_layer="test",
+                data={"attacker_id": attacker.id, "target_id": target.id},
+            )
+        )
+
+        assert result.success is True
+        assert target.current_hp < hp_before
+        assert target.current_intent is None
+        assert pool.current_uses == 0
 
 
 # ---------------------------------------------------------------------------

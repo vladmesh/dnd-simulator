@@ -16,6 +16,14 @@ class IntentType(StrEnum):
     TRAVEL = "travel"
 
 
+class IntentInterruptReason(StrEnum):
+    """Built-in world events that stop an intent before completion."""
+
+    DAMAGE = "damage"
+    COMBAT = "combat"
+    SCENE = "scene"
+
+
 @dataclass(frozen=True)
 class TimedIntent:
     """A creature activity with an absolute start and wake boundary."""

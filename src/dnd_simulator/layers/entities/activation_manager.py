@@ -13,11 +13,15 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.character import Creature, Entity
-from dnd_simulator.core.intent import TimedIntent, TravelIntent
+from dnd_simulator.core.intent import IntentInterruptReason, TimedIntent, TravelIntent
 from dnd_simulator.core.models import Event
 from dnd_simulator.core.monster import EncounterEntry
 from dnd_simulator.layers.entities.encounters import check_encounters
-from dnd_simulator.layers.entities.intent_completion import advance_travel_intent, complete_timed_intent
+from dnd_simulator.layers.entities.intent_completion import (
+    advance_travel_leg,
+    complete_timed_intent,
+    interrupt_intent,
+)
 from dnd_simulator.layers.entities.materialization import update_lair_materialization, update_squad_materialization
 
 if TYPE_CHECKING:
@@ -91,8 +95,9 @@ class ActivationManager:
         # Snapshot active creature IDs before re-evaluation (for encounter checks).
         previously_active: set[str] = {e.id for e in self._entities.values() if isinstance(e, Creature) and e.active}
 
-        # First pass: expire timers and collect locations held by awake anchors.
-        anchor_locations: set[str] = set()
+        # Capture scenes held before arrivals. Travelers reaching one of these
+        # locations stop there instead of crossing it in one update.
+        occupied_scene_locations: set[str] = set()
         for e in self._entities.values():
             if not isinstance(e, Creature):
                 continue
@@ -100,14 +105,31 @@ class ActivationManager:
                 e.active = False
                 e.current_intent = None
                 continue
+            if e.is_anchor and e.current_intent is None:
+                effective_location = e.current_location(hour) if isinstance(e, Npc) else e.location_id
+                occupied_scene_locations.add(effective_location)
+
+        # First pass: expire timers and advance elapsed travel boundaries.
+        for e in self._entities.values():
+            if not isinstance(e, Creature) or not e.is_alive:
+                continue
             if isinstance(e.current_intent, TimedIntent) and now >= e.current_intent.wake_at_seconds:
                 complete_timed_intent(e, e.current_intent)
                 e.current_intent = None
                 logger.info("activation_wake_timer", entity_id=e.id)
-            elif isinstance(e.current_intent, TravelIntent) and now >= e.current_intent.next_arrival_seconds:
+            while isinstance(e.current_intent, TravelIntent) and now >= e.current_intent.next_arrival_seconds:
                 if location_graph is None:
                     raise RuntimeError("location graph is required to advance travel")
-                e.current_intent = advance_travel_intent(e, e.current_intent, now, location_graph)
+                e.current_intent = advance_travel_leg(e, e.current_intent, location_graph)
+                if e.current_intent is not None and e.location_id in occupied_scene_locations:
+                    interrupt_intent(e, IntentInterruptReason.SCENE)
+                    break
+
+        # Collect locations held after completions and interruptions.
+        anchor_locations: set[str] = set()
+        for e in self._entities.values():
+            if not isinstance(e, Creature) or not e.is_alive:
+                continue
             if e.is_anchor and e.current_intent is None:
                 effective_location = e.current_location(hour) if isinstance(e, Npc) else e.location_id
                 anchor_locations.add(effective_location)
