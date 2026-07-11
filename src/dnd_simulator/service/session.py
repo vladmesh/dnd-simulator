@@ -41,6 +41,11 @@ logger = structlog.get_logger(domain="session")
 # inside this window (StrictMode remount, network blip) cancels the evict. Configurable
 # for ops/tests; overridable per-session via ``GameSession._evict_grace_seconds``.
 _DEFAULT_EVICT_GRACE_SECONDS = float(os.getenv("DND_EVICT_GRACE_SECONDS", "1.5"))
+_DEFAULT_ROUND_STOP_TIMEOUT_SECONDS = float(os.getenv("DND_ROUND_STOP_TIMEOUT_SECONDS", "5"))
+
+
+class RoundStopTimeoutError(RuntimeError):
+    """The session's round thread did not stop within its lifecycle deadline."""
 
 
 # ---------------------------------------------------------------------------
@@ -308,6 +313,7 @@ class GameSession:
     _on_empty: Callable[[GameSession], None] | None = field(default=None, init=False, repr=False)
     _evict_timer: threading.Timer | None = field(default=None, init=False, repr=False)
     _evict_grace_seconds: float = field(default=_DEFAULT_EVICT_GRACE_SECONDS, init=False, repr=False)
+    _round_stop_timeout_seconds: float = field(default=_DEFAULT_ROUND_STOP_TIMEOUT_SECONDS, init=False, repr=False)
 
     # ---------------------------------------------------------------------------
     # Player queries
@@ -631,7 +637,7 @@ class GameSession:
             self._stop_round(discard_events=discard_events)
 
     def _stop_round(self, *, discard_events: bool = False) -> None:
-        """Stop the round loop and clean up."""
+        """Stop the round loop within the deadline, then clean up its lifecycle snapshot."""
         self._bind_session_context()
         logger.info("stop_round")
         with self._lock:
@@ -639,9 +645,6 @@ class GameSession:
             game_round = self._round
             brain = self._player_brain
             thread = self._round_thread
-            self._round = None
-            self._player_brain = None
-            self._round_thread = None
 
         if game_round is not None:
             if discard_events:
@@ -651,7 +654,26 @@ class GameSession:
             brain.submit_action(Action(name=ActionType.END_TURN))  # unblock queue
             brain.submit_reaction(Action(name=ActionType.SKIP))
         if thread is not None:
-            thread.join()
+            thread.join(timeout=self._round_stop_timeout_seconds)
+            if thread.is_alive():
+                logger.error(
+                    "stop_round_timeout",
+                    session_id=self.session_id,
+                    timeout_seconds=self._round_stop_timeout_seconds,
+                    thread_name=thread.name,
+                )
+                raise RoundStopTimeoutError(
+                    f"Round thread for session {self.session_id!r} did not stop within "
+                    f"{self._round_stop_timeout_seconds:g} seconds"
+                )
+
+        with self._lock:
+            if self._round is game_round:
+                self._round = None
+            if self._player_brain is brain:
+                self._player_brain = None
+            if self._round_thread is thread:
+                self._round_thread = None
 
     def clear_cached_turn(self) -> None:
         """Discard transport state tied to the world that was just replaced."""

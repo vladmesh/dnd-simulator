@@ -10,10 +10,12 @@ failure means a real bug, not a missing feature.
 from __future__ import annotations
 
 import threading
+import time
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+import structlog
 
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.brain import PlayerBrain
@@ -22,7 +24,7 @@ from dnd_simulator.core.world import World
 from dnd_simulator.round import Round
 from dnd_simulator.rules.movement import calculate_away_direction, calculate_direction
 from dnd_simulator.service import GameService
-from dnd_simulator.service.session import GameSession, resolve_abstract_move
+from dnd_simulator.service.session import GameSession, RoundStopTimeoutError, resolve_abstract_move
 from dnd_simulator.storage.store import SaveStore
 
 # ---------------------------------------------------------------------------
@@ -576,3 +578,58 @@ class TestStopRound:
         session, _player = session_with_player
         # No round started — stop_round must be a safe no-op.
         session.stop_round()
+
+    def test_timeout_preserves_lifecycle_until_same_thread_stops(self, session_with_player: Any) -> None:
+        session, player = session_with_player
+        callback_entered = threading.Event()
+        release_callback = threading.Event()
+        listener = RecordingListener()
+
+        def block_turn(_msg: dict[str, Any]) -> None:
+            callback_entered.set()
+            assert release_callback.wait(timeout=2)
+
+        listener.on_turn = block_turn  # type: ignore[method-assign]
+        session.add_listener(listener)
+        game_round = session.start_round(player)
+        brain = session._player_brain
+        thread = session._round_thread
+        assert brain is not None
+        assert thread is not None
+        session._round_stop_timeout_seconds = 0.01
+        assert callback_entered.wait(timeout=2)
+
+        started = time.monotonic()
+        with structlog.testing.capture_logs() as logs, pytest.raises(RoundStopTimeoutError):
+            session.stop_round()
+
+        assert time.monotonic() - started < 0.5
+        assert session._round is game_round
+        assert session._player_brain is brain
+        assert session._round_thread is thread
+        assert session.start_round(player) is game_round
+        assert session._round_thread is thread
+        assert [event["session_id"] for event in logs if event.get("event") == "stop_round_timeout"] == [
+            session.session_id
+        ]
+
+        release_callback.set()
+        session.stop_round()
+        assert session._round is None
+        assert session._player_brain is None
+        assert session._round_thread is None
+        assert not thread.is_alive()
+
+        replacement = session.start_round(player)
+        assert replacement is not game_round
+        assert session._round_thread is not thread
+
+    def test_parked_player_turn_stops_before_timeout(self, session_with_player: Any) -> None:
+        session, player = session_with_player
+        session._round_stop_timeout_seconds = 0.5
+        session.start_round(player)
+
+        started = time.monotonic()
+        session.stop_round()
+
+        assert time.monotonic() - started < session._round_stop_timeout_seconds

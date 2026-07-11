@@ -40,14 +40,26 @@ timeout и выбросить отдельную понятную lifecycle-ош
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check-backend`)
-- [ ] Stop ожидание ограничено одной именованной timeout-настройкой
-- [ ] Timeout не теряет ссылки на живой round thread
-- [ ] Живой старый thread исключает запуск второго round loop
-- [ ] Повторная остановка после освобождения callback полностью очищает lifecycle
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check-backend`)
+- [x] Stop ожидание ограничено одной именованной timeout-настройкой
+- [x] Timeout не теряет ссылки на живой round thread
+- [x] Живой старый thread исключает запуск второго round loop
+- [x] Повторная остановка после освобождения callback полностью очищает lifecycle
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+`GameSession._stop_round()` теперь сначала фиксирует lifecycle snapshot, останавливает round и разблокирует
+`PlayerBrain`, затем ждёт поток не дольше `DND_ROUND_STOP_TIMEOUT_SECONDS` (5 секунд по умолчанию). При timeout
+выбрасывается `RoundStopTimeoutError`, пишется `stop_round_timeout` с session/thread context, а ссылки на живые
+round, brain и thread остаются в сессии. Успешная повторная остановка очищает только тот же snapshot.
+
+Добавлены два lifecycle-теста: зависший listener callback покрывает timeout, идемпотентный start и recovery;
+обычный parked player turn подтверждает быстрый happy path. Backend gate: lint, format и mypy зелёные, 2475 тестов
+прошли; известный timing-флейк `test_wait_fast_forwards_past_nearby_rule_npc` один раз дал 5 сообщений вместо 4
+и сразу прошёл изолированно.
