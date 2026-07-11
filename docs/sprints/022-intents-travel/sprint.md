@@ -99,4 +99,10 @@ _(заполняется по ходу спринта)_
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-07-12
+
+Якорь стал player-agnostic свойством Creature. Wait, sleep и travel получили строгие сохраняемые intent; travel идёт по кратчайшему маршруту по рёбрам и штатно прерывается телесным событием, боем или активной сценой. Session-owned dice RNG, единый world-mutation gate, connection-driven resume и bounded round shutdown согласовали save/load/autosave с живым раундом.
+
+Спринт: 5 фаз, 15 задач, 32 коммита, 94 изменённых файла. Финальные гейты: integration 160/160, post-audit E2E 8/8. Audit после Phase 5 не нашёл блокеров.
+
+**Deferred:** декларативные trigger-table, Brain gate/decide, NPC wandering, LLM-планирование, цели и квесты остаются следующими эпиками simulation-core. Декомпозиция `service/session.py` и ожидаемые action errors, способные остановить round loop, остаются в `docs/BACKLOG.md`.

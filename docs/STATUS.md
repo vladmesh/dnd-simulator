@@ -3,28 +3,13 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-12
-**Position:** Sprint 020 закрыл thermo-sweep (корректность, чистота `rules/`, типизация границ, decomposition). Sprint 021 закрыл первый эпик simulation-core: версионированная Pydantic-схема сейва (`SaveGame`, schema_version=1), воспроизводимость мира от `DND_WORLD_SEED` (слоевые RNG, их состояние в сейве), периодический автосейв. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
-**Next:** Закрыть Sprint 022 после зелёного post-audit E2E.
+**Position:** Sprint 022 закрыл второй эпик simulation-core: player-agnostic якоря, сохраняемые wait/sleep/travel intent, по-рёберное путешествие и согласованный с round lifecycle save/load/autosave. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
+**Next:** Активного спринта нет. Главный следующий кандидат: `trigger-table`; смежные кандидаты — `brain-gate-decide` и containment ожидаемых action errors.
 **Blockers:** нет.
 
 ## Current Sprint
 
-**Sprint:** 022-intents-travel
-**Goal:** Любое существо может быть якорем и сохраняемым носителем намерения; ожидание, сон и путешествие исполняются во времени, travel движется по графу без телепортации, а save/load согласован с жизненным циклом раунда.
-**Started:** 2026-07-10
-**Phase:** 5 — Bounded round shutdown (COMPLETE) — 2026-07-12
-
-Post-sprint audit нашёл безлимитный `thread.join()` в остановке раунда. Bounded stop сохраняет lifecycle-ссылки живого потока; disconnect, load и eviction теперь не продолжают опасную операцию после timeout. Phase 5 закрыта: integration 160/160, E2E 3/3. Свежий audit после refactor-фазы не нашёл новых блокеров; post-audit E2E зелёный после quick fix generic Travel-кнопки, которая не передавала `destination_id`.
-
-**Audit:** Triaged 2026-07-12 after Phase 5. Quick-fix: 0 applied. Sprint-relevant: 1 (`session.py` decomposition explicitly deferred to existing backlog). Backlog: 12 already tracked or accepted, no duplicates added.
-
-### Phases
-
-1. Safe session lifecycle
-2. Anchors, wait and sleep intents
-3. Travel as an intent
-4. Interruptible journeys and E2E closure
-5. Bounded round shutdown
+No active sprint.
 
 ## Recent activity (non-sprint)
 
@@ -40,6 +25,7 @@ Post-sprint audit нашёл безлимитный `thread.join()` в оста�
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 022-intents-travel | Player-agnostic якоря и сохраняемые wait/sleep/travel intent; travel по рёбрам; согласованный lifecycle save/load/autosave | 2026-07-10 | 2026-07-12 |
 | 021-save-schema | Версионированная Pydantic-схема сейва (schema_version=1, RNG в сейве, combat sides), воспроизводимость мира от DND_WORLD_SEED, периодический автосейв | 2026-07-10 | 2026-07-10 |
 | 020-thermo-sweep | Закрыть структурный долг из термоядерного ревью: корректность + чистота rules, типизация границ, backend/frontend decomposition, сверка с simulation-core | 2026-06-30 | 2026-07-10 |
 | 019-control-plane-prep | Отвердить control-plane под разрез на роли: GameService 1044→357 (миксины WorldBuilderCommands/PlayerCommands), тест-сетка на session, развязка core/adapter (action_parsing seam, public World query API), видимые дырки (combat-log i18n, encounter-перцептор, труп-кнопки) | 2026-06-28 | 2026-06-29 |
