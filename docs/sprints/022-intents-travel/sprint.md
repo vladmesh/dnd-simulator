@@ -39,7 +39,7 @@ Save, load, autosave, evict и round loop согласованы одной sess
 2. [Anchor-driven activation and fast-forward](tasks/phase2-task2-anchor-activation-fast-forward.md)
 3. [Wait and sleep intent lifecycle](tasks/phase2-task3-wait-sleep-lifecycle.md)
 
-## Phase 3: Travel as an intent
+## Phase 3: Travel as an intent ✓
 
 Игрок начинает настоящее travel-намерение. Путешественник проходит маршрут по рёбрам графа, остаётся в конкретной локации на каждом шаге и прибывает после игрового времени, а не телепортируется через `WAIT`. UI показывает текущее путешествие и его завершение. Проверка: маршрут из нескольких рёбер виден по шагам; save/load в середине дороги продолжает тот же маршрут; два активных существа могут оказаться в одной промежуточной точке.
 
@@ -65,7 +65,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 3 tasks complete. Ready to close the phase.
+**Current:** Phase 3 complete. Ready for Phase 4 task generation.
 
 ## Decisions
 

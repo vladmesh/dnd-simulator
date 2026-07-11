@@ -40,6 +40,7 @@
   "use_item": "Use Item",
   "idle": "Look",
   "wait": "Wait",
+  "travel": "Travel",
   "say": "Say",
   "distance": "{{ft}}ft {{dir}}",
   "battle_map": "Battle Map",
