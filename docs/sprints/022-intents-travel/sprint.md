@@ -84,7 +84,7 @@ Wait, sleep и travel штатно прерываются базовыми вс�
 
 ## Status
 
-**Current:** Phase 5 complete. All phases complete; ready for fresh audit.
+**Current:** Phase 5 complete. Fresh audit triaged; post-audit E2E green. Ready to close sprint.
 
 ## Decisions
 

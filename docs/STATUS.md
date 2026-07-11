@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-07-12
 **Position:** Sprint 020 закрыл thermo-sweep (корректность, чистота `rules/`, типизация границ, decomposition). Sprint 021 закрыл первый эпик simulation-core: версионированная Pydantic-схема сейва (`SaveGame`, schema_version=1), воспроизводимость мира от `DND_WORLD_SEED` (слоевые RNG, их состояние в сейве), периодический автосейв. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
-**Next:** Post-audit E2E для Sprint 022 после закрытия bounded round shutdown и свежего audit triage.
+**Next:** Закрыть Sprint 022 после зелёного post-audit E2E.
 **Blockers:** нет.
 
 ## Current Sprint
@@ -14,7 +14,7 @@
 **Started:** 2026-07-10
 **Phase:** 5 — Bounded round shutdown (COMPLETE) — 2026-07-12
 
-Post-sprint audit нашёл безлимитный `thread.join()` в остановке раунда. Bounded stop сохраняет lifecycle-ссылки живого потока; disconnect, load и eviction теперь не продолжают опасную операцию после timeout. Phase 5 закрыта: integration 160/160, E2E 3/3. Свежий audit после refactor-фазы не нашёл новых блокеров; нужен post-audit E2E.
+Post-sprint audit нашёл безлимитный `thread.join()` в остановке раунда. Bounded stop сохраняет lifecycle-ссылки живого потока; disconnect, load и eviction теперь не продолжают опасную операцию после timeout. Phase 5 закрыта: integration 160/160, E2E 3/3. Свежий audit после refactor-фазы не нашёл новых блокеров; post-audit E2E зелёный после quick fix generic Travel-кнопки, которая не передавала `destination_id`.
 
 **Audit:** Triaged 2026-07-12 after Phase 5. Quick-fix: 0 applied. Sprint-relevant: 1 (`session.py` decomposition explicitly deferred to existing backlog). Backlog: 12 already tracked or accepted, no duplicates added.
 

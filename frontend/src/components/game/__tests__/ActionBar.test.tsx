@@ -91,6 +91,17 @@ beforeEach(() => {
 })
 
 describe("ActionBar — cost-type styling", () => {
+  it("leaves destination-based travel to the location panel", () => {
+    setCombatState([
+      makeAction("travel", "action", [{ name: "destination_id", type: "string", required: true }]),
+      makeAction("end_turn", "free"),
+    ], fullBudget)
+
+    render(<ActionBar />)
+
+    expect(screen.queryByRole("button", { name: /travel|путеше/i })).not.toBeInTheDocument()
+  })
+
   it("renders core combat buttons with data-cost-type attribute", () => {
     setCombatState(
       [
