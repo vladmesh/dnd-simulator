@@ -12,9 +12,9 @@
 **Sprint:** 022-intents-travel
 **Goal:** Любое существо может быть якорем и сохраняемым носителем намерения; ожидание, сон и путешествие исполняются во времени, travel движется по графу без телепортации, а save/load согласован с жизненным циклом раунда.
 **Started:** 2026-07-10
-**Phase:** 2 — Anchors, wait and sleep intents (COMPLETE) — 2026-07-11
+**Phase:** 3 — Travel as an intent (tasks generated) — 2026-07-11
 
-WAIT и sleep используют сохраняемый timed intent, эффекты отдыха применяются один раз при wake boundary. Integration: 160 passed. Phase-scoped E2E: 4/4 passed. Ready for Phase 3 task generation.
+Фаза разбита на 3 задачи: строгий сохраняемый маршрут, пошаговое движение по рёбрам через travel intent и отображение путешествия в общем REST/WS-контракте и UI. Ready to start task 1.
 
 ### Phases
 

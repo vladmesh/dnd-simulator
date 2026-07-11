@@ -47,7 +47,9 @@ Save, load, autosave, evict и round loop согласованы одной sess
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Travel route contract](tasks/phase3-task1-travel-route-contract.md)
+2. [Travel action and leg progression](tasks/phase3-task2-travel-action-progression.md)
+3. [Journey status and UI](tasks/phase3-task3-journey-ui.md)
 
 ## Phase 4: Interruptible journeys and E2E closure
 
@@ -63,7 +65,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 2 complete. Ready for Phase 3 task generation.
+**Current:** Phase 3 tasks generated. Ready to start task 1.
 
 ## Decisions
 
