@@ -41,14 +41,25 @@ transport-specific флаги и не расширять фазу общей д�
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check-backend`)
-- [ ] Failed stop never replaces world or evicts the live session
-- [ ] Конкурентный reconnect не создаёт второй round loop
-- [ ] Фоновый timeout залогирован и не теряется в Timer thread
-- [ ] После завершения callback load и eviction можно успешно повторить
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check-backend`)
+- [x] Failed stop never replaces world or evicts the live session
+- [x] Конкурентный reconnect не создаёт второй round loop
+- [x] Фоновый timeout залогирован и не теряется в Timer thread
+- [x] После завершения callback load и eviction можно успешно повторить
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Disconnect теперь перехватывает `RoundStopTimeoutError`, пишет `disconnect_stop_failed` и всё равно ставит
+deferred empty-check; reconnect сериализован тем же `_round_transition_lock`, а живой loop остаётся привязан к
+сессии. Eviction при timeout пишет `evict_stop_failed`, не вызывает `_on_empty` и планирует повторную проверку
+через обычный grace interval, поэтому autosave и удаление registry entry не происходят на живом round.
+
+Load сохранил правильную fail-fast семантику: `replace_world_state()` пробрасывает timeout до очистки cached turn
+и входа в loader. Новый round-trip тест фиксирует неизменность world, dice RNG, brain/lifecycle и transport cache,
+затем успешную повторную загрузку. Полный `make check` зелёный: backend 2479, frontend 282.

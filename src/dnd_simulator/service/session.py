@@ -437,7 +437,10 @@ class GameSession:
             logger.info("remove_listener", listener_count=count, player_empty=player_empty, stop_round=stop_round)
             if stop_round:
                 # Pause before a reconnect can enter add_listener/start_round.
-                self._stop_round()
+                try:
+                    self._stop_round()
+                except RoundStopTimeoutError:
+                    logger.exception("disconnect_stop_failed", session_id=self.session_id)
             if player_empty:
                 # Arm eviction before allowing add_listener to enter; a reconnect then
                 # cancels this exact timer while it starts the next round.
@@ -476,7 +479,14 @@ class GameSession:
                 stop_round = True
         logger.info("evict_check_firing", stop_round=stop_round)
         if stop_round:
-            self.stop_round()
+            try:
+                self.stop_round()
+            except RoundStopTimeoutError:
+                logger.exception("evict_stop_failed", session_id=self.session_id)
+                with self._lock:
+                    if not self.has_player_listeners():
+                        self._schedule_evict_check()
+                return
         if self._on_empty is not None:
             self._on_empty(self)
 

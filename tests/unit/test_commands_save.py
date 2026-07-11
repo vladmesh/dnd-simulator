@@ -9,6 +9,7 @@ remaining gaps (``load_game`` state restore + brain reassignment, ``list_saves``
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -18,6 +19,7 @@ from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.rules.dice import roll
 from dnd_simulator.rules.rule_brain import RuleBrain
 from dnd_simulator.service import GameService
+from dnd_simulator.service.session import RoundStopTimeoutError
 from dnd_simulator.storage.store import JsonFileStore
 
 
@@ -203,6 +205,43 @@ class TestLoadGameRoundTrip:
         assert restored._round is None
         assert restored._round_thread is None
         assert restored._player_brain is None
+
+    def test_stop_timeout_preserves_live_state_and_retry_loads(self, tmp_path: Path) -> None:
+        svc = _make_service(tmp_path)
+        session = svc.start_game("sword_vale")
+        sid = session.session_id
+        svc.save_game(sid, "snap")
+        svc.advance_time(sid, 5)
+        live_time = session.world.time
+        live_rng_state = session.dice_rng.getstate()
+        live_round = MagicMock()
+        live_brain = MagicMock()
+        live_thread = MagicMock()
+        session._round = live_round
+        session._player_brain = live_brain
+        session._round_thread = live_thread
+        session._last_turn_msg = {"type": "live"}
+        original_stop = session._stop_round
+        session._stop_round = MagicMock(side_effect=RoundStopTimeoutError("blocked"))  # type: ignore[method-assign]
+
+        with pytest.raises(RoundStopTimeoutError):
+            svc.load_game(sid, "snap")
+
+        assert session.world.time == live_time
+        assert session.dice_rng.getstate() == live_rng_state
+        assert session._round is live_round
+        assert session._player_brain is live_brain
+        assert session._round_thread is live_thread
+        assert session.get_last_turn_msg() == {"type": "live"}
+
+        session._stop_round = original_stop  # type: ignore[method-assign]
+        session._round = None
+        session._player_brain = None
+        session._round_thread = None
+        svc.load_game(sid, "snap")
+
+        assert session.world.time != live_time
+        assert session.get_last_turn_msg() is None
 
 
 class TestListAndDeleteSaves:

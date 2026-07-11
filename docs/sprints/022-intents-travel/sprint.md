@@ -84,7 +84,7 @@ Wait, sleep и travel штатно прерываются базовыми вс�
 
 ## Status
 
-**Current:** Phase 5 task 1 done. Ready for task 2.
+**Current:** Phase 5 tasks done. Ready to close phase.
 
 ## Decisions
 

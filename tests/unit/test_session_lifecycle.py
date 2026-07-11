@@ -218,6 +218,26 @@ class TestEmptyListeners:
         assert not reconnect.is_alive()
         assert session._listeners == [new_listener]
 
+    def test_disconnect_timeout_is_logged_and_leaves_retryable_session(self) -> None:
+        session = _session()
+        session._evict_grace_seconds = 3600
+        listener = RecordingListener()
+        session.add_listener(listener)
+        game_round = MagicMock(spec=Round)
+        session._round = game_round
+        session._stop_round = MagicMock(side_effect=RoundStopTimeoutError("blocked"))  # type: ignore[method-assign]
+
+        with structlog.testing.capture_logs() as logs:
+            session.remove_listener(listener)
+
+        assert session._round is game_round
+        assert session._evict_timer is not None
+        assert [event["session_id"] for event in logs if event.get("event") == "disconnect_stop_failed"] == [
+            session.session_id
+        ]
+        session.add_listener(RecordingListener())
+        assert session._round is game_round
+
 
 class TestSpectatorListener:
     """Read-only spectators (Sprint 020 phase 3): receive the broadcast, never drive lifecycle."""
@@ -383,6 +403,33 @@ class TestEvictGracePeriod:
         assert session._evict_timer is not None
         session._evict_timer.cancel()
 
+        session._run_evict_check()
+
+        assert fired == [session]
+
+    def test_stop_timeout_defers_evict_until_retry_succeeds(self) -> None:
+        session = _session()
+        session._evict_grace_seconds = 3600
+        session._round = MagicMock(spec=Round)
+        fired: list[GameSession] = []
+        session._on_empty = lambda s: fired.append(s)
+        session._stop_round = MagicMock(side_effect=RoundStopTimeoutError("blocked"))  # type: ignore[method-assign]
+
+        with structlog.testing.capture_logs() as logs:
+            session._run_evict_check()
+
+        assert fired == []
+        assert session._evict_timer is not None
+        assert [event["session_id"] for event in logs if event.get("event") == "evict_stop_failed"] == [
+            session.session_id
+        ]
+
+        session._evict_timer.cancel()
+
+        def successful_stop(*, discard_events: bool = False) -> None:
+            session._round = None
+
+        session._stop_round = successful_stop  # type: ignore[method-assign]
         session._run_evict_check()
 
         assert fired == [session]
