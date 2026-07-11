@@ -135,7 +135,7 @@ Round orchestrator (round.py):
 run_loop:
     while not stopped:
         update_activation → get active creatures
-        if none active → fast_forward to nearest wake_at or exit
+        if none active → fast_forward to nearest intent boundary or exit
         run_round → on_round_end callback
 
 Player input flow (service/, command-based):
@@ -176,7 +176,7 @@ Calendar: 30 days/month, 12 months/year.
 
 ```
 Entity (id, name, location_id, active, on_tick)
-└── Creature (ability_scores, HP, AC, in_combat, is_dodging, is_disengaging, wake_at_seconds, brain, turn_budget, combat_position, equipped_weapon, equipped_armor, equipped_shield, equipped_head, equipped_feet, equipped_ring, resource_pools, faction_id, reputation, squad_id, xp_value, execute_action)
+└── Creature (ability_scores, HP, AC, in_combat, is_dodging, is_disengaging, is_anchor, current_intent, brain, turn_budget, combat_position, equipment, resource_pools, faction_id, reputation, squad_id, xp_value, execute_action)
     └── Character (race, class, alignment, gold, appearance, class_features, level, experience, level_up_available, perceive_by_id, get_npc_data)
         ├── PlayerCharacter (interactive I/O, overrides take_turn directly)
         └── Npc (role, personality, schedule, memory: NpcMemory, ai_type — brain assigned by content_loader/adapter)
@@ -184,7 +184,7 @@ Entity (id, name, location_id, active, on_tick)
 
 All tracked entities live on the `EntitiesLayer`. The layer's `tick()` is a no-op — the Round orchestrator calls `run_creature_turn` directly for both combat and peaceful turns. `Entity.on_tick(hour)` is called by the Round to update NPC activity based on daily schedule.
 
-**Activation system:** `EntitiesLayer.update_activation(time)` runs at the start of each round. Players without `wake_at_seconds` are anchors; creatures at an anchor's location become active, all others go dormant. Creatures in combat stay active. NPCs are moved to their scheduled location when activated. The `wait` action sets `wake_at_seconds` on the creature and marks it dormant. When no active creatures exist, `Round.run_loop()` fast-forwards `World.advance_time()` to the nearest `wake_at`, re-runs activation, and continues. If nobody has a `wake_at`, the loop exits.
+**Activation system:** `EntitiesLayer.update_activation(time)` runs at the start of each round. Any living creature with `is_anchor=True` and no `current_intent` holds its location active; creatures at an anchor's location become active, all others go dormant. Creatures in combat stay active. NPCs are moved to their scheduled location when activated. Wait and sleep use persisted `TimedIntent`; travel uses persisted `TravelIntent` with a destination, remaining route, and next edge-arrival boundary. `Round.run_loop()` fast-forwards to the nearest intent boundary when no creature needs a turn. Travel advances one graph edge per boundary and can be interrupted by damage, combat, or arrival in an occupied scene.
 
 `World.location_graph` (`LocationGraph`) provides a flat graph of all locations. Each `Location` node has a `region_id` tag (for weather/terrain lookups) and an optional `settlement_id` tag (for economy/NPC binding). Entities hold a `location_id` and the graph resolves which region/settlement they are in. Edges between locations carry distances in meters; `travel_seconds()` computes travel time.
 
@@ -277,9 +277,9 @@ Centralized derived stat computation replacing ad-hoc logic scattered across com
 
 **Save format** (Sprint 021): one versioned Pydantic envelope — `SaveGame(schema_version=1, meta, world)` in `storage/save_schema.py`. `WorldSave` carries the world seed, dice RNG state, time, last tick times, and typed layer states: each layer owns a state model (`layers/*/state.py`, `layers/entities/save_models.py`) that is the authoritative format (`extra="forbid"`), while the `Layer` ABC keeps its dict-facing `get_state()/load_state()` signatures (core stays pydantic-free). Entity payloads are a discriminated union on `entity_type` (`PlayerSave`/`NpcSave`/`CreatureSave`/`ContainerSave`) built directly from live objects in `entity_serialization.py`; combat state persists turn order, round, battle map, and sides. `save_game()` and `autosave_session()` build the same envelope; `load_game()` validates it and rejects legacy saves without `schema_version`.
 
-**Reproducibility**: `DND_WORLD_SEED` (env; random + logged when absent) seeds the world in `game_service` — per-layer seeds are derived deterministically and passed to layer constructors, which own their `random.Random` streams (weather, politics, ecology roam/retreat/lair depletion, entity encounters). The dice RNG (`rules/dice.py`, `DND_DICE_SEED`) is a separate stream. All RNG states are serialized into the save, so a loaded game continues the same random sequences — same seed, same content → identical world evolution (pinned by `tests/unit/test_world_seed.py`).
+**Reproducibility**: `DND_WORLD_SEED` (env; random + logged when absent) seeds the world in `game_service`; per-layer seeds are derived deterministically and passed to layer-owned `random.Random` streams. Each `GameSession` owns its dice RNG (`DND_DICE_SEED` supplies the initial seed), so concurrent sessions cannot shift one another's rolls. All RNG states are serialized into the save, so a loaded game continues the same random sequences. Same seed plus the same content produces identical world evolution.
 
-**Autosave**: per-action (create_player), on session evict, on shutdown, plus a periodic lifespan task every `DND_AUTOSAVE_SECONDS` (default 120, cancelled before the final shutdown autosave). Autosave failures are logged, never suppressed.
+**Autosave and round lifecycle**: per-action (create_player), session evict, shutdown, and periodic autosave all take a session snapshot through the same world-mutation gate used by round actions. File I/O happens after the snapshot is built. Load stops the old round before replacing world/RNG state and resumes only after a player reconnects. Round shutdown has a bounded timeout (`DND_ROUND_STOP_TIMEOUT_SECONDS`, default 5); on timeout the session retains the live round/thread references and load or eviction aborts safely. Autosave failures are logged, never suppressed.
 
 ## Logging
 

@@ -3,7 +3,8 @@
 - GameService: world loading, session creation/deletion; thin facade composed of command mixins
 - WorldBuilderCommands / PlayerCommands: mixins peeled off GameService (world+content+catalog CRUD;
   create_player/level_up_player/player_status). GameServiceProtocol (base) declares the shared interface
-- GameSession: player connection, round thread, listener dispatch, action submission
+- GameSession: player connection, bounded round-thread lifecycle, world snapshot gate,
+  listener dispatch, action submission
 - ActionDispatcher: validate → handler → budget consume pipeline
 - action_parsing: parse JSON payloads into Action (ActionParseError); keeps adapters off core Action types
 - BrainFactory: creates Brain instances from ai_type string
