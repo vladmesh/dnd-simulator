@@ -63,17 +63,35 @@ Wait, sleep и travel штатно прерываются базовыми вс�
 2. [Interruption lifecycle consistency](tasks/phase4-task2-interruption-lifecycle.md)
 3. [Target accessibility and journey E2E](tasks/phase4-task3-accessibility-e2e.md)
 
+## Phase 5: Bounded round shutdown
+
+Остановка round thread получает ограниченное время ожидания и явный отказ вместо бессрочного
+зависания disconnect, load или eviction. Пока старый поток жив, сессия сохраняет его lifecycle-состояние
+и не позволяет запустить новый раунд или заменить world. Проверка: зависший callback быстро возвращает
+контролируемую ошибку, а после освобождения callback повторная остановка штатно очищает сессию.
+
+Почему отдельной refactor-фазой: post-sprint audit обнаружил, что `_stop_round()` делает безлимитный
+`join()` и заранее теряет ссылки на ещё живой поток. Это нарушает атомарный load-контракт Phase 1 и может
+заблокировать disconnect/eviction. Фаза ограничена lifecycle-путём; общая декомпозиция `session.py`,
+`round.py` и entities layer остаётся в существующем backlog.
+
+**Tasks:**
+
+1. [Bounded round-stop contract](tasks/phase5-task1-bounded-round-stop.md)
+2. [Lifecycle boundary failure handling](tasks/phase5-task2-lifecycle-boundary-failures.md)
+
 ---
 
 ## Status
 
-**Current:** All phases complete. Ready for audit.
+**Current:** Phase 5 planned. Ready for task 1.
 
 ## Decisions
 
 - Граница Sprint 022: anchors + сохраняемые intents для wait/sleep/travel + встроенные прерывания. Декларативные trigger-table, Brain gate/decide, NPC wandering, LLM-планирование, цели и квесты остаются за пределами спринта (2026-07-10).
 - Связанные lifecycle-дефекты `save-round-concurrency`, `load-combat-round-resume` и `wait-no-fastforward-with-npc` входят в основной scope; `attack-buttons-accessible-names` закрывается как E2E-polish (2026-07-10).
 - Phase 1: session-level world gate недостаточен, пока dice RNG process-global. Dice RNG переводится во владение сессии до синхронизации snapshot; модульный fallback остаётся только для изолированных правиловых тестов (2026-07-10).
+- Post-sprint audit: bounded round shutdown выделен в Phase 5. Общая декомпозиция lifecycle/payload responsibilities и растущих entities/round modules остаётся в каноническом backlog, без расширения refactor-фазы (2026-07-12).
 
 ## Deferred
 

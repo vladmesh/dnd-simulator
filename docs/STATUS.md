@@ -2,9 +2,9 @@
 
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
-**Last updated:** 2026-07-11
+**Last updated:** 2026-07-12
 **Position:** Sprint 020 закрыл thermo-sweep (корректность, чистота `rules/`, типизация границ, decomposition). Sprint 021 закрыл первый эпик simulation-core: версионированная Pydantic-схема сейва (`SaveGame`, schema_version=1), воспроизводимость мира от `DND_WORLD_SEED` (слоевые RNG, их состояние в сейве), периодический автосейв. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
-**Next:** Sprint 022 исполняет цепочку simulation-core: safe session lifecycle → anchors/intents → travel → interruptible journeys.
+**Next:** Sprint 022 закрывает post-audit refactor-фазу: bounded round shutdown без зависания disconnect/load/eviction.
 **Blockers:** нет.
 
 ## Current Sprint
@@ -12,9 +12,11 @@
 **Sprint:** 022-intents-travel
 **Goal:** Любое существо может быть якорем и сохраняемым носителем намерения; ожидание, сон и путешествие исполняются во времени, travel движется по графу без телепортации, а save/load согласован с жизненным циклом раунда.
 **Started:** 2026-07-10
-**Phase:** 4 — Interruptible journeys and E2E closure (COMPLETE) — 2026-07-11
+**Phase:** 5 — Bounded round shutdown (tasks generated) — 2026-07-12
 
-Урон, вход в бой и прибытие в активную сцену прерывают intent через единый idempotent helper. Task 2 закрепил согласованность прерываний через session boundary (6 тестов в `test_interruption_lifecycle.py`). Task 3 закрыл `attack-buttons-accessible-names` (target-aware `aria-label` по уникальному `entity.id`, EN/RU, подтверждено браузерным E2E). Phase-4 E2E прошёл 5/5, integration suite прошёл 160/160. Все фазы завершены. Спринт готов к аудиту (`/audit`).
+Post-sprint audit нашёл безлимитный `thread.join()` в остановке раунда. Phase 5 добавлена как узкая lifecycle-refactor фаза: bounded stop сохраняет управляемое состояние живого потока, а disconnect, load и eviction не продолжаются после timeout. Готова Task 1.
+
+**Audit:** Triaged 2026-07-12. Quick-fix: 0. Sprint-relevant: 4 (bounded shutdown + tests → Phase 5; structural decomposition deferred to existing backlog). Backlog: 11 already tracked, no duplicates added.
 
 ### Phases
 
@@ -22,6 +24,7 @@
 2. Anchors, wait and sleep intents
 3. Travel as an intent
 4. Interruptible journeys and E2E closure
+5. Bounded round shutdown
 
 ## Recent activity (non-sprint)
 
