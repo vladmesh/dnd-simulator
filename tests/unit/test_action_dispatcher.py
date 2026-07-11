@@ -357,16 +357,16 @@ class TestHandleWait:
         handle_wait(_creature(), action, emit, _PEACEFUL, world)
         assert len(emitted) == 0
 
-    def test_wait_travel(self) -> None:
+    def test_wait_does_not_travel(self) -> None:
         world = MagicMock()
-        world.location_graph.travel_seconds.return_value = 600
+        world.time.to_total_seconds.return_value = 0
         creature = _creature()
         creature.location_id = "loc_a"
         action = Action(name=ActionType.WAIT, params={"travel_to": "loc_b"})
         result = handle_wait(creature, action, _noop_emit, _PEACEFUL, world)
         assert result.success
-        assert creature.location_id == "loc_b"
-        world.advance_time.assert_called_once()
+        assert creature.location_id == "loc_a"
+        world.advance_time.assert_not_called()
 
 
 class TestHandleDash:

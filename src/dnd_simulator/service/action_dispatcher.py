@@ -48,6 +48,7 @@ from dnd_simulator.rules.handlers import (
     handle_sell,
     handle_short_rest,
     handle_take,
+    handle_travel,
     handle_use_item,
     handle_wait,
 )
@@ -164,6 +165,7 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.register(ActionType.DASH, handle_dash)
     dispatcher.register(ActionType.DISENGAGE, handle_disengage)
     dispatcher.register(ActionType.WAIT, handle_wait)
+    dispatcher.register(ActionType.TRAVEL, handle_travel)
     dispatcher.register(ActionType.USE_ITEM, handle_use_item)
     dispatcher.register(ActionType.BLESS, handle_bless)
     for _equip_action, _equip_handler in EQUIPMENT_HANDLERS.items():

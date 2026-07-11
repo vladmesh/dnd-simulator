@@ -28,14 +28,18 @@ Likely files: `core/action.py`, `core/action_defs.py`, `service/action_dispatche
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] `TRAVEL` is a peaceful action and `WAIT` has no travel parameter or teleport branch.
-- [ ] Location changes occur only at graph-edge time boundaries, one edge at a time.
-- [ ] Fast-forward, save/load, and concurrent travelers preserve route progress.
-- [ ] Invalid travel is atomic from the caller's perspective.
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] `TRAVEL` is a peaceful action and `WAIT` has no travel parameter or teleport branch.
+- [x] Location changes occur only at graph-edge time boundaries, one edge at a time.
+- [x] Fast-forward, save/load, and concurrent travelers preserve route progress.
+- [x] Invalid travel is atomic from the caller's perspective.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+`ActionType.TRAVEL` now resolves and stores the route without moving the actor or advancing world time. Activation advances every elapsed leg boundary, schedules the next one from the persisted boundary, and clears the intent only on final arrival; the round loop passes the world graph into activation and treats travel arrivals as fast-forward wake points. Legacy `WAIT + travel_to` behavior and schema were removed. Product tests cover intermediate nodes, invalid atomic starts, multi-leg fast-forward, two travelers sharing a node, and save/load continuation.

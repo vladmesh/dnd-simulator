@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     )
     from dnd_simulator.core.character import Character, Creature, Entity
     from dnd_simulator.core.combat import CombatState
+    from dnd_simulator.core.location import LocationGraph
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn
     from dnd_simulator.core.turn_budget import TurnBudget
 
@@ -53,6 +54,7 @@ class CreatureHost(Protocol):
         time: GameDateTime,
         query_fn: QueryFn | None = None,
         emit_fn: EmitFn | None = None,
+        location_graph: LocationGraph | None = None,
     ) -> None:
         """Refresh active/dormant state based on proximity to awake anchors."""
         ...

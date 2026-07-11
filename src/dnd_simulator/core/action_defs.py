@@ -274,11 +274,20 @@ _reg(
         cost_type=CostType.FREE,
         combat_mode=CombatMode.PEACEFUL_ONLY,
         ends_peaceful_turn=True,
-        params=(
-            ParamDef("hours", "integer", N_("How many hours to wait (default: 1)")),
-            ParamDef("travel_to", "string", N_("Location ID to travel to instead of waiting in place")),
-        ),
+        params=(ParamDef("hours", "integer", N_("How many hours to wait (default: 1)")),),
         llm_hint="Wait and do nothing for a period of time. Useful when nothing is happening.",
+    )
+)
+
+_reg(
+    ActionDef(
+        action_type=ActionType.TRAVEL,
+        description=N_("Travel to a location through the world map."),
+        cost_type=CostType.FREE,
+        combat_mode=CombatMode.PEACEFUL_ONLY,
+        ends_peaceful_turn=True,
+        params=(ParamDef("destination_id", "string", N_("Location ID to travel to"), required=True),),
+        llm_hint="Travel along the shortest known route to a location. Time passes for every route leg.",
     )
 )
 

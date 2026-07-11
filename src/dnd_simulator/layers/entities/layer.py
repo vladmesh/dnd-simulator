@@ -39,6 +39,7 @@ from dnd_simulator.layers.entities.query_handler import QueryHandler
 from dnd_simulator.layers.entities.save_models import EntitiesState
 
 if TYPE_CHECKING:
+    from dnd_simulator.core.location import LocationGraph
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn, TimeDelta
     from dnd_simulator.llm.summarizer import MemorySummarizer
 
@@ -154,13 +155,16 @@ class EntitiesLayer(Layer):
 
     def get_nearest_wake_time(self) -> int | None:
         """Return the minimum intent wake time across all creatures, or None."""
-        from dnd_simulator.core.intent import TimedIntent
+        from dnd_simulator.core.intent import TimedIntent, TravelIntent
 
-        wake_times = [
-            e.current_intent.wake_at_seconds
-            for e in self._entities.values()
-            if isinstance(e, Creature) and isinstance(e.current_intent, TimedIntent)
-        ]
+        wake_times: list[int] = []
+        for entity in self._entities.values():
+            if not isinstance(entity, Creature):
+                continue
+            if isinstance(entity.current_intent, TimedIntent):
+                wake_times.append(entity.current_intent.wake_at_seconds)
+            elif isinstance(entity.current_intent, TravelIntent):
+                wake_times.append(entity.current_intent.next_arrival_seconds)
         return min(wake_times) if wake_times else None
 
     def update_activation(
@@ -168,9 +172,10 @@ class EntitiesLayer(Layer):
         time: GameDateTime,
         query_fn: QueryFn | None = None,
         emit_fn: EmitFn | None = None,
+        location_graph: LocationGraph | None = None,
     ) -> None:
         """Activate creatures near awake anchors, dormify the rest."""
-        self._activation.update_activation(time, query_fn, emit_fn)
+        self._activation.update_activation(time, query_fn, emit_fn, location_graph)
 
     # -- Combat (delegated to CombatManager) --
 

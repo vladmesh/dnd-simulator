@@ -220,43 +220,42 @@ def handle_disengage(
 
 
 def handle_wait(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
-    """Wait: creature goes dormant until wake_at, or travels to a location.
-
-    Travel: immediate move + time advance.
-    Plain wait: set a timed intent and mark dormant. Fast-forward in run_loop
-    handles the actual time advancement.
-    """
+    """Wait in place until the requested wake boundary."""
     from dnd_simulator.core.intent import IntentType, TimedIntent
-    from dnd_simulator.core.models import TimeDelta
 
-    travel_to = action.params.get("travel_to")
-    if travel_to:
-        target_id = str(travel_to)
-        graph = world.location_graph
-        resolved_id: str | None = None
-        try:
-            graph.travel_seconds(actor.location_id, target_id)
-            resolved_id = target_id
-        except ValueError:
-            # No direct path — try by name match
-            for loc_id in graph.all_ids():
-                loc = graph.get(loc_id)
-                if loc.name.lower() == target_id.lower():
-                    resolved_id = loc_id
-                    break
-        if resolved_id is None:
-            return ActionResult(success=False, error=_("Unknown travel destination"))
-        try:
-            seconds = graph.travel_seconds(actor.location_id, resolved_id)
-        except ValueError:
-            return ActionResult(success=False, error=_("No route to destination"))
-        actor.location_id = resolved_id
-        world.advance_time(TimeDelta(seconds=seconds))
-    else:
-        hours = int(str(action.params.get("hours", 1)))
-        if hours > 0:
-            now = world.time.to_total_seconds()
-            actor.current_intent = TimedIntent(IntentType.WAIT, now, now + hours * 3600)
-            actor.active = False
-            logger.info("wait_sleep", hours=hours, wake_at=actor.current_intent.wake_at_seconds)
+    hours = int(str(action.params.get("hours", 1)))
+    if hours > 0:
+        now = world.time.to_total_seconds()
+        actor.current_intent = TimedIntent(IntentType.WAIT, now, now + hours * 3600)
+        actor.active = False
+        logger.info("wait_sleep", hours=hours, wake_at=actor.current_intent.wake_at_seconds)
+    return ActionResult()
+
+
+def handle_travel(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
+    """Start a persisted journey without moving or advancing world time inline."""
+    from dnd_simulator.core.intent import TravelIntent
+
+    destination_raw = action.params.get("destination_id")
+    if destination_raw is None:
+        return ActionResult(success=False, error=_("Travel requires a destination"))
+    destination_id = str(destination_raw)
+    try:
+        route = world.location_graph.shortest_route(actor.location_id, destination_id)
+    except ValueError:
+        return ActionResult(success=False, error=_("No route to destination"))
+    if not route:
+        return ActionResult(success=False, error=_("Already at destination"))
+
+    now = world.time.to_total_seconds()
+    next_arrival = now + world.location_graph.travel_seconds(actor.location_id, route[0])
+    actor.current_intent = TravelIntent(now, destination_id, route, next_arrival)
+    actor.active = False
+    logger.info(
+        "travel_start",
+        entity_id=actor.id,
+        destination_id=destination_id,
+        route=route,
+        next_arrival=next_arrival,
+    )
     return ActionResult()

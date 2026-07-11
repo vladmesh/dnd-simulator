@@ -6,9 +6,9 @@ from dnd_simulator.core.action import END_TURN, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain, PlayerBrain
 from dnd_simulator.core.character import Creature
-from dnd_simulator.core.intent import IntentType, TimedIntent
-from dnd_simulator.core.location import Location, LocationGraph
-from dnd_simulator.core.models import GameDateTime
+from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
+from dnd_simulator.core.location import Location, LocationEdge, LocationGraph
+from dnd_simulator.core.models import GameDateTime, TimeDelta
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -45,6 +45,18 @@ def _make_world(entities: list[Creature], hour: int = 10) -> World:
         time=GameDateTime(year=1, month=1, day=1, hour=hour),
         location_graph=LocationGraph([Location(id="r1", name="Test Field", region_id="r1")]),
     )
+
+
+def _travel_world(entities: list[Creature], hour: int = 10) -> World:
+    world = _make_world(entities, hour)
+    world.location_graph = LocationGraph(
+        [
+            Location("start", "Start", "r1", edges=(LocationEdge("road", 1000),)),
+            Location("road", "Road", "r1", edges=(LocationEdge("goal", 2000),)),
+            Location("goal", "Goal", "r1"),
+        ]
+    )
+    return world
 
 
 class _EndTurnBrain(Brain):
@@ -402,3 +414,69 @@ class TestWaitAndFastForward:
         game_round.run_loop()  # should exit immediately
 
         assert world.time.to_total_seconds() == initial  # no time passed
+
+
+class TestTravelAndFastForward:
+    def test_journey_reaches_each_node_only_at_its_boundary(self) -> None:
+        now = GameDateTime(year=1, month=1, day=1, hour=10).to_total_seconds()
+        traveler = Creature(id="traveler", name="Traveler", location_id="start", is_anchor=True)
+        traveler.current_intent = TravelIntent(now, "goal", ("road", "goal"), now + 720)
+        world = _travel_world([traveler])
+        layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+
+        world.advance_time(TimeDelta(seconds=719))
+        layer.update_activation(world.time, location_graph=world.location_graph)
+        assert traveler.location_id == "start"
+
+        world.advance_time(TimeDelta(seconds=1))
+        layer.update_activation(world.time, location_graph=world.location_graph)
+        assert traveler.location_id == "road"
+        assert traveler.current_intent == TravelIntent(now, "goal", ("goal",), now + 2160)
+
+        world.advance_time(TimeDelta(seconds=1440))
+        layer.update_activation(world.time, location_graph=world.location_graph)
+        assert traveler.location_id == "goal"
+        assert traveler.current_intent is None
+        assert traveler.active is True
+
+    def test_two_travelers_share_intermediate_node_and_resume_after_save(self) -> None:
+        now = GameDateTime(year=1, month=1, day=1, hour=10).to_total_seconds()
+        first = Creature(id="first", name="First", location_id="start", is_anchor=True)
+        second = Creature(id="second", name="Second", location_id="start", is_anchor=True)
+        for traveler in (first, second):
+            traveler.current_intent = TravelIntent(now, "goal", ("road", "goal"), now + 720)
+        world = _travel_world([first, second])
+        layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+
+        world.advance_time(TimeDelta(seconds=720))
+        layer.update_activation(world.time, location_graph=world.location_graph)
+        assert first.location_id == second.location_id == "road"
+
+        restored = EntitiesLayer()
+        restored.load_state(layer.get_state())
+        world.advance_time(TimeDelta(seconds=1440))
+        restored.update_activation(world.time, location_graph=world.location_graph)
+        restored_first = restored.get_entity("first")
+        restored_second = restored.get_entity("second")
+        assert isinstance(restored_first, Creature)
+        assert isinstance(restored_second, Creature)
+        assert restored_first.location_id == restored_second.location_id == "goal"
+        assert restored_first.current_intent is None
+        assert restored_second.current_intent is None
+
+    def test_round_loop_fast_forwards_all_legs_then_returns_control(self) -> None:
+        traveler = PlayerCharacter(
+            id="traveler",
+            name="Traveler",
+            location_id="start",
+            brain=_make_player_brain(Action(name=ActionType.TRAVEL, params={"destination_id": "goal"})),
+        )
+        world = _travel_world([traveler])
+        layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        started_at = world.time.to_total_seconds()
+
+        Round(world, layer).run_loop(max_rounds=2)
+
+        assert traveler.location_id == "goal"
+        assert traveler.current_intent is None
+        assert world.time.to_total_seconds() - started_at == 2160 + 6

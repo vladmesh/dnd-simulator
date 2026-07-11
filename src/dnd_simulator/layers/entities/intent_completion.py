@@ -5,7 +5,8 @@ from __future__ import annotations
 import structlog
 
 from dnd_simulator.core.character import Creature
-from dnd_simulator.core.intent import TimedIntent
+from dnd_simulator.core.intent import TimedIntent, TravelIntent
+from dnd_simulator.core.location import LocationGraph
 from dnd_simulator.core.resource import RestType
 from dnd_simulator.rules.resources import reset_resources
 
@@ -26,3 +27,28 @@ def complete_timed_intent(creature: Creature, intent: TimedIntent) -> None:
         reset_pools=reset_ids,
         healed=healed,
     )
+
+
+def advance_travel_intent(
+    creature: Creature,
+    intent: TravelIntent,
+    now_seconds: int,
+    location_graph: LocationGraph,
+) -> TravelIntent | None:
+    """Advance every route leg whose arrival boundary has elapsed."""
+    current = intent
+    while now_seconds >= current.next_arrival_seconds:
+        arrived_at = current.remaining_route[0]
+        creature.location_id = arrived_at
+        remaining = current.remaining_route[1:]
+        logger.info("travel_leg_arrive", entity_id=creature.id, location_id=arrived_at)
+        if not remaining:
+            return None
+        next_arrival = current.next_arrival_seconds + location_graph.travel_seconds(arrived_at, remaining[0])
+        current = TravelIntent(
+            started_at_seconds=current.started_at_seconds,
+            destination_id=current.destination_id,
+            remaining_route=remaining,
+            next_arrival_seconds=next_arrival,
+        )
+    return current

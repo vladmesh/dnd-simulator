@@ -465,7 +465,9 @@ class Round:
 
         # Activate creatures near players, dormify the rest, materialize squads
         if not skip_activation:
-            self._host.update_activation(time, query_fn=query_fn, emit_fn=emit_fn)
+            self._host.update_activation(
+                time, query_fn=query_fn, emit_fn=emit_fn, location_graph=self._world.location_graph
+            )
 
         active_count = len(self._host.get_active_creatures())
         combat_locations = list(self._host.get_combat_locations())
@@ -508,7 +510,9 @@ class Round:
         qfn = self._world.make_query_fn("entities")
         efn = self._world.make_emit_fn("entities")
         with self._mutation_scope():
-            self._host.update_activation(self._world.time, query_fn=qfn, emit_fn=efn)
+            self._host.update_activation(
+                self._world.time, query_fn=qfn, emit_fn=efn, location_graph=self._world.location_graph
+            )
 
     def run_loop(self, max_rounds: int | None = None) -> None:
         """Run rounds until no active creatures remain or stop() is called."""

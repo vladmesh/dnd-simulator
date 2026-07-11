@@ -13,14 +13,15 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.character import Creature, Entity
-from dnd_simulator.core.intent import TimedIntent
+from dnd_simulator.core.intent import TimedIntent, TravelIntent
 from dnd_simulator.core.models import Event
 from dnd_simulator.core.monster import EncounterEntry
 from dnd_simulator.layers.entities.encounters import check_encounters
-from dnd_simulator.layers.entities.intent_completion import complete_timed_intent
+from dnd_simulator.layers.entities.intent_completion import advance_travel_intent, complete_timed_intent
 from dnd_simulator.layers.entities.materialization import update_lair_materialization, update_squad_materialization
 
 if TYPE_CHECKING:
+    from dnd_simulator.core.location import LocationGraph
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn
     from dnd_simulator.core.monster import MonsterTemplate
     from dnd_simulator.layers.entities.combat_manager import CombatManager
@@ -65,6 +66,7 @@ class ActivationManager:
         time: GameDateTime,
         query_fn: QueryFn | None = None,
         emit_fn: EmitFn | None = None,
+        location_graph: LocationGraph | None = None,
     ) -> None:
         """Activate creatures near awake anchors, dormify the rest.
 
@@ -102,6 +104,10 @@ class ActivationManager:
                 complete_timed_intent(e, e.current_intent)
                 e.current_intent = None
                 logger.info("activation_wake_timer", entity_id=e.id)
+            elif isinstance(e.current_intent, TravelIntent) and now >= e.current_intent.next_arrival_seconds:
+                if location_graph is None:
+                    raise RuntimeError("location graph is required to advance travel")
+                e.current_intent = advance_travel_intent(e, e.current_intent, now, location_graph)
             if e.is_anchor and e.current_intent is None:
                 effective_location = e.current_location(hour) if isinstance(e, Npc) else e.location_id
                 anchor_locations.add(effective_location)

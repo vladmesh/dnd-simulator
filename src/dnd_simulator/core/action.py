@@ -17,6 +17,7 @@ class ActionType(StrEnum):
     MOVE = "move"
     DASH = "dash"
     WAIT = "wait"
+    TRAVEL = "travel"
     USE_ITEM = "use_item"
     BLESS = "bless"
     EQUIP = "equip"
