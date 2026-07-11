@@ -63,7 +63,7 @@ Wait, sleep и travel штатно прерываются базовыми вс�
 2. [Interruption lifecycle consistency](tasks/phase4-task2-interruption-lifecycle.md)
 3. [Target accessibility and journey E2E](tasks/phase4-task3-accessibility-e2e.md)
 
-## Phase 5: Bounded round shutdown
+## Phase 5: Bounded round shutdown ✓
 
 Остановка round thread получает ограниченное время ожидания и явный отказ вместо бессрочного
 зависания disconnect, load или eviction. Пока старый поток жив, сессия сохраняет его lifecycle-состояние
@@ -84,7 +84,7 @@ Wait, sleep и travel штатно прерываются базовыми вс�
 
 ## Status
 
-**Current:** Phase 5 tasks done. Ready to close phase.
+**Current:** Phase 5 complete. All phases complete; ready for fresh audit.
 
 ## Decisions
 

@@ -12,9 +12,9 @@
 **Sprint:** 022-intents-travel
 **Goal:** Любое существо может быть якорем и сохраняемым носителем намерения; ожидание, сон и путешествие исполняются во времени, travel движется по графу без телепортации, а save/load согласован с жизненным циклом раунда.
 **Started:** 2026-07-10
-**Phase:** 5 — Bounded round shutdown (all tasks done, ready to close) — 2026-07-12
+**Phase:** 5 — Bounded round shutdown (COMPLETE) — 2026-07-12
 
-Post-sprint audit нашёл безлимитный `thread.join()` в остановке раунда. Bounded stop сохраняет lifecycle-ссылки живого потока; disconnect, load и eviction теперь не продолжают опасную операцию после timeout. Все задачи Phase 5 готовы, фаза ожидает закрытия.
+Post-sprint audit нашёл безлимитный `thread.join()` в остановке раунда. Bounded stop сохраняет lifecycle-ссылки живого потока; disconnect, load и eviction теперь не продолжают опасную операцию после timeout. Phase 5 закрыта: integration 160/160, E2E 3/3. Все фазы завершены, нужен свежий audit после refactor-фазы.
 
 **Audit:** Triaged 2026-07-12. Quick-fix: 0. Sprint-relevant: 4 (bounded shutdown + tests → Phase 5; structural decomposition deferred to existing backlog). Backlog: 11 already tracked, no duplicates added.
 
