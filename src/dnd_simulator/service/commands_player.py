@@ -169,4 +169,4 @@ class PlayerCommands(GameServiceProtocol):
         player = session.get_player(player_id) if player_id else session.get_player()
         if player is None:
             raise PlayerNotFoundError("No player in this session")
-        return build_player_status(player)
+        return build_player_status(player, session.world.location_graph)

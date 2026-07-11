@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 import structlog
 
 if TYPE_CHECKING:
+    from dnd_simulator.core.location import LocationGraph
     from dnd_simulator.storage.save_schema import SaveGame
 
 from dnd_simulator.core.action import Action, ActionType
@@ -32,7 +33,7 @@ from dnd_simulator.rules.actions import collect_cost_overrides
 from dnd_simulator.rules.leveling import xp_to_next_level
 from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.service.action_dispatcher import create_dispatcher
-from dnd_simulator.service.dto import PlayerStatusData, ResourcePoolView
+from dnd_simulator.service.dto import JourneyView, PlayerStatusData, ResourcePoolView
 
 logger = structlog.get_logger(domain="session")
 
@@ -174,12 +175,29 @@ def build_inventory_payload(player: PlayerCharacter) -> list[dict[str, object]]:
     return inventory
 
 
-def build_player_status(player: PlayerCharacter) -> PlayerStatusData:
+def build_player_status(player: PlayerCharacter, location_graph: LocationGraph | None = None) -> PlayerStatusData:
     """Build the full player status snapshot — single source shared by REST and WS.
 
     All derived fields (AC from equipment+modifiers, XP to next level) are computed here.
     """
+    from dnd_simulator.core.intent import TravelIntent
+
     scores = player.ability_scores
+    journey = None
+    if isinstance(player.current_intent, TravelIntent) and location_graph is not None:
+        intent = player.current_intent
+
+        def location_name(location_id: str) -> str:
+            return location_graph.get(location_id).name if location_graph.has(location_id) else location_id
+
+        journey = JourneyView(
+            destination_id=intent.destination_id,
+            destination_name=location_name(intent.destination_id),
+            current_location_name=location_name(player.location_id),
+            next_location_name=location_name(intent.remaining_route[0]),
+            remaining_route=tuple(location_name(location_id) for location_id in intent.remaining_route),
+            next_arrival_seconds=intent.next_arrival_seconds,
+        )
     return PlayerStatusData(
         player_id=player.id,
         name=player.name,
@@ -204,6 +222,7 @@ def build_player_status(player: PlayerCharacter) -> PlayerStatusData:
             "wis": scores[Ability.WIS],
             "cha": scores[Ability.CHA],
         },
+        journey=journey,
         resource_pools=[
             ResourcePoolView(id=p.id, max_uses=p.max_uses, current_uses=p.current_uses) for p in player.resource_pools
         ],
@@ -485,7 +504,7 @@ class GameSession:
             "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
             "awareness": _awareness_to_dict(awareness, creature=player),
             "events": _events_to_list(perceived),
-            "player": dataclasses.asdict(build_player_status(player)),
+            "player": dataclasses.asdict(build_player_status(player, self.world.location_graph)),
             "location": _location_data(self.world, player.location_id),
         }
 
@@ -528,7 +547,7 @@ class GameSession:
                     "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
                     "awareness": _awareness_to_dict(awareness, creature=creature),
                     "events": _events_to_list(events),
-                    "player": dataclasses.asdict(build_player_status(player)),
+                    "player": dataclasses.asdict(build_player_status(player, self.world.location_graph)),
                     "location": _location_data(self.world, player.location_id),
                 }
                 if awareness.turn_budget is not None:

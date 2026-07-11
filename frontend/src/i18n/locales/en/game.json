@@ -11,6 +11,8 @@
   "inspect": "Inspect",
   "location": "Location",
   "paths": "Paths:",
+  "journey_to": "Traveling to {{destination}}",
+  "journey_route": "Route: {{route}}",
   "character": "Character",
   "actions_label": "Actions: {{n}}",
   "bonus_label": "Bonus: {{n}}",

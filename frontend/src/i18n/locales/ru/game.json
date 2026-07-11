@@ -11,6 +11,8 @@
   "inspect": "Осмотреть",
   "location": "Локация",
   "paths": "Пути:",
+  "journey_to": "Путь к {{destination}}",
+  "journey_route": "Маршрут: {{route}}",
   "character": "Персонаж",
   "actions_label": "Действия: {{n}}",
   "bonus_label": "Бонус: {{n}}",

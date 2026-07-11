@@ -25,14 +25,21 @@ Likely files: `service/dto.py`, `service/session.py`, adapter schema tests, `fro
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] REST and WebSocket status use one typed journey contract.
-- [ ] The location UI sends `TRAVEL` and shows persisted multi-leg progress.
-- [ ] Arrival clears journey presentation and refreshes the visible location paths.
-- [ ] New user-visible strings are localized in English and Russian.
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] REST and WebSocket status use one typed journey contract.
+- [x] The location UI sends `TRAVEL` and shows persisted multi-leg progress.
+- [x] Arrival clears journey presentation and refreshes the visible location paths.
+- [x] New user-visible strings are localized in English and Russian.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+`PlayerStatusData` теперь содержит опциональный типизированный journey view с разрешёнными именами текущей
+точки, следующей остановки, оставшегося маршрута и финальной цели. REST и все WS round payloads строят его одним
+`build_player_status`; после завершения сохранённого intent поле становится `null`. `LocationPanel` отправляет
+`travel` с `destination_id`, показывает persisted route и возвращается к обычным путям после arrival update.

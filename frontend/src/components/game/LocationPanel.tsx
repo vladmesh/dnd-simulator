@@ -7,12 +7,13 @@ import { MapPin } from "lucide-react"
 export function LocationPanel() {
   const { t } = useTranslation(["game"])
   const location = useGameStore((s) => s.location)
+  const journey = useGameStore((s) => s.player?.journey)
   const isMyTurn = useGameStore((s) => s.isMyTurn)
 
   if (!location) return null
 
   const sendGo = (locationId: string) => {
-    wsClient.send({ type: "action", name: "wait", params: { hours: 0, travel_to: locationId } })
+    wsClient.send({ type: "action", name: "travel", params: { destination_id: locationId } })
     useGameStore.getState().setWaitingForAction(true)
   }
 
@@ -28,6 +29,16 @@ export function LocationPanel() {
           <p className="text-xs text-muted-foreground">{location.description}</p>
         )}
       </div>
+      {journey && (
+        <div className="space-y-1 text-xs" data-testid="journey-status">
+          <p className="font-medium">{t("game:journey_to", { destination: journey.destination_name })}</p>
+          <p className="text-muted-foreground">
+            {t("game:journey_route", {
+              route: [journey.current_location_name, ...journey.remaining_route].join(" → "),
+            })}
+          </p>
+        </div>
+      )}
       {location.paths.length > 0 && (
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">{t("game:paths")}</p>
