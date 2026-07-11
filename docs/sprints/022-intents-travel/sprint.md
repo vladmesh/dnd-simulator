@@ -59,13 +59,15 @@ Wait, sleep и travel штатно прерываются базовыми вс�
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Built-in intent interruptions](tasks/phase4-task1-built-in-intent-interruptions.md)
+2. [Interruption lifecycle consistency](tasks/phase4-task2-interruption-lifecycle.md)
+3. [Target accessibility and journey E2E](tasks/phase4-task3-accessibility-e2e.md)
 
 ---
 
 ## Status
 
-**Current:** Phase 3 complete. Ready for Phase 4 task generation.
+**Current:** Phase 4 tasks generated. Ready to start task 1.
 
 ## Decisions
 

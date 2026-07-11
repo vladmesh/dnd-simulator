@@ -12,9 +12,9 @@
 **Sprint:** 022-intents-travel
 **Goal:** Любое существо может быть якорем и сохраняемым носителем намерения; ожидание, сон и путешествие исполняются во времени, travel движется по графу без телепортации, а save/load согласован с жизненным циклом раунда.
 **Started:** 2026-07-10
-**Phase:** 3 — Travel as an intent (COMPLETE) — 2026-07-11
+**Phase:** 4 — Interruptible journeys and E2E closure (tasks generated) — 2026-07-11
 
-Общий REST/WS player status отдаёт типизированный journey view с именами точек и оставшимся маршрутом; location UI отправляет `TRAVEL`, показывает прогресс и очищает его после прибытия. Integration 160/160 и phase E2E 3/3 зелёные. Ready for Phase 4 task generation.
+Фаза разбита на встроенную политику прерываний, проверку save/load/reconnect lifecycle и финальный accessibility/E2E проход. Ready to start task 1.
 
 ### Phases
 
