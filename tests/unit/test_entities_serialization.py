@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from dnd_simulator.core.character import Creature, NpcRole
 from dnd_simulator.core.combat import BattleMap, CombatState, Position, Wall
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.intent import IntentType, TimedIntent
+from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.core.turn_budget import TurnBudget
@@ -458,6 +458,42 @@ class TestEntitiesStateModel:
         assert restored_creature.is_anchor is False
         assert restored_creature.current_intent == creature.current_intent
 
+    def test_travel_progress_round_trips_for_every_creature_kind(self) -> None:
+        player = PlayerCharacter(id="hero", name="Hero", location_id="crossroads", is_anchor=True)
+        player.current_intent = TravelIntent(
+            started_at_seconds=100,
+            destination_id="harbor",
+            remaining_route=("bridge", "harbor"),
+            next_arrival_seconds=220,
+        )
+        npc = _make_fighter_npc(location_id="bridge")
+        npc.current_intent = TravelIntent(
+            started_at_seconds=50,
+            destination_id="harbor",
+            remaining_route=("harbor",),
+            next_arrival_seconds=260,
+        )
+        creature = _make_creature("wolf", location_id="forest")
+        creature.current_intent = TravelIntent(
+            started_at_seconds=70,
+            destination_id="cave",
+            remaining_route=("ridge", "cave"),
+            next_arrival_seconds=190,
+        )
+
+        restored_layer = EntitiesLayer()
+        restored_layer.load_state(EntitiesLayer(entities=[player, npc, creature]).get_state())
+
+        restored_player = restored_layer.get_entity("hero")
+        restored_npc = restored_layer.get_entity("fighter_npc")
+        restored_creature = restored_layer.get_entity("wolf")
+        assert isinstance(restored_player, PlayerCharacter)
+        assert isinstance(restored_npc, Npc)
+        assert isinstance(restored_creature, Creature)
+        assert restored_player.current_intent == player.current_intent
+        assert restored_npc.current_intent == npc.current_intent
+        assert restored_creature.current_intent == creature.current_intent
+
     def test_idle_creature_round_trips_without_fabricated_wake_time(self) -> None:
         creature = _make_creature("idle")
 
@@ -478,6 +514,34 @@ class TestEntitiesStateModel:
         ],
     )
     def test_invalid_timed_intent_payload_is_rejected(self, invalid_intent: dict[str, object]) -> None:
+        state = EntitiesLayer(entities=[_make_creature("broken")]).get_state()
+        state["entities"]["broken"]["current_intent"] = invalid_intent
+
+        with pytest.raises(ValidationError):
+            EntitiesLayer().load_state(state)
+
+    @pytest.mark.parametrize(
+        "invalid_intent",
+        [
+            {
+                "kind": "travel",
+                "started_at_seconds": 10,
+                "destination_id": "harbor",
+                "remaining_route": [],
+                "next_arrival_seconds": 20,
+            },
+            {
+                "kind": "travel",
+                "started_at_seconds": 10,
+                "destination_id": "harbor",
+                "remaining_route": ["harbor"],
+                "next_arrival_seconds": 20,
+                "extra": True,
+            },
+            {"kind": "travel", "started_at_seconds": 10, "wake_at_seconds": 20},
+        ],
+    )
+    def test_invalid_travel_intent_payload_is_rejected(self, invalid_intent: dict[str, object]) -> None:
         state = EntitiesLayer(entities=[_make_creature("broken")]).get_state()
         state["entities"]["broken"]["current_intent"] = invalid_intent
 

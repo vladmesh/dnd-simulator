@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.character import Creature, Entity
+from dnd_simulator.core.intent import TimedIntent
 from dnd_simulator.core.models import Event
 from dnd_simulator.core.monster import EncounterEntry
 from dnd_simulator.layers.entities.encounters import check_encounters
@@ -97,7 +98,7 @@ class ActivationManager:
                 e.active = False
                 e.current_intent = None
                 continue
-            if e.current_intent is not None and now >= e.current_intent.wake_at_seconds:
+            if isinstance(e.current_intent, TimedIntent) and now >= e.current_intent.wake_at_seconds:
                 complete_timed_intent(e, e.current_intent)
                 e.current_intent = None
                 logger.info("activation_wake_timer", entity_id=e.id)

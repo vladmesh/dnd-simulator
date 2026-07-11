@@ -154,10 +154,12 @@ class EntitiesLayer(Layer):
 
     def get_nearest_wake_time(self) -> int | None:
         """Return the minimum intent wake time across all creatures, or None."""
+        from dnd_simulator.core.intent import TimedIntent
+
         wake_times = [
             e.current_intent.wake_at_seconds
             for e in self._entities.values()
-            if isinstance(e, Creature) and e.current_intent is not None
+            if isinstance(e, Creature) and isinstance(e.current_intent, TimedIntent)
         ]
         return min(wake_times) if wake_times else None
 
@@ -508,18 +510,29 @@ class EntitiesLayer(Layer):
                         )
                     elif budget_raw is None:
                         entity.turn_budget = None
-                    from dnd_simulator.core.intent import IntentType, TimedIntent
+                    from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
 
                     entity.is_anchor = bool(edata.get("is_anchor", entity.is_anchor))
                     intent_raw = edata.get("current_intent")
                     if isinstance(intent_raw, dict):
-                        rest_type_raw = intent_raw.get("rest_type")
-                        entity.current_intent = TimedIntent(
-                            kind=IntentType(str(intent_raw["kind"])),
-                            started_at_seconds=int(intent_raw["started_at_seconds"]),
-                            wake_at_seconds=int(intent_raw["wake_at_seconds"]),
-                            rest_type=RestType(str(rest_type_raw)) if rest_type_raw is not None else None,
-                        )
+                        kind = IntentType(str(intent_raw["kind"]))
+                        if kind is IntentType.TRAVEL:
+                            route_raw = intent_raw["remaining_route"]
+                            assert isinstance(route_raw, list | tuple)
+                            entity.current_intent = TravelIntent(
+                                started_at_seconds=int(intent_raw["started_at_seconds"]),
+                                destination_id=str(intent_raw["destination_id"]),
+                                remaining_route=tuple(str(node) for node in route_raw),
+                                next_arrival_seconds=int(intent_raw["next_arrival_seconds"]),
+                            )
+                        else:
+                            rest_type_raw = intent_raw.get("rest_type")
+                            entity.current_intent = TimedIntent(
+                                kind=kind,
+                                started_at_seconds=int(intent_raw["started_at_seconds"]),
+                                wake_at_seconds=int(intent_raw["wake_at_seconds"]),
+                                rest_type=RestType(str(rest_type_raw)) if rest_type_raw is not None else None,
+                            )
                     else:
                         entity.current_intent = None
                     position_raw = edata.get("combat_position")

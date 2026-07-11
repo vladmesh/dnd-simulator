@@ -25,13 +25,17 @@ Likely files: `core/intent.py`, `core/location.py`, `layers/entities/save_models
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Multi-edge routes are selected by total edge distance with deterministic tie-breaking.
-- [ ] Travel progress has one strict runtime and save representation for all creature kinds.
-- [ ] A mid-route save restores the exact remaining journey without recomputing it.
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Multi-edge routes are selected by total edge distance with deterministic tie-breaking.
+- [x] Travel progress has one strict runtime and save representation for all creature kinds.
+- [x] A mid-route save restores the exact remaining journey without recomputing it.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Added deterministic Dijkstra routing whose tie-break is the lexicographic node route, plus a strict discriminated save union for timed and travel intents. `TravelIntent` persists the final destination, remaining nodes, journey start, and next arrival boundary; Phase 2 activation intentionally handles only `TimedIntent` until task 2 wires travel progression. The full check exposed an unrelated flaky smite test whose “guaranteed hit” could roll a natural 1; its combat RNG is now seeded, with no product behavior change.

@@ -7,6 +7,7 @@ from typing import cast
 from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.class_features import FighterFeatures, PaladinFeatures, RogueFeatures
 from dnd_simulator.core.container import Container
+from dnd_simulator.core.intent import CreatureIntent, IntentType, TravelIntent
 from dnd_simulator.core.items import Item
 from dnd_simulator.core.models import EntityKind
 from dnd_simulator.core.player import PlayerCharacter
@@ -25,6 +26,7 @@ from dnd_simulator.layers.entities.save_models import (
     PlayerSave,
     ResourcePoolSave,
     TimedIntentSave,
+    TravelIntentSave,
     TurnBudgetSave,
 )
 
@@ -201,19 +203,29 @@ def _creature_fields(entity: Creature) -> dict[str, object]:
         "xp_value": entity.xp_value,
         "squad_id": entity.squad_id,
         "is_anchor": entity.is_anchor,
-        "current_intent": (
-            TimedIntentSave(
-                kind=entity.current_intent.kind,
-                started_at_seconds=entity.current_intent.started_at_seconds,
-                wake_at_seconds=entity.current_intent.wake_at_seconds,
-                rest_type=entity.current_intent.rest_type,
-            )
-            if entity.current_intent is not None
-            else None
-        ),
+        "current_intent": _intent_save(entity.current_intent),
         "combat_position": entity.combat_position,
     }
     return data
+
+
+def _intent_save(intent: CreatureIntent | None) -> TimedIntentSave | TravelIntentSave | None:
+    if intent is None:
+        return None
+    if isinstance(intent, TravelIntent):
+        return TravelIntentSave(
+            kind=IntentType.TRAVEL,
+            started_at_seconds=intent.started_at_seconds,
+            destination_id=intent.destination_id,
+            remaining_route=intent.remaining_route,
+            next_arrival_seconds=intent.next_arrival_seconds,
+        )
+    return TimedIntentSave(
+        kind=IntentType.WAIT if intent.kind is IntentType.WAIT else IntentType.SLEEP,
+        started_at_seconds=intent.started_at_seconds,
+        wake_at_seconds=intent.wake_at_seconds,
+        rest_type=intent.rest_type,
+    )
 
 
 def _item_save(item: Item | None) -> ItemSave | None:

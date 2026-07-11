@@ -65,7 +65,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 3 tasks generated. Ready to start task 1.
+**Current:** Phase 3 task 1 complete. Ready to start task 2.
 
 ## Decisions
 

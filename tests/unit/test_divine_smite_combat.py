@@ -6,6 +6,7 @@ RuleBrain smite decision, damage log components.
 
 from __future__ import annotations
 
+import random
 from collections import defaultdict
 
 from dnd_simulator.core.action import ActionType
@@ -108,7 +109,7 @@ def _target(*, hp: int = 50, ac: int = 5) -> Creature:
 def _setup_combat(attacker: Creature, target: Creature) -> tuple[CombatManager, dict[str, list[Event]]]:
     entities: dict[str, Creature] = {attacker.id: attacker, target.id: target}
     log: dict[str, list[Event]] = defaultdict(list)
-    cm = CombatManager(entities, log)  # type: ignore[arg-type]
+    cm = CombatManager(entities, log, rng=random.Random(42))  # type: ignore[arg-type]
     cm.start_combat("arena")
     return cm, log
 

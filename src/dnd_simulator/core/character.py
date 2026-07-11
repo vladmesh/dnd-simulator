@@ -10,7 +10,7 @@ import structlog
 
 from dnd_simulator.core.class_features import ClassFeatures
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.intent import TimedIntent
+from dnd_simulator.core.intent import CreatureIntent
 from dnd_simulator.core.items import EquipmentSlot, Item
 from dnd_simulator.core.resource import ResourcePool
 from dnd_simulator.core.turn_budget import TurnBudget
@@ -230,7 +230,7 @@ class Creature(Entity):
     xp_value: int = 0  # XP awarded to Character attacker on kill (0 for most creatures, set from CR for monsters)
     squad_id: str | None = None  # which squad this creature belongs to (if materialized)
     is_anchor: bool = False
-    current_intent: TimedIntent | None = None
+    current_intent: CreatureIntent | None = None
     combat_position: tuple[int, int] | None = None  # fixed starting position on battle map (x, y in feet)
     brain: Brain | None = field(default=None, repr=False)
 
