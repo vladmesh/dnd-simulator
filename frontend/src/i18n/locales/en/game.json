@@ -9,6 +9,7 @@
   "target_self": "Self",
   "talk": "Talk",
   "inspect": "Inspect",
+  "inspect_target": "Inspect {{target}}",
   "location": "Location",
   "paths": "Paths:",
   "journey_to": "Traveling to {{destination}}",

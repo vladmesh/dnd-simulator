@@ -91,4 +91,35 @@ describe("LocationPanel journey", () => {
     expect(screen.queryByText(/Old Road.*Stone Bridge.*Hill Keep/)).not.toBeInTheDocument()
     expect(screen.getByText("Hill Keep")).toBeInTheDocument()
   })
+
+  it("clears journey progress and shows the reached node when interrupted mid-route", () => {
+    useGameStore.setState({
+      player: {
+        ...player,
+        journey: {
+          destination_id: "keep",
+          destination_name: "Hill Keep",
+          current_location_name: "Old Road",
+          next_location_name: "Stone Bridge",
+          remaining_route: ["Stone Bridge", "Hill Keep"],
+          next_arrival_seconds: 460,
+        },
+      },
+    })
+    render(<LocationPanel />)
+    expect(screen.getByTestId("journey-status")).toBeInTheDocument()
+
+    // Interruption at the intermediate node: intent cleared (journey undefined),
+    // location is the reached node — not the original destination.
+    act(() => {
+      useGameStore.setState({
+        player: { ...player, location_id: "bridge" },
+        location: { current_location: "Stone Bridge", current_location_id: "bridge", region_id: "r", paths: [] },
+      })
+    })
+
+    expect(screen.queryByTestId("journey-status")).not.toBeInTheDocument()
+    expect(screen.getByText("Stone Bridge")).toBeInTheDocument()
+    expect(screen.queryByText("Hill Keep")).not.toBeInTheDocument()
+  })
 })

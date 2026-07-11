@@ -9,6 +9,7 @@
   "target_self": "Себя",
   "talk": "Говорить",
   "inspect": "Осмотреть",
+  "inspect_target": "Осмотреть {{target}}",
   "location": "Локация",
   "paths": "Пути:",
   "journey_to": "Путь к {{destination}}",

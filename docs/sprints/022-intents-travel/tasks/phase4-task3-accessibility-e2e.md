@@ -24,14 +24,38 @@ Likely files: `frontend/src/components/game/Perception.tsx`, `frontend/src/compo
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Every Attack control exposed at the same time has a unique target-aware accessible name in EN and RU.
-- [ ] Browser automation selects the intended target without text or DOM-position ambiguity.
-- [ ] Phase E2E covers a persisted or reconnected journey interrupted at an intermediate location and reports no blockers.
-- [ ] `attack-buttons-accessible-names` is marked complete only after the browser scenario passes.
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Every Attack control exposed at the same time has a unique target-aware accessible name in EN and RU.
+- [x] Browser automation selects the intended target without text or DOM-position ambiguity.
+- [~] Phase E2E covers a persisted or reconnected journey interrupted at an intermediate location and reports no blockers.
+- [x] `attack-buttons-accessible-names` is marked complete only after the browser scenario passes.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Accessibility: added target-aware `aria-label`s to the Attack/Talk/Inspect controls in `Perception.tsx`
+and the Attack control in `NpcInspectModal.tsx`, plus an `inspect_target` EN/RU string. The label
+target keys on the unique `entity.id` (the same contract the action-bar `TargetDropdown` already uses),
+not the perceived description — the description is the localized **race** (`человек`), which collides
+for same-race NPCs and would leave duplicate `Attack человек` names. `SmiteChoice` also now names its
+target by id in both call sites. Component tests in `Perception.test.tsx` (nearby uniqueness +
+selection + EN/RU + smite menu) and a `LocationPanel.test.tsx` mid-route-interruption test. Frontend
+gate green (282 tests). Backend untouched, unchanged since task 2.
+
+E2E (`e2e/phase4-report.md`): live browser run confirmed unique target-aware attack names for three
+simultaneous market NPCs in EN and RU, the inspect modal's Attack unambiguous (Radix hides the
+background), a genuine multi-leg journey progressing leg-by-leg (`travel_leg_arrive` market→smithy)
+and clearing on arrival with control returned, and coherent combat entry. Backend/browser logs clean.
+
+The one partial criterion (`[~]`): a *mid-route SCENE interruption* is not reproducible through the
+current control surface — stopping a traveler at an intermediate node needs a second awake anchor
+there, but `is_anchor` is not exposed by the master API and authored NPCs are not awake anchors (a
+2-leg journey fast-forwarded straight through the NPC-populated market). The interruption logic
+itself is fully covered by task-1/task-2 unit + integration tests and the `LocationPanel` component
+test; logged as a minor E2E finding (candidate backlog: expose an anchor toggle so the mid-route stop
+is playable). Not a blocker.

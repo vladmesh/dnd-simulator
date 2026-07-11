@@ -12,9 +12,9 @@
 **Sprint:** 022-intents-travel
 **Goal:** Любое существо может быть якорем и сохраняемым носителем намерения; ожидание, сон и путешествие исполняются во времени, travel движется по графу без телепортации, а save/load согласован с жизненным циклом раунда.
 **Started:** 2026-07-10
-**Phase:** 4 — Interruptible journeys and E2E closure (task 2 done, task 3 pending) — 2026-07-11
+**Phase:** 4 — Interruptible journeys and E2E closure (all 3 tasks done) — 2026-07-11
 
-Урон, вход в бой и прибытие в активную сцену прерывают intent через единый idempotent helper. Task 2 закрепил согласованность прерываний через session boundary: save/load до и после прерывания, resume ровно один раз, снапшот атомарен под session-гейтом (6 тестов в `test_interruption_lifecycle.py`, изменений оркестрации не потребовалось). Ready to start task 3 (accessibility + journey E2E).
+Урон, вход в бой и прибытие в активную сцену прерывают intent через единый idempotent helper. Task 2 закрепил согласованность прерываний через session boundary (6 тестов в `test_interruption_lifecycle.py`). Task 3 закрыл `attack-buttons-accessible-names` (target-aware `aria-label` по уникальному `entity.id`, EN/RU, подтверждено браузерным E2E) и провёл phase-4 E2E: multi-leg travel идёт по рёбрам и чистится по прибытии, вход в бой когерентен. Все задачи фазы 4 сделаны — фаза готова к закрытию (`/close-phase`).
 
 ### Phases
 

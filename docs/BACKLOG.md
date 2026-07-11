@@ -73,7 +73,7 @@
 - [ ] **could** `drag-resize-panels` — Drag-and-drop / resizable панели на dashboard
 - [ ] **could** `mobile-layout` — Мобильная адаптация dashboard
 - [ ] **could** `log-filter-tabs` — Фильтрация лога табами (Все/Бой/Диалоги)
-- [ ] **should** `attack-buttons-accessible-names` — кнопки Attack в nearby-списке и action bar имеют одинаковые accessible names: цели неразличимы для автоматизации и скринридеров — E2E-смоук бил не в ту цель (убил торговку Гретту). Добавить aria-label с именем цели. Побочная аномалия того прогона (не отрепрожена чисто): свежая сессия в том же процессе увидела пустой рынок и зависла в «Waiting for turn…» — если всплывёт снова, разбирать отдельно. E2E sprint 021 close
+- [x] **should** `attack-buttons-accessible-names` — кнопки Attack/Talk/Inspect в nearby-списке и в inspect-модалке получили target-aware `aria-label` по уникальному `entity.id` (тот же контракт, что у action-bar `TargetDropdown`); SmiteChoice тоже именует цель по id. Закрыто в Sprint 022 phase 4 task 3: EN/RU уникальность подтверждена браузерным E2E (три NPC на рынке → три различимых имени) + компонентные тесты. E2E sprint 021 close
 - [ ] **should** `master-panel-creature-inventory` — `CreatureResponse` / `all_entities` query не включают inventory/equipped_weapon; мастер не видит предметы существ. Добавить поля в схему и query
 - [x] `master-give-item-ui` — ~~endpoint для give_item есть, кнопки нет~~ FIXED Sprint 007 phase 2: кнопка «Выдать предмет» в карточке существа
 - [x] `inspect-as-idle-param` — ~~inspect шёл как `Action(IDLE, {inspect_target})`~~ FIXED Sprint 009 phase 4: клиентская NpcInspectModal из awareness
