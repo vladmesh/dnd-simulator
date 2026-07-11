@@ -51,7 +51,7 @@ Save, load, autosave, evict и round loop согласованы одной sess
 2. [Travel action and leg progression](tasks/phase3-task2-travel-action-progression.md)
 3. [Journey status and UI](tasks/phase3-task3-journey-ui.md)
 
-## Phase 4: Interruptible journeys and E2E closure
+## Phase 4: Interruptible journeys and E2E closure ✓
 
 Wait, sleep и travel штатно прерываются базовыми встроенными причинами: телесное событие, втягивание в сцену или бой, прибытие и таймер. После прерывания существо остаётся в согласованной локации и получает управление без потери или двойного исполнения намерения. Проверка: сохранение, загрузка, реконнект и прерывание в середине пути дают одно и то же состояние; полный пользовательский сценарий проходит через UI. Здесь же закрывается `attack-buttons-accessible-names`, чтобы E2E однозначно выбирал цель.
 
@@ -67,7 +67,7 @@ Wait, sleep и travel штатно прерываются базовыми вс�
 
 ## Status
 
-**Current:** Phase 4 tasks generated. Ready to start task 1.
+**Current:** All phases complete. Ready for audit.
 
 ## Decisions
 
