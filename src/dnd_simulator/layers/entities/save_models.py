@@ -112,6 +112,7 @@ class TimedIntentSave(SaveModel):
     kind: IntentType
     started_at_seconds: int
     wake_at_seconds: int
+    rest_type: RestType | None = None
 
 
 class EntitySaveBase(SaveModel):

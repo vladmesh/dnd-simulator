@@ -206,6 +206,7 @@ def _creature_fields(entity: Creature) -> dict[str, object]:
                 kind=entity.current_intent.kind,
                 started_at_seconds=entity.current_intent.started_at_seconds,
                 wake_at_seconds=entity.current_intent.wake_at_seconds,
+                rest_type=entity.current_intent.rest_type,
             )
             if entity.current_intent is not None
             else None

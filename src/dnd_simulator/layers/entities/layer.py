@@ -27,6 +27,7 @@ from dnd_simulator.core.models import ActionResult, Answer, EntityKind, Event, E
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.core.player import PlayerCharacter
+from dnd_simulator.core.resource import RestType
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.layers.common.rng_state import dump_rng_state, load_rng_state
 from dnd_simulator.layers.entities.activation_manager import ActivationManager
@@ -512,10 +513,12 @@ class EntitiesLayer(Layer):
                     entity.is_anchor = bool(edata.get("is_anchor", entity.is_anchor))
                     intent_raw = edata.get("current_intent")
                     if isinstance(intent_raw, dict):
+                        rest_type_raw = intent_raw.get("rest_type")
                         entity.current_intent = TimedIntent(
                             kind=IntentType(str(intent_raw["kind"])),
                             started_at_seconds=int(intent_raw["started_at_seconds"]),
                             wake_at_seconds=int(intent_raw["wake_at_seconds"]),
+                            rest_type=RestType(str(rest_type_raw)) if rest_type_raw is not None else None,
                         )
                     else:
                         entity.current_intent = None
@@ -545,7 +548,7 @@ class EntitiesLayer(Layer):
                             setattr(entity, field_name, deserialize_item(eq_data))
                     pools_raw = edata.get("resource_pools")
                     if isinstance(pools_raw, list):
-                        from dnd_simulator.core.resource import ResourcePool, RestType
+                        from dnd_simulator.core.resource import ResourcePool
 
                         saved_pools = {str(d["id"]): d for d in pools_raw}
                         existing_ids = {pool.id for pool in entity.resource_pools}

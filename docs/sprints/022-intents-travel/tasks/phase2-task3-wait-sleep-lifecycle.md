@@ -28,15 +28,23 @@ Likely files: `rules/handlers/movement.py`, `rules/handlers/rest.py`, the intent
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] WAIT, SHORT_REST, and LONG_REST use the persisted intent lifecycle.
-- [ ] Rest effects happen once, after elapsed game time.
-- [ ] Save/load/reconnect preserves an in-progress timed intent.
-- [ ] The websocket wait-with-NPC regression reaches the next player turn via fast-forward.
-- [ ] Travel compatibility remains isolated for Phase 3 removal.
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] WAIT, SHORT_REST, and LONG_REST use the persisted intent lifecycle.
+- [x] Rest effects happen once, after elapsed game time.
+- [x] Save/load/reconnect preserves an in-progress timed intent.
+- [x] The websocket wait-with-NPC regression reaches the next player turn via fast-forward.
+- [x] Travel compatibility remains isolated for Phase 3 removal.
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Timed intents now persist an optional rest completion type. Rest handlers only start sleep; activation applies healing
+and resource resets at the wake boundary before clearing the intent, so a second activation cannot repeat them. The
+strict save model preserves this completion data across save/load. A TestClient WebSocket regression covers wait next
+to a RuleBrain NPC and verifies that the next player turn arrives after a single fast-forward. Legacy `WAIT + travel_to`
+continues to use its isolated immediate-travel branch and never creates a timed intent.

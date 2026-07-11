@@ -432,7 +432,12 @@ class TestEntitiesStateModel:
         player = PlayerCharacter(id="hero", name="Hero", location_id="square", is_anchor=True)
         player.current_intent = TimedIntent(IntentType.WAIT, started_at_seconds=100, wake_at_seconds=3700)
         npc = _make_fighter_npc(is_anchor=True)
-        npc.current_intent = TimedIntent(IntentType.SLEEP, started_at_seconds=200, wake_at_seconds=29000)
+        npc.current_intent = TimedIntent(
+            IntentType.SLEEP,
+            started_at_seconds=200,
+            wake_at_seconds=29000,
+            rest_type=RestType.LONG_REST,
+        )
         creature = _make_creature("wolf")
         creature.is_anchor = False
         creature.current_intent = TimedIntent(IntentType.WAIT, started_at_seconds=300, wake_at_seconds=900)

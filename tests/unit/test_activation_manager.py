@@ -26,6 +26,7 @@ from dnd_simulator.core.models import (
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.queries import SquadInfo
+from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.core.squad import SquadBehavior, SquadType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 
@@ -154,6 +155,37 @@ class TestProximityActivation:
         EntitiesLayer([fighter]).update_activation(_TIME_0)
 
         assert fighter.active is True
+
+    def test_completed_long_rest_applies_rewards_once(self) -> None:
+        now = _TIME_0.to_total_seconds()
+        pool = ResourcePool("spell_slot_1", 2, 0, RestType.LONG_REST)
+        sleeper = Creature(
+            id="sleeper",
+            name="Sleeper",
+            location_id="inn",
+            is_anchor=True,
+            max_hp=20,
+            current_hp=5,
+            resource_pools=[pool],
+        )
+        sleeper.current_intent = TimedIntent(
+            IntentType.SLEEP,
+            now - 8 * 3600,
+            now,
+            rest_type=RestType.LONG_REST,
+        )
+        layer = EntitiesLayer([sleeper])
+
+        layer.update_activation(_TIME_0)
+        assert sleeper.current_hp == 20
+        assert pool.current_uses == 2
+        assert sleeper.current_intent is None
+
+        sleeper.current_hp = 10
+        pool.current_uses = 0
+        layer.update_activation(_TIME_0)
+        assert sleeper.current_hp == 10
+        assert pool.current_uses == 0
 
 
 class TestEncounterCooldown:

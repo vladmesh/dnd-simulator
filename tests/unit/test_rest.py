@@ -27,8 +27,8 @@ def _creature(
 
 
 class TestLongRestHandler:
-    def test_long_rest_resets_all_resource_pools(self) -> None:
-        """Long rest resets both SHORT_REST and LONG_REST pools."""
+    def test_long_rest_defers_resource_reset_until_wake(self) -> None:
+        """Long rest records sleep without granting its rewards up front."""
         from dnd_simulator.rules.handlers.rest import handle_long_rest
 
         short_pool = ResourcePool("second_wind", 1, 0, RestType.SHORT_REST)
@@ -40,11 +40,11 @@ class TestLongRestHandler:
         result = handle_long_rest(creature, Action(name=ActionType.LONG_REST), lambda *a: None, ctx, world)
 
         assert result.success
-        assert short_pool.current_uses == 1
-        assert long_pool.current_uses == 2
+        assert short_pool.current_uses == 0
+        assert long_pool.current_uses == 0
 
-    def test_long_rest_heals_to_full(self) -> None:
-        """Long rest restores HP to max_hp."""
+    def test_long_rest_defers_healing_until_wake(self) -> None:
+        """Long rest does not restore HP when sleep begins."""
         from dnd_simulator.rules.handlers.rest import handle_long_rest
 
         creature = _creature(hp=5, max_hp=20)
@@ -52,7 +52,7 @@ class TestLongRestHandler:
         world = _stub_world()
         handle_long_rest(creature, Action(name=ActionType.LONG_REST), lambda *a: None, ctx, world)
 
-        assert creature.current_hp == creature.max_hp
+        assert creature.current_hp == 5
 
     def test_long_rest_advances_8_hours(self) -> None:
         """Long rest sets a sleep intent 8 hours ahead and marks dormant."""
@@ -69,8 +69,8 @@ class TestLongRestHandler:
 
 
 class TestShortRestHandler:
-    def test_short_rest_resets_only_short_rest_pools(self) -> None:
-        """Short rest resets SHORT_REST pools, leaves LONG_REST pools untouched."""
+    def test_short_rest_defers_resource_reset_until_wake(self) -> None:
+        """Short rest records sleep without granting its rewards up front."""
         from dnd_simulator.rules.handlers.rest import handle_short_rest
 
         short_pool = ResourcePool("second_wind", 1, 0, RestType.SHORT_REST)
@@ -82,7 +82,7 @@ class TestShortRestHandler:
         result = handle_short_rest(creature, Action(name=ActionType.SHORT_REST), lambda *a: None, ctx, world)
 
         assert result.success
-        assert short_pool.current_uses == 1
+        assert short_pool.current_uses == 0
         assert long_pool.current_uses == 0  # NOT reset
 
     def test_short_rest_does_not_heal(self) -> None:

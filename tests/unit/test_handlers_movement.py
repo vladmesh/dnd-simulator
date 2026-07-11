@@ -347,6 +347,7 @@ class TestHandleWait:
         assert not result.success
         assert result.error
         assert mover.location_id == "starting_town"
+        assert mover.current_intent is None
 
     def test_wait_travel_misnamed_target_returns_failure(self) -> None:
         """Travel by name when no location matches returns success=False and location unchanged."""
@@ -370,6 +371,7 @@ class TestHandleWait:
         assert not result.success
         assert result.error
         assert mover.location_id == "starting_town"
+        assert mover.current_intent is None
 
     def test_wait_travel_name_match_unreachable_returns_failure(self) -> None:
         """Travel where name matches but route to that location is unreachable returns failure."""
@@ -391,3 +393,4 @@ class TestHandleWait:
         assert not result.success
         assert result.error
         assert mover.location_id == "starting_town"
+        assert mover.current_intent is None

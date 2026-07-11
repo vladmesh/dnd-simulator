@@ -16,6 +16,7 @@ from dnd_simulator.core.character import Creature, Entity
 from dnd_simulator.core.models import Event
 from dnd_simulator.core.monster import EncounterEntry
 from dnd_simulator.layers.entities.encounters import check_encounters
+from dnd_simulator.layers.entities.intent_completion import complete_timed_intent
 from dnd_simulator.layers.entities.materialization import update_lair_materialization, update_squad_materialization
 
 if TYPE_CHECKING:
@@ -97,6 +98,7 @@ class ActivationManager:
                 e.current_intent = None
                 continue
             if e.current_intent is not None and now >= e.current_intent.wake_at_seconds:
+                complete_timed_intent(e, e.current_intent)
                 e.current_intent = None
                 logger.info("activation_wake_timer", entity_id=e.id)
             if e.is_anchor and e.current_intent is None:
