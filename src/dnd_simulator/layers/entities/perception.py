@@ -102,13 +102,16 @@ def _format_roll(atk_roll: dict[str, object], ac: object) -> str:
     return " [" + "".join(parts) + "]"
 
 
-def _format_damage(damage: object, damage_components: list[dict[str, object]], critical: bool) -> str:
+def _format_damage(
+    damage: object, damage_components: list[dict[str, object]] | tuple[object, ...], critical: bool
+) -> str:
     """Build damage string from structured components.
 
     Format: , 10 damage (1d8 slashing + 1d6 sneak_attack + 2 dueling)
     """
     detail_parts: list[str] = []
     for dc in damage_components:
+        assert isinstance(dc, dict)
         if dc["dice"] and dc["source"] != "weapon":
             detail_parts.append(f"{dc['dice']} {_(str(dc['source']))}")
         elif dc["dice"]:
@@ -144,7 +147,7 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
         outcome_str = _(", miss")
     elif "damage_components" in d:
         damage_components = d["damage_components"]
-        assert isinstance(damage_components, list)
+        assert isinstance(damage_components, (list, tuple))
         outcome_str = _format_damage(d["damage"], damage_components, bool(critical))
     elif "damage" in d:
         outcome_str = _(", {damage} damage").format(damage=d["damage"])

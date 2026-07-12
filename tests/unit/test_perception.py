@@ -291,7 +291,7 @@ class TestRegionLog:
             Event(
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
-                data={"attacker_id": "player", "target_id": "smith", "weapon": "longsword"},
+                data={"attacker_id": "player", "target_id": "smith"},
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -304,7 +304,7 @@ class TestRegionLog:
             Event(
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
-                data={"attacker_id": "player", "target_id": "smith", "weapon": "longsword"},
+                data={"attacker_id": "player", "target_id": "smith"},
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -575,58 +575,53 @@ class TestPerceptionDispatchAndFailFast:
             )
 
     def test_missing_weapon_in_attack_raises_key_error(self) -> None:
-        """ENTITY_ATTACK without 'weapon' raises KeyError — fail-fast."""
-        observer = Character(id="guard", name="Guard", location_id="r1")
-        event = Event(
-            event_type=EventType.ENTITY_ATTACK,
-            source_layer="entities",
-            data={
-                "attacker_id": "guard",
-                "target_id": "npc",
-                "hit": False,
-                "critical": False,
-                "ac": 13,
-                "attack_roll": {
-                    "natural": 8,
-                    "components": [],
-                    "total": 8,
-                    "advantage": False,
-                    "disadvantage": False,
+        """ENTITY_ATTACK without 'weapon' is rejected at construction."""
+        with pytest.raises(TypeError, match="weapon"):
+            Event(
+                event_type=EventType.ENTITY_ATTACK,
+                source_layer="entities",
+                data={
+                    "attacker_id": "guard",
+                    "target_id": "npc",
+                    "hit": False,
+                    "critical": False,
+                    "ac": 13,
+                    "attack_roll": {
+                        "natural": 8,
+                        "components": [],
+                        "total": 8,
+                        "advantage": False,
+                        "disadvantage": False,
+                    },
                 },
-                # "weapon" deliberately missing
-            },
-        )
-        with pytest.raises(KeyError, match="weapon"):
-            perceive_event(event, observer, _get_entity_fn(observer))
+            )
 
     def test_missing_critical_in_attack_raises_key_error(self) -> None:
-        """ENTITY_ATTACK without 'critical' raises KeyError — fail-fast."""
-        observer = Character(id="guard", name="Guard", location_id="r1")
-        event = Event(
-            event_type=EventType.ENTITY_ATTACK,
-            source_layer="entities",
-            data={
-                "attacker_id": "guard",
-                "target_id": "npc",
-                "weapon": "longsword",
-                "hit": True,
-                "ac": 13,
-                "attack_roll": {
-                    "natural": 18,
-                    "components": [],
-                    "total": 18,
-                    "advantage": False,
-                    "disadvantage": False,
+        """ENTITY_ATTACK without 'critical' is rejected at construction."""
+        with pytest.raises(TypeError, match="critical"):
+            Event(
+                event_type=EventType.ENTITY_ATTACK,
+                source_layer="entities",
+                data={
+                    "attacker_id": "guard",
+                    "target_id": "npc",
+                    "weapon": "longsword",
+                    "hit": True,
+                    "ac": 13,
+                    "attack_roll": {
+                        "natural": 18,
+                        "components": [],
+                        "total": 18,
+                        "advantage": False,
+                        "disadvantage": False,
+                    },
+                    "damage": 5,
+                    "damage_components": [
+                        {"source": "weapon", "dice": "1d8", "amount": 5, "type": "slashing"},
+                    ],
+                    # "critical" deliberately missing
                 },
-                "damage": 5,
-                "damage_components": [
-                    {"source": "weapon", "dice": "1d8", "amount": 5, "type": "slashing"},
-                ],
-                # "critical" deliberately missing
-            },
-        )
-        with pytest.raises(KeyError, match="critical"):
-            perceive_event(event, observer, _get_entity_fn(observer))
+            )
 
 
 class TestPerceiveReputationChanged:

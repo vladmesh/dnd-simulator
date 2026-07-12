@@ -130,7 +130,7 @@ class TestNpcTurnOrchestration:
 
         _run_turn(layer, npc, capture_emit)
         assert len(emit_calls) == 1
-        assert emit_calls[0].event_type == EventType.ENTITY_ATTACK
+        assert emit_calls[0].event_type == EventType.ENTITY_ATTACK_REQUESTED
         assert emit_calls[0].data["attacker_id"] == "n1"
         assert emit_calls[0].data["target_id"] == "player"
 

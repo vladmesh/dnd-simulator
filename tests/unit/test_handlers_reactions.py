@@ -40,7 +40,7 @@ def _ctx(actor: Creature) -> ActionContext:
 
 class TestHandleOpportunityAttack:
     def test_emits_entity_attack_event(self) -> None:
-        """OA emits ENTITY_ATTACK event with is_opportunity_attack=True."""
+        """OA emits ENTITY_ATTACK_REQUESTED with is_opportunity_attack=True."""
         actor = _creature("guard")
         action = _oa_action("goblin")
         events: list[Event] = []
@@ -53,7 +53,7 @@ class TestHandleOpportunityAttack:
         ctx = _ctx(actor)
         handle_opportunity_attack(actor, action, emit_fn, ctx, world)
 
-        attack_events = [e for e in events if e.event_type == EventType.ENTITY_ATTACK]
+        attack_events = [e for e in events if e.event_type == EventType.ENTITY_ATTACK_REQUESTED]
         assert len(attack_events) == 1
         assert attack_events[0].data["attacker_id"] == "guard"
         assert attack_events[0].data["target_id"] == "goblin"
@@ -86,7 +86,7 @@ class TestHandleOpportunityAttack:
         expected_result = ActionResult(success=True)
 
         def emit_fn(event: Event) -> ActionResult:
-            if event.event_type == EventType.ENTITY_ATTACK:
+            if event.event_type == EventType.ENTITY_ATTACK_REQUESTED:
                 return expected_result
             return ActionResult()
 
@@ -111,7 +111,7 @@ class TestHandleOpportunityAttack:
         ctx = _ctx(actor)
         handle_opportunity_attack(actor, action, emit_fn, ctx, world)
 
-        attack_events = [e for e in events if e.event_type == EventType.ENTITY_ATTACK]
+        attack_events = [e for e in events if e.event_type == EventType.ENTITY_ATTACK_REQUESTED]
         assert attack_events[0].data["target_id"] == "specific_target"
 
     def test_source_layer_is_entities(self) -> None:

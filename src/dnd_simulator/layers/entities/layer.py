@@ -303,10 +303,10 @@ class EntitiesLayer(Layer):
             return self._combat.resolve_dodge(event)
 
         # Attack/flee can end combat (kill/flee removes fighter, <=1 left → combat ends)
-        if event.event_type in (EventType.ENTITY_ATTACK, EventType.ENTITY_FLEE):
+        if event.event_type in (EventType.ENTITY_ATTACK_REQUESTED, EventType.ENTITY_FLEE):
             location_id = self._event_location(event)
             had_combat = location_id is not None and self._combat.get_combat(location_id) is not None
-            if event.event_type == EventType.ENTITY_ATTACK:
+            if event.event_type == EventType.ENTITY_ATTACK_REQUESTED:
                 result = self._combat.resolve_attack(event, query_fn=query_fn)
             else:
                 result = self._combat.resolve_flee(event)

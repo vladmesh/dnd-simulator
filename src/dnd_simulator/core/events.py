@@ -242,6 +242,29 @@ class TurnSkippedPayload(TypedPayload):
     location_id: str = ""
 
 
+@dataclass(frozen=True)
+class AttackRequestedPayload(TypedPayload):
+    attacker_id: str
+    target_id: str
+    smite_slot_level: int | None = None
+    is_opportunity_attack: bool = False
+
+
+@dataclass(frozen=True)
+class AttackResolvedPayload(TypedPayload):
+    attacker_id: str
+    target_id: str
+    hit: bool
+    weapon: str
+    critical: bool
+    ac: int
+    attack_roll: object
+    is_opportunity_attack: bool = False
+    damage: int | None = None
+    total_damage: int | None = None
+    damage_components: tuple[object, ...] = ()
+
+
 EventPayload = (
     WeatherChangedPayload
     | SquadMovePayload
@@ -267,6 +290,8 @@ EventPayload = (
     | ReputationChangedPayload
     | XpGainedPayload
     | TurnSkippedPayload
+    | AttackRequestedPayload
+    | AttackResolvedPayload
 )
 
 
@@ -295,4 +320,6 @@ EVENT_PAYLOAD_TYPES: dict[EventType, type[object]] = {
     EventType.REPUTATION_CHANGED: ReputationChangedPayload,
     EventType.XP_GAINED: XpGainedPayload,
     EventType.TURN_SKIPPED: TurnSkippedPayload,
+    EventType.ENTITY_ATTACK_REQUESTED: AttackRequestedPayload,
+    EventType.ENTITY_ATTACK: AttackResolvedPayload,
 }

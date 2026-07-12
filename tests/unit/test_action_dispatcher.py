@@ -292,7 +292,7 @@ class TestHandleAttack:
         result = handle_attack(_creature(), action, emit, _COMBAT, _WORLD)
         assert result.success
         assert len(emitted) == 1
-        assert emitted[0].event_type == EventType.ENTITY_ATTACK
+        assert emitted[0].event_type == EventType.ENTITY_ATTACK_REQUESTED
         assert emitted[0].data["attacker_id"] == "test"
         assert emitted[0].data["target_id"] == "goblin_1"
 

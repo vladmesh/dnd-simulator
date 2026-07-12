@@ -26,6 +26,7 @@
 
 1. [Типизированное ядро событий](tasks/phase1-task1-event-contract-core.md) — payload-контракт и миграция системных/layer-событий
 2. [Контракты lifecycle и боя существ](tasks/phase1-task2-entity-lifecycle-contracts.md) — encounter, combat, death, movement, XP/reputation
+2.5. [Разделить запрос и результат атаки](tasks/phase1-task2.5-split-attack-event.md) — отдельные контракты command/fact
 3. [Контракты событий действий](tasks/phase1-task3-action-event-contracts.md) — handlers, attack result, perception и полное покрытие EventType
 
 `encounter-spawned-perceiver` при разведке оказался уже закрыт в Sprint 019: `_perceive_encounter_spawned`
@@ -71,6 +72,7 @@ _(генерируются отдельно перед началом фазы)_
 
 - Граница Sprint 023: таксономия событий + lair write-back + trigger table + минимальная ручка ГМ. `inner-self`, `brain-gate-decide`, полная `detail-ladder`, квесты, реализм доставки информации и `gm-actives-panel` сверх минимума — за пределами спринта (2026-07-12).
 - Разгрузка бэклога по просьбе оператора: `action-error-kills-round-loop`, `encounter-spawned-perceiver`, `dash-actiondef-movement-conflation` входят в scope как polish-айтемы фаз 1 и 4 (2026-07-12).
+- `ENTITY_ATTACK_REQUESTED` — внутренняя команда resolution, `ENTITY_ATTACK` — завершённый мировой факт. Разделение принято вместо optional-полей в одном payload (2026-07-12).
 
 ## Deferred
 

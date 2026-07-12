@@ -3,6 +3,8 @@ from __future__ import annotations
 import pytest
 
 from dnd_simulator.core.events import (
+    AttackRequestedPayload,
+    AttackResolvedPayload,
     CombatStartedPayload,
     EncounterSpawnedPayload,
     EntityDiedPayload,
@@ -79,3 +81,21 @@ def test_lifecycle_event_rejects_incompatible_payload_immediately() -> None:
             "entities",
             EncounterSpawnedPayload("crossroads", ("Goblin",), ("goblin_1",)),
         )
+
+
+def test_attack_request_and_result_have_distinct_contracts() -> None:
+    requested = Event(
+        EventType.ENTITY_ATTACK_REQUESTED,
+        "entities",
+        AttackRequestedPayload("hero", "goblin", 1),
+    )
+    resolved = Event(
+        EventType.ENTITY_ATTACK,
+        "entities",
+        AttackResolvedPayload("hero", "goblin", False, "Longsword", False, 13, None),
+    )
+
+    assert requested.data.smite_slot_level == 1
+    assert resolved.data.hit is False
+    with pytest.raises(TypeError, match="ENTITY_ATTACK requires AttackResolvedPayload"):
+        Event(EventType.ENTITY_ATTACK, "entities", requested.data)

@@ -109,6 +109,7 @@ class EventType(Enum):
 
     ENTITY_DIED = "entity_died"
     ENTITY_SAY = "entity_say"
+    ENTITY_ATTACK_REQUESTED = "entity_attack_requested"
     ENTITY_ATTACK = "entity_attack"
     ENTITY_DODGE = "entity_dodge"
     ENTITY_FLEE = "entity_flee"
@@ -265,6 +266,10 @@ class Event:
     def __post_init__(self) -> None:
         from dnd_simulator.core.events import EVENT_PAYLOAD_TYPES
 
+        # Transitional adapter for tests and callers still constructing the old
+        # attack-command dictionary. Production producers use the explicit type.
+        if self.event_type is EventType.ENTITY_ATTACK and isinstance(self.data, dict) and "hit" not in self.data:
+            object.__setattr__(self, "event_type", EventType.ENTITY_ATTACK_REQUESTED)
         expected = EVENT_PAYLOAD_TYPES.get(self.event_type)
         if expected is not None and isinstance(self.data, dict):
             values = dict(self.data)
@@ -279,6 +284,7 @@ class Event:
                 EventType.COMBAT_STARTED: ("turn_order", "turn_order_names"),
                 EventType.ENCOUNTER_SPAWNED: ("spawned_entity_ids", "spawned_names"),
                 EventType.TURN_SKIPPED: ("conditions",),
+                EventType.ENTITY_ATTACK: ("damage_components",),
             }
             for name in tuple_fields.get(self.event_type, ()):
                 if isinstance(values.get(name), list):

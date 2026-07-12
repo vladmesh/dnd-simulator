@@ -192,6 +192,8 @@ def resolve_attack(mgr: CombatManager, event: Event, query_fn: QueryFn | None = 
     )
 
     log_data = build_attack_event(attacker_id, target_id, attack, result, atk_mods, rolled_dice)
+    if event.data.get("is_opportunity_attack") is True:
+        log_data["is_opportunity_attack"] = True
 
     if result.hit:
         actual_damage = target.take_damage(result.total_damage)
