@@ -40,7 +40,8 @@ Ecology подписывается на события смерти сущест
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Принадлежность смерти логову](tasks/phase2-task1-lair-death-provenance.md) — строгая provenance ядра/миньона в `ENTITY_DIED` и сейве
+2. [Немедленный write-back смерти в ecology](tasks/phase2-task2-ecology-death-writeback.md) — событийное обновление ростера/depletion и save/load
 
 ## Phase 3: Trigger table
 
@@ -66,7 +67,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 1 (Типизированная таксономия событий) CLOSED — 2026-07-12. Integration 160 green, E2E section 1 + typed-payload auto-scenarios 8/8. Ready for Phase 2 task generation.
+**Current:** Phase 2 (Событийный write-back — смерти логова) tasks generated — 2026-07-13. Ready to start task 1.
 
 ## Decisions
 
