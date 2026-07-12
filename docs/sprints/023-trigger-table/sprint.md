@@ -24,7 +24,12 @@
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Типизированное ядро событий](tasks/phase1-task1-event-contract-core.md) — payload-контракт и миграция системных/layer-событий
+2. [Контракты lifecycle и боя существ](tasks/phase1-task2-entity-lifecycle-contracts.md) — encounter, combat, death, movement, XP/reputation
+3. [Контракты событий действий](tasks/phase1-task3-action-event-contracts.md) — handlers, attack result, perception и полное покрытие EventType
+
+`encounter-spawned-perceiver` при разведке оказался уже закрыт в Sprint 019: `_perceive_encounter_spawned`
+зарегистрирован в dispatch и покрыт RU/EN тестами. Phase 1 сохраняет и пинует это поведение при миграции payload'а.
 
 ## Phase 2: Событийный write-back — смерти логова
 
@@ -60,7 +65,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** Phase 1 tasks generated. Ready to start task 1.
 
 ## Decisions
 
