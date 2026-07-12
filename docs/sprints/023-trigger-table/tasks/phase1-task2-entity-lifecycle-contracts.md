@@ -25,13 +25,20 @@ Encounter payload должен содержать стабильные иден�
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Lifecycle/combat producers не собирают payload через dict
-- [ ] Death и encounter payload'ы содержат стабильные entity/location идентификаторы для фаз 2-3
-- [ ] Encounter log остаётся локализованным, не раскрывает roster и не использует fallback
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Lifecycle/combat producers не собирают payload через dict
+- [x] Death и encounter payload'ы содержат стабильные entity/location идентификаторы для фаз 2-3
+- [x] Encounter log остаётся локализованным, не раскрывает roster и не использует fallback
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Добавлены frozen payload-контракты для death, movement, combat start/end, encounter, round/turn skip, opportunity attack, XP и reputation. Encounter сохраняет и ID, и display names; перцептор по-прежнему выдаёт только локализованную расплывчатую строку.
+- Producers и lifecycle-perception переведены на атрибуты payload. Combat summary теперь читает типизированный turn order; старые fail-fast тесты обновлены с позднего `KeyError` на ранний `TypeError` при создании события.
+- Разрешённый attack event остаётся в task 3 вместе с остальными action payload'ами, чтобы roll/damage value objects мигрировали одним контрактом.
+- `make check`: backend 2483 passed, frontend 283 passed.

@@ -118,7 +118,7 @@ class TestLayerIsolationEmitValidation:
         world = World([geo, ent])
 
         emit_fn = world.make_emit_fn("geography")
-        event = Event(event_type=EventType.ENTITY_MOVE, source_layer="geography")
+        event = Event(event_type=EventType.CUSTOM, source_layer="geography")
         result = emit_fn(event)
         assert result.success is True
 
@@ -128,7 +128,7 @@ class TestLayerIsolationEmitValidation:
         world = World([geo, ent])
 
         emit_fn = world.make_emit_fn("geography")
-        event = Event(event_type=EventType.ENTITY_MOVE, source_layer="entities")
+        event = Event(event_type=EventType.CUSTOM, source_layer="entities")
         with pytest.raises(LayerError, match="cannot emit event"):
             emit_fn(event)
 
@@ -142,7 +142,7 @@ class TestEventPropagation:
         ent = StubLayer("entities")
         world = World([geo, pol, ent])
 
-        event = Event(event_type=EventType.ENTITY_MOVE, source_layer="geography")
+        event = Event(event_type=EventType.CUSTOM, source_layer="geography")
         geo.tick_events = [event]
 
         world.advance_time(TimeDelta(seconds=10))

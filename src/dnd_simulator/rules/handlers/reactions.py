@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from dnd_simulator.core.events import OpportunityAttackPayload
 from dnd_simulator.core.models import ActionResult, Event, EventType
 
 if TYPE_CHECKING:
@@ -49,10 +50,7 @@ def handle_opportunity_attack(
         Event(
             event_type=EventType.OPPORTUNITY_ATTACK,
             source_layer="entities",
-            data={
-                "attacker_id": actor.id,
-                "target_id": target_id,
-            },
+            data=OpportunityAttackPayload(actor.id, target_id, actor.location_id),
         )
     )
 

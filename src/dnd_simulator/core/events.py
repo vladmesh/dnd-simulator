@@ -159,6 +159,89 @@ class SettlementDamagedPayload(TypedPayload):
     region_id: str
 
 
+@dataclass(frozen=True)
+class EntityDiedPayload(TypedPayload):
+    entity_id: str
+    location_id: str = ""
+    killer_id: str | None = None
+
+
+@dataclass(frozen=True)
+class EntityMovePayload(TypedPayload):
+    entity_id: str
+    location_id: str = ""
+    from_x: int | None = None
+    from_y: int | None = None
+    to_x: int | None = None
+    to_y: int | None = None
+    distance_ft: int | None = None
+    direction: str | None = None
+    ft: int = 5
+
+
+@dataclass(frozen=True)
+class CombatStartedPayload(TypedPayload):
+    location_id: str
+    turn_order: tuple[str, ...]
+    turn_order_names: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class CombatEndedPayload(TypedPayload):
+    location_id: str
+
+
+@dataclass(frozen=True)
+class EncounterSpawnedPayload(TypedPayload):
+    legacy_aliases: ClassVar[dict[str, str]] = {"names": "spawned_names"}
+    location_id: str
+    spawned_names: tuple[str, ...]
+    spawned_entity_ids: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class RoundStartPayload(TypedPayload):
+    location_id: str
+    round_number: int
+
+
+@dataclass(frozen=True)
+class OpportunityAttackPayload(TypedPayload):
+    attacker_id: str
+    target_id: str
+    location_id: str = ""
+
+
+@dataclass(frozen=True)
+class ReputationChangedPayload(TypedPayload):
+    entity_id: str
+    faction_id: str
+    old_rep: int
+    new_rep: int
+    delta: int
+    reason: str
+    faction_name: str | None = None
+    location_id: str = ""
+
+
+@dataclass(frozen=True)
+class XpGainedPayload(TypedPayload):
+    entity_id: str
+    amount: int
+    new_total: int
+    source_entity_id: str
+    level_up_available: bool
+    location_id: str = ""
+
+
+@dataclass(frozen=True)
+class TurnSkippedPayload(TypedPayload):
+    entity_id: str
+    reason: str
+    conditions: tuple[str, ...]
+    location_id: str = ""
+
+
 EventPayload = (
     WeatherChangedPayload
     | SquadMovePayload
@@ -174,6 +257,16 @@ EventPayload = (
     | LeaderDiedPayload
     | NationDestroyedPayload
     | SettlementDamagedPayload
+    | EntityDiedPayload
+    | EntityMovePayload
+    | CombatStartedPayload
+    | CombatEndedPayload
+    | EncounterSpawnedPayload
+    | RoundStartPayload
+    | OpportunityAttackPayload
+    | ReputationChangedPayload
+    | XpGainedPayload
+    | TurnSkippedPayload
 )
 
 
@@ -192,4 +285,14 @@ EVENT_PAYLOAD_TYPES: dict[EventType, type[object]] = {
     EventType.LEADER_DIED: LeaderDiedPayload,
     EventType.NATION_DESTROYED: NationDestroyedPayload,
     EventType.SETTLEMENT_DAMAGED: SettlementDamagedPayload,
+    EventType.ENTITY_DIED: EntityDiedPayload,
+    EventType.ENTITY_MOVE: EntityMovePayload,
+    EventType.COMBAT_STARTED: CombatStartedPayload,
+    EventType.COMBAT_ENDED: CombatEndedPayload,
+    EventType.ENCOUNTER_SPAWNED: EncounterSpawnedPayload,
+    EventType.ROUND_START: RoundStartPayload,
+    EventType.OPPORTUNITY_ATTACK: OpportunityAttackPayload,
+    EventType.REPUTATION_CHANGED: ReputationChangedPayload,
+    EventType.XP_GAINED: XpGainedPayload,
+    EventType.TURN_SKIPPED: TurnSkippedPayload,
 }

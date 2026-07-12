@@ -24,6 +24,7 @@ from dnd_simulator.core.awareness import (
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.combat import CombatState, Position
 from dnd_simulator.core.creature_host import CreatureHost
+from dnd_simulator.core.events import TurnSkippedPayload
 from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType, GameDateTime, QueryFn, TimeDelta
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
 from dnd_simulator.core.turn_budget import TurnBudget
@@ -162,7 +163,7 @@ class Round:
                     Event(
                         event_type=EventType.TURN_SKIPPED,
                         source_layer="entities",
-                        data={"entity_id": creature.id, "reason": "incapacitated", "conditions": reasons},
+                        data=TurnSkippedPayload(creature.id, "incapacitated", tuple(reasons), creature.location_id),
                     )
                 )
                 return None

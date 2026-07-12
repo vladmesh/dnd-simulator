@@ -271,8 +271,18 @@ class Event:
             if self.event_type is EventType.SQUAD_MOVE:
                 values["from_location_id"] = values.pop("from")
                 values["to_location_id"] = values.pop("to")
+            if self.event_type is EventType.ENCOUNTER_SPAWNED and "names" in values:
+                values["spawned_names"] = values.pop("names")
             if self.event_type is EventType.LAIR_DEMATERIALIZED and isinstance(values.get("alive_members"), list):
                 values["alive_members"] = tuple(values["alive_members"])
+            tuple_fields = {
+                EventType.COMBAT_STARTED: ("turn_order", "turn_order_names"),
+                EventType.ENCOUNTER_SPAWNED: ("spawned_entity_ids", "spawned_names"),
+                EventType.TURN_SKIPPED: ("conditions",),
+            }
+            for name in tuple_fields.get(self.event_type, ()):
+                if isinstance(values.get(name), list):
+                    values[name] = tuple(values[name])
             try:
                 object.__setattr__(self, "data", expected(**values))
             except TypeError as exc:

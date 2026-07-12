@@ -557,27 +557,13 @@ class TestPerceptionDispatchAndFailFast:
         with pytest.raises(KeyError, match="text"):
             perceive_event(event, observer, _get_entity_fn(observer))
 
-    def test_missing_entity_id_raises_key_error(self) -> None:
-        """ENTITY_DIED without 'entity_id' raises KeyError."""
-        observer = Character(id="guard", name="Guard", location_id="r1")
-        event = Event(
-            event_type=EventType.ENTITY_DIED,
-            source_layer="entities",
-            data={},  # missing "entity_id"
-        )
-        with pytest.raises(KeyError, match="entity_id"):
-            perceive_event(event, observer, _get_entity_fn(observer))
+    def test_missing_entity_id_fails_at_event_boundary(self) -> None:
+        with pytest.raises(TypeError, match="invalid ENTITY_DIED payload"):
+            Event(event_type=EventType.ENTITY_DIED, source_layer="entities", data={})
 
-    def test_missing_round_number_raises_key_error(self) -> None:
-        """ROUND_START without 'round_number' raises KeyError."""
-        observer = Character(id="guard", name="Guard", location_id="r1")
-        event = Event(
-            event_type=EventType.ROUND_START,
-            source_layer="entities",
-            data={},  # missing "round_number"
-        )
-        with pytest.raises(KeyError, match="round_number"):
-            perceive_event(event, observer, _get_entity_fn(observer))
+    def test_missing_round_number_fails_at_event_boundary(self) -> None:
+        with pytest.raises(TypeError, match="invalid ROUND_START payload"):
+            Event(event_type=EventType.ROUND_START, source_layer="entities", data={})
 
     def test_missing_squad_payload_fields_rejected_at_event_boundary(self) -> None:
         """Typed events fail at construction instead of later in perception."""

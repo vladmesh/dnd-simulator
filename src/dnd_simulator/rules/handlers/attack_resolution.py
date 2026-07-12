@@ -12,6 +12,7 @@ import structlog
 
 from dnd_simulator.core.character import Attack, Creature
 from dnd_simulator.core.combat import CombatState
+from dnd_simulator.core.events import EntityMovePayload
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.core.modifiers import AttackModifiers, RollComponent
 from dnd_simulator.i18n import _
@@ -147,14 +148,15 @@ def resolve_combat_move(
         Event(
             event_type=EventType.ENTITY_MOVE,
             source_layer="entities",
-            data={
-                "entity_id": entity_id,
-                "from_x": cur_pos.x,
-                "from_y": cur_pos.y,
-                "to_x": new_pos.x,
-                "to_y": new_pos.y,
-                "distance_ft": moved_ft,
-            },
+            data=EntityMovePayload(
+                entity_id=entity_id,
+                location_id=entity.location_id,
+                from_x=cur_pos.x,
+                from_y=cur_pos.y,
+                to_x=new_pos.x,
+                to_y=new_pos.y,
+                distance_ft=moved_ft,
+            ),
         )
     )
     return ActionResult(success=True)

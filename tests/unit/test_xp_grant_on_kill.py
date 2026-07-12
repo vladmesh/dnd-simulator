@@ -172,7 +172,7 @@ class TestReputationEventFactionName:
         combat_resolution.handle_death(cm, hero, goblin, goblin.id, _hit_result(), self._query_fn(None))
 
         rep_ev = next(e for e in log["arena"] if e.event_type == EventType.REPUTATION_CHANGED)
-        assert "faction_name" not in rep_ev.data
+        assert rep_ev.data.faction_name is None
 
 
 class TestMonsterTemplateSpawnXp:

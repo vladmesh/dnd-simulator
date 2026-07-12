@@ -6,10 +6,18 @@ from collections.abc import Callable
 
 from dnd_simulator.core.character import Character, Entity
 from dnd_simulator.core.events import (
+    CombatStartedPayload,
+    EntityDiedPayload,
+    EntityMovePayload,
+    OpportunityAttackPayload,
+    ReputationChangedPayload,
+    RoundStartPayload,
     SquadCombatPayload,
     SquadDematerializedPayload,
     SquadMaterializedPayload,
     SquadMovePayload,
+    TurnSkippedPayload,
+    XpGainedPayload,
 )
 from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.i18n import _
@@ -170,8 +178,10 @@ def _perceive_opportunity_attack(event: Event, observer: Character, get_entity: 
     The detailed attack info is in the preceding ENTITY_ATTACK event
     (annotated with '(opportunity attack)'), so this is kept minimal.
     """
-    attacker_id = str(event.data["attacker_id"])
-    target_id = str(event.data["target_id"])
+    payload = event.data
+    assert isinstance(payload, OpportunityAttackPayload)
+    attacker_id = payload.attacker_id
+    target_id = payload.target_id
     attacker = _describe(observer, attacker_id, get_entity)
     target = _describe(observer, target_id, get_entity)
     if attacker_id == observer.id:
@@ -182,7 +192,9 @@ def _perceive_opportunity_attack(event: Event, observer: Character, get_entity: 
 
 
 def _perceive_death(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    entity_id = str(event.data["entity_id"])
+    payload = event.data
+    assert isinstance(payload, EntityDiedPayload)
+    entity_id = payload.entity_id
     if entity_id == observer.id:
         return _("You die")
     desc = _describe(observer, entity_id, get_entity)
@@ -214,14 +226,15 @@ def _perceive_flee(event: Event, observer: Character, get_entity: GetEntityFn) -
 def _perceive_move(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     from dnd_simulator.rules.movement import direction_label
 
-    d = event.data
-    entity_id = str(d["entity_id"])
-    description = d.get("description", "")  # optional flavor text
-    distance_ft = d["distance_ft"]
-    from_x = d["from_x"]
-    from_y = d["from_y"]
-    to_x = d["to_x"]
-    to_y = d["to_y"]
+    payload = event.data
+    assert isinstance(payload, EntityMovePayload)
+    entity_id = payload.entity_id
+    description = ""
+    distance_ft = payload.distance_ft
+    from_x = payload.from_x
+    from_y = payload.from_y
+    to_x = payload.to_x
+    to_y = payload.to_y
     assert isinstance(from_x, int) and isinstance(from_y, int)
     assert isinstance(to_x, int) and isinstance(to_y, int)
 
@@ -285,10 +298,10 @@ def _perceive_inspect(event: Event, observer: Character, get_entity: GetEntityFn
 
 
 def _perceive_turn_skipped(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
-    entity_id = str(d["entity_id"])
-    conditions = d["conditions"]
-    assert isinstance(conditions, list)
+    payload = event.data
+    assert isinstance(payload, TurnSkippedPayload)
+    entity_id = payload.entity_id
+    conditions = payload.conditions
 
     cond_str = ", ".join(str(c) for c in conditions) if conditions else "?"
     if entity_id == observer.id:
@@ -432,14 +445,17 @@ def _perceive_take(event: Event, observer: Character, get_entity: GetEntityFn) -
 
 
 def _perceive_combat_started(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    names = event.data["turn_order_names"]
-    assert isinstance(names, list)
+    payload = event.data
+    assert isinstance(payload, CombatStartedPayload)
+    names = payload.turn_order_names
     order_str = ", ".join(str(n) for n in names) if names else "?"
     return _("Combat started! Initiative order: {order}").format(order=order_str)
 
 
 def _perceive_round_start(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    round_number = event.data["round_number"]
+    payload = event.data
+    assert isinstance(payload, RoundStartPayload)
+    round_number = payload.round_number
     return _("— Round {n} —").format(n=round_number)
 
 
@@ -500,10 +516,11 @@ def _perceive_encounter_spawned(event: Event, observer: Character, get_entity: G
 
 
 def _perceive_xp_gained(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
-    entity_id = str(d["entity_id"])
-    amount = d["amount"]
-    source_id = str(d["source_entity_id"])
+    payload = event.data
+    assert isinstance(payload, XpGainedPayload)
+    entity_id = payload.entity_id
+    amount = payload.amount
+    source_id = payload.source_entity_id
     source = _describe(observer, source_id, get_entity)
     if entity_id == observer.id:
         return _("You gain {amount} XP for defeating {source}").format(amount=amount, source=source)
@@ -512,11 +529,12 @@ def _perceive_xp_gained(event: Event, observer: Character, get_entity: GetEntity
 
 
 def _perceive_reputation_change(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
-    entity_id = str(d["entity_id"])
-    faction_name = str(d.get("faction_name", d["faction_id"]))
-    old_rep = d["old_rep"]
-    new_rep = d["new_rep"]
+    payload = event.data
+    assert isinstance(payload, ReputationChangedPayload)
+    entity_id = payload.entity_id
+    faction_name = payload.faction_name or payload.faction_id
+    old_rep = payload.old_rep
+    new_rep = payload.new_rep
 
     if entity_id == observer.id:
         return _("Your reputation with {faction} changed ({old} → {new})").format(

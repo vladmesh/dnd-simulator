@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.combat import Position
+from dnd_simulator.core.events import EntityMovePayload
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.modifiers import effective_speed
@@ -70,14 +71,9 @@ def handle_move(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
             Event(
                 event_type=EventType.ENTITY_MOVE,
                 source_layer="entities",
-                data={
-                    "entity_id": actor.id,
-                    "from_x": cur_pos.x,
-                    "from_y": cur_pos.y,
-                    "to_x": new_pos.x,
-                    "to_y": new_pos.y,
-                    "distance_ft": moved_ft,
-                },
+                data=EntityMovePayload(
+                    actor.id, actor.location_id, cur_pos.x, cur_pos.y, new_pos.x, new_pos.y, moved_ft
+                ),
             )
         )
         return ActionResult()
@@ -87,7 +83,7 @@ def handle_move(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
         Event(
             event_type=EventType.ENTITY_MOVE,
             source_layer="entities",
-            data={"entity_id": actor.id, "direction": str(direction), "ft": ft},
+            data=EntityMovePayload(actor.id, actor.location_id, direction=str(direction), ft=ft),
         )
     )
 
@@ -164,14 +160,9 @@ def handle_move_to(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Action
         Event(
             event_type=EventType.ENTITY_MOVE,
             source_layer="entities",
-            data={
-                "entity_id": actor.id,
-                "from_x": start_pos.x,
-                "from_y": start_pos.y,
-                "to_x": cur_pos.x,
-                "to_y": cur_pos.y,
-                "distance_ft": moved_ft,
-            },
+            data=EntityMovePayload(
+                actor.id, actor.location_id, start_pos.x, start_pos.y, cur_pos.x, cur_pos.y, moved_ft
+            ),
         )
     )
     return ActionResult()

@@ -14,6 +14,7 @@ import structlog
 
 from dnd_simulator.core.character import Character, Creature
 from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.events import EntityDiedPayload, ReputationChangedPayload, XpGainedPayload
 from dnd_simulator.core.intent import IntentInterruptReason
 from dnd_simulator.core.models import ActionResult, Event, EventType, FactionRelation, QueryFn
 from dnd_simulator.core.queries import query_faction_name, query_faction_relation
@@ -232,7 +233,7 @@ def handle_death(
     death_event = Event(
         event_type=EventType.ENTITY_DIED,
         source_layer="entities",
-        data={"entity_id": target_id},
+        data=EntityDiedPayload(target_id, target.location_id, attacker.id),
     )
     mgr._location_log[target.location_id].append(death_event)
     events.append(death_event)
@@ -253,22 +254,22 @@ def handle_death(
 
     delta = apply_reputation_drop(attacker, target, BASE_KILL_REPUTATION_DELTA, get_faction_relation)
     if delta > 0:
-        rep_data: dict[str, object] = {
-            "entity_id": attacker.id,
-            "faction_id": target.faction_id,
-            "old_rep": old_rep,
-            "new_rep": old_rep - delta,
-            "delta": -delta,
-            "reason": "kill",
-        }
+        faction_name: str | None = None
         if query_fn is not None and target.faction_id:
             faction_name = query_faction_name(query_fn, target.faction_id)
-            if faction_name:
-                rep_data["faction_name"] = faction_name
         rep_event = Event(
             event_type=EventType.REPUTATION_CHANGED,
             source_layer="entities",
-            data=rep_data,
+            data=ReputationChangedPayload(
+                entity_id=attacker.id,
+                faction_id=target.faction_id,
+                old_rep=old_rep,
+                new_rep=old_rep - delta,
+                delta=-delta,
+                reason="kill",
+                faction_name=faction_name,
+                location_id=target.location_id,
+            ),
         )
         mgr._location_log[target.location_id].append(rep_event)
         events.append(rep_event)
@@ -280,13 +281,14 @@ def handle_death(
         xp_event = Event(
             event_type=EventType.XP_GAINED,
             source_layer="entities",
-            data={
-                "entity_id": attacker.id,
-                "amount": target.xp_value,
-                "new_total": attacker.experience,
-                "source_entity_id": target_id,
-                "level_up_available": attacker.level_up_available,
-            },
+            data=XpGainedPayload(
+                entity_id=attacker.id,
+                amount=target.xp_value,
+                new_total=attacker.experience,
+                source_entity_id=target_id,
+                level_up_available=attacker.level_up_available,
+                location_id=target.location_id,
+            ),
         )
         mgr._location_log[target.location_id].append(xp_event)
         events.append(xp_event)

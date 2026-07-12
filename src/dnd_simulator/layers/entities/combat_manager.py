@@ -8,6 +8,7 @@ import structlog
 
 from dnd_simulator.core.character import Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
+from dnd_simulator.core.events import CombatEndedPayload, CombatStartedPayload
 from dnd_simulator.core.intent import IntentInterruptReason
 from dnd_simulator.core.models import ActionResult, Event, EventType, FactionRelation, QueryFn
 from dnd_simulator.core.turn_budget import TurnBudget
@@ -118,11 +119,11 @@ class CombatManager:
             Event(
                 event_type=EventType.COMBAT_STARTED,
                 source_layer="entities",
-                data={
-                    "location_id": location_id,
-                    "turn_order": [c.id for c in ordered],
-                    "turn_order_names": [c.name for c in ordered],
-                },
+                data=CombatStartedPayload(
+                    location_id=location_id,
+                    turn_order=tuple(c.id for c in ordered),
+                    turn_order_names=tuple(c.name for c in ordered),
+                ),
             )
         )
         return combat
@@ -161,7 +162,7 @@ class CombatManager:
             Event(
                 event_type=EventType.COMBAT_ENDED,
                 source_layer="entities",
-                data={"location_id": location_id},
+                data=CombatEndedPayload(location_id),
             )
         )
 

@@ -3,9 +3,14 @@ from __future__ import annotations
 import pytest
 
 from dnd_simulator.core.events import (
+    CombatStartedPayload,
+    EncounterSpawnedPayload,
+    EntityDiedPayload,
+    EntityMovePayload,
     SquadMaterializedPayload,
     SquadMovePayload,
     WeatherChangedPayload,
+    XpGainedPayload,
 )
 from dnd_simulator.core.models import Event, EventType
 
@@ -38,4 +43,39 @@ def test_event_rejects_payload_for_another_event_type() -> None:
             event_type=EventType.SQUAD_MOVE,
             source_layer="ecology",
             data=WeatherChangedPayload("north", "clear", "rain", 8.5),
+        )
+
+
+def test_lifecycle_payloads_expose_stable_ids_and_combat_state() -> None:
+    encounter = Event(
+        EventType.ENCOUNTER_SPAWNED,
+        "entities",
+        EncounterSpawnedPayload("crossroads", ("Goblin", "Goblin"), ("goblin_1", "goblin_2")),
+    )
+    combat = Event(
+        EventType.COMBAT_STARTED,
+        "entities",
+        CombatStartedPayload("crossroads", ("hero", "goblin_1"), ("Hero", "Goblin")),
+    )
+    death = Event(EventType.ENTITY_DIED, "entities", EntityDiedPayload("goblin_1", "crossroads", "hero"))
+    movement = Event(
+        EventType.ENTITY_MOVE,
+        "entities",
+        EntityMovePayload("hero", "crossroads", 0, 0, 5, 0, 5),
+    )
+    xp = Event(EventType.XP_GAINED, "entities", XpGainedPayload("hero", 50, 50, "goblin_1", False, "crossroads"))
+
+    assert encounter.data.spawned_entity_ids == ("goblin_1", "goblin_2")
+    assert combat.data.turn_order == ("hero", "goblin_1")
+    assert death.data.killer_id == "hero"
+    assert movement.data.distance_ft == 5
+    assert xp.data.source_entity_id == "goblin_1"
+
+
+def test_lifecycle_event_rejects_incompatible_payload_immediately() -> None:
+    with pytest.raises(TypeError, match=r"ENTITY_DIED.*EncounterSpawnedPayload"):
+        Event(
+            EventType.ENTITY_DIED,
+            "entities",
+            EncounterSpawnedPayload("crossroads", ("Goblin",), ("goblin_1",)),
         )

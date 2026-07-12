@@ -22,6 +22,7 @@ from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.container import Container
+from dnd_simulator.core.events import CombatStartedPayload, RoundStartPayload
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, EntityKind, Event, EventType, Query
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
@@ -193,7 +194,7 @@ class EntitiesLayer(Layer):
             Event(
                 event_type=EventType.ROUND_START,
                 source_layer="entities",
-                data={"location_id": location_id, "round_number": round_number},
+                data=RoundStartPayload(location_id, round_number),
             )
         )
 
@@ -397,9 +398,10 @@ class EntitiesLayer(Layer):
 
         combat_events = log[start_idx:]
         participant_ids: list[str] = []
-        turn_order = log[start_idx].data.get("turn_order", [])
-        if isinstance(turn_order, list):
-            participant_ids = [str(pid) for pid in turn_order]
+        payload = log[start_idx].data
+        if not isinstance(payload, CombatStartedPayload):
+            return
+        participant_ids = list(payload.turn_order)
 
         for pid in participant_ids:
             entity = self._entities.get(pid)
