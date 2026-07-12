@@ -67,7 +67,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 2 (Событийный write-back — смерти логова) tasks generated — 2026-07-13. Ready to start task 1.
+**Current:** Phase 2 (Событийный write-back — смерти логова) tasks complete — 2026-07-13. Ready to close phase.
 
 ## Decisions
 

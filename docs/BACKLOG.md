@@ -43,7 +43,7 @@
 - [x] `spawn-event-trigger` — ~~Event-триггер спавна (спавн по мировому событию), в связке со спринтом квестов~~ ПОГЛОЩЁН `trigger-table`: спавн — одно из действий сработавшего триггера
 - [ ] **could** `spawn-api-xp-value` — master spawn API не принимает `xp_value` для generic-монстров: XP-смоук возможен только на фикстурном мире. E2E sprint 021 close
 - [ ] **could** `container-hp-locks` — Сундуки с замком/HP: взлом (lockpicking) и «разбить» контейнер
-- [ ] **should** `lair-death-event` — смерти существ логова не фиксируются в `EcologyLayer` в реальном времени: `LairState`/`core_alive` обновляются только при dematerialize. При рестарте сервера без сейва lair стартует как ACTIVE заново. Фикс-механизм подтверждён брейнштормом simulation-core: событийная запись (`ENTITY_DIED` через emit_fn, ecology подписывается) — это **прототип write-back всей `detail-ladder`**, кандидат в ближайший спринт как первая проба механизма. Направление зависимости: entities→ecology через emit_fn, не прямой импорт
+- [x] **should** `lair-death-event` — закрыт Sprint 023 Phase 2: `ENTITY_DIED` немедленно и идемпотентно обновляет ростер/core/depletion ecology, результат сохраняется и не откатывается при dematerialize
 - [ ] **could** `lair-actions` — D&D lair actions на ядре логова
 - [ ] **could** `lair-new-leader` — После смерти ядра логово с шансом поднимает нового вожака вместо деплита (динамика мира)
 - [ ] **could** `lair-time-of-day` — Активность логова варьируется день/ночь (`active_at: day|night` гейтит материализацию ростера). Переиспользует `TimeOfDay`/`IS_DAYLIGHT`/`is_active_at_time` из Sprint 018 phase 4 (отложено при планировании фазы 4)

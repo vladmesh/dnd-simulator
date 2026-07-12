@@ -36,15 +36,21 @@ depletion. Закрыть `lair-death-event` в `docs/BACKLOG.md` после з�
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Убийство ядра немедленно даёт `core_alive=False` и `LairState.DEPLETED`
-- [ ] Убийство миньона немедленно и ровно один раз уменьшает сохраняемый ростер
-- [ ] Результат обеих смертей переживает save/load без дематериализации
-- [ ] Поздняя дематериализация не откатывает событийный write-back
-- [ ] `lair-death-event` отмечен закрытым в `docs/BACKLOG.md`
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Убийство ядра немедленно даёт `core_alive=False` и `LairState.DEPLETED`
+- [x] Убийство миньона немедленно и ровно один раз уменьшает сохраняемый ростер
+- [x] Результат обеих смертей переживает save/load без дематериализации
+- [x] Поздняя дематериализация не откатывает событийный write-back
+- [x] `lair-death-event` отмечен закрытым в `docs/BACKLOG.md`
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+`EcologyLayer` применяет provenance из `EntityDiedPayload` к абстрактному ростеру сразу после смерти. Для
+идемпотентности обработанные entity ID сохраняются вместе с runtime state логова. Дематериализация продолжает
+сверять выживших, но не может оживить ядро или вывести логово из terminal `DEPLETED`.

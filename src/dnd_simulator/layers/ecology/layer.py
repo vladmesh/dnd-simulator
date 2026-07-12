@@ -11,14 +11,14 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from dnd_simulator.core.events import SquadDematerializedPayload, SquadMovePayload
+from dnd_simulator.core.events import EntityDiedPayload, SquadDematerializedPayload, SquadMovePayload
 from dnd_simulator.core.lair import Lair
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
 from dnd_simulator.core.queries import LairInfo, SquadInfo
 from dnd_simulator.core.squad import Squad
 from dnd_simulator.layers.common.rng_state import dump_rng_state, load_rng_state
-from dnd_simulator.layers.ecology.lairs import apply_lair_dematerialize, respawn_lairs
+from dnd_simulator.layers.ecology.lairs import apply_lair_death, apply_lair_dematerialize, respawn_lairs
 from dnd_simulator.layers.ecology.movement import move_squad
 from dnd_simulator.layers.ecology.squad_combat import resolve_squad_combat
 from dnd_simulator.layers.ecology.state import EcologyState, LairRuntimeState, SquadRuntimeState
@@ -133,6 +133,10 @@ class EcologyLayer(Layer):
                 logger.info("squad_strength_updated", squad_id=squad_id, new_strength=new_strength)
         elif event.event_type is EventType.LAIR_DEMATERIALIZED:
             apply_lair_dematerialize(self._lairs, event, self._rng)
+        elif event.event_type is EventType.ENTITY_DIED:
+            payload = event.data
+            assert isinstance(payload, EntityDiedPayload)
+            apply_lair_death(self._lairs, payload)
         return ActionResult()
 
     def query(self, query: Query) -> Answer:
@@ -177,6 +181,7 @@ class EcologyLayer(Layer):
                     alive_members=lair.alive_members,
                     core_alive=lair.core_alive,
                     last_respawn_time=lair.last_respawn_time,
+                    death_writebacks=lair.death_writebacks,
                 )
                 for lid, lair in self._lairs.items()
             },
@@ -205,6 +210,7 @@ class EcologyLayer(Layer):
             lair.alive_members = ldata.alive_members
             lair.core_alive = ldata.core_alive
             lair.last_respawn_time = ldata.last_respawn_time
+            lair.death_writebacks = set(ldata.death_writebacks)
 
         self._last_move_time = dict(data.last_move_time)
         self._route_index = dict(data.route_index)

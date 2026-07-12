@@ -60,3 +60,4 @@ class Lair:
     alive_members: list[str] | None = None  # surviving minion templates; None == full roster
     core_alive: bool = True
     last_respawn_time: int = 0  # game-time seconds anchoring the respawn countdown (set on loss/respawn)
+    death_writebacks: set[str] = field(default_factory=set)  # entity IDs already applied from ENTITY_DIED
