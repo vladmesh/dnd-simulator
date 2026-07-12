@@ -26,6 +26,21 @@ Read `docs/STATUS.md` to find the current sprint and phase. Then read the sprint
 
 Work through this decision tree top-to-bottom. The FIRST match wins:
 
+#### docs/STATUS.md contains `**Closure:** Ждём завершения CI`
+→ **Reconcile the previous sprint closure before any other action.** This rule wins even when Current Sprint
+says `No active sprint`.
+
+1. Identify the PR from the branch name in the marker using `gh pr list --state all --head <branch>`.
+2. Read `state`, `mergedAt`, `mergeStateStatus`, and every item in `statusCheckRollup`.
+3. If checks are still queued or running, start the same recurring monitor required by `/close-sprint`, wait for
+   terminal results, and do not finish the turn early.
+4. If every required check succeeded and the PR is `MERGED`, fast-forward local `main`, remove the `Closure`
+   marker from `docs/STATUS.md`, commit that reconciliation, and push it to `main`. Then stop: reconciliation is
+   this invocation's one pipeline granule.
+5. If any check failed/cancelled/timed out, the PR is closed without merge, or green checks did not produce a
+   merge, escalate to the operator with the PR and check URLs. Do not clear the marker and do not dispatch the
+   next pipeline step.
+
 #### No current sprint in docs/STATUS.md or sprint marked COMPLETE
 → **`/new-sprint`** — time to plan the next sprint.
 
