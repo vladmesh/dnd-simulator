@@ -4,12 +4,24 @@
 
 **Last updated:** 2026-07-12
 **Position:** Sprint 022 закрыл второй эпик simulation-core: player-agnostic якоря, сохраняемые wait/sleep/travel intent, по-рёберное путешествие и согласованный с round lifecycle save/load/autosave. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
-**Next:** Активного спринта нет. Главный следующий кандидат: `trigger-table`; смежные кандидаты — `brain-gate-decide` и containment ожидаемых action errors.
+**Next:** Sprint 023 `trigger-table` спланирован (4 фазы); генерация задач Phase 1.
 **Blockers:** нет.
 
 ## Current Sprint
 
-No active sprint.
+**Sprint:** 023-trigger-table
+**Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
+**Started:** 2026-07-12
+**Phase:** Planning (COMPLETE) — 2026-07-12
+
+Ready for Phase 1 task generation.
+
+### Phases
+
+1. Типизированная таксономия событий (+ `encounter-spawned-perceiver`)
+2. Событийный write-back — смерти логова (`lair-death-event`)
+3. Trigger table (`{on, until}`, самогашение, сейв)
+4. Ручка ГМ + failure containment (`action-error-kills-round-loop`, `dash-actiondef-movement-conflation`)
 
 ## Recent activity (non-sprint)
 
