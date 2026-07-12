@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import random
 
+from dnd_simulator.core.events import PeaceDeclaredPayload, TradeAgreementPayload, WarDeclaredPayload
 from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.layers.politics.models import DiplomaticStatus, LeaderTrait, Nation
 from dnd_simulator.rules.politics import peace_chance, trade_agreement_chance, war_declaration_chance
@@ -62,9 +63,9 @@ def process_diplomacy(
                     war_durations.pop(key, None)
                     events.append(
                         Event(
-                            event_type=EventType.CUSTOM,
+                            event_type=EventType.PEACE_DECLARED,
                             source_layer="politics",
-                            data={"type": "peace", "nation_a": nid_a, "nation_b": nid_b},
+                            data=PeaceDeclaredPayload(nid_a, nid_b),
                             description=f"{nation_a.name} and {nation_b.name} sign a peace treaty",
                         )
                     )
@@ -82,9 +83,9 @@ def process_diplomacy(
                         war_durations[key] = 0
                         events.append(
                             Event(
-                                event_type=EventType.CUSTOM,
+                                event_type=EventType.WAR_DECLARED,
                                 source_layer="politics",
-                                data={"type": "war_declared", "aggressor": aggressor.id, "target": target.id},
+                                data=WarDeclaredPayload(aggressor.id, target.id),
                                 description=f"{aggressor.name} declares war on {target.name}!",
                             ),
                         )
@@ -101,9 +102,9 @@ def process_diplomacy(
                             relations[key] = DiplomaticStatus.TRADE_AGREEMENT
                             events.append(
                                 Event(
-                                    event_type=EventType.CUSTOM,
+                                    event_type=EventType.TRADE_AGREEMENT,
                                     source_layer="politics",
-                                    data={"type": "trade_agreement", "nation_a": nid_a, "nation_b": nid_b},
+                                    data=TradeAgreementPayload(nid_a, nid_b),
                                     description=f"{nation_a.name} and {nation_b.name} sign a trade agreement",
                                 )
                             )

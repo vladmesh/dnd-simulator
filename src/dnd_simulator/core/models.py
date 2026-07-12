@@ -130,6 +130,14 @@ class EventType(Enum):
     COMBAT_ENDED = "combat_ended"
     ENCOUNTER_SPAWNED = "encounter_spawned"
     WEATHER_CHANGED = "weather_changed"
+    WAR_DECLARED = "war_declared"
+    PEACE_DECLARED = "peace_declared"
+    TRADE_AGREEMENT = "trade_agreement"
+    REGION_CONQUERED = "region_conquered"
+    REBELLION = "rebellion"
+    LEADER_DIED = "leader_died"
+    NATION_DESTROYED = "nation_destroyed"
+    SETTLEMENT_DAMAGED = "settlement_damaged"
     TIME_ADVANCED = "time_advanced"
     SQUAD_MOVE = "squad_move"
     SQUAD_COMBAT = "squad_combat"
@@ -249,9 +257,28 @@ class Event:
 
     event_type: EventType
     source_layer: str
-    data: dict[str, Any] = field(default_factory=dict)
+    # Transitional until every EventType is migrated in Phase 1 task 3.
+    data: Any = field(default_factory=dict)
     description: str = ""
     observer_ids: frozenset[str] | None = None  # None = public (all in area see it)
+
+    def __post_init__(self) -> None:
+        from dnd_simulator.core.events import EVENT_PAYLOAD_TYPES
+
+        expected = EVENT_PAYLOAD_TYPES.get(self.event_type)
+        if expected is not None and isinstance(self.data, dict):
+            values = dict(self.data)
+            if self.event_type is EventType.SQUAD_MOVE:
+                values["from_location_id"] = values.pop("from")
+                values["to_location_id"] = values.pop("to")
+            if self.event_type is EventType.LAIR_DEMATERIALIZED and isinstance(values.get("alive_members"), list):
+                values["alive_members"] = tuple(values["alive_members"])
+            try:
+                object.__setattr__(self, "data", expected(**values))
+            except TypeError as exc:
+                raise TypeError(f"invalid {self.event_type.name} payload: {exc}") from exc
+        if expected is not None and not isinstance(self.data, expected):
+            raise TypeError(f"{self.event_type.name} requires {expected.__name__}, got {type(self.data).__name__}")
 
 
 @dataclass(frozen=True)

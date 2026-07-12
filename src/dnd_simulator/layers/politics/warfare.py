@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import random
 
+from dnd_simulator.core.events import RegionConqueredPayload
 from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.layers.politics.models import DiplomaticStatus, Nation
 from dnd_simulator.rules.politics import calculate_war_strength, clamp
@@ -70,14 +71,9 @@ def process_wars(
             winner.regions.append(border_region)
             events.append(
                 Event(
-                    event_type=EventType.CUSTOM,
+                    event_type=EventType.REGION_CONQUERED,
                     source_layer="politics",
-                    data={
-                        "type": "region_conquered",
-                        "winner": winner.id,
-                        "loser": loser.id,
-                        "region": border_region,
-                    },
+                    data=RegionConqueredPayload(winner.id, loser.id, border_region),
                     description=f"{winner.name} conquers {border_region} from {loser.name}",
                 )
             )

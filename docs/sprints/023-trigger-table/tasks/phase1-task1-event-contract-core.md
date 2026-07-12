@@ -25,13 +25,21 @@
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Системные и layer-события не создаются через свободные dict payload'ы
-- [ ] Несовпадение `EventType` и payload определяется fail-fast
-- [ ] Штатные эмиссии geography/politics/settlements/ecology не используют `CUSTOM`
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Системные и layer-события не создаются через свободные dict payload'ы
+- [x] Несовпадение `EventType` и payload определяется fail-fast
+- [x] Штатные эмиссии geography/politics/settlements/ecology не используют `CUSTOM`
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Добавлен `core/events.py`: 14 frozen payload-моделей и реестр `EventType → payload type`; `Event` валидирует зарегистрированный контракт при создании.
+- Geography, politics, settlements, ecology и squad/lair materialization переведены на typed payload'ы. Семь смыслов politics и settlement damage получили отдельные `EventType` вместо `CUSTOM`.
+- До завершения миграции action/lifecycle событий в tasks 2-3 `Event.data` остаётся временно типизирован как `Any`. Typed payload'ы имеют read-only mapping facade для немигрированных wire/log consumers; producer-код словари больше не собирает.
+- Malformed typed events теперь падают на границе `Event`, поэтому старые fail-fast тесты обновлены с позднего `KeyError` perception на ранний `TypeError`.
+- `make check`: backend 2481 passed, frontend 283 passed.

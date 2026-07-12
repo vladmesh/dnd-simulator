@@ -2,6 +2,7 @@
 
 import pytest
 
+from dnd_simulator.core.events import RegionConqueredPayload, WeatherChangedPayload
 from dnd_simulator.core.models import (
     ActionResult,
     Answer,
@@ -113,7 +114,11 @@ class TestLayerBasics:
 
     def test_handle_event_unrelated(self) -> None:
         layer = _make_layer()
-        event = Event(event_type=EventType.WEATHER_CHANGED, source_layer="geography")
+        event = Event(
+            event_type=EventType.WEATHER_CHANGED,
+            source_layer="geography",
+            data=WeatherChangedPayload("region_a", "clear", "rain", 10.0),
+        )
         result = layer.handle_event(event, _make_query_fn(), _noop_emit_fn)
         assert result.success
         assert result.events == []
@@ -167,9 +172,9 @@ class TestConquest:
     def test_conquest_damages_settlements(self) -> None:
         layer = _make_layer()
         event = Event(
-            event_type=EventType.CUSTOM,
+            event_type=EventType.REGION_CONQUERED,
             source_layer="politics",
-            data={"type": "region_conquered", "winner": "beta", "loser": "alpha", "region": "region_a"},
+            data=RegionConqueredPayload("beta", "alpha", "region_a"),
         )
         result = layer.handle_event(event, _make_query_fn(), _noop_emit_fn)
         assert result.success
@@ -184,9 +189,9 @@ class TestConquest:
     def test_conquest_doesnt_affect_other_regions(self) -> None:
         layer = _make_layer()
         event = Event(
-            event_type=EventType.CUSTOM,
+            event_type=EventType.REGION_CONQUERED,
             source_layer="politics",
-            data={"type": "region_conquered", "winner": "alpha", "loser": "beta", "region": "region_a"},
+            data=RegionConqueredPayload("alpha", "beta", "region_a"),
         )
         layer.handle_event(event, _make_query_fn(), _noop_emit_fn)
 

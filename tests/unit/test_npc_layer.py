@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from dnd_simulator.core.character import Creature, Entity, NpcRole
+from dnd_simulator.core.events import WeatherChangedPayload
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query, QueryType, TimeDelta
 from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.core.player import PlayerCharacter
@@ -83,7 +84,11 @@ class TestLayerBasics:
 
     def test_handle_event_returns_empty(self) -> None:
         layer = _make_layer()
-        event = Event(event_type=EventType.WEATHER_CHANGED, source_layer="geography")
+        event = Event(
+            event_type=EventType.WEATHER_CHANGED,
+            source_layer="geography",
+            data=WeatherChangedPayload("r1", "clear", "rain", 10.0),
+        )
         result = layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         assert result.success
         assert result.events == []

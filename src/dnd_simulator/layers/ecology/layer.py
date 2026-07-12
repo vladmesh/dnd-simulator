@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from dnd_simulator.core.events import SquadDematerializedPayload, SquadMovePayload
 from dnd_simulator.core.lair import Lair
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
@@ -87,12 +88,7 @@ class EcologyLayer(Layer):
                     Event(
                         event_type=EventType.SQUAD_MOVE,
                         source_layer=self.name,
-                        data={
-                            "squad_id": squad.id,
-                            "squad_name": squad.name,
-                            "from": moved[0],
-                            "to": moved[1],
-                        },
+                        data=SquadMovePayload(squad.id, squad.name, moved[0], moved[1]),
                         description=f"{squad.name} moved from {moved[0]} to {moved[1]}",
                     )
                 )
@@ -128,8 +124,10 @@ class EcologyLayer(Layer):
     def handle_event(self, event: Event, query_fn: QueryFn, emit_fn: EmitFn) -> ActionResult:
         """Process external events."""
         if event.event_type is EventType.SQUAD_DEMATERIALIZED:
-            squad_id = str(event.data["squad_id"])
-            new_strength = int(event.data["new_strength"])
+            payload = event.data
+            assert isinstance(payload, SquadDematerializedPayload)
+            squad_id = payload.squad_id
+            new_strength = payload.new_strength
             if squad_id in self._squads:
                 self._squads[squad_id].strength = new_strength
                 logger.info("squad_strength_updated", squad_id=squad_id, new_strength=new_strength)

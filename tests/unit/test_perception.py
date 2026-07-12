@@ -6,6 +6,7 @@ import pytest
 
 import dnd_simulator.layers.entities.perception as perception_mod
 from dnd_simulator.core.character import Ability, Attack, Character, DamageComponent, DamageType, Entity, Race
+from dnd_simulator.core.events import WeatherChangedPayload
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.i18n import set_language
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -170,7 +171,7 @@ class TestPerceiveEvent:
         event = Event(
             event_type=EventType.WEATHER_CHANGED,
             source_layer="geography",
-            data={},
+            data=WeatherChangedPayload("r1", "clear", "rain", 10.0),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
         assert "Something happened" in result
@@ -259,7 +260,7 @@ class TestRegionLog:
         event = Event(
             event_type=EventType.WEATHER_CHANGED,
             source_layer="geography",
-            data={},
+            data=WeatherChangedPayload("r1", "clear", "rain", 10.0),
         )
         layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         assert len(layer.get_perceived_log(smith)) == 0
@@ -539,7 +540,7 @@ class TestPerceptionDispatchAndFailFast:
         event = Event(
             event_type=EventType.WEATHER_CHANGED,
             source_layer="geography",
-            data={},
+            data=WeatherChangedPayload("r1", "clear", "rain", 10.0),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
         assert "Something happened" in result
@@ -578,16 +579,14 @@ class TestPerceptionDispatchAndFailFast:
         with pytest.raises(KeyError, match="round_number"):
             perceive_event(event, observer, _get_entity_fn(observer))
 
-    def test_missing_squad_name_raises_key_error(self) -> None:
-        """SQUAD_DEMATERIALIZED without 'squad_name' raises KeyError."""
-        observer = Character(id="guard", name="Guard", location_id="r1")
-        event = Event(
-            event_type=EventType.SQUAD_DEMATERIALIZED,
-            source_layer="ecology",
-            data={},  # missing "squad_name"
-        )
-        with pytest.raises(KeyError, match="squad_name"):
-            perceive_event(event, observer, _get_entity_fn(observer))
+    def test_missing_squad_payload_fields_rejected_at_event_boundary(self) -> None:
+        """Typed events fail at construction instead of later in perception."""
+        with pytest.raises(TypeError, match="invalid SQUAD_DEMATERIALIZED payload"):
+            Event(
+                event_type=EventType.SQUAD_DEMATERIALIZED,
+                source_layer="ecology",
+                data={},
+            )
 
     def test_missing_weapon_in_attack_raises_key_error(self) -> None:
         """ENTITY_ATTACK without 'weapon' raises KeyError — fail-fast."""

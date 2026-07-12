@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from dnd_simulator.core.events import WeatherChangedPayload
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.location import LocationGraph
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
@@ -100,12 +101,9 @@ class GeographyLayer(Layer):
                     Event(
                         event_type=EventType.WEATHER_CHANGED,
                         source_layer=self.name,
-                        data={
-                            "region_id": region.id,
-                            "old_weather": old_weather.value,
-                            "new_weather": region.weather.value,
-                            "temperature": region.temperature,
-                        },
+                        data=WeatherChangedPayload(
+                            region.id, old_weather.value, region.weather.value, region.temperature
+                        ),
                         description=_("Weather in {region} changed from {old} to {new}").format(
                             region=region.name, old=_(old_weather.value), new=_(region.weather.value)
                         ),

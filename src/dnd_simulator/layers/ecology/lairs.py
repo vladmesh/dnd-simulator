@@ -11,6 +11,7 @@ import random
 
 import structlog
 
+from dnd_simulator.core.events import LairDematerializedPayload
 from dnd_simulator.core.lair import Lair, LairState
 from dnd_simulator.core.models import Event
 from dnd_simulator.rules.lairs import should_deplete
@@ -20,15 +21,16 @@ logger = structlog.get_logger(domain="ecology")
 
 def apply_lair_dematerialize(lairs: dict[str, Lair], event: Event, rng: random.Random) -> None:
     """Sync a lair's surviving population from a finished visit."""
-    lair_id = str(event.data["lair_id"])
+    payload = event.data
+    assert isinstance(payload, LairDematerializedPayload)
+    lair_id = payload.lair_id
     lair = lairs.get(lair_id)
     if lair is None:
         return
-    alive_members = event.data.get("alive_members")
-    lair.alive_members = [str(m) for m in alive_members] if isinstance(alive_members, list) else []
-    lair.core_alive = bool(event.data.get("core_alive", lair.core_alive))
+    lair.alive_members = list(payload.alive_members)
+    lair.core_alive = payload.core_alive
     # Anchor the respawn countdown to this visit so respawn waits a full interval afterwards.
-    lair.last_respawn_time = int(event.data.get("at_seconds", lair.last_respawn_time))
+    lair.last_respawn_time = payload.at_seconds
 
     # Depletion decision is a pure rule; the roll is generated here and injected.
     roll = rng.random()

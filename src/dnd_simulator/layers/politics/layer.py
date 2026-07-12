@@ -6,6 +6,7 @@ import random
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
+from dnd_simulator.core.events import LeaderDiedPayload, NationDestroyedPayload, RebellionPayload
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
 from dnd_simulator.core.queries import LeaderInfo, NationInfo
@@ -223,9 +224,9 @@ class PoliticsLayer(Layer):
 
                 events.append(
                     Event(
-                        event_type=EventType.CUSTOM,
+                        event_type=EventType.REBELLION,
                         source_layer=self.name,
-                        data={"type": "rebellion", "nation": nation.id},
+                        data=RebellionPayload(nation.id),
                         description=f"Rebellion in {nation.name}! {nation.leader.name} seizes power",
                     )
                 )
@@ -250,14 +251,9 @@ class PoliticsLayer(Layer):
 
                 events.append(
                     Event(
-                        event_type=EventType.CUSTOM,
+                        event_type=EventType.LEADER_DIED,
                         source_layer=self.name,
-                        data={
-                            "type": "leader_died",
-                            "nation": nation.id,
-                            "old_leader": old_name,
-                            "new_leader": nation.leader.name,
-                        },
+                        data=LeaderDiedPayload(nation.id, old_name, nation.leader.name),
                         description=(
                             f"{old_name} of {nation.name} has died. "
                             f"{nation.leader.name} ({nation.leader.trait.value}) takes the throne"
@@ -278,9 +274,9 @@ class PoliticsLayer(Layer):
                     self._war_durations.pop(key, None)
             events.append(
                 Event(
-                    event_type=EventType.CUSTOM,
+                    event_type=EventType.NATION_DESTROYED,
                     source_layer=self.name,
-                    data={"type": "nation_destroyed", "nation": nid},
+                    data=NationDestroyedPayload(nid),
                     description=f"{nation.name} has fallen!",
                 )
             )

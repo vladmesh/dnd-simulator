@@ -5,6 +5,12 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from dnd_simulator.core.character import Character, Entity
+from dnd_simulator.core.events import (
+    SquadCombatPayload,
+    SquadDematerializedPayload,
+    SquadMaterializedPayload,
+    SquadMovePayload,
+)
 from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.i18n import _
 
@@ -446,9 +452,10 @@ def _perceive_combat_ended(event: Event, observer: Character, get_entity: GetEnt
 
 def _perceive_squad_move(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     d = event.data
-    name = str(d["squad_name"])
-    to_loc = d["to"]
-    from_loc = d["from"]
+    assert isinstance(d, SquadMovePayload)
+    name = d.squad_name
+    to_loc = d.to_location_id
+    from_loc = d.from_location_id
     at_dest = observer.location_id == to_loc
     at_origin = observer.location_id == from_loc
     if at_dest and at_origin:
@@ -462,9 +469,10 @@ def _perceive_squad_move(event: Event, observer: Character, get_entity: GetEntit
 
 def _perceive_squad_combat(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     d = event.data
-    winner = str(d["winner_name"])
-    loser = str(d["loser_name"])
-    loser_strength = d["loser_strength"]
+    assert isinstance(d, SquadCombatPayload)
+    winner = d.winner_name
+    loser = d.loser_name
+    loser_strength = d.loser_strength
     if loser_strength == 0:
         return _("{winner} destroyed {loser}").format(winner=winner, loser=loser)
     return _("{winner} defeated {loser}").format(winner=winner, loser=loser)
@@ -472,13 +480,16 @@ def _perceive_squad_combat(event: Event, observer: Character, get_entity: GetEnt
 
 def _perceive_squad_materialized(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     d = event.data
-    name = str(d["squad_name"])
-    count = d["creature_count"]
+    assert isinstance(d, SquadMaterializedPayload)
+    name = d.squad_name
+    count = d.creature_count
     return _("{name} appears — {count} creatures materialize").format(name=name, count=count)
 
 
 def _perceive_squad_dematerialized(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    name = str(event.data["squad_name"])
+    payload = event.data
+    assert isinstance(payload, SquadDematerializedPayload)
+    name = payload.squad_name
     return _("{name} moves on, disappearing into the distance").format(name=name)
 
 
