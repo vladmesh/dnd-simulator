@@ -12,6 +12,7 @@ from dnd_simulator.core.character import Ability, Alignment, CharClass, DamageTy
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.intent import IntentType
 from dnd_simulator.core.items import ArmorCategory, EquipmentSlot, ItemType, WeaponCategory
+from dnd_simulator.core.lair import LairMemberRole
 from dnd_simulator.core.models import EntityKind
 from dnd_simulator.core.modifiers import ModifierOp, StatType
 from dnd_simulator.core.resource import RestType
@@ -143,6 +144,12 @@ class EntitySaveBase(SaveModel):
     faction_id: str = ""
 
 
+class LairOriginSave(SaveModel):
+    lair_id: str
+    template_id: str
+    role: LairMemberRole
+
+
 class CreatureFields(EntitySaveBase):
     max_hp: int
     current_hp: int
@@ -167,6 +174,7 @@ class CreatureFields(EntitySaveBase):
     reputation: dict[str, int] = Field(default_factory=dict)
     xp_value: int = 0
     squad_id: str | None = None
+    lair_origin: LairOriginSave | None = None
     is_anchor: bool = False
     current_intent: IntentSave | None = None
     combat_position: tuple[int, int] | None = None

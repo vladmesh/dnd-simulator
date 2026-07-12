@@ -254,7 +254,7 @@ def handle_death(
     death_event = Event(
         event_type=EventType.ENTITY_DIED,
         source_layer="entities",
-        data=EntityDiedPayload(target_id, target.location_id, attacker.id),
+        data=EntityDiedPayload(target_id, target.location_id, attacker.id, target.lair_origin),
     )
     mgr._location_log[target.location_id].append(death_event)
     events.append(death_event)

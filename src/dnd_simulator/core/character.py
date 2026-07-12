@@ -18,6 +18,7 @@ from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
     from dnd_simulator.core.brain import Brain
+    from dnd_simulator.core.lair import LairOrigin
 
 _F = TypeVar("_F", bound=ClassFeatures)
 
@@ -229,6 +230,7 @@ class Creature(Entity):
     reputation: dict[str, int] = field(default_factory=dict)  # sparse: faction_id → rep score
     xp_value: int = 0  # XP awarded to Character attacker on kill (0 for most creatures, set from CR for monsters)
     squad_id: str | None = None  # which squad this creature belongs to (if materialized)
+    lair_origin: LairOrigin | None = None
     is_anchor: bool = False
     current_intent: CreatureIntent | None = None
     combat_position: tuple[int, int] | None = None  # fixed starting position on battle map (x, y in feet)

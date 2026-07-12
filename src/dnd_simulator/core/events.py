@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 from typing import Any, ClassVar, cast
 
+from dnd_simulator.core.lair import LairOrigin
 from dnd_simulator.core.models import EventType
 
 
@@ -164,6 +165,7 @@ class EntityDiedPayload(TypedPayload):
     entity_id: str
     location_id: str = ""
     killer_id: str | None = None
+    lair_origin: LairOrigin | None = None
 
 
 @dataclass(frozen=True)

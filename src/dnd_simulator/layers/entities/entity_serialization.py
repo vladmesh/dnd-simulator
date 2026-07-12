@@ -21,6 +21,7 @@ from dnd_simulator.layers.entities.save_models import (
     DamageComponentSave,
     EntitySave,
     ItemSave,
+    LairOriginSave,
     NpcMemorySave,
     NpcSave,
     PlayerSave,
@@ -202,6 +203,15 @@ def _creature_fields(entity: Creature) -> dict[str, object]:
         "reputation": dict(entity.reputation),
         "xp_value": entity.xp_value,
         "squad_id": entity.squad_id,
+        "lair_origin": (
+            LairOriginSave(
+                lair_id=entity.lair_origin.lair_id,
+                template_id=entity.lair_origin.template_id,
+                role=entity.lair_origin.role,
+            )
+            if entity.lair_origin is not None
+            else None
+        ),
         "is_anchor": entity.is_anchor,
         "current_intent": _intent_save(entity.current_intent),
         "combat_position": entity.combat_position,

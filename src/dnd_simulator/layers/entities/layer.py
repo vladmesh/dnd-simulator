@@ -549,6 +549,17 @@ class EntitiesLayer(Layer):
                         entity.combat_position = None
                     squad_id = edata.get("squad_id")
                     entity.squad_id = str(squad_id) if squad_id else None
+                    from dnd_simulator.core.lair import LairMemberRole, LairOrigin
+
+                    lair_origin_raw = edata.get("lair_origin")
+                    if isinstance(lair_origin_raw, dict):
+                        entity.lair_origin = LairOrigin(
+                            lair_id=str(lair_origin_raw["lair_id"]),
+                            template_id=str(lair_origin_raw["template_id"]),
+                            role=LairMemberRole(str(lair_origin_raw["role"])),
+                        )
+                    else:
+                        entity.lair_origin = None
                     entity.xp_value = int(edata.get("xp_value", entity.xp_value))
                     entity.gold = int(edata.get("gold", entity.gold))
                     conditions_raw = edata.get("conditions")

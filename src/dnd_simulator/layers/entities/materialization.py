@@ -19,7 +19,7 @@ from dnd_simulator.core.events import (
     SquadDematerializedPayload,
     SquadMaterializedPayload,
 )
-from dnd_simulator.core.lair import LairState
+from dnd_simulator.core.lair import LairMemberRole, LairOrigin, LairState
 from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.core.queries import LairInfo, SquadInfo, query_lairs_at_location, query_squads_at_location
 from dnd_simulator.layers.entities.encounters import maybe_start_combat
@@ -247,6 +247,9 @@ def materialize_lair(mgr: ActivationManager, lair_id: str, info: LairInfo) -> No
         instance_id = f"{tid}_{mgr._spawn_counter}"
         creature = template.spawn(location, instance_id)
         creature.faction_id = faction_id
+        is_core = bool(core_tid and core_creature_id is None and tid == core_tid)
+        role = LairMemberRole.CORE if is_core else LairMemberRole.MEMBER
+        creature.lair_origin = LairOrigin(lair_id=lair_id, template_id=tid, role=role)
         creature.brain = RuleBrain()
         creature.active = True
         mgr._entities[creature.id] = creature
