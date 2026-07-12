@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -15,23 +16,27 @@ class _Svc(SaveCommands):
 
     def __init__(self, sessions: dict[str, Any]) -> None:
         self._sessions = sessions  # type: ignore[assignment]
+        self._sessions_lock = threading.RLock()
         self._store = MagicMock()
         self.saved: list[str] = []
-
-    def autosave_session(self, session_id: str) -> None:  # type: ignore[override]
-        raise NotImplementedError
 
 
 class TestAutosaveAllSessions:
     def test_one_failure_does_not_block_others_and_logs(self) -> None:
-        svc = _Svc({"a": object(), "b": object(), "c": object()})
+        sessions = {sid: MagicMock() for sid in ("a", "b", "c")}
+        for sid, session in sessions.items():
+            session.session_id = sid
+            session.build_save_game.return_value.model_dump.return_value = {}
+            session.world_name = "world"
+        svc = _Svc(sessions)
 
-        def autosave(sid: str) -> None:
+        def autosave(name: str, data: dict[str, Any], *, world: str = "") -> None:
+            sid = name.removeprefix("session_")
             if sid == "b":
                 raise RuntimeError("disk full")
             svc.saved.append(sid)
 
-        svc.autosave_session = autosave  # type: ignore[method-assign]
+        svc._store.save.side_effect = autosave
 
         with structlog.testing.capture_logs() as logs:
             svc.autosave_all_sessions()

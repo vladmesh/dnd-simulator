@@ -27,6 +27,7 @@ from dnd_simulator.core.models import ActionResult, Answer, EntityKind, Event, E
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.core.player import PlayerCharacter
+from dnd_simulator.core.resource import RestType
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.layers.common.rng_state import dump_rng_state, load_rng_state
 from dnd_simulator.layers.entities.activation_manager import ActivationManager
@@ -38,6 +39,7 @@ from dnd_simulator.layers.entities.query_handler import QueryHandler
 from dnd_simulator.layers.entities.save_models import EntitiesState
 
 if TYPE_CHECKING:
+    from dnd_simulator.core.location import LocationGraph
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn, TimeDelta
     from dnd_simulator.llm.summarizer import MemorySummarizer
 
@@ -82,6 +84,7 @@ class EntitiesLayer(Layer):
         monster_templates: dict[str, MonsterTemplate] | None = None,
         encounter_tables: dict[str, list[EncounterEntry]] | None = None,
         seed: int | None = None,
+        dice_rng: random.Random | None = None,
     ) -> None:
         self._entities: dict[str, Entity] = {}
         self._location_log: dict[str, list[Event]] = defaultdict(list)
@@ -99,7 +102,7 @@ class EntitiesLayer(Layer):
         if entities:
             for e in entities:
                 self._entities[e.id] = e
-        self._combat = CombatManager(self._entities, self._location_log, battle_map_configs)
+        self._combat = CombatManager(self._entities, self._location_log, battle_map_configs, rng=dice_rng)
         self._awareness = AwarenessBuilder(self._entities, self._location_log, self._combat)
         self._activation = ActivationManager(
             self._entities,
@@ -151,12 +154,17 @@ class EntitiesLayer(Layer):
         return active_merchants_at(self._entities, location_id, hour)
 
     def get_nearest_wake_time(self) -> int | None:
-        """Return the minimum wake_at_seconds across all creatures, or None."""
-        wake_times = [
-            e.wake_at_seconds
-            for e in self._entities.values()
-            if isinstance(e, Creature) and e.wake_at_seconds is not None
-        ]
+        """Return the minimum intent wake time across all creatures, or None."""
+        from dnd_simulator.core.intent import TimedIntent, TravelIntent
+
+        wake_times: list[int] = []
+        for entity in self._entities.values():
+            if not isinstance(entity, Creature):
+                continue
+            if isinstance(entity.current_intent, TimedIntent):
+                wake_times.append(entity.current_intent.wake_at_seconds)
+            elif isinstance(entity.current_intent, TravelIntent):
+                wake_times.append(entity.current_intent.next_arrival_seconds)
         return min(wake_times) if wake_times else None
 
     def update_activation(
@@ -164,9 +172,10 @@ class EntitiesLayer(Layer):
         time: GameDateTime,
         query_fn: QueryFn | None = None,
         emit_fn: EmitFn | None = None,
+        location_graph: LocationGraph | None = None,
     ) -> None:
-        """Activate creatures near players, dormify the rest."""
-        self._activation.update_activation(time, query_fn, emit_fn)
+        """Activate creatures near awake anchors, dormify the rest."""
+        self._activation.update_activation(time, query_fn, emit_fn, location_graph)
 
     # -- Combat (delegated to CombatManager) --
 
@@ -506,8 +515,31 @@ class EntitiesLayer(Layer):
                         )
                     elif budget_raw is None:
                         entity.turn_budget = None
-                    wake_at = edata.get("wake_at_seconds")
-                    entity.wake_at_seconds = int(wake_at) if wake_at is not None else None
+                    from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
+
+                    entity.is_anchor = bool(edata.get("is_anchor", entity.is_anchor))
+                    intent_raw = edata.get("current_intent")
+                    if isinstance(intent_raw, dict):
+                        kind = IntentType(str(intent_raw["kind"]))
+                        if kind is IntentType.TRAVEL:
+                            route_raw = intent_raw["remaining_route"]
+                            assert isinstance(route_raw, list | tuple)
+                            entity.current_intent = TravelIntent(
+                                started_at_seconds=int(intent_raw["started_at_seconds"]),
+                                destination_id=str(intent_raw["destination_id"]),
+                                remaining_route=tuple(str(node) for node in route_raw),
+                                next_arrival_seconds=int(intent_raw["next_arrival_seconds"]),
+                            )
+                        else:
+                            rest_type_raw = intent_raw.get("rest_type")
+                            entity.current_intent = TimedIntent(
+                                kind=kind,
+                                started_at_seconds=int(intent_raw["started_at_seconds"]),
+                                wake_at_seconds=int(intent_raw["wake_at_seconds"]),
+                                rest_type=RestType(str(rest_type_raw)) if rest_type_raw is not None else None,
+                            )
+                    else:
+                        entity.current_intent = None
                     position_raw = edata.get("combat_position")
                     if isinstance(position_raw, list | tuple) and len(position_raw) == 2:
                         entity.combat_position = (int(position_raw[0]), int(position_raw[1]))
@@ -534,7 +566,7 @@ class EntitiesLayer(Layer):
                             setattr(entity, field_name, deserialize_item(eq_data))
                     pools_raw = edata.get("resource_pools")
                     if isinstance(pools_raw, list):
-                        from dnd_simulator.core.resource import ResourcePool, RestType
+                        from dnd_simulator.core.resource import ResourcePool
 
                         saved_pools = {str(d["id"]): d for d in pools_raw}
                         existing_ids = {pool.id for pool in entity.resource_pools}

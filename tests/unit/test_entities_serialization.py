@@ -8,6 +8,8 @@ from pydantic import ValidationError
 from dnd_simulator.core.character import Creature, NpcRole
 from dnd_simulator.core.combat import BattleMap, CombatState, Position, Wall
 from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
+from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -325,7 +327,7 @@ class TestCombatStateRoundTrip:
 class TestEntitiesStateModel:
     def test_state_round_trips_through_json_and_preserves_rng(self) -> None:
         creature = _make_creature("wanderer")
-        creature.wake_at_seconds = 123
+        creature.current_intent = TimedIntent(IntentType.WAIT, started_at_seconds=23, wake_at_seconds=123)
         layer = EntitiesLayer(entities=[creature], seed=19)
         _ = layer._rng.random()
 
@@ -397,7 +399,8 @@ class TestEntitiesStateModel:
         creature.reputation = {"guards": 5}
         creature.xp_value = 25
         creature.squad_id = "patrol_1"
-        creature.wake_at_seconds = 321
+        creature.is_anchor = True
+        creature.current_intent = TimedIntent(IntentType.WAIT, started_at_seconds=123, wake_at_seconds=321)
         creature.combat_position = (10, 15)
 
         layer = EntitiesLayer(entities=[creature])
@@ -417,5 +420,130 @@ class TestEntitiesStateModel:
         assert restored.reputation == {"guards": 5}
         assert restored.xp_value == 25
         assert restored.squad_id == "patrol_1"
-        assert restored.wake_at_seconds == 321
+        assert restored.is_anchor is True
+        assert restored.current_intent == TimedIntent(
+            IntentType.WAIT,
+            started_at_seconds=123,
+            wake_at_seconds=321,
+        )
         assert restored.combat_position == (10, 15)
+
+    def test_anchor_and_timed_intents_round_trip_for_every_creature_kind(self) -> None:
+        player = PlayerCharacter(id="hero", name="Hero", location_id="square", is_anchor=True)
+        player.current_intent = TimedIntent(IntentType.WAIT, started_at_seconds=100, wake_at_seconds=3700)
+        npc = _make_fighter_npc(is_anchor=True)
+        npc.current_intent = TimedIntent(
+            IntentType.SLEEP,
+            started_at_seconds=200,
+            wake_at_seconds=29000,
+            rest_type=RestType.LONG_REST,
+        )
+        creature = _make_creature("wolf")
+        creature.is_anchor = False
+        creature.current_intent = TimedIntent(IntentType.WAIT, started_at_seconds=300, wake_at_seconds=900)
+
+        restored_layer = EntitiesLayer()
+        restored_layer.load_state(EntitiesLayer(entities=[player, npc, creature]).get_state())
+
+        restored_player = restored_layer.get_entity("hero")
+        restored_npc = restored_layer.get_entity("fighter_npc")
+        restored_creature = restored_layer.get_entity("wolf")
+        assert isinstance(restored_player, PlayerCharacter)
+        assert isinstance(restored_npc, Npc)
+        assert isinstance(restored_creature, Creature)
+        assert restored_player.is_anchor is True
+        assert restored_player.current_intent == player.current_intent
+        assert restored_npc.is_anchor is True
+        assert restored_npc.current_intent == npc.current_intent
+        assert restored_creature.is_anchor is False
+        assert restored_creature.current_intent == creature.current_intent
+
+    def test_travel_progress_round_trips_for_every_creature_kind(self) -> None:
+        player = PlayerCharacter(id="hero", name="Hero", location_id="crossroads", is_anchor=True)
+        player.current_intent = TravelIntent(
+            started_at_seconds=100,
+            destination_id="harbor",
+            remaining_route=("bridge", "harbor"),
+            next_arrival_seconds=220,
+        )
+        npc = _make_fighter_npc(location_id="bridge")
+        npc.current_intent = TravelIntent(
+            started_at_seconds=50,
+            destination_id="harbor",
+            remaining_route=("harbor",),
+            next_arrival_seconds=260,
+        )
+        creature = _make_creature("wolf", location_id="forest")
+        creature.current_intent = TravelIntent(
+            started_at_seconds=70,
+            destination_id="cave",
+            remaining_route=("ridge", "cave"),
+            next_arrival_seconds=190,
+        )
+
+        restored_layer = EntitiesLayer()
+        restored_layer.load_state(EntitiesLayer(entities=[player, npc, creature]).get_state())
+
+        restored_player = restored_layer.get_entity("hero")
+        restored_npc = restored_layer.get_entity("fighter_npc")
+        restored_creature = restored_layer.get_entity("wolf")
+        assert isinstance(restored_player, PlayerCharacter)
+        assert isinstance(restored_npc, Npc)
+        assert isinstance(restored_creature, Creature)
+        assert restored_player.current_intent == player.current_intent
+        assert restored_npc.current_intent == npc.current_intent
+        assert restored_creature.current_intent == creature.current_intent
+
+    def test_idle_creature_round_trips_without_fabricated_wake_time(self) -> None:
+        creature = _make_creature("idle")
+
+        state = EntitiesLayer(entities=[creature]).get_state()
+        assert state["entities"]["idle"]["current_intent"] is None
+
+        restored_layer = EntitiesLayer()
+        restored_layer.load_state(state)
+        restored = restored_layer.get_entity("idle")
+        assert isinstance(restored, Creature)
+        assert restored.current_intent is None
+
+    @pytest.mark.parametrize(
+        "invalid_intent",
+        [
+            {"kind": "unknown", "started_at_seconds": 10, "wake_at_seconds": 20},
+            {"kind": "wait", "started_at_seconds": 10, "wake_at_seconds": 20, "extra": True},
+        ],
+    )
+    def test_invalid_timed_intent_payload_is_rejected(self, invalid_intent: dict[str, object]) -> None:
+        state = EntitiesLayer(entities=[_make_creature("broken")]).get_state()
+        state["entities"]["broken"]["current_intent"] = invalid_intent
+
+        with pytest.raises(ValidationError):
+            EntitiesLayer().load_state(state)
+
+    @pytest.mark.parametrize(
+        "invalid_intent",
+        [
+            {
+                "kind": "travel",
+                "started_at_seconds": 10,
+                "destination_id": "harbor",
+                "remaining_route": [],
+                "next_arrival_seconds": 20,
+            },
+            {
+                "kind": "travel",
+                "started_at_seconds": 10,
+                "destination_id": "harbor",
+                "remaining_route": ["harbor"],
+                "next_arrival_seconds": 20,
+                "extra": True,
+            },
+            {"kind": "travel", "started_at_seconds": 10, "wake_at_seconds": 20},
+        ],
+    )
+    def test_invalid_travel_intent_payload_is_rejected(self, invalid_intent: dict[str, object]) -> None:
+        state = EntitiesLayer(entities=[_make_creature("broken")]).get_state()
+        state["entities"]["broken"]["current_intent"] = invalid_intent
+
+        with pytest.raises(ValidationError):
+            EntitiesLayer().load_state(state)

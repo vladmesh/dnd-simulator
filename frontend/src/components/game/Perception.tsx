@@ -49,11 +49,13 @@ export function Perception() {
       {nearby.length === 0 && (
         <p className="text-xs text-muted-foreground">{t("common:nobody_around")}</p>
       )}
-      {nearby.map((entity) => (
+      {nearby.map((entity) => {
+        const targetName = entity.description || entity.id
+        return (
         <div key={entity.id} className="rounded border border-border p-2 text-xs">
           <div className="flex items-start justify-between gap-1">
             <div>
-              <span className="font-medium">{entity.description || entity.id}</span>
+              <span className="font-medium">{targetName}</span>
               {entity.is_wounded && <span className="ml-1 text-red-400">{t("game:wounded")}</span>}
             </div>
           </div>
@@ -67,6 +69,7 @@ export function Perception() {
                   <Button
                     size="xs"
                     variant="destructive"
+                    aria-label={t("game:attack_target", { target: entity.id })}
                     onClick={() => {
                       if (spellSlots.length > 0) {
                         setSmiteTarget(smiteTarget === entity.id ? null : entity.id)
@@ -82,6 +85,7 @@ export function Perception() {
                   <Button
                     size="xs"
                     variant="secondary"
+                    aria-label={t("game:talk_to", { target: entity.id })}
                     onClick={() => setTalkTarget(talkTarget === entity.id ? null : entity.id)}
                   >
                     <MessageCircle className="mr-1 size-3" /> {t("game:talk")}
@@ -90,6 +94,7 @@ export function Perception() {
                 <Button
                   size="xs"
                   variant="ghost"
+                  aria-label={t("game:inspect_target", { target: entity.id })}
                   onClick={() => setInspectEntity(entity)}
                 >
                   <Eye className="size-3" />
@@ -127,7 +132,8 @@ export function Perception() {
             </div>
           )}
         </div>
-      ))}
+        )
+      })}
 
       <NpcInspectModal
         entity={inspectEntity}

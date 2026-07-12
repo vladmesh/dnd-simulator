@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import random
+
 import structlog
 
 from dnd_simulator.core.character import Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
+from dnd_simulator.core.intent import IntentInterruptReason
 from dnd_simulator.core.models import ActionResult, Event, EventType, FactionRelation, QueryFn
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.layers.entities import combat_resolution
 from dnd_simulator.layers.entities.combat_serialization import deserialize_combats, serialize_combats
+from dnd_simulator.layers.entities.intent_completion import interrupt_intent
 from dnd_simulator.rules.combat import roll_initiative
 from dnd_simulator.rules.combat_sides import build_combat_sides
 from dnd_simulator.rules.reputation import (
@@ -34,6 +38,7 @@ class CombatManager:
         entities: dict[str, Entity],
         location_log: dict[str, list[Event]],
         battle_map_configs: dict[str, BattleMap] | None = None,
+        rng: random.Random | None = None,
     ) -> None:
         self._entities = entities
         self._location_log = location_log
@@ -41,6 +46,7 @@ class CombatManager:
         self._attack_this_round: dict[str, bool] = {}
         self._sneak_attack_used: set[str] = set()  # creature IDs that used SA this round
         self._battle_map_configs: dict[str, BattleMap] = battle_map_configs or {}
+        self._rng = rng or random.Random()
 
     def get_combat_locations(self) -> list[str]:
         """Return location IDs with active combats."""
@@ -60,7 +66,7 @@ class CombatManager:
         creatures = self._active_creatures_at_location(location_id)
         if len(creatures) < 2:
             return None
-        ordered = roll_initiative(creatures)
+        ordered = roll_initiative(creatures, rng=self._rng)
 
         if location_id in self._battle_map_configs:
             template = self._battle_map_configs[location_id]
@@ -74,7 +80,7 @@ class CombatManager:
                 fixed_ids.add(c.id)
         remaining = [c.id for c in creatures if c.id not in fixed_ids]
         if remaining:
-            battle_map.place_randomly(remaining)
+            battle_map.place_randomly(remaining, rng=self._rng)
 
         combat = CombatState(
             location_id=location_id,
@@ -94,6 +100,7 @@ class CombatManager:
         self._combats[location_id] = combat
         self._attack_this_round[location_id] = False
         for c in creatures:
+            interrupt_intent(c, IntentInterruptReason.COMBAT)
             c.in_combat = True
             if c.turn_budget is None:  # reaction-only budget for OA before first turn
                 c.turn_budget = TurnBudget(

@@ -254,6 +254,15 @@ export interface AbilityScores {
   cha: number
 }
 
+export interface JourneyStatus {
+  destination_id: string
+  destination_name: string
+  current_location_name: string
+  next_location_name: string
+  remaining_route: string[]
+  next_arrival_seconds: number
+}
+
 /**
  * Player status — single source for both the REST `player_status` response and
  * the WS status payload (backend `PlayerStatusData`). `appearance`/`equipped`/
@@ -277,6 +286,7 @@ export interface PlayerStatus {
   location_id: string
   appearance?: string
   ability_scores: AbilityScores
+  journey?: JourneyStatus | null
   equipped?: EquippedInfo[]
   inventory?: ItemInfo[]
   resource_pools?: ResourcePoolInfo[]
@@ -295,6 +305,7 @@ export type ActionName =
   | "end_turn"
   | "skip"
   | "wait"
+  | "travel"
   | "use_item"
   | "bless"
   | "equip"

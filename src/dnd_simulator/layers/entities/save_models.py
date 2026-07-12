@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
 from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.character import Ability, Alignment, CharClass, DamageType, NpcRole, Race
 from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.intent import IntentType
 from dnd_simulator.core.items import ArmorCategory, EquipmentSlot, ItemType, WeaponCategory
 from dnd_simulator.core.models import EntityKind
 from dnd_simulator.core.modifiers import ModifierOp, StatType
@@ -107,6 +108,32 @@ class TurnBudgetSave(SaveModel):
     reaction: int
 
 
+class TimedIntentSave(SaveModel):
+    kind: Literal[IntentType.WAIT, IntentType.SLEEP]
+    started_at_seconds: int
+    wake_at_seconds: int
+    rest_type: RestType | None = None
+
+
+class TravelIntentSave(SaveModel):
+    kind: Literal[IntentType.TRAVEL]
+    started_at_seconds: int
+    destination_id: str
+    remaining_route: tuple[str, ...] = Field(min_length=1)
+    next_arrival_seconds: int
+
+    @model_validator(mode="after")
+    def validate_route(self) -> TravelIntentSave:
+        if self.remaining_route[-1] != self.destination_id:
+            raise ValueError("travel destination must be the final route node")
+        if self.next_arrival_seconds < self.started_at_seconds:
+            raise ValueError("arrival time cannot precede journey start time")
+        return self
+
+
+IntentSave = Annotated[TimedIntentSave | TravelIntentSave, Field(discriminator="kind")]
+
+
 class EntitySaveBase(SaveModel):
     id: str
     name: str
@@ -140,7 +167,8 @@ class CreatureFields(EntitySaveBase):
     reputation: dict[str, int] = Field(default_factory=dict)
     xp_value: int = 0
     squad_id: str | None = None
-    wake_at_seconds: int | None = None
+    is_anchor: bool = False
+    current_intent: IntentSave | None = None
     combat_position: tuple[int, int] | None = None
 
 

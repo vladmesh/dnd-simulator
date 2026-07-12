@@ -10,10 +10,12 @@ from unittest.mock import MagicMock
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
+from dnd_simulator.core.intent import TravelIntent
+from dnd_simulator.core.location import Location, LocationEdge, LocationGraph
 from dnd_simulator.core.models import ActionResult, Event
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.i18n import set_language
-from dnd_simulator.rules.handlers.movement import handle_dash, handle_disengage, handle_move, handle_wait
+from dnd_simulator.rules.handlers.movement import handle_dash, handle_disengage, handle_move, handle_travel, handle_wait
 from dnd_simulator.rules.validation import ActionContext
 
 
@@ -265,7 +267,7 @@ class TestHandleDisengage:
 
 class TestHandleWait:
     def test_sets_wake_at_and_dormant(self) -> None:
-        """Wait sets wake_at_seconds and marks creature dormant."""
+        """Wait sets a timed intent and marks creature dormant."""
         mover = _creature("mover")
         world = MagicMock()
         world.time.to_total_seconds.return_value = 10000
@@ -276,7 +278,8 @@ class TestHandleWait:
         result = handle_wait(mover, action, emit_fn, ctx, world)
 
         assert result.success
-        assert mover.wake_at_seconds == 10000 + 2 * 3600
+        assert mover.current_intent is not None
+        assert mover.current_intent.wake_at_seconds == 10000 + 2 * 3600
         assert mover.active is False
 
     def test_wait_default_one_hour(self) -> None:
@@ -290,14 +293,14 @@ class TestHandleWait:
 
         handle_wait(mover, action, emit_fn, ctx, world)
 
-        assert mover.wake_at_seconds == 5000 + 3600
+        assert mover.current_intent is not None
+        assert mover.current_intent.wake_at_seconds == 5000 + 3600
 
-    def test_wait_travel(self) -> None:
-        """Wait with travel_to changes location and advances time."""
+    def test_wait_ignores_removed_travel_parameter(self) -> None:
         mover = _creature("mover")
         mover.location_id = "town_square"
         world = MagicMock()
-        world.location_graph.travel_seconds.return_value = 600
+        world.time.to_total_seconds.return_value = 100
         ctx = _ctx(mover)
         action = Action(name=ActionType.WAIT, params={"travel_to": "tavern"})
         emit_fn = MagicMock(return_value=ActionResult())
@@ -305,87 +308,53 @@ class TestHandleWait:
         result = handle_wait(mover, action, emit_fn, ctx, world)
 
         assert result.success
-        assert mover.location_id == "tavern"
-        world.advance_time.assert_called_once()
+        assert mover.location_id == "town_square"
+        assert mover.current_intent is not None
+        world.advance_time.assert_not_called()
 
-    def test_wait_travel_no_direct_route_by_name_succeeds(self) -> None:
-        """Travel by name finds target and succeeds when a route exists."""
+
+class TestHandleTravel:
+    def test_starts_multi_leg_journey_without_moving_or_advancing_time(self) -> None:
         mover = _creature("mover")
-        mover.location_id = "town_square"
+        mover.location_id = "start"
         world = MagicMock()
-        # Direct route fails, name-match route succeeds
-        loc = MagicMock()
-        loc.name = "Tavern"
-        world.location_graph.travel_seconds.side_effect = [ValueError("no direct route"), 300]
-        world.location_graph.all_ids.return_value = ["tavern_id"]
-        world.location_graph.get.return_value = loc
-        ctx = _ctx(mover)
-        action = Action(name=ActionType.WAIT, params={"travel_to": "tavern"})
-        emit_fn = MagicMock(return_value=ActionResult())
+        world.time.to_total_seconds.return_value = 100
+        world.location_graph = LocationGraph(
+            [
+                Location("start", "Start", "r", edges=(LocationEdge("road", 1000),)),
+                Location("road", "Road", "r", edges=(LocationEdge("goal", 2000),)),
+                Location("goal", "Goal", "r"),
+            ]
+        )
 
-        result = handle_wait(mover, action, emit_fn, ctx, world)
+        result = handle_travel(
+            mover,
+            Action(name=ActionType.TRAVEL, params={"destination_id": "goal"}),
+            MagicMock(return_value=ActionResult()),
+            _ctx(mover),
+            world,
+        )
 
         assert result.success
-        assert mover.location_id == "tavern_id"
-        world.advance_time.assert_called_once()
+        assert mover.location_id == "start"
+        assert mover.current_intent == TravelIntent(100, "goal", ("road", "goal"), 820)
+        assert mover.active is False
+        world.advance_time.assert_not_called()
 
-    def test_wait_travel_unreachable_returns_failure(self) -> None:
-        """Travel to an ID with no route returns success=False and location unchanged."""
+    def test_invalid_destination_does_not_mutate_creature(self) -> None:
         mover = _creature("mover")
-        mover.location_id = "starting_town"
+        mover.location_id = "start"
         world = MagicMock()
-        world.location_graph.travel_seconds.side_effect = ValueError("no route")
-        world.location_graph.all_ids.return_value = []
-        ctx = _ctx(mover)
-        action = Action(name=ActionType.WAIT, params={"travel_to": "nowhere_island"})
-        emit_fn = MagicMock(return_value=ActionResult())
+        world.location_graph = LocationGraph([Location("start", "Start", "r")])
 
-        result = handle_wait(mover, action, emit_fn, ctx, world)
+        result = handle_travel(
+            mover,
+            Action(name=ActionType.TRAVEL, params={"destination_id": "missing"}),
+            MagicMock(return_value=ActionResult()),
+            _ctx(mover),
+            world,
+        )
 
         assert not result.success
-        assert result.error
-        assert mover.location_id == "starting_town"
-
-    def test_wait_travel_misnamed_target_returns_failure(self) -> None:
-        """Travel by name when no location matches returns success=False and location unchanged."""
-        mover = _creature("mover")
-        mover.location_id = "starting_town"
-        world = MagicMock()
-        # Direct route by ID fails (no such ID), name scan finds no match
-        world.location_graph.travel_seconds.side_effect = ValueError("no direct route")
-        loc_a = MagicMock()
-        loc_a.name = "Market Square"
-        loc_b = MagicMock()
-        loc_b.name = "The Docks"
-        world.location_graph.all_ids.return_value = ["market", "docks"]
-        world.location_graph.get.side_effect = lambda lid: {"market": loc_a, "docks": loc_b}[lid]
-        ctx = _ctx(mover)
-        action = Action(name=ActionType.WAIT, params={"travel_to": "Nonexistent Place"})
-        emit_fn = MagicMock(return_value=ActionResult())
-
-        result = handle_wait(mover, action, emit_fn, ctx, world)
-
-        assert not result.success
-        assert result.error
-        assert mover.location_id == "starting_town"
-
-    def test_wait_travel_name_match_unreachable_returns_failure(self) -> None:
-        """Travel where name matches but route to that location is unreachable returns failure."""
-        mover = _creature("mover")
-        mover.location_id = "starting_town"
-        world = MagicMock()
-        # Both direct and name-based route raise ValueError
-        world.location_graph.travel_seconds.side_effect = ValueError("no route")
-        loc = MagicMock()
-        loc.name = "Dead End"
-        world.location_graph.all_ids.return_value = ["dead_end_id"]
-        world.location_graph.get.return_value = loc
-        ctx = _ctx(mover)
-        action = Action(name=ActionType.WAIT, params={"travel_to": "Dead End"})
-        emit_fn = MagicMock(return_value=ActionResult())
-
-        result = handle_wait(mover, action, emit_fn, ctx, world)
-
-        assert not result.success
-        assert result.error
-        assert mover.location_id == "starting_town"
+        assert mover.location_id == "start"
+        assert mover.current_intent is None

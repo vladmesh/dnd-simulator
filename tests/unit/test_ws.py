@@ -9,6 +9,10 @@ from fastapi.testclient import TestClient
 
 from dnd_simulator.adapters.api.app import app
 from dnd_simulator.adapters.api.deps import set_service
+from dnd_simulator.core.character import Creature
+from dnd_simulator.core.player import PlayerCharacter
+from dnd_simulator.layers.entities.layer import EntitiesLayer
+from dnd_simulator.rules.rule_brain import RuleBrain
 from dnd_simulator.service import GameService
 from dnd_simulator.storage.store import JsonFileStore
 
@@ -66,6 +70,37 @@ class TestWebSocketErrors:
 
 
 class TestWebSocketTurnCycle:
+    def test_wait_fast_forwards_past_nearby_rule_npc(self, tmp_path: object) -> None:
+        client, service = _make_client(tmp_path)
+        sid = _create_session_with_player(client)
+        session = service.get_session(sid)
+        entities = next(layer for layer in session.world.layers if isinstance(layer, EntitiesLayer))
+        player = next(entity for entity in entities._entities.values() if isinstance(entity, PlayerCharacter))
+        entities.add_entity(
+            Creature(
+                id="bystander",
+                name="Bystander",
+                location_id=player.location_id,
+                brain=RuleBrain(),
+            )
+        )
+        started_at = session.world.time.to_total_seconds()
+
+        with client.websocket_connect(f"/api/ws/{sid}") as ws:
+            assert ws.receive_json()["type"] == "turn"
+            ws.send_json({"type": "action", "name": "wait", "params": {"hours": 1}})
+
+            messages = []
+            for _ in range(6):
+                message = ws.receive_json()
+                messages.append(message)
+                if message["type"] == "turn":
+                    break
+
+        assert messages[-1]["type"] == "turn"
+        assert len(messages) <= 4
+        assert session.world.time.to_total_seconds() >= started_at + 3600
+
     def test_receive_turn_send_end_turn(self, tmp_path: object) -> None:
         """Connect WS, receive turn awareness, send end_turn, receive round_result."""
         client, _ = _make_client(tmp_path)

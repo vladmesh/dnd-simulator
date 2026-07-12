@@ -37,7 +37,7 @@ export function ActionBar() {
     )
   }
 
-  const ALWAYS_HIDDEN = new Set(["buy", "sell", "take", "move", "move_to"])
+  const ALWAYS_HIDDEN = new Set(["buy", "sell", "take", "move", "move_to", "travel"])
   const PEACEFUL_ONLY_HIDDEN = new Set(["use_item", "equip", "unequip"])
   const available = (awareness?.available_actions ?? []).filter(
     (a) => !ALWAYS_HIDDEN.has(a.name) && !(mode === "peaceful" && PEACEFUL_ONLY_HIDDEN.has(a.name)),

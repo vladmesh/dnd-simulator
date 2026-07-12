@@ -159,7 +159,12 @@ export function NpcInspectModal({ entity, open, onClose, isCombat }: NpcInspectM
           {/* Action buttons */}
           {isMyTurn && !nearby?.is_dead && (
             <div className="flex flex-wrap gap-1 pt-1">
-              <Button size="xs" variant="destructive" onClick={handleAttack}>
+              <Button
+                size="xs"
+                variant="destructive"
+                aria-label={t("game:attack_target", { target: entity.id })}
+                onClick={handleAttack}
+              >
                 <Sword className="mr-1 size-3" /> {t("game:attack")}
               </Button>
               {!isCombat && (

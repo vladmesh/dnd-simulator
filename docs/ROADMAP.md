@@ -29,7 +29,7 @@ BattleMap (2D grid), инициатива, auto-exit после 2 idle раун�
 React + TypeScript + shadcn/ui, dark theme. Игровой экран (EventLog, BattleMap, ActionBar, Nearby/Location/Character панели) + мастер-панель (World/Creatures/Time/Saves). WebSocket для real-time взаимодействия.
 
 ### Level 0 — Фундамент game loop
-Proximity-based активация существ: NPC рядом с игроком active, остальные dormant. Wait + fast-forward: `wake_at_seconds` на существе, Round.run_loop() мотает время до ближайшего пробуждения. Explicit locations — каждый мир обязан определить locations явно, убрана автогенерация из регионов. NPC перемещаются по расписанию при активации. Round lifecycle в GameSession.
+Anchor-based активация существ: NPC рядом с бодрствующим якорем active, остальные dormant. Wait/sleep/travel хранятся как типизированные intent; Round.run_loop() мотает время до ближайшей границы намерения. Explicit locations — каждый мир обязан определить locations явно, убрана автогенерация из регионов. NPC перемещаются по расписанию при активации. Round lifecycle в GameSession.
 → [брейншторм](brainstorms/ecs-and-content.md)
 
 ### Level 1 — Conditions, BrainFactory, валидация
@@ -127,6 +127,10 @@ Paladin L1-L2 как первый caster-класс. Phase 1: spell slots как
 Первый эпик цепочки simulation-core. Phase 1: единый `DND_WORLD_SEED` — слоевые сиды выводятся детерминированно в `game_service`, слои владеют своими `random.Random` (погода, политика, roam/retreat/деплит логова, encounter rolls), процесс-глобальный `random` из `layers/` убран, сквозной пин детерминизма (`test_world_seed.py`: один сид → идентичный `World.save()`). Phase 2: версионированная Pydantic-схема сейва — `SaveGame(schema_version=1)` в `storage/save_schema.py`, типизированные state-модели слоёв (`extra="forbid"`), entity-сейвы как discriminated union, построение напрямую из объектов, combat sides в сейве (закрыт lossless-пробел), состояние RNG (слоевые + dice) сериализуется и продолжает последовательности после load, legacy-форматы отклоняются. Phase 3: периодический автосейв (`DND_AUTOSAVE_SECONDS`, cancel до финального сейва), ошибки автосейва логируются вместо suppress, гвард на evict-после-DELETE (заодно закрыл воскрешение удалённой сессии), интеграционный стек чистит `saves/`. Закрыты backlog: `save-schema`, `layer-rng-threading`, `test-gap-world-rng-determinism`, `periodic-autosave-scheduler`, `silent-failure-autosave`.
 → [план спринта](sprints/021-save-schema/sprint.md)
 
+### Sprint 022 — Intentions & Travel (фазы 1-5)
+Второй эпик simulation-core. Якорь стал свойством любого существа; wait, sleep и travel представлены строгими сохраняемыми intent. Travel идёт по кратчайшему маршруту по рёбрам графа, сохраняется посреди пути и прерывается телесным событием, боем или встречей в активной сцене. Session-owned dice RNG, единый world-mutation gate и bounded round shutdown согласовали save/load/autosave с живым раундом. Post-audit E2E: 8/8, integration: 160/160.
+→ [план спринта](sprints/022-intents-travel/sprint.md)
+
 ## Planned
 
 ### Level 2 — Расходуемые ресурсы
@@ -137,8 +141,8 @@ Spell slots, ki, rage. Дополнительные типы брони и ор�
 Заклинания как YAML, интерактивные объекты (двери, сундуки).
 → [брейншторм](brainstorms/ecs-and-content.md)
 
-### Simulation Core — намерения, триггеры, внутреннее я, лестница детализации
-Заменяет прежний план «Phase 3 — Автономные тики» (периодические тики отброшены в пользу decision-точек). Первый эпик (единая схема сейва + воспроизводимость) закрыт Sprint 021. Цепочка эпиков: ~~единая схема сейва~~ → якорь-как-свойство + намерения (спит/идёт/ждёт, travel по рёбрам) → парные триггеры `{on, until}` активации/гашения → внутреннее я NPC (цели, отношения, живой alignment, переваривание + правиловый близнец) → лестница детализации поселений (событийная запись, храповик субъектности) → квесты как контент поверх целей и триггеров.
+### Simulation Core — триггеры, внутреннее я, лестница детализации
+Заменяет прежний план «Phase 3 — Автономные тики» (периодические тики отброшены в пользу decision-точек). Единая схема сейва и воспроизводимость закрыты Sprint 021, якоря и намерения закрыты Sprint 022. Цепочка эпиков: ~~единая схема сейва~~ → ~~якорь-как-свойство + намерения~~ → парные триггеры `{on, until}` активации/гашения → внутреннее я NPC (цели, отношения, живой alignment, переваривание + правиловый близнец) → лестница детализации поселений (событийная запись, храповик субъектности) → квесты как контент поверх целей и триггеров.
 → [брейншторм](brainstorms/simulation-core.md), эпики в [BACKLOG](BACKLOG.md#simulation-core-брейншторм-2026-07-04)
 
 ### World Builder (advanced)

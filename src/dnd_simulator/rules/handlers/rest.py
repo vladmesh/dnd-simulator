@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.action import Action
+from dnd_simulator.core.intent import IntentType, TimedIntent
 from dnd_simulator.core.models import ActionResult
 from dnd_simulator.core.resource import RestType
-from dnd_simulator.rules.resources import reset_resources
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
@@ -26,27 +26,22 @@ _SHORT_REST_SECONDS = 1 * 3600  # 1 hour
 def handle_long_rest(
     actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
 ) -> ActionResult:
-    """Long rest: reset all resource pools, heal to full, advance 8 hours."""
-    reset_ids = reset_resources(actor, RestType.LONG_REST)
-    healed = actor.heal(actor.max_hp)
-
+    """Long rest: sleep for eight hours, then recover on completion."""
     now = world.time.to_total_seconds()
-    actor.wake_at_seconds = now + _LONG_REST_SECONDS
+    actor.current_intent = TimedIntent(IntentType.SLEEP, now, now + _LONG_REST_SECONDS, rest_type=RestType.LONG_REST)
     actor.active = False
 
-    logger.info("long_rest", healed=healed, reset_pools=reset_ids, wake_at=actor.wake_at_seconds)
+    logger.info("long_rest", wake_at=actor.current_intent.wake_at_seconds)
     return ActionResult()
 
 
 def handle_short_rest(
     actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World
 ) -> ActionResult:
-    """Short rest: reset short-rest pools only, advance 1 hour. No healing."""
-    reset_ids = reset_resources(actor, RestType.SHORT_REST)
-
+    """Short rest: sleep for one hour, then recover on completion."""
     now = world.time.to_total_seconds()
-    actor.wake_at_seconds = now + _SHORT_REST_SECONDS
+    actor.current_intent = TimedIntent(IntentType.SLEEP, now, now + _SHORT_REST_SECONDS, rest_type=RestType.SHORT_REST)
     actor.active = False
 
-    logger.info("short_rest", reset_pools=reset_ids, wake_at=actor.wake_at_seconds)
+    logger.info("short_rest", wake_at=actor.current_intent.wake_at_seconds)
     return ActionResult()

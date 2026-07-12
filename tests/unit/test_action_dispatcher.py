@@ -335,7 +335,8 @@ class TestHandleWait:
         action = Action(name=ActionType.WAIT, params={"hours": 2})
         result = handle_wait(creature, action, _noop_emit, _PEACEFUL, world)
         assert result.success
-        assert creature.wake_at_seconds == 10000 + 2 * 3600
+        assert creature.current_intent is not None
+        assert creature.current_intent.wake_at_seconds == 10000 + 2 * 3600
         assert creature.active is False
 
     def test_wait_default_1_hour(self) -> None:
@@ -345,7 +346,8 @@ class TestHandleWait:
         action = Action(name=ActionType.WAIT)
         result = handle_wait(creature, action, _noop_emit, _PEACEFUL, world)
         assert result.success
-        assert creature.wake_at_seconds == 5000 + 3600
+        assert creature.current_intent is not None
+        assert creature.current_intent.wake_at_seconds == 5000 + 3600
 
     def test_wait_emits_no_event(self) -> None:
         world = MagicMock()
@@ -355,16 +357,16 @@ class TestHandleWait:
         handle_wait(_creature(), action, emit, _PEACEFUL, world)
         assert len(emitted) == 0
 
-    def test_wait_travel(self) -> None:
+    def test_wait_does_not_travel(self) -> None:
         world = MagicMock()
-        world.location_graph.travel_seconds.return_value = 600
+        world.time.to_total_seconds.return_value = 0
         creature = _creature()
         creature.location_id = "loc_a"
         action = Action(name=ActionType.WAIT, params={"travel_to": "loc_b"})
         result = handle_wait(creature, action, _noop_emit, _PEACEFUL, world)
         assert result.success
-        assert creature.location_id == "loc_b"
-        world.advance_time.assert_called_once()
+        assert creature.location_id == "loc_a"
+        world.advance_time.assert_not_called()
 
 
 class TestHandleDash:

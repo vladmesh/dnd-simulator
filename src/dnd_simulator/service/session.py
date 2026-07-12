@@ -4,12 +4,17 @@ import contextlib
 import contextvars
 import dataclasses
 import os
+import random
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 import structlog
+
+if TYPE_CHECKING:
+    from dnd_simulator.core.location import LocationGraph
+    from dnd_simulator.storage.save_schema import SaveGame
 
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.action_defs import get_action_def
@@ -28,7 +33,7 @@ from dnd_simulator.rules.actions import collect_cost_overrides
 from dnd_simulator.rules.leveling import xp_to_next_level
 from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.service.action_dispatcher import create_dispatcher
-from dnd_simulator.service.dto import PlayerStatusData, ResourcePoolView
+from dnd_simulator.service.dto import JourneyView, PlayerStatusData, ResourcePoolView
 
 logger = structlog.get_logger(domain="session")
 
@@ -36,6 +41,11 @@ logger = structlog.get_logger(domain="session")
 # inside this window (StrictMode remount, network blip) cancels the evict. Configurable
 # for ops/tests; overridable per-session via ``GameSession._evict_grace_seconds``.
 _DEFAULT_EVICT_GRACE_SECONDS = float(os.getenv("DND_EVICT_GRACE_SECONDS", "1.5"))
+_DEFAULT_ROUND_STOP_TIMEOUT_SECONDS = float(os.getenv("DND_ROUND_STOP_TIMEOUT_SECONDS", "5"))
+
+
+class RoundStopTimeoutError(RuntimeError):
+    """The session's round thread did not stop within its lifecycle deadline."""
 
 
 # ---------------------------------------------------------------------------
@@ -170,12 +180,29 @@ def build_inventory_payload(player: PlayerCharacter) -> list[dict[str, object]]:
     return inventory
 
 
-def build_player_status(player: PlayerCharacter) -> PlayerStatusData:
+def build_player_status(player: PlayerCharacter, location_graph: LocationGraph | None = None) -> PlayerStatusData:
     """Build the full player status snapshot — single source shared by REST and WS.
 
     All derived fields (AC from equipment+modifiers, XP to next level) are computed here.
     """
+    from dnd_simulator.core.intent import TravelIntent
+
     scores = player.ability_scores
+    journey = None
+    if isinstance(player.current_intent, TravelIntent) and location_graph is not None:
+        intent = player.current_intent
+
+        def location_name(location_id: str) -> str:
+            return location_graph.get(location_id).name if location_graph.has(location_id) else location_id
+
+        journey = JourneyView(
+            destination_id=intent.destination_id,
+            destination_name=location_name(intent.destination_id),
+            current_location_name=location_name(player.location_id),
+            next_location_name=location_name(intent.remaining_route[0]),
+            remaining_route=tuple(location_name(location_id) for location_id in intent.remaining_route),
+            next_arrival_seconds=intent.next_arrival_seconds,
+        )
     return PlayerStatusData(
         player_id=player.id,
         name=player.name,
@@ -200,6 +227,7 @@ def build_player_status(player: PlayerCharacter) -> PlayerStatusData:
             "wis": scores[Ability.WIS],
             "cha": scores[Ability.CHA],
         },
+        journey=journey,
         resource_pools=[
             ResourcePoolView(id=p.id, max_uses=p.max_uses, current_uses=p.current_uses) for p in player.resource_pools
         ],
@@ -268,6 +296,7 @@ class GameSession:
     lang: str = "en"
     world_name: str = ""
     default_player_faction: str = ""
+    dice_rng: random.Random = field(default_factory=random.Random, repr=False)
 
     # Round lifecycle (managed, not serialized)
     _round: Round | None = field(default=None, init=False, repr=False)
@@ -279,13 +308,49 @@ class GameSession:
     _spectators: list[SessionEventListener] = field(default_factory=list, init=False, repr=False)
     _last_turn_msg: dict[str, Any] | None = field(default=None, init=False, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
+    _round_transition_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
+    _world_state_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
     _on_empty: Callable[[GameSession], None] | None = field(default=None, init=False, repr=False)
     _evict_timer: threading.Timer | None = field(default=None, init=False, repr=False)
     _evict_grace_seconds: float = field(default=_DEFAULT_EVICT_GRACE_SECONDS, init=False, repr=False)
+    _round_stop_timeout_seconds: float = field(default=_DEFAULT_ROUND_STOP_TIMEOUT_SECONDS, init=False, repr=False)
 
     # ---------------------------------------------------------------------------
     # Player queries
     # ---------------------------------------------------------------------------
+
+    @contextlib.contextmanager
+    def read_world(self) -> Iterator[None]:
+        """Hold the session gate while reading a consistent world snapshot."""
+        with self._world_state_lock:
+            yield
+
+    @contextlib.contextmanager
+    def mutate_world(self) -> Iterator[None]:
+        """Hold the re-entrant session gate while mutating world state."""
+        with self._world_state_lock:
+            yield
+
+    def build_save_game(self) -> SaveGame:
+        """Build an immutable save snapshot under the world-state gate."""
+        from dnd_simulator.layers.common.rng_state import dump_rng_state
+        from dnd_simulator.storage.save_schema import SCHEMA_VERSION, SaveGame, SaveMeta
+
+        with self.read_world():
+            world_data = self.world.save()
+            world_data["dice_rng_state"] = dump_rng_state(self.dice_rng)
+            return SaveGame.model_validate(
+                {
+                    "schema_version": SCHEMA_VERSION,
+                    "meta": SaveMeta(
+                        session_id=self.session_id,
+                        world_name=self.world_name,
+                        lang=self.lang,
+                        default_player_faction=self.default_player_faction,
+                    ).model_dump(mode="json"),
+                    "world": world_data,
+                }
+            )
 
     def get_players(self) -> list[PlayerCharacter]:
         return query_players(self.world.query_layer)
@@ -326,8 +391,10 @@ class GameSession:
 
     def add_listener(self, listener: SessionEventListener) -> None:
         self._bind_session_context()
-        with self._lock:
-            # A (re)connecting player cancels any pending evict during the grace window.
+        with self._round_transition_lock, self._lock:
+            # Serialize listener arrival with disconnect-driven stop_round. Otherwise an
+            # old connection can observe an empty listener list, a reconnect can start a
+            # new round, and the old connection can then stop that new round.
             self._cancel_evict_check()
             self._listeners.append(listener)
             count = len(self._listeners)
@@ -356,30 +423,29 @@ class GameSession:
 
     def remove_listener(self, listener: SessionEventListener) -> None:
         self._bind_session_context()
-        stop_round = False
-        with self._lock:
-            with contextlib.suppress(ValueError):
-                self._listeners.remove(listener)
-            count = len(self._listeners)
-            player_empty = not self.has_player_listeners()
-            if player_empty and self._round is not None:
-                stop_round = True
-        logger.info("remove_listener", listener_count=count, player_empty=player_empty, stop_round=stop_round)
-        if stop_round:
-            # Pause the simulation immediately when no player drives it. A lingering round
-            # thread would keep advancing NPC turns during the grace window: for a real
-            # player a network blip would silently cost them combat turns, and because all
-            # sessions share one process-global dice RNG, overlapping player-less rounds make
-            # seeded integration tests nondeterministic. stop_round() cancels any stale timer,
-            # so the evict is (re)armed after it returns.
-            self.stop_round()
-        if player_empty:
-            # Defer only the registry eviction: a quick disconnect+reconnect (StrictMode
-            # remount, network blip) must not flash the session out of the registry, and the
-            # reconnecting player restarts the round via start_round. The deferred check
-            # (_run_evict_check) re-verifies emptiness before firing _on_empty.
+        player_empty = False
+        with self._round_transition_lock:
             with self._lock:
-                self._schedule_evict_check()
+                try:
+                    self._listeners.remove(listener)
+                except ValueError:
+                    logger.info("remove_listener_ignored", listener_count=len(self._listeners))
+                    return
+                count = len(self._listeners)
+                player_empty = not self.has_player_listeners()
+                stop_round = player_empty and self._round is not None
+            logger.info("remove_listener", listener_count=count, player_empty=player_empty, stop_round=stop_round)
+            if stop_round:
+                # Pause before a reconnect can enter add_listener/start_round.
+                try:
+                    self._stop_round()
+                except RoundStopTimeoutError:
+                    logger.exception("disconnect_stop_failed", session_id=self.session_id)
+            if player_empty:
+                # Arm eviction before allowing add_listener to enter; a reconnect then
+                # cancels this exact timer while it starts the next round.
+                with self._lock:
+                    self._schedule_evict_check()
 
     def _schedule_evict_check(self) -> None:
         """Arm the deferred empty-session check. Caller holds ``_lock``."""
@@ -413,7 +479,14 @@ class GameSession:
                 stop_round = True
         logger.info("evict_check_firing", stop_round=stop_round)
         if stop_round:
-            self.stop_round()
+            try:
+                self.stop_round()
+            except RoundStopTimeoutError:
+                logger.exception("evict_stop_failed", session_id=self.session_id)
+                with self._lock:
+                    if not self.has_player_listeners():
+                        self._schedule_evict_check()
+                return
         if self._on_empty is not None:
             self._on_empty(self)
 
@@ -447,7 +520,7 @@ class GameSession:
             "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
             "awareness": _awareness_to_dict(awareness, creature=player),
             "events": _events_to_list(perceived),
-            "player": dataclasses.asdict(build_player_status(player)),
+            "player": dataclasses.asdict(build_player_status(player, self.world.location_graph)),
             "location": _location_data(self.world, player.location_id),
         }
 
@@ -456,6 +529,11 @@ class GameSession:
     # ---------------------------------------------------------------------------
 
     def start_round(self, player: PlayerCharacter) -> Round:
+        """Start or return the round while excluding load/stop transitions."""
+        with self._round_transition_lock:
+            return self._start_round(player)
+
+    def _start_round(self, player: PlayerCharacter) -> Round:
         """Start the round loop if not already running. Idempotent.
 
         Wires PlayerBrain, creates Round, starts background thread.
@@ -485,7 +563,7 @@ class GameSession:
                     "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
                     "awareness": _awareness_to_dict(awareness, creature=creature),
                     "events": _events_to_list(events),
-                    "player": dataclasses.asdict(build_player_status(player)),
+                    "player": dataclasses.asdict(build_player_status(player, self.world.location_graph)),
                     "location": _location_data(self.world, player.location_id),
                 }
                 if awareness.turn_budget is not None:
@@ -508,7 +586,13 @@ class GameSession:
             player.brain = brain
 
             dispatcher = create_dispatcher(self.world)
-            game_round = Round(self.world, creature_host, dispatcher=dispatcher)
+            game_round = Round(
+                self.world,
+                creature_host,
+                dispatcher=dispatcher,
+                rng=self.dice_rng,
+                mutation_scope=self.mutate_world,
+            )
 
             # Wire on_action: fires after each action by any creature
             def on_action(creature: Creature, action: Action, budget: TurnBudget | None, error: str) -> None:
@@ -557,8 +641,13 @@ class GameSession:
 
             return game_round
 
-    def stop_round(self) -> None:
-        """Stop the round loop and clean up."""
+    def stop_round(self, *, discard_events: bool = False) -> None:
+        """Stop the round while excluding concurrent start/load transitions."""
+        with self._round_transition_lock:
+            self._stop_round(discard_events=discard_events)
+
+    def _stop_round(self, *, discard_events: bool = False) -> None:
+        """Stop the round loop within the deadline, then clean up its lifecycle snapshot."""
         self._bind_session_context()
         logger.info("stop_round")
         with self._lock:
@@ -566,16 +655,47 @@ class GameSession:
             game_round = self._round
             brain = self._player_brain
             thread = self._round_thread
-            self._round = None
-            self._player_brain = None
-            self._round_thread = None
 
         if game_round is not None:
+            if discard_events:
+                game_round.clear_callbacks()
             game_round.stop()
         if brain is not None:
             brain.submit_action(Action(name=ActionType.END_TURN))  # unblock queue
+            brain.submit_reaction(Action(name=ActionType.SKIP))
         if thread is not None:
-            thread.join(timeout=5)
+            thread.join(timeout=self._round_stop_timeout_seconds)
+            if thread.is_alive():
+                logger.error(
+                    "stop_round_timeout",
+                    session_id=self.session_id,
+                    timeout_seconds=self._round_stop_timeout_seconds,
+                    thread_name=thread.name,
+                )
+                raise RoundStopTimeoutError(
+                    f"Round thread for session {self.session_id!r} did not stop within "
+                    f"{self._round_stop_timeout_seconds:g} seconds"
+                )
+
+        with self._lock:
+            if self._round is game_round:
+                self._round = None
+            if self._player_brain is brain:
+                self._player_brain = None
+            if self._round_thread is thread:
+                self._round_thread = None
+
+    def clear_cached_turn(self) -> None:
+        """Discard transport state tied to the world that was just replaced."""
+        self._last_turn_msg = None
+
+    def replace_world_state(self, loader: Callable[[], None]) -> None:
+        """Pause the round and atomically replace state before another start can win."""
+        with self._round_transition_lock:
+            self._stop_round(discard_events=True)
+            self.clear_cached_turn()
+            with self.mutate_world():
+                loader()
 
     def submit_player_action(self, action: Action) -> None:
         """Submit a player action to the brain queue.

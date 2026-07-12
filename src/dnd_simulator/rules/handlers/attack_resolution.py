@@ -6,6 +6,8 @@ separate from combat lifecycle management.
 
 from __future__ import annotations
 
+import random
+
 import structlog
 
 from dnd_simulator.core.character import Attack, Creature
@@ -93,7 +95,7 @@ def build_damage_components(
     return components
 
 
-def roll_attack_dice(atk_mods: AttackModifiers) -> tuple[list[RollComponent], int]:
+def roll_attack_dice(atk_mods: AttackModifiers, *, rng: random.Random | None = None) -> tuple[list[RollComponent], int]:
     """Roll dice bonuses (Bless +1d4, etc.). Returns (rolled_components, total)."""
     rolled_dice: list[RollComponent] = []
     dice_total = 0
@@ -102,7 +104,7 @@ def roll_attack_dice(atk_mods: AttackModifiers) -> tuple[list[RollComponent], in
 
         for rc in atk_mods.roll_components:
             if rc.dice:
-                rolled_value = roll_dice_fn(rc.dice).total
+                rolled_value = roll_dice_fn(rc.dice, rng=rng).total
                 rolled_dice.append(RollComponent(source=rc.source, value=rolled_value, dice=rc.dice))
                 dice_total += rolled_value
     return rolled_dice, dice_total

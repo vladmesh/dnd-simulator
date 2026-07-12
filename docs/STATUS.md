@@ -2,9 +2,9 @@
 
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
-**Last updated:** 2026-07-10
-**Position:** Sprint 020 закрыл thermo-sweep (корректность, чистота `rules/`, типизация границ, decomposition). Sprint 021 закрыл первый эпик simulation-core: версионированная Pydantic-схема сейва (`SaveGame`, schema_version=1), воспроизводимость мира от `DND_WORLD_SEED` (слоевые RNG, их состояние в сейве), периодический автосейв. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
-**Next:** активного спринта нет. Следующий `/new-sprint`: продолжение цепочки simulation-core (`anchor-as-property` / `intents` + `travel-action-type` → `trigger-table` → ...), при этом `save-round-concurrency` из свежего audit — top-кандидат на включение (сейв гоняется с живым раунд-тредом без синхронизации). Альтернатива — `control-interfaces`. `quest-system` планировать только после триггеров и целей.
+**Last updated:** 2026-07-12
+**Position:** Sprint 022 закрыл второй эпик simulation-core: player-agnostic якоря, сохраняемые wait/sleep/travel intent, по-рёберное путешествие и согласованный с round lifecycle save/load/autosave. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
+**Next:** Активного спринта нет. Главный следующий кандидат: `trigger-table`; смежные кандидаты — `brain-gate-decide` и containment ожидаемых action errors.
 **Blockers:** нет.
 
 ## Current Sprint
@@ -25,6 +25,7 @@ No active sprint.
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 022-intents-travel | Player-agnostic якоря и сохраняемые wait/sleep/travel intent; travel по рёбрам; согласованный lifecycle save/load/autosave | 2026-07-10 | 2026-07-12 |
 | 021-save-schema | Версионированная Pydantic-схема сейва (schema_version=1, RNG в сейве, combat sides), воспроизводимость мира от DND_WORLD_SEED, периодический автосейв | 2026-07-10 | 2026-07-10 |
 | 020-thermo-sweep | Закрыть структурный долг из термоядерного ревью: корректность + чистота rules, типизация границ, backend/frontend decomposition, сверка с simulation-core | 2026-06-30 | 2026-07-10 |
 | 019-control-plane-prep | Отвердить control-plane под разрез на роли: GameService 1044→357 (миксины WorldBuilderCommands/PlayerCommands), тест-сетка на session, развязка core/adapter (action_parsing seam, public World query API), видимые дырки (combat-log i18n, encounter-перцептор, труп-кнопки) | 2026-06-28 | 2026-06-29 |

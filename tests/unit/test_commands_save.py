@@ -9,14 +9,17 @@ remaining gaps (``load_game`` state restore + brain reassignment, ``list_saves``
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
-from dnd_simulator.core.brain import BrainType
+from dnd_simulator.core.brain import BrainType, PlayerBrain
+from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.layers.entities.models import Npc
-from dnd_simulator.rules.dice import roll, set_global_seed
+from dnd_simulator.rules.dice import roll
 from dnd_simulator.rules.rule_brain import RuleBrain
 from dnd_simulator.service import GameService
+from dnd_simulator.service.session import RoundStopTimeoutError
 from dnd_simulator.storage.store import JsonFileStore
 
 
@@ -69,15 +72,27 @@ class TestLoadGameRoundTrip:
         svc = _make_service(tmp_path)
         session = svc.start_game("sword_vale")
         sid = session.session_id
-        set_global_seed(77)
-        roll("1d20")
+        session.dice_rng.seed(77)
+        roll("1d20", rng=session.dice_rng)
         svc.save_game(sid, "dice")
-        expected = roll("1d20").total
-        roll("1d20")
+        expected = roll("1d20", rng=session.dice_rng).total
+        roll("1d20", rng=session.dice_rng)
 
         svc.load_game(sid, "dice")
 
-        assert roll("1d20").total == expected
+        assert roll("1d20", rng=session.dice_rng).total == expected
+
+    def test_sessions_own_independent_dice_sequences(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("DND_DICE_SEED", "91")
+        svc = _make_service(tmp_path)
+        first = svc.start_game("sword_vale")
+        second = svc.start_game("sword_vale")
+
+        first_initial = roll("1d20", rng=first.dice_rng).total
+        roll("5d20", rng=first.dice_rng)
+        second_initial = roll("1d20", rng=second.dice_rng).total
+
+        assert first_initial == second_initial
 
     def test_state_restored_to_saved_snapshot(self, tmp_path: Path) -> None:
         svc = _make_service(tmp_path)
@@ -115,6 +130,118 @@ class TestLoadGameRoundTrip:
         restored = layer._entities[npc_id]
         assert isinstance(restored, Npc)
         assert isinstance(restored.brain, RuleBrain)
+
+    def test_load_stops_old_round_and_resumes_once_for_restored_player(self, tmp_path: Path) -> None:
+        svc = _make_service(tmp_path)
+        session = svc.start_game("sword_vale")
+        sid = session.session_id
+        player = svc.create_player(
+            sid,
+            {
+                "name": "Loader",
+                "race": "human",
+                "class": "fighter",
+                "ability_scores": {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 12, "cha": 8},
+                "fighting_style": "defense",
+            },
+        )
+        layer = svc._get_entities_layer(session)
+        player.in_combat = True
+        player.active = True
+        layer._combat._combats[player.location_id] = CombatState(
+            location_id=player.location_id,
+            turn_order=[player.id],
+            round_number=1,
+            battle_map=BattleMap(width=60, height=60),
+        )
+        svc.save_game(sid, "combat")
+        session._last_turn_msg = {"type": "stale"}
+        session.start_round(player)
+        old_thread = session._round_thread
+        assert old_thread is not None
+
+        svc.load_game(sid, "combat")
+
+        assert not old_thread.is_alive()
+        assert session._round is None
+        assert session._round_thread is None
+        assert session._player_brain is None
+        assert session.get_last_turn_msg() is None
+        restored_combat = svc._get_entities_layer(session).get_combat(player.location_id)
+        assert restored_combat is not None
+        assert restored_combat.round_number == 1
+
+        restored_player = session.get_player()
+        assert restored_player is not None
+        first_round = session.start_round(restored_player)
+        first_thread = session._round_thread
+        second_round = session.start_round(restored_player)
+        try:
+            assert first_round is second_round
+            assert session._round_thread is first_thread
+            assert isinstance(restored_player.brain, PlayerBrain)
+        finally:
+            session.stop_round()
+
+    def test_autosave_restore_is_paused_until_player_connection(self, tmp_path: Path) -> None:
+        svc = _make_service(tmp_path)
+        session = svc.start_game("sword_vale")
+        sid = session.session_id
+        svc.create_player(
+            sid,
+            {
+                "name": "Restored",
+                "race": "human",
+                "class": "fighter",
+                "ability_scores": {"str": 15, "dex": 10, "con": 14, "int": 8, "wis": 12, "cha": 8},
+                "fighting_style": "defense",
+            },
+        )
+        svc.autosave_session(sid)
+        svc._sessions.pop(sid)
+
+        restored = svc.get_session(sid)
+
+        assert restored._round is None
+        assert restored._round_thread is None
+        assert restored._player_brain is None
+
+    def test_stop_timeout_preserves_live_state_and_retry_loads(self, tmp_path: Path) -> None:
+        svc = _make_service(tmp_path)
+        session = svc.start_game("sword_vale")
+        sid = session.session_id
+        svc.save_game(sid, "snap")
+        svc.advance_time(sid, 5)
+        live_time = session.world.time
+        live_rng_state = session.dice_rng.getstate()
+        live_round = MagicMock()
+        live_brain = MagicMock()
+        live_thread = MagicMock()
+        session._round = live_round
+        session._player_brain = live_brain
+        session._round_thread = live_thread
+        session._last_turn_msg = {"type": "live"}
+        original_stop = session._stop_round
+        session._stop_round = MagicMock(side_effect=RoundStopTimeoutError("blocked"))  # type: ignore[method-assign]
+
+        with pytest.raises(RoundStopTimeoutError):
+            svc.load_game(sid, "snap")
+
+        assert session.world.time == live_time
+        assert session.dice_rng.getstate() == live_rng_state
+        assert session._round is live_round
+        assert session._player_brain is live_brain
+        assert session._round_thread is live_thread
+        assert session.get_last_turn_msg() == {"type": "live"}
+
+        session._stop_round = original_stop  # type: ignore[method-assign]
+        session._round = None
+        session._player_brain = None
+        session._round_thread = None
+        svc.load_game(sid, "snap")
+
+        assert session.world.time != live_time
+        assert session.get_last_turn_msg() is None
 
 
 class TestListAndDeleteSaves:

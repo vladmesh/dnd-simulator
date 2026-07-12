@@ -2,8 +2,9 @@
 
 Includes attack resolution (via CombatManager), initiative/combat management,
 event perception, and visibility filtering. Manages CombatState per location.
-Proximity-based activation: update_activation() marks creatures near players as
-active and others as dormant; NPCs are moved to their scheduled location on
+Anchor-based activation: update_activation() marks creatures near awake anchors as
+active and others as dormant; it completes or interrupts persisted wait/sleep/travel
+intents, while NPCs are moved to their scheduled location on
 activation. Activation also rolls location encounter tables (cooldown-gated
 and time-of-day filtered) to spawn transient monsters. Npc is a pure data model (role, personality, schedule, memory,
 ai_type); decision-making is delegated to the brain field on Creature. NpcMemory

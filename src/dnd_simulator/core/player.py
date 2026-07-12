@@ -17,3 +17,5 @@ class PlayerCharacter(Character):
     Save/load is handled by ``content_loader.creatures`` (``player_to_full_save_data`` /
     ``load_player_save_data``) so ``core`` carries no dependency on ``content_loader``.
     """
+
+    is_anchor: bool = True

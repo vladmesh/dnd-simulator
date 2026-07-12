@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import contextlib
 import os
 import random
+import threading
 import uuid
 from pathlib import Path
 
@@ -70,6 +72,11 @@ def _derive_layer_seeds(world_seed: int) -> dict[str, int]:
     return {layer_name: rng.getrandbits(64) for layer_name in _LAYER_SEED_ORDER}
 
 
+def _create_dice_rng() -> random.Random:
+    raw = os.getenv("DND_DICE_SEED")
+    return random.Random(int(raw)) if raw is not None else random.Random()
+
+
 def _flatten_region_defaults[T](
     locations: list[Location],
     by_region: dict[str, T],
@@ -109,6 +116,7 @@ class GameService(
         llm: LlmClient | None = None,
     ) -> None:
         self._sessions: dict[str, GameSession] = {}
+        self._sessions_lock = threading.RLock()
         self._store = store
         self._content_dir = content_dir
         self._llm = llm
@@ -131,6 +139,7 @@ class GameService(
         meta = load_world_meta_from_manifest(world_path, lang=lang)
         world_seed = _resolve_world_seed()
         layer_seeds = _derive_layer_seeds(world_seed)
+        dice_rng = _create_dice_rng()
         regions = load_world(layer_paths["geography"], lang=lang)
         nations = load_nations(layer_paths["politics"], lang=lang)
         settlements = load_settlements(layer_paths["settlements"], lang=lang)
@@ -209,6 +218,7 @@ class GameService(
             encounter_tables=effective_encounters,
             battle_map_configs=battle_map_configs,
             seed=layer_seeds["entities"],
+            dice_rng=dice_rng,
         )
 
         # Assign brains via factory (content_loader only parses data, not brains)
@@ -230,9 +240,11 @@ class GameService(
             lang=lang,
             world_name=world_name,
             default_player_faction=meta.get("default_player_faction", ""),
+            dice_rng=dice_rng,
         )
         session._on_empty = self._on_session_empty
-        self._sessions[session_id] = session
+        with self._sessions_lock:
+            self._sessions[session_id] = session
         return session
 
     def list_sessions(self) -> list[dict[str, str]]:
@@ -240,7 +252,9 @@ class GameService(
         result: dict[str, dict[str, str]] = {}
 
         # In-memory sessions
-        for sid, s in self._sessions.items():
+        with self._sessions_lock:
+            active_sessions = list(self._sessions.items())
+        for sid, s in active_sessions:
             players = s.get_players()
             player_name = players[0].name if players else ""
             result[sid] = {"session_id": sid, "player_name": player_name, "world_name": s.world_name}
@@ -264,23 +278,26 @@ class GameService(
 
     def delete_session(self, session_id: str) -> None:
         """Stop and remove a session."""
-        self._get_session(session_id)
-        del self._sessions[session_id]
+        session = self._get_session(session_id)
+        with self._sessions_lock:
+            if self._sessions.get(session_id) is session:
+                del self._sessions[session_id]
+            with contextlib.suppress(KeyError):
+                self._store.delete(f"session_{session_id}", world=session.world_name)
 
     def _on_session_empty(self, session: GameSession) -> None:
         """Called when all listeners disconnect. Autosave and evict from memory."""
         sid = session.session_id
-        if sid not in self._sessions:
-            # Explicit DELETE already evicted it; autosaving here would fail or
-            # resurrect the session from its stale autosave via _get_session.
-            logger.info("session_empty_evict_skipped", session_id=sid)
-            return
-        logger.info("session_empty_evict", session_id=sid)
-        try:
-            self.autosave_session(sid)
-        except Exception:
-            logger.exception("session_empty_autosave_failed", session_id=sid)
-        self._sessions.pop(sid, None)
+        with self._sessions_lock:
+            if self._sessions.get(sid) is not session:
+                logger.info("session_empty_evict_skipped", session_id=sid)
+                return
+            logger.info("session_empty_evict", session_id=sid)
+            try:
+                self._autosave_active_session(session)
+            except Exception:
+                logger.exception("session_empty_autosave_failed", session_id=sid)
+            self._sessions.pop(sid, None)
 
     # -- Layer accessors --
 
@@ -300,24 +317,31 @@ class GameService(
         match the (possibly restored) ai_type field.
         """
         from dnd_simulator.core.character import Creature
+        from dnd_simulator.core.player import PlayerCharacter
         from dnd_simulator.layers.entities.models import Npc
 
         for entity in entities_layer._entities.values():
             if isinstance(entity, Npc):
                 entity.brain = self._brain_factory.create(entity.ai_type)
+            elif isinstance(entity, PlayerCharacter):
+                entity.brain = None
             elif isinstance(entity, Creature) and entity.brain is None:
                 entity.brain = self._brain_factory.create(BrainType.RULE_BASED)
 
     def _get_session(self, session_id: str) -> GameSession:
         from dnd_simulator.service.errors import SessionNotFoundError
 
-        if session_id not in self._sessions:
-            # Try to restore from autosave on disk
-            self._try_restore_session(session_id)
-        if session_id not in self._sessions:
+        with self._sessions_lock:
+            session = self._sessions.get(session_id)
+            if session is None:
+                # Serialize restore with registry changes so concurrent callers cannot
+                # create two in-memory sessions from the same autosave.
+                self._try_restore_session(session_id)
+            session = self._sessions.get(session_id)
+        if session is None:
             raise SessionNotFoundError(f"Session '{session_id}' not found")
         structlog.contextvars.bind_contextvars(session_id=session_id)
-        return self._sessions[session_id]
+        return session
 
     def _try_restore_session(self, session_id: str) -> None:
         """Attempt to restore a session from its autosave file."""
@@ -343,7 +367,6 @@ class GameService(
                 return
 
         from dnd_simulator.layers.common.rng_state import load_rng_state
-        from dnd_simulator.rules.dice import get_global_rng
         from dnd_simulator.storage.save_schema import SaveGame
 
         try:
@@ -364,11 +387,14 @@ class GameService(
             return
 
         # Reassign to the original session_id
-        del self._sessions[session.session_id]
+        with self._sessions_lock:
+            del self._sessions[session.session_id]
         session.session_id = session_id
 
-        load_rng_state(get_global_rng(), save.world.dice_rng_state)
-        session.world.load(save.world.to_world_dict())
-        self._assign_brains(self._get_entities_layer(session))
+        with session.mutate_world():
+            load_rng_state(session.dice_rng, save.world.dice_rng_state)
+            session.world.load(save.world.to_world_dict())
+            self._assign_brains(self._get_entities_layer(session))
 
-        self._sessions[session_id] = session
+        with self._sessions_lock:
+            self._sessions[session_id] = session

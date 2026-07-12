@@ -9,10 +9,13 @@ failure means a real bug, not a missing feature.
 
 from __future__ import annotations
 
+import threading
+import time
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+import structlog
 
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.brain import PlayerBrain
@@ -21,7 +24,7 @@ from dnd_simulator.core.world import World
 from dnd_simulator.round import Round
 from dnd_simulator.rules.movement import calculate_away_direction, calculate_direction
 from dnd_simulator.service import GameService
-from dnd_simulator.service.session import GameSession, resolve_abstract_move
+from dnd_simulator.service.session import GameSession, RoundStopTimeoutError, resolve_abstract_move
 from dnd_simulator.storage.store import SaveStore
 
 # ---------------------------------------------------------------------------
@@ -175,6 +178,65 @@ class TestEmptyListeners:
 
         assert fired == []
         assert session._listeners == [registered]
+
+    def test_stale_remove_does_not_arm_evict_when_already_empty(self) -> None:
+        session = _session()
+
+        session.remove_listener(RecordingListener())
+
+        assert session._evict_timer is None
+
+    def test_reconnect_cannot_interleave_with_disconnect_stop(self) -> None:
+        session = _session()
+        old_listener = RecordingListener()
+        new_listener = RecordingListener()
+        session.add_listener(old_listener)
+        session._round = MagicMock(spec=Round)
+
+        stop_entered = threading.Event()
+        allow_stop = threading.Event()
+
+        def blocking_stop(*, discard_events: bool = False) -> None:
+            stop_entered.set()
+            assert allow_stop.wait(timeout=1)
+            session._round = None
+
+        session._stop_round = blocking_stop  # type: ignore[method-assign]
+        disconnect = threading.Thread(target=session.remove_listener, args=(old_listener,))
+        reconnect = threading.Thread(target=session.add_listener, args=(new_listener,))
+
+        disconnect.start()
+        assert stop_entered.wait(timeout=1)
+        reconnect.start()
+        assert new_listener not in session._listeners
+
+        allow_stop.set()
+        disconnect.join(timeout=1)
+        reconnect.join(timeout=1)
+
+        assert not disconnect.is_alive()
+        assert not reconnect.is_alive()
+        assert session._listeners == [new_listener]
+
+    def test_disconnect_timeout_is_logged_and_leaves_retryable_session(self) -> None:
+        session = _session()
+        session._evict_grace_seconds = 3600
+        listener = RecordingListener()
+        session.add_listener(listener)
+        game_round = MagicMock(spec=Round)
+        session._round = game_round
+        session._stop_round = MagicMock(side_effect=RoundStopTimeoutError("blocked"))  # type: ignore[method-assign]
+
+        with structlog.testing.capture_logs() as logs:
+            session.remove_listener(listener)
+
+        assert session._round is game_round
+        assert session._evict_timer is not None
+        assert [event["session_id"] for event in logs if event.get("event") == "disconnect_stop_failed"] == [
+            session.session_id
+        ]
+        session.add_listener(RecordingListener())
+        assert session._round is game_round
 
 
 class TestSpectatorListener:
@@ -341,6 +403,33 @@ class TestEvictGracePeriod:
         assert session._evict_timer is not None
         session._evict_timer.cancel()
 
+        session._run_evict_check()
+
+        assert fired == [session]
+
+    def test_stop_timeout_defers_evict_until_retry_succeeds(self) -> None:
+        session = _session()
+        session._evict_grace_seconds = 3600
+        session._round = MagicMock(spec=Round)
+        fired: list[GameSession] = []
+        session._on_empty = lambda s: fired.append(s)
+        session._stop_round = MagicMock(side_effect=RoundStopTimeoutError("blocked"))  # type: ignore[method-assign]
+
+        with structlog.testing.capture_logs() as logs:
+            session._run_evict_check()
+
+        assert fired == []
+        assert session._evict_timer is not None
+        assert [event["session_id"] for event in logs if event.get("event") == "evict_stop_failed"] == [
+            session.session_id
+        ]
+
+        session._evict_timer.cancel()
+
+        def successful_stop(*, discard_events: bool = False) -> None:
+            session._round = None
+
+        session._stop_round = successful_stop  # type: ignore[method-assign]
         session._run_evict_check()
 
         assert fired == [session]
@@ -536,3 +625,58 @@ class TestStopRound:
         session, _player = session_with_player
         # No round started — stop_round must be a safe no-op.
         session.stop_round()
+
+    def test_timeout_preserves_lifecycle_until_same_thread_stops(self, session_with_player: Any) -> None:
+        session, player = session_with_player
+        callback_entered = threading.Event()
+        release_callback = threading.Event()
+        listener = RecordingListener()
+
+        def block_turn(_msg: dict[str, Any]) -> None:
+            callback_entered.set()
+            assert release_callback.wait(timeout=2)
+
+        listener.on_turn = block_turn  # type: ignore[method-assign]
+        session.add_listener(listener)
+        game_round = session.start_round(player)
+        brain = session._player_brain
+        thread = session._round_thread
+        assert brain is not None
+        assert thread is not None
+        session._round_stop_timeout_seconds = 0.01
+        assert callback_entered.wait(timeout=2)
+
+        started = time.monotonic()
+        with structlog.testing.capture_logs() as logs, pytest.raises(RoundStopTimeoutError):
+            session.stop_round()
+
+        assert time.monotonic() - started < 0.5
+        assert session._round is game_round
+        assert session._player_brain is brain
+        assert session._round_thread is thread
+        assert session.start_round(player) is game_round
+        assert session._round_thread is thread
+        assert [event["session_id"] for event in logs if event.get("event") == "stop_round_timeout"] == [
+            session.session_id
+        ]
+
+        release_callback.set()
+        session.stop_round()
+        assert session._round is None
+        assert session._player_brain is None
+        assert session._round_thread is None
+        assert not thread.is_alive()
+
+        replacement = session.start_round(player)
+        assert replacement is not game_round
+        assert session._round_thread is not thread
+
+    def test_parked_player_turn_stops_before_timeout(self, session_with_player: Any) -> None:
+        session, player = session_with_player
+        session._round_stop_timeout_seconds = 0.5
+        session.start_round(player)
+
+        started = time.monotonic()
+        session.stop_round()
+
+        assert time.monotonic() - started < session._round_stop_timeout_seconds

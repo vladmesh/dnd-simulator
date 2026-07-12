@@ -6,6 +6,9 @@ from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, ResourcePoolInfo
 from dnd_simulator.core.character import Ability, AbilityScores, Attack, Character, DamageComponent, DamageType
 from dnd_simulator.core.class_features import RogueFeatures
+from dnd_simulator.core.intent import TravelIntent
+from dnd_simulator.core.location import Location, LocationGraph
+from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.service.session import _awareness_to_dict, build_player_status
 
 _SWORD = Attack(
@@ -189,3 +192,35 @@ class TestPlayerStatusResourcePools:
         )
         result = build_player_status(player)
         assert result.resource_pools == []
+
+
+class TestPlayerJourneyStatus:
+    def test_mid_journey_resolves_route_names_and_arrival(self) -> None:
+        player = PlayerCharacter(id="p1", name="Hero", location_id="road", ability_scores=_scores())
+        player.current_intent = TravelIntent(100, "keep", ("bridge", "keep"), 460)
+        graph = LocationGraph(
+            [
+                Location("road", "Old Road", "r"),
+                Location("bridge", "Stone Bridge", "r"),
+                Location("keep", "Hill Keep", "r"),
+            ]
+        )
+
+        journey = build_player_status(player, graph).journey
+
+        assert journey is not None
+        assert journey.destination_id == "keep"
+        assert journey.destination_name == "Hill Keep"
+        assert journey.current_location_name == "Old Road"
+        assert journey.next_location_name == "Stone Bridge"
+        assert journey.remaining_route == ("Stone Bridge", "Hill Keep")
+        assert journey.next_arrival_seconds == 460
+
+    def test_completed_journey_is_omitted(self) -> None:
+        player = PlayerCharacter(id="p1", name="Hero", location_id="keep", ability_scores=_scores())
+        graph = LocationGraph([Location("keep", "Hill Keep", "r")])
+
+        status = build_player_status(player, graph)
+
+        assert status.location_id == "keep"
+        assert status.journey is None

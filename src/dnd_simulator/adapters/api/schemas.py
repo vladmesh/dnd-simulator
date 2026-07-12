@@ -178,6 +178,15 @@ class WorldListItem(BaseModel):
     editable: bool
 
 
+class JourneyResponse(BaseModel):
+    destination_id: str
+    destination_name: str
+    current_location_name: str
+    next_location_name: str
+    remaining_route: list[str]
+    next_arrival_seconds: int
+
+
 class PlayerStatusResponse(BaseModel):
     player_id: str
     name: str
@@ -195,6 +204,7 @@ class PlayerStatusResponse(BaseModel):
     location_id: str
     appearance: str
     ability_scores: dict[str, int]
+    journey: JourneyResponse | None = None
     resource_pools: list[dict[str, object]] = Field(default_factory=list)
     equipped: list[dict[str, str]] = Field(default_factory=list)
     inventory: list[dict[str, object]] = Field(default_factory=list)

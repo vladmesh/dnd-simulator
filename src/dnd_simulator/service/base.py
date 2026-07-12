@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
@@ -19,6 +20,7 @@ class GameServiceProtocol(Protocol):
 
     _store: SaveStore
     _sessions: dict[str, GameSession]
+    _sessions_lock: threading.RLock
     _brain_factory: BrainFactory
     _content_dir: Path
 

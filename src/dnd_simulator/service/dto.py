@@ -19,6 +19,18 @@ class ResourcePoolView:
 
 
 @dataclass(frozen=True)
+class JourneyView:
+    """Resolved presentation of a persisted travel intent."""
+
+    destination_id: str
+    destination_name: str
+    current_location_name: str
+    next_location_name: str
+    remaining_route: tuple[str, ...]
+    next_arrival_seconds: int
+
+
+@dataclass(frozen=True)
 class PlayerStatusData:
     """Full player status snapshot — derived stats already computed."""
 
@@ -38,6 +50,7 @@ class PlayerStatusData:
     location_id: str
     appearance: str
     ability_scores: dict[str, int]
+    journey: JourneyView | None = None
     resource_pools: list[ResourcePoolView] = field(default_factory=list)
     equipped: list[dict[str, str]] = field(default_factory=list)
     inventory: list[dict[str, object]] = field(default_factory=list)

@@ -12,6 +12,8 @@ from dnd_simulator.core.character import (
     DamageComponent,
     DamageType,
 )
+from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
+from dnd_simulator.core.location import Location, LocationEdge, LocationGraph
 from dnd_simulator.core.models import (
     ActionResult,
     Answer,
@@ -25,6 +27,7 @@ from dnd_simulator.core.models import (
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.queries import SquadInfo
+from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.core.squad import SquadBehavior, SquadType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 
@@ -105,6 +108,123 @@ class TestProximityActivation:
         layer.update_activation(_TIME_0)
         assert npc_a.active is False
         assert npc_b.active is True
+
+    def test_generic_anchor_activates_scene_without_player(self) -> None:
+        anchor = Creature(id="anchor", name="Oracle", location_id="temple", is_anchor=True)
+        nearby = Creature(id="nearby", name="Acolyte", location_id="temple", active=False)
+        distant = Creature(id="distant", name="Farmer", location_id="farm", active=True)
+
+        EntitiesLayer([anchor, nearby, distant]).update_activation(_TIME_0)
+
+        assert anchor.active is True
+        assert nearby.active is True
+        assert distant.active is False
+
+    def test_player_without_anchor_capability_does_not_activate_scene(self) -> None:
+        player = PlayerCharacter(id="p1", name="Hero", location_id="village", is_anchor=False)
+        nearby = Creature(id="nearby", name="Guard", location_id="village", active=True)
+
+        EntitiesLayer([player, nearby]).update_activation(_TIME_0)
+
+        assert player.active is False
+        assert nearby.active is False
+
+    def test_active_non_anchor_does_not_activate_another_location(self) -> None:
+        anchor = Creature(id="anchor", name="Anchor", location_id="square", is_anchor=True)
+        nearby = Creature(id="nearby", name="Courier", location_id="square", active=True)
+        elsewhere = Creature(id="elsewhere", name="Friend", location_id="gate", active=True)
+
+        EntitiesLayer([anchor, nearby, elsewhere]).update_activation(_TIME_0)
+
+        assert nearby.active is True
+        assert elsewhere.active is False
+
+    def test_proximity_does_not_cancel_timed_intent(self) -> None:
+        now = _TIME_0.to_total_seconds()
+        anchor = Creature(id="anchor", name="Anchor", location_id="square", is_anchor=True)
+        sleeper = Creature(id="sleeper", name="Sleeper", location_id="square", active=True)
+        sleeper.current_intent = TimedIntent(IntentType.SLEEP, now, now + 3600)
+
+        EntitiesLayer([anchor, sleeper]).update_activation(_TIME_0)
+
+        assert sleeper.active is False
+        assert sleeper.current_intent == TimedIntent(IntentType.SLEEP, now, now + 3600)
+
+    def test_combat_stays_active_without_anchor(self) -> None:
+        fighter = Creature(id="fighter", name="Fighter", location_id="arena", active=False, in_combat=True)
+
+        EntitiesLayer([fighter]).update_activation(_TIME_0)
+
+        assert fighter.active is True
+
+    def test_completed_long_rest_applies_rewards_once(self) -> None:
+        now = _TIME_0.to_total_seconds()
+        pool = ResourcePool("spell_slot_1", 2, 0, RestType.LONG_REST)
+        sleeper = Creature(
+            id="sleeper",
+            name="Sleeper",
+            location_id="inn",
+            is_anchor=True,
+            max_hp=20,
+            current_hp=5,
+            resource_pools=[pool],
+        )
+        sleeper.current_intent = TimedIntent(
+            IntentType.SLEEP,
+            now - 8 * 3600,
+            now,
+            rest_type=RestType.LONG_REST,
+        )
+        layer = EntitiesLayer([sleeper])
+
+        layer.update_activation(_TIME_0)
+        assert sleeper.current_hp == 20
+        assert pool.current_uses == 2
+        assert sleeper.current_intent is None
+
+        sleeper.current_hp = 10
+        pool.current_uses = 0
+        layer.update_activation(_TIME_0)
+        assert sleeper.current_hp == 10
+        assert pool.current_uses == 0
+
+    def test_traveler_stops_when_intermediate_location_has_awake_anchor(self) -> None:
+        now = _TIME_0.to_total_seconds()
+        traveler = Creature(id="traveler", name="Traveler", location_id="start", is_anchor=True)
+        traveler.current_intent = TravelIntent(now, "goal", ("road", "goal"), now)
+        scene_anchor = Creature(id="host", name="Host", location_id="road", is_anchor=True)
+        graph = LocationGraph(
+            [
+                Location("start", "Start", "r1", edges=(LocationEdge("road", 1000),)),
+                Location("road", "Road", "r1", edges=(LocationEdge("goal", 2000),)),
+                Location("goal", "Goal", "r1"),
+            ]
+        )
+
+        EntitiesLayer([traveler, scene_anchor]).update_activation(_TIME_0, location_graph=graph)
+
+        assert traveler.location_id == "road"
+        assert traveler.current_intent is None
+        assert traveler.active is True
+
+    def test_traveler_continues_through_dormant_intermediate_location(self) -> None:
+        now = _TIME_0.to_total_seconds()
+        traveler = Creature(id="traveler", name="Traveler", location_id="start", is_anchor=True)
+        traveler.current_intent = TravelIntent(now, "goal", ("road", "goal"), now)
+        dormant = Creature(id="local", name="Local", location_id="road", is_anchor=False)
+        graph = LocationGraph(
+            [
+                Location("start", "Start", "r1", edges=(LocationEdge("road", 1000),)),
+                Location("road", "Road", "r1", edges=(LocationEdge("goal", 2000),)),
+                Location("goal", "Goal", "r1"),
+            ]
+        )
+
+        EntitiesLayer([traveler, dormant]).update_activation(_TIME_0, location_graph=graph)
+
+        assert traveler.location_id == "road"
+        assert traveler.current_intent == TravelIntent(now, "goal", ("goal",), now + 1440)
+        assert traveler.active is False
 
 
 class TestEncounterCooldown:

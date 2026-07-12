@@ -493,7 +493,15 @@ class TestGameLoopCombat:
             id="c1", name="A", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,), brain=LogBrain()
         )
         c_combat2 = Character(id="c2", name="B", location_id="r1", max_hp=15, current_hp=15, brain=LogBrain())
-        c_peaceful = Character(id="c3", name="C", location_id="r2", max_hp=10, current_hp=10, brain=LogBrain())
+        c_peaceful = Character(
+            id="c3",
+            name="C",
+            location_id="r2",
+            max_hp=10,
+            current_hp=10,
+            is_anchor=True,
+            brain=LogBrain(),
+        )
 
         layer = EntitiesLayer([c_combat1, c_combat2, c_peaceful])
         world = World(

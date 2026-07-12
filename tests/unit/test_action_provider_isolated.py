@@ -40,7 +40,15 @@ _COMBAT_BASE = frozenset(
     }
 )
 _PEACEFUL_BASE = frozenset(
-    {ActionType.IDLE, ActionType.SAY, ActionType.WAIT, ActionType.ATTACK, ActionType.END_TURN, ActionType.SKIP}
+    {
+        ActionType.IDLE,
+        ActionType.SAY,
+        ActionType.WAIT,
+        ActionType.TRAVEL,
+        ActionType.ATTACK,
+        ActionType.END_TURN,
+        ActionType.SKIP,
+    }
 )
 _ALL_BASE = _COMBAT_BASE | _PEACEFUL_BASE
 

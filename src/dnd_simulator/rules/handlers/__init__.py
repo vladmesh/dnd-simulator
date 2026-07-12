@@ -23,6 +23,7 @@ from dnd_simulator.rules.handlers.movement import (
     handle_disengage,
     handle_move,
     handle_move_to,
+    handle_travel,
     handle_wait,
 )
 from dnd_simulator.rules.handlers.reactions import handle_opportunity_attack
@@ -53,6 +54,7 @@ __all__ = [
     "handle_sell",
     "handle_short_rest",
     "handle_take",
+    "handle_travel",
     "handle_unequip",
     "handle_use_item",
     "handle_wait",

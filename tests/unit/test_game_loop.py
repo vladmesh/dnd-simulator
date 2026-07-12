@@ -6,8 +6,9 @@ from dnd_simulator.core.action import END_TURN, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain, PlayerBrain
 from dnd_simulator.core.character import Creature
-from dnd_simulator.core.location import Location, LocationGraph
-from dnd_simulator.core.models import GameDateTime
+from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
+from dnd_simulator.core.location import Location, LocationEdge, LocationGraph
+from dnd_simulator.core.models import GameDateTime, TimeDelta
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -46,6 +47,18 @@ def _make_world(entities: list[Creature], hour: int = 10) -> World:
     )
 
 
+def _travel_world(entities: list[Creature], hour: int = 10) -> World:
+    world = _make_world(entities, hour)
+    world.location_graph = LocationGraph(
+        [
+            Location("start", "Start", "r1", edges=(LocationEdge("road", 1000),)),
+            Location("road", "Road", "r1", edges=(LocationEdge("goal", 2000),)),
+            Location("goal", "Goal", "r1"),
+        ]
+    )
+    return world
+
+
 class _EndTurnBrain(Brain):
     """Brain that immediately ends its turn (for single-round tests)."""
 
@@ -77,7 +90,7 @@ def _make_player_brain(action: Action) -> PlayerBrain:
 class TestRoundTimeAdvancement:
     def test_time_advances_by_one_round_per_round(self) -> None:
         """After all creatures act, world time advances by 6 seconds."""
-        npc = Creature(id="npc1", name="Guard", location_id="r1", brain=_EndTurnBrain())
+        npc = Creature(id="npc1", name="Guard", location_id="r1", is_anchor=True, brain=_EndTurnBrain())
         world = _make_world([npc])
         entities_layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
 
@@ -90,7 +103,7 @@ class TestRoundTimeAdvancement:
 
     def test_multiple_creatures_still_one_round(self) -> None:
         """Multiple creatures acting in one round = still only 6 seconds."""
-        c1 = Creature(id="c1", name="A", location_id="r1", brain=_EndTurnBrain())
+        c1 = Creature(id="c1", name="A", location_id="r1", is_anchor=True, brain=_EndTurnBrain())
         c2 = Creature(id="c2", name="B", location_id="r1", brain=_EndTurnBrain())
         world = _make_world([c1, c2])
         entities_layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
@@ -124,7 +137,7 @@ class TestPlayerWaitViaRound:
         elapsed = world.time.to_total_seconds() - initial_seconds
         assert elapsed == 3600 + 6
         assert player.active is True
-        assert player.wake_at_seconds is None
+        assert player.current_intent is None
 
     def test_wait_custom_hours(self) -> None:
         """Wait 3 hours: fast-forward advances 3 hours."""
@@ -254,8 +267,8 @@ class TestProximityActivation:
         assert player.active is False
         assert npc.active is False
 
-    def test_no_player_no_change(self) -> None:
-        """Without a PlayerCharacter, activation is unchanged (tests still work)."""
+    def test_no_anchor_dormifies_noncombat_creature(self) -> None:
+        """Without an anchor, an ordinary peaceful creature does not keep the loop alive."""
         npc = Creature(id="npc", name="Guard", location_id="r1", active=True, brain=_EndTurnBrain())
         world = _make_world([npc])
         entities_layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
@@ -263,7 +276,7 @@ class TestProximityActivation:
         game_round = Round(world, entities_layer)
         game_round.run_round()
 
-        assert npc.active is True
+        assert npc.active is False
 
 
 class TestRoundStopFlag:
@@ -317,7 +330,7 @@ class TestWaitAndFastForward:
         # Player went dormant, wake_at is set
         assert player.active is False
         # wake_at was set before the 6s advance
-        assert player.wake_at_seconds is not None
+        assert player.current_intent is not None
 
     def test_fast_forward_advances_to_wake_at(self) -> None:
         """Fast-forward skips time to nearest wake_at when no active creatures."""
@@ -338,7 +351,7 @@ class TestWaitAndFastForward:
         elapsed = world.time.to_total_seconds() - initial
         assert elapsed == 2 * 3600 + 6
         assert player.active is True
-        assert player.wake_at_seconds is None
+        assert player.current_intent is None
 
     def test_nearby_npc_dormifies_when_player_waits(self) -> None:
         """NPC near player goes dormant when player waits, reactivates on wake."""
@@ -364,12 +377,31 @@ class TestWaitAndFastForward:
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
 
         game_round = Round(world, el)
+        initial = world.time.to_total_seconds()
         game_round.run_loop(max_rounds=2)
 
         # After fast-forward and wake, both should be active
         assert player.active is True
         assert npc.active is True
         assert call_count == 2  # called once for wait, once after waking
+        assert world.time.to_total_seconds() - initial == 3600 + 6
+
+    def test_fast_forward_stops_at_earliest_intent(self) -> None:
+        now = GameDateTime(year=1, month=1, day=1, hour=10).to_total_seconds()
+        early = Creature(id="early", name="Early", location_id="r1", is_anchor=True, brain=_EndTurnBrain())
+        late = Creature(id="late", name="Late", location_id="r1", is_anchor=True, brain=_EndTurnBrain())
+        early.current_intent = TimedIntent(IntentType.WAIT, now, now + 60)
+        late.current_intent = TimedIntent(IntentType.SLEEP, now, now + 120)
+        world = _make_world([early, late], hour=10)
+        el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+
+        Round(world, el).run_loop(max_rounds=1)
+
+        assert world.time.to_total_seconds() - now == 60 + 6
+        assert early.current_intent is None
+        assert early.active is True
+        assert late.current_intent == TimedIntent(IntentType.SLEEP, now, now + 120)
+        assert late.active is False
 
     def test_no_wake_at_means_loop_exits(self) -> None:
         """Without any wake_at, run_loop exits when no active creatures."""
@@ -382,3 +414,69 @@ class TestWaitAndFastForward:
         game_round.run_loop()  # should exit immediately
 
         assert world.time.to_total_seconds() == initial  # no time passed
+
+
+class TestTravelAndFastForward:
+    def test_journey_reaches_each_node_only_at_its_boundary(self) -> None:
+        now = GameDateTime(year=1, month=1, day=1, hour=10).to_total_seconds()
+        traveler = Creature(id="traveler", name="Traveler", location_id="start", is_anchor=True)
+        traveler.current_intent = TravelIntent(now, "goal", ("road", "goal"), now + 720)
+        world = _travel_world([traveler])
+        layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+
+        world.advance_time(TimeDelta(seconds=719))
+        layer.update_activation(world.time, location_graph=world.location_graph)
+        assert traveler.location_id == "start"
+
+        world.advance_time(TimeDelta(seconds=1))
+        layer.update_activation(world.time, location_graph=world.location_graph)
+        assert traveler.location_id == "road"
+        assert traveler.current_intent == TravelIntent(now, "goal", ("goal",), now + 2160)
+
+        world.advance_time(TimeDelta(seconds=1440))
+        layer.update_activation(world.time, location_graph=world.location_graph)
+        assert traveler.location_id == "goal"
+        assert traveler.current_intent is None
+        assert traveler.active is True
+
+    def test_two_travelers_share_intermediate_node_and_resume_after_save(self) -> None:
+        now = GameDateTime(year=1, month=1, day=1, hour=10).to_total_seconds()
+        first = Creature(id="first", name="First", location_id="start", is_anchor=True)
+        second = Creature(id="second", name="Second", location_id="start", is_anchor=True)
+        for traveler in (first, second):
+            traveler.current_intent = TravelIntent(now, "goal", ("road", "goal"), now + 720)
+        world = _travel_world([first, second])
+        layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+
+        world.advance_time(TimeDelta(seconds=720))
+        layer.update_activation(world.time, location_graph=world.location_graph)
+        assert first.location_id == second.location_id == "road"
+
+        restored = EntitiesLayer()
+        restored.load_state(layer.get_state())
+        world.advance_time(TimeDelta(seconds=1440))
+        restored.update_activation(world.time, location_graph=world.location_graph)
+        restored_first = restored.get_entity("first")
+        restored_second = restored.get_entity("second")
+        assert isinstance(restored_first, Creature)
+        assert isinstance(restored_second, Creature)
+        assert restored_first.location_id == restored_second.location_id == "goal"
+        assert restored_first.current_intent is None
+        assert restored_second.current_intent is None
+
+    def test_round_loop_fast_forwards_all_legs_then_returns_control(self) -> None:
+        traveler = PlayerCharacter(
+            id="traveler",
+            name="Traveler",
+            location_id="start",
+            brain=_make_player_brain(Action(name=ActionType.TRAVEL, params={"destination_id": "goal"})),
+        )
+        world = _travel_world([traveler])
+        layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        started_at = world.time.to_total_seconds()
+
+        Round(world, layer).run_loop(max_rounds=2)
+
+        assert traveler.location_id == "goal"
+        assert traveler.current_intent is None
+        assert world.time.to_total_seconds() - started_at == 2160 + 6

@@ -6,6 +6,8 @@ add on_leave_reach callback to ActionContext.
 
 from __future__ import annotations
 
+import random
+from contextlib import nullcontext
 from unittest.mock import MagicMock
 
 from dnd_simulator.core.action import Action, ActionType
@@ -67,6 +69,8 @@ def _make_round(creatures: list[Creature]) -> object:
     r._world = world
     r._host = entities
     r._dispatcher = dispatcher
+    r._rng = random.Random(0)
+    r._mutation_scope = nullcontext
     r._on_action = None
     return r
 
