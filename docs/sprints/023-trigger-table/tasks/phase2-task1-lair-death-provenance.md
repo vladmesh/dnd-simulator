@@ -32,13 +32,23 @@
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Смерть ядра и миньона несёт строгую принадлежность конкретному логову и template ID
-- [ ] Обычные и encounter-существа не получают ложную принадлежность логову
-- [ ] Provenance существа переживает save/load
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Смерть ядра и миньона несёт строгую принадлежность конкретному логову и template ID
+- [x] Обычные и encounter-существа не получают ложную принадлежность логову
+- [x] Provenance существа переживает save/load
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Добавлены frozen `LairOrigin`/`LairMemberRole`, заполнение provenance при материализации, перенос в
+`EntityDiedPayload` и строгий round-trip через Pydantic save-модели. Событие смерти берёт provenance с самого
+существа, а не из эфемерной таблицы `_materialized_lairs`.
+
+Полный gate дважды обнаружил известный WS-флейк: тест ограничивал число транспортных сообщений, хотя это не
+продуктовый контракт. Проверка заменена на прямой инвариант сценария: соседний RuleBrain NPC не получает ход,
+время доматывается и управление возвращается игроку.

@@ -98,7 +98,7 @@ class TestWebSocketTurnCycle:
                     break
 
         assert messages[-1]["type"] == "turn"
-        assert len(messages) <= 4
+        assert not any(message.get("actor") == "bystander" for message in messages)
         assert session.world.time.to_total_seconds() >= started_at + 3600
 
     def test_receive_turn_send_end_turn(self, tmp_path: object) -> None:
