@@ -157,7 +157,11 @@ class TestEventPropagation:
         layers = [StubLayer(f"layer_{i}") for i in range(4)]
         world = World(layers)
 
-        event = Event(event_type=EventType.ENTITY_SAY, source_layer="layer_1")
+        event = Event(
+            event_type=EventType.ENTITY_SAY,
+            source_layer="layer_1",
+            data={"entity_id": "speaker", "text": "hello"},
+        )
         layers[1].tick_events = [event]
 
         world.advance_time(TimeDelta(seconds=10))

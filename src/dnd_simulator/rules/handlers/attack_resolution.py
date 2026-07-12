@@ -12,7 +12,13 @@ import structlog
 
 from dnd_simulator.core.character import Attack, Creature
 from dnd_simulator.core.combat import CombatState
-from dnd_simulator.core.events import EntityMovePayload
+from dnd_simulator.core.events import (
+    AttackResolvedPayload,
+    AttackRollPayload,
+    DamageComponentPayload,
+    EntityMovePayload,
+    RollComponentPayload,
+)
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.core.modifiers import AttackModifiers, RollComponent
 from dnd_simulator.i18n import _
@@ -29,42 +35,35 @@ def build_attack_event(
     result: AttackResult,
     atk_mods: AttackModifiers,
     rolled_dice: list[RollComponent],
-) -> dict[str, object]:
+) -> AttackResolvedPayload:
     """Build structured attack event data from resolution result."""
-    all_roll_components = [
-        {"source": rc.source, "value": rc.value, "dice": rc.dice} for rc in atk_mods.roll_components if not rc.dice
-    ] + [{"source": rc.source, "value": rc.value, "dice": rc.dice} for rc in rolled_dice]
+    all_roll_components = tuple(
+        RollComponentPayload(rc.source, rc.value, rc.dice)
+        for rc in (*tuple(rc for rc in atk_mods.roll_components if not rc.dice), *rolled_dice)
+    )
 
     d20 = result.attack_check.d20
     d20_data: dict[str, object] = {"result": d20.die.result, "sides": d20.die.sides}
-    atk_roll_data: dict[str, object] = {
-        "natural": result.attack_check.roll,
-        "d20": d20_data,
-        "components": all_roll_components,
-        "total": result.attack_check.total,
-        "advantage": atk_mods.advantage,
-        "disadvantage": atk_mods.disadvantage,
-    }
-    if d20.alt is not None:
-        atk_roll_data["d20_alt"] = {"result": d20.alt.result, "sides": d20.alt.sides}
-
-    return {
-        "attacker_id": attacker_id,
-        "target_id": target_id,
-        "weapon": attack.name,
-        "hit": result.hit,
-        "critical": result.critical,
-        "ac": atk_mods.target_ac,
-        "attack_roll": atk_roll_data,
-    }
+    atk_roll = AttackRollPayload(
+        result.attack_check.roll,
+        all_roll_components,
+        result.attack_check.total,
+        atk_mods.advantage,
+        atk_mods.disadvantage,
+        d20_data,
+        {"result": d20.alt.result, "sides": d20.alt.sides} if d20.alt is not None else None,
+    )
+    return AttackResolvedPayload(
+        attacker_id, target_id, result.hit, attack.name, result.critical, atk_mods.target_ac, atk_roll
+    )
 
 
 def build_damage_components(
     result: AttackResult,
     damage_components: list[RollComponent] | tuple[RollComponent, ...],
-) -> list[dict[str, object]]:
+) -> tuple[DamageComponentPayload, ...]:
     """Build damage component list for event data."""
-    components: list[dict[str, object]] = []
+    components: list[DamageComponentPayload] = []
     for dr in result.damage:
         dice_detail: list[dict[str, object]] = []
         if dr.dice_result is not None:
@@ -73,27 +72,11 @@ def build_damage_components(
                 if die.original is not None:
                     entry["original"] = die.original
                 dice_detail.append(entry)
-        components.append(
-            {
-                "source": dr.source,
-                "dice": dr.dice,
-                "dice_detail": dice_detail,
-                "amount": dr.amount,
-                "type": dr.type.value,
-            }
-        )
+        components.append(DamageComponentPayload(dr.source, dr.dice, tuple(dice_detail), dr.amount, dr.type.value))
     primary_type = result.damage[0].type.value if result.damage else "bludgeoning"
     for dbc in damage_components:
-        components.append(
-            {
-                "source": dbc.source,
-                "dice": "",
-                "dice_detail": [],
-                "amount": dbc.value,
-                "type": primary_type,
-            }
-        )
-    return components
+        components.append(DamageComponentPayload(dbc.source, "", (), dbc.value, primary_type))
+    return tuple(components)
 
 
 def roll_attack_dice(atk_mods: AttackModifiers, *, rng: random.Random | None = None) -> tuple[list[RollComponent], int]:
@@ -127,8 +110,10 @@ def resolve_combat_move(
     if cur_pos is None:
         return ActionResult(success=False, error=_("Creature not on the battle map."))
 
-    direction = str(event.data.get("direction", ""))
-    ft = int(event.data.get("ft", 5))
+    payload = event.payload
+    assert isinstance(payload, EntityMovePayload)
+    direction = payload.direction or ""
+    ft = payload.ft
     new_pos = move_direction(cur_pos, direction, ft, bm, entity_id)
 
     if new_pos == cur_pos:

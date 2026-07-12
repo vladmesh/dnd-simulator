@@ -315,7 +315,7 @@ class EntitiesLayer(Layer):
             return result
 
         if event.event_type == EventType.ENTITY_MOVE:
-            if "direction" in event.data:
+            if "direction" in event.payload:
                 # Needs resolution (from handle_move via compass direction)
                 return self._combat.resolve_move(event)
             # Already-resolved move (from handle_move_to) — just log it
@@ -326,7 +326,7 @@ class EntitiesLayer(Layer):
 
         # Clean up temporary creatures on death
         if event.event_type == EventType.ENTITY_DIED:
-            entity_id = str(event.data["entity_id"])
+            entity_id = str(event.payload["entity_id"])
             entity = self._entities.get(entity_id)
             if entity is not None and entity.temporary:
                 self.remove_entity(entity_id)
@@ -335,7 +335,7 @@ class EntitiesLayer(Layer):
             if event.event_type == EventType.SQUAD_MOVE:
                 # Log at both origin and destination so observers at either location see it
                 for key in ("from", "to"):
-                    loc = event.data.get(key)
+                    loc = event.payload.get(key)
                     if isinstance(loc, str):
                         self._location_log[loc].append(event)
             else:
@@ -362,20 +362,20 @@ class EntitiesLayer(Layer):
     def _event_location(self, event: Event) -> str | None:
         """Determine which location an event happened at."""
         for key in ("entity_id", "attacker_id"):
-            eid = event.data.get(key)
+            eid = event.payload.get(key)
             if isinstance(eid, str):
                 entity = self._entities.get(eid)
                 if entity:
                     return entity.location_id
         # Squad events: SQUAD_MOVE uses "to" (destination), others use "location_id"
         if event.event_type == EventType.SQUAD_MOVE:
-            to = event.data.get("to")
-            from_ = event.data.get("from")
+            to = event.payload.get("to")
+            from_ = event.payload.get("from")
             if isinstance(to, str):
                 return to
             if isinstance(from_, str):
                 return from_
-        loc = event.data.get("location_id")
+        loc = event.payload.get("location_id")
         if isinstance(loc, str):
             return loc
         return None

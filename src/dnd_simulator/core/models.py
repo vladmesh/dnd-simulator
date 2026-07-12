@@ -3,7 +3,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum, StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from dnd_simulator.core.events import EventPayload
 
 
 class EntityKind(StrEnum):
@@ -259,7 +262,7 @@ class Event:
     event_type: EventType
     source_layer: str
     # Transitional until every EventType is migrated in Phase 1 task 3.
-    data: Any = field(default_factory=dict)
+    data: EventPayload | dict[str, object] = field(default_factory=dict)
     description: str = ""
     observer_ids: frozenset[str] | None = None  # None = public (all in area see it)
 
@@ -273,28 +276,64 @@ class Event:
         expected = EVENT_PAYLOAD_TYPES.get(self.event_type)
         if expected is not None and isinstance(self.data, dict):
             values = dict(self.data)
+            raw_roll = values.get("attack_roll")
+            if self.event_type is EventType.ENTITY_ATTACK and isinstance(raw_roll, dict):
+                from dnd_simulator.core.events import AttackRollPayload, DamageComponentPayload, RollComponentPayload
+
+                roll = dict(raw_roll)
+                roll_components = cast(list[dict[str, object]], roll["components"])
+                roll["components"] = tuple(
+                    RollComponentPayload(
+                        cast(str, component["source"]),
+                        cast(int, component["value"]),
+                        cast(str, component.get("dice", "")),
+                    )
+                    for component in roll_components
+                )
+                values["attack_roll"] = AttackRollPayload(**roll)
+                damage_components = cast(list[dict[str, object]], values.get("damage_components", []))
+                values["damage_components"] = tuple(
+                    DamageComponentPayload(
+                        source=cast(str, component["source"]),
+                        dice=cast(str, component["dice"]),
+                        dice_detail=tuple(cast(list[object], component.get("dice_detail", []))),
+                        amount=cast(int, component["amount"]),
+                        type=cast(str, component["type"]),
+                    )
+                    for component in damage_components
+                )
             if self.event_type is EventType.SQUAD_MOVE:
                 values["from_location_id"] = values.pop("from")
                 values["to_location_id"] = values.pop("to")
             if self.event_type is EventType.ENCOUNTER_SPAWNED and "names" in values:
                 values["spawned_names"] = values.pop("names")
-            if self.event_type is EventType.LAIR_DEMATERIALIZED and isinstance(values.get("alive_members"), list):
-                values["alive_members"] = tuple(values["alive_members"])
+            alive_members = values.get("alive_members")
+            if self.event_type is EventType.LAIR_DEMATERIALIZED and isinstance(alive_members, list):
+                values["alive_members"] = tuple(alive_members)
             tuple_fields = {
                 EventType.COMBAT_STARTED: ("turn_order", "turn_order_names"),
                 EventType.ENCOUNTER_SPAWNED: ("spawned_entity_ids", "spawned_names"),
                 EventType.TURN_SKIPPED: ("conditions",),
                 EventType.ENTITY_ATTACK: ("damage_components",),
+                EventType.ENTITY_USE_ITEM: ("dice_detail",),
+                EventType.ENTITY_SECOND_WIND: ("dice_detail",),
+                EventType.ENTITY_TAKE: ("item_names",),
             }
             for name in tuple_fields.get(self.event_type, ()):
-                if isinstance(values.get(name), list):
-                    values[name] = tuple(values[name])
+                value = values.get(name)
+                if isinstance(value, list):
+                    values[name] = tuple(value)
             try:
                 object.__setattr__(self, "data", expected(**values))
             except TypeError as exc:
                 raise TypeError(f"invalid {self.event_type.name} payload: {exc}") from exc
         if expected is not None and not isinstance(self.data, expected):
             raise TypeError(f"{self.event_type.name} requires {expected.__name__}, got {type(self.data).__name__}")
+
+    @property
+    def payload(self) -> EventPayload | dict[str, object]:
+        """Typed event payload after boundary normalization."""
+        return self.data
 
 
 @dataclass(frozen=True)

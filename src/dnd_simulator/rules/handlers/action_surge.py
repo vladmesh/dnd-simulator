@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from dnd_simulator.core.events import EntityActorPayload
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.resources import has_resource, use_resource
@@ -46,7 +47,7 @@ def handle_action_surge(
         Event(
             event_type=EventType.ENTITY_ACTION_SURGE,
             source_layer="entities",
-            data={"entity_id": actor.id},
+            data=EntityActorPayload(actor.id),
         )
     )
     return ActionResult()

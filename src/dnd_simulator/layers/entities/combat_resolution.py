@@ -8,13 +8,21 @@ have with their layer.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 import structlog
 
 from dnd_simulator.core.character import Character, Creature
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.events import EntityDiedPayload, ReputationChangedPayload, XpGainedPayload
+from dnd_simulator.core.events import (
+    ActionFlavorPayload,
+    AttackRequestedPayload,
+    EntityDiedPayload,
+    EntityMovePayload,
+    ReputationChangedPayload,
+    XpGainedPayload,
+)
 from dnd_simulator.core.intent import IntentInterruptReason
 from dnd_simulator.core.models import ActionResult, Event, EventType, FactionRelation, QueryFn
 from dnd_simulator.core.queries import query_faction_name, query_faction_relation
@@ -50,7 +58,9 @@ logger = structlog.get_logger(domain="combat")
 
 def resolve_dodge(mgr: CombatManager, event: Event) -> ActionResult:
     """Resolve a dodge action: set is_dodging until next turn."""
-    entity_id = str(event.data.get("entity_id", ""))
+    payload = event.payload
+    assert isinstance(payload, ActionFlavorPayload)
+    entity_id = payload.entity_id
     entity = mgr._entities.get(entity_id)
     if isinstance(entity, Creature):
         entity.is_dodging = True
@@ -63,7 +73,9 @@ def resolve_dodge(mgr: CombatManager, event: Event) -> ActionResult:
 
 def resolve_flee(mgr: CombatManager, event: Event) -> ActionResult:
     """Resolve a flee attempt: mark the creature as out of combat."""
-    entity_id = str(event.data.get("entity_id", ""))
+    payload = event.payload
+    assert isinstance(payload, ActionFlavorPayload)
+    entity_id = payload.entity_id
     entity = mgr._entities.get(entity_id)
     if isinstance(entity, Creature):
         entity.in_combat = False
@@ -76,7 +88,9 @@ def resolve_flee(mgr: CombatManager, event: Event) -> ActionResult:
 
 def resolve_move(mgr: CombatManager, event: Event) -> ActionResult:
     """Resolve an atomic move: single step in a compass direction."""
-    entity_id = str(event.data.get("entity_id", ""))
+    payload = event.payload
+    assert isinstance(payload, EntityMovePayload)
+    entity_id = payload.entity_id
     entity = mgr._entities.get(entity_id)
     if not isinstance(entity, Creature):
         return ActionResult(success=False, error=_("Creature '{id}' not found.").format(id=entity_id))
@@ -99,8 +113,10 @@ def is_faction_friendly(mgr: CombatManager, attacker: Creature, candidate_id: st
 
 def resolve_attack(mgr: CombatManager, event: Event, query_fn: QueryFn | None = None) -> ActionResult:
     """Resolve an attack: roll dice, apply damage, log."""
-    attacker_id = str(event.data.get("attacker_id", ""))
-    target_id = str(event.data.get("target_id", ""))
+    payload = event.payload
+    assert isinstance(payload, AttackRequestedPayload)
+    attacker_id = payload.attacker_id
+    target_id = payload.target_id
 
     attacker = mgr._entities.get(attacker_id)
     if not isinstance(attacker, Creature):
@@ -152,7 +168,7 @@ def resolve_attack(mgr: CombatManager, event: Event, query_fn: QueryFn | None = 
 
     # Divine Smite: validate before attack, add damage, spend slot only on hit.
     smite_slot_level: int | None = None
-    raw_smite = event.data.get("smite_slot_level")
+    raw_smite = payload.smite_slot_level
     if raw_smite is not None:
         smite_slot_level = int(str(raw_smite))
         smite_error = validate_smite(attacker, smite_slot_level)
@@ -191,17 +207,20 @@ def resolve_attack(mgr: CombatManager, event: Event, query_fn: QueryFn | None = 
         damage=result.total_damage if result.hit else 0,
     )
 
-    log_data = build_attack_event(attacker_id, target_id, attack, result, atk_mods, rolled_dice)
-    if event.data.get("is_opportunity_attack") is True:
-        log_data["is_opportunity_attack"] = True
+    log_payload = build_attack_event(attacker_id, target_id, attack, result, atk_mods, rolled_dice)
+    if payload.is_opportunity_attack:
+        log_payload = replace(log_payload, is_opportunity_attack=True)
 
     if result.hit:
         actual_damage = target.take_damage(result.total_damage)
         if actual_damage > 0:
             interrupt_intent(target, IntentInterruptReason.DAMAGE)
-        log_data["damage"] = actual_damage
-        log_data["total_damage"] = result.total_damage
-        log_data["damage_components"] = build_damage_components(result, atk_mods.damage_components)
+        log_payload = replace(
+            log_payload,
+            damage=actual_damage,
+            total_damage=result.total_damage,
+            damage_components=build_damage_components(result, atk_mods.damage_components),
+        )
         if extra_damage and attacker_id not in mgr._sneak_attack_used:
             for ed in extra_damage:
                 if ed.source == "sneak_attack":
@@ -211,7 +230,7 @@ def resolve_attack(mgr: CombatManager, event: Event, query_fn: QueryFn | None = 
             use_resource(attacker, spell_slot_pool_id(smite_slot_level))
 
     mgr._location_log[attacker.location_id].append(
-        Event(event_type=EventType.ENTITY_ATTACK, source_layer="entities", data=log_data)
+        Event(event_type=EventType.ENTITY_ATTACK, source_layer="entities", data=log_payload)
     )
 
     return handle_death(mgr, attacker, target, target_id, result, query_fn)

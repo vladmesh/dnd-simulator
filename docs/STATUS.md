@@ -12,9 +12,9 @@
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 1 — Типизированная таксономия событий (task 2.5 done, task 3 pending) — 2026-07-12
+**Phase:** 1 — Типизированная таксономия событий (all tasks done, ready to close) — 2026-07-12
 
-Ready to start task 3.
+Ready to close Phase 1.
 
 ### Phases
 

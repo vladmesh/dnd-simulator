@@ -23,13 +23,22 @@
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Все штатные `EventType` имеют один зарегистрированный payload-контракт
-- [ ] В production producers и perception нет обращений `event.data[...]`/`event.data.get(...)`
-- [ ] `Event` больше не экспортирует свободный `dict[str, Any]` как доменный контракт
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Все штатные `EventType` имеют один зарегистрированный payload-контракт
+- [x] В production producers и perception нет обращений `event.data[...]`/`event.data.get(...)`
+- [x] `Event` больше не экспортирует свободный `dict[str, Any]` как доменный контракт
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Добавлены payload-контракты для всех action events, trade/loot, `TIME_ADVANCED` и явно
+названного inspect payload для `CUSTOM`. Handlers теперь создают payload dataclass напрямую.
+Attack roll, его modifiers и damage components стали общими frozen value objects для resolution
+и perception. `Event.data` больше не `Any`; dict остаётся только входным compatibility-форматом
+и сразу нормализуется по registry. Старые тесты обновлены там, где они проверяли list/dict форму,
+а не игровое поведение. `make check`: backend 2485, frontend 283 теста.

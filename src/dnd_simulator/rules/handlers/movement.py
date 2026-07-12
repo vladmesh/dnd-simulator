@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.combat import Position
-from dnd_simulator.core.events import EntityMovePayload
+from dnd_simulator.core.events import EntityActorPayload, EntityDashPayload, EntityMovePayload
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.modifiers import effective_speed
@@ -184,7 +184,7 @@ def handle_dash(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
         Event(
             event_type=EventType.ENTITY_DASH,
             source_layer="entities",
-            data={"entity_id": actor.id, "extra_movement_ft": speed},
+            data=EntityDashPayload(actor.id, speed),
         )
     )
     return ActionResult()
@@ -204,7 +204,7 @@ def handle_disengage(
         Event(
             event_type=EventType.ENTITY_DISENGAGE,
             source_layer="entities",
-            data={"entity_id": actor.id},
+            data=EntityActorPayload(actor.id),
         )
     )
     return ActionResult()

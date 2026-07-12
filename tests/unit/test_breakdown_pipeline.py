@@ -215,10 +215,8 @@ class TestBuildAttackEvent:
             total_damage=6,
         )
         data = build_attack_event("a", "t", _sword(), attack_result, _atk_mods(), [])
-        atk_roll = data["attack_roll"]
-        assert isinstance(atk_roll, dict)
-        assert "d20" in atk_roll
-        d20_data = atk_roll["d20"]
+        atk_roll = data.attack_roll
+        d20_data = atk_roll.d20
         assert isinstance(d20_data, dict)
         assert d20_data["result"] == 14
         assert d20_data["sides"] == 20
@@ -235,10 +233,8 @@ class TestBuildAttackEvent:
             total_damage=6,
         )
         data = build_attack_event("a", "t", _sword(), attack_result, _atk_mods(advantage=True), [])
-        atk_roll = data["attack_roll"]
-        assert isinstance(atk_roll, dict)
-        assert "d20_alt" in atk_roll
-        d20_alt = atk_roll["d20_alt"]
+        atk_roll = data.attack_roll
+        d20_alt = atk_roll.d20_alt
         assert isinstance(d20_alt, dict)
         assert d20_alt["result"] == 7
         assert d20_alt["sides"] == 20
@@ -266,9 +262,7 @@ class TestBuildAttackEvent:
         components = build_damage_components(attack_result, _atk_mods().damage_components)
         assert len(components) >= 1
         comp = components[0]
-        assert "dice_detail" in comp
-        dice_detail = comp["dice_detail"]
-        assert isinstance(dice_detail, list)
+        dice_detail = comp.dice_detail
         assert len(dice_detail) == 1
         assert dice_detail[0]["sides"] == 8
         assert dice_detail[0]["result"] == 6
@@ -294,8 +288,7 @@ class TestBuildAttackEvent:
         )
 
         components = build_damage_components(attack_result, _atk_mods().damage_components)
-        detail = components[0]["dice_detail"]
-        assert isinstance(detail, list)
+        detail = components[0].dice_detail
         assert detail[0]["original"] == 1
 
     def test_flat_damage_has_empty_dice_detail(self) -> None:
@@ -316,9 +309,9 @@ class TestBuildAttackEvent:
             (RollComponent(source="dueling", value=2, dice=""),),
         )
         # The flat "dueling" component should have empty dice_detail
-        dueling = [c for c in components if c["source"] == "dueling"]
+        dueling = [c for c in components if c.source == "dueling"]
         assert len(dueling) == 1
-        assert dueling[0]["dice_detail"] == []
+        assert dueling[0].dice_detail == ()
 
 
 # ---------------------------------------------------------------------------
@@ -365,7 +358,7 @@ class TestHealingDiceDetail:
         data = emitted[0].data
         assert "dice_detail" in data
         dice_detail = data["dice_detail"]
-        assert isinstance(dice_detail, list)
+        assert isinstance(dice_detail, tuple)
         assert len(dice_detail) == 1
         assert dice_detail[0]["sides"] == 10
 
@@ -406,7 +399,7 @@ class TestHealingDiceDetail:
         data = emitted[0].data
         assert "dice_detail" in data
         dice_detail = data["dice_detail"]
-        assert isinstance(dice_detail, list)
+        assert isinstance(dice_detail, tuple)
         assert len(dice_detail) == 2  # 2d4
         assert all(d["sides"] == 4 for d in dice_detail)
 

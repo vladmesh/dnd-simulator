@@ -123,7 +123,7 @@ class TestLootCorpse:
         assert ev.event_type == EventType.ENTITY_TAKE
         assert ev.data["actor_id"] == "player_1"
         assert ev.data["target_id"] == "goblin_corpse"
-        assert ev.data["item_names"] == ["Longsword"]
+        assert ev.data["item_names"] == ("Longsword",)
         assert ev.data["gold"] == 50
 
 

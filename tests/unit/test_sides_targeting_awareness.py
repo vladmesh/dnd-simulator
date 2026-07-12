@@ -260,7 +260,7 @@ class TestSneakAttackAllyUsesSides:
                 if log_event.event_type == EventType.ENTITY_ATTACK and log_event.data.get("attacker_id") == "rogue":
                     components = log_event.data.get("damage_components", [])
                     for comp in components:
-                        if isinstance(comp, dict) and comp.get("source") == "sneak_attack":
+                        if comp.source == "sneak_attack":
                             sneak_attack_triggered = True
                             break
             if sneak_attack_triggered:

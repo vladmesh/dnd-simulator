@@ -241,7 +241,7 @@ class CombatManager:
     def _event_location(self, event: Event) -> str | None:
         """Determine which location an event happened at."""
         for key in ("entity_id", "attacker_id"):
-            eid = event.data.get(key)
+            eid = event.payload.get(key)
             if isinstance(eid, str):
                 entity = self._entities.get(eid)
                 if entity:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from dnd_simulator.core.events import (
+    EVENT_PAYLOAD_TYPES,
     AttackRequestedPayload,
     AttackResolvedPayload,
     CombatStartedPayload,
@@ -99,3 +100,7 @@ def test_attack_request_and_result_have_distinct_contracts() -> None:
     assert resolved.data.hit is False
     with pytest.raises(TypeError, match="ENTITY_ATTACK requires AttackResolvedPayload"):
         Event(EventType.ENTITY_ATTACK, "entities", requested.data)
+
+
+def test_every_event_type_has_one_payload_contract() -> None:
+    assert set(EVENT_PAYLOAD_TYPES) == set(EventType)

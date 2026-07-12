@@ -547,15 +547,13 @@ class TestPerceptionDispatchAndFailFast:
         assert "weather_changed" in result
 
     def test_missing_required_data_raises_key_error(self) -> None:
-        """ENTITY_SAY without 'text' raises KeyError — fail-fast, no silent defaults."""
-        observer = Character(id="guard", name="Guard", location_id="r1")
-        event = Event(
-            event_type=EventType.ENTITY_SAY,
-            source_layer="entities",
-            data={"entity_id": "guard"},  # missing "text"
-        )
-        with pytest.raises(KeyError, match="text"):
-            perceive_event(event, observer, _get_entity_fn(observer))
+        """ENTITY_SAY without text is rejected at construction."""
+        with pytest.raises(TypeError, match="text"):
+            Event(
+                event_type=EventType.ENTITY_SAY,
+                source_layer="entities",
+                data={"entity_id": "guard"},
+            )
 
     def test_missing_entity_id_fails_at_event_boundary(self) -> None:
         with pytest.raises(TypeError, match="invalid ENTITY_DIED payload"):

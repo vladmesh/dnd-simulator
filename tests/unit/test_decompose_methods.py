@@ -156,9 +156,9 @@ class TestAttackWithBlessDiceBonus:
             for ev in log:
                 if ev.event_type == EventType.ENTITY_ATTACK:
                     roll_data = ev.data.get("attack_roll")
-                    if isinstance(roll_data, dict):
-                        for comp in roll_data.get("components", []):
-                            if comp.get("source") == "blessed" and comp.get("dice") == "1d4":
+                    if roll_data is not None:
+                        for component in roll_data.components:
+                            if component.source == "blessed" and component.dice == "1d4":
                                 found_bless = True
             if found_bless:
                 break

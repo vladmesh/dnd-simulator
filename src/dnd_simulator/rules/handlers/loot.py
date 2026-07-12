@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from dnd_simulator.core.events import TakePayload
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.i18n import _
 
@@ -46,12 +47,7 @@ def handle_take(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
         Event(
             event_type=EventType.ENTITY_TAKE,
             source_layer="entities",
-            data={
-                "actor_id": actor.id,
-                "target_id": target_id,
-                "item_names": item_names,
-                "gold": taken_gold,
-            },
+            data=TakePayload(actor.id, target_id, tuple(item_names), taken_gold),
         )
     )
     return ActionResult()

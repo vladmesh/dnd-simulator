@@ -3,14 +3,19 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import cast
 
 from dnd_simulator.core.character import Character, Entity
 from dnd_simulator.core.events import (
+    AttackResolvedPayload,
+    AttackRollPayload,
     CombatStartedPayload,
+    DamageComponentPayload,
     EntityDiedPayload,
     EntityMovePayload,
     OpportunityAttackPayload,
     ReputationChangedPayload,
+    RollComponentPayload,
     RoundStartPayload,
     SquadCombatPayload,
     SquadDematerializedPayload,
@@ -65,7 +70,7 @@ def _describe(observer: Character, entity_id: str, get_entity: GetEntityFn) -> s
 
 
 def _perceive_say(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
+    d = event.payload
     speaker_id = str(d["entity_id"])
     text = str(d["text"])
 
@@ -75,49 +80,74 @@ def _perceive_say(event: Event, observer: Character, get_entity: GetEntityFn) ->
     return _('{speaker} says: "{text}"').format(speaker=speaker, text=text)
 
 
-def _format_roll(atk_roll: dict[str, object], ac: object) -> str:
+def _format_roll(atk_roll: AttackRollPayload | dict[str, object], ac: int) -> str:
     """Build attack roll string from structured components.
 
     Format: [adv d20(14)+5=19 vs AC 13]
     Components are generic — no knowledge of specific bonuses.
     """
+    if isinstance(atk_roll, dict):
+        raw_components = cast(list[dict[str, object]], atk_roll["components"])
+        components = tuple(
+            RollComponentPayload(str(item["source"]), int(str(item["value"])), str(item.get("dice", "")))
+            for item in raw_components
+        )
+        atk_roll = AttackRollPayload(
+            int(str(atk_roll["natural"])),
+            components,
+            int(str(atk_roll["total"])),
+            bool(atk_roll["advantage"]),
+            bool(atk_roll["disadvantage"]),
+            atk_roll.get("d20"),
+            atk_roll.get("d20_alt"),
+        )
     parts: list[str] = []
-    if atk_roll["advantage"] and not atk_roll["disadvantage"]:
+    if atk_roll.advantage and not atk_roll.disadvantage:
         parts.append(_("adv "))
-    elif atk_roll["disadvantage"] and not atk_roll["advantage"]:
+    elif atk_roll.disadvantage and not atk_roll.advantage:
         parts.append(_("disadv "))
 
-    parts.append(f"d20({atk_roll['natural']})")
+    parts.append(f"d20({atk_roll.natural})")
 
-    components = atk_roll["components"]
-    assert isinstance(components, list)
-    modifier_total = sum(c["value"] for c in components)
+    modifier_total = sum(component.value for component in atk_roll.components)
     if modifier_total >= 0:
         parts.append(f"+{modifier_total}")
     else:
         parts.append(str(modifier_total))
-    parts.append(f"={atk_roll['total']}")
+    parts.append(f"={atk_roll.total}")
     ac_label = _("AC")
     parts.append(f" vs {ac_label} {ac}")
     return " [" + "".join(parts) + "]"
 
 
 def _format_damage(
-    damage: object, damage_components: list[dict[str, object]] | tuple[object, ...], critical: bool
+    damage: int, damage_components: tuple[DamageComponentPayload, ...] | list[dict[str, object]], critical: bool
 ) -> str:
     """Build damage string from structured components.
 
     Format: , 10 damage (1d8 slashing + 1d6 sneak_attack + 2 dueling)
     """
+    if isinstance(damage_components, list):
+        damage_components = tuple(
+            DamageComponentPayload(
+                str(item["source"]),
+                str(item["dice"]),
+                tuple(cast(list[object], item.get("dice_detail", [])))
+                if isinstance(item.get("dice_detail", []), list)
+                else (),
+                int(str(item["amount"])),
+                str(item["type"]),
+            )
+            for item in damage_components
+        )
     detail_parts: list[str] = []
-    for dc in damage_components:
-        assert isinstance(dc, dict)
-        if dc["dice"] and dc["source"] != "weapon":
-            detail_parts.append(f"{dc['dice']} {_(str(dc['source']))}")
-        elif dc["dice"]:
-            detail_parts.append(f"{dc['dice']} {_(str(dc['type']))}")
-        elif dc["amount"]:
-            detail_parts.append(f"+{dc['amount']} {_(str(dc['source']))}")
+    for component in damage_components:
+        if component.dice and component.source != "weapon":
+            detail_parts.append(f"{component.dice} {_(component.source)}")
+        elif component.dice:
+            detail_parts.append(f"{component.dice} {_(component.type)}")
+        elif component.amount:
+            detail_parts.append(f"+{component.amount} {_(component.source)}")
     detail = " (" + " + ".join(detail_parts) + ")" if detail_parts else ""
 
     if critical:
@@ -126,31 +156,26 @@ def _format_damage(
 
 
 def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
-    attacker_id = str(d["attacker_id"])
-    target_id = str(d["target_id"])
-    hit = d["hit"]
-    weapon = d["weapon"]  # empty string for unarmed, always present
-    critical = d["critical"]  # always present (False on miss)
-    is_oa = bool(d.get("is_opportunity_attack"))  # optional — absent on normal attacks
-    atk_roll = d["attack_roll"]
-    assert isinstance(atk_roll, dict)
+    payload = event.payload
+    assert isinstance(payload, AttackResolvedPayload)
+    attacker_id = payload.attacker_id
+    target_id = payload.target_id
+    hit = payload.hit
+    weapon = payload.weapon
+    critical = payload.critical
+    is_oa = payload.is_opportunity_attack
 
     attacker = _describe(observer, attacker_id, get_entity)
     target = _describe(observer, target_id, get_entity)
 
     weapon_str = f" ({_(str(weapon))})" if weapon else ""
     oa_str = _(" (opportunity attack)") if is_oa else ""
-    roll_str = _format_roll(atk_roll, d["ac"])
+    roll_str = _format_roll(payload.attack_roll, payload.ac)
 
     if not hit:
         outcome_str = _(", miss")
-    elif "damage_components" in d:
-        damage_components = d["damage_components"]
-        assert isinstance(damage_components, (list, tuple))
-        outcome_str = _format_damage(d["damage"], damage_components, bool(critical))
-    elif "damage" in d:
-        outcome_str = _(", {damage} damage").format(damage=d["damage"])
+    elif payload.damage is not None:
+        outcome_str = _format_damage(payload.damage, payload.damage_components, critical)
     else:
         outcome_str = ""
 
@@ -168,7 +193,7 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
 
 
 def _perceive_disengage(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    entity_id = str(event.data["entity_id"])
+    entity_id = str(event.payload["entity_id"])
     if entity_id == observer.id:
         return _("You disengage")
     desc = _describe(observer, entity_id, get_entity)
@@ -181,7 +206,7 @@ def _perceive_opportunity_attack(event: Event, observer: Character, get_entity: 
     The detailed attack info is in the preceding ENTITY_ATTACK event
     (annotated with '(opportunity attack)'), so this is kept minimal.
     """
-    payload = event.data
+    payload = event.payload
     assert isinstance(payload, OpportunityAttackPayload)
     attacker_id = payload.attacker_id
     target_id = payload.target_id
@@ -195,7 +220,7 @@ def _perceive_opportunity_attack(event: Event, observer: Character, get_entity: 
 
 
 def _perceive_death(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    payload = event.data
+    payload = event.payload
     assert isinstance(payload, EntityDiedPayload)
     entity_id = payload.entity_id
     if entity_id == observer.id:
@@ -205,8 +230,8 @@ def _perceive_death(event: Event, observer: Character, get_entity: GetEntityFn) 
 
 
 def _perceive_dodge(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    entity_id = str(event.data["entity_id"])
-    description = event.data.get("description", "")  # optional flavor text
+    entity_id = str(event.payload["entity_id"])
+    description = event.payload.get("description", "")  # optional flavor text
 
     desc_suffix = f" \u00ab{description}\u00bb" if description else ""
     if entity_id == observer.id:
@@ -216,8 +241,8 @@ def _perceive_dodge(event: Event, observer: Character, get_entity: GetEntityFn) 
 
 
 def _perceive_flee(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    entity_id = str(event.data["entity_id"])
-    description = event.data.get("description", "")  # optional flavor text
+    entity_id = str(event.payload["entity_id"])
+    description = event.payload.get("description", "")  # optional flavor text
 
     desc_suffix = f" \u00ab{description}\u00bb" if description else ""
     if entity_id == observer.id:
@@ -229,7 +254,7 @@ def _perceive_flee(event: Event, observer: Character, get_entity: GetEntityFn) -
 def _perceive_move(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     from dnd_simulator.rules.movement import direction_label
 
-    payload = event.data
+    payload = event.payload
     assert isinstance(payload, EntityMovePayload)
     entity_id = payload.entity_id
     description = ""
@@ -258,8 +283,8 @@ def _perceive_move(event: Event, observer: Character, get_entity: GetEntityFn) -
 
 
 def _perceive_dash(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    entity_id = str(event.data["entity_id"])
-    extra_ft = event.data["extra_movement_ft"]
+    entity_id = str(event.payload["entity_id"])
+    extra_ft = event.payload["extra_movement_ft"]
     if entity_id == observer.id:
         return _("You dash (+{ft} ft movement)").format(ft=extra_ft)
     desc = _describe(observer, entity_id, get_entity)
@@ -267,7 +292,7 @@ def _perceive_dash(event: Event, observer: Character, get_entity: GetEntityFn) -
 
 
 def _perceive_use_item(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
+    d = event.payload
     entity_id = str(d["entity_id"])
     item_name = _(str(d["item_name"]))
     healed = d["healed"]
@@ -281,7 +306,7 @@ def _perceive_use_item(event: Event, observer: Character, get_entity: GetEntityF
 def _perceive_inspect(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     from dnd_simulator.core.character import Creature
 
-    target_id = str(event.data["inspect_target"])
+    target_id = str(event.payload["inspect_target"])
     target = get_entity(target_id)
     if target is None:
         return _("You look around but see no one matching '{id}'.").format(id=target_id)
@@ -301,7 +326,7 @@ def _perceive_inspect(event: Event, observer: Character, get_entity: GetEntityFn
 
 
 def _perceive_turn_skipped(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    payload = event.data
+    payload = event.payload
     assert isinstance(payload, TurnSkippedPayload)
     entity_id = payload.entity_id
     conditions = payload.conditions
@@ -314,7 +339,7 @@ def _perceive_turn_skipped(event: Event, observer: Character, get_entity: GetEnt
 
 
 def _perceive_bless(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
+    d = event.payload
     entity_id = str(d["entity_id"])
     duration = d["duration_rounds"]
     if entity_id == observer.id:
@@ -324,7 +349,7 @@ def _perceive_bless(event: Event, observer: Character, get_entity: GetEntityFn) 
 
 
 def _perceive_second_wind(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
+    d = event.payload
     entity_id = str(d["entity_id"])
     healed = d["healed"]
     if entity_id == observer.id:
@@ -334,7 +359,7 @@ def _perceive_second_wind(event: Event, observer: Character, get_entity: GetEnti
 
 
 def _perceive_action_surge(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
+    d = event.payload
     entity_id = str(d["entity_id"])
     if entity_id == observer.id:
         return _("You surge with energy, gaining an extra action")
@@ -343,7 +368,7 @@ def _perceive_action_surge(event: Event, observer: Character, get_entity: GetEnt
 
 
 def _perceive_lay_on_hands(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
+    d = event.payload
     entity_id = str(d["entity_id"])
     target_id = str(d["target_id"])
     healed = d["healed"]
@@ -370,7 +395,7 @@ def _perceive_lay_on_hands(event: Event, observer: Character, get_entity: GetEnt
 
 
 def _perceive_equip(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
+    d = event.payload
     entity_id = str(d["entity_id"])
     item_name = _(str(d["item_name"]))
     if entity_id == observer.id:
@@ -380,7 +405,7 @@ def _perceive_equip(event: Event, observer: Character, get_entity: GetEntityFn) 
 
 
 def _perceive_unequip(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
+    d = event.payload
     entity_id = str(d["entity_id"])
     item_name = _(str(d["item_name"]))
     if entity_id == observer.id:
@@ -390,7 +415,7 @@ def _perceive_unequip(event: Event, observer: Character, get_entity: GetEntityFn
 
 
 def _perceive_buy(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
+    d = event.payload
     buyer_id = str(d["buyer_id"])
     merchant_id = str(d["merchant_id"])
     item_name = _(str(d["item_name"]))
@@ -408,7 +433,7 @@ def _perceive_buy(event: Event, observer: Character, get_entity: GetEntityFn) ->
 
 
 def _perceive_sell(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
+    d = event.payload
     seller_id = str(d["seller_id"])
     merchant_id = str(d["merchant_id"])
     item_name = _(str(d["item_name"]))
@@ -426,7 +451,7 @@ def _perceive_sell(event: Event, observer: Character, get_entity: GetEntityFn) -
 
 
 def _perceive_take(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
+    d = event.payload
     actor_id = str(d["actor_id"])
     target_id = str(d["target_id"])
     raw_names = d.get("item_names")
@@ -448,7 +473,7 @@ def _perceive_take(event: Event, observer: Character, get_entity: GetEntityFn) -
 
 
 def _perceive_combat_started(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    payload = event.data
+    payload = event.payload
     assert isinstance(payload, CombatStartedPayload)
     names = payload.turn_order_names
     order_str = ", ".join(str(n) for n in names) if names else "?"
@@ -456,7 +481,7 @@ def _perceive_combat_started(event: Event, observer: Character, get_entity: GetE
 
 
 def _perceive_round_start(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    payload = event.data
+    payload = event.payload
     assert isinstance(payload, RoundStartPayload)
     round_number = payload.round_number
     return _("— Round {n} —").format(n=round_number)
@@ -470,7 +495,7 @@ def _perceive_combat_ended(event: Event, observer: Character, get_entity: GetEnt
 
 
 def _perceive_squad_move(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
+    d = event.payload
     assert isinstance(d, SquadMovePayload)
     name = d.squad_name
     to_loc = d.to_location_id
@@ -487,7 +512,7 @@ def _perceive_squad_move(event: Event, observer: Character, get_entity: GetEntit
 
 
 def _perceive_squad_combat(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
+    d = event.payload
     assert isinstance(d, SquadCombatPayload)
     winner = d.winner_name
     loser = d.loser_name
@@ -498,7 +523,7 @@ def _perceive_squad_combat(event: Event, observer: Character, get_entity: GetEnt
 
 
 def _perceive_squad_materialized(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.data
+    d = event.payload
     assert isinstance(d, SquadMaterializedPayload)
     name = d.squad_name
     count = d.creature_count
@@ -506,7 +531,7 @@ def _perceive_squad_materialized(event: Event, observer: Character, get_entity: 
 
 
 def _perceive_squad_dematerialized(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    payload = event.data
+    payload = event.payload
     assert isinstance(payload, SquadDematerializedPayload)
     name = payload.squad_name
     return _("{name} moves on, disappearing into the distance").format(name=name)
@@ -519,7 +544,7 @@ def _perceive_encounter_spawned(event: Event, observer: Character, get_entity: G
 
 
 def _perceive_xp_gained(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    payload = event.data
+    payload = event.payload
     assert isinstance(payload, XpGainedPayload)
     entity_id = payload.entity_id
     amount = payload.amount
@@ -532,7 +557,7 @@ def _perceive_xp_gained(event: Event, observer: Character, get_entity: GetEntity
 
 
 def _perceive_reputation_change(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    payload = event.data
+    payload = event.payload
     assert isinstance(payload, ReputationChangedPayload)
     entity_id = payload.entity_id
     faction_name = payload.faction_name or payload.faction_id
@@ -594,7 +619,7 @@ def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -
     looks different to different observers.
     """
     # CUSTOM with inspect_target is a sub-type — check before dispatch
-    if event.event_type == EventType.CUSTOM and event.data.get("inspect_target"):
+    if event.event_type == EventType.CUSTOM and event.payload.get("inspect_target"):
         return _perceive_inspect(event, observer, get_entity)
 
     handler = _DISPATCH.get(event.event_type)
