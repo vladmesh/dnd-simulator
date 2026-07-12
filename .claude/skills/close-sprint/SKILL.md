@@ -2,7 +2,7 @@
 name: close-sprint
 description: >
   Close the current sprint: verify all phases done, audit completed, post-audit E2E green, integration
-  tests green, then update docs, commit, and push. Blocks if anything is off. Use when user says
+  tests green, then update docs, commit, push, and wait for CI. Blocks if anything is off. Use when user says
   "close sprint", "finish sprint", "sprint done", "wrap up sprint", or when all phases are complete
   and it's time to finalize.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Agent
@@ -135,6 +135,15 @@ No active sprint.
 | ... previous sprints ... |
 ```
 
+Also leave an explicit closure marker while the remote gate is unresolved:
+
+```markdown
+**Closure:** Ждём завершения CI для `sprint/NNN-slug`.
+```
+
+This marker is pipeline state, not a prose note. It must be committed in the sprint PR. Do not replace it
+with "closed", remove it, or start another sprint until the required CI checks and merge result are known.
+
 #### 4d. Commit, push the branch, open the PR
 
 The sprint ran on its own branch (`sprint/NNN-slug`, created by `/new-sprint`). Close it by opening a PR into `main` with auto-merge — CI is the gate, not a human.
@@ -148,14 +157,33 @@ git push -u origin "$branch"
 gh pr create --base main --head "$branch" \
   --title "sprint NNN: <goal summary>" \
   --body "<sprint summary + key metrics; note it was produced autonomously>"
-gh pr merge "$branch" --auto --squash --delete-branch
+gh pr merge "$branch" --auto --merge --delete-branch
 ```
 
 `--auto` lands the PR on `main` automatically once the required CI checks pass — no human approval (branch protection requires the checks, not a reviewer). If CI fails, the PR stays open and `main` is untouched: that is the gate doing its job. After this, return to a clean base for the next sprint: `git checkout main` (the merge lands on remote `main` asynchronously; the next `/new-sprint` fast-forwards local main).
 
 **Note:** Do NOT stage `.claude/skills/update-docs/state.json` here — it is committed by the `/update-docs` skill itself in step 4a.
 
-This is the only skill that pushes. The sprint is done once the auto-merge PR is open; the merge itself completes when CI is green.
+This is the only skill that pushes. Opening the auto-merge PR is not the end of the step.
+
+#### 4e. Monitor CI through merge
+
+After enabling auto-merge, start a monitor and keep working until every required check reaches a terminal state.
+Do not end the turn while checks are queued or in progress.
+
+Use `gh pr checks <number> --watch --interval 10` in a background process with output redirected to
+`/tmp/sprint-NNN-ci.log`, or an equivalent recurring monitor. Poll it at least once per minute and keep the
+user informed. Also inspect `gh pr view <number> --json state,mergedAt,mergeStateStatus,statusCheckRollup,url`;
+checks being green is insufficient if the PR did not merge.
+
+- If every required check succeeds, wait until the PR state is `MERGED`, then report closure. Leave the
+  `Closure` marker for the next `/go` reconciliation, which verifies the remote result independently and
+  clears the marker on `main`.
+- If any required check fails, is cancelled, or times out, stop the monitor and escalate to the operator with
+  the PR URL, failed check names, and log URLs. Do not claim the sprint is closed, do not remove the marker,
+  and do not start unrelated fixes without operator direction.
+- If auto-merge is disabled or the PR remains open after all checks succeed, escalate that merge-state problem
+  to the operator instead of finishing silently.
 
 ### 5. Report
 
@@ -164,5 +192,6 @@ Sprint NNN — <Title>: CLOSED
   Phases: N completed
   Tests: integration green, E2E green
   Docs: updated
-  Pushed to remote.
+  CI: all required checks green
+  PR: merged to main
 ```
