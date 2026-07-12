@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-07-12
 **Position:** Sprint 022 закрыл второй эпик simulation-core: player-agnostic якоря, сохраняемые wait/sleep/travel intent, по-рёберное путешествие и согласованный с round lifecycle save/load/autosave. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
-**Next:** Sprint 023 Phase 1 task 2 — контракты lifecycle и боя существ.
+**Next:** Sprint 023 Phase 2 — генерация задач (событийный write-back смертей логова).
 **Blockers:** нет.
 
 ## Current Sprint
@@ -12,9 +12,9 @@
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 1 — Типизированная таксономия событий (all tasks done, ready to close) — 2026-07-12
+**Phase:** 1 — Типизированная таксономия событий (COMPLETE) — 2026-07-12
 
-Ready to close Phase 1.
+Ready for Phase 2 task generation.
 
 ### Phases
 

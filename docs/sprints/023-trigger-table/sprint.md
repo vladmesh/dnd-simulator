@@ -16,7 +16,7 @@
 
 **Ссылки:** [simulation-core](../../brainstorms/simulation-core.md), [BACKLOG](../../BACKLOG.md#simulation-core-брейншторм-2026-07-04), [Sprint 022](../022-intents-travel/sprint.md)
 
-## Phase 1: Типизированная таксономия событий
+## Phase 1: Типизированная таксономия событий ✓
 
 События получают фиксированные типы и payload'ы (контракт вместо свободных dict'ов); существующие эмиссии переводятся на таксономию. Сюда же `encounter-spawned-perceiver`: событие встречи получает перцептор вместо мусорного фолбэка. Проверка: unit-тесты контрактов payload'ов, существующие integration зелёные, в логе игрока осмысленная строка вместо `Something happened (encounter_spawned)`.
 
@@ -66,7 +66,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 1 implementation complete. Ready for phase closure.
+**Current:** Phase 1 (Типизированная таксономия событий) CLOSED — 2026-07-12. Integration 160 green, E2E section 1 + typed-payload auto-scenarios 8/8. Ready for Phase 2 task generation.
 
 ## Decisions
 
