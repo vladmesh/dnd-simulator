@@ -64,13 +64,16 @@ Ecology подписывается на события смерти сущест
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Ручка ГМ для активности и триггеров](tasks/phase4-task1-gm-activation-api.md) — сохраняемый override, trigger state и master API под world gate
+2. [Минимальная панель активности ГМ](tasks/phase4-task2-gm-activation-panel.md) — live controls в существующем списке существ
+3. [Изоляция ошибок action от round loop](tasks/phase4-task3-action-error-containment.md) — failed `ActionResult` и WS-regression живой сессии
+4. [Контракт Dash без мёртвого перемещения](tasks/phase4-task4-dash-action-contract.md) — metadata соответствует budget-only механике
 
 ---
 
 ## Status
 
-**Current:** Phase 3 (Trigger table) complete, 2026-07-13. Ready for Phase 4 task generation.
+**Current:** Phase 4 (Ручка ГМ + failure containment), tasks generated 2026-07-13. Ready to start task 1.
 
 ## Decisions
 
