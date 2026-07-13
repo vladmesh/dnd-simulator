@@ -69,7 +69,7 @@ Ecology подписывается на события смерти сущест
 3. [Изоляция ошибок action от round loop](tasks/phase4-task3-action-error-containment.md) — failed `ActionResult` и WS-regression живой сессии
 4. [Контракт Dash без мёртвого перемещения](tasks/phase4-task4-dash-action-contract.md) — metadata соответствует budget-only механике
 
-## Phase 5: Post-audit refactor
+## Phase 5: Post-audit refactor ✓
 
 Audit 2026-07-13 не нашёл блокеров, но показал, что типизированный event-контракт после Phase 1 всё ещё живёт рядом с legacy dict-представлением, а `EntitiesLayer`, `perception.py`, `session.py` и `apiClient.ts` снова растут на той же событийной и control-plane поверхности. Закрываем этот долг сейчас, пока контекст триггеров свежий.
 
@@ -93,7 +93,7 @@ Audit 2026-07-13 не нашёл блокеров, но показал, что �
 
 ## Status
 
-**Current:** Phase 5 Task 4 complete; ready for phase closure. Phases 1-4 complete.
+**Current:** Phase 5 complete. All phases complete; ready for final audit.
 
 ## Decisions
 
