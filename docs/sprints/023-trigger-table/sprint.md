@@ -103,7 +103,7 @@ server-rendered live event log на RU и `COMBAT_ENDED` уходит в generic
 1. [Единая locale и typed COMBAT_ENDED в live WS](tasks/phase6-task1-live-ws-locale-combat-ended.md) — синхронизировать язык session/WS и убрать fallback завершения боя.
 2. [Не показывать stale saved sessions в Master](tasks/phase6-task2-stale-master-sessions.md) — оставить в Manage list только доступные live sessions.
 
-## Phase 7: Follow-up post-audit E2E locale
+## Phase 7: Follow-up post-audit E2E locale ✓
 
 Повторный post-audit E2E после Phase 6 нашёл один blocker: `action_result.error` создаётся в round
 thread до session-scoped locale context, поэтому failed action в EN session сохраняет process-default
@@ -123,7 +123,7 @@ RU перевод. Закрываем только эту propagation boundary, 
 
 ## Status
 
-**Current:** Phase 7 tasks generated. Ready to start task 1.
+**Current:** All phases complete. Ready for a follow-up audit after the Phase 7 locale fix.
 
 ## Decisions
 
