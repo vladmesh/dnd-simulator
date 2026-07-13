@@ -54,4 +54,11 @@ state: `build_player_status`, WS message types, `turnSlice.applyCommon`, `player
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+`level_up_available` already survived XP, transport, and REST-confirm paths. The regression was
+client-only: `combat_ended` cleared the local defer flag, so an unchanged pending snapshot reopened
+the dialog instead of leaving the manual control available. WS-driven Paladin L1 → L2 coverage now
+checks defer, manual reopen, Fighting Style confirmation, and removal of the pending control.

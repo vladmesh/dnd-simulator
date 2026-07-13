@@ -90,7 +90,7 @@ describe("PlayerStats — level-up integration", () => {
     expect(useGameStore.getState().levelUpDismissed).toBe(true)
   })
 
-  it("combat_ended event clears dismiss flag and auto-reopens the modal", async () => {
+  it("keeps a deferred modal closed when the next round includes combat_ended", async () => {
     useGameStore.setState({
       player: makePlayer({ level_up_available: true }),
       levelUpDismissed: true,
@@ -117,8 +117,9 @@ describe("PlayerStats — level-up integration", () => {
       } as unknown as RoundResultMessage)
     })
 
-    expect(useGameStore.getState().levelUpDismissed).toBe(false)
-    expect(screen.getByTestId("level-up-modal")).toBeInTheDocument()
+    expect(useGameStore.getState().levelUpDismissed).toBe(true)
+    expect(screen.queryByTestId("level-up-modal")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /level up/i })).toBeInTheDocument()
   })
 
   it("clicking level-up button after manual close reopens the modal", async () => {
@@ -136,6 +137,80 @@ describe("PlayerStats — level-up integration", () => {
 
     await user.click(screen.getByRole("button", { name: /level up/i }))
     expect(screen.getByTestId("level-up-modal")).toBeInTheDocument()
+  })
+
+  it("keeps Paladin L1 pending through WS snapshots until the manual L2 confirm", async () => {
+    const pending = makePlayer({
+      char_class: "paladin",
+      experience: 300,
+      level_up_available: true,
+    })
+    const leveled = makePlayer({
+      char_class: "paladin",
+      level: 2,
+      experience: 300,
+      level_up_available: false,
+      resource_pools: [{ id: "paladin_spell_slots", max_uses: 2, current_uses: 2 }],
+    })
+    levelUpMock.mockResolvedValueOnce(leveled)
+    useGameStore.setState({ player: makePlayer({ char_class: "paladin" }) })
+    render(<PlayerStats />)
+
+    act(() => {
+      useGameStore.getState().onActionResult({
+        type: "action_result",
+        player: pending,
+        mode: "peaceful",
+        awareness: {
+          hour: 12,
+          day: 1,
+          month: 1,
+          year: 1000,
+          location_id: "town",
+          nearby: [],
+          turn_budget: null,
+        },
+        location: null,
+        events: [],
+      } as unknown as RoundResultMessage)
+    })
+    expect(screen.getByTestId("level-up-modal")).toBeInTheDocument()
+
+    const user = userEvent.setup()
+    await user.keyboard("{Escape}")
+    act(() => {
+      useGameStore.getState().onRoundResult({
+        type: "round_result",
+        player: pending,
+        mode: "peaceful",
+        awareness: {
+          hour: 12,
+          day: 1,
+          month: 1,
+          year: 1000,
+          location_id: "town",
+          nearby: [],
+          turn_budget: null,
+        },
+        location: null,
+        events: [{ description: "Combat ended", event_type: "combat_ended" }],
+      } as unknown as RoundResultMessage)
+    })
+    expect(screen.queryByTestId("level-up-modal")).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: /level up/i }))
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /fighting style/i }),
+      "dueling",
+    )
+    await user.click(screen.getByRole("button", { name: /^ok$/i }))
+
+    await vi.waitFor(() => {
+      expect(levelUpMock).toHaveBeenCalledWith("s1", { fighting_style: "dueling" })
+    })
+    expect(useGameStore.getState().player).toEqual(leveled)
+    expect(screen.queryByRole("button", { name: /level up/i })).not.toBeInTheDocument()
+    expect(screen.queryByTestId("level-up-modal")).not.toBeInTheDocument()
   })
 
   it("on successful level-up: store reflects new player, modal closes, button hidden", async () => {

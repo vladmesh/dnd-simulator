@@ -88,12 +88,6 @@ export const createTurnSlice: StateCreator<
   [],
   TurnSlice
 > = (set, get) => {
-  const clearDismissIfCombatEnded = (events: PerceivedEvent[]) => {
-    if (events.some((e) => e.event_type === "combat_ended")) {
-      get().setLevelUpDismissed(false)
-    }
-  }
-
   // Shared handling for turn/action/round messages: player + events + the
   // mode/awareness/location/gameTime block. `extra` carries per-message fields.
   const applyCommon = (
@@ -103,7 +97,6 @@ export const createTurnSlice: StateCreator<
   ) => {
     get().updatePlayer(msg.player)
     get().appendEvents(events)
-    clearDismissIfCombatEnded(events)
     const updates: Partial<TurnSlice> = {
       mode: msg.mode,
       awareness: msg.awareness,
