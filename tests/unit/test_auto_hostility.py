@@ -8,6 +8,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from dnd_simulator.core.character import Ability, Attack, Creature, DamageComponent, DamageType
+from dnd_simulator.core.events import AttackRequestedPayload
 from dnd_simulator.core.models import Event, EventType, FactionRelation, Query, QueryType
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.layers.entities.combat_manager import CombatManager
@@ -78,7 +79,6 @@ def _make_combat_manager(*creatures: Creature) -> CombatManager:
 
 
 def _attack_event(attacker_id: str, target_id: str) -> Event:
-    from dnd_simulator.core.events import AttackRequestedPayload
 
     return Event(
         event_type=EventType.ENTITY_ATTACK_REQUESTED,

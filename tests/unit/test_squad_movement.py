@@ -352,6 +352,6 @@ class TestMovementEvents:
 
         move_events = [e for e in events if e.event_type is EventType.SQUAD_MOVE]
         assert len(move_events) == 1
-        assert move_events[0].data["squad_id"] == "patrol_1"
-        assert move_events[0].data["from"] == "A"
-        assert move_events[0].data["to"] == "B"
+        assert move_events[0].data.squad_id == "patrol_1"
+        assert move_events[0].data.from_location_id == "A"
+        assert move_events[0].data.to_location_id == "B"

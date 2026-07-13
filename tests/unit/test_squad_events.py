@@ -16,6 +16,12 @@ from dnd_simulator.core.character import (
     DamageType,
     Race,
 )
+from dnd_simulator.core.events import (
+    SquadCombatPayload,
+    SquadDematerializedPayload,
+    SquadMaterializedPayload,
+    SquadMovePayload,
+)
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.core.monster import MonsterTemplate
 from dnd_simulator.core.queries import SquadInfo
@@ -51,12 +57,14 @@ def _make_squad_move_event(squad_name: str, from_loc: str, to_loc: str) -> Event
     return Event(
         event_type=EventType.SQUAD_MOVE,
         source_layer="ecology",
-        data={
-            "squad_id": "orc_patrol",
-            "squad_name": squad_name,
-            "from": from_loc,
-            "to": to_loc,
-        },
+        data=SquadMovePayload(
+            **{
+                "squad_id": "orc_patrol",
+                "squad_name": squad_name,
+                "from": from_loc,
+                "to": to_loc,
+            }
+        ),
         description=f"{squad_name} moved from {from_loc} to {to_loc}",
     )
 
@@ -70,15 +78,17 @@ def _make_squad_combat_event(
     return Event(
         event_type=EventType.SQUAD_COMBAT,
         source_layer="ecology",
-        data={
-            "location_id": location,
-            "winner_id": "guards",
-            "winner_name": winner_name,
-            "loser_id": "wolves",
-            "loser_name": loser_name,
-            "winner_strength": 12,
-            "loser_strength": loser_strength,
-        },
+        data=SquadCombatPayload(
+            **{
+                "location_id": location,
+                "winner_id": "guards",
+                "winner_name": winner_name,
+                "loser_id": "wolves",
+                "loser_name": loser_name,
+                "winner_strength": 12,
+                "loser_strength": loser_strength,
+            }
+        ),
         description=f"{winner_name} defeated {loser_name}",
     )
 
@@ -209,12 +219,14 @@ class TestSquadDematerializationPerception:
         event = Event(
             event_type=EventType.SQUAD_DEMATERIALIZED,
             source_layer="entities",
-            data={
-                "squad_id": "orc_patrol",
-                "squad_name": "Orc Patrol",
-                "location_id": "forest_road",
-                "new_strength": 3,
-            },
+            data=SquadDematerializedPayload(
+                **{
+                    "squad_id": "orc_patrol",
+                    "squad_name": "Orc Patrol",
+                    "location_id": "forest_road",
+                    "new_strength": 3,
+                }
+            ),
             description="Squad orc_patrol dematerialized",
         )
         layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
@@ -246,12 +258,14 @@ class TestPerceiveSquadEvents:
         event = Event(
             event_type=EventType.SQUAD_MATERIALIZED,
             source_layer="entities",
-            data={
-                "squad_id": "orc_patrol",
-                "squad_name": "Orc Patrol",
-                "location_id": "forest_road",
-                "creature_count": 3,
-            },
+            data=SquadMaterializedPayload(
+                **{
+                    "squad_id": "orc_patrol",
+                    "squad_name": "Orc Patrol",
+                    "location_id": "forest_road",
+                    "creature_count": 3,
+                }
+            ),
             description="Squad materialized",
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
@@ -262,12 +276,14 @@ class TestPerceiveSquadEvents:
         event = Event(
             event_type=EventType.SQUAD_DEMATERIALIZED,
             source_layer="entities",
-            data={
-                "squad_id": "orc_patrol",
-                "squad_name": "Orc Patrol",
-                "location_id": "forest_road",
-                "new_strength": 3,
-            },
+            data=SquadDematerializedPayload(
+                **{
+                    "squad_id": "orc_patrol",
+                    "squad_name": "Orc Patrol",
+                    "location_id": "forest_road",
+                    "new_strength": 3,
+                }
+            ),
             description="Squad dematerialized",
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))

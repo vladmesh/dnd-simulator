@@ -61,7 +61,7 @@ class TestProcessWars:
         # With 80 vs 40 military, alpha should win and conquer
         conquest_events = [e for e in events if e.data.get("type") == "region_conquered"]
         assert len(conquest_events) == 1
-        assert conquest_events[0].data["winner"] == "alpha"
+        assert conquest_events[0].data.winner == "alpha"
 
     def test_war_costs_applied(self) -> None:
         """Both winner and loser lose military. Loser also loses stability."""

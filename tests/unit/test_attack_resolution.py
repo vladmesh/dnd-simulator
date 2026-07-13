@@ -11,6 +11,7 @@ from dnd_simulator.core.character import (
     DamageType,
 )
 from dnd_simulator.core.combat import Position
+from dnd_simulator.core.events import AttackRequestedPayload
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 
@@ -33,9 +34,9 @@ def _sword() -> Attack:
 
 def _attack_event(attacker_id: str = "attacker", target_id: str = "target") -> Event:
     return Event(
-        event_type=EventType.ENTITY_ATTACK,
+        event_type=EventType.ENTITY_ATTACK_REQUESTED,
         source_layer="entities",
-        data={"attacker_id": attacker_id, "target_id": target_id},
+        data=AttackRequestedPayload(**{"attacker_id": attacker_id, "target_id": target_id}),
     )
 
 
@@ -105,7 +106,7 @@ class TestAttackResolution:
 
         death_events = [e for e in result.events if e.event_type == EventType.ENTITY_DIED]
         assert len(death_events) == 1
-        assert death_events[0].data["entity_id"] == "target"
+        assert death_events[0].data.entity_id == "target"
         assert target.is_alive is False
 
     def test_unarmed_strike_when_no_weapons(self) -> None:

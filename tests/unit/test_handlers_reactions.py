@@ -55,9 +55,9 @@ class TestHandleOpportunityAttack:
 
         attack_events = [e for e in events if e.event_type == EventType.ENTITY_ATTACK_REQUESTED]
         assert len(attack_events) == 1
-        assert attack_events[0].data["attacker_id"] == "guard"
-        assert attack_events[0].data["target_id"] == "goblin"
-        assert attack_events[0].data["is_opportunity_attack"] is True
+        assert attack_events[0].data.attacker_id == "guard"
+        assert attack_events[0].data.target_id == "goblin"
+        assert attack_events[0].data.is_opportunity_attack is True
 
     def test_emits_opportunity_attack_log_event(self) -> None:
         """OA emits a separate OPPORTUNITY_ATTACK event for combat log."""
@@ -75,8 +75,8 @@ class TestHandleOpportunityAttack:
 
         oa_events = [e for e in events if e.event_type == EventType.OPPORTUNITY_ATTACK]
         assert len(oa_events) == 1
-        assert oa_events[0].data["attacker_id"] == "guard"
-        assert oa_events[0].data["target_id"] == "goblin"
+        assert oa_events[0].data.attacker_id == "guard"
+        assert oa_events[0].data.target_id == "goblin"
 
     def test_returns_result_from_attack_event(self) -> None:
         """Handler returns the ActionResult from the ENTITY_ATTACK emit."""
@@ -112,7 +112,7 @@ class TestHandleOpportunityAttack:
         handle_opportunity_attack(actor, action, emit_fn, ctx, world)
 
         attack_events = [e for e in events if e.event_type == EventType.ENTITY_ATTACK_REQUESTED]
-        assert attack_events[0].data["target_id"] == "specific_target"
+        assert attack_events[0].data.target_id == "specific_target"
 
     def test_source_layer_is_entities(self) -> None:
         """Both events have source_layer='entities'."""

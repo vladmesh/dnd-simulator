@@ -16,6 +16,7 @@ from dnd_simulator.core.character import (
 from dnd_simulator.core.class_features import RogueFeatures
 from dnd_simulator.core.combat import BattleMap, Position
 from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.events import AttackRequestedPayload
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, FactionRelation, Query, QueryType
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -64,9 +65,9 @@ def _scores(**overrides: int) -> AbilityScores:
 
 def _attack_event(attacker_id: str = "rogue", target_id: str = "target") -> Event:
     return Event(
-        event_type=EventType.ENTITY_ATTACK,
+        event_type=EventType.ENTITY_ATTACK_REQUESTED,
         source_layer="entities",
-        data={"attacker_id": attacker_id, "target_id": target_id},
+        data=AttackRequestedPayload(**{"attacker_id": attacker_id, "target_id": target_id}),
     )
 
 
@@ -115,10 +116,10 @@ class TestSneakAttackWithAllyAdjacency:
             result = layer.handle_event(_attack_event(), _faction_query_fn, _noop_emit_fn)
             if result.success:
                 log = layer._location_log["arena"]
-                attack_events = [e for e in log if e.event_type == EventType.ENTITY_ATTACK and e.data.get("hit")]
+                attack_events = [e for e in log if e.event_type == EventType.ENTITY_ATTACK and e.data.hit]
                 for ae in attack_events:
-                    damage_components = ae.data.get("damage_components", [])
-                    if any(dc.get("source") == "sneak_attack" for dc in damage_components):
+                    damage_components = ae.data.damage_components
+                    if any(dc.source == "sneak_attack" for dc in damage_components):
                         found_sneak = True
                         break
                 if found_sneak:
@@ -155,11 +156,9 @@ class TestAttackWithBlessDiceBonus:
             log = layer._location_log["arena"]
             for ev in log:
                 if ev.event_type == EventType.ENTITY_ATTACK:
-                    roll_data = ev.data.get("attack_roll")
-                    if roll_data is not None:
-                        for component in roll_data.components:
-                            if component.source == "blessed" and component.dice == "1d4":
-                                found_bless = True
+                    for component in ev.data.attack_roll.components:
+                        if component.source == "blessed" and component.dice == "1d4":
+                            found_bless = True
             if found_bless:
                 break
 

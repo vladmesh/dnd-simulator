@@ -18,6 +18,7 @@ from dnd_simulator.core.character import (
 )
 from dnd_simulator.core.class_features import RogueFeatures
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
+from dnd_simulator.core.events import AttackRequestedPayload
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, FactionRelation, Query, QueryType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 
@@ -250,9 +251,9 @@ class TestSneakAttackAllyUsesSides:
             random.seed(seed)
             layer._combat._sneak_attack_used.clear()
             event = Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="entities",
-                data={"attacker_id": "rogue", "target_id": "goblin"},
+                data=AttackRequestedPayload(**{"attacker_id": "rogue", "target_id": "goblin"}),
             )
             layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
 
@@ -319,9 +320,9 @@ class TestSneakAttackAllyUsesSides:
             layer._combat._sneak_attack_used.clear()
             layer._combat._location_log["arena"].clear()
             event = Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="entities",
-                data={"attacker_id": "rogue", "target_id": "goblin"},
+                data=AttackRequestedPayload(**{"attacker_id": "rogue", "target_id": "goblin"}),
             )
             layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
 

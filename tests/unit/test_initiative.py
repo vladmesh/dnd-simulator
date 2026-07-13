@@ -14,6 +14,7 @@ from dnd_simulator.core.character import (
     DamageType,
 )
 from dnd_simulator.core.combat import CombatState
+from dnd_simulator.core.events import ActionFlavorPayload, AttackRequestedPayload
 from dnd_simulator.core.location import Location, LocationGraph
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query, QueryType
 from dnd_simulator.core.world import World
@@ -126,9 +127,9 @@ class TestEntitiesLayerCombat:
     def test_first_attack_creates_combat(self) -> None:
         layer, _c1, _c2, _c3 = self._make_layer()
         event = Event(
-            event_type=EventType.ENTITY_ATTACK,
+            event_type=EventType.ENTITY_ATTACK_REQUESTED,
             source_layer="entities",
-            data={"attacker_id": "c1", "target_id": "c2"},
+            data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
         )
         layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
 
@@ -140,9 +141,9 @@ class TestEntitiesLayerCombat:
     def test_all_in_region_marked_in_combat(self) -> None:
         layer, c1, c2, c3 = self._make_layer()
         event = Event(
-            event_type=EventType.ENTITY_ATTACK,
+            event_type=EventType.ENTITY_ATTACK_REQUESTED,
             source_layer="entities",
-            data={"attacker_id": "c1", "target_id": "c2"},
+            data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
         )
         layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
 
@@ -158,9 +159,9 @@ class TestEntitiesLayerCombat:
         layer = EntitiesLayer([c1, c2, c3])
 
         atk = Event(
-            event_type=EventType.ENTITY_ATTACK,
+            event_type=EventType.ENTITY_ATTACK_REQUESTED,
             source_layer="entities",
-            data={"attacker_id": "c1", "target_id": "c2"},
+            data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
         )
         layer.handle_event(atk, _noop_query_fn, _noop_emit_fn)
         first_order = list(layer.get_combat("r1").turn_order)
@@ -175,9 +176,9 @@ class TestEntitiesLayerCombat:
         layer.add_entity(c_other)
 
         event = Event(
-            event_type=EventType.ENTITY_ATTACK,
+            event_type=EventType.ENTITY_ATTACK_REQUESTED,
             source_layer="entities",
-            data={"attacker_id": "c1", "target_id": "c2"},
+            data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
         )
         layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         assert c_other.in_combat is False
@@ -188,9 +189,9 @@ class TestEntitiesLayerCombat:
         # Start combat
         layer.handle_event(
             Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="entities",
-                data={"attacker_id": "c1", "target_id": "c2"},
+                data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -205,9 +206,9 @@ class TestEntitiesLayerCombat:
         # Start combat with attack
         layer.handle_event(
             Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="entities",
-                data={"attacker_id": "c1", "target_id": "c2"},
+                data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -233,9 +234,9 @@ class TestEntitiesLayerCombat:
         # Start combat
         layer.handle_event(
             Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="entities",
-                data={"attacker_id": "c1", "target_id": "c2"},
+                data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -249,9 +250,9 @@ class TestEntitiesLayerCombat:
         # Round 3: attack happens!
         layer.handle_event(
             Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="entities",
-                data={"attacker_id": "c1", "target_id": "c2"},
+                data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -275,9 +276,9 @@ class TestFleeRemovesFromCombat:
         # Start combat
         layer.handle_event(
             Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="entities",
-                data={"attacker_id": "c1", "target_id": "c2"},
+                data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -289,7 +290,7 @@ class TestFleeRemovesFromCombat:
             Event(
                 event_type=EventType.ENTITY_FLEE,
                 source_layer="entities",
-                data={"entity_id": "c3"},
+                data=ActionFlavorPayload(**{"entity_id": "c3"}),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -307,9 +308,9 @@ class TestFleeRemovesFromCombat:
         # Start combat
         layer.handle_event(
             Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="entities",
-                data={"attacker_id": "c1", "target_id": "c2"},
+                data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -320,7 +321,7 @@ class TestFleeRemovesFromCombat:
             Event(
                 event_type=EventType.ENTITY_FLEE,
                 source_layer="entities",
-                data={"entity_id": "c2"},
+                data=ActionFlavorPayload(**{"entity_id": "c2"}),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -349,9 +350,9 @@ class TestDeathRemovesFromCombat:
         # Attack c2 (HP=1, AC=1 → almost guaranteed kill)
         layer.handle_event(
             Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="entities",
-                data={"attacker_id": "c1", "target_id": "c2"},
+                data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -378,9 +379,9 @@ class TestDeathRemovesFromCombat:
 
         layer.handle_event(
             Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="entities",
-                data={"attacker_id": "c1", "target_id": "c2"},
+                data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -400,9 +401,9 @@ class TestCombatInfoQuery:
 
         layer.handle_event(
             Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="entities",
-                data={"attacker_id": "c1", "target_id": "c2"},
+                data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
             ),
             _noop_query_fn,
             _noop_emit_fn,

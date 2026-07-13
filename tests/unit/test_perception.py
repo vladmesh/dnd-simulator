@@ -6,8 +6,29 @@ import pytest
 
 import dnd_simulator.layers.entities.perception as perception_mod
 from dnd_simulator.core.character import Ability, Attack, Character, DamageComponent, DamageType, Entity, Race
-from dnd_simulator.core.events import WeatherChangedPayload
-from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
+from dnd_simulator.core.events import (
+    EVENT_PAYLOAD_TYPES,
+    AttackRequestedPayload,
+    AttackResolvedPayload,
+    AttackRollPayload,
+    DamageComponentPayload,
+    EncounterSpawnedPayload,
+    EntityActorPayload,
+    EntityDiedPayload,
+    EntityLayOnHandsPayload,
+    EntitySayPayload,
+    EntityUseItemPayload,
+    EquipmentPayload,
+    InspectPayload,
+    ReputationChangedPayload,
+    RollComponentPayload,
+    RoundStartPayload,
+    SquadDematerializedPayload,
+    TakePayload,
+    WeatherChangedPayload,
+)
+from dnd_simulator.core.models import ActionResult, Answer, EventType, Query
+from dnd_simulator.core.models import Event as RuntimeEvent
 from dnd_simulator.i18n import set_language
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.perception import perceive_event
@@ -31,6 +52,82 @@ def _get_entity_fn(*entities: Entity):
     return lambda eid: by_id.get(eid)
 
 
+def _event(event_type: EventType, **fields: object) -> RuntimeEvent:
+    """Build test events through the registered typed payload class."""
+    payload_type = EVENT_PAYLOAD_TYPES[event_type]
+    return RuntimeEvent(event_type, "entities", payload_type(**fields))  # type: ignore[operator,call-arg]
+
+
+def _attack_payload(**overrides: object) -> AttackResolvedPayload:
+    fields: dict[str, object] = {
+        "attacker_id": "player",
+        "target_id": "npc",
+        "weapon": "Longsword",
+        "hit": True,
+        "critical": False,
+        "ac": 13,
+        "attack_roll": AttackRollPayload(14, (RollComponentPayload("ability", 3),), 17, False, False),
+        "damage": 8,
+        "damage_components": (
+            DamageComponentPayload("weapon", "1d8", (), 5, "slashing"),
+            DamageComponentPayload("ability", "", (), 3, "slashing"),
+        ),
+    }
+    fields.update(overrides)
+    return AttackResolvedPayload(**fields)  # type: ignore[arg-type]
+
+
+def Event(  # noqa: N802
+    event_type: EventType,
+    source_layer: str,
+    data: object,
+    description: str = "",
+    observer_ids: frozenset[str] | None = None,
+) -> RuntimeEvent:
+    """Create typed test events while preserving concise test setup."""
+    if isinstance(data, dict):
+        if event_type is EventType.ENTITY_ATTACK:
+            roll = data.get("attack_roll", {})
+            assert isinstance(roll, dict)
+            components = tuple(
+                RollComponentPayload(str(item["source"]), int(item["value"]), str(item.get("dice", "")))
+                for item in roll.get("components", [])
+                if isinstance(item, dict)
+            )
+            damage = tuple(
+                DamageComponentPayload(
+                    str(item["source"]),
+                    str(item["dice"]),
+                    tuple(item.get("dice_detail", [])),
+                    int(item["amount"]),
+                    str(item["type"]),
+                )
+                for item in data.get("damage_components", [])
+                if isinstance(item, dict)
+            )
+            data = AttackResolvedPayload(
+                attacker_id=str(data["attacker_id"]),
+                target_id=str(data["target_id"]),
+                hit=bool(data["hit"]),
+                weapon=str(data["weapon"]),
+                critical=bool(data["critical"]),
+                ac=int(data["ac"]),
+                attack_roll=AttackRollPayload(
+                    int(roll["natural"]),
+                    components,
+                    int(roll["total"]),
+                    bool(roll["advantage"]),
+                    bool(roll["disadvantage"]),
+                ),
+                damage=int(data["damage"]) if data.get("damage") is not None else None,
+                damage_components=damage,
+                is_opportunity_attack=bool(data.get("is_opportunity_attack", False)),
+            )
+        else:
+            data = EVENT_PAYLOAD_TYPES[event_type](**data)  # type: ignore[operator,call-arg]
+    return RuntimeEvent(event_type, source_layer, data, description, observer_ids)  # type: ignore[arg-type]
+
+
 class TestPerceiveEvent:
     def test_say_from_other(self) -> None:
         observer = Character(id="guard", name="Guard", location_id="r1")
@@ -38,7 +135,7 @@ class TestPerceiveEvent:
         event = Event(
             event_type=EventType.ENTITY_SAY,
             source_layer="entities",
-            data={"entity_id": "smith", "text": "Добро пожаловать!"},
+            data=EntitySayPayload(entity_id="smith", text="Добро пожаловать!"),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, speaker))
         assert "says" in result
@@ -50,7 +147,9 @@ class TestPerceiveEvent:
         event = Event(
             event_type=EventType.ENTITY_SAY,
             source_layer="entities",
-            data={"entity_id": "smith", "text": "Привет!"},
+            data=EntitySayPayload(
+                **{"entity_id": "smith", "text": "Привет!"},
+            ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
         assert "You say" in result
@@ -61,25 +160,27 @@ class TestPerceiveEvent:
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data={
-                "attacker_id": "player",
-                "target_id": "smith",
-                "weapon": "longsword",
-                "hit": True,
-                "critical": False,
-                "ac": 13,
-                "attack_roll": {
-                    "natural": 14,
-                    "components": [{"source": "ability", "value": 3, "dice": ""}],
-                    "total": 17,
-                    "advantage": False,
-                    "disadvantage": False,
-                },
-                "damage": 5,
-                "damage_components": [
-                    {"source": "weapon", "dice": "1d8", "amount": 5, "type": "slashing"},
-                ],
-            },
+            data=AttackResolvedPayload(
+                **{
+                    "attacker_id": "player",
+                    "target_id": "smith",
+                    "weapon": "longsword",
+                    "hit": True,
+                    "critical": False,
+                    "ac": 13,
+                    "attack_roll": {
+                        "natural": 14,
+                        "components": [{"source": "ability", "value": 3, "dice": ""}],
+                        "total": 17,
+                        "advantage": False,
+                        "disadvantage": False,
+                    },
+                    "damage": 5,
+                    "damage_components": [
+                        {"source": "weapon", "dice": "1d8", "amount": 5, "type": "slashing"},
+                    ],
+                }
+            ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, attacker))
         assert "attacks you" in result
@@ -92,21 +193,23 @@ class TestPerceiveEvent:
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data={
-                "attacker_id": "player",
-                "target_id": "smith",
-                "weapon": "longsword",
-                "hit": False,
-                "critical": False,
-                "ac": 15,
-                "attack_roll": {
-                    "natural": 8,
-                    "components": [{"source": "ability", "value": 3, "dice": ""}],
-                    "total": 11,
-                    "advantage": False,
-                    "disadvantage": False,
-                },
-            },
+            data=AttackResolvedPayload(
+                **{
+                    "attacker_id": "player",
+                    "target_id": "smith",
+                    "weapon": "longsword",
+                    "hit": False,
+                    "critical": False,
+                    "ac": 15,
+                    "attack_roll": {
+                        "natural": 8,
+                        "components": [{"source": "ability", "value": 3, "dice": ""}],
+                        "total": 11,
+                        "advantage": False,
+                        "disadvantage": False,
+                    },
+                }
+            ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, target))
         assert "You attack" in result
@@ -119,25 +222,27 @@ class TestPerceiveEvent:
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data={
-                "attacker_id": "player",
-                "target_id": "smith",
-                "weapon": "",
-                "hit": True,
-                "critical": False,
-                "ac": 10,
-                "attack_roll": {
-                    "natural": 15,
-                    "components": [],
-                    "total": 15,
-                    "advantage": False,
-                    "disadvantage": False,
-                },
-                "damage": 3,
-                "damage_components": [
-                    {"source": "weapon", "dice": "1d4", "amount": 3, "type": "bludgeoning"},
-                ],
-            },
+            data=AttackResolvedPayload(
+                **{
+                    "attacker_id": "player",
+                    "target_id": "smith",
+                    "weapon": "",
+                    "hit": True,
+                    "critical": False,
+                    "ac": 10,
+                    "attack_roll": {
+                        "natural": 15,
+                        "components": [],
+                        "total": 15,
+                        "advantage": False,
+                        "disadvantage": False,
+                    },
+                    "damage": 3,
+                    "damage_components": [
+                        {"source": "weapon", "dice": "1d4", "amount": 3, "type": "bludgeoning"},
+                    ],
+                }
+            ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, attacker, target))
         assert "elf" in result
@@ -150,7 +255,7 @@ class TestPerceiveEvent:
         event = Event(
             event_type=EventType.ENTITY_DIED,
             source_layer="entities",
-            data={"entity_id": "smith"},
+            data=EntityDiedPayload(**{"entity_id": "smith"}),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, victim))
         assert "dies" in result
@@ -161,7 +266,7 @@ class TestPerceiveEvent:
         event = Event(
             event_type=EventType.ENTITY_DIED,
             source_layer="entities",
-            data={"entity_id": "smith"},
+            data=EntityDiedPayload(**{"entity_id": "smith"}),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
         assert "You die" in result
@@ -181,7 +286,9 @@ class TestPerceiveEvent:
         event = Event(
             event_type=EventType.ENTITY_SAY,
             source_layer="entities",
-            data={"entity_id": "unknown_npc", "text": "Бу!"},
+            data=EntitySayPayload(
+                **{"entity_id": "unknown_npc", "text": "Бу!"},
+            ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
         assert "someone" in result
@@ -195,7 +302,9 @@ class TestRegionLog:
         event = Event(
             event_type=EventType.ENTITY_SAY,
             source_layer="entities",
-            data={"entity_id": "smith", "text": "Привет!"},
+            data=EntitySayPayload(
+                **{"entity_id": "smith", "text": "Привет!"},
+            ),
         )
         layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         log = layer.get_perceived_log(smith)
@@ -209,7 +318,9 @@ class TestRegionLog:
         event = Event(
             event_type=EventType.ENTITY_SAY,
             source_layer="entities",
-            data={"entity_id": "smith", "text": "Привет!"},
+            data=EntitySayPayload(
+                **{"entity_id": "smith", "text": "Привет!"},
+            ),
         )
         layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         assert len(layer.get_perceived_log(smith)) == 1
@@ -224,7 +335,9 @@ class TestRegionLog:
             Event(
                 event_type=EventType.ENTITY_SAY,
                 source_layer="entities",
-                data={"entity_id": "player", "text": "Первое!"},
+                data=EntitySayPayload(
+                    **{"entity_id": "player", "text": "Первое!"},
+                ),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -241,7 +354,9 @@ class TestRegionLog:
             Event(
                 event_type=EventType.ENTITY_SAY,
                 source_layer="entities",
-                data={"entity_id": "player", "text": "Второе!"},
+                data=EntitySayPayload(
+                    **{"entity_id": "player", "text": "Второе!"},
+                ),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -281,7 +396,9 @@ class TestRegionLog:
             Event(
                 event_type=EventType.ENTITY_SAY,
                 source_layer="entities",
-                data={"entity_id": "player", "text": "Готовься!"},
+                data=EntitySayPayload(
+                    **{"entity_id": "player", "text": "Готовься!"},
+                ),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -289,9 +406,9 @@ class TestRegionLog:
         # First attack starts combat — place in melee range, then attack again
         layer.handle_event(
             Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="entities",
-                data={"attacker_id": "player", "target_id": "smith"},
+                data=AttackRequestedPayload(**{"attacker_id": "player", "target_id": "smith"}),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -302,9 +419,9 @@ class TestRegionLog:
         combat.battle_map.set_position("smith", Position(35, 30))
         layer.handle_event(
             Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="entities",
-                data={"attacker_id": "player", "target_id": "smith"},
+                data=AttackRequestedPayload(**{"attacker_id": "player", "target_id": "smith"}),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -409,7 +526,7 @@ class TestCombatLogI18n:
         event = Event(
             event_type=EventType.ENTITY_USE_ITEM,
             source_layer="entities",
-            data={"entity_id": "player", "item_name": "Health Potion", "healed": 8},
+            data=EntityUseItemPayload(**{"entity_id": "player", "item_name": "Health Potion", "healed": 8}),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, user))
         assert "[T]Health Potion" in result
@@ -422,26 +539,28 @@ class TestCombatLogI18n:
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data={
-                "attacker_id": "orc",
-                "target_id": "player",
-                "weapon": "Greataxe",
-                "hit": True,
-                "critical": False,
-                "ac": 15,
-                "attack_roll": {
-                    "natural": 16,
-                    "components": [{"source": "ability", "value": 3, "dice": ""}],
-                    "total": 19,
-                    "advantage": False,
-                    "disadvantage": False,
-                },
-                "damage": 10,
-                "damage_components": [
-                    {"source": "weapon", "dice": "1d12", "amount": 10, "type": "slashing"},
-                ],
-                "is_opportunity_attack": True,
-            },
+            data=AttackResolvedPayload(
+                **{
+                    "attacker_id": "orc",
+                    "target_id": "player",
+                    "weapon": "Greataxe",
+                    "hit": True,
+                    "critical": False,
+                    "ac": 15,
+                    "attack_roll": {
+                        "natural": 16,
+                        "components": [{"source": "ability", "value": 3, "dice": ""}],
+                        "total": 19,
+                        "advantage": False,
+                        "disadvantage": False,
+                    },
+                    "damage": 10,
+                    "damage_components": [
+                        {"source": "weapon", "dice": "1d12", "amount": 10, "type": "slashing"},
+                    ],
+                    "is_opportunity_attack": True,
+                }
+            ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, attacker, target))
         assert "opportunity attack" in result.lower()
@@ -456,25 +575,27 @@ class TestCombatLogI18n:
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data={
-                "attacker_id": "orc",
-                "target_id": "player",
-                "weapon": "Greataxe",
-                "hit": True,
-                "critical": False,
-                "ac": 15,
-                "attack_roll": {
-                    "natural": 16,
-                    "components": [{"source": "ability", "value": 3, "dice": ""}],
-                    "total": 19,
-                    "advantage": False,
-                    "disadvantage": False,
-                },
-                "damage": 10,
-                "damage_components": [
-                    {"source": "weapon", "dice": "1d12", "amount": 10, "type": "slashing"},
-                ],
-            },
+            data=AttackResolvedPayload(
+                **{
+                    "attacker_id": "orc",
+                    "target_id": "player",
+                    "weapon": "Greataxe",
+                    "hit": True,
+                    "critical": False,
+                    "ac": 15,
+                    "attack_roll": {
+                        "natural": 16,
+                        "components": [{"source": "ability", "value": 3, "dice": ""}],
+                        "total": 19,
+                        "advantage": False,
+                        "disadvantage": False,
+                    },
+                    "damage": 10,
+                    "damage_components": [
+                        {"source": "weapon", "dice": "1d12", "amount": 10, "type": "slashing"},
+                    ],
+                }
+            ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, attacker, target))
         assert "opportunity attack" not in result.lower()
@@ -486,7 +607,7 @@ class TestCombatLogI18n:
         event = Event(
             event_type=EventType.ENTITY_DISENGAGE,
             source_layer="entities",
-            data={"entity_id": "rogue"},
+            data=EntityActorPayload(**{"entity_id": "rogue"}),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, actor))
         assert "disengage" in result.lower()
@@ -498,7 +619,7 @@ class TestCombatLogI18n:
         event = Event(
             event_type=EventType.ENTITY_DISENGAGE,
             source_layer="entities",
-            data={"entity_id": "rogue"},
+            data=EntityActorPayload(**{"entity_id": "rogue"}),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
         assert "you" in result.lower()
@@ -512,7 +633,7 @@ class TestCombatLogI18n:
         event = Event(
             event_type=EventType.ENTITY_EQUIP,
             source_layer="entities",
-            data={"entity_id": "player", "item_name": "Dagger"},
+            data=EquipmentPayload(**{"entity_id": "player", "item_name": "Dagger"}),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, equipper))
         assert "[T]Dagger" in result
@@ -529,7 +650,7 @@ class TestPerceptionDispatchAndFailFast:
         disengage = Event(
             event_type=EventType.ENTITY_DISENGAGE,
             source_layer="entities",
-            data={"entity_id": "rogue"},
+            data=EntityActorPayload(**{"entity_id": "rogue"}),
         )
         result = perceive_event(disengage, observer, _get_entity_fn(observer, actor))
         assert "disengage" in result.lower()
@@ -552,73 +673,77 @@ class TestPerceptionDispatchAndFailFast:
             Event(
                 event_type=EventType.ENTITY_SAY,
                 source_layer="entities",
-                data={"entity_id": "guard"},
+                data=EntitySayPayload(**{"entity_id": "guard"}),
             )
 
     def test_missing_entity_id_fails_at_event_boundary(self) -> None:
-        with pytest.raises(TypeError, match="invalid ENTITY_DIED payload"):
-            Event(event_type=EventType.ENTITY_DIED, source_layer="entities", data={})
+        with pytest.raises(TypeError, match="entity_id"):
+            Event(event_type=EventType.ENTITY_DIED, source_layer="entities", data=EntityDiedPayload(**{}))
 
     def test_missing_round_number_fails_at_event_boundary(self) -> None:
-        with pytest.raises(TypeError, match="invalid ROUND_START payload"):
-            Event(event_type=EventType.ROUND_START, source_layer="entities", data={})
+        with pytest.raises(TypeError, match="round_number"):
+            Event(event_type=EventType.ROUND_START, source_layer="entities", data=RoundStartPayload(**{}))
 
     def test_missing_squad_payload_fields_rejected_at_event_boundary(self) -> None:
         """Typed events fail at construction instead of later in perception."""
-        with pytest.raises(TypeError, match="invalid SQUAD_DEMATERIALIZED payload"):
+        with pytest.raises(TypeError, match="SquadDematerializedPayload"):
             Event(
                 event_type=EventType.SQUAD_DEMATERIALIZED,
                 source_layer="ecology",
-                data={},
+                data=SquadDematerializedPayload(**{}),
             )
 
     def test_missing_weapon_in_attack_raises_key_error(self) -> None:
         """ENTITY_ATTACK without 'weapon' is rejected at construction."""
-        with pytest.raises(TypeError, match="weapon"):
+        with pytest.raises(KeyError, match="weapon"):
             Event(
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
-                data={
-                    "attacker_id": "guard",
-                    "target_id": "npc",
-                    "hit": False,
-                    "critical": False,
-                    "ac": 13,
-                    "attack_roll": {
-                        "natural": 8,
-                        "components": [],
-                        "total": 8,
-                        "advantage": False,
-                        "disadvantage": False,
-                    },
-                },
+                data=AttackResolvedPayload(
+                    **{
+                        "attacker_id": "guard",
+                        "target_id": "npc",
+                        "hit": False,
+                        "critical": False,
+                        "ac": 13,
+                        "attack_roll": {
+                            "natural": 8,
+                            "components": [],
+                            "total": 8,
+                            "advantage": False,
+                            "disadvantage": False,
+                        },
+                    }
+                ),
             )
 
     def test_missing_critical_in_attack_raises_key_error(self) -> None:
         """ENTITY_ATTACK without 'critical' is rejected at construction."""
-        with pytest.raises(TypeError, match="critical"):
+        with pytest.raises(KeyError, match="critical"):
             Event(
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
-                data={
-                    "attacker_id": "guard",
-                    "target_id": "npc",
-                    "weapon": "longsword",
-                    "hit": True,
-                    "ac": 13,
-                    "attack_roll": {
-                        "natural": 18,
-                        "components": [],
-                        "total": 18,
-                        "advantage": False,
-                        "disadvantage": False,
-                    },
-                    "damage": 5,
-                    "damage_components": [
-                        {"source": "weapon", "dice": "1d8", "amount": 5, "type": "slashing"},
-                    ],
-                    # "critical" deliberately missing
-                },
+                data=AttackResolvedPayload(
+                    **{
+                        "attacker_id": "guard",
+                        "target_id": "npc",
+                        "weapon": "longsword",
+                        "hit": True,
+                        "ac": 13,
+                        "attack_roll": {
+                            "natural": 18,
+                            "components": [],
+                            "total": 18,
+                            "advantage": False,
+                            "disadvantage": False,
+                        },
+                        "damage": 5,
+                        "damage_components": [
+                            {"source": "weapon", "dice": "1d8", "amount": 5, "type": "slashing"},
+                        ],
+                        # "critical" deliberately missing
+                    }
+                ),
             )
 
 
@@ -632,15 +757,17 @@ class TestPerceiveReputationChanged:
         event = Event(
             event_type=EventType.REPUTATION_CHANGED,
             source_layer="entities",
-            data={
-                "entity_id": "player",
-                "faction_id": "bandits",
-                "faction_name": "Bandits",
-                "old_rep": 80,
-                "new_rep": 60,
-                "delta": -20,
-                "reason": "kill",
-            },
+            data=ReputationChangedPayload(
+                **{
+                    "entity_id": "player",
+                    "faction_id": "bandits",
+                    "faction_name": "Bandits",
+                    "old_rep": 80,
+                    "new_rep": 60,
+                    "delta": -20,
+                    "reason": "kill",
+                }
+            ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, faction_entity))
         assert "reputation" in result.lower()
@@ -655,15 +782,17 @@ class TestPerceiveReputationChanged:
         event = Event(
             event_type=EventType.REPUTATION_CHANGED,
             source_layer="entities",
-            data={
-                "entity_id": "player",
-                "faction_id": "bandits",
-                "faction_name": "Bandits",
-                "old_rep": 80,
-                "new_rep": 60,
-                "delta": -20,
-                "reason": "kill",
-            },
+            data=ReputationChangedPayload(
+                **{
+                    "entity_id": "player",
+                    "faction_id": "bandits",
+                    "faction_name": "Bandits",
+                    "old_rep": 80,
+                    "new_rep": 60,
+                    "delta": -20,
+                    "reason": "kill",
+                }
+            ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, actor))
         assert "reputation" in result.lower()
@@ -682,21 +811,23 @@ class TestAttackLineLocalizes:
         return Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data={
-                "attacker_id": "player",
-                "target_id": "smith",
-                "weapon": "Longsword",
-                "hit": False,
-                "critical": False,
-                "ac": 15,
-                "attack_roll": {
-                    "natural": 8,
-                    "components": [{"source": "ability", "value": 3, "dice": ""}],
-                    "total": 11,
-                    "advantage": False,
-                    "disadvantage": False,
-                },
-            },
+            data=AttackResolvedPayload(
+                **{
+                    "attacker_id": "player",
+                    "target_id": "smith",
+                    "weapon": "Longsword",
+                    "hit": False,
+                    "critical": False,
+                    "ac": 15,
+                    "attack_roll": {
+                        "natural": 8,
+                        "components": [{"source": "ability", "value": 3, "dice": ""}],
+                        "total": 11,
+                        "advantage": False,
+                        "disadvantage": False,
+                    },
+                }
+            ),
         )
 
     def test_attack_line_renders_russian(self) -> None:
@@ -721,7 +852,7 @@ class TestEncounterSpawnedPerceiver:
         return Event(
             event_type=EventType.ENCOUNTER_SPAWNED,
             source_layer="entities",
-            data={"location_id": "loc1", "names": ["Goblin", "Goblin"]},
+            data=EncounterSpawnedPayload(**{"location_id": "loc1", "spawned_names": ("Goblin", "Goblin")}),
         )
 
     def test_not_fallback_and_no_name_leak(self) -> None:
@@ -750,7 +881,7 @@ class TestCombatLogLocalizesRussian:
         event = Event(
             event_type=EventType.ENTITY_TAKE,
             source_layer="entities",
-            data={"actor_id": "player", "target_id": "bandit", "item_names": [], "gold": 12},
+            data=TakePayload(**{"actor_id": "player", "target_id": "bandit", "item_names": [], "gold": 12}),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, corpse))
         assert "You loot" not in result
@@ -763,13 +894,15 @@ class TestCombatLogLocalizesRussian:
         event = Event(
             event_type=EventType.ENTITY_LAY_ON_HANDS,
             source_layer="entities",
-            data={
-                "entity_id": "paladin",
-                "target_id": "paladin",
-                "healed": 5,
-                "pool_before": 10,
-                "pool_after": 5,
-            },
+            data=EntityLayOnHandsPayload(
+                **{
+                    "entity_id": "paladin",
+                    "target_id": "paladin",
+                    "healed": 5,
+                    "pool_before": 10,
+                    "pool_after": 5,
+                }
+            ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
         assert "lay hands" not in result
@@ -782,7 +915,7 @@ class TestCombatLogLocalizesRussian:
         event = Event(
             event_type=EventType.ENTITY_ACTION_SURGE,
             source_layer="entities",
-            data={"entity_id": "fighter"},
+            data=EntityActorPayload(**{"entity_id": "fighter"}),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
         assert "surge with energy" not in result
@@ -798,7 +931,7 @@ class TestCombatLogLocalizesRussian:
         event = Event(
             event_type=EventType.CUSTOM,
             source_layer="entities",
-            data={"inspect_target": "orc"},
+            data=InspectPayload(**{"inspect_target": "orc"}),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, target))
         assert "Conditions:" not in result

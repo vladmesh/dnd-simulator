@@ -396,7 +396,7 @@ class TestSquadMaterialization:
         demat_events = [e for e in emitted if e.event_type == EventType.SQUAD_DEMATERIALIZED]
         assert len(demat_events) == 1
         # 2 alive out of 3 spawned, original strength 100 → ~67
-        new_strength = demat_events[0].data["new_strength"]
+        new_strength = demat_events[0].data.new_strength
         assert new_strength < 100
         assert new_strength > 0
 

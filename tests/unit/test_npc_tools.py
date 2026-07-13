@@ -95,7 +95,7 @@ class TestNpcTurnOrchestration:
         _run_turn(layer, npc, capture_emit)
         assert len(emit_calls) == 1
         assert emit_calls[0].event_type == EventType.ENTITY_SAY
-        assert emit_calls[0].data["text"] == "Привет!"
+        assert emit_calls[0].data.text == "Привет!"
 
     def test_llm_idle_no_event(self) -> None:
         npc = Npc(id="n1", name="Smith", location_id="r1", role=NpcRole.BLACKSMITH)
@@ -131,8 +131,8 @@ class TestNpcTurnOrchestration:
         _run_turn(layer, npc, capture_emit)
         assert len(emit_calls) == 1
         assert emit_calls[0].event_type == EventType.ENTITY_ATTACK_REQUESTED
-        assert emit_calls[0].data["attacker_id"] == "n1"
-        assert emit_calls[0].data["target_id"] == "player"
+        assert emit_calls[0].data.attacker_id == "n1"
+        assert emit_calls[0].data.target_id == "player"
 
     def test_llm_text_response_retries(self) -> None:
         npc = Npc(id="n1", name="Smith", location_id="r1", role=NpcRole.BLACKSMITH)

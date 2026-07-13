@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from dnd_simulator.core.events import EntitySayPayload, InspectPayload
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import (
     ActionResult,
@@ -118,7 +119,7 @@ class TestLayerIsolationEmitValidation:
         world = World([geo, ent])
 
         emit_fn = world.make_emit_fn("geography")
-        event = Event(event_type=EventType.CUSTOM, source_layer="geography")
+        event = Event(event_type=EventType.CUSTOM, source_layer="geography", data=InspectPayload())
         result = emit_fn(event)
         assert result.success is True
 
@@ -128,7 +129,7 @@ class TestLayerIsolationEmitValidation:
         world = World([geo, ent])
 
         emit_fn = world.make_emit_fn("geography")
-        event = Event(event_type=EventType.CUSTOM, source_layer="entities")
+        event = Event(event_type=EventType.CUSTOM, source_layer="entities", data=InspectPayload())
         with pytest.raises(LayerError, match="cannot emit event"):
             emit_fn(event)
 
@@ -142,7 +143,7 @@ class TestEventPropagation:
         ent = StubLayer("entities")
         world = World([geo, pol, ent])
 
-        event = Event(event_type=EventType.CUSTOM, source_layer="geography")
+        event = Event(event_type=EventType.CUSTOM, source_layer="geography", data=InspectPayload())
         geo.tick_events = [event]
 
         world.advance_time(TimeDelta(seconds=10))
@@ -160,7 +161,7 @@ class TestEventPropagation:
         event = Event(
             event_type=EventType.ENTITY_SAY,
             source_layer="layer_1",
-            data={"entity_id": "speaker", "text": "hello"},
+            data=EntitySayPayload("speaker", "hello"),
         )
         layers[1].tick_events = [event]
 
@@ -173,8 +174,8 @@ class TestEventPropagation:
             assert event in layers[i].handled_events
 
     def test_action_result_events_cascade_in_order_through_all_layers(self) -> None:
-        first = Event(event_type=EventType.CUSTOM, source_layer="producer", data={"entity_id": "first"})
-        second = Event(event_type=EventType.CUSTOM, source_layer="consumer", data={"entity_id": "second"})
+        first = Event(event_type=EventType.CUSTOM, source_layer="producer", data=InspectPayload("first"))
+        second = Event(event_type=EventType.CUSTOM, source_layer="consumer", data=InspectPayload("second"))
 
         class Producer(StubLayer):
             def handle_event(self, event: Event, query_fn: QueryFn, emit_fn: EmitFn) -> ActionResult:

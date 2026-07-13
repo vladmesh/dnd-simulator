@@ -102,5 +102,17 @@ def test_attack_request_and_result_have_distinct_contracts() -> None:
         Event(EventType.ENTITY_ATTACK, "entities", requested.data)
 
 
+def test_event_rejects_legacy_mapping_without_changing_its_type() -> None:
+    with pytest.raises(TypeError, match="ENTITY_ATTACK requires AttackResolvedPayload"):
+        Event(EventType.ENTITY_ATTACK, "entities", {"attacker_id": "hero", "target_id": "goblin"})
+
+
+def test_typed_payload_is_not_a_mapping() -> None:
+    payload = WeatherChangedPayload("north", "clear", "rain", 8.5)
+
+    assert not hasattr(payload, "get")
+    assert not hasattr(payload, "keys")
+
+
 def test_every_event_type_has_one_payload_contract() -> None:
     assert set(EVENT_PAYLOAD_TYPES) == set(EventType)

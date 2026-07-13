@@ -328,7 +328,7 @@ class TestHandleIdle:
         handle_idle(_creature(), action, emit, _PEACEFUL, _WORLD)
         assert len(emitted) == 1
         assert emitted[0].event_type == EventType.CUSTOM
-        assert emitted[0].data["inspect_target"] == "goblin_1"
+        assert emitted[0].data.inspect_target == "goblin_1"
 
     def test_idle_no_inspect_no_event(self) -> None:
         emitted, emit = _capture_emit()
@@ -344,7 +344,7 @@ class TestHandleSay:
         assert result.success
         assert len(emitted) == 1
         assert emitted[0].event_type == EventType.ENTITY_SAY
-        assert emitted[0].data["text"] == "Hello!"
+        assert emitted[0].data.text == "Hello!"
 
 
 # ---------------------------------------------------------------------------
@@ -360,8 +360,8 @@ class TestHandleAttack:
         assert result.success
         assert len(emitted) == 1
         assert emitted[0].event_type == EventType.ENTITY_ATTACK_REQUESTED
-        assert emitted[0].data["attacker_id"] == "test"
-        assert emitted[0].data["target_id"] == "goblin_1"
+        assert emitted[0].data.attacker_id == "test"
+        assert emitted[0].data.target_id == "goblin_1"
 
 
 class TestHandleDodge:
@@ -390,8 +390,8 @@ class TestHandleMove:
         assert result.success
         assert len(emitted) == 1
         assert emitted[0].event_type == EventType.ENTITY_MOVE
-        assert emitted[0].data["direction"] == "N"
-        assert emitted[0].data["ft"] == 10
+        assert emitted[0].data.direction == "N"
+        assert emitted[0].data.ft == 10
 
 
 class TestHandleWait:
@@ -456,8 +456,8 @@ class TestHandleDash:
         handle_dash(_creature(speed=25), Action(name=ActionType.DASH), emit, ctx, _WORLD)
         assert len(emitted) == 1
         assert emitted[0].event_type == EventType.ENTITY_DASH
-        assert emitted[0].data["entity_id"] == "test"
-        assert emitted[0].data["extra_movement_ft"] == 25
+        assert emitted[0].data.entity_id == "test"
+        assert emitted[0].data.extra_movement_ft == 25
 
 
 # ---------------------------------------------------------------------------
@@ -742,7 +742,7 @@ class TestHandleUseItem:
         assert len(actor.inventory) == 0
         assert len(emitted) == 1
         assert emitted[0].event_type == EventType.ENTITY_USE_ITEM
-        assert emitted[0].data["healed"] == 4
+        assert emitted[0].data.healed == 4
 
     def test_potion_capped_at_max_hp(self) -> None:
         potion = _healing_potion(heal_dice="100")

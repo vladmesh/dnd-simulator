@@ -14,6 +14,7 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.combat import BattleMap
+from dnd_simulator.core.events import EntitySayPayload
 from dnd_simulator.core.items import EquipmentSlot, Item, ItemType, WeaponCategory, WeaponDef
 from dnd_simulator.core.models import Event, EventType, Query, QueryType
 from dnd_simulator.core.player import PlayerCharacter
@@ -156,13 +157,13 @@ class TestPerceivedLog:
         public_event = Event(
             event_type=EventType.ENTITY_SAY,
             source_layer="entities",
-            data={"entity_id": "other", "text": "Hello everyone!"},
+            data=EntitySayPayload(**{"entity_id": "other", "text": "Hello everyone!"}),
             observer_ids=None,
         )
         private_event = Event(
             event_type=EventType.ENTITY_SAY,
             source_layer="entities",
-            data={"entity_id": "other", "text": "Secret whisper"},
+            data=EntitySayPayload(**{"entity_id": "other", "text": "Secret whisper"}),
             observer_ids=frozenset({"other"}),
         )
         layer._location_log["square"].append(public_event)

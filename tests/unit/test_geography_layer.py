@@ -95,7 +95,7 @@ class TestGeographyLayer:
 
         # Events should have region_id in data
         for event in weather_events:
-            assert "region_id" in event.data
+            assert event.data.region_id
 
     def test_query_weather(self) -> None:
         regions = _make_test_regions()

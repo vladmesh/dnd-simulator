@@ -2,42 +2,37 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, fields
-from typing import Any, ClassVar, cast
+from dataclasses import asdict, dataclass, is_dataclass
+from enum import Enum
+from typing import Any, cast
 
 from dnd_simulator.core.lair import LairOrigin
 from dnd_simulator.core.models import EventType
 
 
 class TypedPayload:
-    """Typed fields with a temporary read-only mapping facade for unmigrated consumers."""
+    """Marker base class for immutable typed event payloads."""
 
-    legacy_aliases: ClassVar[dict[str, str]] = {}
-    legacy_type: ClassVar[str | None] = None
 
-    def __getitem__(self, key: str) -> object:
-        value = self.get(key, None)
-        if value is None and key not in self:
-            raise KeyError(key)
+def payload_to_data(payload: TypedPayload) -> dict[str, object]:
+    """Encode a typed payload for transport or log boundaries."""
+
+    def encode(value: Any) -> object:
+        if isinstance(value, Enum):
+            return value.value
+        if is_dataclass(value):
+            return {key: encode(item) for key, item in asdict(cast(Any, value)).items()}
+        if isinstance(value, tuple):
+            return [encode(item) for item in value]
+        if isinstance(value, list):
+            return [encode(item) for item in value]
+        if isinstance(value, dict):
+            return {str(key): encode(item) for key, item in value.items()}
         return value
 
-    def __contains__(self, key: object) -> bool:
-        if not isinstance(key, str):
-            return False
-        return (key == "type" and self.legacy_type is not None) or any(
-            field.name == self.legacy_aliases.get(key, key) for field in fields(cast(Any, self))
-        )
-
-    def keys(self) -> tuple[str, ...]:
-        reverse_aliases = {value: key for key, value in self.legacy_aliases.items()}
-        names = tuple(reverse_aliases.get(field.name, field.name) for field in fields(cast(Any, self)))
-        return ("type", *names) if self.legacy_type is not None else names
-
-    def get(self, key: str, default: object = None) -> object:
-        if key == "type" and self.legacy_type is not None:
-            return self.legacy_type
-        name = self.legacy_aliases.get(key, key)
-        return getattr(self, name, default)
+    encoded = encode(payload)
+    assert isinstance(encoded, dict)
+    return encoded
 
 
 @dataclass(frozen=True)
@@ -50,7 +45,6 @@ class WeatherChangedPayload(TypedPayload):
 
 @dataclass(frozen=True)
 class SquadMovePayload(TypedPayload):
-    legacy_aliases: ClassVar[dict[str, str]] = {"from": "from_location_id", "to": "to_location_id"}
     squad_id: str
     squad_name: str
     from_location_id: str
@@ -94,36 +88,24 @@ class LairDematerializedPayload(TypedPayload):
 
 @dataclass(frozen=True)
 class WarDeclaredPayload(TypedPayload):
-    legacy_type: ClassVar[str] = "war_declared"
-    legacy_aliases: ClassVar[dict[str, str]] = {"aggressor": "aggressor_id", "target": "target_id"}
     aggressor_id: str
     target_id: str
 
 
 @dataclass(frozen=True)
 class PeaceDeclaredPayload(TypedPayload):
-    legacy_type: ClassVar[str] = "peace"
-    legacy_aliases: ClassVar[dict[str, str]] = {"nation_a": "nation_a_id", "nation_b": "nation_b_id"}
     nation_a_id: str
     nation_b_id: str
 
 
 @dataclass(frozen=True)
 class TradeAgreementPayload(TypedPayload):
-    legacy_type: ClassVar[str] = "trade_agreement"
-    legacy_aliases: ClassVar[dict[str, str]] = {"nation_a": "nation_a_id", "nation_b": "nation_b_id"}
     nation_a_id: str
     nation_b_id: str
 
 
 @dataclass(frozen=True)
 class RegionConqueredPayload(TypedPayload):
-    legacy_type: ClassVar[str] = "region_conquered"
-    legacy_aliases: ClassVar[dict[str, str]] = {
-        "winner": "winner_id",
-        "loser": "loser_id",
-        "region": "region_id",
-    }
     winner_id: str
     loser_id: str
     region_id: str
@@ -131,15 +113,11 @@ class RegionConqueredPayload(TypedPayload):
 
 @dataclass(frozen=True)
 class RebellionPayload(TypedPayload):
-    legacy_type: ClassVar[str] = "rebellion"
-    legacy_aliases: ClassVar[dict[str, str]] = {"nation": "nation_id"}
     nation_id: str
 
 
 @dataclass(frozen=True)
 class LeaderDiedPayload(TypedPayload):
-    legacy_type: ClassVar[str] = "leader_died"
-    legacy_aliases: ClassVar[dict[str, str]] = {"nation": "nation_id"}
     nation_id: str
     old_leader: str
     new_leader: str
@@ -147,15 +125,11 @@ class LeaderDiedPayload(TypedPayload):
 
 @dataclass(frozen=True)
 class NationDestroyedPayload(TypedPayload):
-    legacy_type: ClassVar[str] = "nation_destroyed"
-    legacy_aliases: ClassVar[dict[str, str]] = {"nation": "nation_id"}
     nation_id: str
 
 
 @dataclass(frozen=True)
 class SettlementDamagedPayload(TypedPayload):
-    legacy_type: ClassVar[str] = "settlement_damaged"
-    legacy_aliases: ClassVar[dict[str, str]] = {"settlement": "settlement_id", "region": "region_id"}
     settlement_id: str
     region_id: str
 
@@ -195,7 +169,6 @@ class CombatEndedPayload(TypedPayload):
 
 @dataclass(frozen=True)
 class EncounterSpawnedPayload(TypedPayload):
-    legacy_aliases: ClassVar[dict[str, str]] = {"names": "spawned_names"}
     location_id: str
     spawned_names: tuple[str, ...]
     spawned_entity_ids: tuple[str, ...] = ()

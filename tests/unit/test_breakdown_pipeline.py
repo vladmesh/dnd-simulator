@@ -15,6 +15,7 @@ from dnd_simulator.core.character import (
     DamageComponent,
     DamageType,
 )
+from dnd_simulator.core.events import AttackRollPayload, DamageComponentPayload, RollComponentPayload
 from dnd_simulator.core.rolls import D20Result, DiceResult, DieRoll
 from dnd_simulator.rules.checks import CheckResult, attack_roll
 from dnd_simulator.rules.combat import ExtraDamage, resolve_attack
@@ -356,8 +357,8 @@ class TestHealingDiceDetail:
 
         assert len(emitted) == 1
         data = emitted[0].data
-        assert "dice_detail" in data
-        dice_detail = data["dice_detail"]
+        assert data.dice_detail
+        dice_detail = data.dice_detail
         assert isinstance(dice_detail, tuple)
         assert len(dice_detail) == 1
         assert dice_detail[0]["sides"] == 10
@@ -397,8 +398,8 @@ class TestHealingDiceDetail:
 
         assert len(emitted) == 1
         data = emitted[0].data
-        assert "dice_detail" in data
-        dice_detail = data["dice_detail"]
+        assert data.dice_detail
+        dice_detail = data.dice_detail
         assert isinstance(dice_detail, tuple)
         assert len(dice_detail) == 2  # 2d4
         assert all(d["sides"] == 4 for d in dice_detail)
@@ -416,14 +417,14 @@ class TestPerceptionUnchanged:
         """_format_roll produces correct text even when d20/d20_alt present."""
         from dnd_simulator.layers.entities.perception import _format_roll
 
-        atk_roll: dict[str, object] = {
-            "natural": 14,
-            "d20": {"result": 14, "sides": 20},
-            "components": [{"source": "ability", "value": 5, "dice": ""}],
-            "total": 19,
-            "advantage": False,
-            "disadvantage": False,
-        }
+        atk_roll = AttackRollPayload(
+            natural=14,
+            d20={"result": 14, "sides": 20},
+            components=(RollComponentPayload(source="ability", value=5),),
+            total=19,
+            advantage=False,
+            disadvantage=False,
+        )
         result = _format_roll(atk_roll, 13)
         assert "d20(14)" in result
         assert "+5" in result
@@ -434,15 +435,15 @@ class TestPerceptionUnchanged:
     def test_format_roll_with_advantage_and_d20_alt(self) -> None:
         from dnd_simulator.layers.entities.perception import _format_roll
 
-        atk_roll: dict[str, object] = {
-            "natural": 14,
-            "d20": {"result": 14, "sides": 20},
-            "d20_alt": {"result": 7, "sides": 20},
-            "components": [{"source": "ability", "value": 3, "dice": ""}],
-            "total": 17,
-            "advantage": True,
-            "disadvantage": False,
-        }
+        atk_roll = AttackRollPayload(
+            natural=14,
+            d20={"result": 14, "sides": 20},
+            d20_alt={"result": 7, "sides": 20},
+            components=(RollComponentPayload(source="ability", value=3),),
+            total=17,
+            advantage=True,
+            disadvantage=False,
+        )
         result = _format_roll(atk_roll, 13)
         assert "adv" in result.lower()
         assert "d20(14)" in result
@@ -451,29 +452,13 @@ class TestPerceptionUnchanged:
         """_format_damage produces correct text even when dice_detail present."""
         from dnd_simulator.layers.entities.perception import _format_damage
 
-        components: list[dict[str, object]] = [
-            {
-                "source": "weapon",
-                "dice": "1d8",
-                "dice_detail": [{"sides": 8, "result": 6}],
-                "amount": 6,
-                "type": "slashing",
-            },
-            {
-                "source": "sneak_attack",
-                "dice": "2d6",
-                "dice_detail": [{"sides": 6, "result": 5}, {"sides": 6, "result": 4}],
-                "amount": 9,
-                "type": "piercing",
-            },
-            {
-                "source": "dueling",
-                "dice": "",
-                "dice_detail": [],
-                "amount": 2,
-                "type": "slashing",
-            },
-        ]
+        components = (
+            DamageComponentPayload("weapon", "1d8", ({"sides": 8, "result": 6},), 6, "slashing"),
+            DamageComponentPayload(
+                "sneak_attack", "2d6", ({"sides": 6, "result": 5}, {"sides": 6, "result": 4}), 9, "piercing"
+            ),
+            DamageComponentPayload("dueling", "", (), 2, "slashing"),
+        )
         result = _format_damage(17, components, critical=False)
         assert "17 damage" in result
         assert "1d8" in result

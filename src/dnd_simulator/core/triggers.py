@@ -40,7 +40,7 @@ class EventCondition:
     def matches(self, event: Event) -> bool:
         if event.event_type is not self.event_type:
             return False
-        return all(event.payload.get(name) == expected for name, expected in self.match_fields)
+        return all(getattr(event.payload, name) == expected for name, expected in self.match_fields)
 
 
 @dataclass(frozen=True)

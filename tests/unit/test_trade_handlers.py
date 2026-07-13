@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.awareness import ItemInfo, MerchantInfo
 from dnd_simulator.core.character import NpcRole
+from dnd_simulator.core.events import BuyPayload, SellPayload
 from dnd_simulator.core.items import Item, ItemType
 from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.core.player import PlayerCharacter
@@ -73,10 +74,10 @@ class TestHandleBuy:
         assert merchant.gold == 250
         assert len(events) == 1
         assert events[0].event_type == EventType.ENTITY_BUY
-        assert events[0].data["buyer_id"] == "player_1"
-        assert events[0].data["merchant_id"] == "merchant_1"
-        assert events[0].data["item_name"] == "Health Potion"
-        assert events[0].data["price"] == 50
+        assert events[0].data.buyer_id == "player_1"
+        assert events[0].data.merchant_id == "merchant_1"
+        assert events[0].data.item_name == "Health Potion"
+        assert events[0].data.price == 50
 
 
 class TestHandleSell:
@@ -99,10 +100,10 @@ class TestHandleSell:
         assert merchant.gold == 170
         assert len(events) == 1
         assert events[0].event_type == EventType.ENTITY_SELL
-        assert events[0].data["seller_id"] == "player_1"
-        assert events[0].data["merchant_id"] == "merchant_1"
-        assert events[0].data["item_name"] == "Dagger"
-        assert events[0].data["price"] == 30
+        assert events[0].data.seller_id == "player_1"
+        assert events[0].data.merchant_id == "merchant_1"
+        assert events[0].data.item_name == "Dagger"
+        assert events[0].data.price == 30
 
 
 class TestBuyValidationRejects:
@@ -175,12 +176,14 @@ class TestTradePerception:
         event = Event(
             event_type=EventType.ENTITY_BUY,
             source_layer="entities",
-            data={
-                "buyer_id": "player_1",
-                "merchant_id": "merchant_1",
-                "item_name": "Health Potion",
-                "price": 50,
-            },
+            data=BuyPayload(
+                **{
+                    "buyer_id": "player_1",
+                    "merchant_id": "merchant_1",
+                    "item_name": "Health Potion",
+                    "price": 50,
+                }
+            ),
         )
         text = perceive_event(event, player, lambda eid: entities.get(eid))
         assert "Health Potion" in text
@@ -194,12 +197,14 @@ class TestTradePerception:
         event = Event(
             event_type=EventType.ENTITY_SELL,
             source_layer="entities",
-            data={
-                "seller_id": "player_1",
-                "merchant_id": "merchant_1",
-                "item_name": "Dagger",
-                "price": 30,
-            },
+            data=SellPayload(
+                **{
+                    "seller_id": "player_1",
+                    "merchant_id": "merchant_1",
+                    "item_name": "Dagger",
+                    "price": 30,
+                }
+            ),
         )
         text = perceive_event(event, player, lambda eid: entities.get(eid))
         assert "Dagger" in text

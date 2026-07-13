@@ -22,6 +22,7 @@ from dnd_simulator.core.character import (
 )
 from dnd_simulator.core.class_features import RogueFeatures
 from dnd_simulator.core.combat import BattleMap, Position
+from dnd_simulator.core.events import AttackRequestedPayload
 from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
 from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.core.resource import ResourcePool, RestType
@@ -381,9 +382,9 @@ class TestIntentInterruption:
 
         result = cm.resolve_attack(
             Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="test",
-                data={"attacker_id": attacker.id, "target_id": target.id},
+                data=AttackRequestedPayload(**{"attacker_id": attacker.id, "target_id": target.id}),
             )
         )
 
@@ -431,12 +432,12 @@ class TestBuildAttackEvent:
             target_ac=15,
         )
         data = build_attack_event("att", "tgt", _sword(), atk_result, mods, [])
-        assert data["attacker_id"] == "att"
-        assert data["target_id"] == "tgt"
-        assert data["hit"] is True
-        assert data["critical"] is False
-        assert data["weapon"] == "longsword"
-        assert data["ac"] == 15
+        assert data.attacker_id == "att"
+        assert data.target_id == "tgt"
+        assert data.hit is True
+        assert data.critical is False
+        assert data.weapon == "longsword"
+        assert data.ac == 15
 
 
 class TestBuildDamageComponents:
@@ -464,7 +465,7 @@ class TestBuildDamageComponents:
         damage_comps = [RollComponent(source="str", value=3)]
         components = build_damage_components(atk_result, damage_comps)
         assert len(components) == 2  # weapon + str bonus
-        assert components[0]["source"] == "weapon"
-        assert components[0]["amount"] == 5
-        assert components[1]["source"] == "str"
-        assert components[1]["amount"] == 3
+        assert components[0].source == "weapon"
+        assert components[0].amount == 5
+        assert components[1].source == "str"
+        assert components[1].amount == 3

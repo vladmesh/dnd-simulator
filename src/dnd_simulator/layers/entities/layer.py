@@ -22,7 +22,13 @@ from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.container import Container
-from dnd_simulator.core.events import CombatStartedPayload, RoundStartPayload
+from dnd_simulator.core.events import (
+    CombatStartedPayload,
+    EntityDiedPayload,
+    RoundStartPayload,
+    SquadMovePayload,
+    payload_to_data,
+)
 from dnd_simulator.core.intent import IntentInterruptReason
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, EntityKind, Event, EventType, Query
@@ -278,8 +284,8 @@ class EntitiesLayer(Layer):
             if e.observer_ids is not None and creature.id not in e.observer_ids:
                 continue
             desc = perceive_event(e, creature, self.get_entity)
-            actor_id = e.data.get("entity_id") or e.data.get("attacker_id")
-            target_id = e.data.get("target_id")
+            actor_id = getattr(e.payload, "entity_id", None) or getattr(e.payload, "attacker_id", None)
+            target_id = getattr(e.payload, "target_id", None)
             actor_name: str | None = None
             if actor_id:
                 actor_entity = self.get_entity(str(actor_id))
@@ -292,7 +298,7 @@ class EntitiesLayer(Layer):
                     actor_id=str(actor_id) if actor_id else None,
                     actor_name=actor_name,
                     target_id=str(target_id) if target_id else None,
-                    data=dict(e.data),
+                    data=payload_to_data(e.payload),
                 )
             )
         return result
@@ -327,7 +333,7 @@ class EntitiesLayer(Layer):
             return self._with_trigger_cascades(result)
 
         if event.event_type == EventType.ENTITY_MOVE:
-            if "direction" in event.payload:
+            if getattr(event.payload, "direction", None) is not None:
                 # Needs resolution (from handle_move via compass direction)
                 return self._with_trigger_cascades(self._combat.resolve_move(event))
             # Already-resolved move (from handle_move_to) — just log it
@@ -338,7 +344,9 @@ class EntitiesLayer(Layer):
 
         # Clean up temporary creatures on death
         if event.event_type == EventType.ENTITY_DIED:
-            entity_id = str(event.payload["entity_id"])
+            payload = event.payload
+            assert isinstance(payload, EntityDiedPayload)
+            entity_id = payload.entity_id
             entity = self._entities.get(entity_id)
             if entity is not None and entity.temporary:
                 self.remove_entity(entity_id)
@@ -346,8 +354,9 @@ class EntitiesLayer(Layer):
         if event.event_type in _LOGGED_EVENTS:
             if event.event_type == EventType.SQUAD_MOVE:
                 # Log at both origin and destination so observers at either location see it
-                for key in ("from", "to"):
-                    loc = event.payload.get(key)
+                payload = event.payload
+                assert isinstance(payload, SquadMovePayload)
+                for loc in (payload.from_location_id, payload.to_location_id):
                     if isinstance(loc, str):
                         self._location_log[loc].append(event)
             else:
@@ -392,20 +401,22 @@ class EntitiesLayer(Layer):
     def _event_location(self, event: Event) -> str | None:
         """Determine which location an event happened at."""
         for key in ("entity_id", "attacker_id"):
-            eid = event.payload.get(key)
+            eid = getattr(event.payload, key, None)
             if isinstance(eid, str):
                 entity = self._entities.get(eid)
                 if entity:
                     return entity.location_id
         # Squad events: SQUAD_MOVE uses "to" (destination), others use "location_id"
         if event.event_type == EventType.SQUAD_MOVE:
-            to = event.payload.get("to")
-            from_ = event.payload.get("from")
+            payload = event.payload
+            assert isinstance(payload, SquadMovePayload)
+            to = payload.to_location_id
+            from_ = payload.from_location_id
             if isinstance(to, str):
                 return to
             if isinstance(from_, str):
                 return from_
-        loc = event.payload.get("location_id")
+        loc = getattr(event.payload, "location_id", None)
         if isinstance(loc, str):
             return loc
         return None
