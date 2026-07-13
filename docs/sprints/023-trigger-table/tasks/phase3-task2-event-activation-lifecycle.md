@@ -40,15 +40,26 @@ NPC не создавал транзитивный LOD-каскад.
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] `on` немедленно будит dormant существо и безопасно прерывает его intent
-- [ ] `until` снимает только свою пару; combat, scene, другая пара и `always_active` имеют независимый приоритет
-- [ ] Срабатывание переживает последующие activation passes и не делает активность транзитивной
-- [ ] Внешние и entities-cascade события матчатся ровно один раз
-- [ ] Матчинг происходит при эмиссии событий, а не через round polling
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] `on` немедленно будит dormant существо и безопасно прерывает его intent
+- [x] `until` снимает только свою пару; combat, scene, другая пара и `always_active` имеют независимый приоритет
+- [x] Срабатывание переживает последующие activation passes и не делает активность транзитивной
+- [x] Внешние и entities-cascade события матчатся ровно один раз
+- [x] Матчинг происходит при эмиссии событий, а не через round polling
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+`EntitiesLayer` применяет trigger index к каждому входящему событию и отдельным общим helper'ом к событиям из
+своих `ActionResult`, до source-skip каскадной очереди `World`. `on` идемпотентно взводит runtime-состояние,
+прерывает wait/sleep/travel через общий `interrupt_intent` и немедленно будит живое существо; `until` снимает
+только совпавшую пару.
+
+`ActivationManager` теперь вычисляет активность из боя, awake anchor scene, `always_active` и активных взведённых
+пар. Anchor locations для encounter/materialization не изменялись, поэтому trigger-only NPC не активирует соседей
+и не создаёт LOD-каскад. Полный gate зелёный: 2508 backend unit и 283 frontend tests.

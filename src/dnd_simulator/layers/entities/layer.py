@@ -23,6 +23,7 @@ from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.container import Container
 from dnd_simulator.core.events import CombatStartedPayload, RoundStartPayload
+from dnd_simulator.core.intent import IntentInterruptReason
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, EntityKind, Event, EventType, Query
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
@@ -34,11 +35,12 @@ from dnd_simulator.layers.common.rng_state import dump_rng_state, load_rng_state
 from dnd_simulator.layers.entities.activation_manager import ActivationManager
 from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder, active_merchants_at
 from dnd_simulator.layers.entities.combat_manager import CombatManager
+from dnd_simulator.layers.entities.intent_completion import interrupt_intent
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.layers.entities.query_handler import QueryHandler
 from dnd_simulator.layers.entities.save_models import EntitiesState
-from dnd_simulator.layers.entities.trigger_index import TriggerIndex, TriggerMatch
+from dnd_simulator.layers.entities.trigger_index import TriggerBoundary, TriggerIndex, TriggerMatch
 
 if TYPE_CHECKING:
     from dnd_simulator.core.location import LocationGraph
@@ -307,8 +309,10 @@ class EntitiesLayer(Layer):
 
     def handle_event(self, event: Event, query_fn: QueryFn, emit_fn: EmitFn) -> ActionResult:
         """React to world events. Resolve attacks, log relevant events."""
+        self._apply_trigger_event(event)
+
         if event.event_type == EventType.ENTITY_DODGE:
-            return self._combat.resolve_dodge(event)
+            return self._with_trigger_cascades(self._combat.resolve_dodge(event))
 
         # Attack/flee can end combat (kill/flee removes fighter, <=1 left → combat ends)
         if event.event_type in (EventType.ENTITY_ATTACK_REQUESTED, EventType.ENTITY_FLEE):
@@ -320,12 +324,12 @@ class EntitiesLayer(Layer):
                 result = self._combat.resolve_flee(event)
             if had_combat and location_id and self._combat.get_combat(location_id) is None:
                 self._on_combat_ended(location_id)
-            return result
+            return self._with_trigger_cascades(result)
 
         if event.event_type == EventType.ENTITY_MOVE:
             if "direction" in event.payload:
                 # Needs resolution (from handle_move via compass direction)
-                return self._combat.resolve_move(event)
+                return self._with_trigger_cascades(self._combat.resolve_move(event))
             # Already-resolved move (from handle_move_to) — just log it
             location_id = self._event_location(event)
             if location_id:
@@ -352,6 +356,24 @@ class EntitiesLayer(Layer):
                     self._location_log[location_id].append(event)
 
         return ActionResult()
+
+    def _apply_trigger_event(self, event: Event) -> None:
+        """Apply one typed event to activation trigger runtime state."""
+        for match in self._trigger_index.match(event):
+            if match.boundary is TriggerBoundary.ON:
+                if not match.creature.is_alive or match.trigger.active:
+                    continue
+                match.trigger.active = True
+                interrupt_intent(match.creature, IntentInterruptReason.TRIGGER)
+                match.creature.active = True
+            elif match.trigger.active:
+                match.trigger.active = False
+
+    def _with_trigger_cascades(self, result: ActionResult) -> ActionResult:
+        """Match events produced by this layer before World source-skip propagation."""
+        for event in result.events:
+            self._apply_trigger_event(event)
+        return result
 
     # -- Perception log (delegated to QueryHandler) --
 

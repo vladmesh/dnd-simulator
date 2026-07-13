@@ -70,7 +70,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 3 (Trigger table), tasks generated — 2026-07-13. Ready to start task 1.
+**Current:** Phase 3 (Trigger table), task 2 done — 2026-07-13. Ready to start task 3.
 
 ## Decisions
 
