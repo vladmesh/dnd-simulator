@@ -52,7 +52,9 @@ Ecology подписывается на события смерти сущест
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Контракт и индекс trigger table](tasks/phase3-task1-trigger-contract-index.md) — строгий YAML/runtime-контракт и индексированный typed-payload matcher
+2. [Событийный lifecycle активации](tasks/phase3-task2-event-activation-lifecycle.md) — `on`/`until` в живом event flow и независимые причины активности
+3. [Сейв и самогашение триггера](tasks/phase3-task3-trigger-save-self-complete.md) — lossless save/load и действие мозга `complete_trigger`
 
 ## Phase 4: Ручка ГМ + failure containment
 
@@ -68,7 +70,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 2 (Событийный write-back — смерти логова) complete — 2026-07-13. Ready for Phase 3 task generation.
+**Current:** Phase 3 (Trigger table), tasks generated — 2026-07-13. Ready to start task 1.
 
 ## Decisions
 
