@@ -19,7 +19,7 @@ import asyncio
 import json
 import os
 import time
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -33,6 +33,17 @@ from dnd_simulator.service.session import GameSession
 logger = structlog.get_logger(domain="transport")
 
 router = APIRouter(tags=["websocket"])
+
+
+def _parse_json_object_envelope(raw: str) -> tuple[dict[str, Any] | None, str | None]:
+    """Parse one recoverable client message into a JSON object envelope."""
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return None, _("Invalid JSON")
+    if not isinstance(parsed, dict):
+        return None, _("JSON message must be an object")
+    return cast(dict[str, Any], parsed), None
 
 
 # ---------------------------------------------------------------------------
@@ -116,11 +127,11 @@ async def _run_spectator(ws: WebSocket, session: GameSession, session_id: str) -
                 continue
             rl_budget -= 1.0
 
-            try:
-                msg = json.loads(raw)
-            except json.JSONDecodeError:
-                await ws.send_json({"type": "error", "message": _("Invalid JSON")})
+            msg, parse_error = _parse_json_object_envelope(raw)
+            if parse_error is not None:
+                await ws.send_json({"type": "error", "message": parse_error})
                 continue
+            assert msg is not None
             msg_type = msg.get("type")
 
             if msg_type in ("action", "reaction"):
@@ -214,11 +225,11 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
                 continue
             rl_budget -= 1.0
 
-            try:
-                msg = json.loads(raw)
-            except json.JSONDecodeError:
-                await ws.send_json({"type": "error", "message": _("Invalid JSON")})
+            msg, parse_error = _parse_json_object_envelope(raw)
+            if parse_error is not None:
+                await ws.send_json({"type": "error", "message": parse_error})
                 continue
+            assert msg is not None
             msg_type = msg.get("type")
 
             if msg_type == "action":

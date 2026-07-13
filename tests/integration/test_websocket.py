@@ -278,6 +278,35 @@ class TestSpectator:
         finally:
             player.close()
 
+    def test_non_object_json_is_recoverable_and_shared_with_player_protocol(
+        self, ws_village: tuple[str, str, str]
+    ) -> None:
+        ws_base, sid, pid = ws_village
+        player = ws_connect(ws_base, sid, pid)
+        try:
+            assert _recv_until(player, "turn") is not None
+            spec = _spectate_connect(ws_base, sid)
+            try:
+                assert _recv_until(spec, "turn") is not None
+
+                for raw in ("[]", "null", '"text"', "1"):
+                    spec.send(raw)
+                    error = _recv_until(spec, "error")
+                    assert error is not None
+                    assert "object" in error["message"].lower()
+
+                ws_send_action(spec, "end_turn")
+                error = _recv_until(spec, "error")
+                assert error is not None
+                assert "Spectators cannot submit actions" in error["message"]
+
+                ws_send_action(player, "end_turn")
+                assert _recv_until(spec, "round_result") is not None
+            finally:
+                spec.close()
+        finally:
+            player.close()
+
     def test_disconnect_does_not_evict(self, ws_arena: tuple[str, str, str], _urls: tuple[str, str, str]) -> None:
         """A spectator leaving never evicts: the player keeps playing and the session stays listed."""
         api, _, _ = _urls

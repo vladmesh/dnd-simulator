@@ -12,11 +12,11 @@
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 5 — Post-audit refactor (task 3 done, task 4 pending) — 2026-07-13
+**Phase:** 5 — Post-audit refactor (task 4 done; ready for phase closure) — 2026-07-13
 
 Audit triaged. Phase 5 открыта для event-contract cleanup, decomposition растущих entities/session/transport модулей и двух небольших reliability gaps.
 
-Phase 5 Task 1 done: единый typed event-контракт. Task 2 done: trigger runtime, event-log и perception split. Task 3 done: transport builders. Task 4 pending: protocol containment и финальный autosave.
+Phase 5 Task 1 done: единый typed event-контракт. Task 2 done: trigger runtime, event-log и perception split. Task 3 done: transport builders. Task 4 done: non-object WS JSON изолирован protocol error, final shutdown-autosave логирует failure и завершает lifespan.
 
 **Audit:** Triaged 2026-07-13. Quick-fix: 0 applied. Sprint-relevant: 6 findings → Phase 5 refactor. Backlog: 8 findings already tracked or accepted; 1 fresh item added.
 

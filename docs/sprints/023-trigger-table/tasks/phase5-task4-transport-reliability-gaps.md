@@ -48,4 +48,11 @@ autosave узкой logging boundary с отдельным событием. Н�
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Player and spectator loops now share one JSON-object envelope parser: malformed JSON keeps its prior message,
+while valid non-object JSON returns a recoverable protocol error. Lifespan still awaits cancellation of periodic
+autosave before the final save; a final-save exception is logged as `final_autosave_failed` and does not escape.
+Unit and live integration regressions cover both paths.

@@ -130,6 +130,7 @@ async def test_lifespan_cancels_periodic_task_before_final_autosave(
     monkeypatch.setattr(app_module, "GameService", lambda **_: Service())
     monkeypatch.setattr(app_module, "set_service", lambda service: None)
     monkeypatch.setattr(app_module, "_autosave_interval_from_env", lambda: 0.01)
+    monkeypatch.setattr(app_module, "configure_logging", lambda **_: None)
     monkeypatch.setattr(app_module, "_periodic_autosave", fake_periodic)
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     monkeypatch.delenv("DND_DICE_SEED", raising=False)
@@ -139,3 +140,30 @@ async def test_lifespan_cancels_periodic_task_before_final_autosave(
         assert events == ["periodic_started"]
 
     assert events == ["periodic_started", "periodic_cancelled", "save"]
+
+
+async def test_lifespan_logs_final_autosave_failure_and_still_exits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Service(_FakeService):
+        def autosave_all_sessions(self) -> None:
+            raise RuntimeError("final save failed")
+
+    class Store:
+        def __init__(self, path: Path) -> None:
+            self.path = path
+
+    monkeypatch.setattr(app_module, "JsonFileStore", Store)
+    monkeypatch.setattr(app_module, "GameService", lambda **_: Service())
+    monkeypatch.setattr(app_module, "set_service", lambda service: None)
+    monkeypatch.setattr(app_module, "_autosave_interval_from_env", lambda: 0.01)
+    monkeypatch.setattr(app_module, "configure_logging", lambda **_: None)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    monkeypatch.delenv("DND_DICE_SEED", raising=False)
+
+    with structlog.testing.capture_logs() as logs:
+        async with lifespan(MagicMock()):
+            pass
+
+    failures = [entry for entry in logs if entry.get("event") == "final_autosave_failed"]
+    assert len(failures) == 1
