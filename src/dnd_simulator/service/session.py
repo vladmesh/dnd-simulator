@@ -8,6 +8,7 @@ import random
 import threading
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
 
 import structlog
@@ -121,10 +122,24 @@ def _awareness_to_dict(
 def _events_to_list(events: list[PerceivedEvent]) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
     for e in events:
-        d = dataclasses.asdict(e)
+        d = _json_safe(dataclasses.asdict(e))
+        assert isinstance(d, dict)
         d["event_type"] = e.event_type.value
         result.append(d)
     return result
+
+
+def _json_safe(value: object) -> object:
+    """Convert nested event data to values accepted by the standard JSON encoder."""
+    if isinstance(value, Enum):
+        return value.value
+    if dataclasses.is_dataclass(value) and not isinstance(value, type):
+        return _json_safe(dataclasses.asdict(value))
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return [_json_safe(item) for item in value]
+    return value
 
 
 def _budget_to_dict(budget: TurnBudget) -> dict[str, Any]:

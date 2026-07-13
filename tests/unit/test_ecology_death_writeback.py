@@ -84,7 +84,6 @@ def _kill(world: World, entities: EntitiesLayer, target_id: str) -> EntityDiedPa
         result = world.handle_event(attack)
         for event in result.events:
             if event.event_type is EventType.ENTITY_DIED:
-                world.handle_event(event)
                 assert isinstance(event.data, EntityDiedPayload)
                 return event.data
     raise AssertionError("deterministic attacker did not kill target")

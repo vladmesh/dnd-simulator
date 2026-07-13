@@ -9,6 +9,7 @@ failure means a real bug, not a missing feature.
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 from typing import Any
@@ -18,13 +19,17 @@ import pytest
 import structlog
 
 from dnd_simulator.core.action import Action, ActionType
+from dnd_simulator.core.awareness import PerceivedEvent
 from dnd_simulator.core.brain import PlayerBrain
 from dnd_simulator.core.combat import Position
+from dnd_simulator.core.events import EntityDiedPayload
+from dnd_simulator.core.lair import LairMemberRole, LairOrigin
+from dnd_simulator.core.models import EventType
 from dnd_simulator.core.world import World
 from dnd_simulator.round import Round
 from dnd_simulator.rules.movement import calculate_away_direction, calculate_direction
 from dnd_simulator.service import GameService
-from dnd_simulator.service.session import GameSession, RoundStopTimeoutError, resolve_abstract_move
+from dnd_simulator.service.session import GameSession, RoundStopTimeoutError, _events_to_list, resolve_abstract_move
 from dnd_simulator.storage.store import SaveStore
 
 # ---------------------------------------------------------------------------
@@ -117,6 +122,24 @@ def _session() -> GameSession:
 
 
 class TestListenerDispatch:
+    def test_perceived_lair_death_payload_is_json_serializable(self) -> None:
+        event = PerceivedEvent(
+            description="Goblin Boss dies",
+            event_type=EventType.ENTITY_DIED,
+            data=dict(
+                EntityDiedPayload(
+                    "goblin_boss_1",
+                    "cave",
+                    "hero",
+                    LairOrigin("goblin_warren", "goblin_boss", LairMemberRole.CORE),
+                )
+            ),
+        )
+
+        payload = _events_to_list([event])
+
+        assert json.loads(json.dumps(payload))[0]["data"]["lair_origin"]["role"] == "core"
+
     def test_fire_calls_every_listener(self) -> None:
         session = _session()
         a = RecordingListener()

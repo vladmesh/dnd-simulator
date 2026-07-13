@@ -172,6 +172,27 @@ class TestEventPropagation:
         for i in [0, 2, 3]:
             assert event in layers[i].handled_events
 
+    def test_action_result_events_cascade_in_order_through_all_layers(self) -> None:
+        first = Event(event_type=EventType.CUSTOM, source_layer="producer", data={"entity_id": "first"})
+        second = Event(event_type=EventType.CUSTOM, source_layer="consumer", data={"entity_id": "second"})
+
+        class Producer(StubLayer):
+            def handle_event(self, event: Event, query_fn: QueryFn, emit_fn: EmitFn) -> ActionResult:
+                self.handled_events.append(event)
+                if event is first:
+                    return ActionResult(events=[second])
+                return ActionResult()
+
+        producer = Producer("producer")
+        consumer = StubLayer("consumer")
+        world = World([producer, consumer])
+
+        result = world.handle_event(first)
+
+        assert result.events == [second]
+        assert producer.handled_events == [first, second]
+        assert consumer.handled_events == [first, second]
+
 
 class TestAdvanceTimeTickGating:
     """advance_time only ticks layers when their tick_interval has elapsed."""

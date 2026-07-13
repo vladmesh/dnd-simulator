@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import deque
 from typing import TYPE_CHECKING
 
 import structlog
@@ -96,15 +97,19 @@ class World:
         return all_events
 
     def handle_event(self, event: Event) -> ActionResult:
-        """Send an event to all layers. Returns first failure or aggregated success."""
+        """Send an event and its cascade events to all layers."""
         all_events: list[Event] = []
-        for layer in self._layers:
-            query_fn = self.make_query_fn(layer.name)
-            emit_fn = self.make_emit_fn(layer.name)
-            result = layer.handle_event(event, query_fn, emit_fn)
-            if not result.success:
-                return result
-            all_events.extend(result.events)
+        pending = deque([event])
+        while pending:
+            current = pending.popleft()
+            for layer in self._layers:
+                query_fn = self.make_query_fn(layer.name)
+                emit_fn = self.make_emit_fn(layer.name)
+                result = layer.handle_event(current, query_fn, emit_fn)
+                if not result.success:
+                    return result
+                all_events.extend(result.events)
+                pending.extend(result.events)
         return ActionResult(success=True, events=all_events)
 
     def query_layer(self, layer_name: str, query: Query) -> Answer:

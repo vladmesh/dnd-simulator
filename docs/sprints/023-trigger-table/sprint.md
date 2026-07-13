@@ -42,6 +42,7 @@ Ecology подписывается на события смерти сущест
 
 1. [Принадлежность смерти логову](tasks/phase2-task1-lair-death-provenance.md) — строгая provenance ядра/миньона в `ENTITY_DIED` и сейве
 2. [Немедленный write-back смерти в ecology](tasks/phase2-task2-ecology-death-writeback.md) — событийное обновление ростера/depletion и save/load
+3. [Доставка каскадных событий в live session](tasks/phase2-task3-live-event-cascade.md) — E2E-блокер доставки `ENTITY_DIED` и WS-сериализации provenance
 
 ## Phase 3: Trigger table
 
@@ -67,7 +68,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 2 (Событийный write-back — смерти логова) tasks complete — 2026-07-13. Ready to close phase.
+**Current:** Phase 2 task 3 (Доставка каскадных событий в live session) done — 2026-07-13. Phase-scoped E2E rerun pending.
 
 ## Decisions
 
