@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next"
+import { api } from "@/transport/apiClient"
 import { Button } from "@/components/ui/button"
 import { Languages } from "lucide-react"
 
@@ -7,8 +8,17 @@ const LANGS = [
   { code: "ru", label: "RU" },
 ] as const
 
-export function LanguageToggle() {
+type Props = {
+  sessionId?: string
+}
+
+export function LanguageToggle({ sessionId }: Props) {
   const { i18n } = useTranslation()
+
+  async function changeLanguage(lang: "en" | "ru") {
+    await i18n.changeLanguage(lang)
+    if (sessionId) await api.master.setLang(sessionId, { lang })
+  }
 
   return (
     <div className="flex items-center gap-1">
@@ -18,7 +28,7 @@ export function LanguageToggle() {
           key={lang.code}
           size="xs"
           variant={i18n.language === lang.code ? "default" : "ghost"}
-          onClick={() => i18n.changeLanguage(lang.code)}
+          onClick={() => void changeLanguage(lang.code)}
         >
           {lang.label}
         </Button>

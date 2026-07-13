@@ -2,6 +2,8 @@
 
 import gettext
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from contextvars import ContextVar
 from pathlib import Path
 
@@ -46,3 +48,13 @@ def N_(message: str) -> str:  # noqa: N802 — standard gettext convention
 def set_language(lang: str) -> None:
     """Set the language for the current context (thread/coroutine)."""
     current_lang.set(lang)
+
+
+@contextmanager
+def language_context(lang: str) -> Iterator[None]:
+    """Apply a language only while producing one session-scoped response."""
+    token = current_lang.set(lang)
+    try:
+        yield
+    finally:
+        current_lang.reset(token)

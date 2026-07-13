@@ -12,9 +12,9 @@
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 6 — Post-audit E2E fixes (tasks generated) — 2026-07-13
+**Phase:** 6 — Post-audit E2E fixes (task 1 done, task 2 pending) — 2026-07-13
 
-Phase 6 tasks generated. Ready to start task 1.
+Phase 6 Task 1 done: live WS payloads use the current session locale and `COMBAT_ENDED` has typed perception. Task 2 pending: exclude stale saved sessions from Master.
 
 Phase 6: [post-audit E2E report](e2e-reports/2026-07-13-sprint023-post-audit.md) зафиксировал два блокера: синхронизация frontend/session locale для live WS + typed `COMBAT_ENDED` perception и исключение stale disk saves из Master session list.
 

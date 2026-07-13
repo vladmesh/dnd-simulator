@@ -50,4 +50,11 @@ handlers и его gettext message в каталоги. Сохранить `Comb
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Round callbacks now apply the current session language while formatting each live payload, so a
+language change affects the next player WS event. The player header propagates its language toggle
+to the existing session-language endpoint. `COMBAT_ENDED` now has a typed perception handler using
+the existing gettext entry.

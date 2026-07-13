@@ -10,6 +10,7 @@ from dnd_simulator.core.events import (
     AttackResolvedPayload,
     AttackRollPayload,
     BuyPayload,
+    CombatEndedPayload,
     DamageComponentPayload,
     EntityActorPayload,
     EntityBlessPayload,
@@ -169,6 +170,12 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
     return _("{attacker} attacks {target}{weapon}{oa}{roll}{outcome}").format(
         attacker=attacker, target=target, weapon=weapon_str, oa=oa_str, roll=roll_str, outcome=outcome_str
     )
+
+
+def _perceive_combat_ended(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+    payload = event.payload
+    assert isinstance(payload, CombatEndedPayload)
+    return _("Combat ended.")
 
 
 def _perceive_disengage(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
@@ -529,6 +536,7 @@ _PerceiveHandler = Callable[[Event, Character, GetEntityFn], str]
 _DISPATCH: dict[EventType, _PerceiveHandler] = {
     EventType.ENTITY_SAY: _perceive_say,
     EventType.ENTITY_ATTACK: _perceive_attack,
+    EventType.COMBAT_ENDED: _perceive_combat_ended,
     EventType.ENTITY_DIED: _perceive_death,
     EventType.ENTITY_DISENGAGE: _perceive_disengage,
     EventType.OPPORTUNITY_ATTACK: _perceive_opportunity_attack,

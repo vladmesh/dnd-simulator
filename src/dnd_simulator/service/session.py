@@ -24,6 +24,7 @@ from dnd_simulator.core.queries import query_player, query_players
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
+from dnd_simulator.i18n import language_context
 from dnd_simulator.round import Round
 from dnd_simulator.service.action_dispatcher import create_dispatcher
 from dnd_simulator.service.transport_payloads import (
@@ -338,7 +339,8 @@ class GameSession:
                 awareness: PeacefulAwareness | CombatAwareness,
                 events: list[PerceivedEvent],
             ) -> None:
-                msg = build_turn_state(player, awareness, events, self.world)
+                with language_context(self.lang):
+                    msg = build_turn_state(player, awareness, events, self.world)
                 self._last_turn_msg = msg
                 self._fire("on_turn", msg)
 
@@ -368,7 +370,8 @@ class GameSession:
             # Wire on_action: fires after each action by any creature
             def on_action(creature: Creature, action: Action, budget: TurnBudget | None, error: str) -> None:
                 self._last_turn_msg = None  # turn is being processed
-                msg = build_round_state("action_result", player, game_round, creature_host, self.world)
+                with language_context(self.lang):
+                    msg = build_round_state("action_result", player, game_round, creature_host, self.world)
                 msg["actor"] = creature.id
                 msg["action"] = action.name
                 if error:
@@ -381,7 +384,8 @@ class GameSession:
 
             # Wire on_round_end: fires after each complete round
             def on_round_end(result: object) -> None:
-                msg = build_round_state("round_result", player, game_round, creature_host, self.world)
+                with language_context(self.lang):
+                    msg = build_round_state("round_result", player, game_round, creature_host, self.world)
                 self._fire("on_round_result", msg)
 
             game_round.set_on_round_end(on_round_end)

@@ -10,6 +10,7 @@ from dnd_simulator.core.events import (
     AttackRequestedPayload,
     AttackResolvedPayload,
     AttackRollPayload,
+    CombatEndedPayload,
     DamageComponentPayload,
     EncounterSpawnedPayload,
     EntityActorPayload,
@@ -183,6 +184,21 @@ class TestPerceiveEvent:
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
         assert "Something happened" in result
+
+    def test_combat_ended_has_localized_perception(self) -> None:
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        event = Event(
+            event_type=EventType.COMBAT_ENDED,
+            source_layer="entities",
+            data=CombatEndedPayload("r1"),
+        )
+
+        set_language("en")
+        assert perceive_event(event, observer, _get_entity_fn(observer)) == "Combat ended."
+
+        set_language("ru")
+        assert perceive_event(event, observer, _get_entity_fn(observer)) == "Бой окончен."
+        set_language("en")
 
     def test_unknown_entity_id(self) -> None:
         observer = Character(id="guard", name="Guard", location_id="r1")
