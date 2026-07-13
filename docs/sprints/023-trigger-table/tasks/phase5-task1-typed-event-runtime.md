@@ -54,4 +54,4 @@ payload definitions, registry и сам конверт события по ус�
 
 ## Developer Notes
 
-`Event` больше не принимает и не нормализует словари: payload проверяется по registry сразу. Убраны mapping-методы и legacy aliases, matcher и perception работают через поля payload, а все тестовые event-конструкторы используют конкретные payload-классы. Для wire/log boundary добавлен явный `payload_to_data()`.
+`Event` больше не принимает и не нормализует словари: payload проверяется по registry сразу. Убраны mapping-методы и legacy aliases, matcher и perception работают через поля payload, а все тестовые event-конструкторы используют конкретные payload-классы. Для wire/log boundary добавлен явный `payload_to_data()`. Полный gate выявил и закрыл последние обращения тестов к mapping API и legacy field names.

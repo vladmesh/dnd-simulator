@@ -58,7 +58,7 @@ class TestReactionTrigger:
         trigger = _leaving_reach_trigger()
         assert trigger.trigger_type == TriggerType.LEAVING_REACH
         assert trigger.source_creature_id == "fleeing_goblin"
-        assert trigger.data.mover_id == "fleeing_goblin"
+        assert trigger.data["mover_id"] == "fleeing_goblin"
 
     def test_immutable(self) -> None:
         trigger = _leaving_reach_trigger()

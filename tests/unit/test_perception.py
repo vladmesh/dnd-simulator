@@ -7,7 +7,6 @@ import pytest
 import dnd_simulator.layers.entities.perception as perception_mod
 from dnd_simulator.core.character import Ability, Attack, Character, DamageComponent, DamageType, Entity, Race
 from dnd_simulator.core.events import (
-    EVENT_PAYLOAD_TYPES,
     AttackRequestedPayload,
     AttackResolvedPayload,
     AttackRollPayload,
@@ -27,8 +26,7 @@ from dnd_simulator.core.events import (
     TakePayload,
     WeatherChangedPayload,
 )
-from dnd_simulator.core.models import ActionResult, Answer, EventType, Query
-from dnd_simulator.core.models import Event as RuntimeEvent
+from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
 from dnd_simulator.i18n import set_language
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.perception import perceive_event
@@ -52,12 +50,6 @@ def _get_entity_fn(*entities: Entity):
     return lambda eid: by_id.get(eid)
 
 
-def _event(event_type: EventType, **fields: object) -> RuntimeEvent:
-    """Build test events through the registered typed payload class."""
-    payload_type = EVENT_PAYLOAD_TYPES[event_type]
-    return RuntimeEvent(event_type, "entities", payload_type(**fields))  # type: ignore[operator,call-arg]
-
-
 def _attack_payload(**overrides: object) -> AttackResolvedPayload:
     fields: dict[str, object] = {
         "attacker_id": "player",
@@ -75,57 +67,6 @@ def _attack_payload(**overrides: object) -> AttackResolvedPayload:
     }
     fields.update(overrides)
     return AttackResolvedPayload(**fields)  # type: ignore[arg-type]
-
-
-def Event(  # noqa: N802
-    event_type: EventType,
-    source_layer: str,
-    data: object,
-    description: str = "",
-    observer_ids: frozenset[str] | None = None,
-) -> RuntimeEvent:
-    """Create typed test events while preserving concise test setup."""
-    if isinstance(data, dict):
-        if event_type is EventType.ENTITY_ATTACK:
-            roll = data.get("attack_roll", {})
-            assert isinstance(roll, dict)
-            components = tuple(
-                RollComponentPayload(str(item["source"]), int(item["value"]), str(item.get("dice", "")))
-                for item in roll.get("components", [])
-                if isinstance(item, dict)
-            )
-            damage = tuple(
-                DamageComponentPayload(
-                    str(item["source"]),
-                    str(item["dice"]),
-                    tuple(item.get("dice_detail", [])),
-                    int(item["amount"]),
-                    str(item["type"]),
-                )
-                for item in data.get("damage_components", [])
-                if isinstance(item, dict)
-            )
-            data = AttackResolvedPayload(
-                attacker_id=str(data["attacker_id"]),
-                target_id=str(data["target_id"]),
-                hit=bool(data["hit"]),
-                weapon=str(data["weapon"]),
-                critical=bool(data["critical"]),
-                ac=int(data["ac"]),
-                attack_roll=AttackRollPayload(
-                    int(roll["natural"]),
-                    components,
-                    int(roll["total"]),
-                    bool(roll["advantage"]),
-                    bool(roll["disadvantage"]),
-                ),
-                damage=int(data["damage"]) if data.get("damage") is not None else None,
-                damage_components=damage,
-                is_opportunity_attack=bool(data.get("is_opportunity_attack", False)),
-            )
-        else:
-            data = EVENT_PAYLOAD_TYPES[event_type](**data)  # type: ignore[operator,call-arg]
-    return RuntimeEvent(event_type, source_layer, data, description, observer_ids)  # type: ignore[arg-type]
 
 
 class TestPerceiveEvent:
@@ -160,26 +101,11 @@ class TestPerceiveEvent:
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data=AttackResolvedPayload(
-                **{
-                    "attacker_id": "player",
-                    "target_id": "smith",
-                    "weapon": "longsword",
-                    "hit": True,
-                    "critical": False,
-                    "ac": 13,
-                    "attack_roll": {
-                        "natural": 14,
-                        "components": [{"source": "ability", "value": 3, "dice": ""}],
-                        "total": 17,
-                        "advantage": False,
-                        "disadvantage": False,
-                    },
-                    "damage": 5,
-                    "damage_components": [
-                        {"source": "weapon", "dice": "1d8", "amount": 5, "type": "slashing"},
-                    ],
-                }
+            data=_attack_payload(
+                target_id="smith",
+                weapon="longsword",
+                damage=5,
+                damage_components=(DamageComponentPayload("weapon", "1d8", (), 5, "slashing"),),
             ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, attacker))
@@ -193,22 +119,12 @@ class TestPerceiveEvent:
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data=AttackResolvedPayload(
-                **{
-                    "attacker_id": "player",
-                    "target_id": "smith",
-                    "weapon": "longsword",
-                    "hit": False,
-                    "critical": False,
-                    "ac": 15,
-                    "attack_roll": {
-                        "natural": 8,
-                        "components": [{"source": "ability", "value": 3, "dice": ""}],
-                        "total": 11,
-                        "advantage": False,
-                        "disadvantage": False,
-                    },
-                }
+            data=_attack_payload(
+                target_id="smith",
+                weapon="longsword",
+                hit=False,
+                ac=15,
+                attack_roll=AttackRollPayload(8, (RollComponentPayload("ability", 3),), 11, False, False),
             ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, target))
@@ -222,26 +138,13 @@ class TestPerceiveEvent:
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data=AttackResolvedPayload(
-                **{
-                    "attacker_id": "player",
-                    "target_id": "smith",
-                    "weapon": "",
-                    "hit": True,
-                    "critical": False,
-                    "ac": 10,
-                    "attack_roll": {
-                        "natural": 15,
-                        "components": [],
-                        "total": 15,
-                        "advantage": False,
-                        "disadvantage": False,
-                    },
-                    "damage": 3,
-                    "damage_components": [
-                        {"source": "weapon", "dice": "1d4", "amount": 3, "type": "bludgeoning"},
-                    ],
-                }
+            data=_attack_payload(
+                target_id="smith",
+                weapon="",
+                ac=10,
+                attack_roll=AttackRollPayload(15, (), 15, False, False),
+                damage=3,
+                damage_components=(DamageComponentPayload("weapon", "1d4", (), 3, "bludgeoning"),),
             ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, attacker, target))
@@ -452,28 +355,7 @@ class TestCombatLogI18n:
     are passed through the gettext _() function in perception output."""
 
     def _attack_event(self, **overrides: object) -> Event:
-        base: dict[str, object] = {
-            "attacker_id": "player",
-            "target_id": "npc",
-            "weapon": "Longsword",
-            "hit": True,
-            "critical": False,
-            "ac": 13,
-            "attack_roll": {
-                "natural": 14,
-                "components": [{"source": "ability", "value": 3, "dice": ""}],
-                "total": 17,
-                "advantage": False,
-                "disadvantage": False,
-            },
-            "damage": 8,
-            "damage_components": [
-                {"source": "weapon", "dice": "1d8", "amount": 5, "type": "slashing"},
-                {"source": "ability", "dice": "", "amount": 3, "type": "slashing"},
-            ],
-        }
-        base.update(overrides)
-        return Event(event_type=EventType.ENTITY_ATTACK, source_layer="entities", data=base)
+        return Event(event_type=EventType.ENTITY_ATTACK, source_layer="entities", data=_attack_payload(**overrides))
 
     def test_damage_type_translated(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Damage type 'slashing' in damage detail must go through _()."""
@@ -490,11 +372,11 @@ class TestCombatLogI18n:
         target = Character(id="npc", name="Goblin", location_id="r1", race=Race.HUMAN)
         event = self._attack_event(
             damage=12,
-            damage_components=[
-                {"source": "weapon", "dice": "1d8", "amount": 5, "type": "slashing"},
-                {"source": "sneak_attack", "dice": "1d6", "amount": 4, "type": "slashing"},
-                {"source": "ability", "dice": "", "amount": 3, "type": "slashing"},
-            ],
+            damage_components=(
+                DamageComponentPayload("weapon", "1d8", (), 5, "slashing"),
+                DamageComponentPayload("sneak_attack", "1d6", (), 4, "slashing"),
+                DamageComponentPayload("ability", "", (), 3, "slashing"),
+            ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, target))
         # sneak_attack source label must be translated
@@ -539,27 +421,15 @@ class TestCombatLogI18n:
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data=AttackResolvedPayload(
-                **{
-                    "attacker_id": "orc",
-                    "target_id": "player",
-                    "weapon": "Greataxe",
-                    "hit": True,
-                    "critical": False,
-                    "ac": 15,
-                    "attack_roll": {
-                        "natural": 16,
-                        "components": [{"source": "ability", "value": 3, "dice": ""}],
-                        "total": 19,
-                        "advantage": False,
-                        "disadvantage": False,
-                    },
-                    "damage": 10,
-                    "damage_components": [
-                        {"source": "weapon", "dice": "1d12", "amount": 10, "type": "slashing"},
-                    ],
-                    "is_opportunity_attack": True,
-                }
+            data=_attack_payload(
+                attacker_id="orc",
+                target_id="player",
+                weapon="Greataxe",
+                ac=15,
+                attack_roll=AttackRollPayload(16, (RollComponentPayload("ability", 3),), 19, False, False),
+                damage=10,
+                damage_components=(DamageComponentPayload("weapon", "1d12", (), 10, "slashing"),),
+                is_opportunity_attack=True,
             ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, attacker, target))
@@ -575,26 +445,14 @@ class TestCombatLogI18n:
         event = Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data=AttackResolvedPayload(
-                **{
-                    "attacker_id": "orc",
-                    "target_id": "player",
-                    "weapon": "Greataxe",
-                    "hit": True,
-                    "critical": False,
-                    "ac": 15,
-                    "attack_roll": {
-                        "natural": 16,
-                        "components": [{"source": "ability", "value": 3, "dice": ""}],
-                        "total": 19,
-                        "advantage": False,
-                        "disadvantage": False,
-                    },
-                    "damage": 10,
-                    "damage_components": [
-                        {"source": "weapon", "dice": "1d12", "amount": 10, "type": "slashing"},
-                    ],
-                }
+            data=_attack_payload(
+                attacker_id="orc",
+                target_id="player",
+                weapon="Greataxe",
+                ac=15,
+                attack_roll=AttackRollPayload(16, (RollComponentPayload("ability", 3),), 19, False, False),
+                damage=10,
+                damage_components=(DamageComponentPayload("weapon", "1d12", (), 10, "slashing"),),
             ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, attacker, target))
@@ -695,7 +553,7 @@ class TestPerceptionDispatchAndFailFast:
 
     def test_missing_weapon_in_attack_raises_key_error(self) -> None:
         """ENTITY_ATTACK without 'weapon' is rejected at construction."""
-        with pytest.raises(KeyError, match="weapon"):
+        with pytest.raises(TypeError, match="weapon"):
             Event(
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
@@ -706,20 +564,14 @@ class TestPerceptionDispatchAndFailFast:
                         "hit": False,
                         "critical": False,
                         "ac": 13,
-                        "attack_roll": {
-                            "natural": 8,
-                            "components": [],
-                            "total": 8,
-                            "advantage": False,
-                            "disadvantage": False,
-                        },
+                        "attack_roll": AttackRollPayload(8, (), 8, False, False),
                     }
                 ),
             )
 
     def test_missing_critical_in_attack_raises_key_error(self) -> None:
         """ENTITY_ATTACK without 'critical' is rejected at construction."""
-        with pytest.raises(KeyError, match="critical"):
+        with pytest.raises(TypeError, match="critical"):
             Event(
                 event_type=EventType.ENTITY_ATTACK,
                 source_layer="entities",
@@ -730,17 +582,9 @@ class TestPerceptionDispatchAndFailFast:
                         "weapon": "longsword",
                         "hit": True,
                         "ac": 13,
-                        "attack_roll": {
-                            "natural": 18,
-                            "components": [],
-                            "total": 18,
-                            "advantage": False,
-                            "disadvantage": False,
-                        },
+                        "attack_roll": AttackRollPayload(18, (), 18, False, False),
                         "damage": 5,
-                        "damage_components": [
-                            {"source": "weapon", "dice": "1d8", "amount": 5, "type": "slashing"},
-                        ],
+                        "damage_components": (DamageComponentPayload("weapon", "1d8", (), 5, "slashing"),),
                         # "critical" deliberately missing
                     }
                 ),
@@ -811,22 +655,11 @@ class TestAttackLineLocalizes:
         return Event(
             event_type=EventType.ENTITY_ATTACK,
             source_layer="entities",
-            data=AttackResolvedPayload(
-                **{
-                    "attacker_id": "player",
-                    "target_id": "smith",
-                    "weapon": "Longsword",
-                    "hit": False,
-                    "critical": False,
-                    "ac": 15,
-                    "attack_roll": {
-                        "natural": 8,
-                        "components": [{"source": "ability", "value": 3, "dice": ""}],
-                        "total": 11,
-                        "advantage": False,
-                        "disadvantage": False,
-                    },
-                }
+            data=_attack_payload(
+                target_id="smith",
+                hit=False,
+                ac=15,
+                attack_roll=AttackRollPayload(8, (RollComponentPayload("ability", 3),), 11, False, False),
             ),
         )
 

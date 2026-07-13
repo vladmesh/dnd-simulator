@@ -3,7 +3,7 @@
 import pytest
 
 from dnd_simulator.core.events import WeatherChangedPayload
-from dnd_simulator.core.models import ActionResult, Answer, GameDateTime, Query, QueryType, TimeDelta
+from dnd_simulator.core.models import ActionResult, Answer, EventType, GameDateTime, Query, QueryType, TimeDelta
 from dnd_simulator.layers.politics.layer import PoliticsLayer
 from dnd_simulator.layers.politics.models import (
     DiplomaticStatus,
@@ -148,7 +148,7 @@ class TestWarResolution:
         # At least some conquest or political events should have occurred
         assert len(all_events) > 0
         # Check that region_conquered events exist
-        conquest_events = [e for e in all_events if e.data.get("type") == "region_conquered"]
+        conquest_events = [e for e in all_events if e.event_type == EventType.REGION_CONQUERED]
         assert len(conquest_events) > 0
 
     def test_war_reduces_military(self) -> None:

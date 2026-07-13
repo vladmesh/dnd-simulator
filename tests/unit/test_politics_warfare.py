@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import random
 
+from dnd_simulator.core.events import RegionConqueredPayload
 from dnd_simulator.layers.politics.models import (
     DiplomaticStatus,
     Nation,
@@ -59,9 +60,9 @@ class TestProcessWars:
         events = process_wars(nations, relations, war_durations, adjacency, rng)
 
         # With 80 vs 40 military, alpha should win and conquer
-        conquest_events = [e for e in events if e.data.get("type") == "region_conquered"]
+        conquest_events = [e for e in events if isinstance(e.data, RegionConqueredPayload)]
         assert len(conquest_events) == 1
-        assert conquest_events[0].data.winner == "alpha"
+        assert conquest_events[0].data.winner_id == "alpha"
 
     def test_war_costs_applied(self) -> None:
         """Both winner and loser lose military. Loser also loses stability."""
@@ -107,7 +108,7 @@ class TestProcessWars:
 
         events = process_wars(nations, relations, war_durations, adjacency, rng)
 
-        conquest_events = [e for e in events if e.data.get("type") == "region_conquered"]
+        conquest_events = [e for e in events if isinstance(e.data, RegionConqueredPayload)]
         # Either stalemate (no conquest, both lose 1) or narrow victory
         if not conquest_events:
             assert alpha.military == 50.0 - STALEMATE_MILITARY_COST

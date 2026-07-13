@@ -57,14 +57,7 @@ def _make_squad_move_event(squad_name: str, from_loc: str, to_loc: str) -> Event
     return Event(
         event_type=EventType.SQUAD_MOVE,
         source_layer="ecology",
-        data=SquadMovePayload(
-            **{
-                "squad_id": "orc_patrol",
-                "squad_name": squad_name,
-                "from": from_loc,
-                "to": to_loc,
-            }
-        ),
+        data=SquadMovePayload("orc_patrol", squad_name, from_loc, to_loc),
         description=f"{squad_name} moved from {from_loc} to {to_loc}",
     )
 

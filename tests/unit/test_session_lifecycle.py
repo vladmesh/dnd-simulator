@@ -22,7 +22,7 @@ from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.awareness import PerceivedEvent
 from dnd_simulator.core.brain import PlayerBrain
 from dnd_simulator.core.combat import Position
-from dnd_simulator.core.events import EntityDiedPayload
+from dnd_simulator.core.events import EntityDiedPayload, payload_to_data
 from dnd_simulator.core.lair import LairMemberRole, LairOrigin
 from dnd_simulator.core.models import EventType
 from dnd_simulator.core.world import World
@@ -126,7 +126,7 @@ class TestListenerDispatch:
         event = PerceivedEvent(
             description="Goblin Boss dies",
             event_type=EventType.ENTITY_DIED,
-            data=dict(
+            data=payload_to_data(
                 EntityDiedPayload(
                     "goblin_boss_1",
                     "cave",

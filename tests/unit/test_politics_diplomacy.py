@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import random
 
+from dnd_simulator.core.events import PeaceDeclaredPayload, TradeAgreementPayload
 from dnd_simulator.layers.politics.models import (
     DiplomaticStatus,
     Leader,
@@ -49,7 +50,7 @@ class TestProcessDiplomacy:
             war_durations[("alpha", "beta")] = 20
             rng = random.Random(seed)
             events = process_diplomacy(nations, relations, war_durations, adjacency, rng)
-            peace_events = [e for e in events if e.data.get("type") == "peace"]
+            peace_events = [e for e in events if isinstance(e.data, PeaceDeclaredPayload)]
             if peace_events:
                 peace_happened = True
                 assert relations[("alpha", "beta")] == DiplomaticStatus.PEACE
@@ -75,7 +76,7 @@ class TestProcessDiplomacy:
             relations[("alpha", "beta")] = DiplomaticStatus.PEACE
             rng = random.Random(seed)
             events = process_diplomacy(nations, relations, war_durations, adjacency, rng)
-            trade_events = [e for e in events if e.data.get("type") == "trade_agreement"]
+            trade_events = [e for e in events if isinstance(e.data, TradeAgreementPayload)]
             if trade_events:
                 trade_happened = True
                 assert relations[("alpha", "beta")] == DiplomaticStatus.TRADE_AGREEMENT

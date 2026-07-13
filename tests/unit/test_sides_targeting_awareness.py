@@ -18,7 +18,7 @@ from dnd_simulator.core.character import (
 )
 from dnd_simulator.core.class_features import RogueFeatures
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
-from dnd_simulator.core.events import AttackRequestedPayload
+from dnd_simulator.core.events import AttackRequestedPayload, AttackResolvedPayload
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, FactionRelation, Query, QueryType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 
@@ -258,8 +258,12 @@ class TestSneakAttackAllyUsesSides:
             layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
 
             for log_event in layer._combat._location_log["arena"]:
-                if log_event.event_type == EventType.ENTITY_ATTACK and log_event.data.get("attacker_id") == "rogue":
-                    components = log_event.data.get("damage_components", [])
+                if (
+                    log_event.event_type == EventType.ENTITY_ATTACK
+                    and isinstance(log_event.data, AttackResolvedPayload)
+                    and log_event.data.attacker_id == "rogue"
+                ):
+                    components = log_event.data.damage_components
                     for comp in components:
                         if comp.source == "sneak_attack":
                             sneak_attack_triggered = True
@@ -327,10 +331,14 @@ class TestSneakAttackAllyUsesSides:
             layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
 
             for log_event in layer._combat._location_log["arena"]:
-                if log_event.event_type == EventType.ENTITY_ATTACK and log_event.data.get("attacker_id") == "rogue":
-                    components = log_event.data.get("damage_components", [])
+                if (
+                    log_event.event_type == EventType.ENTITY_ATTACK
+                    and isinstance(log_event.data, AttackResolvedPayload)
+                    and log_event.data.attacker_id == "rogue"
+                ):
+                    components = log_event.data.damage_components
                     for comp in components:
-                        if isinstance(comp, dict) and comp.get("source") == "sneak_attack":
+                        if comp.source == "sneak_attack":
                             sneak_attack_from_ally = True
                             break
 
