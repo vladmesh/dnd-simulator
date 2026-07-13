@@ -3,8 +3,8 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-13
-**Position:** Sprint 022 закрыл второй эпик simulation-core: player-agnostic якоря, сохраняемые wait/sleep/travel intent, по-рёберное путешествие и согласованный с round lifecycle save/load/autosave. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
-**Next:** Реализовать Task 4 Phase 5 Sprint 023: protocol containment и финальный autosave.
+**Position:** Sprint 023 завершил trigger table, ecology write-back смертей логова, GM controls и post-audit refactor; финальный аудит ждёт triage.
+**Next:** Провести audit triage Sprint 023.
 **Blockers:** нет.
 
 ## Current Sprint
@@ -14,13 +14,11 @@
 **Started:** 2026-07-12
 **Phase:** 5 — Post-audit refactor (COMPLETE) — 2026-07-13
 
-All phases complete. Ready for audit.
+All phases complete. Final audit complete; ready for audit triage.
 
-Audit triaged. Phase 5 открыта для event-contract cleanup, decomposition растущих entities/session/transport модулей и двух небольших reliability gaps.
+Phase 5 closed: единый typed event-контракт; trigger runtime, event-log и perception split; transport builders; non-object WS JSON protocol containment; final shutdown-autosave failure logging.
 
-Phase 5 Task 1 done: единый typed event-контракт. Task 2 done: trigger runtime, event-log и perception split. Task 3 done: transport builders. Task 4 done: non-object WS JSON изолирован protocol error, final shutdown-autosave логирует failure и завершает lifespan.
-
-**Audit:** Triaged 2026-07-13. Quick-fix: 0 applied. Sprint-relevant: 6 findings → Phase 5 refactor. Backlog: 8 findings already tracked or accepted; 1 fresh item added.
+**Audit:** Final audit 2026-07-13: 11 findings, no sprint blockers. Previous 6 sprint-relevant findings and 2 test gaps are fixed; triage the 1 fresh typed-event codec `Any` finding and confirm remaining known backlog debt.
 
 Phase 4 Task 1 done: сохраняемый GM override и управление trigger armed state через master API под world gate.
 
