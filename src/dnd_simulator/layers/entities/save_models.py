@@ -16,7 +16,7 @@ from dnd_simulator.core.lair import LairMemberRole
 from dnd_simulator.core.models import EntityKind, EventType
 from dnd_simulator.core.modifiers import ModifierOp, StatType
 from dnd_simulator.core.resource import RestType
-from dnd_simulator.core.triggers import ActivationTrigger, EventCondition, TriggerDefinition
+from dnd_simulator.core.triggers import ActivationTrigger, EventCondition, GmActivationOverride, TriggerDefinition
 
 
 class SaveModel(BaseModel):
@@ -207,6 +207,7 @@ class CreatureFields(EntitySaveBase):
     lair_origin: LairOriginSave | None = None
     is_anchor: bool = False
     always_active: bool = False
+    gm_activation_override: GmActivationOverride = GmActivationOverride.AUTOMATIC
     triggers: list[ActivationTriggerSave] = Field(default_factory=list)
     current_intent: IntentSave | None = None
     combat_position: tuple[int, int] | None = None

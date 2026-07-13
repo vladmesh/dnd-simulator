@@ -554,6 +554,7 @@ class EntitiesLayer(Layer):
 
                     entity.is_anchor = bool(edata.get("is_anchor", entity.is_anchor))
                     entity.always_active = esave.always_active
+                    entity.gm_activation_override = esave.gm_activation_override
                     entity.triggers = [trigger.to_domain() for trigger in esave.triggers]
                     intent_raw = edata.get("current_intent")
                     if isinstance(intent_raw, dict):

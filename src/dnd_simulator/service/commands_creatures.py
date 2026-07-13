@@ -6,6 +6,7 @@ from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import EntityKind
 from dnd_simulator.core.queries import query_all_creatures, query_entity_info
+from dnd_simulator.core.triggers import GmActivationOverride
 from dnd_simulator.service.base import GameServiceProtocol
 
 if TYPE_CHECKING:
@@ -34,6 +35,48 @@ class CreatureCommands(GameServiceProtocol):
         """Get single entity detail."""
         session = self._get_session(session_id)
         return query_entity_info(session.world.query_layer, entity_id)
+
+    def set_creature_activation_override(
+        self,
+        session_id: str,
+        entity_id: str,
+        override: GmActivationOverride,
+    ) -> dict[str, object]:
+        """Set the persistent GM activation override and apply it immediately."""
+        from dnd_simulator.core.character import Creature
+
+        session = self._get_session(session_id)
+        with session.mutate_world():
+            layer = self._get_entities_layer(session)
+            entity = layer.get_entity(entity_id)
+            if not isinstance(entity, Creature):
+                raise ValueError(f"Creature '{entity_id}' not found")
+            entity.gm_activation_override = override
+            layer.update_activation(session.world.time, location_graph=session.world.location_graph)
+            return query_entity_info(session.world.query_layer, entity_id)
+
+    def set_activation_trigger_armed(
+        self,
+        session_id: str,
+        entity_id: str,
+        trigger_id: str,
+        armed: bool,
+    ) -> dict[str, object]:
+        """Arm or disarm one existing activation trigger without changing its definition or state."""
+        from dnd_simulator.core.character import Creature
+
+        session = self._get_session(session_id)
+        with session.mutate_world():
+            layer = self._get_entities_layer(session)
+            entity = layer.get_entity(entity_id)
+            if not isinstance(entity, Creature):
+                raise ValueError(f"Creature '{entity_id}' not found")
+            trigger = next((item for item in entity.triggers if item.definition.id == trigger_id), None)
+            if trigger is None:
+                raise ValueError(f"Activation trigger '{trigger_id}' not found on creature '{entity_id}'")
+            trigger.armed = armed
+            layer.update_activation(session.world.time, location_graph=session.world.location_graph)
+            return {"id": trigger.definition.id, "armed": trigger.armed, "active": trigger.active}
 
     # -- Spawn --
 

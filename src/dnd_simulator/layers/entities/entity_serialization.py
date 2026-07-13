@@ -216,6 +216,7 @@ def _creature_fields(entity: Creature) -> dict[str, object]:
         ),
         "is_anchor": entity.is_anchor,
         "always_active": entity.always_active,
+        "gm_activation_override": entity.gm_activation_override,
         "triggers": [
             ActivationTriggerSave(
                 id=trigger.definition.id,

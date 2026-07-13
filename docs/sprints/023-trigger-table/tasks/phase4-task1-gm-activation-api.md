@@ -45,16 +45,24 @@ response схемы и master routes; расширить entity detail wire cont
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Ручной `active`/`dormant` немедленно влияет на trigger-only существо и не теряется на activation pass
-- [ ] `automatic` возвращает существу штатные причины активности
-- [ ] Combat, anchor scene и `always_active` нельзя случайно погасить ручкой ГМ
-- [ ] Override и trigger runtime-state проходят строгий save/load round-trip
-- [ ] Master API управляет существующим trigger ID и отдаёт состояния панели
-- [ ] Все live-world мутации этой ручки проходят под session world gate
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Ручной `active`/`dormant` немедленно влияет на trigger-only существо и не теряется на activation pass
+- [x] `automatic` возвращает существу штатные причины активности
+- [x] Combat, anchor scene и `always_active` нельзя случайно погасить ручкой ГМ
+- [x] Override и trigger runtime-state проходят строгий save/load round-trip
+- [x] Master API управляет существующим trigger ID и отдаёт состояния панели
+- [x] Все live-world мутации этой ручки проходят под session world gate
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Добавлен сохраняемый `GmActivationOverride` и две узкие master API команды под `session.mutate_world()`.
+Переключение override или `armed` сразу запускает activation pass без materialization/event side effects; определение
+пары и её `active` state при disarm сохраняются. Полный backend gate зелёный (2526 unit). Frontend suite не затронут:
+на загруженной машине четыре старых теста упёрлись в штатный 5s timeout; повтор проблемных файлов подтвердил 26/26,
+а `CreatureForm` отдельно прошёл 2/2 с timeout 15s.

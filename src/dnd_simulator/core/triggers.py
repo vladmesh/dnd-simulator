@@ -65,6 +65,14 @@ class ActivationTrigger:
     active: bool = False
 
 
+class GmActivationOverride(StrEnum):
+    """Persistent GM control layered over automatic activation reasons."""
+
+    ACTIVE = "active"
+    DORMANT = "dormant"
+    AUTOMATIC = "automatic"
+
+
 class CompleteTriggerStatus(StrEnum):
     COMPLETED = "completed"
     UNKNOWN = "unknown"

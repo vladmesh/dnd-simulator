@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.models import EntityKind
+from dnd_simulator.core.triggers import GmActivationOverride
 
 # -- Requests --
 
@@ -102,6 +103,24 @@ class SetBrainResponse(BaseModel):
     message: str
     brain_type: BrainType
     warning: str | None = None
+
+
+class SetActivationOverrideRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    override: GmActivationOverride
+
+
+class SetActivationTriggerRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    armed: bool
+
+
+class ActivationTriggerResponse(BaseModel):
+    id: str
+    armed: bool
+    active: bool
 
 
 class PatchNationRequest(BaseModel):
@@ -250,6 +269,8 @@ class CreatureResponse(BaseModel):
     inventory: list[dict[str, str]] = Field(default_factory=list)
     equipped_weapon: dict[str, str] | None = None
     resource_pools: list[dict[str, object]] = Field(default_factory=list)
+    gm_activation_override: GmActivationOverride = GmActivationOverride.AUTOMATIC
+    activation_triggers: list[ActivationTriggerResponse] = Field(default_factory=list)
 
 
 class TemplateListItem(BaseModel):

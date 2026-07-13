@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 
 from dnd_simulator.adapters.api.deps import get_service
 from dnd_simulator.adapters.api.schemas import (
+    ActivationTriggerResponse,
     AdvanceTimeRequest,
     CreateSessionRequest,
     CreatureResponse,
@@ -13,6 +14,8 @@ from dnd_simulator.adapters.api.schemas import (
     PatchNationRequest,
     PatchSettlementRequest,
     SessionResponse,
+    SetActivationOverrideRequest,
+    SetActivationTriggerRequest,
     SetBrainRequest,
     SetBrainResponse,
     SetLangRequest,
@@ -97,6 +100,40 @@ def get_creature(session_id: str, entity_id: str) -> CreatureResponse:
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     return CreatureResponse.model_validate(info)
+
+
+@router.put("/sessions/{session_id}/creatures/{entity_id}/activation", response_model=CreatureResponse)
+def set_creature_activation(
+    session_id: str,
+    entity_id: str,
+    body: SetActivationOverrideRequest,
+) -> CreatureResponse:
+    """Set a creature's persistent GM activation override."""
+    service = get_service()
+    try:
+        info = service.set_creature_activation_override(session_id, entity_id, body.override)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return CreatureResponse.model_validate(info)
+
+
+@router.put(
+    "/sessions/{session_id}/creatures/{entity_id}/triggers/{trigger_id}",
+    response_model=ActivationTriggerResponse,
+)
+def set_activation_trigger(
+    session_id: str,
+    entity_id: str,
+    trigger_id: str,
+    body: SetActivationTriggerRequest,
+) -> ActivationTriggerResponse:
+    """Arm or disarm an existing activation trigger."""
+    service = get_service()
+    try:
+        state = service.set_activation_trigger_armed(session_id, entity_id, trigger_id, body.armed)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    return ActivationTriggerResponse.model_validate(state)
 
 
 @router.post("/sessions/{session_id}/creatures", response_model=CreatureResponse)
