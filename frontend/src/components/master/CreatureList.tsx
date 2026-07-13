@@ -6,6 +6,7 @@ import type { CreatureResponse } from "@/types/api"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { CreatureForm } from "./CreatureForm"
+import { ActivationControls } from "./ActivationControls"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Loader2, Plus, Trash2, Brain } from "lucide-react"
 
@@ -24,15 +25,16 @@ export function CreatureList({ sessionId }: Props) {
   const [editCreature, setEditCreature] = useState<CreatureResponse | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
 
-  const refresh = useCallback(() => {
+  const refresh = useCallback(async () => {
     const params = filter === "all" ? undefined : { entity_type: filter }
-    api.master
-      .getCreatures(sessionId, params)
-      .then(setCreatures)
-      .finally(() => setLoading(false))
+    try {
+      setCreatures(await api.master.getCreatures(sessionId, params))
+    } finally {
+      setLoading(false)
+    }
   }, [sessionId, filter])
 
-  useEffect(() => { refresh() }, [refresh])
+  useEffect(() => { void refresh() }, [refresh])
 
   const deleteCreature = (c: CreatureResponse) => {
     if (!confirm(t("master:confirm_delete_creature", { name: c.name }))) return
@@ -159,9 +161,7 @@ export function CreatureList({ sessionId }: Props) {
                     </button>
                   </td>
                   <td className="px-3 py-2">
-                    <Badge variant={c.active ? "default" : "outline"}>
-                      {c.active ? "yes" : "no"}
-                    </Badge>
+                    <ActivationControls sessionId={sessionId} creature={c} onChanged={refresh} />
                   </td>
                   <td className="px-3 py-2">
                     <Button

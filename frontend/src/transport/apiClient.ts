@@ -1,6 +1,7 @@
 import type { LevelUpRequest, PlayerStatus } from "@/types/game"
 import type {
   AdvanceTimeRequest,
+  ActivationTriggerResponse,
   AssembleWorldRequest,
   CatalogEntry,
   CreatePlayerRequest,
@@ -24,6 +25,8 @@ import type {
   SessionResponse,
   SetBrainRequest,
   SetBrainResponse,
+  SetActivationOverrideRequest,
+  SetActivationTriggerRequest,
   SetLangRequest,
   SpawnCreatureRequest,
   TemplateListItem,
@@ -220,6 +223,27 @@ const master = {
   setBrain: (sessionId: string, entityId: string, data: SetBrainRequest) =>
     put<SetBrainResponse>(
       `/api/master/sessions/${sessionId}/creatures/${entityId}/brain`,
+      data,
+    ),
+
+  setCreatureActivation: (
+    sessionId: string,
+    entityId: string,
+    data: SetActivationOverrideRequest,
+  ) =>
+    put<CreatureResponse>(
+      `/api/master/sessions/${sessionId}/creatures/${entityId}/activation`,
+      data,
+    ),
+
+  setActivationTrigger: (
+    sessionId: string,
+    entityId: string,
+    triggerId: string,
+    data: SetActivationTriggerRequest,
+  ) =>
+    put<ActivationTriggerResponse>(
+      `/api/master/sessions/${sessionId}/creatures/${entityId}/triggers/${encodeURIComponent(triggerId)}`,
       data,
     ),
 

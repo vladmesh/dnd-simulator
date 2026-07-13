@@ -73,7 +73,7 @@ Ecology подписывается на события смерти сущест
 
 ## Status
 
-**Current:** Phase 4 (Ручка ГМ + failure containment), tasks generated 2026-07-13. Ready to start task 1.
+**Current:** Phase 4 (Ручка ГМ + failure containment), task 2 done, task 3 pending.
 
 ## Decisions
 

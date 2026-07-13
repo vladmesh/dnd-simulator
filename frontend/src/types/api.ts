@@ -51,6 +51,16 @@ export interface SetBrainRequest {
   model?: string
 }
 
+export type GmActivationOverride = "active" | "dormant" | "automatic"
+
+export interface SetActivationOverrideRequest {
+  override: GmActivationOverride
+}
+
+export interface SetActivationTriggerRequest {
+  armed: boolean
+}
+
 export interface PatchNationRequest {
   wealth?: number | null
   military?: number | null
@@ -218,6 +228,14 @@ export interface CreatureResponse {
   memory?: Record<string, unknown> | null
   inventory?: InventoryItem[]
   equipped_weapon?: EquippedWeapon | null
+  gm_activation_override: GmActivationOverride
+  activation_triggers: ActivationTriggerResponse[]
+}
+
+export interface ActivationTriggerResponse {
+  id: string
+  armed: boolean
+  active: boolean
 }
 
 export interface TemplateListItem {

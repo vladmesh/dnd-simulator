@@ -35,16 +35,24 @@
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] ГМ может выбрать active, dormant и automatic для существа из master session view
-- [ ] Фактическая активность и GM override показаны как разные состояния
-- [ ] Каждая trigger-пара взводится/снимается независимо по стабильному ID
-- [ ] Ошибки API видимы и не оставляют ложное состояние UI
-- [ ] Новые RU/EN строки проходят штатную локализацию
-- [ ] Полная панель активных и история причин не попали в scope
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] ГМ может выбрать active, dormant и automatic для существа из master session view
+- [x] Фактическая активность и GM override показаны как разные состояния
+- [x] Каждая trigger-пара взводится/снимается независимо по стабильному ID
+- [x] Ошибки API видимы и не оставляют ложное состояние UI
+- [x] Новые RU/EN строки проходят штатную локализацию
+- [x] Полная панель активных и история причин не попали в scope
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Frontend-контракт расширен типами и двумя API-командами задачи 1. Компактный `ActivationControls` вынесен из
+таблицы: фактическая активность, GM override и runtime-state каждой trigger-пары показаны раздельно. После
+успешной команды список перечитывается с сервера; при ошибке показывается локализованный toast без оптимистической
+мутации. Добавлены три component-flow теста, включая независимое переключение двух trigger ID, rollback-free error
+path и RU/EN labels. `make check`: backend 2526 passed, frontend 286 passed.
