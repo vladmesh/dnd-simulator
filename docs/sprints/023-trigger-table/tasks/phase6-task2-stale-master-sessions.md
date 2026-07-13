@@ -36,14 +36,20 @@
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Master list содержит только session ids, доступные через Manage endpoint
-- [ ] Stale `session_<id>` files не создают строку или 404-ссылку в Master UI
-- [ ] Active session с autosave появляется в list ровно один раз
-- [ ] Existing save/load commands сохраняют своё поведение
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Master list содержит только session ids, доступные через Manage endpoint
+- [x] Stale `session_<id>` files не создают строку или 404-ссылку в Master UI
+- [x] Active session с autosave появляется в list ровно один раз
+- [x] Existing save/load commands сохраняют своё поведение
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+`GameService.list_sessions()` теперь возвращает только sessions из in-memory registry. Регрессия создаёт
+active autosave и независимый stale `session_` save: active id виден один раз и доступен через Manage,
+stale id в список не попадает.

@@ -71,6 +71,7 @@ describe("MasterScreen tabs", () => {
     await waitFor(() => {
       expect(screen.getByText(/sess-001/)).toBeInTheDocument()
     })
+    expect(screen.getByRole("link", { name: /manage/i })).toHaveAttribute("href", "/master/sess-001")
   })
 })
 

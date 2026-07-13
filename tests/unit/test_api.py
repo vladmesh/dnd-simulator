@@ -102,6 +102,20 @@ class TestWorldsEndpoint:
 
 
 class TestMasterSessions:
+    def test_list_sessions_excludes_stale_disk_autosaves(self, tmp_path: object) -> None:
+        client, service = _make_client(tmp_path)
+        sid = _create_session(client)
+        service.autosave_session(sid)
+        service._store.save("session_stale", {}, world="sword_vale")
+
+        response = client.get("/api/master/sessions")
+
+        assert response.status_code == HTTPStatus.OK
+        session_ids = [session["session_id"] for session in response.json()]
+        assert session_ids == [sid]
+        assert client.get(f"/api/master/sessions/{sid}").status_code == HTTPStatus.OK
+        assert client.get("/api/master/sessions/stale").status_code == HTTPStatus.NOT_FOUND
+
     def test_create_session(self, tmp_path: object) -> None:
         client, _ = _make_client(tmp_path)
         resp = client.post("/api/master/sessions", json={"world_name": "sword_vale"})

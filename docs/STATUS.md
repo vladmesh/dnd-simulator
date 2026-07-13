@@ -2,19 +2,19 @@
 
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
-**Last updated:** 2026-07-13
-**Position:** Sprint 023 получил Phase 6 по двум блокерам post-audit E2E: locale live WS/`COMBAT_ENDED` и stale Master sessions.
-**Next:** Реализовать Phase 6 Task 1, затем Task 2 и повторить post-audit E2E.
-**Blockers:** Post-audit E2E 2026-07-13 не green: mixed EN/RU live event log с fallback `combat_ended`; Master list ведёт на stale saved session 404.
+**Last updated:** 2026-07-14
+**Position:** Sprint 023 Phase 6 закрыла оба post-audit E2E blocker fixes.
+**Next:** Повторить post-audit E2E.
+**Blockers:** Нужен повтор post-audit E2E после fixes locale/`COMBAT_ENDED` и stale Master sessions.
 
 ## Current Sprint
 
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 6 — Post-audit E2E fixes (task 1 done, task 2 pending) — 2026-07-13
+**Phase:** 6 — Post-audit E2E fixes (tasks 1–2 done) — 2026-07-14
 
-Phase 6 Task 1 done: live WS payloads use the current session locale and `COMBAT_ENDED` has typed perception. Task 2 pending: exclude stale saved sessions from Master.
+Phase 6 Task 1 done: live WS payloads use the current session locale and `COMBAT_ENDED` has typed perception. Task 2 done: Master lists only sessions managed in memory, excluding stale disk saves.
 
 Phase 6: [post-audit E2E report](e2e-reports/2026-07-13-sprint023-post-audit.md) зафиксировал два блокера: синхронизация frontend/session locale для live WS + typed `COMBAT_ENDED` perception и исключение stale disk saves из Master session list.
 
