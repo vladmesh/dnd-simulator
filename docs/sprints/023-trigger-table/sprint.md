@@ -119,11 +119,24 @@ RU перевод. Закрываем только эту propagation boundary, 
 
 1. [Locale server-rendered action failure в live session](tasks/phase7-task1-live-action-failure-locale.md) — применить session locale до dispatch expected failure.
 
+## Phase 8: Follow-up post-audit E2E Paladin
+
+Полный post-audit E2E 2026-07-14 остановился на §14.1, потому что playbook требовал у Paladin
+L1 Fighting Style selector и spell slot. Это не регрессия UI: продукт следует SRD/PHB 2014, где
+эти механики появляются на L2 через `LevelUpModal`. Сначала приводим playbook к уже реализованному
+контракту, затем повторяем весь обязательный non-LLM прогон, включая L1 creation, L2 level-up,
+Lay on Hands и Divine Smite.
+
+**Tasks:**
+
+1. [Контракт Paladin в E2E playbook](tasks/phase8-task1-paladin-e2e-contract.md) — выровнять §14.1 и зависимые Paladin сценарии с L2 contract.
+2. [Повторный обязательный Paladin post-audit E2E](tasks/phase8-task2-paladin-post-audit-e2e.md) — выполнить полный прогон по исправленному playbook и записать report.
+
 ---
 
 ## Status
 
-**Current:** All phases complete. Ready for a follow-up audit after the Phase 7 locale fix.
+**Current:** Phase 8 planned. Исправить E2E playbook Paladin L1/L2 contract, затем повторить обязательный post-audit E2E.
 
 ## Decisions
 
@@ -132,6 +145,7 @@ RU перевод. Закрываем только эту propagation boundary, 
 - `ENTITY_ATTACK_REQUESTED` — внутренняя команда resolution, `ENTITY_ATTACK` — завершённый мировой факт. Разделение принято вместо optional-полей в одном payload (2026-07-12).
 - Audit 2026-07-13: quick-fix нет. В Phase 5 взяты `typed-event-compat-bridge`, `entities-layer-regrowth` + `perception-fail-fast`, transport decomposition (`session.py` + `api-client-growing`) и два малых test-gap. Security, eslint suppressions, общий `Any` sweep и принятые mutable runtime dataclasses остаются в backlog (2026-07-13).
 - Post-audit E2E 2026-07-13: Phase 6 ограничена единой locale live WS + typed `COMBAT_ENDED` perception и исключением stale saved sessions из Master list. Остальной playbook повторяется после этих двух fixes (2026-07-13).
+- Post-audit E2E 2026-07-14: §14.1 ошибочно требовал Fighting Style и spell slot у Paladin L1. Подтверждённый SRD/PHB 2014 контракт проекта оставляет их на L2; Phase 8 исправляет E2E expectations, не product code (2026-07-14).
 
 ## Deferred
 

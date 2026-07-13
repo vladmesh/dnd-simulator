@@ -3,20 +3,24 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-14
-**Position:** Все фазы Sprint 023 завершены; follow-up post-audit E2E остановился на Paladin L1 creation blocker.
-**Next:** Исправить Paladin Fighting Style selector, затем повторить полный post-audit E2E.
-**Blockers:** Paladin L1 creation не показывает Fighting Style selector, требуемый E2E playbook scenario 14.1; nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
+**Position:** Sprint 023 Phase 8 planned: post-audit E2E playbook расходится с установленным Paladin L1→L2 contract.
+**Next:** Исправить Paladin E2E expectations, затем повторить полный обязательный post-audit E2E.
+**Blockers:** §14.1 ошибочно требует Fighting Style и spell slot у Paladin L1; продукт следует SRD/PHB 2014, где они появляются на L2. nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
 
 ## Current Sprint
 
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 7 — Follow-up post-audit E2E locale (COMPLETE) — 2026-07-14
+**Phase:** 8 — Follow-up post-audit E2E Paladin (tasks generated) — 2026-07-14
+
+Phase 8 tasks generated: §14.1 и зависимые Paladin E2E scenarios будут выровнены с существующим
+SRD/PHB 2014 L1→L2 contract, затем весь required non-LLM post-audit E2E повторится. Product code
+не меняется: Fighting Style, Divine Smite и spell slots остаются L2 features.
 
 Phase 7 closed: targeted post-audit E2E passed 4/4, including EN live action failure `Target too far (10 ft, reach 5 ft).`; nearby-creature race label remains deferred as non-blocking because content-name locale stays a separate `DND_LANGUAGE` contract. All phases complete; a follow-up audit is required after the final locale fix.
 
-Follow-up [post-audit E2E](e2e-reports/2026-07-14-sprint023-post-audit.md) passed 10/11 targeted scenarios, then found that Paladin L1 character creation has no Fighting Style selector. This blocks scenario 14.1 and its Paladin follow-ups; Sprint 023 is not ready for close-sprint.
+Follow-up [post-audit E2E](e2e-reports/2026-07-14-sprint023-post-audit.md) passed 10/11 targeted scenarios, then stopped because §14.1 incorrectly required a Paladin L1 Fighting Style selector. Phase 8 corrects that stale E2E expectation and repeats the dependent Paladin L2/Smite flow; Sprint 023 is not ready for close-sprint until the rerun is green.
 
 Phase 6 Task 1 done: live WS payloads use the current session locale and `COMBAT_ENDED` has typed perception. Task 2 done: Master lists only sessions managed in memory, excluding stale disk saves.
 
@@ -43,6 +47,7 @@ Phase 4 Task 4 done: Dash metadata только пополняет movement budg
 5. Post-audit refactor (`typed-event-compat-bridge`, entities/perception/session/transport decomposition, два test-gap)
 6. Post-audit E2E fixes (`live-ws-locale-combat-ended`, `stale-master-sessions`)
 7. Follow-up post-audit E2E locale (`live-action-failure-locale`; race label deferred non-blocking)
+8. Follow-up post-audit E2E Paladin (`paladin-e2e-contract`, full Paladin post-audit rerun)
 
 ## Recent activity (non-sprint)
 
