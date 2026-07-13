@@ -103,11 +103,27 @@ server-rendered live event log на RU и `COMBAT_ENDED` уходит в generic
 1. [Единая locale и typed COMBAT_ENDED в live WS](tasks/phase6-task1-live-ws-locale-combat-ended.md) — синхронизировать язык session/WS и убрать fallback завершения боя.
 2. [Не показывать stale saved sessions в Master](tasks/phase6-task2-stale-master-sessions.md) — оставить в Manage list только доступные live sessions.
 
+## Phase 7: Follow-up post-audit E2E locale
+
+Повторный post-audit E2E после Phase 6 нашёл один blocker: `action_result.error` создаётся в round
+thread до session-scoped locale context, поэтому failed action в EN session сохраняет process-default
+RU перевод. Закрываем только эту propagation boundary, затем повторяем targeted locale scenario и
+полный post-audit E2E.
+
+Смешанный label расы соседнего существа не включён: content names сейчас следуют отдельному
+`DND_LANGUAGE` contract, а не UI/session locale. Это non-blocking follow-up для отдельного решения.
+
+**E2E:** [post-audit rerun report](../../e2e-reports/2026-07-14-sprint023-post-audit-rerun.md)
+
+**Tasks:**
+
+1. [Locale server-rendered action failure в live session](tasks/phase7-task1-live-action-failure-locale.md) — применить session locale до dispatch expected failure.
+
 ---
 
 ## Status
 
-**Current:** Phase 6 tasks generated. Ready to start task 1.
+**Current:** Phase 7 tasks generated. Ready to start task 1.
 
 ## Decisions
 
