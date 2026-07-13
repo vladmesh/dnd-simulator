@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-07-13
 **Position:** Sprint 022 закрыл второй эпик simulation-core: player-agnostic якоря, сохраняемые wait/sleep/travel intent, по-рёберное путешествие и согласованный с round lifecycle save/load/autosave. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
-**Next:** Спланировать задачи Phase 5 post-audit refactor Sprint 023.
+**Next:** Реализовать Task 1 Phase 5 Sprint 023: единый typed event-контракт.
 **Blockers:** нет.
 
 ## Current Sprint
@@ -12,19 +12,21 @@
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 5 — Post-audit refactor (PENDING tasks) — 2026-07-13
+**Phase:** 5 — Post-audit refactor (tasks generated) — 2026-07-13
 
 Audit triaged. Phase 5 открыта для event-contract cleanup, decomposition растущих entities/session/transport модулей и двух небольших reliability gaps.
 
+Phase 5 tasks generated: 4 pending. Ready to start Task 1, единый typed event-контракт.
+
 **Audit:** Triaged 2026-07-13. Quick-fix: 0 applied. Sprint-relevant: 6 findings → Phase 5 refactor. Backlog: 8 findings already tracked or accepted; 1 fresh item added.
 
-Task 1 done: сохраняемый GM override и управление trigger armed state через master API под world gate.
+Phase 4 Task 1 done: сохраняемый GM override и управление trigger armed state через master API под world gate.
 
-Task 2 done: минимальные live controls активности и trigger armed state в существующем списке существ.
+Phase 4 Task 2 done: минимальные live controls активности и trigger armed state в существующем списке существ.
 
-Task 3 done: malformed action параметры изолированы в failed `ActionResult`; round thread и следующий ход живы.
+Phase 4 Task 3 done: malformed action параметры изолированы в failed `ActionResult`; round thread и следующий ход живы.
 
-Task 4 done: Dash metadata только пополняет movement budget и требует отдельного `move`/`move_to`.
+Phase 4 Task 4 done: Dash metadata только пополняет movement budget и требует отдельного `move`/`move_to`.
 
 ### Phases
 
