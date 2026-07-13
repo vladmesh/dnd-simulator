@@ -3,9 +3,9 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-14
-**Position:** Sprint 023 Phase 6 закрыла оба post-audit E2E blocker fixes.
-**Next:** Повторить post-audit E2E.
-**Blockers:** Нужен повтор post-audit E2E после fixes locale/`COMBAT_ENDED` и stale Master sessions.
+**Position:** Повторный post-audit E2E Sprint 023 нашёл незакрытый live-locale blocker.
+**Next:** Исправить server-rendered action failure для locale EN, затем повторить post-audit E2E.
+**Blockers:** В EN live WS action failure приходит по-русски (`Цель слишком далеко…`); подробности в [rerun report](e2e-reports/2026-07-14-sprint023-post-audit-rerun.md).
 
 ## Current Sprint
 
