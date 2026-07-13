@@ -14,11 +14,13 @@ from dnd_simulator.core.brain import Brain
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.events import PeaceDeclaredPayload, WarDeclaredPayload
 from dnd_simulator.core.models import Event, EventType, GameDateTime
+from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.round import Round
+from dnd_simulator.rules.action_provider import TriggerActionProvider
 from dnd_simulator.rules.validation import ActionContext
 from dnd_simulator.service.action_dispatcher import create_dispatcher
 
@@ -185,6 +187,15 @@ def test_scripted_brain_completes_trigger_through_round_and_dormifies_on_activat
     assert npc.triggers[0].active is False
     layer.update_activation(TIME)
     assert npc.active is False
+
+
+def test_player_never_receives_brain_only_complete_trigger_action() -> None:
+    npc = _npc(triggers=[_trigger("war_duty")])
+    npc.triggers[0].active = True
+    player = PlayerCharacter(id="player", name="Hero", location_id="far_keep")
+    player.triggers = deepcopy(npc.triggers)
+
+    assert TriggerActionProvider().get_action_types(player, ActionContext(is_combat=False)) == []
 
 
 @pytest.mark.parametrize("trigger_id", ["missing", "disabled", "pending"])

@@ -61,6 +61,10 @@ class TriggerActionProvider:
     """Provides self-completion only while an armed trigger is active."""
 
     def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
+        from dnd_simulator.core.player import PlayerCharacter
+
+        if isinstance(creature, PlayerCharacter):
+            return []
         if not any(trigger.armed and trigger.active for trigger in creature.triggers):
             return []
         probe = Action(name=ActionType.COMPLETE_TRIGGER)

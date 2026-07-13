@@ -44,7 +44,7 @@ Ecology подписывается на события смерти сущест
 2. [Немедленный write-back смерти в ecology](tasks/phase2-task2-ecology-death-writeback.md) — событийное обновление ростера/depletion и save/load
 3. [Доставка каскадных событий в live session](tasks/phase2-task3-live-event-cascade.md) — E2E-блокер доставки `ENTITY_DIED` и WS-сериализации provenance
 
-## Phase 3: Trigger table
+## Phase 3: Trigger table ✓
 
 Парные `{on, until}` триггеры на существе из YAML: матчинг при эмиссии, пробуждение dormant→active по `on`, гашение по `until`, самогашение «моя роль сыграна» как штатное действие мозга, состояние триггеров в сейве. Проверка: контентный триггер будит NPC на событии, until гасит, всё переживает save/load.
 
@@ -70,7 +70,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 3 (Trigger table), all tasks done — 2026-07-13. Ready to close phase 3.
+**Current:** Phase 3 (Trigger table) complete, 2026-07-13. Ready for Phase 4 task generation.
 
 ## Decisions
 
