@@ -57,6 +57,18 @@ class InventoryActionProvider:
         return [ActionType.USE_ITEM]
 
 
+class TriggerActionProvider:
+    """Provides self-completion only while an armed trigger is active."""
+
+    def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
+        if not any(trigger.armed and trigger.active for trigger in creature.triggers):
+            return []
+        probe = Action(name=ActionType.COMPLETE_TRIGGER)
+        if validate_action(creature, probe, ctx) is not None:
+            return []
+        return [ActionType.COMPLETE_TRIGGER]
+
+
 class EquipmentActionProvider:
     """Slot-driven equipment provider — handles all equipment slots generically."""
 

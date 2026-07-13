@@ -39,7 +39,7 @@ from dnd_simulator.layers.entities.intent_completion import interrupt_intent
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.layers.entities.query_handler import QueryHandler
-from dnd_simulator.layers.entities.save_models import EntitiesState
+from dnd_simulator.layers.entities.save_models import CreatureFields, EntitiesState
 from dnd_simulator.layers.entities.trigger_index import TriggerBoundary, TriggerIndex, TriggerMatch
 
 if TYPE_CHECKING:
@@ -496,7 +496,9 @@ class EntitiesLayer(Layer):
                 elif entity_kind is EntityKind.NPC:
                     from dnd_simulator.content_loader import parse_npc
 
-                    entity = parse_npc(str(eid), edata)
+                    npc_data = dict(edata)
+                    npc_data["triggers"] = []
+                    entity = parse_npc(str(eid), npc_data)
                     self.add_entity(entity)
                     # Fall through to mutable state restoration below
                 elif entity_kind is EntityKind.CREATURE:
@@ -534,6 +536,7 @@ class EntitiesLayer(Layer):
                 if loc:
                     entity.location_id = str(loc)
                 if isinstance(entity, Creature):
+                    assert isinstance(esave, CreatureFields)
                     entity.in_combat = bool(edata.get("in_combat", entity.in_combat))
                     entity.is_dodging = bool(edata.get("is_dodging", entity.is_dodging))
                     entity.is_disengaging = bool(edata.get("is_disengaging", entity.is_disengaging))
@@ -550,6 +553,8 @@ class EntitiesLayer(Layer):
                     from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
 
                     entity.is_anchor = bool(edata.get("is_anchor", entity.is_anchor))
+                    entity.always_active = esave.always_active
+                    entity.triggers = [trigger.to_domain() for trigger in esave.triggers]
                     intent_raw = edata.get("current_intent")
                     if isinstance(intent_raw, dict):
                         kind = IntentType(str(intent_raw["kind"]))
@@ -656,4 +661,5 @@ class EntitiesLayer(Layer):
                     if isinstance(inv_raw, list):
                         entity.inventory = [deserialize_item(d) for d in inv_raw]
 
+        self._trigger_index = TriggerIndex(list(self._entities.values()))
         self._combat.load_combats_state(state_data["combats"])

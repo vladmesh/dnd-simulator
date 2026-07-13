@@ -43,6 +43,7 @@ class ActionType(StrEnum):
     TAKE = "take"
     LONG_REST = "long_rest"
     SHORT_REST = "short_rest"
+    COMPLETE_TRIGGER = "complete_trigger"
     END_TURN = "end_turn"
     SKIP = "skip"
 

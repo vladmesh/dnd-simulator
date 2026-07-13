@@ -14,12 +14,14 @@ from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.save_models import (
     AbilityScoresSave,
+    ActivationTriggerSave,
     AttackSave,
     ClassFeaturesSave,
     ContainerSave,
     CreatureSave,
     DamageComponentSave,
     EntitySave,
+    EventConditionSave,
     ItemSave,
     LairOriginSave,
     NpcMemorySave,
@@ -213,6 +215,23 @@ def _creature_fields(entity: Creature) -> dict[str, object]:
             else None
         ),
         "is_anchor": entity.is_anchor,
+        "always_active": entity.always_active,
+        "triggers": [
+            ActivationTriggerSave(
+                id=trigger.definition.id,
+                on=EventConditionSave(
+                    event=trigger.definition.on.event_type,
+                    match=dict(trigger.definition.on.match_fields),
+                ),
+                until=EventConditionSave(
+                    event=trigger.definition.until.event_type,
+                    match=dict(trigger.definition.until.match_fields),
+                ),
+                armed=trigger.armed,
+                active=trigger.active,
+            )
+            for trigger in entity.triggers
+        ],
         "current_intent": _intent_save(entity.current_intent),
         "combat_position": entity.combat_position,
     }

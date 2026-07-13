@@ -24,6 +24,7 @@ from dnd_simulator.rules.action_provider import (
     ClassFeatureActionProvider,
     EquipmentActionProvider,
     InventoryActionProvider,
+    TriggerActionProvider,
     WeaponActionProvider,
 )
 from dnd_simulator.rules.actions import action_cost
@@ -33,6 +34,7 @@ from dnd_simulator.rules.handlers import (
     handle_attack,
     handle_bless,
     handle_buy,
+    handle_complete_trigger,
     handle_dash,
     handle_disengage,
     handle_dodge,
@@ -178,12 +180,14 @@ def create_dispatcher(world: World) -> ActionDispatcher:
     dispatcher.register(ActionType.SELL, handle_sell)
     dispatcher.register(ActionType.LONG_REST, handle_long_rest)
     dispatcher.register(ActionType.SHORT_REST, handle_short_rest)
+    dispatcher.register(ActionType.COMPLETE_TRIGGER, handle_complete_trigger)
     dispatcher.register(ActionType.OPPORTUNITY_ATTACK, handle_opportunity_attack)
 
     # Register providers — base types exclude provider-managed actions
     base_types = frozenset(at for at in dispatcher._handlers if not get_action_def(at).provider_managed)
     dispatcher.add_provider(BaseActionProvider(base_types))
     dispatcher.add_provider(InventoryActionProvider())
+    dispatcher.add_provider(TriggerActionProvider())
     dispatcher.add_provider(EquipmentActionProvider())
     dispatcher.add_provider(WeaponActionProvider())
     dispatcher.add_provider(ClassFeatureActionProvider())

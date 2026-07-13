@@ -41,15 +41,26 @@ NPC, восстановленный только из сейва, продолж
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Trigger definitions, взведённость, срабатывание и `always_active` проходят строгий save/load round-trip
-- [ ] Runtime-created NPC восстанавливает trigger table без исходного YAML
-- [ ] `complete_trigger` идёт через ActionDef/provider/dispatcher и снимает ровно указанную активную пару
-- [ ] Ошибочное самогашение не мутирует состояние и не расходует action budget
-- [ ] После самогашения итоговая активность учитывает остальные пары, combat, scene и `always_active`
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Trigger definitions, взведённость, срабатывание и `always_active` проходят строгий save/load round-trip
+- [x] Runtime-created NPC восстанавливает trigger table без исходного YAML
+- [x] `complete_trigger` идёт через ActionDef/provider/dispatcher и снимает ровно указанную активную пару
+- [x] Ошибочное самогашение не мутирует состояние и не расходует action budget
+- [x] После самогашения итоговая активность учитывает остальные пары, combat, scene и `always_active`
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Добавлены строгие `EventConditionSave`/`ActivationTriggerSave` в единый Pydantic-конверт entities. Все `Creature`
+сохраняют `always_active`, определения пар, `armed` и `active`; load полностью заменяет runtime-пары и перестраивает
+`TriggerIndex`, включая NPC, созданных только во время сессии.
+
+`complete_trigger` реализован доменной операцией и штатной цепочкой ActionDef → provider → dispatcher → handler.
+Provider показывает действие только для взведённой активной пары, handler не меняет `active` существа напрямую и
+ошибки не мутируют пары. LLM/API metadata строится из registry; gettext-каталоги и frontend action type/labels
+обновлены. Полный gate зелёный: 2517 backend unit и 283 frontend tests.

@@ -1124,3 +1124,22 @@ msgstr "Всплеск действий требует активного ход
 
 msgid "Target '{id}' cannot be looted"
 msgstr "Цель '{id}' нельзя обыскать"
+
+# =========================================================================
+# Trigger completion
+# =========================================================================
+
+msgid "Mark an activation trigger's role as complete."
+msgstr "Завершить роль активирующего триггера."
+
+msgid "ID of the activation trigger to complete"
+msgstr "ID активирующего триггера, роль которого завершена"
+
+msgid "Unknown activation trigger '{id}'"
+msgstr "Неизвестный активирующий триггер '{id}'"
+
+msgid "Activation trigger '{id}' is disarmed"
+msgstr "Активирующий триггер '{id}' снят со взведения"
+
+msgid "Activation trigger '{id}' is not active"
+msgstr "Активирующий триггер '{id}' не активен"

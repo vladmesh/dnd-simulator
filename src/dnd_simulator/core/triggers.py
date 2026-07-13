@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import ClassVar, get_origin, get_type_hints
 
 from pydantic import TypeAdapter, ValidationError
@@ -62,3 +63,23 @@ class ActivationTrigger:
     definition: TriggerDefinition
     armed: bool = True
     active: bool = False
+
+
+class CompleteTriggerStatus(StrEnum):
+    COMPLETED = "completed"
+    UNKNOWN = "unknown"
+    DISARMED = "disarmed"
+    INACTIVE = "inactive"
+
+
+def complete_trigger(triggers: list[ActivationTrigger], trigger_id: str) -> CompleteTriggerStatus:
+    """Complete one armed active trigger without touching any other pair."""
+    trigger = next((candidate for candidate in triggers if candidate.definition.id == trigger_id), None)
+    if trigger is None:
+        return CompleteTriggerStatus.UNKNOWN
+    if not trigger.armed:
+        return CompleteTriggerStatus.DISARMED
+    if not trigger.active:
+        return CompleteTriggerStatus.INACTIVE
+    trigger.active = False
+    return CompleteTriggerStatus.COMPLETED

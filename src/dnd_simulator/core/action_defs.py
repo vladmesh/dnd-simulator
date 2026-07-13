@@ -145,6 +145,19 @@ _reg(
 
 _reg(
     ActionDef(
+        action_type=ActionType.COMPLETE_TRIGGER,
+        description=N_("Mark an activation trigger's role as complete."),
+        cost_type=CostType.FREE,
+        combat_mode=CombatMode.PEACEFUL_ONLY,
+        ends_peaceful_turn=True,
+        provider_managed=True,
+        params=(ParamDef("trigger_id", "string", N_("ID of the activation trigger to complete"), required=True),),
+        llm_hint="Complete one active trigger after its role in the current situation has been fulfilled.",
+    )
+)
+
+_reg(
+    ActionDef(
         action_type=ActionType.ATTACK,
         description=N_("Attack a target with your equipped weapon or fists."),
         cost_type=CostType.ACTION,
