@@ -39,14 +39,20 @@ typed payload → JSON-safe data.
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Trigger lifecycle и event location/logging отсутствуют как private implementations в `EntitiesLayer`
-- [ ] Perception handlers читают обязательные поля из конкретных payload-классов без mapping access
-- [ ] `perceive_event` и пользовательские RU/EN строки сохраняют публичный контракт
-- [ ] `layers/entities/layer.py` и `perception.py` заметно уменьшаются, новые модули имеют одну ответственность
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Trigger lifecycle и event location/logging отсутствуют как private implementations в `EntitiesLayer`
+- [x] Perception handlers читают обязательные поля из конкретных payload-классов без mapping access
+- [x] `perceive_event` и пользовательские RU/EN строки сохраняют публичный контракт
+- [x] `layers/entities/layer.py` и `perception.py` заметно уменьшаются, новые модули имеют одну ответственность
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- `TriggerRuntime` владеет применением on/until и каскадными событиями, а `EventLog` — typed location resolution, запись location log и JSON-safe `PerceivedEvent`.
+- `EntitiesLayer` уменьшен с 677 до 567 строк; public `perceive_event` остался фасадом, а lifecycle/squad dispatch вынесен в `perception_world.py`.
+- Добавлены contract tests для новых границ; целевые 59 тестов и полный `make check` зелёные.

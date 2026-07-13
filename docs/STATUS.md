@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-07-13
 **Position:** Sprint 022 закрыл второй эпик simulation-core: player-agnostic якоря, сохраняемые wait/sleep/travel intent, по-рёберное путешествие и согласованный с round lifecycle save/load/autosave. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
-**Next:** Реализовать Task 1 Phase 5 Sprint 023: единый typed event-контракт.
+**Next:** Реализовать Task 3 Phase 5 Sprint 023: разделение backend и frontend transport builders.
 **Blockers:** нет.
 
 ## Current Sprint
@@ -12,11 +12,11 @@
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 5 — Post-audit refactor (task 1 done, task 2 pending) — 2026-07-13
+**Phase:** 5 — Post-audit refactor (task 2 done, task 3 pending) — 2026-07-13
 
 Audit triaged. Phase 5 открыта для event-contract cleanup, decomposition растущих entities/session/transport модулей и двух небольших reliability gaps.
 
-Phase 5 Task 1 done: единый typed event-контракт. Task 2 pending: разгрузка entities event flow и perception.
+Phase 5 Task 1 done: единый typed event-контракт. Task 2 done: trigger runtime, event-log и perception split. Task 3 pending: transport builders.
 
 **Audit:** Triaged 2026-07-13. Quick-fix: 0 applied. Sprint-relevant: 6 findings → Phase 5 refactor. Backlog: 8 findings already tracked or accepted; 1 fresh item added.
 

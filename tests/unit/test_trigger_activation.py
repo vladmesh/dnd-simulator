@@ -17,6 +17,7 @@ from dnd_simulator.core.events import (
 from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
 from dnd_simulator.core.models import Event, EventType, GameDateTime
 from dnd_simulator.core.world import World
+from dnd_simulator.layers.entities.event_runtime import TriggerRuntime
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.trigger_index import TriggerMatch
 from dnd_simulator.layers.politics.layer import PoliticsLayer
@@ -196,3 +197,8 @@ def test_entity_death_cascade_reaches_trigger_matcher_exactly_once(monkeypatch: 
     assert witness.active is True
     assert witness.triggers[0].active is True
     assert matched_deaths == 1
+
+
+def test_trigger_runtime_rejects_non_trigger_index_contract() -> None:
+    with pytest.raises(TypeError, match="TriggerIndex"):
+        TriggerRuntime(object())  # type: ignore[arg-type]

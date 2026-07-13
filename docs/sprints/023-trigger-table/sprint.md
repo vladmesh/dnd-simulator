@@ -93,7 +93,7 @@ Audit 2026-07-13 не нашёл блокеров, но показал, что �
 
 ## Status
 
-**Current:** Phase 5 tasks generated; ready for Task 1. Phases 1-4 complete.
+**Current:** Phase 5 Task 2 complete; ready for Task 3. Phases 1-4 complete.
 
 ## Decisions
 

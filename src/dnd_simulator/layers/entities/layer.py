@@ -26,10 +26,7 @@ from dnd_simulator.core.events import (
     CombatStartedPayload,
     EntityDiedPayload,
     RoundStartPayload,
-    SquadMovePayload,
-    payload_to_data,
 )
-from dnd_simulator.core.intent import IntentInterruptReason
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, EntityKind, Event, EventType, Query
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
@@ -41,12 +38,13 @@ from dnd_simulator.layers.common.rng_state import dump_rng_state, load_rng_state
 from dnd_simulator.layers.entities.activation_manager import ActivationManager
 from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder, active_merchants_at
 from dnd_simulator.layers.entities.combat_manager import CombatManager
-from dnd_simulator.layers.entities.intent_completion import interrupt_intent
+from dnd_simulator.layers.entities.event_log import EventLog
+from dnd_simulator.layers.entities.event_runtime import TriggerRuntime
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.layers.entities.query_handler import QueryHandler
 from dnd_simulator.layers.entities.save_models import CreatureFields, EntitiesState
-from dnd_simulator.layers.entities.trigger_index import TriggerBoundary, TriggerIndex, TriggerMatch
+from dnd_simulator.layers.entities.trigger_index import TriggerIndex, TriggerMatch
 
 if TYPE_CHECKING:
     from dnd_simulator.core.location import LocationGraph
@@ -54,33 +52,6 @@ if TYPE_CHECKING:
     from dnd_simulator.llm.summarizer import MemorySummarizer
 
 logger = structlog.get_logger(domain="entity")
-
-# Event types that get recorded in the location log
-_LOGGED_EVENTS = {
-    EventType.ENTITY_SAY,
-    EventType.ENTITY_ATTACK,
-    EventType.ENTITY_DIED,
-    EventType.ENTITY_DODGE,
-    EventType.ENTITY_FLEE,
-    EventType.ENTITY_MOVE,
-    EventType.ENTITY_DASH,
-    EventType.ENTITY_DISENGAGE,
-    EventType.ENTITY_USE_ITEM,
-    EventType.ENTITY_BLESS,
-    EventType.ENTITY_EQUIP,
-    EventType.ENTITY_UNEQUIP,
-    EventType.ENTITY_SECOND_WIND,
-    EventType.ENTITY_ACTION_SURGE,
-    EventType.ENTITY_LAY_ON_HANDS,
-    EventType.OPPORTUNITY_ATTACK,
-    EventType.COMBAT_STARTED,
-    EventType.COMBAT_ENDED,
-    EventType.ENCOUNTER_SPAWNED,
-    EventType.SQUAD_MOVE,
-    EventType.SQUAD_COMBAT,
-    EventType.SQUAD_MATERIALIZED,
-    EventType.SQUAD_DEMATERIALIZED,
-}
 
 
 class EntitiesLayer(Layer):
@@ -113,6 +84,8 @@ class EntitiesLayer(Layer):
             for e in entities:
                 self._entities[e.id] = e
         self._trigger_index = TriggerIndex(list(self._entities.values()))
+        self._trigger_runtime = TriggerRuntime(self._trigger_index)
+        self._event_log = EventLog(self._entities, self._location_log)
         self._combat = CombatManager(self._entities, self._location_log, battle_map_configs, rng=dice_rng)
         self._awareness = AwarenessBuilder(self._entities, self._location_log, self._combat)
         self._activation = ActivationManager(
@@ -272,36 +245,7 @@ class EntitiesLayer(Layer):
         This is critical for the multi-action turn loop — without it, RuleBrain
         would see the same events every iteration and loop forever.
         """
-        if not isinstance(creature, Character):
-            return []
-        events = self._location_log.get(creature.location_id, [])
-        new_events = events[creature._last_seen_log_index :]
-        creature._last_seen_log_index = len(events)
-        if not new_events:
-            return []
-        result: list[PerceivedEvent] = []
-        for e in new_events:
-            if e.observer_ids is not None and creature.id not in e.observer_ids:
-                continue
-            desc = perceive_event(e, creature, self.get_entity)
-            actor_id = getattr(e.payload, "entity_id", None) or getattr(e.payload, "attacker_id", None)
-            target_id = getattr(e.payload, "target_id", None)
-            actor_name: str | None = None
-            if actor_id:
-                actor_entity = self.get_entity(str(actor_id))
-                if actor_entity is not None:
-                    actor_name = actor_entity.name
-            result.append(
-                PerceivedEvent(
-                    description=desc,
-                    event_type=e.event_type,
-                    actor_id=str(actor_id) if actor_id else None,
-                    actor_name=actor_name,
-                    target_id=str(target_id) if target_id else None,
-                    data=payload_to_data(e.payload),
-                )
-            )
-        return result
+        return self._event_log.perceived_events(creature, self.get_entity)
 
     # -- Layer interface --
 
@@ -315,14 +259,14 @@ class EntitiesLayer(Layer):
 
     def handle_event(self, event: Event, query_fn: QueryFn, emit_fn: EmitFn) -> ActionResult:
         """React to world events. Resolve attacks, log relevant events."""
-        self._apply_trigger_event(event)
+        self._trigger_runtime.apply(event)
 
         if event.event_type == EventType.ENTITY_DODGE:
-            return self._with_trigger_cascades(self._combat.resolve_dodge(event))
+            return self._trigger_runtime.apply_cascades(self._combat.resolve_dodge(event))
 
         # Attack/flee can end combat (kill/flee removes fighter, <=1 left → combat ends)
         if event.event_type in (EventType.ENTITY_ATTACK_REQUESTED, EventType.ENTITY_FLEE):
-            location_id = self._event_location(event)
+            location_id = self._event_log.location_for(event)
             had_combat = location_id is not None and self._combat.get_combat(location_id) is not None
             if event.event_type == EventType.ENTITY_ATTACK_REQUESTED:
                 result = self._combat.resolve_attack(event, query_fn=query_fn)
@@ -330,16 +274,14 @@ class EntitiesLayer(Layer):
                 result = self._combat.resolve_flee(event)
             if had_combat and location_id and self._combat.get_combat(location_id) is None:
                 self._on_combat_ended(location_id)
-            return self._with_trigger_cascades(result)
+            return self._trigger_runtime.apply_cascades(result)
 
         if event.event_type == EventType.ENTITY_MOVE:
             if getattr(event.payload, "direction", None) is not None:
                 # Needs resolution (from handle_move via compass direction)
-                return self._with_trigger_cascades(self._combat.resolve_move(event))
+                return self._trigger_runtime.apply_cascades(self._combat.resolve_move(event))
             # Already-resolved move (from handle_move_to) — just log it
-            location_id = self._event_location(event)
-            if location_id:
-                self._location_log[location_id].append(event)
+            self._event_log.record(event)
             return ActionResult()
 
         # Clean up temporary creatures on death
@@ -351,38 +293,9 @@ class EntitiesLayer(Layer):
             if entity is not None and entity.temporary:
                 self.remove_entity(entity_id)
 
-        if event.event_type in _LOGGED_EVENTS:
-            if event.event_type == EventType.SQUAD_MOVE:
-                # Log at both origin and destination so observers at either location see it
-                payload = event.payload
-                assert isinstance(payload, SquadMovePayload)
-                for loc in (payload.from_location_id, payload.to_location_id):
-                    if isinstance(loc, str):
-                        self._location_log[loc].append(event)
-            else:
-                location_id = self._event_location(event)
-                if location_id:
-                    self._location_log[location_id].append(event)
+        self._event_log.record(event)
 
         return ActionResult()
-
-    def _apply_trigger_event(self, event: Event) -> None:
-        """Apply one typed event to activation trigger runtime state."""
-        for match in self._trigger_index.match(event):
-            if match.boundary is TriggerBoundary.ON:
-                if not match.creature.is_alive or match.trigger.active:
-                    continue
-                match.trigger.active = True
-                interrupt_intent(match.creature, IntentInterruptReason.TRIGGER)
-                match.creature.active = True
-            elif match.trigger.active:
-                match.trigger.active = False
-
-    def _with_trigger_cascades(self, result: ActionResult) -> ActionResult:
-        """Match events produced by this layer before World source-skip propagation."""
-        for event in result.events:
-            self._apply_trigger_event(event)
-        return result
 
     # -- Perception log (delegated to QueryHandler) --
 
@@ -397,29 +310,6 @@ class EntitiesLayer(Layer):
     def get_new_raw_events(self, observer: Character) -> list[Event]:
         """Peek at raw Event objects since observer's last seen index."""
         return self._query_handler.get_new_raw_events(observer)
-
-    def _event_location(self, event: Event) -> str | None:
-        """Determine which location an event happened at."""
-        for key in ("entity_id", "attacker_id"):
-            eid = getattr(event.payload, key, None)
-            if isinstance(eid, str):
-                entity = self._entities.get(eid)
-                if entity:
-                    return entity.location_id
-        # Squad events: SQUAD_MOVE uses "to" (destination), others use "location_id"
-        if event.event_type == EventType.SQUAD_MOVE:
-            payload = event.payload
-            assert isinstance(payload, SquadMovePayload)
-            to = payload.to_location_id
-            from_ = payload.from_location_id
-            if isinstance(to, str):
-                return to
-            if isinstance(from_, str):
-                return from_
-        loc = getattr(event.payload, "location_id", None)
-        if isinstance(loc, str):
-            return loc
-        return None
 
     def _on_combat_ended(self, location_id: str) -> None:
         """After combat ends, summarize combat events into each NPC participant's memory."""

@@ -6,6 +6,10 @@ must flow through the location log and appear as PerceivedEvents for players.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
+import pytest
+
 from dnd_simulator.core.character import (
     Ability,
     AbilityScores,
@@ -26,6 +30,7 @@ from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Qu
 from dnd_simulator.core.monster import MonsterTemplate
 from dnd_simulator.core.queries import SquadInfo
 from dnd_simulator.core.squad import SquadBehavior, SquadType
+from dnd_simulator.layers.entities.event_log import EventLog
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.materialization import materialize_squad
 from dnd_simulator.layers.entities.perception import perceive_event
@@ -124,6 +129,11 @@ class TestSquadMovePerception:
         perceived = layer.get_perceived_events(player)
         assert len(perceived) == 1
         assert perceived[0].event_type == EventType.SQUAD_MOVE
+
+
+def test_event_log_rejects_untyped_payload_location() -> None:
+    with pytest.raises(TypeError, match="TypedPayload"):
+        EventLog({}).location_for(SimpleNamespace(payload=object()))  # type: ignore[arg-type]
 
 
 class TestSquadCombatPerception:

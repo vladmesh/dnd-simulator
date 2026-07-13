@@ -10,7 +10,6 @@ from dnd_simulator.core.events import (
     AttackResolvedPayload,
     AttackRollPayload,
     BuyPayload,
-    CombatStartedPayload,
     DamageComponentPayload,
     EntityActorPayload,
     EntityBlessPayload,
@@ -25,18 +24,16 @@ from dnd_simulator.core.events import (
     InspectPayload,
     OpportunityAttackPayload,
     ReputationChangedPayload,
-    RoundStartPayload,
     SellPayload,
-    SquadCombatPayload,
     SquadDematerializedPayload,
     SquadMaterializedPayload,
-    SquadMovePayload,
     TakePayload,
     TurnSkippedPayload,
     XpGainedPayload,
 )
 from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.i18n import _
+from dnd_simulator.layers.entities.perception_world import DISPATCH as WORLD_DISPATCH
 
 GetEntityFn = Callable[[str], Entity | None]
 
@@ -473,56 +470,6 @@ def _perceive_take(event: Event, observer: Character, get_entity: GetEntityFn) -
     return _("{actor} loots {target} ({loot})").format(actor=actor, target=target, loot=loot)
 
 
-def _perceive_combat_started(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    payload = event.payload
-    assert isinstance(payload, CombatStartedPayload)
-    names = payload.turn_order_names
-    order_str = ", ".join(str(n) for n in names) if names else "?"
-    return _("Combat started! Initiative order: {order}").format(order=order_str)
-
-
-def _perceive_round_start(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    payload = event.payload
-    assert isinstance(payload, RoundStartPayload)
-    round_number = payload.round_number
-    return _("— Round {n} —").format(n=round_number)
-
-
-def _perceive_combat_ended(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    return _("Combat ended.")
-
-
-# -- Squad events --
-
-
-def _perceive_squad_move(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.payload
-    assert isinstance(d, SquadMovePayload)
-    name = d.squad_name
-    to_loc = d.to_location_id
-    from_loc = d.from_location_id
-    at_dest = observer.location_id == to_loc
-    at_origin = observer.location_id == from_loc
-    if at_dest and at_origin:
-        return _("{name} passes through").format(name=name)
-    if at_dest:
-        return _("{name} arrives").format(name=name)
-    if at_origin:
-        return _("{name} departs").format(name=name)
-    return _("{name} is on the move").format(name=name)
-
-
-def _perceive_squad_combat(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
-    d = event.payload
-    assert isinstance(d, SquadCombatPayload)
-    winner = d.winner_name
-    loser = d.loser_name
-    loser_strength = d.loser_strength
-    if loser_strength == 0:
-        return _("{winner} destroyed {loser}").format(winner=winner, loser=loser)
-    return _("{winner} defeated {loser}").format(winner=winner, loser=loser)
-
-
 def _perceive_squad_materialized(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
     d = event.payload
     assert isinstance(d, SquadMaterializedPayload)
@@ -600,17 +547,13 @@ _DISPATCH: dict[EventType, _PerceiveHandler] = {
     EventType.ENTITY_SELL: _perceive_sell,
     EventType.ENTITY_TAKE: _perceive_take,
     EventType.TURN_SKIPPED: _perceive_turn_skipped,
-    EventType.ROUND_START: _perceive_round_start,
-    EventType.COMBAT_STARTED: _perceive_combat_started,
-    EventType.COMBAT_ENDED: _perceive_combat_ended,
-    EventType.SQUAD_MOVE: _perceive_squad_move,
-    EventType.SQUAD_COMBAT: _perceive_squad_combat,
     EventType.SQUAD_MATERIALIZED: _perceive_squad_materialized,
     EventType.SQUAD_DEMATERIALIZED: _perceive_squad_dematerialized,
     EventType.ENCOUNTER_SPAWNED: _perceive_encounter_spawned,
     EventType.REPUTATION_CHANGED: _perceive_reputation_change,
     EventType.XP_GAINED: _perceive_xp_gained,
 }
+_DISPATCH.update(WORLD_DISPATCH)
 
 
 def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
