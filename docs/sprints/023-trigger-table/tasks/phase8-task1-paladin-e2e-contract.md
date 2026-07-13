@@ -45,4 +45,11 @@ Styles (Defense, Dueling, Great Weapon Fighting) на границе LevelUpModa
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Сверка с `test_level_aware_features.py` и `test_rules_perform_level_up.py` подтвердила: L1
+не получает Fighting Style или spell slots, а L2 получает выбранный style и два слота первого
+уровня. Playbook теперь оставляет L1 creation и Lay on Hands независимыми от style, а Smite
+явно начинает после §3.5; product code не менялся.

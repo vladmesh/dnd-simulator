@@ -12,11 +12,12 @@
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 8 — Follow-up post-audit E2E Paladin (tasks generated) — 2026-07-14
+**Phase:** 8 — Follow-up post-audit E2E Paladin (task 1 done, task 2 pending) — 2026-07-14
 
-Phase 8 tasks generated: §14.1 и зависимые Paladin E2E scenarios будут выровнены с существующим
-SRD/PHB 2014 L1→L2 contract, затем весь required non-LLM post-audit E2E повторится. Product code
-не меняется: Fighting Style, Divine Smite и spell slots остаются L2 features.
+Phase 8 Task 1 done: §14.1 теперь проверяет Paladin L1 без Fighting Style и spell slots; §3.5
+остаётся единственным L2 flow для Fighting Style, slots и Divine Smite. Далее повторить весь
+required non-LLM post-audit E2E. Product code не менялся: Fighting Style, Divine Smite и spell
+slots остаются L2 features.
 
 Phase 7 closed: targeted post-audit E2E passed 4/4, including EN live action failure `Target too far (10 ft, reach 5 ft).`; nearby-creature race label remains deferred as non-blocking because content-name locale stays a separate `DND_LANGUAGE` contract. All phases complete; a follow-up audit is required after the final locale fix.
 
