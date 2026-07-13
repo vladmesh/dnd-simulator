@@ -3,9 +3,9 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-14
-**Position:** Sprint 023 Phase 8: Task 3 завершён; core UI, Master mutation и Fighter/equipment блоки Task 2 прошли, но полный обязательный E2E ещё не закончен.
-**Next:** Продолжить Task 2 следующим непокрытым обязательным post-audit E2E-блоком.
-**Blockers:** Task 2 остаётся blocked до зелёной границы всех обязательных non-LLM sections. Paladin L1→L2 path, core UI, Master mutations и Fighter/equipment зелёные; Rogue Dash требует точного rerun. nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
+**Position:** Sprint 023 Phase 8: Task 3 завершён; обязательный E2E дошёл до lair lifecycle boundary.
+**Next:** Исправить lair core lifecycle, затем повторить только blocked E2E boundary Task 2.
+**Blockers:** Task 2 blocked: после Master mutation `current_hp=0` для ядра логова reconnect материализует второй core/minion roster, сохраняя мёртвое прежнее ядро. Reactions, faction relations, corpse loot и intents/travel зелёные; nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
 
 ## Current Sprint
 
@@ -29,6 +29,10 @@ NPC role сейчас отдаёт raw validation prose, это minor finding, �
 подтвердил Second Wind, re-equip weapon/armor/shield, potion и equip/unequip Ring of Protection.
 Rogue Dash требует точного rerun с capture action-result; до полной границы также остаются conditions,
 reactions, faction relations, lairs/loot и intents/travel.
+
+Финальный блок [reactions, faction relations, lairs/loot и intents/travel](e2e-reports/2026-07-14-sprint023-post-audit-final-areas.md)
+прошёл всё, кроме lifecycle логова: после `current_hp=0` ядра через Master UI reconnect создаёт второй
+ростер ядра/миньонов вместо terminal depletion. Это единственный текущий blocker Task 2.
 
 Phase 7 closed: targeted post-audit E2E passed 4/4, including EN live action failure `Target too far (10 ft, reach 5 ft).`; nearby-creature race label remains deferred as non-blocking because content-name locale stays a separate `DND_LANGUAGE` contract. All phases complete; a follow-up audit is required after the final locale fix.
 

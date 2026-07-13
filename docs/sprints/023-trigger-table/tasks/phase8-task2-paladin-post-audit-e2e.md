@@ -52,3 +52,8 @@ non-LLM sections, включая обновлённые §3.5 и §14, поск�
 `xp_dummy`. Closing that modal did not expose the required manual `Level Up` button, including
 after the next round, so Dueling, Lay on Hands, Smite, target scope and the remaining mandatory
 non-LLM sections were not run. See [rerun report](../../../e2e-reports/2026-07-14-sprint023-post-audit-paladin-rerun.md).
+
+2026-07-14: The remaining reactions, faction relations, corpse loot, and intent/travel checks
+passed in the live UI. The lair boundary remains blocked: after setting a lair core to 0 HP in the
+Master UI and reconnecting, Test Vale materialized a second core/minion roster while retaining the
+dead first core. See [final areas report](../../../e2e-reports/2026-07-14-sprint023-post-audit-final-areas.md).
