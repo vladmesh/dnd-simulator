@@ -48,4 +48,8 @@ commands_player импортирует builder из нового владель�
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Сериализация player/round/reaction payload вынесена в `service.transport_payloads`; `GameSession` оставил lifecycle, locks и callback wiring. Frontend разбит на общий request core и domain clients, а `apiClient.ts` сохранил прежние exports как 21-строчный facade. Покрыты wire paths для world/content/session/creature/save/player; полный local gate зелёный.

@@ -204,7 +204,7 @@ class TestPlayerToDict:
             inventory=[potion],
         )
 
-        from dnd_simulator.service.session import build_player_status
+        from dnd_simulator.service.transport_payloads import build_player_status
 
         status = build_player_status(player)
         # Must have equipped list

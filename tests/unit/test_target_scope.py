@@ -235,7 +235,7 @@ class TestSerialization:
     def test_action_info_includes_target_mode_and_scope(self) -> None:
         """Serialized action_info dict includes target_mode and target_scope."""
         from dnd_simulator.core.awareness import CombatAwareness
-        from dnd_simulator.service.session import _awareness_to_dict
+        from dnd_simulator.service.transport_payloads import _awareness_to_dict
 
         awareness = CombatAwareness(
             self_hp=20,

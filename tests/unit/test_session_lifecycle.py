@@ -29,7 +29,8 @@ from dnd_simulator.core.world import World
 from dnd_simulator.round import Round
 from dnd_simulator.rules.movement import calculate_away_direction, calculate_direction
 from dnd_simulator.service import GameService
-from dnd_simulator.service.session import GameSession, RoundStopTimeoutError, _events_to_list, resolve_abstract_move
+from dnd_simulator.service.session import GameSession, RoundStopTimeoutError, resolve_abstract_move
+from dnd_simulator.service.transport_payloads import _events_to_list
 from dnd_simulator.storage.store import SaveStore
 
 # ---------------------------------------------------------------------------
