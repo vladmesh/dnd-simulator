@@ -55,4 +55,4 @@ typed payload → JSON-safe data.
 
 - `TriggerRuntime` владеет применением on/until и каскадными событиями, а `EventLog` — typed location resolution, запись location log и JSON-safe `PerceivedEvent`.
 - `EntitiesLayer` уменьшен с 677 до 567 строк; public `perceive_event` остался фасадом, а lifecycle/squad dispatch вынесен в `perception_world.py`.
-- Добавлены contract tests для новых границ; целевые 59 тестов и полный `make check` зелёные.
+- Добавлены contract tests для новых границ; после `load_state` runtime теперь пересоздаётся вместе с индексом, поэтому trigger save/load снова использует восстановленные trigger definitions.

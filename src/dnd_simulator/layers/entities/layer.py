@@ -564,4 +564,5 @@ class EntitiesLayer(Layer):
                         entity.inventory = [deserialize_item(d) for d in inv_raw]
 
         self._trigger_index = TriggerIndex(list(self._entities.values()))
+        self._trigger_runtime = TriggerRuntime(self._trigger_index)
         self._combat.load_combats_state(state_data["combats"])
