@@ -6,6 +6,10 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 
 
+class ActionRejectedError(Exception):
+    """Expected rejection caused by action input, safe to return to the actor."""
+
+
 class ActionType(StrEnum):
     """All known action types. Values match LLM tool names."""
 

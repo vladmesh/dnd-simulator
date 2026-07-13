@@ -36,15 +36,26 @@ Round должен обработать такой результат по уж�
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Missing/invalid params известного action возвращают failed `ActionResult` без мутации и расхода бюджета
-- [ ] Malformed WS action не завершает round thread и не отправляет `game_over`
-- [ ] После отказа игрок может выполнить следующий валидный action в той же сессии
-- [ ] Неизвестные action names остаются transport errors
-- [ ] Непредвиденные programming errors не поглощаются containment-границей
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Missing/invalid params известного action возвращают failed `ActionResult` без мутации и расхода бюджета
+- [x] Malformed WS action не завершает round thread и не отправляет `game_over`
+- [x] После отказа игрок может выполнить следующий валидный action в той же сессии
+- [x] Неизвестные action names остаются transport errors
+- [x] Непредвиденные programming errors не поглощаются containment-границей
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Dispatcher теперь проверяет required-параметры и типы из `ActionDef` до handler и возвращает failed
+`ActionResult`. Для ожидаемых отказов внутри handler добавлен узкий `ActionRejectedError`; прочие исключения,
+включая `ValueError`, по-прежнему пробрасываются как programming errors. Целочисленные параметры используют
+общий typed accessor, а stale item lookup больше не отдаёт наружу сырой `KeyError`.
+
+Добавлены пять regressions: invalid shape, узкая exception-граница, combat retry без расхода бюджета и live
+TestClient WebSocket flow `bad travel → новый turn → valid say`. Старые тесты missing required param и item lookup
+обновлены под новый контракт. `make check`: backend 2531 passed, frontend 286 passed.

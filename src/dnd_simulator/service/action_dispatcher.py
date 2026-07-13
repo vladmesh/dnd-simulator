@@ -15,10 +15,11 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from dnd_simulator.core.action import Action, ActionType
+from dnd_simulator.core.action import Action, ActionRejectedError, ActionType
 from dnd_simulator.core.action_defs import get_action_def
 from dnd_simulator.core.models import ActionResult
 from dnd_simulator.core.world import World
+from dnd_simulator.rules.action_params import validate_action_params
 from dnd_simulator.rules.action_provider import (
     BaseActionProvider,
     ClassFeatureActionProvider,
@@ -108,22 +109,26 @@ class ActionDispatcher:
         """Validate all preconditions → execute handler → consume budget.
 
         Raises KeyError if action has no registered handler (programming error).
-        Raises ValueError if a required param declared in ActionDef is missing.
+        Unexpected handler exceptions propagate as programming errors.
         """
-        # 1. Required-param check (fail fast before validation/handler).
-        action_def = get_action_def(action.name)
-        for p in action_def.params:
-            if p.required and p.name not in action.params:
-                raise ValueError(f"Action {action.name} missing required param: {p.name}")
-
-        # 2. Full validation chain (alive, active, mode, budget, item, target, reach)
-        error = validate_action(actor, action, ctx)
-        if error:
-            return ActionResult(success=False, error=error.message)
-
-        # 2. Execute handler
         handler = self._handlers[action.name]  # KeyError = unknown action = bug
-        result = handler(actor, action, emit_fn, ctx, self._world)
+        try:
+            # 1. Input contract, then full precondition chain.
+            validate_action_params(action)
+            error = validate_action(actor, action, ctx)
+            if error:
+                return ActionResult(success=False, error=error.message)
+
+            # 2. Execute the registered handler. Only explicit input rejections are contained.
+            result = handler(actor, action, emit_fn, ctx, self._world)
+        except ActionRejectedError as error:
+            logger.info(
+                "action_rejected",
+                actor_id=actor.id,
+                action=action.name.value,
+                error=str(error),
+            )
+            return ActionResult(success=False, error=str(error))
 
         # 3. Consume budget only on success
         cost = action_cost(action, creature=actor)

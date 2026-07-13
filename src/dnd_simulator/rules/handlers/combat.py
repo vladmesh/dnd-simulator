@@ -8,6 +8,7 @@ import structlog
 
 from dnd_simulator.core.events import ActionFlavorPayload, AttackRequestedPayload
 from dnd_simulator.core.models import ActionResult, Event, EventType
+from dnd_simulator.rules.action_params import integer_param
 
 if TYPE_CHECKING:
     from dnd_simulator.core.action import Action
@@ -22,7 +23,7 @@ logger = structlog.get_logger(domain="action")
 def handle_attack(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
     """Attack: emit attack event. CombatManager resolves via handle_event."""
     logger.info("attack", target=str(action.params["target_id"]))
-    smite_slot_level = int(str(action.params["smite_slot_level"])) if "smite_slot_level" in action.params else None
+    smite_slot_level = integer_param(action, "smite_slot_level") if "smite_slot_level" in action.params else None
     return emit_fn(
         Event(
             event_type=EventType.ENTITY_ATTACK_REQUESTED,

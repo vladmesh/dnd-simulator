@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from dnd_simulator.core.action import ActionRejectedError
 from dnd_simulator.core.events import (
     EntityBlessPayload,
     EntityLayOnHandsPayload,
@@ -18,6 +19,7 @@ from dnd_simulator.core.events import (
 from dnd_simulator.core.items import ItemType
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.i18n import _
+from dnd_simulator.rules.action_params import integer_param
 from dnd_simulator.rules.dice import roll
 
 if TYPE_CHECKING:
@@ -65,11 +67,11 @@ def handle_say(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCont
 
 
 def _find_item(actor: Creature, item_id: str) -> Item:
-    """Find an item in actor's inventory by id. Raises KeyError if not found."""
+    """Find an item in actor's inventory or reject stale action input."""
     for item in actor.inventory:
         if item.id == item_id:
             return item
-    raise KeyError(f"Item '{item_id}' not in {actor.name}'s inventory")
+    raise ActionRejectedError(_("Item {id} not in inventory").format(id=item_id))
 
 
 def _apply_potion(actor: Creature, item: Item, rng: random.Random | None = None) -> tuple[int, list[dict[str, object]]]:
@@ -118,7 +120,7 @@ def handle_lay_on_hands(
     if not isinstance(actor, Character) or actor.char_class != CharClass.PALADIN:
         return ActionResult(success=False, error=_("Only Paladins can use Lay on Hands"))
 
-    amount = int(str(action.params["amount"]))
+    amount = integer_param(action, "amount")
     if amount < 1:
         return ActionResult(success=False, error=_("Amount must be at least 1"))
 

@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dnd_simulator.core.action import Action, ActionType
+from dnd_simulator.core.action import Action, ActionRejectedError, ActionType
 from dnd_simulator.core.character import Ability, Attack, Creature, DamageComponent, DamageType
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.core.conditions import Condition
@@ -136,18 +136,56 @@ class TestDispatchBasic:
         result = d.dispatch(_creature(), Action(name=ActionType.DODGE), _PEACEFUL, _noop_emit)
         assert not result.success
 
-    def test_attack_without_target_id_raises_value_error(self) -> None:
-        """Missing required param → ValueError mentioning the param, not KeyError."""
+    def test_attack_without_target_id_returns_failed_result(self) -> None:
+        """Missing required param is rejected without mutating the turn budget."""
         d = create_dispatcher(_WORLD)
         actor = _creature()
         _setup_entities(actor, _target())
         budget = TurnBudget()
         ctx = _combat_ctx(budget)
         before = (budget.actions, budget.bonus_actions, budget.movement_remaining)
-        with pytest.raises(ValueError, match="target_id"):
-            d.dispatch(actor, Action(name=ActionType.ATTACK, params={}), ctx, _noop_emit)
+        result = d.dispatch(actor, Action(name=ActionType.ATTACK, params={}), ctx, _noop_emit)
+        assert not result.success
+        assert "target_id" in result.error
         # Budget untouched — error means no mutation.
         assert (budget.actions, budget.bonus_actions, budget.movement_remaining) == before
+
+    def test_invalid_declared_param_type_returns_failed_result(self) -> None:
+        d = create_dispatcher(_WORLD)
+        actor = _creature()
+
+        result = d.dispatch(
+            actor,
+            Action(name=ActionType.WAIT, params={"hours": {"bad": "shape"}}),
+            _PEACEFUL,
+            _noop_emit,
+        )
+
+        assert not result.success
+        assert "hours" in result.error
+        assert actor.current_intent is None
+
+    def test_action_rejection_from_handler_is_contained(self) -> None:
+        d = create_dispatcher(_WORLD)
+
+        def reject_input(*args: object) -> ActionResult:
+            raise ActionRejectedError("bad action input")
+
+        d.register(ActionType.IDLE, reject_input)
+        result = d.dispatch(_creature(), Action(name=ActionType.IDLE), _PEACEFUL, _noop_emit)
+
+        assert not result.success
+        assert result.error == "bad action input"
+
+    def test_unexpected_handler_error_propagates(self) -> None:
+        d = create_dispatcher(_WORLD)
+
+        def crash(*args: object) -> ActionResult:
+            raise ValueError("programming bug")
+
+        d.register(ActionType.IDLE, crash)
+        with pytest.raises(ValueError, match="programming bug"):
+            d.dispatch(_creature(), Action(name=ActionType.IDLE), _PEACEFUL, _noop_emit)
 
 
 # ---------------------------------------------------------------------------
@@ -688,10 +726,10 @@ class TestHandleUseItem:
         assert result.success
         assert actor.current_hp == 20
 
-    def test_missing_item_raises(self) -> None:
+    def test_missing_item_is_explicit_action_rejection(self) -> None:
         actor = _creature()
         action = Action(name=ActionType.USE_ITEM, params={"item_id": "nonexistent"})
-        with pytest.raises(KeyError, match="nonexistent"):
+        with pytest.raises(ActionRejectedError, match="nonexistent"):
             handle_use_item(actor, action, _noop_emit, _PEACEFUL, _WORLD)
 
     def test_missing_item_id_param_raises(self) -> None:

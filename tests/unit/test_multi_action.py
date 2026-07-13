@@ -138,6 +138,39 @@ class _ScriptedBrain(Brain):
 
 
 class TestMultiActionLoop:
+    def test_missing_param_does_not_spend_budget_and_next_action_runs(self) -> None:
+        brain = _ScriptedBrain(
+            [
+                Action(name=ActionType.ATTACK, params={}),
+                Action(name=ActionType.DODGE),
+                END_TURN,
+            ]
+        )
+        creature = Creature(id="c1", name="A", location_id="r1", brain=brain, in_combat=True)
+
+        world = _make_world([creature])
+        el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        game_round = Round(world, el)
+        callback_log: list[tuple[ActionType, int, str]] = []
+
+        def on_action(c: Creature, a: Action, b: TurnBudget | None, error: str = "") -> None:
+            assert b is not None
+            callback_log.append((a.name, b.actions, error))
+
+        game_round.set_on_action(on_action)
+        actions = game_round.run_combat_turn(
+            creature,
+            world.time,
+            world.make_query_fn("entities"),
+            world.make_emit_fn("entities"),
+        )
+
+        assert [action.name for action in actions] == [ActionType.DODGE]
+        assert callback_log[0][0] == ActionType.ATTACK
+        assert callback_log[0][1] == 1
+        assert callback_log[0][2]
+        assert callback_log[1] == (ActionType.DODGE, 0, "")
+
     def test_single_action_then_end_turn(self) -> None:
         """Brain does one action then end_turn. Round records it."""
         brain = _ScriptedBrain([Action(name=ActionType.SAY, params={"text": "hi"}), END_TURN])

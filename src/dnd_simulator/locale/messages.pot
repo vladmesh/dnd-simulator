@@ -130,6 +130,22 @@ msgstr ""
 msgid "Unknown reaction: {}"
 msgstr ""
 
+#: src/dnd_simulator/rules/action_params.py
+msgid "Action '{action}' requires parameter '{param}'"
+msgstr ""
+
+#: src/dnd_simulator/rules/action_params.py
+msgid "Parameter '{param}' must be a string"
+msgstr ""
+
+#: src/dnd_simulator/rules/action_params.py
+msgid "Action requires parameter '{param}'"
+msgstr ""
+
+#: src/dnd_simulator/rules/action_params.py
+msgid "Parameter '{param}' must be an integer"
+msgstr ""
+
 #: src/dnd_simulator/core/action_defs.py:125
 msgid "Do nothing this turn."
 msgstr ""
@@ -1396,4 +1412,3 @@ msgstr ""
 #: src/dnd_simulator/rules/validation.py:356
 msgid "'{action}' can only target allies."
 msgstr ""
-
