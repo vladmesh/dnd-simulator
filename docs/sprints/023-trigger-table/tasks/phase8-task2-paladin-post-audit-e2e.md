@@ -44,4 +44,11 @@ non-LLM sections, включая обновлённые §3.5 и §14, поск�
 
 ## Status
 
-`pending`
+`blocked`
+
+## Developer Notes
+
+2026-07-14: UI run passed Paladin L1 creation and verified automatic L2 modal after killing
+`xp_dummy`. Closing that modal did not expose the required manual `Level Up` button, including
+after the next round, so Dueling, Lay on Hands, Smite, target scope and the remaining mandatory
+non-LLM sections were not run. See [rerun report](../../../e2e-reports/2026-07-14-sprint023-post-audit-paladin-rerun.md).

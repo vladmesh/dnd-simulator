@@ -3,21 +3,23 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-14
-**Position:** Sprint 023 Phase 8 planned: post-audit E2E playbook расходится с установленным Paladin L1→L2 contract.
-**Next:** Исправить Paladin E2E expectations, затем повторить полный обязательный post-audit E2E.
-**Blockers:** §14.1 ошибочно требует Fighting Style и spell slot у Paladin L1; продукт следует SRD/PHB 2014, где они появляются на L2. nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
+**Position:** Sprint 023 Phase 8 blocked: deferred Paladin level-up нельзя вручную продолжить через UI.
+**Next:** Восстановить ручное повторное открытие `LevelUpModal`, затем повторить полный обязательный post-audit E2E.
+**Blockers:** После закрытия автоматической L2 `LevelUpModal` кнопка `Level Up` не появляется, даже после следующего раунда. Поэтому §3.5 не может выбрать Fighting Style и продолжить к Smite; §14.1 уже приведён к верному L1 contract. nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
 
 ## Current Sprint
 
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 8 — Follow-up post-audit E2E Paladin (task 1 done, task 2 pending) — 2026-07-14
+**Phase:** 8 — Follow-up post-audit E2E Paladin (task 1 done, task 2 blocked) — 2026-07-14
 
 Phase 8 Task 1 done: §14.1 теперь проверяет Paladin L1 без Fighting Style и spell slots; §3.5
-остаётся единственным L2 flow для Fighting Style, slots и Divine Smite. Далее повторить весь
-required non-LLM post-audit E2E. Product code не менялся: Fighting Style, Divine Smite и spell
-slots остаются L2 features.
+остаётся единственным L2 flow для Fighting Style, slots и Divine Smite. Task 2 blocked:
+после Close автоматической L2-модалки ручная кнопка `Level Up` не появляется, включая после
+следующего раунда. [Paladin rerun report](e2e-reports/2026-07-14-sprint023-post-audit-paladin-rerun.md)
+фиксирует blocker; product code не менялся в Task 1, Fighting Style, Divine Smite и spell slots
+остаются L2 features.
 
 Phase 7 closed: targeted post-audit E2E passed 4/4, including EN live action failure `Target too far (10 ft, reach 5 ft).`; nearby-creature race label remains deferred as non-blocking because content-name locale stays a separate `DND_LANGUAGE` contract. All phases complete; a follow-up audit is required after the final locale fix.
 

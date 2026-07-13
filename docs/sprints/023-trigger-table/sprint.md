@@ -136,7 +136,9 @@ Lay on Hands и Divine Smite.
 
 ## Status
 
-**Current:** Phase 8 planned. Исправить E2E playbook Paladin L1/L2 contract, затем повторить обязательный post-audit E2E.
+**Current:** Phase 8 blocked. §14.1 приведён к Paladin L1/L2 contract, но после Close
+автоматической `LevelUpModal` UI не показывает ручную кнопку `Level Up`, поэтому §3.5 не может
+продолжить к выбору Fighting Style, Smite и полному обязательному post-audit E2E.
 
 ## Decisions
 
