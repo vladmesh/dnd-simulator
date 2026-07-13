@@ -3,7 +3,7 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-14
-**Position:** Sprint 023 Phase 8: Task 3 завершён; первый непокрытый UI-блок Task 2 прошёл, но полный обязательный E2E ещё не закончен.
+**Position:** Sprint 023 Phase 8: Task 3 завершён; core UI и Master mutation блоки Task 2 прошли, но полный обязательный E2E ещё не закончен.
 **Next:** Продолжить Task 2 следующим непокрытым обязательным post-audit E2E-блоком.
 **Blockers:** Task 2 остаётся blocked до зелёной границы всех обязательных non-LLM sections. Paladin L1→L2 path и core UI block зелёные; nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
 
@@ -21,6 +21,9 @@ Phase 8 Task 1 done: §14.1 теперь проверяет Paladin L1 без Fi
 фиксирует talk, movement и базовый combat. Task 3 done: backend state contract уже сохранял pending
 level-up; frontend больше не снимает defer на `combat_ended`, поэтому ручная кнопка остаётся доступна
 до REST-confirm. Добавлен WS-driven Paladin L1→L2 regression с Fighting Style и скрытием control после confirm.
+Очередной блок Task 2, [Master mutations](e2e-reports/2026-07-14-sprint023-post-audit-master-mutations.md),
+зелёный: spawn, edit HP, condition, weapon/potion inventory и manual activity override. Незаполненная
+NPC role сейчас отдаёт raw validation prose, это minor finding, не блокер.
 
 Phase 7 closed: targeted post-audit E2E passed 4/4, including EN live action failure `Target too far (10 ft, reach 5 ft).`; nearby-creature race label remains deferred as non-blocking because content-name locale stays a separate `DND_LANGUAGE` contract. All phases complete; a follow-up audit is required after the final locale fix.
 
