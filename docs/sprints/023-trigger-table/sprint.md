@@ -109,4 +109,4 @@ Audit 2026-07-13 не нашёл блокеров, но показал, что �
 
 ## Results
 
-_(заполняется в конце спринта)_
+Финальный audit triage 2026-07-13: quick-fix 0, sprint-relevant 0, новый `core/events.py` typed-event codec `Any` добавлен подпунктом к `any-to-object-sweep`; остальные 10 findings уже отслеживаются в BACKLOG.

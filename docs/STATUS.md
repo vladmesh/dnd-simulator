@@ -3,8 +3,8 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-13
-**Position:** Sprint 023 завершил trigger table, ecology write-back смертей логова, GM controls и post-audit refactor; финальный аудит ждёт triage.
-**Next:** Провести audit triage Sprint 023.
+**Position:** Sprint 023 завершил trigger table, ecology write-back смертей логова, GM controls и post-audit refactor; финальный audit triaged.
+**Next:** Провести post-audit E2E Sprint 023.
 **Blockers:** нет.
 
 ## Current Sprint
@@ -18,7 +18,7 @@ All phases complete. Final audit complete; ready for audit triage.
 
 Phase 5 closed: единый typed event-контракт; trigger runtime, event-log и perception split; transport builders; non-object WS JSON protocol containment; final shutdown-autosave failure logging.
 
-**Audit:** Final audit 2026-07-13: 11 findings, no sprint blockers. Previous 6 sprint-relevant findings and 2 test gaps are fixed; triage the 1 fresh typed-event codec `Any` finding and confirm remaining known backlog debt.
+**Audit:** Triaged 2026-07-13. Quick-fix: 0 applied. Sprint-relevant: 0 deferred. Backlog: 1 added (`core/events.py` typed-event codec `Any` as a subpoint of `any-to-object-sweep`); 10 findings already tracked.
 
 Phase 4 Task 1 done: сохраняемый GM override и управление trigger armed state через master API под world gate.
 
