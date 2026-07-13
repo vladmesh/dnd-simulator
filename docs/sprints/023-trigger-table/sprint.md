@@ -89,11 +89,25 @@ Audit 2026-07-13 не нашёл блокеров, но показал, что �
 3. [Разделение backend и frontend transport builders](tasks/phase5-task3-transport-decomposition.md) — уменьшить session.py/apiClient.ts без изменения wire API
 4. [Protocol containment и финальный autosave](tasks/phase5-task4-transport-reliability-gaps.md) — закрыть два reliability test-gap
 
+## Phase 6: Post-audit E2E fixes
+
+Post-audit E2E 2026-07-13 остановился на двух пользовательских блокерах: frontend EN расходится с
+server-rendered live event log на RU и `COMBAT_ENDED` уходит в generic fallback; Master Sessions
+показывает stale disk saves, хотя их Manage URL не может открыть session. Закрываем только эти
+регрессии, затем повторяем post-audit E2E.
+
+**E2E:** [post-audit report](../../e2e-reports/2026-07-13-sprint023-post-audit.md)
+
+**Tasks:**
+
+1. [Единая locale и typed COMBAT_ENDED в live WS](tasks/phase6-task1-live-ws-locale-combat-ended.md) — синхронизировать язык session/WS и убрать fallback завершения боя.
+2. [Не показывать stale saved sessions в Master](tasks/phase6-task2-stale-master-sessions.md) — оставить в Manage list только доступные live sessions.
+
 ---
 
 ## Status
 
-**Current:** Phase 5 complete. All phases complete; ready for final audit.
+**Current:** Phase 6 tasks generated. Ready to start task 1.
 
 ## Decisions
 
@@ -101,6 +115,7 @@ Audit 2026-07-13 не нашёл блокеров, но показал, что �
 - Разгрузка бэклога по просьбе оператора: `action-error-kills-round-loop`, `encounter-spawned-perceiver`, `dash-actiondef-movement-conflation` входят в scope как polish-айтемы фаз 1 и 4 (2026-07-12).
 - `ENTITY_ATTACK_REQUESTED` — внутренняя команда resolution, `ENTITY_ATTACK` — завершённый мировой факт. Разделение принято вместо optional-полей в одном payload (2026-07-12).
 - Audit 2026-07-13: quick-fix нет. В Phase 5 взяты `typed-event-compat-bridge`, `entities-layer-regrowth` + `perception-fail-fast`, transport decomposition (`session.py` + `api-client-growing`) и два малых test-gap. Security, eslint suppressions, общий `Any` sweep и принятые mutable runtime dataclasses остаются в backlog (2026-07-13).
+- Post-audit E2E 2026-07-13: Phase 6 ограничена единой locale live WS + typed `COMBAT_ENDED` perception и исключением stale saved sessions из Master list. Остальной playbook повторяется после этих двух fixes (2026-07-13).
 
 ## Deferred
 

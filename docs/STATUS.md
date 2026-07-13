@@ -3,18 +3,20 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-13
-**Position:** Sprint 023 завершил trigger table, ecology write-back смертей логова, GM controls и post-audit refactor; финальный audit triaged.
-**Next:** Провести post-audit E2E Sprint 023.
-**Blockers:** нет.
+**Position:** Sprint 023 получил Phase 6 по двум блокерам post-audit E2E: locale live WS/`COMBAT_ENDED` и stale Master sessions.
+**Next:** Реализовать Phase 6 Task 1, затем Task 2 и повторить post-audit E2E.
+**Blockers:** Post-audit E2E 2026-07-13 не green: mixed EN/RU live event log с fallback `combat_ended`; Master list ведёт на stale saved session 404.
 
 ## Current Sprint
 
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 5 — Post-audit refactor (COMPLETE) — 2026-07-13
+**Phase:** 6 — Post-audit E2E fixes (tasks generated) — 2026-07-13
 
-All phases complete. Final audit complete; ready for audit triage.
+Phase 6 tasks generated. Ready to start task 1.
+
+Phase 6: [post-audit E2E report](e2e-reports/2026-07-13-sprint023-post-audit.md) зафиксировал два блокера: синхронизация frontend/session locale для live WS + typed `COMBAT_ENDED` perception и исключение stale disk saves из Master session list.
 
 Phase 5 closed: единый typed event-контракт; trigger runtime, event-log и perception split; transport builders; non-object WS JSON protocol containment; final shutdown-autosave failure logging.
 
@@ -35,6 +37,7 @@ Phase 4 Task 4 done: Dash metadata только пополняет movement budg
 3. Trigger table (`{on, until}`, самогашение, сейв)
 4. Ручка ГМ + failure containment (`action-error-kills-round-loop`, `dash-actiondef-movement-conflation`)
 5. Post-audit refactor (`typed-event-compat-bridge`, entities/perception/session/transport decomposition, два test-gap)
+6. Post-audit E2E fixes (`live-ws-locale-combat-ended`, `stale-master-sessions`)
 
 ## Recent activity (non-sprint)
 
