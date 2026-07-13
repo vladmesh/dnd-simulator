@@ -365,6 +365,7 @@ class GameSession:
                 dispatcher=dispatcher,
                 rng=self.dice_rng,
                 mutation_scope=self.mutate_world,
+                action_scope=lambda: language_context(self.lang),
             )
 
             # Wire on_action: fires after each action by any creature

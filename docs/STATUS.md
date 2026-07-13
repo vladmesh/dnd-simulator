@@ -3,18 +3,18 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-14
-**Position:** Для оставшегося live-locale blocker post-audit E2E создан follow-up Phase 7.
-**Next:** Выполнить Phase 7 Task 1, затем повторить targeted locale и post-audit E2E.
-**Blockers:** В EN live WS action failure приходит по-русски (`Цель слишком далеко…`); подробности в [rerun report](e2e-reports/2026-07-14-sprint023-post-audit-rerun.md).
+**Position:** Phase 7 устранила locale boundary live action failure; нужен targeted locale и post-audit E2E.
+**Next:** Закрыть Phase 7, затем повторить targeted locale и post-audit E2E.
+**Blockers:** Нет известных блокеров к повторному E2E; nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
 
 ## Current Sprint
 
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 7 — Follow-up post-audit E2E locale (tasks generated) — 2026-07-14
+**Phase:** 7 — Follow-up post-audit E2E locale (task 1 done) — 2026-07-14
 
-Phase 7 Task 1 pending: session locale must apply while a live action creates its failed `ActionResult`, not only while its WS response is built. Nearby-creature race label is deferred as non-blocking because content-name locale remains a separate `DND_LANGUAGE` contract.
+Phase 7 Task 1 done: session locale now applies while a live action creates its `ActionResult`, and a locale change affects the next failed action. Nearby-creature race label remains deferred as non-blocking because content-name locale stays a separate `DND_LANGUAGE` contract.
 
 Phase 6 Task 1 done: live WS payloads use the current session locale and `COMBAT_ENDED` has typed perception. Task 2 done: Master lists only sessions managed in memory, excluding stale disk saves.
 

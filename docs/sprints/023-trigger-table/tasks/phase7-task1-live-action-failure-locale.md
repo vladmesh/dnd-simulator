@@ -42,15 +42,19 @@ handler. После implementation повторить targeted post-audit E2E sc
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] EN live action failure is English even when process default is RU
-- [ ] RU live action failure remains Russian
-- [ ] Changing an open session locale affects the next failed action
-- [ ] Failed action remains contained and the round accepts a later valid action
-- [ ] Nearby-creature race label is recorded as a deferred non-blocking issue, not folded into this fix
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] EN live action failure is English even when process default is RU
+- [x] RU live action failure remains Russian
+- [x] Changing an open session locale affects the next failed action
+- [x] Failed action remains contained and the round accepts a later valid action
+- [x] Nearby-creature race label is recorded as a deferred non-blocking issue, not folded into this fix
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+`Round` now accepts a session-owned action context and `GameSession` supplies `language_context(self.lang)` for every dispatch. The WS regression verifies English first, Russian after changing the same session, and a succeeding action afterward; the reaction fixture now supplies the new null action scope because it constructs `Round` without `__init__`. The test began RED on the stale round-thread locale and the full local gate passed: 2541 backend unit tests and 288 frontend tests.

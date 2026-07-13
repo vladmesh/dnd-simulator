@@ -71,6 +71,7 @@ class Round:
         dispatcher: ActionDispatcher | None = None,
         rng: random.Random | None = None,
         mutation_scope: Callable[[], AbstractContextManager[None]] | None = None,
+        action_scope: Callable[[], AbstractContextManager[None]] | None = None,
     ) -> None:
         self._world = world
         self._host = creature_host or world.creature_host
@@ -81,6 +82,7 @@ class Round:
         self._dispatcher = dispatcher
         self._rng = rng or random.Random()
         self._mutation_scope = mutation_scope or nullcontext
+        self._action_scope = action_scope or nullcontext
         self._stop_flag = False
         self._on_round_end: Callable[[RoundResult], None] | None = None
         self._on_action: OnActionCallback | None = None
@@ -115,7 +117,7 @@ class Round:
         emit_fn: EmitFn,
     ) -> ActionResult:
         """Execute action via dispatcher. Validates, checks budget, executes, consumes budget."""
-        with self._mutation_scope():
+        with self._action_scope(), self._mutation_scope():
             return self._dispatcher.dispatch(creature, action, ctx, emit_fn)
 
     def get_perceived_events(self, creature: Creature) -> list[PerceivedEvent]:
