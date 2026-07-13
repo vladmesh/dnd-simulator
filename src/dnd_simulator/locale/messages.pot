@@ -211,7 +211,6 @@ msgid "ID of entity to move away from"
 msgstr ""
 
 #: src/dnd_simulator/core/action_defs.py:218
-#: src/dnd_simulator/core/action_defs.py:256
 msgid "Compass direction: north, south, east, west, etc."
 msgstr ""
 
@@ -227,20 +226,12 @@ msgstr ""
 msgid "Target Y coordinate in feet"
 msgstr ""
 
-#: src/dnd_simulator/core/action_defs.py:248
-msgid "Sprint: move up to double your speed. Costs 1 action."
-msgstr ""
-
-#: src/dnd_simulator/core/action_defs.py:254
-msgid "ID of entity to dash toward"
+#: src/dnd_simulator/core/action_defs.py:249
+msgid "Add your effective speed to the movement budget, then move separately. Costs 1 action."
 msgstr ""
 
 #: src/dnd_simulator/core/action_defs.py:255
-msgid "ID of entity to dash away from"
-msgstr ""
-
-#: src/dnd_simulator/core/action_defs.py:258
-#: src/dnd_simulator/core/action_defs.py:275
+#: src/dnd_simulator/core/action_defs.py:272
 msgid "Cost variant: action or bonus_action"
 msgstr ""
 

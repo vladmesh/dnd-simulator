@@ -15,6 +15,9 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
 
+msgid "Add your effective speed to the movement budget, then move separately. Costs 1 action."
+msgstr "Добавьте текущую скорость к запасу перемещения, затем переместитесь отдельным действием. Стоит 1 действие."
+
 # =========================================================================
 # core/character.py — perceive() output
 # =========================================================================

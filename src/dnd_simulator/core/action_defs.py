@@ -245,21 +245,18 @@ _reg(
 _reg(
     ActionDef(
         action_type=ActionType.DASH,
-        description=N_("Sprint: move up to double your speed. Costs 1 action."),
+        description=N_("Add your effective speed to the movement budget, then move separately. Costs 1 action."),
         cost_type=CostType.ACTION,
         combat_mode=CombatMode.COMBAT_ONLY,
         target_mode=TargetMode.SELF,
         ends_peaceful_turn=True,
         params=(
-            ParamDef("toward", "string", N_("ID of entity to dash toward")),
-            ParamDef("away_from", "string", N_("ID of entity to dash away from")),
-            ParamDef("direction", "string", N_("Compass direction: north, south, east, west, etc.")),
             ParamDef("description", "string", N_("Flavor text")),
             ParamDef("cost_mode", "string", N_("Cost variant: action or bonus_action")),
         ),
         llm_hint=(
-            "Sprint: move up to DOUBLE your speed. Uses your action — you cannot attack this turn. "
-            "Same parameters as move. Rogues can pass cost_mode=bonus_action via Cunning Action."
+            "Add your current effective speed to the movement budget, then use a separate move or move_to action. "
+            "Costs 1 action. Rogues can pass cost_mode=bonus_action via Cunning Action."
         ),
     )
 )

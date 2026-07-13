@@ -29,15 +29,22 @@
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] Dash schema не содержит `toward`, `away_from` и `direction`
-- [ ] Описание требует отдельного move после пополнения movement budget
-- [ ] Dash не меняет позицию и добавляет ровно `effective_speed(actor)`
-- [ ] Обычная и Cunning Action стоимости не изменились
-- [ ] Handler и abstract MOVE resolution не получили лишней переделки
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] Dash schema не содержит `toward`, `away_from` и `direction`
+- [x] Описание требует отдельного move после пополнения movement budget
+- [x] Dash не меняет позицию и добавляет ровно `effective_speed(actor)`
+- [x] Обычная и Cunning Action стоимости не изменились
+- [x] Handler и abstract MOVE resolution не получили лишней переделки
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Из публичного Dash metadata удалены три параметра движения. Description, LLM hint и RU-каталог теперь описывают
+пополнение movement budget и отдельный `move`/`move_to`. Product regression проходит через dispatcher со скоростью
+из accessory modifier, проверяет неизменную позицию после Dash и расход нового бюджета последующим move. Handler,
+abstract MOVE resolution и cost rules не менялись. `make check`: backend 2532 passed, frontend 286 passed.

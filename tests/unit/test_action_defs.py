@@ -62,6 +62,13 @@ class TestToolSchemaGeneration:
         schema = tools[0]
         assert "required" not in schema["function"]["parameters"]
 
+    def test_dash_schema_only_adds_movement_budget(self) -> None:
+        schema = get_tools([ActionType.DASH])[0]["function"]
+
+        assert set(schema["parameters"]["properties"]) == {"description", "cost_mode"}
+        assert "movement budget" in schema["description"]
+        assert "separate move" in schema["description"]
+
     def test_llm_hint_overrides_description(self) -> None:
         """When llm_hint is set, it should be used instead of description."""
         ad = get_action_def(ActionType.ATTACK)

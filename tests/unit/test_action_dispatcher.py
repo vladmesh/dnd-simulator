@@ -11,8 +11,9 @@ from dnd_simulator.core.action import Action, ActionRejectedError, ActionType
 from dnd_simulator.core.character import Ability, Attack, Creature, DamageComponent, DamageType
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.items import Item, ItemType, WeaponCategory, WeaponDef
+from dnd_simulator.core.items import AccessoryDef, EquipmentSlot, Item, ItemType, WeaponCategory, WeaponDef
 from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType
+from dnd_simulator.core.modifiers import Modifier, ModifierOp, StatType
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.rules.handlers import (
@@ -264,16 +265,44 @@ class TestDispatchBudget:
         result = d.dispatch(_creature(), action, ctx, _noop_emit)
         assert not result.success
 
-    def test_dash_consumes_action_adds_movement(self) -> None:
-        """Dash costs 1 action and adds effective speed to movement pool."""
-        budget = TurnBudget(actions=1, bonus_actions=0, movement_remaining=30)
-        ctx = _combat_ctx(budget)
+    def test_dash_adds_effective_speed_without_moving_then_move_spends_it(self) -> None:
+        budget = TurnBudget(actions=1, bonus_actions=0, movement_remaining=10)
+        battle_map = BattleMap(width=60, height=60)
+        battle_map.set_position("test", Position(10, 10))
+        combat = CombatState(location_id="loc", turn_order=["test"], battle_map=battle_map)
+        ctx = ActionContext(
+            is_combat=True,
+            current_turn_entity_id="test",
+            turn_budget=budget,
+            combat_state=combat,
+            get_entity=_get_entity,
+            on_leave_reach=lambda _mover, _start, _end, _reactors: True,
+        )
         d = create_dispatcher(_WORLD)
         creature = _creature(speed=30)
+        creature.equipped_feet = Item(
+            id="boots",
+            name="Boots of Striding",
+            item_type=ItemType.ACCESSORY,
+            accessory_def=AccessoryDef(
+                accessory_id="boots_of_striding",
+                slot=EquipmentSlot.FEET,
+                grant_modifiers=(Modifier(StatType.SPEED, ModifierOp.ADD, value=5, source="boots"),),
+            ),
+        )
+
         result = d.dispatch(creature, Action(name=ActionType.DASH), ctx, _noop_emit)
         assert result.success
-        assert budget.actions == 0  # consumed 1 action
-        assert budget.movement_remaining == 60  # 30 original + 30 from dash
+        assert budget.actions == 0
+        assert budget.movement_remaining == 45
+        assert battle_map.get_position(creature.id) == Position(10, 10)
+
+        result = d.dispatch(
+            creature, Action(name=ActionType.MOVE, params={"direction": "north", "ft": 5}), ctx, _noop_emit
+        )
+        assert result.success
+        assert budget.movement_remaining == 40
+        assert battle_map.get_position(creature.id) == Position(10, 15)
 
     def test_dash_no_actions_rejected(self) -> None:
         budget = TurnBudget(actions=0, bonus_actions=0, movement_remaining=30)
