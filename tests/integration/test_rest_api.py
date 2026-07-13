@@ -66,6 +66,40 @@ class TestSessionLifecycle:
         assert resp.status_code == HTTPStatus.NOT_FOUND
 
 
+class TestGmActivationControls:
+    def test_override_and_trigger_controls(self, api_url: str, village_session: str) -> None:
+        creature_url = f"{api_url}/sessions/{village_session}/creatures/sergei"
+
+        resp = requests.put(
+            f"{creature_url}/activation",
+            json={"override": "active"},
+            timeout=5,
+        )
+        assert resp.status_code == HTTPStatus.OK
+        assert resp.json()["active"] is True
+        assert resp.json()["gm_activation_override"] == "active"
+
+        resp = requests.put(
+            f"{creature_url}/triggers/war_duty",
+            json={"armed": False},
+            timeout=5,
+        )
+        assert resp.status_code == HTTPStatus.OK
+        assert resp.json() == {"id": "war_duty", "armed": False, "active": False}
+
+        resp = requests.get(creature_url, timeout=5)
+        assert resp.status_code == HTTPStatus.OK
+        assert resp.json()["activation_triggers"] == [{"id": "war_duty", "armed": False, "active": False}]
+
+        resp = requests.put(
+            f"{creature_url}/activation",
+            json={"override": "automatic"},
+            timeout=5,
+        )
+        assert resp.status_code == HTTPStatus.OK
+        assert resp.json()["gm_activation_override"] == "automatic"
+
+
 # ── World listing ─────────────────────────────────────────────────────
 
 

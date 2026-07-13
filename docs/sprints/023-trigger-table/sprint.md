@@ -56,7 +56,7 @@ Ecology подписывается на события смерти сущест
 2. [Событийный lifecycle активации](tasks/phase3-task2-event-activation-lifecycle.md) — `on`/`until` в живом event flow и независимые причины активности
 3. [Сейв и самогашение триггера](tasks/phase3-task3-trigger-save-self-complete.md) — lossless save/load и действие мозга `complete_trigger`
 
-## Phase 4: Ручка ГМ + failure containment
+## Phase 4: Ручка ГМ + failure containment ✓
 
 Минимальная мастерская ручка: активировать/погасить существо и взвести/снять триггер через master API + кнопки в панели (без полной `gm-actives-panel`). Плюс разгрузка бэклога: `action-error-kills-round-loop` (ожидаемые dispatch/handler-ошибки → неуспешный `ActionResult`, WS-regression что раунд живёт дальше) и `dash-actiondef-movement-conflation` (убрать мёртвые params, переписать описание). Проверка: E2E через мастер-панель, malformed action не убивает сессию.
 
@@ -73,7 +73,7 @@ Ecology подписывается на события смерти сущест
 
 ## Status
 
-**Current:** Phase 4 (Ручка ГМ + failure containment), all tasks done, ready for phase closure.
+**Current:** All phases complete. Ready for audit.
 
 ## Decisions
 

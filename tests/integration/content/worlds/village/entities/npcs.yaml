@@ -10,6 +10,18 @@ sergei:
   role: guard
   personality: Дисциплинированный и серьёзный.
   settlement_id: millbrook
+  triggers:
+  - id: war_duty
+    'on':
+      event: war_declared
+      match:
+        aggressor_id: north
+        target_id: south
+    until:
+      event: peace_declared
+      match:
+        nation_a_id: north
+        nation_b_id: south
 masha:
   name: Маша-торговка
   start_location: millbrook_market
