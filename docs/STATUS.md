@@ -3,8 +3,8 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-14
-**Position:** Все фазы Sprint 023 завершены; Phase 7 закрыла locale boundary live action failure и повторный targeted post-audit E2E зелёный.
-**Next:** Провести follow-up audit после закрытия последней фазы.
+**Position:** Все фазы Sprint 023 завершены; follow-up audit после Phase 7 не нашёл новых sprint-блокеров.
+**Next:** Провести triage follow-up audit.
 **Blockers:** Нет известных блокеров; nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
 
 ## Current Sprint
@@ -22,7 +22,7 @@ Phase 6: [post-audit E2E report](e2e-reports/2026-07-13-sprint023-post-audit.md)
 
 Phase 5 closed: единый typed event-контракт; trigger runtime, event-log и perception split; transport builders; non-object WS JSON protocol containment; final shutdown-autosave failure logging.
 
-**Audit:** Triaged 2026-07-13. Quick-fix: 0 applied. Sprint-relevant: 0 deferred. Backlog: 1 added (`core/events.py` typed-event codec `Any` as a subpoint of `any-to-object-sweep`); 10 findings already tracked.
+**Audit:** Follow-up 2026-07-14: 11 findings, новых sprint-блокеров нет; требуется triage. Предыдущий triage 2026-07-13: quick-fix 0, sprint-relevant 0 deferred, один подпункт добавлен в `any-to-object-sweep`; остальные findings уже отслеживаются.
 
 Phase 4 Task 1 done: сохраняемый GM override и управление trigger armed state через master API под world gate.
 

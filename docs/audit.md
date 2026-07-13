@@ -1,7 +1,7 @@
 # Code Audit
 
-> **Date**: 2026-07-13
-> **Scope**: full codebase, post Sprint 023 Phase 5 (`65eb963`)
+> **Date**: 2026-07-14
+> **Scope**: full codebase, follow-up after Sprint 023 Phase 7 (`8521a37`)
 
 > Transient snapshot. Canonical tracking lives in [BACKLOG.md](BACKLOG.md); known backlog items are marked `known` and should not be duplicated during triage.
 
@@ -16,7 +16,7 @@
 - Test gaps: 0 issues
 - Vision drift: 0 issues
 
-**Total: 11 issues.** Phase 5 closed the typed-event compatibility bridge, the transport-growth findings, and both reliability test gaps from the previous audit. No sprint blocker was found; the remaining items are known security, maintainability, and style debt.
+**Total: 11 issues.** The Phase 7 locale boundary does not introduce a new architecture, transport, or test-coverage finding. No sprint blocker was found; the remaining items are known security, maintainability, and style debt.
 
 ## Dead Code
 
@@ -28,8 +28,8 @@
 
 | File | Issue | Suggestion |
 |------|-------|------------|
-| `src/dnd_simulator/service/session.py` (497 lines) | `known, improved`: Phase 5 extracted transport payload builders and reduced the module from 741 lines, but it still owns round lifecycle, listener dispatch, save snapshots, and three locking domains. | Keep `test-gap-session`; extract a lifecycle/locking collaborator before another session-control feature. |
-| `src/dnd_simulator/layers/entities/layer.py` (568 lines), `layers/entities/perception.py` (577 lines), `round.py` (572 lines), `core/action_defs.py` (564 lines), `service/commands_worldbuilder.py` (535 lines) | `known, improved`: trigger runtime, event logging, and world perception moved out, but these facades remain over the audit threshold. | Keep `entities-layer-regrowth`, `perception-fail-fast`, `round-growing`, and `action-defs-growing`; extract only along an existing responsibility boundary. |
+| `src/dnd_simulator/service/session.py` (502 lines) | `known, improved`: Phase 5 extracted transport payload builders and reduced the module from 741 lines, but it still owns round lifecycle, listener dispatch, save snapshots, and three locking domains. | Keep `test-gap-session`; extract a lifecycle/locking collaborator before another session-control feature. |
+| `src/dnd_simulator/layers/entities/layer.py` (568 lines), `layers/entities/perception.py` (585 lines), `round.py` (574 lines), `core/action_defs.py` (564 lines), `service/commands_worldbuilder.py` (535 lines) | `known, improved`: trigger runtime, event logging, and world perception moved out, but these facades remain over the audit threshold. | Keep `entities-layer-regrowth`, `perception-fail-fast`, `round-growing`, and `action-defs-growing`; extract only along an existing responsibility boundary. |
 | `frontend/src/components/game/EventLog.tsx:244`, `frontend/src/components/master/SchemaForm.tsx:62` | `known`: two `eslint-disable react-hooks/exhaustive-deps` suppressions remain. | Keep `event-log-eslint-suppress` and `schema-form-eslint-suppress`; remove only with focused effect tests. |
 
 ## Security
