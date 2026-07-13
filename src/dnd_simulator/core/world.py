@@ -99,17 +99,19 @@ class World:
     def handle_event(self, event: Event) -> ActionResult:
         """Send an event and its cascade events to all layers."""
         all_events: list[Event] = []
-        pending = deque([event])
+        pending: deque[tuple[Event, Layer | None]] = deque([(event, None)])
         while pending:
-            current = pending.popleft()
+            current, source = pending.popleft()
             for layer in self._layers:
+                if layer is source:
+                    continue
                 query_fn = self.make_query_fn(layer.name)
                 emit_fn = self.make_emit_fn(layer.name)
                 result = layer.handle_event(current, query_fn, emit_fn)
                 if not result.success:
                     return result
                 all_events.extend(result.events)
-                pending.extend(result.events)
+                pending.extend((cascade, layer) for cascade in result.events)
         return ActionResult(success=True, events=all_events)
 
     def query_layer(self, layer_name: str, query: Query) -> Answer:

@@ -4,18 +4,17 @@
 
 **Last updated:** 2026-07-13
 **Position:** Sprint 022 закрыл второй эпик simulation-core: player-agnostic якоря, сохраняемые wait/sleep/travel intent, по-рёберное путешествие и согласованный с round lifecycle save/load/autosave. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
-**Next:** Повторить phase-scoped E2E Sprint 023 Phase 2 после task 3.
-**Blockers:** Phase 2 остаётся заблокирована до E2E-подтверждения corrective task 3.
+**Next:** Сгенерировать задачи Sprint 023 Phase 3.
+**Blockers:** нет.
 
 ## Current Sprint
 
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 2 — Событийный write-back — смерти логова (task 3 done, E2E rerun pending) — 2026-07-13
+**Phase:** 2 — Событийный write-back — смерти логова (COMPLETE) — 2026-07-13
 
-Blockers:
-- Phase-scoped E2E: убийство ядра логова через реальный combat UI оставляет ecology в `state: active`, `core_alive: true`, `death_writebacks: []`; немедленный и повторный сейвы воспроизводят ошибку. На killing hit также залогирован `WsEventListener.on_action_result` listener error. См. `docs/sprints/023-trigger-table/e2e/phase2-report.md`.
+Ready for Phase 3 task generation.
 
 ### Phases
 

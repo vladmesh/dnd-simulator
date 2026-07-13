@@ -190,7 +190,7 @@ class TestEventPropagation:
         result = world.handle_event(first)
 
         assert result.events == [second]
-        assert producer.handled_events == [first, second]
+        assert producer.handled_events == [first]
         assert consumer.handled_events == [first, second]
 
 

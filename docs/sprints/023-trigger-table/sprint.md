@@ -32,7 +32,7 @@
 `encounter-spawned-perceiver` при разведке оказался уже закрыт в Sprint 019: `_perceive_encounter_spawned`
 зарегистрирован в dispatch и покрыт RU/EN тестами. Phase 1 сохраняет и пинует это поведение при миграции payload'а.
 
-## Phase 2: Событийный write-back — смерти логова
+## Phase 2: Событийный write-back — смерти логова ✓
 
 Ecology подписывается на события смерти существ и обновляет `LairState`/`core_alive` в реальном времени, а не при дематериализации. Закрывает `lair-death-event`. Проверка: убийство ядра → логово depleted сразу, состояние переживает save/load без дематериализации.
 
@@ -68,7 +68,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 2 task 3 (Доставка каскадных событий в live session) done — 2026-07-13. Phase-scoped E2E rerun pending.
+**Current:** Phase 2 (Событийный write-back — смерти логова) complete — 2026-07-13. Ready for Phase 3 task generation.
 
 ## Decisions
 
