@@ -131,14 +131,16 @@ Lay on Hands и Divine Smite.
 
 1. [Контракт Paladin в E2E playbook](tasks/phase8-task1-paladin-e2e-contract.md) — выровнять §14.1 и зависимые Paladin сценарии с L2 contract.
 2. [Повторный обязательный Paladin post-audit E2E](tasks/phase8-task2-paladin-post-audit-e2e.md) — выполнить полный прогон по исправленному playbook и записать report.
+3. [Повторное открытие Level Up после defer](tasks/phase8-task3-level-up-modal-reentry.md) — восстановить ручной UI путь к pending L2 без изменения правил.
 
 ---
 
 ## Status
 
-**Current:** Phase 8 blocked. §14.1 приведён к Paladin L1/L2 contract, но после Close
-автоматической `LevelUpModal` UI не показывает ручную кнопку `Level Up`, поэтому §3.5 не может
-продолжить к выбору Fighting Style, Smite и полному обязательному post-audit E2E.
+**Current:** Phase 8 Task 3 planned. §14.1 приведён к Paladin L1/L2 contract, но после Close
+автоматической `LevelUpModal` UI не показывает ручную кнопку `Level Up`. Task 3 восстанавливает
+этот путь; Task 2 остаётся blocked до его завершения, затем §3.5 продолжит к выбору Fighting
+Style, Smite и полному обязательному post-audit E2E.
 
 ## Decisions
 
