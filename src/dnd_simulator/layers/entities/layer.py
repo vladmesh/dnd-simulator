@@ -38,6 +38,7 @@ from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.layers.entities.query_handler import QueryHandler
 from dnd_simulator.layers.entities.save_models import EntitiesState
+from dnd_simulator.layers.entities.trigger_index import TriggerIndex, TriggerMatch
 
 if TYPE_CHECKING:
     from dnd_simulator.core.location import LocationGraph
@@ -103,6 +104,7 @@ class EntitiesLayer(Layer):
         if entities:
             for e in entities:
                 self._entities[e.id] = e
+        self._trigger_index = TriggerIndex(list(self._entities.values()))
         self._combat = CombatManager(self._entities, self._location_log, battle_map_configs, rng=dice_rng)
         self._awareness = AwarenessBuilder(self._entities, self._location_log, self._combat)
         self._activation = ActivationManager(
@@ -141,10 +143,16 @@ class EntitiesLayer(Layer):
     def add_entity(self, entity: Entity) -> None:
         """Add an entity to the layer."""
         self._entities[entity.id] = entity
+        self._trigger_index.add(entity)
 
     def remove_entity(self, entity_id: str) -> None:
         """Remove an entity from the layer."""
         self._entities.pop(entity_id, None)
+        self._trigger_index.remove(entity_id)
+
+    def find_trigger_matches(self, event: Event) -> list[TriggerMatch]:
+        """Return armed trigger boundaries matching a typed world event."""
+        return self._trigger_index.match(event)
 
     def get_active_creatures(self) -> list[Creature]:
         """Get all active creatures in the world (for the main game loop)."""

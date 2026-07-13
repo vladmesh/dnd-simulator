@@ -50,14 +50,24 @@ triggers:
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] YAML задаёт строгие пары `{on, until}` со стабильными ID и точным typed-payload match
-- [ ] Невалидные event type, payload-поля и дубли ID падают при загрузке контента
-- [ ] Матчинг индексирован по `EventType` и не выполняется в шестисекундном activation loop
-- [ ] `always_active` и trigger definitions живут на runtime `Creature`, а не во внешнем сценарном реестре
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] YAML задаёт строгие пары `{on, until}` со стабильными ID и точным typed-payload match
+- [x] Невалидные event type, payload-поля и дубли ID падают при загрузке контента
+- [x] Матчинг индексирован по `EventType` и не выполняется в шестисекундном activation loop
+- [x] `always_active` и trigger definitions живут на runtime `Creature`, а не во внешнем сценарном реестре
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Добавлены frozen `EventCondition`/`TriggerDefinition`, отдельное mutable `ActivationTrigger` на `Creature` и
+строгий YAML-контракт для именных NPC. Значения `match` проверяются в strict-режиме по type hints соответствующего
+typed payload; неизвестные поля, типы событий, несовместимые значения и дубли ID падают при загрузке.
+
+`TriggerIndex` принадлежит `EntitiesLayer`, держит отдельные buckets для `on` и `until` по `EventType`, учитывает
+текущую взведённость и обновляется при add/remove. Матчинг пока только возвращает совпадения и не меняет
+активность, event lifecycle остаётся task 2, save/load состояния остаётся task 3.
