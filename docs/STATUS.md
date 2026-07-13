@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-07-13
 **Position:** Sprint 022 закрыл второй эпик simulation-core: player-agnostic якоря, сохраняемые wait/sleep/travel intent, по-рёберное путешествие и согласованный с round lifecycle save/load/autosave. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
-**Next:** Провести свежий audit Sprint 023.
+**Next:** Провести triage свежего audit Sprint 023.
 **Blockers:** нет.
 
 ## Current Sprint
@@ -14,7 +14,7 @@
 **Started:** 2026-07-12
 **Phase:** 4 — Ручка ГМ + failure containment (COMPLETE) — 2026-07-13
 
-All phases complete. Ready for audit.
+All phases complete. Fresh audit found 14 issues, no sprint blockers. Ready for triage.
 
 Task 1 done: сохраняемый GM override и управление trigger armed state через master API под world gate.
 
