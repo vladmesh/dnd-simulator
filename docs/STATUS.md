@@ -3,9 +3,9 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-14
-**Position:** Все фазы Sprint 023 завершены; follow-up audit после Phase 7 не нашёл новых sprint-блокеров.
-**Next:** Провести post-audit E2E.
-**Blockers:** Нет известных блокеров; nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
+**Position:** Все фазы Sprint 023 завершены; follow-up post-audit E2E остановился на Paladin L1 creation blocker.
+**Next:** Исправить Paladin Fighting Style selector, затем повторить полный post-audit E2E.
+**Blockers:** Paladin L1 creation не показывает Fighting Style selector, требуемый E2E playbook scenario 14.1; nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
 
 ## Current Sprint
 
@@ -15,6 +15,8 @@
 **Phase:** 7 — Follow-up post-audit E2E locale (COMPLETE) — 2026-07-14
 
 Phase 7 closed: targeted post-audit E2E passed 4/4, including EN live action failure `Target too far (10 ft, reach 5 ft).`; nearby-creature race label remains deferred as non-blocking because content-name locale stays a separate `DND_LANGUAGE` contract. All phases complete; a follow-up audit is required after the final locale fix.
+
+Follow-up [post-audit E2E](e2e-reports/2026-07-14-sprint023-post-audit.md) passed 10/11 targeted scenarios, then found that Paladin L1 character creation has no Fighting Style selector. This blocks scenario 14.1 and its Paladin follow-ups; Sprint 023 is not ready for close-sprint.
 
 Phase 6 Task 1 done: live WS payloads use the current session locale and `COMBAT_ENDED` has typed perception. Task 2 done: Master lists only sessions managed in memory, excluding stale disk saves.
 
