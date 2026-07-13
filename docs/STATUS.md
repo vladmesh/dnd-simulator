@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-07-13
 **Position:** Sprint 022 закрыл второй эпик simulation-core: player-agnostic якоря, сохраняемые wait/sleep/travel intent, по-рёберное путешествие и согласованный с round lifecycle save/load/autosave. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
-**Next:** Провести triage свежего audit Sprint 023.
+**Next:** Спланировать задачи Phase 5 post-audit refactor Sprint 023.
 **Blockers:** нет.
 
 ## Current Sprint
@@ -12,9 +12,11 @@
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 4 — Ручка ГМ + failure containment (COMPLETE) — 2026-07-13
+**Phase:** 5 — Post-audit refactor (PENDING tasks) — 2026-07-13
 
-All phases complete. Fresh audit found 14 issues, no sprint blockers. Ready for triage.
+Audit triaged. Phase 5 открыта для event-contract cleanup, decomposition растущих entities/session/transport модулей и двух небольших reliability gaps.
+
+**Audit:** Triaged 2026-07-13. Quick-fix: 0 applied. Sprint-relevant: 6 findings → Phase 5 refactor. Backlog: 8 findings already tracked or accepted; 1 fresh item added.
 
 Task 1 done: сохраняемый GM override и управление trigger armed state через master API под world gate.
 
@@ -30,6 +32,7 @@ Task 4 done: Dash metadata только пополняет movement budget и т
 2. Событийный write-back — смерти логова (`lair-death-event`)
 3. Trigger table (`{on, until}`, самогашение, сейв)
 4. Ручка ГМ + failure containment (`action-error-kills-round-loop`, `dash-actiondef-movement-conflation`)
+5. Post-audit refactor (`typed-event-compat-bridge`, entities/perception/session/transport decomposition, два test-gap)
 
 ## Recent activity (non-sprint)
 

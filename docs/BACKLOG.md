@@ -17,7 +17,7 @@
 - [x] **must** `save-schema` — CLOSED Sprint 021: единая схема сейва (Pydantic по образцу контента) вместо рукописного формата в нескольких местах. Предусловие всей модели: «мир заморожен на полушаге» требует lossless-сейва (намерения, планы мозгов, триггеры, лог мыслей, зародыши субъектности). Стартовый кусок — «дедуп сериализации» в Sprint 020 phase 3, добивается отдельным спринтом
 - [x] **must** `anchor-as-property` — FIXED Sprint 022: `is_anchor` на любом Creature, активация больше не зависит от `PlayerCharacter`
 - [x] **must** `intents` — FIXED Sprint 022: строгие сохраняемые wait/sleep/travel intent, встроенные прерывания и границы пробуждения/прибытия
-- [ ] **must** `trigger-table` — парные декларативные триггеры `{on, until}` на существе (YAML + ручка ГМ), матчинг при эмиссии событий, активация/гашение dormant↔active, самогашение «моя роль сыграна» как действие мозга. Требует типизированной таксономии событий (фундамент заложен Sprint 020 phase 2). Поглощает `spawn-event-trigger`
+- [x] **must** `trigger-table` — CLOSED Sprint 023 Phases 1-4: строгие typed payload, индексированный `{on, until}` matcher, activation lifecycle, save/load, `complete_trigger`, GM override и arm/disarm control. Поглощает `spawn-event-trigger`
 - [ ] **should** `brain-gate-decide` — контракт Brain: дешёвый гейт (чистые ифы, «продолжаю намерение?», хоть каждый раунд) + дорогое решение (только границы: завершение, прерывание, триггер, ГМ). Инвариант: LLM никогда не вызывается на 6-секундном пути
 - [ ] **should** `llm-turn-plan` — план хода внутри LlmBrain: 1 вызов на ход вместо 3-5, шаги плана со сверкой awareness дешёвой проверкой, перепланирование при сюрпризе. Плюс иерархия командир/исполнитель для сцен: LLM-стратегия на входе, правила разыгрывают раунды, reassess-триггеры (союзник упал, HP < 1/2, враг сдаётся, появился поименованный) поднимают момент до сюжетного решения. Поглощает `combat-reassess`. Движок не меняется — всё внутренности мозга
 - [ ] **should** `inner-self` — внутреннее я NPC: цели одним списком (типизированный словарь kill/protect/reach/... исполним RuleBrain + свободные строки только для LLM), типизированные отношения (не путать с reputation), живой alignment (переваривание свидетельствует, правило применяет сдвиг по накоплению с гистерезисом), mood-enum; лог мыслей (только LLM); контракт переваривания «обнови ядро + перепиши дневник»; правиловый близнец суммаризатора (5-8 детерминированных правил — нужен Classic и CI)
@@ -157,6 +157,7 @@
 - [x] `base-action-provider-stateful` — ~~BaseActionProvider в rules/ — stateful class с self._types~~ FIXED Sprint 020 phase 1 task 5: standalone-функция / frozen dataclass
 - [x] `adapter-imports-core-directly` — ~~routes_player импортирует PlayerCharacter/Ability, routes_master — Query/QueryType напрямую из core~~ FIXED Sprint 019 phase 2 task 3: старые PlayerCharacter/Ability/Query/QueryType импорты убраны при routes_master split (Sprint 016); Action/ActionType вынесены в `service/action_parsing.py` (task 3). Оставшиеся BrainType/FightingStyle — enum-at-boundary в Pydantic-схемах, приняты (аудит 2026-06-28: 0 арх-нарушений, адаптерам можно импортировать enum)
 - [ ] **should** `any-to-object-sweep` — dict[str, Any] вместо dict[str, object] (core/models, layers, llm, adapters). Частично закрыт Sprint 020 phase 2 (typed query contract, ~28 cast-сайтов); остатки в llm/ и adapters/
+- [ ] **should** `typed-event-compat-bridge` — IN SPRINT 023 PHASE 5: после миграции production emitters `TypedPayload` всё ещё притворяется mapping, а `Event.__post_init__` нормализует legacy dict и attack shapes. Перевести оставшиеся тесты/границы на typed constructors, удалить двойное представление и разнести 489-строчный `core/events.py` по устойчивым модулям
 - [x] **should** `layer-rng-threading` — FIXED Sprint 021 phase 1: encounter rolls, squad roam movement и retreat selection в `layers/entities/encounters.py`, `layers/ecology/movement.py`, `layers/ecology/squad_combat.py` используют process-global `random`. Прокинуть RNG явно или через единый seeded источник, чтобы world simulation была воспроизводима для `save-schema` / `gm-interlude` ([simulation-core](brainstorms/simulation-core.md))
 - [x] `entity-type-enum` — ~~"player"/"npc"/"creature" строковые сравнения в 5+ файлах~~ FIXED Sprint 016 (`EntityKind(StrEnum)`) + добивка на границах Sprint 020 phase 2 task 3
 - [x] `brain-type-enum` — ~~ai_type == "rule_based" строковые сравнения~~ FIXED Sprint 016 (`BrainType(StrEnum)`) + границы Sprint 020 phase 2
@@ -165,7 +166,7 @@
 - [x] `long-func-choose-combat-action` — ~~core/brain.py _choose_combat_action 114 строк~~ FIXED Sprint 014 phase 0: decomposed into _CombatContext + per-action helpers
 - [ ] **should** `round-growing` — round.py 548 строк после Sprint 020 phase 3. Частично закрыто: awareness → `AwarenessBuilder`, `resolve_abstract_move` → `rules/movement`, одна активация за loop. Слияние combat/peaceful отменено по [simulation-core](brainstorms/simulation-core.md): peaceful будет переписан через `intents`
 - [ ] **could** `action-defs-growing` — core/action_defs.py 545 строк. Sprint 020 phase 3 сделал backend equipment registry, но 12 equip/unequip ActionType и wire-контракт сохранены; полный `equip-action-collapse` отдельно. Data-driven YAML формат — отдельно
-- [ ] **should** `perception-fail-fast` — layers/entities/perception.py 54x .get() с silent defaults. Маскирует отсутствие данных в событиях
+- [ ] **should** `perception-fail-fast` — IN SPRINT 023 PHASE 5: layers/entities/perception.py вырос до 629 строк; после typed taxonomy убрать silent `.get()` для гарантированных payload-полей и отделить typed formatters
 - [ ] **could** `test-bare-status-codes` — test_api.py, test_trade_ws.py используют bare 200/404 вместо HTTPStatus
 - [ ] **should** `long-func-start-round` — service/session.py start_round 103 строки. Extract closures into named methods
 - [x] `perception-dispatch-chain` — ~~perception.py if-elif chain~~ FIXED Sprint 012 phase 4: dict[EventType, handler] dispatch
@@ -185,7 +186,7 @@
 - [ ] **should** `dict-str-object-overuse` — dict[str, object] вместо TypedDict/dataclass в query_handler, game_service, combat_manager, schemas. Частично закрыт Sprint 020 phase 2 task 1 (query payload dataclasses); остатки в game_service/schemas
 - [x] `world-private-method-access` — ~~world._make_query_fn() вызывается из session.py и round.py~~ FIXED Sprint 019 phase 2 task 3: `World.make_query_fn`/`make_emit_fn` теперь public API
 - [ ] **could** `event-log-eslint-suppress` — EventLog.tsx eslint-disable-next-line react-hooks/exhaustive-deps
-- [ ] **could** `api-client-growing` — apiClient.ts 365 строк, 35+ методов. Разделить по домену
+- [ ] **could** `api-client-growing` — IN SPRINT 023 PHASE 5: apiClient.ts вырос до 415 строк после GM activation controls. Разделить по transport-доменам без изменения экспортируемого API
 - [x] `world-overview-growing` — ~~WorldOverview.tsx 331 строка~~ FIXED Sprint 020 phase 4: generic `EditableStatsTable<T>` + typed rows, `WorldOverview.tsx` стал тонким composition layer
 - [ ] **should** `class-features-hardcoded` — ClassFeatures/proficiency system hardcoded в Python. Adding new class requires code, not YAML. Vision drift ([ecs-and-content](brainstorms/ecs-and-content.md)); упрётся в рост при заклинаниях (Level 3)
 
@@ -242,7 +243,7 @@
 - [ ] **should** `test-gap-commands-politics` — service/commands_politics.py 0 test references
 - [ ] **should** `test-gap-commands-time` — service/commands_time.py 0 test references
 - [ ] **should** `test-gap-fighting-style` — rules/fighting_style.py без выделенных unit-тестов (indirect через test_second_wind, test_create_player)
-- [ ] **could** `test-gap-ws-malformed-json` — WS handler не тестируется на невалидный JSON (только unknown message type)
+- [ ] **could** `test-gap-ws-malformed-json` — IN SPRINT 023 PHASE 5: синтаксически валидные non-object JSON (`[]`, `null`, string) доходят до `.get()` и закрывают WS; валидировать envelope и покрыть player + spectator paths
 - [x] **could** `test-gap-world-rng-determinism` — FIXED Sprint 021 phase 1 (`test_world_seed.py`): нет тестов, фиксирующих seeded deterministic behavior для encounter rolls, squad roam movement и squad retreat selection. Добавить вместе с `layer-rng-threading`
 
 ## From audit 2026-04-13 (post Sprint 017)
@@ -253,7 +254,7 @@
 - [ ] **could** `test-gap-ws-disconnect` — нет теста disconnect во время активного game loop
 - [ ] **could** `test-gap-ws-reaction-prompts` — reaction prompt flow по WS не покрыт
 - [ ] **could** `test-gap-ws-concurrent-messages` — concurrent message handling по WS не тестируется
-- [ ] **could** `test-gap-shutdown-autosave-failure` — поведение shutdown-пути, когда финальный `autosave_all_sessions()` сам бросает, не запинено (audit 2026-07-10)
+- [ ] **could** `test-gap-shutdown-autosave-failure` — IN SPRINT 023 PHASE 5: поведение shutdown-пути, когда финальный `autosave_all_sessions()` сам бросает, не запинено (audit 2026-07-10)
 - [ ] **could** `player-save-bridge-removal` — `player_to_save_data()` остался как compatibility-subset для `parse_player`; когда парсинг игрока переедет целиком на save-модели — убрать мост (audit 2026-07-10)
 
 ## From audit 2026-06-28 (post Sprint 018), triaged
@@ -261,6 +262,6 @@
 - [x] `any-treasure-items` — ~~`content_loader/monsters.py:207` `treasure_items: list[Any]`, хотя `parse_items()` отдаёт `list[Item]`~~ FIXED в триаже 2026-06-28: аннотация `list[Item]` + импорт `Item`
 - [x] `test-gap-encounters-rule` — ~~`rules/encounters.py:8` `is_active_at_time` покрыт только косвенно через integration `test_time_of_day_encounters.py`~~ FIXED в триаже 2026-06-28: `tests/unit/test_encounters.py` (3 теста, truth-table)
 - [ ] **could** `any-encounter-entries` — `content_loader/monsters.py:128` `_parse_encounter_entries(entries: Any)` на raw-YAML границе. `object`/`list[object]` строже (часть общего `any-to-object-sweep`)
-- [ ] **could** `entities-layer-regrowth` — `layers/entities/layer.py` 629→552 после Sprint 020 phase 3 (`entity_serialization.py` выделен), но слой снова выше 400 строк после декомпозиции Sprint 005. Следить за ростом по мере ecology/session-фич; следующий разрез — load/restore helpers, entity CRUD helpers, query facade
+- [ ] **could** `entities-layer-regrowth` — IN SPRINT 023 PHASE 5: `layers/entities/layer.py` вырос до 666 строк после typed events + trigger lifecycle. Вынести trigger application и event location/logging; не переносить orchestration в соседний god-module
 - [ ] **should** `test-gap-leveling` — `rules/leveling.py` без выделенных unit-тестов (косвенно через level-up тесты)
 - [ ] **could** `schema-form-eslint-suppress` — `frontend SchemaForm.tsx:137` eslint-disable-next-line react-hooks/exhaustive-deps (намеренная зависимость эффекта; см. также `event-log-eslint-suppress`, `schema-form-growing`)
