@@ -138,8 +138,8 @@ Lay on Hands и Divine Smite.
 
 ## Status
 
-**Current:** Phase 8 закрыта. Интеграционный набор зелёный (163 passed); свежая landing-регрессия и
-накопленные целевые границы Paladin/lair без блокеров. Все фазы завершены, нужен финальный audit.
+**Current:** Финальный audit triaged, post-audit E2E зелёный. Интеграционный набор (163 passed),
+свежая landing-регрессия и накопленные целевые границы Paladin/lair без блокеров. Спринт готов к закрытию.
 
 ## Decisions
 

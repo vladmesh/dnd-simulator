@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-07-14
 **Position:** Sprint 023 Phase 8: фаза завершена, все фазы закрыты.
-**Next:** Провести post-audit E2E Sprint 023.
+**Next:** Закрыть Sprint 023.
 **Blockers:** Нет. Master mutation `current_hp=0` сразу переводит lair core в terminal depleted state; targeted §15.2 подтвердил сохранение исходного corpse без второго roster при save/load и reconnect. nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
 
 ## Current Sprint
@@ -13,6 +13,10 @@
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
 **Phase:** 8 — Follow-up post-audit E2E Paladin (COMPLETE) — 2026-07-14
+
+Post-audit E2E complete: fresh landing-page regression passed in RU and EN; accumulated Sprint 023
+reports cover the remaining non-LLM playbook boundary, with no post-audit code changes to retest.
+Ready for sprint closure.
 
 Phase 8 closed: integration suite passed 163/163. Fresh landing-page regression passed in RU and EN;
 the Paladin and lair boundaries reuse the Phase 8 targeted green evidence, including the final
