@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-07-14
 **Position:** Sprint 023 Phase 8: фаза завершена, все фазы закрыты.
-**Next:** Провести финальный audit Sprint 023.
+**Next:** Провести post-audit E2E Sprint 023.
 **Blockers:** Нет. Master mutation `current_hp=0` сразу переводит lair core в terminal depleted state; targeted §15.2 подтвердил сохранение исходного corpse без второго roster при save/load и reconnect. nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
 
 ## Current Sprint
@@ -59,7 +59,7 @@ Phase 6: [post-audit E2E report](e2e-reports/2026-07-13-sprint023-post-audit.md)
 
 Phase 5 closed: единый typed event-контракт; trigger runtime, event-log и perception split; transport builders; non-object WS JSON protocol containment; final shutdown-autosave failure logging.
 
-**Audit:** Triaged follow-up 2026-07-14: quick-fix 0, sprint-relevant 0, backlog 11 already tracked. Предыдущий triage 2026-07-13: quick-fix 0, sprint-relevant 0 deferred, один подпункт добавлен в `any-to-object-sweep`; остальные findings уже отслеживаются.
+**Audit:** Triaged final audit `a625ea7`: 2026-07-14, quick-fix 0, sprint-relevant 0, backlog 11 already tracked. Предыдущий triage 2026-07-13: quick-fix 0, sprint-relevant 0 deferred, один подпункт добавлен в `any-to-object-sweep`; остальные findings уже отслеживаются.
 
 Phase 4 Task 1 done: сохраняемый GM override и управление trigger armed state через master API под world gate.
 

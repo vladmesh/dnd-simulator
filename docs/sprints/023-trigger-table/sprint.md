@@ -157,4 +157,4 @@ Lay on Hands и Divine Smite.
 
 ## Results
 
-Финальный audit triage 2026-07-13: quick-fix 0, sprint-relevant 0, новый `core/events.py` typed-event codec `Any` добавлен подпунктом к `any-to-object-sweep`; остальные 10 findings уже отслеживаются в BACKLOG.
+Финальный audit `a625ea7` triaged 2026-07-14: quick-fix 0, sprint-relevant 0; все 11 findings уже отслеживаются в BACKLOG.
