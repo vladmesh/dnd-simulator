@@ -7,12 +7,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dnd_simulator.core.action import Action, ActionType
+from dnd_simulator.core.action import Action, ActionRejectedError, ActionType
 from dnd_simulator.core.character import Ability, Attack, Creature, DamageComponent, DamageType
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.items import Item, ItemType, WeaponCategory, WeaponDef
+from dnd_simulator.core.items import AccessoryDef, EquipmentSlot, Item, ItemType, WeaponCategory, WeaponDef
 from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType
+from dnd_simulator.core.modifiers import Modifier, ModifierOp, StatType
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.rules.handlers import (
@@ -136,18 +137,56 @@ class TestDispatchBasic:
         result = d.dispatch(_creature(), Action(name=ActionType.DODGE), _PEACEFUL, _noop_emit)
         assert not result.success
 
-    def test_attack_without_target_id_raises_value_error(self) -> None:
-        """Missing required param → ValueError mentioning the param, not KeyError."""
+    def test_attack_without_target_id_returns_failed_result(self) -> None:
+        """Missing required param is rejected without mutating the turn budget."""
         d = create_dispatcher(_WORLD)
         actor = _creature()
         _setup_entities(actor, _target())
         budget = TurnBudget()
         ctx = _combat_ctx(budget)
         before = (budget.actions, budget.bonus_actions, budget.movement_remaining)
-        with pytest.raises(ValueError, match="target_id"):
-            d.dispatch(actor, Action(name=ActionType.ATTACK, params={}), ctx, _noop_emit)
+        result = d.dispatch(actor, Action(name=ActionType.ATTACK, params={}), ctx, _noop_emit)
+        assert not result.success
+        assert "target_id" in result.error
         # Budget untouched — error means no mutation.
         assert (budget.actions, budget.bonus_actions, budget.movement_remaining) == before
+
+    def test_invalid_declared_param_type_returns_failed_result(self) -> None:
+        d = create_dispatcher(_WORLD)
+        actor = _creature()
+
+        result = d.dispatch(
+            actor,
+            Action(name=ActionType.WAIT, params={"hours": {"bad": "shape"}}),
+            _PEACEFUL,
+            _noop_emit,
+        )
+
+        assert not result.success
+        assert "hours" in result.error
+        assert actor.current_intent is None
+
+    def test_action_rejection_from_handler_is_contained(self) -> None:
+        d = create_dispatcher(_WORLD)
+
+        def reject_input(*args: object) -> ActionResult:
+            raise ActionRejectedError("bad action input")
+
+        d.register(ActionType.IDLE, reject_input)
+        result = d.dispatch(_creature(), Action(name=ActionType.IDLE), _PEACEFUL, _noop_emit)
+
+        assert not result.success
+        assert result.error == "bad action input"
+
+    def test_unexpected_handler_error_propagates(self) -> None:
+        d = create_dispatcher(_WORLD)
+
+        def crash(*args: object) -> ActionResult:
+            raise ValueError("programming bug")
+
+        d.register(ActionType.IDLE, crash)
+        with pytest.raises(ValueError, match="programming bug"):
+            d.dispatch(_creature(), Action(name=ActionType.IDLE), _PEACEFUL, _noop_emit)
 
 
 # ---------------------------------------------------------------------------
@@ -226,16 +265,44 @@ class TestDispatchBudget:
         result = d.dispatch(_creature(), action, ctx, _noop_emit)
         assert not result.success
 
-    def test_dash_consumes_action_adds_movement(self) -> None:
-        """Dash costs 1 action and adds effective speed to movement pool."""
-        budget = TurnBudget(actions=1, bonus_actions=0, movement_remaining=30)
-        ctx = _combat_ctx(budget)
+    def test_dash_adds_effective_speed_without_moving_then_move_spends_it(self) -> None:
+        budget = TurnBudget(actions=1, bonus_actions=0, movement_remaining=10)
+        battle_map = BattleMap(width=60, height=60)
+        battle_map.set_position("test", Position(10, 10))
+        combat = CombatState(location_id="loc", turn_order=["test"], battle_map=battle_map)
+        ctx = ActionContext(
+            is_combat=True,
+            current_turn_entity_id="test",
+            turn_budget=budget,
+            combat_state=combat,
+            get_entity=_get_entity,
+            on_leave_reach=lambda _mover, _start, _end, _reactors: True,
+        )
         d = create_dispatcher(_WORLD)
         creature = _creature(speed=30)
+        creature.equipped_feet = Item(
+            id="boots",
+            name="Boots of Striding",
+            item_type=ItemType.ACCESSORY,
+            accessory_def=AccessoryDef(
+                accessory_id="boots_of_striding",
+                slot=EquipmentSlot.FEET,
+                grant_modifiers=(Modifier(StatType.SPEED, ModifierOp.ADD, value=5, source="boots"),),
+            ),
+        )
+
         result = d.dispatch(creature, Action(name=ActionType.DASH), ctx, _noop_emit)
         assert result.success
-        assert budget.actions == 0  # consumed 1 action
-        assert budget.movement_remaining == 60  # 30 original + 30 from dash
+        assert budget.actions == 0
+        assert budget.movement_remaining == 45
+        assert battle_map.get_position(creature.id) == Position(10, 10)
+
+        result = d.dispatch(
+            creature, Action(name=ActionType.MOVE, params={"direction": "north", "ft": 5}), ctx, _noop_emit
+        )
+        assert result.success
+        assert budget.movement_remaining == 40
+        assert battle_map.get_position(creature.id) == Position(10, 15)
 
     def test_dash_no_actions_rejected(self) -> None:
         budget = TurnBudget(actions=0, bonus_actions=0, movement_remaining=30)
@@ -261,7 +328,7 @@ class TestHandleIdle:
         handle_idle(_creature(), action, emit, _PEACEFUL, _WORLD)
         assert len(emitted) == 1
         assert emitted[0].event_type == EventType.CUSTOM
-        assert emitted[0].data["inspect_target"] == "goblin_1"
+        assert emitted[0].data.inspect_target == "goblin_1"
 
     def test_idle_no_inspect_no_event(self) -> None:
         emitted, emit = _capture_emit()
@@ -277,7 +344,7 @@ class TestHandleSay:
         assert result.success
         assert len(emitted) == 1
         assert emitted[0].event_type == EventType.ENTITY_SAY
-        assert emitted[0].data["text"] == "Hello!"
+        assert emitted[0].data.text == "Hello!"
 
 
 # ---------------------------------------------------------------------------
@@ -292,9 +359,9 @@ class TestHandleAttack:
         result = handle_attack(_creature(), action, emit, _COMBAT, _WORLD)
         assert result.success
         assert len(emitted) == 1
-        assert emitted[0].event_type == EventType.ENTITY_ATTACK
-        assert emitted[0].data["attacker_id"] == "test"
-        assert emitted[0].data["target_id"] == "goblin_1"
+        assert emitted[0].event_type == EventType.ENTITY_ATTACK_REQUESTED
+        assert emitted[0].data.attacker_id == "test"
+        assert emitted[0].data.target_id == "goblin_1"
 
 
 class TestHandleDodge:
@@ -323,8 +390,8 @@ class TestHandleMove:
         assert result.success
         assert len(emitted) == 1
         assert emitted[0].event_type == EventType.ENTITY_MOVE
-        assert emitted[0].data["direction"] == "N"
-        assert emitted[0].data["ft"] == 10
+        assert emitted[0].data.direction == "N"
+        assert emitted[0].data.ft == 10
 
 
 class TestHandleWait:
@@ -389,8 +456,8 @@ class TestHandleDash:
         handle_dash(_creature(speed=25), Action(name=ActionType.DASH), emit, ctx, _WORLD)
         assert len(emitted) == 1
         assert emitted[0].event_type == EventType.ENTITY_DASH
-        assert emitted[0].data["entity_id"] == "test"
-        assert emitted[0].data["extra_movement_ft"] == 25
+        assert emitted[0].data.entity_id == "test"
+        assert emitted[0].data.extra_movement_ft == 25
 
 
 # ---------------------------------------------------------------------------
@@ -675,7 +742,7 @@ class TestHandleUseItem:
         assert len(actor.inventory) == 0
         assert len(emitted) == 1
         assert emitted[0].event_type == EventType.ENTITY_USE_ITEM
-        assert emitted[0].data["healed"] == 4
+        assert emitted[0].data.healed == 4
 
     def test_potion_capped_at_max_hp(self) -> None:
         potion = _healing_potion(heal_dice="100")
@@ -688,10 +755,10 @@ class TestHandleUseItem:
         assert result.success
         assert actor.current_hp == 20
 
-    def test_missing_item_raises(self) -> None:
+    def test_missing_item_is_explicit_action_rejection(self) -> None:
         actor = _creature()
         action = Action(name=ActionType.USE_ITEM, params={"item_id": "nonexistent"})
-        with pytest.raises(KeyError, match="nonexistent"):
+        with pytest.raises(ActionRejectedError, match="nonexistent"):
             handle_use_item(actor, action, _noop_emit, _PEACEFUL, _WORLD)
 
     def test_missing_item_id_param_raises(self) -> None:

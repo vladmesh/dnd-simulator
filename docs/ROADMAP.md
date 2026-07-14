@@ -131,6 +131,10 @@ Paladin L1-L2 как первый caster-класс. Phase 1: spell slots как
 Второй эпик simulation-core. Якорь стал свойством любого существа; wait, sleep и travel представлены строгими сохраняемыми intent. Travel идёт по кратчайшему маршруту по рёбрам графа, сохраняется посреди пути и прерывается телесным событием, боем или встречей в активной сцене. Session-owned dice RNG, единый world-mutation gate и bounded round shutdown согласовали save/load/autosave с живым раундом. Post-audit E2E: 8/8, integration: 160/160.
 → [план спринта](sprints/022-intents-travel/sprint.md)
 
+### Sprint 023 — Trigger Table (фазы 1-8)
+Третий эпик simulation-core. События получили строгие immutable payload-контракты, а YAML-триггеры `{on, until}` индексируются по `EventType`, активируют и гасят существ, переживают save/load и дополняются persistent GM override. Смерть materialized lair core сразу делает ecology-логово terminal depleted и не создаёт второй roster после save/load/reconnect. Post-audit refactor разделил event runtime, perception и transport; final audit triaged без sprint blockers, integration: 163/163, E2E зелёный.
+→ [план спринта](sprints/023-trigger-table/sprint.md)
+
 ## Planned
 
 ### Level 2 — Расходуемые ресурсы
@@ -142,7 +146,7 @@ Spell slots, ki, rage. Дополнительные типы брони и ор�
 → [брейншторм](brainstorms/ecs-and-content.md)
 
 ### Simulation Core — триггеры, внутреннее я, лестница детализации
-Заменяет прежний план «Phase 3 — Автономные тики» (периодические тики отброшены в пользу decision-точек). Единая схема сейва и воспроизводимость закрыты Sprint 021, якоря и намерения закрыты Sprint 022. Цепочка эпиков: ~~единая схема сейва~~ → ~~якорь-как-свойство + намерения~~ → парные триггеры `{on, until}` активации/гашения → внутреннее я NPC (цели, отношения, живой alignment, переваривание + правиловый близнец) → лестница детализации поселений (событийная запись, храповик субъектности) → квесты как контент поверх целей и триггеров.
+Заменяет прежний план «Phase 3 — Автономные тики» (периодические тики отброшены в пользу decision-точек). Единая схема сейва и воспроизводимость закрыты Sprint 021, якоря и намерения закрыты Sprint 022, парные триггеры `{on, until}` и событийный write-back закрыты Sprint 023. Цепочка эпиков: ~~единая схема сейва~~ → ~~якорь-как-свойство + намерения~~ → ~~парные триггеры `{on, until}` активации/гашения~~ → внутреннее я NPC (цели, отношения, живой alignment, переваривание + правиловый близнец) → лестница детализации поселений (событийная запись, храповик субъектности) → квесты как контент поверх целей и триггеров.
 → [брейншторм](brainstorms/simulation-core.md), эпики в [BACKLOG](BACKLOG.md#simulation-core-брейншторм-2026-07-04)
 
 ### World Builder (advanced)

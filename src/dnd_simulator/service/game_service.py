@@ -248,29 +248,16 @@ class GameService(
         return session
 
     def list_sessions(self) -> list[dict[str, str]]:
-        """List all active sessions (in-memory + saved on disk)."""
-        result: dict[str, dict[str, str]] = {}
-
-        # In-memory sessions
+        """List sessions currently managed by this service."""
+        result: list[dict[str, str]] = []
         with self._sessions_lock:
             active_sessions = list(self._sessions.items())
         for sid, s in active_sessions:
             players = s.get_players()
             player_name = players[0].name if players else ""
-            result[sid] = {"session_id": sid, "player_name": player_name, "world_name": s.world_name}
+            result.append({"session_id": sid, "player_name": player_name, "world_name": s.world_name})
 
-        # Saved sessions on disk (not yet loaded) — scan all world subdirs
-        from dnd_simulator.storage.store import JsonFileStore
-
-        if isinstance(self._store, JsonFileStore):
-            for world_name in self._store.list_worlds():
-                for save_name in self._store.list_saves(world=world_name):
-                    if save_name.startswith("session_"):
-                        sid = save_name[len("session_") :]
-                        if sid not in result:
-                            result[sid] = {"session_id": sid, "player_name": "(saved)", "world_name": world_name}
-
-        return list(result.values())
+        return result
 
     def get_session(self, session_id: str) -> GameSession:
         """Get session info."""

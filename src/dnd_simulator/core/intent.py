@@ -22,6 +22,7 @@ class IntentInterruptReason(StrEnum):
     DAMAGE = "damage"
     COMBAT = "combat"
     SCENE = "scene"
+    TRIGGER = "trigger"
 
 
 @dataclass(frozen=True)

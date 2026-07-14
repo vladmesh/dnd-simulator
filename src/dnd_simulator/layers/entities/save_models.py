@@ -12,9 +12,11 @@ from dnd_simulator.core.character import Ability, Alignment, CharClass, DamageTy
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.intent import IntentType
 from dnd_simulator.core.items import ArmorCategory, EquipmentSlot, ItemType, WeaponCategory
-from dnd_simulator.core.models import EntityKind
+from dnd_simulator.core.lair import LairMemberRole
+from dnd_simulator.core.models import EntityKind, EventType
 from dnd_simulator.core.modifiers import ModifierOp, StatType
 from dnd_simulator.core.resource import RestType
+from dnd_simulator.core.triggers import ActivationTrigger, EventCondition, GmActivationOverride, TriggerDefinition
 
 
 class SaveModel(BaseModel):
@@ -134,6 +136,35 @@ class TravelIntentSave(SaveModel):
 IntentSave = Annotated[TimedIntentSave | TravelIntentSave, Field(discriminator="kind")]
 
 
+class EventConditionSave(SaveModel):
+    event: EventType
+    match: dict[str, object] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_payload_fields(self) -> EventConditionSave:
+        EventCondition.from_mapping(self.event, self.match)
+        return self
+
+
+class ActivationTriggerSave(SaveModel):
+    id: str = Field(min_length=1)
+    on: EventConditionSave
+    until: EventConditionSave
+    armed: bool = True
+    active: bool = False
+
+    def to_domain(self) -> ActivationTrigger:
+        return ActivationTrigger(
+            definition=TriggerDefinition(
+                id=self.id,
+                on=EventCondition.from_mapping(self.on.event, self.on.match),
+                until=EventCondition.from_mapping(self.until.event, self.until.match),
+            ),
+            armed=self.armed,
+            active=self.active,
+        )
+
+
 class EntitySaveBase(SaveModel):
     id: str
     name: str
@@ -141,6 +172,12 @@ class EntitySaveBase(SaveModel):
     active: bool
     temporary: bool = False
     faction_id: str = ""
+
+
+class LairOriginSave(SaveModel):
+    lair_id: str
+    template_id: str
+    role: LairMemberRole
 
 
 class CreatureFields(EntitySaveBase):
@@ -167,9 +204,20 @@ class CreatureFields(EntitySaveBase):
     reputation: dict[str, int] = Field(default_factory=dict)
     xp_value: int = 0
     squad_id: str | None = None
+    lair_origin: LairOriginSave | None = None
     is_anchor: bool = False
+    always_active: bool = False
+    gm_activation_override: GmActivationOverride = GmActivationOverride.AUTOMATIC
+    triggers: list[ActivationTriggerSave] = Field(default_factory=list)
     current_intent: IntentSave | None = None
     combat_position: tuple[int, int] | None = None
+
+    @model_validator(mode="after")
+    def validate_trigger_ids(self) -> CreatureFields:
+        ids = [trigger.id for trigger in self.triggers]
+        if len(ids) != len(set(ids)):
+            raise ValueError("duplicate trigger id")
+        return self
 
 
 class CreatureSave(CreatureFields):

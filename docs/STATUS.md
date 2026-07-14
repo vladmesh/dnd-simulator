@@ -2,10 +2,12 @@
 
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
-**Last updated:** 2026-07-12
-**Position:** Sprint 022 закрыл второй эпик simulation-core: player-agnostic якоря, сохраняемые wait/sleep/travel intent, по-рёберное путешествие и согласованный с round lifecycle save/load/autosave. Классовые механики на уровне D&D L2 (Fighter / Rogue / Paladin).
-**Next:** Активного спринта нет. Главный следующий кандидат: `trigger-table`; смежные кандидаты — `brain-gate-decide` и containment ожидаемых action errors.
-**Blockers:** нет.
+**Last updated:** 2026-07-14
+**Position:** Sprint 023 закрывается через CI merge gate.
+**Next:** Дождаться merge Sprint 023, затем спланировать следующий спринт.
+**Blockers:** Нет.
+
+**Closure:** Ждём завершения CI для `sprint/023-trigger-table`.
 
 ## Current Sprint
 
@@ -25,6 +27,7 @@ No active sprint.
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 023-trigger-table | Парные триггеры `{on, until}` на типизированной таксономии событий; событийный write-back смертей логова | 2026-07-12 | 2026-07-14 |
 | 022-intents-travel | Player-agnostic якоря и сохраняемые wait/sleep/travel intent; travel по рёбрам; согласованный lifecycle save/load/autosave | 2026-07-10 | 2026-07-12 |
 | 021-save-schema | Версионированная Pydantic-схема сейва (schema_version=1, RNG в сейве, combat sides), воспроизводимость мира от DND_WORLD_SEED, периодический автосейв | 2026-07-10 | 2026-07-10 |
 | 020-thermo-sweep | Закрыть структурный долг из термоядерного ревью: корректность + чистота rules, типизация границ, backend/frontend decomposition, сверка с simulation-core | 2026-06-30 | 2026-07-10 |

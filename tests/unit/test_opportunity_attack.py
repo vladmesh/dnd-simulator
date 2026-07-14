@@ -256,12 +256,14 @@ class TestOaHandler:
         # and OPPORTUNITY_ATTACK event (for combat log)
         from dnd_simulator.core.models import Event
 
-        attack_events = [e for e in events_emitted if isinstance(e, Event) and e.event_type == EventType.ENTITY_ATTACK]
+        attack_events = [
+            e for e in events_emitted if isinstance(e, Event) and e.event_type == EventType.ENTITY_ATTACK_REQUESTED
+        ]
         oa_events = [e for e in events_emitted if isinstance(e, Event) and e.event_type == EventType.OPPORTUNITY_ATTACK]
         assert len(attack_events) == 1
         assert len(oa_events) == 1
-        assert attack_events[0].data["attacker_id"] == "reactor"
-        assert attack_events[0].data["target_id"] == "target"
+        assert attack_events[0].data.attacker_id == "reactor"
+        assert attack_events[0].data.target_id == "target"
 
 
 # ---------------------------------------------------------------------------

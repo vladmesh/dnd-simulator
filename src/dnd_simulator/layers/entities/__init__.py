@@ -14,6 +14,8 @@ ends. Direct access: get_entity, add_entity, remove_entity for hot controls.
 Save format is defined by Pydantic models in save_models.py (EntitiesState:
 discriminated entity union, combat state incl. sides, layer RNG state);
 entity_serialization.py builds them directly from live objects.
+TriggerIndex and TriggerRuntime apply typed paired on/until activation conditions;
+GM overrides are persisted alongside automatic activation state.
 """
 
 from dnd_simulator.layers.entities.layer import EntitiesLayer

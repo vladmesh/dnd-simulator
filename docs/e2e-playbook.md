@@ -2,7 +2,7 @@
 
 Сценарии для регрессионного тестирования через Playwright. Каждый сценарий — что делаем, что ожидаем. Обновляется при добавлении новых фич.
 
-**Последнее обновление:** 2026-06-28
+**Последнее обновление:** 2026-07-14
 
 ---
 
@@ -314,15 +314,16 @@
 ## 14. Paladin & Spell Slots
 
 ### 14.1 Paladin character creation
-- Создать Paladin, выбрать Fighting Style
-- **Ожидание:** starting equipment содержит Chain Mail + Shield + Longsword (или греатмечь для GWF); preview HP использует d10 hit die; Lay on Hands pool = 5 × level; level 1 spell slot присутствует в ресурсах
+- Создать Paladin L1 без Fighting Style selector
+- **Ожидание:** starting equipment содержит Chain Mail + Shield + Longsword; preview HP использует d10 hit die; Lay on Hands pool = 5 × level; Fighting Style и spell slots отсутствуют на L1
+- Fighting Style, Divine Smite и spell slots проверяются только после полного L1 → L2 цикла в [§3.5](#35-level-up-full-cycle-paladin-l1--l2).
 
 ### 14.2 Lay on Hands
-- В бою/вне боя использовать Lay on Hands на союзника или на себя, выбрать количество HP
+- Paladin L1 или L2 в бою/вне боя использует Lay on Hands на союзника или на себя, выбирает количество HP
 - **Ожидание:** HP цели увеличилось (clamp до max HP), пул Lay on Hands уменьшился на использованное количество; лог событие `entity_lay_on_hands`
 
 ### 14.3 Divine Smite
-- Paladin атакует melee, попадает, в UI появляется выбор Smite
+- После подтверждённого L1 → L2 в [§3.5](#35-level-up-full-cycle-paladin-l1--l2) Paladin атакует melee, попадает, в UI появляется выбор Smite
 - **Ожидание:** при согласии тратится spell slot, урон в логе показывает radiant component (+2d8 базово, +1d8 на уровень слота); breakdown по damage types виден
 
 ### 14.4 Target scope validation

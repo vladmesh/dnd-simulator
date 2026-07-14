@@ -163,7 +163,7 @@ class PlayerCommands(GameServiceProtocol):
         in the session. Raises ValueError if no matching player exists.
         """
         from dnd_simulator.service.errors import PlayerNotFoundError
-        from dnd_simulator.service.session import build_player_status
+        from dnd_simulator.service.transport_payloads import build_player_status
 
         session = self._get_session(session_id)
         player = session.get_player(player_id) if player_id else session.get_player()

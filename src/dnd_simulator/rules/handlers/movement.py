@@ -7,8 +7,10 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.combat import Position
+from dnd_simulator.core.events import EntityActorPayload, EntityDashPayload, EntityMovePayload
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.i18n import _
+from dnd_simulator.rules.action_params import integer_param
 from dnd_simulator.rules.modifiers import effective_speed
 from dnd_simulator.rules.movement import compute_reachable, grid_distance, move_direction, step_cost
 from dnd_simulator.rules.reactions import find_oa_triggers
@@ -42,7 +44,7 @@ def handle_move(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
     if "direction" not in action.params:
         return ActionResult(success=False, error=_("Move requires a direction"))
     direction = str(action.params["direction"])
-    ft = int(str(action.params.get("ft", 5)))
+    ft = integer_param(action, "ft", default=5)
     logger.info("move", direction=direction, ft=ft)
 
     # In combat with OA callback: resolve directly (not via event)
@@ -70,14 +72,9 @@ def handle_move(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
             Event(
                 event_type=EventType.ENTITY_MOVE,
                 source_layer="entities",
-                data={
-                    "entity_id": actor.id,
-                    "from_x": cur_pos.x,
-                    "from_y": cur_pos.y,
-                    "to_x": new_pos.x,
-                    "to_y": new_pos.y,
-                    "distance_ft": moved_ft,
-                },
+                data=EntityMovePayload(
+                    actor.id, actor.location_id, cur_pos.x, cur_pos.y, new_pos.x, new_pos.y, moved_ft
+                ),
             )
         )
         return ActionResult()
@@ -87,7 +84,7 @@ def handle_move(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
         Event(
             event_type=EventType.ENTITY_MOVE,
             source_layer="entities",
-            data={"entity_id": actor.id, "direction": str(direction), "ft": ft},
+            data=EntityMovePayload(actor.id, actor.location_id, direction=str(direction), ft=ft),
         )
     )
 
@@ -112,8 +109,8 @@ def handle_move_to(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Action
     if start_pos is None:
         return ActionResult(success=False, error=_("Not on the battle map"))
 
-    target_x = int(str(action.params["x"]))
-    target_y = int(str(action.params["y"]))
+    target_x = integer_param(action, "x")
+    target_y = integer_param(action, "y")
     target = Position(target_x, target_y)
 
     if target == start_pos:
@@ -164,14 +161,9 @@ def handle_move_to(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Action
         Event(
             event_type=EventType.ENTITY_MOVE,
             source_layer="entities",
-            data={
-                "entity_id": actor.id,
-                "from_x": start_pos.x,
-                "from_y": start_pos.y,
-                "to_x": cur_pos.x,
-                "to_y": cur_pos.y,
-                "distance_ft": moved_ft,
-            },
+            data=EntityMovePayload(
+                actor.id, actor.location_id, start_pos.x, start_pos.y, cur_pos.x, cur_pos.y, moved_ft
+            ),
         )
     )
     return ActionResult()
@@ -193,7 +185,7 @@ def handle_dash(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
         Event(
             event_type=EventType.ENTITY_DASH,
             source_layer="entities",
-            data={"entity_id": actor.id, "extra_movement_ft": speed},
+            data=EntityDashPayload(actor.id, speed),
         )
     )
     return ActionResult()
@@ -213,7 +205,7 @@ def handle_disengage(
         Event(
             event_type=EventType.ENTITY_DISENGAGE,
             source_layer="entities",
-            data={"entity_id": actor.id},
+            data=EntityActorPayload(actor.id),
         )
     )
     return ActionResult()
@@ -223,7 +215,7 @@ def handle_wait(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
     """Wait in place until the requested wake boundary."""
     from dnd_simulator.core.intent import IntentType, TimedIntent
 
-    hours = int(str(action.params.get("hours", 1)))
+    hours = integer_param(action, "hours", default=1)
     if hours > 0:
         now = world.time.to_total_seconds()
         actor.current_intent = TimedIntent(IntentType.WAIT, now, now + hours * 3600)

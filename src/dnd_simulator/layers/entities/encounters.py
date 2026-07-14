@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.character import Creature
+from dnd_simulator.core.events import EncounterSpawnedPayload
 from dnd_simulator.core.lair import LairState
 from dnd_simulator.core.models import Event, EventType, FactionRelation
 from dnd_simulator.core.queries import query_faction_relation, query_is_daylight, query_lairs_at_location
@@ -135,7 +136,11 @@ def roll_encounters(
         event = Event(
             event_type=EventType.ENCOUNTER_SPAWNED,
             source_layer="entities",
-            data={"location_id": location_id, "names": spawned_names},
+            data=EncounterSpawnedPayload(
+                location_id=location_id,
+                spawned_names=tuple(spawned_names),
+                spawned_entity_ids=tuple(creature.id for creature in spawned_creatures),
+            ),
         )
         mgr._location_log[location_id].append(event)
 

@@ -17,6 +17,7 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.events import ActionFlavorPayload, AttackRequestedPayload, EntitySecondWindPayload
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -229,7 +230,7 @@ class TestPerceiveDodgeFlee:
         event = Event(
             event_type=EventType.ENTITY_DODGE,
             source_layer="entities",
-            data={"entity_id": "p1"},
+            data=ActionFlavorPayload(**{"entity_id": "p1"}),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
         assert "defensive stance" in result
@@ -241,7 +242,7 @@ class TestPerceiveDodgeFlee:
         event = Event(
             event_type=EventType.ENTITY_DODGE,
             source_layer="entities",
-            data={"entity_id": "n1"},
+            data=ActionFlavorPayload(**{"entity_id": "n1"}),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, npc))
         assert "defensive stance" in result
@@ -253,7 +254,7 @@ class TestPerceiveDodgeFlee:
         event = Event(
             event_type=EventType.ENTITY_DODGE,
             source_layer="entities",
-            data={"entity_id": "n1", "description": "Прячется за стол"},
+            data=ActionFlavorPayload(entity_id="n1", description="Прячется за стол"),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, npc))
         assert "Прячется за стол" in result
@@ -263,7 +264,7 @@ class TestPerceiveDodgeFlee:
         event = Event(
             event_type=EventType.ENTITY_FLEE,
             source_layer="entities",
-            data={"entity_id": "p1"},
+            data=ActionFlavorPayload(**{"entity_id": "p1"}),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
         assert "flee" in result
@@ -275,7 +276,7 @@ class TestPerceiveDodgeFlee:
         event = Event(
             event_type=EventType.ENTITY_FLEE,
             source_layer="entities",
-            data={"entity_id": "n1"},
+            data=ActionFlavorPayload(**{"entity_id": "n1"}),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, npc))
         assert "flee" in result
@@ -287,7 +288,9 @@ class TestPerceiveSecondWind:
         event = Event(
             event_type=EventType.ENTITY_SECOND_WIND,
             source_layer="entities",
-            data={"entity_id": "p1", "healed": 5, "dice_detail": [{"sides": 10, "result": 3}]},
+            data=EntitySecondWindPayload(
+                **{"entity_id": "p1", "healed": 5, "dice_detail": [{"sides": 10, "result": 3}]}
+            ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
         assert "5" in result
@@ -299,7 +302,9 @@ class TestPerceiveSecondWind:
         event = Event(
             event_type=EventType.ENTITY_SECOND_WIND,
             source_layer="entities",
-            data={"entity_id": "n1", "healed": 8, "dice_detail": [{"sides": 10, "result": 6}]},
+            data=EntitySecondWindPayload(
+                **{"entity_id": "n1", "healed": 8, "dice_detail": [{"sides": 10, "result": 6}]}
+            ),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, npc))
         assert "8" in result
@@ -318,9 +323,9 @@ class TestCombatModeSwitch:
 
         layer = EntitiesLayer([attacker, target, bystander, other_region])
         event = Event(
-            event_type=EventType.ENTITY_ATTACK,
+            event_type=EventType.ENTITY_ATTACK_REQUESTED,
             source_layer="entities",
-            data={"attacker_id": "p1", "target_id": "n1"},
+            data=AttackRequestedPayload(**{"attacker_id": "p1", "target_id": "n1"}),
         )
         layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
 
@@ -335,7 +340,7 @@ class TestCombatModeSwitch:
         event = Event(
             event_type=EventType.ENTITY_FLEE,
             source_layer="entities",
-            data={"entity_id": "n1"},
+            data=ActionFlavorPayload(**{"entity_id": "n1"}),
         )
         layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         assert npc.in_combat is False
@@ -347,7 +352,7 @@ class TestCombatModeSwitch:
         event = Event(
             event_type=EventType.ENTITY_FLEE,
             source_layer="entities",
-            data={"entity_id": "n1"},
+            data=ActionFlavorPayload(**{"entity_id": "n1"}),
         )
         layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         log = layer.get_perceived_log(observer)
@@ -361,7 +366,7 @@ class TestCombatModeSwitch:
         event = Event(
             event_type=EventType.ENTITY_DODGE,
             source_layer="entities",
-            data={"entity_id": "n1"},
+            data=ActionFlavorPayload(**{"entity_id": "n1"}),
         )
         layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         log = layer.get_perceived_log(observer)
@@ -479,7 +484,7 @@ class TestDodgeMechanics:
         event = Event(
             event_type=EventType.ENTITY_DODGE,
             source_layer="entities",
-            data={"entity_id": "c1"},
+            data=ActionFlavorPayload(**{"entity_id": "c1"}),
         )
         layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         assert c1.is_dodging is True
@@ -501,9 +506,9 @@ class TestDodgeMechanics:
 
         layer.handle_event(
             Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="entities",
-                data={"attacker_id": "c1", "target_id": "c2"},
+                data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -523,9 +528,9 @@ class TestDodgeMechanics:
             random.seed(seed)
             layer.handle_event(
                 Event(
-                    event_type=EventType.ENTITY_ATTACK,
+                    event_type=EventType.ENTITY_ATTACK_REQUESTED,
                     source_layer="entities",
-                    data={"attacker_id": "c1", "target_id": "c2"},
+                    data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
                 ),
                 _noop_query_fn,
                 _noop_emit_fn,
@@ -541,9 +546,9 @@ class TestDodgeMechanics:
             random.seed(seed)
             layer.handle_event(
                 Event(
-                    event_type=EventType.ENTITY_ATTACK,
+                    event_type=EventType.ENTITY_ATTACK_REQUESTED,
                     source_layer="entities",
-                    data={"attacker_id": "c1", "target_id": "c2"},
+                    data=AttackRequestedPayload(**{"attacker_id": "c1", "target_id": "c2"}),
                 ),
                 _noop_query_fn,
                 _noop_emit_fn,

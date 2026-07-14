@@ -22,6 +22,7 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.class_features import FighterFeatures, FightingStyle, PaladinFeatures
+from dnd_simulator.core.events import AttackRequestedPayload
 from dnd_simulator.core.items import EquipmentSlot, Item, ItemType, WeaponCategory, WeaponDef
 from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.core.resource import ResourcePool, RestType
@@ -122,9 +123,9 @@ class TestSmiteOnHit:
         cm, log = _setup_combat(paladin, target)
 
         event = Event(
-            event_type=EventType.ENTITY_ATTACK,
+            event_type=EventType.ENTITY_ATTACK_REQUESTED,
             source_layer="entities",
-            data={"attacker_id": "paladin", "target_id": "target", "smite_slot_level": 1},
+            data=AttackRequestedPayload(**{"attacker_id": "paladin", "target_id": "target", "smite_slot_level": 1}),
         )
         result = cm.resolve_attack(event)
         assert result.success
@@ -136,11 +137,11 @@ class TestSmiteOnHit:
         # Damage log should contain divine_smite component
         attack_events = [e for e in log["arena"] if e.event_type == EventType.ENTITY_ATTACK]
         assert len(attack_events) == 1
-        components = attack_events[0].data.get("damage_components", [])
-        smite_components = [c for c in components if c["source"] == "divine_smite"]
+        components = attack_events[0].data.damage_components
+        smite_components = [c for c in components if c.source == "divine_smite"]
         assert len(smite_components) == 1
-        assert smite_components[0]["type"] == DamageType.RADIANT.value
-        assert "d8" in smite_components[0]["dice"]
+        assert smite_components[0].type == DamageType.RADIANT.value
+        assert "d8" in smite_components[0].dice
 
 
 class TestSmiteOnMiss:
@@ -159,9 +160,9 @@ class TestSmiteOnMiss:
             fresh_cm, _ = _setup_combat(fresh_paladin, fresh_target)
 
             event = Event(
-                event_type=EventType.ENTITY_ATTACK,
+                event_type=EventType.ENTITY_ATTACK_REQUESTED,
                 source_layer="entities",
-                data={"attacker_id": "paladin", "target_id": "target", "smite_slot_level": 1},
+                data=AttackRequestedPayload(**{"attacker_id": "paladin", "target_id": "target", "smite_slot_level": 1}),
             )
             result = fresh_cm.resolve_attack(event)
             assert result.success
@@ -187,9 +188,9 @@ class TestSmiteValidation:
         cm, _log = _setup_combat(paladin, target)
 
         event = Event(
-            event_type=EventType.ENTITY_ATTACK,
+            event_type=EventType.ENTITY_ATTACK_REQUESTED,
             source_layer="entities",
-            data={"attacker_id": "paladin", "target_id": "target", "smite_slot_level": 1},
+            data=AttackRequestedPayload(**{"attacker_id": "paladin", "target_id": "target", "smite_slot_level": 1}),
         )
         result = cm.resolve_attack(event)
         assert not result.success
@@ -201,9 +202,9 @@ class TestSmiteValidation:
         cm, _log = _setup_combat(fighter, target)
 
         event = Event(
-            event_type=EventType.ENTITY_ATTACK,
+            event_type=EventType.ENTITY_ATTACK_REQUESTED,
             source_layer="entities",
-            data={"attacker_id": "fighter", "target_id": "target", "smite_slot_level": 1},
+            data=AttackRequestedPayload(**{"attacker_id": "fighter", "target_id": "target", "smite_slot_level": 1}),
         )
         result = cm.resolve_attack(event)
         assert not result.success

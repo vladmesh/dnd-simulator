@@ -105,7 +105,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         autosave_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await autosave_task
-        service.autosave_all_sessions()
+        try:
+            service.autosave_all_sessions()
+        except Exception:
+            logger.exception("final_autosave_failed")
 
 
 app = FastAPI(title="D&D Simulator", version="0.1.0", lifespan=lifespan)

@@ -266,6 +266,15 @@ class QueryHandler:
                         }
                         for rp in entity.resource_pools
                     ],
+                    "gm_activation_override": entity.gm_activation_override.value,
+                    "activation_triggers": [
+                        {
+                            "id": trigger.definition.id,
+                            "armed": trigger.armed,
+                            "active": trigger.active,
+                        }
+                        for trigger in entity.triggers
+                    ],
                 }
             )
         if isinstance(entity, Character):

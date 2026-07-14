@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from dnd_simulator.core.events import BuyPayload, SellPayload
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.i18n import _
 
@@ -51,6 +52,7 @@ def handle_buy(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCont
         return ActionResult(success=False, error=error)
 
     item = next(i for i in merchant.inventory if i.id == item_id)
+    assert item.price is not None
     execute_buy(buyer=actor, seller=merchant, item=item)
 
     logger.info("buy", buyer=actor.id, merchant=merchant_id, item=item.name, price=item.price)
@@ -58,13 +60,7 @@ def handle_buy(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCont
         Event(
             event_type=EventType.ENTITY_BUY,
             source_layer="entities",
-            data={
-                "buyer_id": actor.id,
-                "merchant_id": merchant_id,
-                "item_id": item_id,
-                "item_name": item.name,
-                "price": item.price,
-            },
+            data=BuyPayload(actor.id, merchant_id, item.name, item.price, item_id),
         )
     )
     return ActionResult()
@@ -90,6 +86,7 @@ def handle_sell(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
         return ActionResult(success=False, error=error)
 
     item = next(i for i in actor.inventory if i.id == item_id)
+    assert item.price is not None
     execute_sell(seller=actor, buyer=merchant, item=item)
 
     logger.info("sell", seller=actor.id, merchant=merchant_id, item=item.name, price=item.price)
@@ -97,13 +94,7 @@ def handle_sell(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
         Event(
             event_type=EventType.ENTITY_SELL,
             source_layer="entities",
-            data={
-                "seller_id": actor.id,
-                "merchant_id": merchant_id,
-                "item_id": item_id,
-                "item_name": item.name,
-                "price": item.price,
-            },
+            data=SellPayload(actor.id, merchant_id, item.name, item.price, item_id),
         )
     )
     return ActionResult()

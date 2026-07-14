@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator, model_validator
 
 from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.character import (
@@ -26,8 +26,9 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.items import ItemType
-from dnd_simulator.core.models import TerrainType, TimeOfDay
+from dnd_simulator.core.models import EventType, TerrainType, TimeOfDay
 from dnd_simulator.core.squad import SquadBehavior, SquadType
+from dnd_simulator.core.triggers import EventCondition
 from dnd_simulator.layers.geography.models import Direction
 from dnd_simulator.layers.politics.models import LeaderTrait
 from dnd_simulator.layers.settlements.models import SettlementType
@@ -377,6 +378,38 @@ class LairContent(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class TriggerConditionContent(BaseModel):
+    """One typed event condition in an activation trigger pair."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    event: EventType
+    match: dict[str, object] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_payload_fields(self) -> TriggerConditionContent:
+        EventCondition.from_mapping(self.event, self.match)
+        return self
+
+
+class ActivationTriggerContent(BaseModel):
+    """Authored paired trigger and its initial armed state."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1)
+    on: TriggerConditionContent
+    until: TriggerConditionContent
+    armed: bool = True
+
+    @field_validator("id")
+    @classmethod
+    def validate_id(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("trigger id must not be empty")
+        return value
+
+
 def _validate_combat_position(value: list[int] | None) -> list[int] | None:
     """Canonical combat_position = (x, y) in FEET on the battle grid.
 
@@ -428,8 +461,17 @@ class NpcContent(BaseModel):
     reputation: dict[str, int] = {}
     memory: NpcMemoryContent | None = None
     xp_value: int = 0
+    always_active: bool = False
+    triggers: list[ActivationTriggerContent] = Field(default_factory=list)
 
     _validate_combat_position = field_validator("combat_position")(_validate_combat_position)
+
+    @model_validator(mode="after")
+    def validate_trigger_ids(self) -> NpcContent:
+        ids = [trigger.id for trigger in self.triggers]
+        if len(ids) != len(set(ids)):
+            raise ValueError("duplicate trigger id")
+        return self
 
 
 class PlayerContent(BaseModel):

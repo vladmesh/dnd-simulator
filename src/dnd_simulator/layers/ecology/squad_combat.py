@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from dnd_simulator.core.events import SquadCombatPayload
 from dnd_simulator.core.models import Event, EventType, FactionRelation
 from dnd_simulator.core.queries import query_faction_relation
 from dnd_simulator.core.squad import Squad
@@ -123,14 +124,14 @@ def _fight_squads(
     return Event(
         event_type=EventType.SQUAD_COMBAT,
         source_layer=_SOURCE_LAYER,
-        data={
-            "location_id": location_id,
-            "winner_id": winner.id,
-            "winner_name": winner.name,
-            "loser_id": loser.id,
-            "loser_name": loser.name,
-            "winner_strength": winner.strength,
-            "loser_strength": loser.strength,
-        },
+        data=SquadCombatPayload(
+            location_id,
+            winner.id,
+            winner.name,
+            loser.id,
+            loser.name,
+            winner.strength,
+            loser.strength,
+        ),
         description=f"{winner.name} defeated {loser.name} at {location_id}",
     )

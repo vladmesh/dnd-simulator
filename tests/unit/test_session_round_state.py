@@ -1,4 +1,4 @@
-"""Tests for GameSession._build_round_state — shared state builder for round callbacks."""
+"""Tests for shared round callback payload builders."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.service.dto import PlayerStatusData
-from dnd_simulator.service.session import GameSession
+from dnd_simulator.service.transport_payloads import build_round_state
 
 _SWORD = Attack(
     name="longsword",
@@ -58,7 +58,7 @@ class _CapturingListener:
 
 
 class TestBuildRoundState:
-    """_build_round_state produces the common dict used by all round callbacks."""
+    """The payload builder produces the common dict used by all round callbacks."""
 
     def test_returns_common_fields(self) -> None:
         """The returned dict has all common fields: type, mode, awareness, events, player, location."""
@@ -77,18 +77,17 @@ class TestBuildRoundState:
 
         time = GameDateTime(year=1490, month=6, day=15, hour=14)
 
-        # Build a mock world + round just enough for _build_round_state
+        # Build a mock world + round just enough for build_round_state.
         world = MagicMock(spec=World)
         world.time = time
         world.make_query_fn.return_value = query_fn
         world.location_graph = MagicMock()
         world.location_graph.has.return_value = False
 
-        session = GameSession(session_id="test", world=world)
         game_round = MagicMock()
         game_round.get_perceived_events.return_value = []
 
-        result = session._build_round_state("test_type", player, game_round, entities_layer)
+        result = build_round_state("test_type", player, game_round, entities_layer, world)
 
         assert result["type"] == "test_type"
         assert result["mode"] in ("peaceful", "combat")
@@ -119,11 +118,10 @@ class TestBuildRoundState:
         world.location_graph = MagicMock()
         world.location_graph.has.return_value = False
 
-        session = GameSession(session_id="test", world=world)
         game_round = MagicMock()
         game_round.get_perceived_events.return_value = []
 
-        result = session._build_round_state("turn", player, game_round, entities_layer)
+        result = build_round_state("turn", player, game_round, entities_layer, world)
 
         expected_keys = {f.name for f in fields(PlayerStatusData)}
         assert set(result["player"].keys()) == expected_keys
@@ -156,11 +154,10 @@ class TestCallbackFieldConsistency:
         world.location_graph = MagicMock()
         world.location_graph.has.return_value = False
 
-        session = GameSession(session_id="test", world=world)
         game_round = MagicMock()
         game_round.get_perceived_events.return_value = []
 
-        result = session._build_round_state("action_result", player, game_round, entities_layer)
+        result = build_round_state("action_result", player, game_round, entities_layer, world)
 
         assert _COMMON_FIELDS.issubset(result.keys()), f"Missing fields: {_COMMON_FIELDS - result.keys()}"
 
@@ -187,10 +184,9 @@ class TestCallbackFieldConsistency:
         world.location_graph = MagicMock()
         world.location_graph.has.return_value = False
 
-        session = GameSession(session_id="test", world=world)
         game_round = MagicMock()
         game_round.get_perceived_events.return_value = []
 
-        result = session._build_round_state("round_result", player, game_round, entities_layer)
+        result = build_round_state("round_result", player, game_round, entities_layer, world)
 
         assert _COMMON_FIELDS.issubset(result.keys()), f"Missing fields: {_COMMON_FIELDS - result.keys()}"

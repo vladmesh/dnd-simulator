@@ -15,6 +15,9 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
 
+msgid "Add your effective speed to the movement budget, then move separately. Costs 1 action."
+msgstr "Добавьте текущую скорость к запасу перемещения, затем переместитесь отдельным действием. Стоит 1 действие."
+
 # =========================================================================
 # core/character.py — perceive() output
 # =========================================================================
@@ -1083,6 +1086,18 @@ msgstr "Только персонажи могут использовать Вт
 msgid "Item {id} not in inventory"
 msgstr "Предмет {id} не в инвентаре"
 
+msgid "Action '{action}' requires parameter '{param}'"
+msgstr "Для действия '{action}' нужен параметр '{param}'"
+
+msgid "Parameter '{param}' must be a string"
+msgstr "Параметр '{param}' должен быть строкой"
+
+msgid "Action requires parameter '{param}'"
+msgstr "Для действия нужен параметр '{param}'"
+
+msgid "Parameter '{param}' must be an integer"
+msgstr "Параметр '{param}' должен быть целым числом"
+
 msgid "Item {id} is not a {item_type}"
 msgstr "Предмет {id} не является {item_type}"
 
@@ -1124,3 +1139,22 @@ msgstr "Всплеск действий требует активного ход
 
 msgid "Target '{id}' cannot be looted"
 msgstr "Цель '{id}' нельзя обыскать"
+
+# =========================================================================
+# Trigger completion
+# =========================================================================
+
+msgid "Mark an activation trigger's role as complete."
+msgstr "Завершить роль активирующего триггера."
+
+msgid "ID of the activation trigger to complete"
+msgstr "ID активирующего триггера, роль которого завершена"
+
+msgid "Unknown activation trigger '{id}'"
+msgstr "Неизвестный активирующий триггер '{id}'"
+
+msgid "Activation trigger '{id}' is disarmed"
+msgstr "Активирующий триггер '{id}' снят со взведения"
+
+msgid "Activation trigger '{id}' is not active"
+msgstr "Активирующий триггер '{id}' не активен"

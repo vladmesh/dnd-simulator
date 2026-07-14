@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.action import ActionType
+from dnd_simulator.core.events import EquipmentPayload
 from dnd_simulator.core.items import EquipmentSlot, Item, ItemType
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.i18n import _
@@ -128,7 +129,7 @@ def _handle_equip_slot(cfg: SlotConfig, actor: Creature, action: Action, emit_fn
         Event(
             event_type=EventType.ENTITY_EQUIP,
             source_layer="entities",
-            data={"entity_id": actor.id, "item_name": item.name},
+            data=EquipmentPayload(actor.id, item.name, item.id),
         )
     )
     return ActionResult()
@@ -148,7 +149,7 @@ def _handle_unequip_slot(cfg: SlotConfig, actor: Creature, action: Action, emit_
         Event(
             event_type=EventType.ENTITY_UNEQUIP,
             source_layer="entities",
-            data={"entity_id": actor.id, "item_name": item.name},
+            data=EquipmentPayload(actor.id, item.name, item.id),
         )
     )
     return ActionResult()

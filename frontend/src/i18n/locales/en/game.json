@@ -42,6 +42,7 @@
   "idle": "Look",
   "wait": "Wait",
   "travel": "Travel",
+  "complete_trigger": "Complete Role",
   "say": "Say",
   "distance": "{{ft}}ft {{dir}}",
   "battle_map": "Battle Map",

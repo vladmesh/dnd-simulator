@@ -91,11 +91,11 @@ class TestXpGrantOnKill:
         xp_events = [e for e in log["arena"] if e.event_type == EventType.XP_GAINED]
         assert len(xp_events) == 1
         ev = xp_events[0]
-        assert ev.data["entity_id"] == hero.id
-        assert ev.data["amount"] == 50
-        assert ev.data["new_total"] == 50
-        assert ev.data["source_entity_id"] == goblin.id
-        assert ev.data["level_up_available"] is False
+        assert ev.data.entity_id == hero.id
+        assert ev.data.amount == 50
+        assert ev.data.new_total == 50
+        assert ev.data.source_entity_id == goblin.id
+        assert ev.data.level_up_available is False
 
     def test_kill_enough_to_level_up_sets_flag(self) -> None:
         hero = _character(experience=280, level=1)
@@ -108,7 +108,7 @@ class TestXpGrantOnKill:
         assert hero.level_up_available is True
         assert hero.level == 1  # level itself does not auto-change
         xp_ev = next(e for e in log["arena"] if e.event_type == EventType.XP_GAINED)
-        assert xp_ev.data["level_up_available"] is True
+        assert xp_ev.data.level_up_available is True
 
     def test_character_kills_character_no_xp(self) -> None:
         hero = _character("hero", experience=0)
@@ -161,8 +161,8 @@ class TestReputationEventFactionName:
         combat_resolution.handle_death(cm, hero, goblin, goblin.id, _hit_result(), self._query_fn("Royal Court"))
 
         rep_ev = next(e for e in log["arena"] if e.event_type == EventType.REPUTATION_CHANGED)
-        assert rep_ev.data["faction_id"] == "goblins"
-        assert rep_ev.data["faction_name"] == "Royal Court"
+        assert rep_ev.data.faction_id == "goblins"
+        assert rep_ev.data.faction_name == "Royal Court"
 
     def test_unresolvable_faction_name_omitted(self) -> None:
         hero = _character("hero")
@@ -172,7 +172,7 @@ class TestReputationEventFactionName:
         combat_resolution.handle_death(cm, hero, goblin, goblin.id, _hit_result(), self._query_fn(None))
 
         rep_ev = next(e for e in log["arena"] if e.event_type == EventType.REPUTATION_CHANGED)
-        assert "faction_name" not in rep_ev.data
+        assert rep_ev.data.faction_name is None
 
 
 class TestMonsterTemplateSpawnXp:

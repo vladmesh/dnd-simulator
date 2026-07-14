@@ -1,5 +1,6 @@
 """Tests for the GeographyLayer."""
 
+from dnd_simulator.core.events import WeatherChangedPayload
 from dnd_simulator.core.models import ActionResult, Answer, EventType, GameDateTime, Query, QueryType, TimeDelta
 from dnd_simulator.layers.geography.layer import GeographyLayer
 from dnd_simulator.layers.geography.models import (
@@ -94,7 +95,7 @@ class TestGeographyLayer:
 
         # Events should have region_id in data
         for event in weather_events:
-            assert "region_id" in event.data
+            assert event.data.region_id
 
     def test_query_weather(self) -> None:
         regions = _make_test_regions()
@@ -135,7 +136,11 @@ class TestGeographyLayer:
         from dnd_simulator.core.models import Event
 
         layer = GeographyLayer()
-        event = Event(event_type=EventType.WEATHER_CHANGED, source_layer="test")
+        event = Event(
+            event_type=EventType.WEATHER_CHANGED,
+            source_layer="test",
+            data=WeatherChangedPayload("r1", "clear", "rain", 10.0),
+        )
         result = layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         assert result.success
         assert result.events == []

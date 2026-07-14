@@ -13,11 +13,13 @@ from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.intent import CreatureIntent
 from dnd_simulator.core.items import EquipmentSlot, Item
 from dnd_simulator.core.resource import ResourcePool
+from dnd_simulator.core.triggers import ActivationTrigger, GmActivationOverride
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
     from dnd_simulator.core.brain import Brain
+    from dnd_simulator.core.lair import LairOrigin
 
 _F = TypeVar("_F", bound=ClassFeatures)
 
@@ -229,7 +231,11 @@ class Creature(Entity):
     reputation: dict[str, int] = field(default_factory=dict)  # sparse: faction_id → rep score
     xp_value: int = 0  # XP awarded to Character attacker on kill (0 for most creatures, set from CR for monsters)
     squad_id: str | None = None  # which squad this creature belongs to (if materialized)
+    lair_origin: LairOrigin | None = None
     is_anchor: bool = False
+    always_active: bool = False
+    gm_activation_override: GmActivationOverride = GmActivationOverride.AUTOMATIC
+    triggers: list[ActivationTrigger] = field(default_factory=list)
     current_intent: CreatureIntent | None = None
     combat_position: tuple[int, int] | None = None  # fixed starting position on battle map (x, y in feet)
     brain: Brain | None = field(default=None, repr=False)

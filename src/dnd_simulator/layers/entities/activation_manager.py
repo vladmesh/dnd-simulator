@@ -16,6 +16,7 @@ from dnd_simulator.core.character import Creature, Entity
 from dnd_simulator.core.intent import IntentInterruptReason, TimedIntent, TravelIntent
 from dnd_simulator.core.models import Event
 from dnd_simulator.core.monster import EncounterEntry
+from dnd_simulator.core.triggers import GmActivationOverride
 from dnd_simulator.layers.entities.encounters import check_encounters
 from dnd_simulator.layers.entities.intent_completion import (
     advance_travel_leg,
@@ -134,7 +135,7 @@ class ActivationManager:
                 effective_location = e.current_location(hour) if isinstance(e, Npc) else e.location_id
                 anchor_locations.add(effective_location)
 
-        # Second pass: recompute every creature from anchors, intents, and combat.
+        # Second pass: recompute every creature from independent activation reasons.
         for e in self._entities.values():
             if not isinstance(e, Creature):
                 continue
@@ -146,7 +147,11 @@ class ActivationManager:
             if isinstance(e, Npc):
                 effective_location = e.current_location(hour)
 
-            should_activate = e.in_combat or (e.current_intent is None and effective_location in anchor_locations)
+            scene_active = e.current_intent is None and effective_location in anchor_locations
+            trigger_active = any(trigger.armed and trigger.active for trigger in e.triggers)
+            automatic_active = trigger_active and e.gm_activation_override is not GmActivationOverride.DORMANT
+            manual_active = e.gm_activation_override is GmActivationOverride.ACTIVE
+            should_activate = e.in_combat or scene_active or e.always_active or automatic_active or manual_active
             e.active = should_activate
 
             # Move NPC to their scheduled location when activated

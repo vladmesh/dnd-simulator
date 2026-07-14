@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from http import HTTPStatus
 from pathlib import Path
 
@@ -98,7 +99,7 @@ class TestWebSocketTurnCycle:
                     break
 
         assert messages[-1]["type"] == "turn"
-        assert len(messages) <= 4
+        assert not any(message.get("actor") == "bystander" for message in messages)
         assert session.world.time.to_total_seconds() >= started_at + 3600
 
     def test_receive_turn_send_end_turn(self, tmp_path: object) -> None:
@@ -181,3 +182,23 @@ class TestWebSocketTurnCycle:
             msg = ws.receive_json()
             assert msg["type"] == "error"
             assert "Unknown" in msg["message"]
+
+    def test_non_object_json_returns_protocol_error_without_closing_player_socket(self, tmp_path: object) -> None:
+        client, _ = _make_client(tmp_path)
+        sid = _create_session_with_player(client)
+
+        with client.websocket_connect(f"/api/ws/{sid}") as ws:
+            assert ws.receive_json()["type"] == "turn"
+
+            for raw in ("[]", "null", json.dumps("text"), "1"):
+                ws.send_text(raw)
+                error = ws.receive_json()
+                assert error["type"] == "error"
+                assert "object" in error["message"].lower()
+
+            ws.send_text("{not json")
+            error = ws.receive_json()
+            assert error == {"type": "error", "message": "Invalid JSON"}
+
+            ws.send_json({"type": "action", "name": "end_turn"})
+            assert ws.receive_json()["type"] == "round_result"

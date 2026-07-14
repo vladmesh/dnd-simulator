@@ -22,6 +22,11 @@ from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.container import Container
+from dnd_simulator.core.events import (
+    CombatStartedPayload,
+    EntityDiedPayload,
+    RoundStartPayload,
+)
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, EntityKind, Event, EventType, Query
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
@@ -33,10 +38,13 @@ from dnd_simulator.layers.common.rng_state import dump_rng_state, load_rng_state
 from dnd_simulator.layers.entities.activation_manager import ActivationManager
 from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder, active_merchants_at
 from dnd_simulator.layers.entities.combat_manager import CombatManager
+from dnd_simulator.layers.entities.event_log import EventLog
+from dnd_simulator.layers.entities.event_runtime import TriggerRuntime
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.layers.entities.query_handler import QueryHandler
-from dnd_simulator.layers.entities.save_models import EntitiesState
+from dnd_simulator.layers.entities.save_models import CreatureFields, EntitiesState
+from dnd_simulator.layers.entities.trigger_index import TriggerIndex, TriggerMatch
 
 if TYPE_CHECKING:
     from dnd_simulator.core.location import LocationGraph
@@ -44,33 +52,6 @@ if TYPE_CHECKING:
     from dnd_simulator.llm.summarizer import MemorySummarizer
 
 logger = structlog.get_logger(domain="entity")
-
-# Event types that get recorded in the location log
-_LOGGED_EVENTS = {
-    EventType.ENTITY_SAY,
-    EventType.ENTITY_ATTACK,
-    EventType.ENTITY_DIED,
-    EventType.ENTITY_DODGE,
-    EventType.ENTITY_FLEE,
-    EventType.ENTITY_MOVE,
-    EventType.ENTITY_DASH,
-    EventType.ENTITY_DISENGAGE,
-    EventType.ENTITY_USE_ITEM,
-    EventType.ENTITY_BLESS,
-    EventType.ENTITY_EQUIP,
-    EventType.ENTITY_UNEQUIP,
-    EventType.ENTITY_SECOND_WIND,
-    EventType.ENTITY_ACTION_SURGE,
-    EventType.ENTITY_LAY_ON_HANDS,
-    EventType.OPPORTUNITY_ATTACK,
-    EventType.COMBAT_STARTED,
-    EventType.COMBAT_ENDED,
-    EventType.ENCOUNTER_SPAWNED,
-    EventType.SQUAD_MOVE,
-    EventType.SQUAD_COMBAT,
-    EventType.SQUAD_MATERIALIZED,
-    EventType.SQUAD_DEMATERIALIZED,
-}
 
 
 class EntitiesLayer(Layer):
@@ -102,6 +83,9 @@ class EntitiesLayer(Layer):
         if entities:
             for e in entities:
                 self._entities[e.id] = e
+        self._trigger_index = TriggerIndex(list(self._entities.values()))
+        self._trigger_runtime = TriggerRuntime(self._trigger_index)
+        self._event_log = EventLog(self._entities, self._location_log)
         self._combat = CombatManager(self._entities, self._location_log, battle_map_configs, rng=dice_rng)
         self._awareness = AwarenessBuilder(self._entities, self._location_log, self._combat)
         self._activation = ActivationManager(
@@ -140,10 +124,16 @@ class EntitiesLayer(Layer):
     def add_entity(self, entity: Entity) -> None:
         """Add an entity to the layer."""
         self._entities[entity.id] = entity
+        self._trigger_index.add(entity)
 
     def remove_entity(self, entity_id: str) -> None:
         """Remove an entity from the layer."""
         self._entities.pop(entity_id, None)
+        self._trigger_index.remove(entity_id)
+
+    def find_trigger_matches(self, event: Event) -> list[TriggerMatch]:
+        """Return armed trigger boundaries matching a typed world event."""
+        return self._trigger_index.match(event)
 
     def get_active_creatures(self) -> list[Creature]:
         """Get all active creatures in the world (for the main game loop)."""
@@ -193,7 +183,7 @@ class EntitiesLayer(Layer):
             Event(
                 event_type=EventType.ROUND_START,
                 source_layer="entities",
-                data={"location_id": location_id, "round_number": round_number},
+                data=RoundStartPayload(location_id, round_number),
             )
         )
 
@@ -255,36 +245,7 @@ class EntitiesLayer(Layer):
         This is critical for the multi-action turn loop — without it, RuleBrain
         would see the same events every iteration and loop forever.
         """
-        if not isinstance(creature, Character):
-            return []
-        events = self._location_log.get(creature.location_id, [])
-        new_events = events[creature._last_seen_log_index :]
-        creature._last_seen_log_index = len(events)
-        if not new_events:
-            return []
-        result: list[PerceivedEvent] = []
-        for e in new_events:
-            if e.observer_ids is not None and creature.id not in e.observer_ids:
-                continue
-            desc = perceive_event(e, creature, self.get_entity)
-            actor_id = e.data.get("entity_id") or e.data.get("attacker_id")
-            target_id = e.data.get("target_id")
-            actor_name: str | None = None
-            if actor_id:
-                actor_entity = self.get_entity(str(actor_id))
-                if actor_entity is not None:
-                    actor_name = actor_entity.name
-            result.append(
-                PerceivedEvent(
-                    description=desc,
-                    event_type=e.event_type,
-                    actor_id=str(actor_id) if actor_id else None,
-                    actor_name=actor_name,
-                    target_id=str(target_id) if target_id else None,
-                    data=dict(e.data),
-                )
-            )
-        return result
+        return self._event_log.perceived_events(creature, self.get_entity)
 
     # -- Layer interface --
 
@@ -298,49 +259,41 @@ class EntitiesLayer(Layer):
 
     def handle_event(self, event: Event, query_fn: QueryFn, emit_fn: EmitFn) -> ActionResult:
         """React to world events. Resolve attacks, log relevant events."""
+        self._trigger_runtime.apply(event)
+
         if event.event_type == EventType.ENTITY_DODGE:
-            return self._combat.resolve_dodge(event)
+            return self._trigger_runtime.apply_cascades(self._combat.resolve_dodge(event))
 
         # Attack/flee can end combat (kill/flee removes fighter, <=1 left → combat ends)
-        if event.event_type in (EventType.ENTITY_ATTACK, EventType.ENTITY_FLEE):
-            location_id = self._event_location(event)
+        if event.event_type in (EventType.ENTITY_ATTACK_REQUESTED, EventType.ENTITY_FLEE):
+            location_id = self._event_log.location_for(event)
             had_combat = location_id is not None and self._combat.get_combat(location_id) is not None
-            if event.event_type == EventType.ENTITY_ATTACK:
+            if event.event_type == EventType.ENTITY_ATTACK_REQUESTED:
                 result = self._combat.resolve_attack(event, query_fn=query_fn)
             else:
                 result = self._combat.resolve_flee(event)
             if had_combat and location_id and self._combat.get_combat(location_id) is None:
                 self._on_combat_ended(location_id)
-            return result
+            return self._trigger_runtime.apply_cascades(result)
 
         if event.event_type == EventType.ENTITY_MOVE:
-            if "direction" in event.data:
+            if getattr(event.payload, "direction", None) is not None:
                 # Needs resolution (from handle_move via compass direction)
-                return self._combat.resolve_move(event)
+                return self._trigger_runtime.apply_cascades(self._combat.resolve_move(event))
             # Already-resolved move (from handle_move_to) — just log it
-            location_id = self._event_location(event)
-            if location_id:
-                self._location_log[location_id].append(event)
+            self._event_log.record(event)
             return ActionResult()
 
         # Clean up temporary creatures on death
         if event.event_type == EventType.ENTITY_DIED:
-            entity_id = str(event.data["entity_id"])
+            payload = event.payload
+            assert isinstance(payload, EntityDiedPayload)
+            entity_id = payload.entity_id
             entity = self._entities.get(entity_id)
-            if entity is not None and entity.temporary:
+            if entity is not None and entity.temporary and event.source_layer == self.name:
                 self.remove_entity(entity_id)
 
-        if event.event_type in _LOGGED_EVENTS:
-            if event.event_type == EventType.SQUAD_MOVE:
-                # Log at both origin and destination so observers at either location see it
-                for key in ("from", "to"):
-                    loc = event.data.get(key)
-                    if isinstance(loc, str):
-                        self._location_log[loc].append(event)
-            else:
-                location_id = self._event_location(event)
-                if location_id:
-                    self._location_log[location_id].append(event)
+        self._event_log.record(event)
 
         return ActionResult()
 
@@ -357,27 +310,6 @@ class EntitiesLayer(Layer):
     def get_new_raw_events(self, observer: Character) -> list[Event]:
         """Peek at raw Event objects since observer's last seen index."""
         return self._query_handler.get_new_raw_events(observer)
-
-    def _event_location(self, event: Event) -> str | None:
-        """Determine which location an event happened at."""
-        for key in ("entity_id", "attacker_id"):
-            eid = event.data.get(key)
-            if isinstance(eid, str):
-                entity = self._entities.get(eid)
-                if entity:
-                    return entity.location_id
-        # Squad events: SQUAD_MOVE uses "to" (destination), others use "location_id"
-        if event.event_type == EventType.SQUAD_MOVE:
-            to = event.data.get("to")
-            from_ = event.data.get("from")
-            if isinstance(to, str):
-                return to
-            if isinstance(from_, str):
-                return from_
-        loc = event.data.get("location_id")
-        if isinstance(loc, str):
-            return loc
-        return None
 
     def _on_combat_ended(self, location_id: str) -> None:
         """After combat ends, summarize combat events into each NPC participant's memory."""
@@ -397,9 +329,10 @@ class EntitiesLayer(Layer):
 
         combat_events = log[start_idx:]
         participant_ids: list[str] = []
-        turn_order = log[start_idx].data.get("turn_order", [])
-        if isinstance(turn_order, list):
-            participant_ids = [str(pid) for pid in turn_order]
+        payload = log[start_idx].data
+        if not isinstance(payload, CombatStartedPayload):
+            return
+        participant_ids = list(payload.turn_order)
 
         for pid in participant_ids:
             entity = self._entities.get(pid)
@@ -464,7 +397,9 @@ class EntitiesLayer(Layer):
                 elif entity_kind is EntityKind.NPC:
                     from dnd_simulator.content_loader import parse_npc
 
-                    entity = parse_npc(str(eid), edata)
+                    npc_data = dict(edata)
+                    npc_data["triggers"] = []
+                    entity = parse_npc(str(eid), npc_data)
                     self.add_entity(entity)
                     # Fall through to mutable state restoration below
                 elif entity_kind is EntityKind.CREATURE:
@@ -502,6 +437,7 @@ class EntitiesLayer(Layer):
                 if loc:
                     entity.location_id = str(loc)
                 if isinstance(entity, Creature):
+                    assert isinstance(esave, CreatureFields)
                     entity.in_combat = bool(edata.get("in_combat", entity.in_combat))
                     entity.is_dodging = bool(edata.get("is_dodging", entity.is_dodging))
                     entity.is_disengaging = bool(edata.get("is_disengaging", entity.is_disengaging))
@@ -518,6 +454,9 @@ class EntitiesLayer(Layer):
                     from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
 
                     entity.is_anchor = bool(edata.get("is_anchor", entity.is_anchor))
+                    entity.always_active = esave.always_active
+                    entity.gm_activation_override = esave.gm_activation_override
+                    entity.triggers = [trigger.to_domain() for trigger in esave.triggers]
                     intent_raw = edata.get("current_intent")
                     if isinstance(intent_raw, dict):
                         kind = IntentType(str(intent_raw["kind"]))
@@ -547,6 +486,17 @@ class EntitiesLayer(Layer):
                         entity.combat_position = None
                     squad_id = edata.get("squad_id")
                     entity.squad_id = str(squad_id) if squad_id else None
+                    from dnd_simulator.core.lair import LairMemberRole, LairOrigin
+
+                    lair_origin_raw = edata.get("lair_origin")
+                    if isinstance(lair_origin_raw, dict):
+                        entity.lair_origin = LairOrigin(
+                            lair_id=str(lair_origin_raw["lair_id"]),
+                            template_id=str(lair_origin_raw["template_id"]),
+                            role=LairMemberRole(str(lair_origin_raw["role"])),
+                        )
+                    else:
+                        entity.lair_origin = None
                     entity.xp_value = int(edata.get("xp_value", entity.xp_value))
                     entity.gold = int(edata.get("gold", entity.gold))
                     conditions_raw = edata.get("conditions")
@@ -613,4 +563,6 @@ class EntitiesLayer(Layer):
                     if isinstance(inv_raw, list):
                         entity.inventory = [deserialize_item(d) for d in inv_raw]
 
+        self._trigger_index = TriggerIndex(list(self._entities.values()))
+        self._trigger_runtime = TriggerRuntime(self._trigger_index)
         self._combat.load_combats_state(state_data["combats"])

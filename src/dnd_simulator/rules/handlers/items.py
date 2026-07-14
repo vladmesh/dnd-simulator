@@ -7,9 +7,19 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from dnd_simulator.core.action import ActionRejectedError
+from dnd_simulator.core.events import (
+    EntityBlessPayload,
+    EntityLayOnHandsPayload,
+    EntitySayPayload,
+    EntitySecondWindPayload,
+    EntityUseItemPayload,
+    InspectPayload,
+)
 from dnd_simulator.core.items import ItemType
 from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.i18n import _
+from dnd_simulator.rules.action_params import integer_param
 from dnd_simulator.rules.dice import roll
 
 if TYPE_CHECKING:
@@ -32,10 +42,7 @@ def handle_idle(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
             Event(
                 event_type=EventType.CUSTOM,
                 source_layer="entities",
-                data={
-                    "entity_id": actor.id,
-                    "inspect_target": str(inspect_target),
-                },
+                data=InspectPayload(actor.id, str(inspect_target)),
             )
         )
     else:
@@ -53,18 +60,18 @@ def handle_say(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCont
         Event(
             event_type=EventType.ENTITY_SAY,
             source_layer="entities",
-            data={"entity_id": actor.id, "text": text},
+            data=EntitySayPayload(actor.id, text),
         )
     )
     return ActionResult()
 
 
 def _find_item(actor: Creature, item_id: str) -> Item:
-    """Find an item in actor's inventory by id. Raises KeyError if not found."""
+    """Find an item in actor's inventory or reject stale action input."""
     for item in actor.inventory:
         if item.id == item_id:
             return item
-    raise KeyError(f"Item '{item_id}' not in {actor.name}'s inventory")
+    raise ActionRejectedError(_("Item {id} not in inventory").format(id=item_id))
 
 
 def _apply_potion(actor: Creature, item: Item, rng: random.Random | None = None) -> tuple[int, list[dict[str, object]]]:
@@ -89,14 +96,9 @@ def handle_use_item(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Actio
             Event(
                 event_type=EventType.ENTITY_USE_ITEM,
                 source_layer="entities",
-                data={
-                    "entity_id": actor.id,
-                    "item_id": item_id,
-                    "item_name": item.name,
-                    "item_type": item.item_type.value,
-                    "healed": healed,
-                    "dice_detail": dice_detail,
-                },
+                data=EntityUseItemPayload(
+                    actor.id, item.name, healed, item_id, item.item_type.value, tuple(dice_detail)
+                ),
             )
         )
         return ActionResult()
@@ -118,7 +120,7 @@ def handle_lay_on_hands(
     if not isinstance(actor, Character) or actor.char_class != CharClass.PALADIN:
         return ActionResult(success=False, error=_("Only Paladins can use Lay on Hands"))
 
-    amount = int(str(action.params["amount"]))
+    amount = integer_param(action, "amount")
     if amount < 1:
         return ActionResult(success=False, error=_("Amount must be at least 1"))
 
@@ -171,18 +173,18 @@ def handle_lay_on_hands(
         Event(
             event_type=EventType.ENTITY_LAY_ON_HANDS,
             source_layer="entities",
-            data={
-                "entity_id": actor.id,
-                "target_id": target.id,
-                "requested": amount,
-                "spent": effective,
-                "healed": healed,
-                "pool_before": pool_before,
-                "pool_after": pool.current_uses,
-                "hp_before": hp_before,
-                "hp_after": target.current_hp,
-                "hp_max": target.max_hp,
-            },
+            data=EntityLayOnHandsPayload(
+                actor.id,
+                target.id,
+                amount,
+                effective,
+                healed,
+                pool_before,
+                pool.current_uses,
+                hp_before,
+                target.current_hp,
+                target.max_hp,
+            ),
         )
     )
     return ActionResult()
@@ -204,10 +206,7 @@ def handle_bless(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCo
         Event(
             event_type=EventType.ENTITY_BLESS,
             source_layer="entities",
-            data={
-                "entity_id": actor.id,
-                "duration_rounds": _BLESS_DURATION_ROUNDS,
-            },
+            data=EntityBlessPayload(actor.id, _BLESS_DURATION_ROUNDS),
         )
     )
     return ActionResult()
@@ -235,7 +234,7 @@ def handle_second_wind(
         Event(
             event_type=EventType.ENTITY_SECOND_WIND,
             source_layer="entities",
-            data={"entity_id": actor.id, "healed": healed, "dice_detail": dice_detail},
+            data=EntitySecondWindPayload(actor.id, healed, tuple(dice_detail)),
         )
     )
     return ActionResult()

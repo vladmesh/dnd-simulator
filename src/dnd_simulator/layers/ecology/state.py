@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from dnd_simulator.core.lair import LairState
 
@@ -23,6 +23,7 @@ class LairRuntimeState(BaseModel):
     alive_members: list[str] | None
     core_alive: bool
     last_respawn_time: int
+    death_writebacks: set[str] = Field(default_factory=set)
 
 
 class EcologyState(BaseModel):

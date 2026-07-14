@@ -20,6 +20,7 @@ from dnd_simulator.core.character import (
     DamageComponent,
     DamageType,
 )
+from dnd_simulator.core.events import DamageComponentPayload
 from dnd_simulator.core.modifiers import RollComponent
 from dnd_simulator.core.rolls import DiceResult, DieRoll
 from dnd_simulator.rules.combat import AttackResult, DamageResult, ExtraDamage, resolve_attack
@@ -153,17 +154,17 @@ class TestMultiDamageFlatBonus:
 
         assert len(components) == 3  # slashing weapon, fire weapon, ability flat
         # Flat bonus should have type = slashing (from first weapon component)
-        ability_comp = [c for c in components if c["source"] == "ability"]
+        ability_comp = [c for c in components if c.source == "ability"]
         assert len(ability_comp) == 1
-        assert ability_comp[0]["type"] == "slashing"
-        assert ability_comp[0]["amount"] == 4
-        assert ability_comp[0]["dice"] == ""
+        assert ability_comp[0].type == "slashing"
+        assert ability_comp[0].amount == 4
+        assert ability_comp[0].dice == ""
 
         # Weapon components keep their own types
-        weapon_comps = [c for c in components if c["source"] == "weapon"]
+        weapon_comps = [c for c in components if c.source == "weapon"]
         assert len(weapon_comps) == 2
-        assert weapon_comps[0]["type"] == "slashing"
-        assert weapon_comps[1]["type"] == "fire"
+        assert weapon_comps[0].type == "slashing"
+        assert weapon_comps[1].type == "fire"
 
 
 # ---------------------------------------------------------------------------
@@ -242,10 +243,10 @@ class TestMultiDamagePerception:
         """_format_damage with 2 weapon damage components shows both types in text."""
         from dnd_simulator.layers.entities.perception import _format_damage
 
-        components: list[dict[str, object]] = [
-            {"source": "weapon", "dice": "1d8", "dice_detail": [], "amount": 6, "type": "slashing"},
-            {"source": "weapon", "dice": "1d6", "dice_detail": [], "amount": 4, "type": "fire"},
-        ]
+        components = (
+            DamageComponentPayload("weapon", "1d8", (), 6, "slashing"),
+            DamageComponentPayload("weapon", "1d6", (), 4, "fire"),
+        )
         result = _format_damage(10, components, critical=False)
         assert "10 damage" in result
         assert "1d8" in result
@@ -257,11 +258,11 @@ class TestMultiDamagePerception:
         """Multi-damage with flat bonus shows all components."""
         from dnd_simulator.layers.entities.perception import _format_damage
 
-        components: list[dict[str, object]] = [
-            {"source": "weapon", "dice": "1d8", "dice_detail": [], "amount": 6, "type": "slashing"},
-            {"source": "weapon", "dice": "1d6", "dice_detail": [], "amount": 4, "type": "fire"},
-            {"source": "ability", "dice": "", "dice_detail": [], "amount": 4, "type": "slashing"},
-        ]
+        components = (
+            DamageComponentPayload("weapon", "1d8", (), 6, "slashing"),
+            DamageComponentPayload("weapon", "1d6", (), 4, "fire"),
+            DamageComponentPayload("ability", "", (), 4, "slashing"),
+        )
         result = _format_damage(14, components, critical=False)
         assert "14 damage" in result
         assert "1d8" in result
@@ -272,11 +273,11 @@ class TestMultiDamagePerception:
         """Multi-damage weapon + smite shows all three sources."""
         from dnd_simulator.layers.entities.perception import _format_damage
 
-        components: list[dict[str, object]] = [
-            {"source": "weapon", "dice": "1d8", "dice_detail": [], "amount": 6, "type": "slashing"},
-            {"source": "weapon", "dice": "1d6", "dice_detail": [], "amount": 4, "type": "fire"},
-            {"source": "divine_smite", "dice": "2d8", "dice_detail": [], "amount": 8, "type": "radiant"},
-        ]
+        components = (
+            DamageComponentPayload("weapon", "1d8", (), 6, "slashing"),
+            DamageComponentPayload("weapon", "1d6", (), 4, "fire"),
+            DamageComponentPayload("divine_smite", "2d8", (), 8, "radiant"),
+        )
         result = _format_damage(18, components, critical=False)
         assert "18 damage" in result
         assert "1d8 slashing" in result

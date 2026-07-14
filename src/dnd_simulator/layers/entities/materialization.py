@@ -14,7 +14,12 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.character import Creature
-from dnd_simulator.core.lair import LairState
+from dnd_simulator.core.events import (
+    LairDematerializedPayload,
+    SquadDematerializedPayload,
+    SquadMaterializedPayload,
+)
+from dnd_simulator.core.lair import LairMemberRole, LairOrigin, LairState
 from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.core.queries import LairInfo, SquadInfo, query_lairs_at_location, query_squads_at_location
 from dnd_simulator.layers.entities.encounters import maybe_start_combat
@@ -119,12 +124,7 @@ def materialize_squad(mgr: ActivationManager, squad_id: str, info: SquadInfo, br
     mat_event = Event(
         event_type=EventType.SQUAD_MATERIALIZED,
         source_layer="entities",
-        data={
-            "squad_id": squad_id,
-            "squad_name": squad_name,
-            "location_id": location,
-            "creature_count": len(creature_ids),
-        },
+        data=SquadMaterializedPayload(squad_id, squad_name, location, len(creature_ids)),
         description=f"{squad_name} materialized at {location}",
     )
     mgr._location_log[location].append(mat_event)
@@ -173,12 +173,7 @@ def dematerialize_squad(
             Event(
                 event_type=EventType.SQUAD_DEMATERIALIZED,
                 source_layer="entities",
-                data={
-                    "squad_id": squad_id,
-                    "squad_name": squad_name,
-                    "location_id": location_id or "",
-                    "new_strength": new_strength,
-                },
+                data=SquadDematerializedPayload(squad_id, squad_name, location_id or "", new_strength),
                 description=f"Squad {squad_id} dematerialized (strength {new_strength})",
             )
         )
@@ -252,6 +247,9 @@ def materialize_lair(mgr: ActivationManager, lair_id: str, info: LairInfo) -> No
         instance_id = f"{tid}_{mgr._spawn_counter}"
         creature = template.spawn(location, instance_id)
         creature.faction_id = faction_id
+        is_core = bool(core_tid and core_creature_id is None and tid == core_tid)
+        role = LairMemberRole.CORE if is_core else LairMemberRole.MEMBER
+        creature.lair_origin = LairOrigin(lair_id=lair_id, template_id=tid, role=role)
         creature.brain = RuleBrain()
         creature.active = True
         mgr._entities[creature.id] = creature
@@ -333,12 +331,7 @@ def dematerialize_lair(mgr: ActivationManager, lair_id: str, now: int, emit_fn: 
             Event(
                 event_type=EventType.LAIR_DEMATERIALIZED,
                 source_layer="entities",
-                data={
-                    "lair_id": lair_id,
-                    "core_alive": core_alive,
-                    "alive_members": alive_members,
-                    "at_seconds": now,
-                },
+                data=LairDematerializedPayload(lair_id, core_alive, tuple(alive_members), now),
                 description=f"Lair {lair_id} dematerialized ({len(alive_members)} minions left)",
             )
         )

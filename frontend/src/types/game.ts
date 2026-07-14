@@ -306,6 +306,7 @@ export type ActionName =
   | "skip"
   | "wait"
   | "travel"
+  | "complete_trigger"
   | "use_item"
   | "bless"
   | "equip"

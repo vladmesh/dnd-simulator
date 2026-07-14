@@ -3,7 +3,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum, StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from dnd_simulator.core.events import EventPayload
 
 
 class EntityKind(StrEnum):
@@ -109,6 +112,7 @@ class EventType(Enum):
 
     ENTITY_DIED = "entity_died"
     ENTITY_SAY = "entity_say"
+    ENTITY_ATTACK_REQUESTED = "entity_attack_requested"
     ENTITY_ATTACK = "entity_attack"
     ENTITY_DODGE = "entity_dodge"
     ENTITY_FLEE = "entity_flee"
@@ -130,6 +134,14 @@ class EventType(Enum):
     COMBAT_ENDED = "combat_ended"
     ENCOUNTER_SPAWNED = "encounter_spawned"
     WEATHER_CHANGED = "weather_changed"
+    WAR_DECLARED = "war_declared"
+    PEACE_DECLARED = "peace_declared"
+    TRADE_AGREEMENT = "trade_agreement"
+    REGION_CONQUERED = "region_conquered"
+    REBELLION = "rebellion"
+    LEADER_DIED = "leader_died"
+    NATION_DESTROYED = "nation_destroyed"
+    SETTLEMENT_DAMAGED = "settlement_damaged"
     TIME_ADVANCED = "time_advanced"
     SQUAD_MOVE = "squad_move"
     SQUAD_COMBAT = "squad_combat"
@@ -249,9 +261,21 @@ class Event:
 
     event_type: EventType
     source_layer: str
-    data: dict[str, Any] = field(default_factory=dict)
+    data: EventPayload
     description: str = ""
     observer_ids: frozenset[str] | None = None  # None = public (all in area see it)
+
+    def __post_init__(self) -> None:
+        from dnd_simulator.core.events import EVENT_PAYLOAD_TYPES
+
+        expected = EVENT_PAYLOAD_TYPES.get(self.event_type)
+        if expected is not None and not isinstance(self.data, expected):
+            raise TypeError(f"{self.event_type.name} requires {expected.__name__}, got {type(self.data).__name__}")
+
+    @property
+    def payload(self) -> EventPayload:
+        """Typed event payload."""
+        return self.data
 
 
 @dataclass(frozen=True)

@@ -100,8 +100,8 @@ class TestHandleMove:
 
         emit_fn.assert_called_once()
         event = emit_fn.call_args[0][0]
-        assert event.data["entity_id"] == "mover"
-        assert event.data["direction"] == "south"
+        assert event.data.entity_id == "mover"
+        assert event.data.direction == "south"
 
     def test_move_missing_direction_fails(self) -> None:
         """Move without direction param fails."""
@@ -205,8 +205,8 @@ class TestHandleDash:
         handle_dash(mover, action, emit_fn, ctx, world)
 
         assert len(events) == 1
-        assert events[0].data["entity_id"] == "mover"
-        assert events[0].data["extra_movement_ft"] == 25
+        assert events[0].data.entity_id == "mover"
+        assert events[0].data.extra_movement_ft == 25
 
     def test_dash_no_budget_fails(self) -> None:
         """Dash with no turn budget fails."""
@@ -257,7 +257,7 @@ class TestHandleDisengage:
         handle_disengage(mover, action, emit_fn, ctx, world)
 
         assert len(events) == 1
-        assert events[0].data["entity_id"] == "mover"
+        assert events[0].data.entity_id == "mover"
 
 
 # ---------------------------------------------------------------------------

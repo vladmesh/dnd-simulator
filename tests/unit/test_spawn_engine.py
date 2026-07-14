@@ -12,6 +12,7 @@ from dnd_simulator.core.character import (
     DamageComponent,
     DamageType,
 )
+from dnd_simulator.core.events import EntityDiedPayload
 from dnd_simulator.core.models import Event, EventType, GameDateTime
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.player import PlayerCharacter
@@ -195,7 +196,7 @@ class TestTemporaryCreatureCleanup:
         death_event = Event(
             event_type=EventType.ENTITY_DIED,
             source_layer="entities",
-            data={"entity_id": "goblin_1"},
+            data=EntityDiedPayload(**{"entity_id": "goblin_1"}),
         )
 
         def noop_query(layer: str, query: object) -> object:
@@ -226,7 +227,7 @@ class TestTemporaryCreatureCleanup:
         death_event = Event(
             event_type=EventType.ENTITY_DIED,
             source_layer="entities",
-            data={"entity_id": "guard_1"},
+            data=EntityDiedPayload(**{"entity_id": "guard_1"}),
         )
 
         def noop_query(layer: str, query: object) -> object:

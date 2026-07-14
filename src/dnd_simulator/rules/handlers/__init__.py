@@ -29,6 +29,7 @@ from dnd_simulator.rules.handlers.movement import (
 from dnd_simulator.rules.handlers.reactions import handle_opportunity_attack
 from dnd_simulator.rules.handlers.rest import handle_long_rest, handle_short_rest
 from dnd_simulator.rules.handlers.trade import handle_buy, handle_sell
+from dnd_simulator.rules.handlers.triggers import handle_complete_trigger
 
 __all__ = [
     "EQUIPMENT_HANDLERS",
@@ -38,6 +39,7 @@ __all__ = [
     "handle_attack",
     "handle_bless",
     "handle_buy",
+    "handle_complete_trigger",
     "handle_dash",
     "handle_disengage",
     "handle_dodge",

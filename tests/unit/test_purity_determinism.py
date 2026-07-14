@@ -23,6 +23,7 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.class_features import FighterFeatures, FightingStyle, RogueFeatures
+from dnd_simulator.core.events import LairDematerializedPayload
 from dnd_simulator.core.items import Item, ItemType
 from dnd_simulator.core.lair import Lair, LairState
 from dnd_simulator.core.models import ActionResult, Event
@@ -322,12 +323,14 @@ class TestEcologyLairDepletion:
         return Event(
             event_type=EventType.LAIR_DEMATERIALIZED,
             source_layer="entities",
-            data={
-                "lair_id": lair_id,
-                "alive_members": alive_members or [],
-                "core_alive": False,
-                "at_seconds": 0,
-            },
+            data=LairDematerializedPayload(
+                **{
+                    "lair_id": lair_id,
+                    "alive_members": alive_members or [],
+                    "core_alive": False,
+                    "at_seconds": 0,
+                }
+            ),
         )
 
     def test_depletion_transitions_active_to_depleted(self) -> None:

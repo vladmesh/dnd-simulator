@@ -9,7 +9,7 @@ from dnd_simulator.core.class_features import RogueFeatures
 from dnd_simulator.core.intent import TravelIntent
 from dnd_simulator.core.location import Location, LocationGraph
 from dnd_simulator.core.player import PlayerCharacter
-from dnd_simulator.service.session import _awareness_to_dict, build_player_status
+from dnd_simulator.service.transport_payloads import _awareness_to_dict, build_player_status
 
 _SWORD = Attack(
     name="longsword",

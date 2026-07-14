@@ -23,6 +23,22 @@ class LairState(Enum):
     DEPLETED = "depleted"
 
 
+class LairMemberRole(Enum):
+    """A concrete creature's role in a materialized lair roster."""
+
+    CORE = "core"
+    MEMBER = "member"
+
+
+@dataclass(frozen=True)
+class LairOrigin:
+    """Stable origin of a creature materialized from a lair template."""
+
+    lair_id: str
+    template_id: str
+    role: LairMemberRole
+
+
 @dataclass
 class Lair:
     """A stationary monster home. Materializes its roster into Creatures near players."""
@@ -44,3 +60,4 @@ class Lair:
     alive_members: list[str] | None = None  # surviving minion templates; None == full roster
     core_alive: bool = True
     last_respawn_time: int = 0  # game-time seconds anchoring the respawn countdown (set on loss/respawn)
+    death_writebacks: set[str] = field(default_factory=set)  # entity IDs already applied from ENTITY_DIED

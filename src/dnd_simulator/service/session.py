@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import contextlib
 import contextvars
-import dataclasses
 import os
 import random
 import threading
@@ -13,27 +12,27 @@ from typing import TYPE_CHECKING, Any, Protocol
 import structlog
 
 if TYPE_CHECKING:
-    from dnd_simulator.core.location import LocationGraph
     from dnd_simulator.storage.save_schema import SaveGame
 
 from dnd_simulator.core.action import Action, ActionType
-from dnd_simulator.core.action_defs import get_action_def
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import PlayerBrain
-from dnd_simulator.core.character import Ability, Creature
+from dnd_simulator.core.character import Creature
 from dnd_simulator.core.creature_host import CreatureHost
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.queries import query_player, query_players
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
-from dnd_simulator.i18n import _
+from dnd_simulator.i18n import language_context
 from dnd_simulator.round import Round
-from dnd_simulator.rules.actions import collect_cost_overrides
-from dnd_simulator.rules.leveling import xp_to_next_level
-from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.service.action_dispatcher import create_dispatcher
-from dnd_simulator.service.dto import JourneyView, PlayerStatusData, ResourcePoolView
+from dnd_simulator.service.transport_payloads import (
+    _budget_to_dict,
+    _reaction_to_dict,
+    build_round_state,
+    build_turn_state,
+)
 
 logger = structlog.get_logger(domain="session")
 
@@ -66,200 +65,6 @@ class SessionEventListener(Protocol):
     def on_round_result(self, msg: dict[str, Any]) -> None: ...
     def on_reaction(self, msg: dict[str, Any]) -> None: ...
     def on_game_over(self) -> None: ...
-
-
-# ---------------------------------------------------------------------------
-# Serialization helpers (game-level, not transport-specific)
-# ---------------------------------------------------------------------------
-
-
-def _awareness_to_dict(
-    awareness: PeacefulAwareness | CombatAwareness,
-    creature: Creature | None = None,
-) -> dict[str, Any]:
-    d = dataclasses.asdict(awareness)
-    # frozenset[Condition] → sorted list of strings for JSON serialization
-    # frozenset[tuple[int, int]] → sorted list of [x, y] pairs for JSON serialization
-    d["reachable"] = sorted([x, y] for x, y in awareness.reachable)
-
-    if isinstance(awareness, CombatAwareness):
-        d["self_conditions"] = sorted(c.value for c in awareness.self_conditions)
-        for i, nearby_entry in enumerate(awareness.nearby):
-            d["nearby"][i]["conditions"] = sorted(c.value for c in nearby_entry.conditions)
-        # tuple[ResourcePoolInfo, ...] → list[dict] for JSON serialization
-        d["self_resource_pools"] = [
-            {"id": p.id, "max_uses": p.max_uses, "current_uses": p.current_uses} for p in awareness.self_resource_pools
-        ]
-
-    # Build structured action info with descriptions, params, and cost options
-    overrides = collect_cost_overrides(creature) if creature else []
-    actions_out: list[dict[str, Any]] = []
-    for a in awareness.available_actions:
-        ad = get_action_def(a)
-        if ad.internal:
-            continue
-        action_info: dict[str, Any] = {
-            "name": str(a),
-            "description": _(ad.description),
-            "cost_type": ad.cost_type.value,
-            "params": [{"name": p.name, "type": p.param_type, "required": p.required} for p in ad.params],
-            "target_mode": ad.target_mode.value,
-            "target_scope": ad.target_scope.value,
-        }
-        # Include cost options if creature has overrides for this action
-        action_overrides = [ov for ov in overrides if ov.action_type == a]
-        if action_overrides:
-            action_info["cost_options"] = [
-                {"cost_type": ad.cost_type.value, "source": "default"},
-                *[{"cost_type": ov.cost_type.value, "source": ov.source} for ov in action_overrides],
-            ]
-        actions_out.append(action_info)
-    d["available_actions"] = actions_out
-    return d
-
-
-def _events_to_list(events: list[PerceivedEvent]) -> list[dict[str, Any]]:
-    result: list[dict[str, Any]] = []
-    for e in events:
-        d = dataclasses.asdict(e)
-        d["event_type"] = e.event_type.value
-        result.append(d)
-    return result
-
-
-def _budget_to_dict(budget: TurnBudget) -> dict[str, Any]:
-    return dataclasses.asdict(budget)
-
-
-def _reaction_to_dict(trigger: ReactionTrigger, options: list[ReactionOption]) -> dict[str, Any]:
-    """Build the reaction_prompt message sent to the client."""
-    return {
-        "type": "reaction_prompt",
-        "trigger": {
-            "trigger_type": trigger.trigger_type.value,
-            "source_creature_id": trigger.source_creature_id,
-            "data": {k: v for k, v in trigger.data.items()},
-        },
-        "options": [
-            {
-                "action_type": opt.action_type.value,
-                "description": opt.description,
-                "params": {k: v for k, v in opt.params.items()},
-            }
-            for opt in options
-        ],
-    }
-
-
-def build_equipped_payload(player: PlayerCharacter) -> list[dict[str, str]]:
-    """Build the equipped-items list for player payloads (WS + REST share this shape)."""
-    from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder
-
-    return [
-        {"slot": e.slot.value, "item_id": e.item_id, "name": e.name, "description": e.description}
-        for e in AwarenessBuilder.build_equipped(player)
-    ]
-
-
-def build_inventory_payload(player: PlayerCharacter) -> list[dict[str, object]]:
-    """Build the inventory list for player payloads (WS + REST share this shape)."""
-    from dnd_simulator.core.awareness import describe_item
-
-    inventory: list[dict[str, object]] = []
-    for item in player.inventory:
-        entry: dict[str, object] = {
-            "id": item.id,
-            "name": item.name,
-            "type": item.item_type.value,
-            "description": describe_item(item),
-            "price": item.price,
-        }
-        if item.accessory_def is not None:
-            entry["slot"] = item.accessory_def.slot.value
-        inventory.append(entry)
-    return inventory
-
-
-def build_player_status(player: PlayerCharacter, location_graph: LocationGraph | None = None) -> PlayerStatusData:
-    """Build the full player status snapshot — single source shared by REST and WS.
-
-    All derived fields (AC from equipment+modifiers, XP to next level) are computed here.
-    """
-    from dnd_simulator.core.intent import TravelIntent
-
-    scores = player.ability_scores
-    journey = None
-    if isinstance(player.current_intent, TravelIntent) and location_graph is not None:
-        intent = player.current_intent
-
-        def location_name(location_id: str) -> str:
-            return location_graph.get(location_id).name if location_graph.has(location_id) else location_id
-
-        journey = JourneyView(
-            destination_id=intent.destination_id,
-            destination_name=location_name(intent.destination_id),
-            current_location_name=location_name(player.location_id),
-            next_location_name=location_name(intent.remaining_route[0]),
-            remaining_route=tuple(location_name(location_id) for location_id in intent.remaining_route),
-            next_arrival_seconds=intent.next_arrival_seconds,
-        )
-    return PlayerStatusData(
-        player_id=player.id,
-        name=player.name,
-        race=player.race.value,
-        char_class=player.char_class.value,
-        level=player.level,
-        experience=player.experience,
-        level_up_available=player.level_up_available,
-        xp_to_next_level=xp_to_next_level(player.experience),
-        alignment=player.alignment.value,
-        hp=player.current_hp,
-        max_hp=player.max_hp,
-        ac=effective_ac(player),
-        gold=player.gold,
-        location_id=player.location_id,
-        appearance=player.appearance,
-        ability_scores={
-            "str": scores[Ability.STR],
-            "dex": scores[Ability.DEX],
-            "con": scores[Ability.CON],
-            "int": scores[Ability.INT],
-            "wis": scores[Ability.WIS],
-            "cha": scores[Ability.CHA],
-        },
-        journey=journey,
-        resource_pools=[
-            ResourcePoolView(id=p.id, max_uses=p.max_uses, current_uses=p.current_uses) for p in player.resource_pools
-        ],
-        equipped=build_equipped_payload(player),
-        inventory=build_inventory_payload(player),
-    )
-
-
-def _location_data(world: World, location_id: str) -> dict[str, Any]:
-    graph = world.location_graph
-    if not graph.has(location_id):
-        return {"current_location": location_id, "paths": []}
-
-    loc = graph.get(location_id)
-    paths = []
-    for edge in loc.edges:
-        target = graph.get(edge.target_id) if graph.has(edge.target_id) else None
-        paths.append(
-            {
-                "target_id": edge.target_id,
-                "target_name": target.name if target else edge.target_id,
-                "distance_m": edge.distance_m,
-            }
-        )
-
-    return {
-        "current_location": loc.name,
-        "current_location_id": loc.id,
-        "description": loc.description,
-        "region_id": loc.region_id,
-        "paths": paths,
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -501,30 +306,6 @@ class GameSession:
                 logger.exception("listener_error", listener=type(listener).__name__, method=method)
 
     # ---------------------------------------------------------------------------
-    # Shared state builder for round callbacks
-    # ---------------------------------------------------------------------------
-
-    def _build_round_state(
-        self,
-        msg_type: str,
-        player: PlayerCharacter,
-        game_round: Round,
-        creature_host: CreatureHost,
-    ) -> dict[str, Any]:
-        """Build the common state dict shared by on_turn, on_action, and on_round_end."""
-        perceived = game_round.get_perceived_events(player)
-        query_fn = self.world.make_query_fn("entities")
-        awareness = creature_host.build_awareness(player, self.world.time, query_fn)
-        return {
-            "type": msg_type,
-            "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
-            "awareness": _awareness_to_dict(awareness, creature=player),
-            "events": _events_to_list(perceived),
-            "player": dataclasses.asdict(build_player_status(player, self.world.location_graph)),
-            "location": _location_data(self.world, player.location_id),
-        }
-
-    # ---------------------------------------------------------------------------
     # Round lifecycle
     # ---------------------------------------------------------------------------
 
@@ -552,22 +333,14 @@ class GameSession:
             creature_host = self.world.creature_host
 
             # Wire on_turn: fires when Round calls brain.choose_action for the player
-            # Uses awareness from Round (which includes merchants, etc.) — not _build_round_state
+            # Uses awareness from Round, which includes merchants and other live context.
             def on_turn(
                 creature: Creature,
                 awareness: PeacefulAwareness | CombatAwareness,
                 events: list[PerceivedEvent],
             ) -> None:
-                msg: dict[str, Any] = {
-                    "type": "turn",
-                    "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",
-                    "awareness": _awareness_to_dict(awareness, creature=creature),
-                    "events": _events_to_list(events),
-                    "player": dataclasses.asdict(build_player_status(player, self.world.location_graph)),
-                    "location": _location_data(self.world, player.location_id),
-                }
-                if awareness.turn_budget is not None:
-                    msg["budget"] = _budget_to_dict(awareness.turn_budget)
+                with language_context(self.lang):
+                    msg = build_turn_state(player, awareness, events, self.world)
                 self._last_turn_msg = msg
                 self._fire("on_turn", msg)
 
@@ -592,12 +365,14 @@ class GameSession:
                 dispatcher=dispatcher,
                 rng=self.dice_rng,
                 mutation_scope=self.mutate_world,
+                action_scope=lambda: language_context(self.lang),
             )
 
             # Wire on_action: fires after each action by any creature
             def on_action(creature: Creature, action: Action, budget: TurnBudget | None, error: str) -> None:
                 self._last_turn_msg = None  # turn is being processed
-                msg = self._build_round_state("action_result", player, game_round, creature_host)
+                with language_context(self.lang):
+                    msg = build_round_state("action_result", player, game_round, creature_host, self.world)
                 msg["actor"] = creature.id
                 msg["action"] = action.name
                 if error:
@@ -610,7 +385,8 @@ class GameSession:
 
             # Wire on_round_end: fires after each complete round
             def on_round_end(result: object) -> None:
-                msg = self._build_round_state("round_result", player, game_round, creature_host)
+                with language_context(self.lang):
+                    msg = build_round_state("round_result", player, game_round, creature_host, self.world)
                 self._fire("on_round_result", msg)
 
             game_round.set_on_round_end(on_round_end)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from dnd_simulator.core.events import RegionConqueredPayload, SettlementDamagedPayload
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query, QueryType
 from dnd_simulator.core.queries import (
@@ -102,9 +103,10 @@ class SettlementsLayer(Layer):
 
     def handle_event(self, event: Event, query_fn: QueryFn, emit_fn: EmitFn) -> ActionResult:
         """React to conquest events from politics layer."""
-        if event.data.get("type") == "region_conquered":
-            region_id = str(event.data["region"])
-            return ActionResult(events=self._apply_conquest(region_id))
+        if event.event_type is EventType.REGION_CONQUERED:
+            payload = event.data
+            assert isinstance(payload, RegionConqueredPayload)
+            return ActionResult(events=self._apply_conquest(payload.region_id))
         return ActionResult()
 
     def _apply_conquest(self, region_id: str) -> list[Event]:
@@ -123,13 +125,9 @@ class SettlementsLayer(Layer):
 
             events.append(
                 Event(
-                    event_type=EventType.CUSTOM,
+                    event_type=EventType.SETTLEMENT_DAMAGED,
                     source_layer=self.name,
-                    data={
-                        "type": "settlement_damaged",
-                        "settlement": s.id,
-                        "region": region_id,
-                    },
+                    data=SettlementDamagedPayload(s.id, region_id),
                     description=(
                         f"{s.name} suffers from the conquest (prosperity {s.prosperity:.0f}, pop {s.population})"
                     ),

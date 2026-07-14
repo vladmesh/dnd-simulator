@@ -37,6 +37,7 @@ from dnd_simulator.core.class_features import (
 )
 from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.core.player import PlayerCharacter
+from dnd_simulator.core.triggers import ActivationTrigger, EventCondition, TriggerDefinition
 from dnd_simulator.layers.entities.models import Npc, resolve_schedule
 from dnd_simulator.rules.resources import build_class_resource_pools
 
@@ -169,6 +170,18 @@ def _to_npc(
         combat_position=tuple(model.combat_position) if model.combat_position else None,  # type: ignore[arg-type]
         reputation=dict(model.reputation),
         xp_value=model.xp_value,
+        always_active=model.always_active,
+        triggers=[
+            ActivationTrigger(
+                definition=TriggerDefinition(
+                    id=trigger.id,
+                    on=EventCondition.from_mapping(trigger.on.event, trigger.on.match),
+                    until=EventCondition.from_mapping(trigger.until.event, trigger.until.match),
+                ),
+                armed=trigger.armed,
+            )
+            for trigger in model.triggers
+        ],
     )
 
 

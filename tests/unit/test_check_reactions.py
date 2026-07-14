@@ -71,6 +71,7 @@ def _make_round(creatures: list[Creature]) -> object:
     r._dispatcher = dispatcher
     r._rng = random.Random(0)
     r._mutation_scope = nullcontext
+    r._action_scope = nullcontext
     r._on_action = None
     return r
 

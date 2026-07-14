@@ -16,7 +16,7 @@ from dnd_simulator.core.character import (
 from dnd_simulator.core.combat import BattleMap, Position, Wall
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.rules.movement import compute_reachable
-from dnd_simulator.service.session import _awareness_to_dict
+from dnd_simulator.service.transport_payloads import _awareness_to_dict
 
 _SWORD = Attack(
     name="longsword",
