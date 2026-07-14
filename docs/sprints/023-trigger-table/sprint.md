@@ -132,7 +132,7 @@ Lay on Hands и Divine Smite.
 1. [Контракт Paladin в E2E playbook](tasks/phase8-task1-paladin-e2e-contract.md) — выровнять §14.1 и зависимые Paladin сценарии с L2 contract.
 2. [Повторный обязательный Paladin post-audit E2E](tasks/phase8-task2-paladin-post-audit-e2e.md) — выполнить полный прогон по исправленному playbook и записать report.
 3. [Повторное открытие Level Up после defer](tasks/phase8-task3-level-up-modal-reentry.md) — восстановить ручной UI путь к pending L2 без изменения правил.
-4. Исправить lifecycle ядра логова после Master mutation `current_hp=0`, чтобы reconnect не материализовал второй roster поверх terminal depletion.
+4. [Terminal lifecycle ядра логова](tasks/phase8-task4-lair-core-lifecycle.md) — исправить lifecycle после Master mutation `current_hp=0`, чтобы reconnect не материализовал второй roster поверх terminal depletion.
 
 ---
 

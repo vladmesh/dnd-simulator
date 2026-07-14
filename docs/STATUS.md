@@ -12,7 +12,7 @@
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 8 — Follow-up post-audit E2E Paladin (task 1 done, task 2 blocked, task 3 done) — 2026-07-14
+**Phase:** 8 — Follow-up post-audit E2E Paladin (task 1 done, task 2 blocked, task 3 done, task 4 pending) — 2026-07-14
 
 Phase 8 Task 4 planned: исправить terminal lifecycle логова после Master mutation `current_hp=0`,
 чтобы reconnect не материализовал второй core/minion roster поверх depleted lair. Task 2 остаётся
