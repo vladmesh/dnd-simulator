@@ -1,7 +1,7 @@
 # Code Audit
 
 > **Date**: 2026-07-14
-> **Scope**: full codebase, follow-up after Sprint 023 Phase 7 (`8521a37`)
+> **Scope**: full codebase, final audit after Sprint 023 Phase 8 (`c820d3c`)
 
 > Transient snapshot. Canonical tracking lives in [BACKLOG.md](BACKLOG.md); known backlog items are marked `known` and should not be duplicated during triage.
 
@@ -16,13 +16,13 @@
 - Test gaps: 0 issues
 - Vision drift: 0 issues
 
-**Total: 11 issues.** The Phase 7 locale boundary does not introduce a new architecture, transport, or test-coverage finding. No sprint blocker was found; the remaining items are known security, maintainability, and style debt.
+**Total: 11 issues.** The Phase 8 Paladin E2E alignment, level-up modal repair, and lair-core lifecycle fix introduce no architecture, transport, or test-coverage finding. No sprint blocker was found; the remaining items are known security, maintainability, and style debt.
 
 ## Dead Code
 
 | File | Issue | Action |
 |------|-------|--------|
-| none | `uv run ruff check src/ --select F401` is clean. No `TODO/FIXME/HACK/XXX` remains in `src/`. The new event-runtime, transport, WS-envelope, and autosave paths have production callers. | none |
+| none | `uv run ruff check src/ --select F401` is clean. No `TODO/FIXME/HACK/XXX` remains in `src/`. The new event-runtime, transport, WS-envelope, autosave, and lair-death write-back paths have production callers. | none |
 
 ## Code Smells
 
@@ -72,10 +72,10 @@ Line length is clean.
 
 | Source File | Expected Test | Status |
 |-------------|---------------|--------|
-| none | Player and spectator non-object WS JSON are covered, and the final shutdown-autosave failure logs once while lifespan exits normally. | both previous gaps fixed in Sprint 023 Phase 5 |
+| none | Player and spectator non-object WS JSON are covered; the final shutdown-autosave failure logs once while lifespan exits normally; Master `current_hp=0` depletes a lair without a duplicate roster through save/load and reconnect. | previous gaps fixed in Sprint 023 Phase 5; Phase 8 lifecycle regression covered by integration and targeted E2E |
 
 ## Vision Drift
 
 | Change | Invariant Violated | Impact |
 |--------|-------------------|--------|
-| none | Typed events, trigger lifecycle, transport extraction, and WS containment preserve classic-mode, the single global round, layer independence, service-mediated master controls, swappable brains, and YAML content. | none |
+| none | Typed events, trigger lifecycle, transport extraction, WS containment, and the Phase 8 service-mediated lair death preserve classic-mode, the single global round, layer independence, service-mediated master controls, swappable brains, and YAML content. | none |
