@@ -157,4 +157,12 @@ Lay on Hands и Divine Smite.
 
 ## Results
 
-Финальный audit `a625ea7` triaged 2026-07-14: quick-fix 0, sprint-relevant 0; все 11 findings уже отслеживаются в BACKLOG.
+**Completed:** 2026-07-14
+
+Построены typed event payload-контракты, YAML trigger table с парными `{on, until}` и GM override,
+а также немедленный lair death write-back. После post-audit refactor события, perception и transport
+разделены по границам ответственности; финальный integration-прогон: 163 passed, post-audit E2E зелёный.
+
+**Deferred:** Security hardening, eslint suppressions, общий `any-to-object-sweep` и mutable runtime
+dataclasses остаются в BACKLOG; `inner-self`, полная detail-ladder, quests и расширенный GM actives panel
+не входили в scope.

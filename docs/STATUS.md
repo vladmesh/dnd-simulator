@@ -3,86 +3,15 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-14
-**Position:** Sprint 023 Phase 8: фаза завершена, все фазы закрыты.
-**Next:** Закрыть Sprint 023.
-**Blockers:** Нет. Master mutation `current_hp=0` сразу переводит lair core в terminal depleted state; targeted §15.2 подтвердил сохранение исходного corpse без второго roster при save/load и reconnect. nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
+**Position:** Sprint 023 закрывается через CI merge gate.
+**Next:** Дождаться merge Sprint 023, затем спланировать следующий спринт.
+**Blockers:** Нет.
+
+**Closure:** Ждём завершения CI для `sprint/023-trigger-table`.
 
 ## Current Sprint
 
-**Sprint:** 023-trigger-table
-**Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
-**Started:** 2026-07-12
-**Phase:** 8 — Follow-up post-audit E2E Paladin (COMPLETE) — 2026-07-14
-
-Post-audit E2E complete: fresh landing-page regression passed in RU and EN; accumulated Sprint 023
-reports cover the remaining non-LLM playbook boundary, with no post-audit code changes to retest.
-Ready for sprint closure.
-
-Phase 8 closed: integration suite passed 163/163. Fresh landing-page regression passed in RU and EN;
-the Paladin and lair boundaries reuse the Phase 8 targeted green evidence, including the final
-[lair lifecycle rerun](e2e-reports/2026-07-14-sprint023-lair-core-lifecycle-rerun.md). All phases
-complete. Ready for final audit.
-
-Phase 8 Task 2 done: targeted §15.2 после Task 4 прошёл через Master UI, save/load и reconnect:
-`goblin_chieftain_5` остался единственным corpse вместе с тремя исходными миньонами, без второго
-roster. [Targeted rerun report](e2e-reports/2026-07-14-sprint023-lair-core-lifecycle-rerun.md)
-зелёный. Вся обязательная non-LLM граница Task 2 теперь зелёная.
-
-Phase 8 Task 4 done: Master mutation `current_hp=0` теперь выпускает typed death write-back,
-сразу переводит логово в depleted и сохраняет исходный corpse без второго roster после save/load
-и reconnect. [Targeted lair report](e2e-reports/2026-07-14-sprint023-lair-core-lifecycle.md)
-зелёный. Task 2 повторяет только lair E2E boundary.
-
-Phase 8 Task 1 done: §14.1 теперь проверяет Paladin L1 без Fighting Style и spell slots; §3.5
-остаётся единственным L2 flow для Fighting Style, slots и Divine Smite. Task 2 остаётся blocked до
-полной зелёной границы обязательного non-LLM playbook: Paladin continuation и первый core UI block
-зелёные, но остаются class/equipment и последующие разделы. [Core UI report](e2e-reports/2026-07-14-sprint023-post-audit-core-ui.md)
-фиксирует talk, movement и базовый combat. Task 3 done: backend state contract уже сохранял pending
-level-up; frontend больше не снимает defer на `combat_ended`, поэтому ручная кнопка остаётся доступна
-до REST-confirm. Добавлен WS-driven Paladin L1→L2 regression с Fighting Style и скрытием control после confirm.
-Очередной блок Task 2, [Master mutations](e2e-reports/2026-07-14-sprint023-post-audit-master-mutations.md),
-зелёный: spawn, edit HP, condition, weapon/potion inventory и manual activity override. Незаполненная
-NPC role сейчас отдаёт raw validation prose, это minor finding, не блокер.
-
-Следующий обязательный блок Task 2, [Fighter/Rogue и equipment](e2e-reports/2026-07-14-sprint023-post-audit-fighter-rogue-equipment.md),
-подтвердил Second Wind, re-equip weapon/armor/shield, potion и equip/unequip Ring of Protection.
-Rogue Dash требует точного rerun с capture action-result; до полной границы также остаются conditions,
-reactions, faction relations, lairs/loot и intents/travel.
-
-Финальный блок [reactions, faction relations, lairs/loot и intents/travel](e2e-reports/2026-07-14-sprint023-post-audit-final-areas.md)
-прошёл всё, кроме lifecycle логова: после `current_hp=0` ядра через Master UI reconnect создаёт второй
-ростер ядра/миньонов вместо terminal depletion. Это единственный текущий blocker Task 2.
-
-Phase 7 closed: targeted post-audit E2E passed 4/4, including EN live action failure `Target too far (10 ft, reach 5 ft).`; nearby-creature race label remains deferred as non-blocking because content-name locale stays a separate `DND_LANGUAGE` contract. All phases complete; a follow-up audit is required after the final locale fix.
-
-Follow-up [post-audit E2E](e2e-reports/2026-07-14-sprint023-post-audit.md) passed 10/11 targeted scenarios, then stopped because §14.1 incorrectly required a Paladin L1 Fighting Style selector. Phase 8 corrects that stale E2E expectation and repeats the dependent Paladin L2/Smite flow; Sprint 023 is not ready for close-sprint until the rerun is green.
-
-Phase 6 Task 1 done: live WS payloads use the current session locale and `COMBAT_ENDED` has typed perception. Task 2 done: Master lists only sessions managed in memory, excluding stale disk saves.
-
-Phase 6: [post-audit E2E report](e2e-reports/2026-07-13-sprint023-post-audit.md) зафиксировал два блокера: синхронизация frontend/session locale для live WS + typed `COMBAT_ENDED` perception и исключение stale disk saves из Master session list.
-
-Phase 5 closed: единый typed event-контракт; trigger runtime, event-log и perception split; transport builders; non-object WS JSON protocol containment; final shutdown-autosave failure logging.
-
-**Audit:** Triaged final audit `a625ea7`: 2026-07-14, quick-fix 0, sprint-relevant 0, backlog 11 already tracked. Предыдущий triage 2026-07-13: quick-fix 0, sprint-relevant 0 deferred, один подпункт добавлен в `any-to-object-sweep`; остальные findings уже отслеживаются.
-
-Phase 4 Task 1 done: сохраняемый GM override и управление trigger armed state через master API под world gate.
-
-Phase 4 Task 2 done: минимальные live controls активности и trigger armed state в существующем списке существ.
-
-Phase 4 Task 3 done: malformed action параметры изолированы в failed `ActionResult`; round thread и следующий ход живы.
-
-Phase 4 Task 4 done: Dash metadata только пополняет movement budget и требует отдельного `move`/`move_to`.
-
-### Phases
-
-1. Типизированная таксономия событий (+ `encounter-spawned-perceiver`)
-2. Событийный write-back — смерти логова (`lair-death-event`)
-3. Trigger table (`{on, until}`, самогашение, сейв)
-4. Ручка ГМ + failure containment (`action-error-kills-round-loop`, `dash-actiondef-movement-conflation`)
-5. Post-audit refactor (`typed-event-compat-bridge`, entities/perception/session/transport decomposition, два test-gap)
-6. Post-audit E2E fixes (`live-ws-locale-combat-ended`, `stale-master-sessions`)
-7. Follow-up post-audit E2E locale (`live-action-failure-locale`; race label deferred non-blocking)
-8. Follow-up post-audit E2E Paladin (`paladin-e2e-contract`, full Paladin post-audit rerun)
+No active sprint.
 
 ## Recent activity (non-sprint)
 
@@ -98,6 +27,7 @@ Phase 4 Task 4 done: Dash metadata только пополняет movement budg
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 023-trigger-table | Парные триггеры `{on, until}` на типизированной таксономии событий; событийный write-back смертей логова | 2026-07-12 | 2026-07-14 |
 | 022-intents-travel | Player-agnostic якоря и сохраняемые wait/sleep/travel intent; travel по рёбрам; согласованный lifecycle save/load/autosave | 2026-07-10 | 2026-07-12 |
 | 021-save-schema | Версионированная Pydantic-схема сейва (schema_version=1, RNG в сейве, combat sides), воспроизводимость мира от DND_WORLD_SEED, периодический автосейв | 2026-07-10 | 2026-07-10 |
 | 020-thermo-sweep | Закрыть структурный долг из термоядерного ревью: корректность + чистота rules, типизация границ, backend/frontend decomposition, сверка с simulation-core | 2026-06-30 | 2026-07-10 |
