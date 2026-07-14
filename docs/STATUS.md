@@ -3,20 +3,21 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-14
-**Position:** Sprint 023 Phase 8: Task 3 завершён; Task 4 запланирована для lair lifecycle boundary.
-**Next:** Выполнить Task 4, затем повторить только blocked E2E boundary Task 2.
-**Blockers:** Task 2 blocked до Task 4: после Master mutation `current_hp=0` для ядра логова reconnect материализует второй core/minion roster, сохраняя мёртвое прежнее ядро. Reactions, faction relations, corpse loot и intents/travel зелёные; nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
+**Position:** Sprint 023 Phase 8: Task 4 завершена; Task 2 ждёт повторного lair E2E boundary.
+**Next:** Повторить только blocked lair E2E boundary Task 2.
+**Blockers:** Task 2 ждёт targeted rerun §15.2 после Task 4. Master mutation `current_hp=0` теперь сразу переводит lair core в terminal depleted state и сохраняет исходный corpse без второго roster при save/load и reconnect. Reactions, faction relations, corpse loot и intents/travel зелёные; nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
 
 ## Current Sprint
 
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 8 — Follow-up post-audit E2E Paladin (task 1 done, task 2 blocked, task 3 done, task 4 pending) — 2026-07-14
+**Phase:** 8 — Follow-up post-audit E2E Paladin (task 1 done, task 2 blocked, task 3 done, task 4 done) — 2026-07-14
 
-Phase 8 Task 4 planned: исправить terminal lifecycle логова после Master mutation `current_hp=0`,
-чтобы reconnect не материализовал второй core/minion roster поверх depleted lair. Task 2 остаётся
-blocked до этого исправления и затем повторяет только lair E2E boundary.
+Phase 8 Task 4 done: Master mutation `current_hp=0` теперь выпускает typed death write-back,
+сразу переводит логово в depleted и сохраняет исходный corpse без второго roster после save/load
+и reconnect. [Targeted lair report](e2e-reports/2026-07-14-sprint023-lair-core-lifecycle.md)
+зелёный. Task 2 повторяет только lair E2E boundary.
 
 Phase 8 Task 1 done: §14.1 теперь проверяет Paladin L1 без Fighting Style и spell slots; §3.5
 остаётся единственным L2 flow для Fighting Style, slots и Divine Smite. Task 2 остаётся blocked до

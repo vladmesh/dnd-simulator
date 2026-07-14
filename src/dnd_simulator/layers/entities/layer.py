@@ -290,7 +290,7 @@ class EntitiesLayer(Layer):
             assert isinstance(payload, EntityDiedPayload)
             entity_id = payload.entity_id
             entity = self._entities.get(entity_id)
-            if entity is not None and entity.temporary:
+            if entity is not None and entity.temporary and event.source_layer == self.name:
                 self.remove_entity(entity_id)
 
         self._event_log.record(event)

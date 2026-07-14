@@ -117,7 +117,20 @@ class CreatureCommands(GameServiceProtocol):
 
         # Creature-level fields
         if "current_hp" in updates:
-            entity.current_hp = int(updates["current_hp"])
+            from dnd_simulator.core.events import EntityDiedPayload
+            from dnd_simulator.core.models import Event, EventType
+
+            with session.mutate_world():
+                was_alive = entity.is_alive
+                entity.current_hp = int(updates["current_hp"])
+                if was_alive and not entity.is_alive:
+                    session.world.handle_event(
+                        Event(
+                            event_type=EventType.ENTITY_DIED,
+                            source_layer="master",
+                            data=EntityDiedPayload(entity.id, entity.location_id, lair_origin=entity.lair_origin),
+                        )
+                    )
         if "max_hp" in updates:
             entity.max_hp = int(updates["max_hp"])
         if "ac" in updates:

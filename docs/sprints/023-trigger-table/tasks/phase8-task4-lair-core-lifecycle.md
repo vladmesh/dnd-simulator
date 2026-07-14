@@ -46,10 +46,15 @@ backend уровне, а browser report обновить только после
 
 ## Status
 
-`pending`
+`done`
 
 ## Developer Notes
 
 Источник дефекта: [final areas E2E report](../../../e2e-reports/2026-07-14-sprint023-post-audit-final-areas.md),
 §15.2. В `/tmp/dnd-e2e-logs/session_d953fe0d/full.jsonl` зафиксированы initial и reconnect-time
 `lair_materialize` events с разными ID chieftain/minions после Master mutation исходного core.
+
+Master mutation теперь выпускает typed `ENTITY_DIED` при переходе HP из живого состояния в ноль.
+Ecology сразу переводит core lair в `depleted`; Master-origin событие сохраняет мёртвое ядро,
+в отличие от обычной combat-cleanup ветки. Integration regression и targeted browser run через
+Master UI подтвердили сохранение того же corpse/roster через save/load и reconnect без второго spawn.

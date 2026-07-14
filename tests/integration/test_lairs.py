@@ -99,11 +99,16 @@ def _nearby(turn: dict[str, object], entity_id: str) -> dict[str, object] | None
     return next((n for n in nearby if n["id"] == entity_id), None)
 
 
-def _monsters_at(api_url: str, sid: str, location_id: str = "cave") -> list[dict[str, object]]:
+def _monsters_at(
+    api_url: str, sid: str, location_id: str = "cave", *, active: bool | None = True
+) -> list[dict[str, object]]:
     """Active non-player creatures at a location (the materialized lair roster)."""
+    params: dict[str, str] = {"location_id": location_id}
+    if active is not None:
+        params["active"] = str(active).lower()
     resp = requests.get(
         f"{api_url}/sessions/{sid}/creatures",
-        params={"location_id": location_id, "active": "true"},
+        params=params,
         timeout=5,
     )
     resp.raise_for_status()
@@ -172,6 +177,46 @@ class TestLairMaterialization:
 
 class TestLairDepletion:
     """Killing the core depletes the lair permanently — no respawn on return."""
+
+    def test_master_patch_core_to_zero_depletes_without_respawning_roster(
+        self, backend_url: str, api_url: str, player_api_url: str
+    ) -> None:
+        """A Master HP mutation is a death fact, so reconnect keeps the original depleted roster."""
+        ws_base, sid, pid = _create_lair_session(backend_url, api_url, player_api_url)
+
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            _get_turn(sock)
+            initial_roster = _monsters_at(api_url, sid, "cave")
+            boss = next(c for c in initial_roster if c["name"] == "Goblin Boss")
+            initial_ids = {c["id"] for c in initial_roster}
+
+            response = requests.patch(
+                f"{api_url}/sessions/{sid}/creatures/{boss['id']}",
+                json={"current_hp": 0},
+                timeout=5,
+            )
+            response.raise_for_status()
+
+            save_response = requests.post(f"{api_url}/sessions/{sid}/save?name=patched_core", timeout=10)
+            save_response.raise_for_status()
+            load_response = requests.post(f"{api_url}/sessions/{sid}/saves/patched_core/load", timeout=10)
+            load_response.raise_for_status()
+
+            sock.close()
+            sock = ws_connect(ws_base, sid, pid)
+            _get_turn(sock)
+
+            roster_after_reconnect = _monsters_at(api_url, sid, "cave", active=None)
+            assert {c["id"] for c in roster_after_reconnect} == initial_ids
+            patched_boss = next(c for c in roster_after_reconnect if c["id"] == boss["id"])
+            assert patched_boss["hp"] == 0
+            assert sum(c["name"] == "Goblin Boss" for c in roster_after_reconnect) == 1
+        finally:
+            sock.close()
+
+        requests.delete(f"{api_url}/sessions/{sid}/saves/patched_core", timeout=5)
+        requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
 
     def test_core_death_depletes_lair(self, backend_url: str, api_url: str, player_api_url: str) -> None:
         """Boss dies → leave → return → the warren is empty (depleted, not respawned)."""
