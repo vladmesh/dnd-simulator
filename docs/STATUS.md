@@ -3,9 +3,9 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-14
-**Position:** Sprint 023 Phase 8: Task 4 завершена; Task 2 ждёт повторного lair E2E boundary.
-**Next:** Повторить только blocked lair E2E boundary Task 2.
-**Blockers:** Task 2 ждёт targeted rerun §15.2 после Task 4. Master mutation `current_hp=0` теперь сразу переводит lair core в terminal depleted state и сохраняет исходный corpse без второго roster при save/load и reconnect. Reactions, faction relations, corpse loot и intents/travel зелёные; nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
+**Position:** Sprint 023 Phase 8: все задачи завершены, фаза готова к закрытию.
+**Next:** Закрыть Phase 8.
+**Blockers:** Нет. Master mutation `current_hp=0` сразу переводит lair core в terminal depleted state; targeted §15.2 подтвердил сохранение исходного corpse без второго roster при save/load и reconnect. nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
 
 ## Current Sprint
 
@@ -13,6 +13,11 @@
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
 **Phase:** 8 — Follow-up post-audit E2E Paladin (task 1 done, task 2 blocked, task 3 done, task 4 done) — 2026-07-14
+
+Phase 8 Task 2 done: targeted §15.2 после Task 4 прошёл через Master UI, save/load и reconnect:
+`goblin_chieftain_5` остался единственным corpse вместе с тремя исходными миньонами, без второго
+roster. [Targeted rerun report](e2e-reports/2026-07-14-sprint023-lair-core-lifecycle-rerun.md)
+зелёный. Вся обязательная non-LLM граница Task 2 теперь зелёная.
 
 Phase 8 Task 4 done: Master mutation `current_hp=0` теперь выпускает typed death write-back,
 сразу переводит логово в depleted и сохраняет исходный corpse без второго roster после save/load

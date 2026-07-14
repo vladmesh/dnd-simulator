@@ -36,15 +36,15 @@ non-LLM sections, включая обновлённые §3.5 и §14, поск�
 
 ## Acceptance Criteria
 
-- [ ] E2E environment and ports are coordinated before the run
-- [ ] Paladin L1, L2 level-up, Lay on Hands, Smite and target-scope scenarios execute through UI
-- [ ] Full required non-LLM post-audit playbook is rerun rather than only the formerly failing row
-- [ ] Report records scenario results and relevant logs
-- [ ] Green result is dated after the corrected playbook; otherwise blockers remain explicit
+- [x] E2E environment and ports are coordinated before the run
+- [x] Paladin L1, L2 level-up, Lay on Hands, Smite and target-scope scenarios execute through UI
+- [x] Full required non-LLM post-audit playbook is rerun rather than only the formerly failing row
+- [x] Report records scenario results and relevant logs
+- [x] Green result is dated after the corrected playbook
 
 ## Status
 
-`blocked`
+`done`
 
 ## Developer Notes
 
@@ -57,3 +57,8 @@ non-LLM sections were not run. See [rerun report](../../../e2e-reports/2026-07-1
 passed in the live UI. The lair boundary remains blocked: after setting a lair core to 0 HP in the
 Master UI and reconnecting, Test Vale materialized a second core/minion roster while retaining the
 dead first core. See [final areas report](../../../e2e-reports/2026-07-14-sprint023-post-audit-final-areas.md).
+
+2026-07-14: После Task 4 targeted rerun §15.2 прошёл. Master UI перевёл
+`goblin_chieftain_5` в 0 HP, save/load и reconnect сохранили единственный corpse и три исходных
+миньона без новой materialization; structured log зафиксировал terminal `lair_death_written_back`.
+См. [targeted report](../../../e2e-reports/2026-07-14-sprint023-lair-core-lifecycle-rerun.md).

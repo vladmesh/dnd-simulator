@@ -138,10 +138,9 @@ Lay on Hands и Divine Smite.
 
 ## Status
 
-**Current:** Phase 8 Task 4 planned. Task 3 восстановила ручной путь к pending level-up, но
-обязательный E2E дошёл до lifecycle boundary логова: после Master mutation `current_hp=0` reconnect
-материализует второй core/minion roster поверх мёртвого ядра. Task 2 остаётся blocked до завершения
-Task 4, затем повторяется только эта E2E boundary.
+**Current:** Phase 8 завершена. После Task 4 targeted §15.2 через Master UI, save/load и reconnect
+подтвердил terminal lifecycle: `goblin_chieftain_5` остался единственным corpse с тремя исходными
+миньонами, без второго roster. Task 2 done; фаза готова к закрытию.
 
 ## Decisions
 
