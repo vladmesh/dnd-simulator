@@ -3,11 +3,9 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-14
-**Position:** Sprint 023 закрывается через CI merge gate.
-**Next:** Дождаться merge Sprint 023, затем спланировать следующий спринт.
+**Position:** Sprint 023 закрыл третий эпик simulation-core: typed event contracts, trigger table и событийный write-back смертей логова.
+**Next:** Активного спринта нет.
 **Blockers:** Нет.
-
-**Closure:** Ждём завершения CI для `sprint/023-trigger-table`.
 
 ## Current Sprint
 
