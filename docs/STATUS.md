@@ -3,8 +3,8 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-14
-**Position:** Sprint 023 Phase 8: все задачи завершены, фаза готова к закрытию.
-**Next:** Закрыть Phase 8.
+**Position:** Sprint 023 Phase 8: фаза завершена, все фазы закрыты.
+**Next:** Провести финальный audit Sprint 023.
 **Blockers:** Нет. Master mutation `current_hp=0` сразу переводит lair core в terminal depleted state; targeted §15.2 подтвердил сохранение исходного corpse без второго roster при save/load и reconnect. nearby-creature race label остаётся отдельным non-blocking контрактом `DND_LANGUAGE`.
 
 ## Current Sprint
@@ -12,7 +12,12 @@
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 8 — Follow-up post-audit E2E Paladin (task 1 done, task 2 done, task 3 done, task 4 done) — 2026-07-14
+**Phase:** 8 — Follow-up post-audit E2E Paladin (COMPLETE) — 2026-07-14
+
+Phase 8 closed: integration suite passed 163/163. Fresh landing-page regression passed in RU and EN;
+the Paladin and lair boundaries reuse the Phase 8 targeted green evidence, including the final
+[lair lifecycle rerun](e2e-reports/2026-07-14-sprint023-lair-core-lifecycle-rerun.md). All phases
+complete. Ready for final audit.
 
 Phase 8 Task 2 done: targeted §15.2 после Task 4 прошёл через Master UI, save/load и reconnect:
 `goblin_chieftain_5` остался единственным corpse вместе с тремя исходными миньонами, без второго

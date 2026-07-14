@@ -119,7 +119,7 @@ RU перевод. Закрываем только эту propagation boundary, 
 
 1. [Locale server-rendered action failure в live session](tasks/phase7-task1-live-action-failure-locale.md) — применить session locale до dispatch expected failure.
 
-## Phase 8: Follow-up post-audit E2E Paladin
+## Phase 8: Follow-up post-audit E2E Paladin ✓
 
 Полный post-audit E2E 2026-07-14 остановился на §14.1, потому что playbook требовал у Paladin
 L1 Fighting Style selector и spell slot. Это не регрессия UI: продукт следует SRD/PHB 2014, где
@@ -138,9 +138,8 @@ Lay on Hands и Divine Smite.
 
 ## Status
 
-**Current:** Phase 8 завершена. После Task 4 targeted §15.2 через Master UI, save/load и reconnect
-подтвердил terminal lifecycle: `goblin_chieftain_5` остался единственным corpse с тремя исходными
-миньонами, без второго roster. Task 2 done; фаза готова к закрытию.
+**Current:** Phase 8 закрыта. Интеграционный набор зелёный (163 passed); свежая landing-регрессия и
+накопленные целевые границы Paladin/lair без блокеров. Все фазы завершены, нужен финальный audit.
 
 ## Decisions
 
