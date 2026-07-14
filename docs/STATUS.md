@@ -12,7 +12,7 @@
 **Sprint:** 023-trigger-table
 **Goal:** Парные триггеры `{on, until}` на типизированной таксономии событий активируют и гасят существ; ecology получает событийный write-back смертей логова (прототип detail-ladder).
 **Started:** 2026-07-12
-**Phase:** 8 — Follow-up post-audit E2E Paladin (task 1 done, task 2 blocked, task 3 done, task 4 done) — 2026-07-14
+**Phase:** 8 — Follow-up post-audit E2E Paladin (task 1 done, task 2 done, task 3 done, task 4 done) — 2026-07-14
 
 Phase 8 Task 2 done: targeted §15.2 после Task 4 прошёл через Master UI, save/load и reconnect:
 `goblin_chieftain_5` остался единственным corpse вместе с тремя исходными миньонами, без второго
