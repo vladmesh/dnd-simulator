@@ -38,7 +38,8 @@
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [SRD-цены для каталога предметов](tasks/phase2-task1-catalog-item-prices.md) — проставить `price` в 31 каталожный YAML (плумбинг цены уже на месте, не хватает данных); снятый стартовый предмет продаётся торговцу из инвентаря
+2. [i18n кнопок надеть/снять](tasks/phase2-task2-equip-unequip-i18n.md) — 10 slot-меток в `game.json` (EN+RU), хардкод `USE`/`EQUIP` в `InventoryPanel` через `t()`, 12 описаний equip/unequip в RU `.po`; `equip-action-collapse` вне скоупа
 
 ## Phase 3: Панель свойств предметов
 
@@ -54,7 +55,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Phase 1 complete (all 3 tasks done, integration 164 green, E2E 9/9). Ready for Phase 2 task generation.
+**Current:** Phase 1 complete (all 3 tasks done, integration 164 green, E2E 9/9). Phase 2 tasks generated (2 tasks). Ready to start Phase 2 task 1.
 
 ## Decisions
 
