@@ -12,11 +12,13 @@
 **Sprint:** 024-playtest-quick-wins
 **Goal:** Быстрые UX-победы из живой партии 2026-07-15 — боевое движение и чистота лога/боевого UI, полировка торговли и i18n снаряжения, панель свойств предметов
 **Started:** 2026-07-16
-**Phase:** 1 — Читаемость и тактика боя (task 2 done, task 3 pending) — 2026-07-16
+**Phase:** 1 — Читаемость и тактика боя (task 3 done, все задачи фазы 1 готовы) — 2026-07-16
 
 Task 1 (единый учёт бюджета движения) done: `MOVE`→FREE, `handle_move` списывает `moved_ft` атомарно, `check_movement_available` держит «0 движения → MOVE недоступен», внятная отбивка `move_to`, остаток движения + достижимость целей в LLM-промпт. Премиса `combat-move-budget-not-consumed` оказалась неверной (бюджет уже списывал диспетчер) — таск переформулирован в унификацию раздвоенного учёта. `make check` зелёный (backend 2550, frontend 289).
 
 Task 2 (чистота боевого лога) done: on_action вынесен в `build_action_result` (transport_payloads), `error`/`budget` гейтятся на игрока — чужие технические отказы (заблокированный ход волка) больше не текут в лог игрока. В awareness `make_relation_fn` строится один раз на ребилд (было ~2N на пару): hostility вынесен в приватный `_hostility_from_relation(relation_fn)`, публичная сигнатура `check_faction_hostility` сохранена. `faction_hostility_check` INFO→DEBUG. `make check` зелёный (backend 2554, frontend 289).
+
+Task 3 (Second Wind без «0 ОЗ») done: `_perceive_second_wind` получил ветку `healed == 0` (self/other) с сообщением о полном здоровье вместо «regaining 0 HP»; ненулевой путь не тронут. Новые EN-строки + RU-перевод, `.pot`/`.mo` перекомпилированы. `make check` зелёный (backend 2558, frontend 289). Фаза 1 полностью закрыта по задачам.
 
 ### Phases
 

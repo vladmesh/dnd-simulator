@@ -399,6 +399,12 @@ msgstr "Ты переводишь дух и восстанавливаешь {hp
 msgid "{entity} catches their breath, regaining {hp} HP"
 msgstr "{entity} переводит дух и восстанавливает {hp} ОЗ"
 
+msgid "You catch your breath, but you are already at full health"
+msgstr "Ты переводишь дух, но твоё здоровье уже полное"
+
+msgid "{entity} catches their breath, already at full health"
+msgstr "{entity} переводит дух; его здоровье уже полное"
+
 #: Action Surge
 msgid "You surge with energy, gaining an extra action"
 msgstr "Ты наполняешься энергией и получаешь дополнительное действие"

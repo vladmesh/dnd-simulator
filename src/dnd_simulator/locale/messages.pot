@@ -807,11 +807,19 @@ msgstr ""
 msgid "{entity} invokes a blessing (+d4 to attack rolls for {n} rounds)"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:356
+#: src/dnd_simulator/layers/entities/perception.py:357
+msgid "You catch your breath, but you are already at full health"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:359
+msgid "{entity} catches their breath, already at full health"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:361
 msgid "You catch your breath, regaining {hp} HP"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:358
+#: src/dnd_simulator/layers/entities/perception.py:363
 msgid "{entity} catches their breath, regaining {hp} HP"
 msgstr ""
 

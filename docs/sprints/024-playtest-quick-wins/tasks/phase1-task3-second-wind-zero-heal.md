@@ -41,4 +41,8 @@ Second Wind при полном HP показывает «восстанавли
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+`_perceive_second_wind` gained a `healed == 0` branch (self/other) before the existing `regaining {hp} HP` lines; non-zero path untouched. New EN msgids ("You catch your breath, but you are already at full health" / "{entity} catches their breath, already at full health") wrapped in `_()`, RU translations added to `dnd_simulator.po`, `.pot` re-extracted via `make messages`, `.mo` recompiled via `make compile-messages`. Four product tests in `TestPerceiveSecondWind` cover zero/positive × self/other, asserting no "0" leaks and "full health" wording on the zero case. `make check` green (backend 2558, frontend 289).

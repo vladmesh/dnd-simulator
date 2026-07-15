@@ -351,7 +351,13 @@ def _perceive_second_wind(event: Event, observer: Character, get_entity: GetEnti
     assert isinstance(payload, EntitySecondWindPayload)
     entity_id = payload.entity_id
     healed = payload.healed
-    if entity_id == observer.id:
+    self_acting = entity_id == observer.id
+    if healed == 0:
+        if self_acting:
+            return _("You catch your breath, but you are already at full health")
+        desc = _describe(observer, entity_id, get_entity)
+        return _("{entity} catches their breath, already at full health").format(entity=desc)
+    if self_acting:
         return _("You catch your breath, regaining {hp} HP").format(hp=healed)
     desc = _describe(observer, entity_id, get_entity)
     return _("{entity} catches their breath, regaining {hp} HP").format(entity=desc, hp=healed)
