@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from dnd_simulator.content_loader.catalogs import load_catalog
+from dnd_simulator.content_loader.items import parse_items
+from dnd_simulator.content_loader.schemas import ItemContent
 from dnd_simulator.core.character import NpcRole
 from dnd_simulator.core.items import Item, ItemType
 from dnd_simulator.core.player import PlayerCharacter
@@ -9,6 +14,8 @@ from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.rules.trade import execute_buy, execute_sell, validate_buy, validate_sell
 
 MARKET = "silverport_city_market"
+
+CATALOG_DIR = Path(__file__).resolve().parents[2] / "content" / "catalogs" / "items"
 
 
 def _merchant(*, gold: int = 100, items: list[Item] | None = None) -> Npc:
@@ -86,6 +93,40 @@ class TestBuyItemWithoutPrice:
         error = validate_buy(buyer=player, seller=merchant, item_id="quest_gem_0")
         assert error is not None
         assert "price" in error.lower()
+
+    def test_sell_rejects_unpriceable_item(self) -> None:
+        gem = _unpriceable()
+        merchant = _merchant(gold=100)
+        player = _player(items=[gem])
+
+        error = validate_sell(seller=player, buyer=merchant, item_id="quest_gem_0")
+        assert error is not None
+        assert "price" in error.lower()
+
+
+class TestSellStartingEquipmentFromCatalog:
+    """A starting item resolved from the catalog can be sold once it's in inventory.
+
+    This is the live-playtest bug (`catalog-item-prices`): before prices were added to
+    the catalog YAML, chain_mail resolved with price=None and the merchant rejected the sale.
+    """
+
+    def test_sell_catalog_chain_mail(self) -> None:
+        catalog = load_catalog(CATALOG_DIR, ItemContent)
+        chain_mail = parse_items([{"ref": "chain_mail"}], item_catalog=catalog)[0]
+        assert chain_mail.price is not None  # resolved from catalog, not hand-built
+
+        merchant = _merchant(gold=1000)
+        player = _player(gold=0, items=[chain_mail])
+
+        error = validate_sell(seller=player, buyer=merchant, item_id=chain_mail.id)
+        assert error is None
+
+        execute_sell(seller=player, buyer=merchant, item=chain_mail)
+
+        assert chain_mail in merchant.inventory
+        assert chain_mail not in player.inventory
+        assert player.gold == chain_mail.price
 
 
 # --- Sell validation & execution ---

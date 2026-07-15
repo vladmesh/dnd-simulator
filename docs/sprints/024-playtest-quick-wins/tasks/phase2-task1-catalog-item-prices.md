@@ -42,4 +42,14 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Плумбинг цены уже был на месте — правок Python не потребовалось. Добавлен `price:` в 31 каталожный YAML: манданое — по таблице PHB (dagger 2 … plate 1500, shield 10, health_potion 50; quarterstaff округлён 2sp→1gp), магическое (`flaming_longsword`/`frost_dagger`/`circlet_of_aim` 2500, `ring_of_protection` 3500, `boots_of_speed` 4000) — по редкости DMG, домашние значения.
+
+Тесты: `TestCatalogPrices` в `test_srd_catalogs.py` (every entry has price / prices positive / price survives ref-resolve в runtime Item) как регресс-гварда против забытого `price:`; `TestSellStartingEquipmentFromCatalog` в `test_trade.py` продаёт `chain_mail`, резолвнутый через `parse_items([{"ref": "chain_mail"}], catalog)` (не hand-built `Item`), проверяя цепочку каталог→resolve→validate_sell→execute_sell→transfer_items и рост золота на `price`; `test_sell_rejects_unpriceable_item` расширил гварду `price is None` на sell.
+
+Проверка `execute_sell` во время разведки: `gold=-price` корректен (src/dst меняются местами между buy и sell, `transfer_items` делает `src.gold -= gold; dst.gold += gold`), продавец получает золото — флаг ревью-агента был ложным.
+
+`make check` зелёный (backend 2563 = 2558 + 5 новых, frontend 289). Наценки при продаже нет (buy и sell по одной `item.price`) — существующее поведение, вне скоупа. Экипированный предмет по-прежнему не продаётся (лежит в `equipped`, не в `inventory`) — тоже вне скоупа, покрыт сценарий продажи снятого.

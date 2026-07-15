@@ -6,3 +6,4 @@ attack_name: warhammer smash
 damage:
   - dice: "1d8"
     type: bludgeoning
+price: 15

@@ -6,3 +6,4 @@ attack_name: mace strike
 damage:
   - dice: "1d6"
     type: bludgeoning
+price: 5

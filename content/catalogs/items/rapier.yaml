@@ -7,3 +7,4 @@ damage:
   - dice: "1d8"
     type: piercing
 is_finesse: true
+price: 25

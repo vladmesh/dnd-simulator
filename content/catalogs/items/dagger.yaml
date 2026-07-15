@@ -9,3 +9,4 @@ damage:
 ability: dex
 is_finesse: true
 is_light: true
+price: 2

@@ -8,3 +8,4 @@ damage:
     type: piercing
 is_finesse: true
 is_light: true
+price: 10
