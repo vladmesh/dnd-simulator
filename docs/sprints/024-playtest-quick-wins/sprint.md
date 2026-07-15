@@ -14,7 +14,7 @@
 
 **Ссылки:** [BACKLOG](../../BACKLOG.md), [VISION](../../VISION.md), [Sprint 023](../023-trigger-table/sprint.md)
 
-## Phase 1: Читаемость и тактика боя
+## Phase 1: Читаемость и тактика боя ✓
 
 Самый плотный кластер из живой партии с 11 волками — всё про то, как бой ощущается и читается. Учёт бюджета движения унифицируется (одно место списания по факту пройденного, корректная диагональ, честная отбивка, видимость остатка мозгу), чужие отказы и faction-спам уходят из лога, Second Wind не пугает нулевым лечением. Проверка: боевой прогон (integration/WS) — шаги списывают `movement_remaining` и ход завершается, в логе игрока нет чужих отказов, бэкенд-лог не тонет в `faction_hostility_check`.
 
@@ -54,7 +54,7 @@ _(генерируются отдельно перед началом фазы)_
 
 ## Status
 
-**Current:** Planning complete. Ready to generate Phase 1 tasks.
+**Current:** Phase 1 complete (all 3 tasks done, integration 164 green, E2E 9/9). Ready for Phase 2 task generation.
 
 ## Decisions
 
