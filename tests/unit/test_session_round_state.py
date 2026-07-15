@@ -6,13 +6,15 @@ from dataclasses import fields
 from typing import Any
 from unittest.mock import MagicMock
 
-from dnd_simulator.core.character import Ability, AbilityScores, Attack, DamageComponent, DamageType
+from dnd_simulator.core.action import Action, ActionType
+from dnd_simulator.core.character import Ability, AbilityScores, Attack, Character, DamageComponent, DamageType
 from dnd_simulator.core.models import Answer, GameDateTime, Query
 from dnd_simulator.core.player import PlayerCharacter
+from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.service.dto import PlayerStatusData
-from dnd_simulator.service.transport_payloads import build_round_state
+from dnd_simulator.service.transport_payloads import build_action_result, build_round_state
 
 _SWORD = Attack(
     name="longsword",
@@ -190,3 +192,63 @@ class TestCallbackFieldConsistency:
         result = build_round_state("round_result", player, game_round, entities_layer, world)
 
         assert _COMMON_FIELDS.issubset(result.keys()), f"Missing fields: {_COMMON_FIELDS - result.keys()}"
+
+
+class TestActionResultErrorGate:
+    """build_action_result: actor/action broadcast for any creature; error and budget are player-only.
+
+    Guards npc-action-errors-leak-to-log — a wolf's blocked-path refusal must never reach the
+    player's combat log.
+    """
+
+    def _fixture(self) -> tuple[PlayerCharacter, Character, MagicMock, MagicMock, EntitiesLayer]:
+        player = PlayerCharacter(
+            id="p1",
+            name="Hero",
+            location_id="arena",
+            ability_scores=_scores(STR=16),
+            attacks=(_SWORD,),
+        )
+        wolf = Character(id="w1", name="Wolf", location_id="arena")
+        entities_layer = EntitiesLayer([player, wolf])
+
+        def query_fn(target: str, query: Query) -> Answer:
+            return Answer(value=None)
+
+        world = MagicMock(spec=World)
+        world.time = GameDateTime(year=1490, month=6, day=15, hour=14)
+        world.make_query_fn.return_value = query_fn
+        world.location_graph = MagicMock()
+        world.location_graph.has.return_value = False
+
+        game_round = MagicMock()
+        game_round.get_perceived_events.return_value = []
+
+        return player, wolf, world, game_round, entities_layer
+
+    def test_other_creature_error_is_not_leaked(self) -> None:
+        """An NPC action with an error yields no `error` field in the player's message."""
+        player, wolf, world, game_round, entities_layer = self._fixture()
+        action = Action(name=ActionType.MOVE, params={"direction": "north", "ft": 5})
+
+        msg = build_action_result(
+            player, game_round, entities_layer, world, wolf, action, TurnBudget(), "Туда не пройти"
+        )
+
+        assert msg["actor"] == "w1"
+        assert msg["action"] == action.name
+        assert "error" not in msg
+        assert "budget" not in msg
+
+    def test_player_error_is_kept(self) -> None:
+        """The player's own action error is preserved (the gate does not swallow player errors)."""
+        player, _wolf, world, game_round, entities_layer = self._fixture()
+        action = Action(name=ActionType.MOVE, params={"direction": "north", "ft": 5})
+
+        msg = build_action_result(
+            player, game_round, entities_layer, world, player, action, TurnBudget(), "Недостаточно ресурсов"
+        )
+
+        assert msg["actor"] == "p1"
+        assert msg["error"] == "Недостаточно ресурсов"
+        assert "budget" in msg

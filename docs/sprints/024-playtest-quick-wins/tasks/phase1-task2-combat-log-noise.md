@@ -53,4 +53,16 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Done 2026-07-16. `make check` green (backend 2554, frontend 289).
+
+**Error leak.** Extracted the `on_action` closure body into `build_action_result` (transport_payloads.py), matching the existing `build_round_state`/`build_turn_state` seam, so the gate is unit-testable without a live round thread. `actor`/`action` broadcast for any creature; `error` and `budget` gated on `creature.id == player.id`. Previously `error` had no gate (only budget did), so a wolf's blocked-path refusal leaked into the player's log. Dropped the now-unused `_budget_to_dict` import from session.py.
+
+**Relation fn once.** `check_faction_hostility` and `_resolve_relation` each built `make_relation_fn(query_fn)` per pair → ~2N closures per awareness rebuild. Split the hostility logic into a private `_hostility_from_relation(observer, other, relation_fn)` that takes a prebuilt callback; `build_combat_awareness` and `build_nearby_entities` now build the relation fn once and pass it down. `check_faction_hostility(observer, other, query_fn)` kept its public signature (builds once, delegates) so the existing `test_reputation_awareness.py` regression tests pass unchanged. `_resolve_relation` is private, so its signature changed to take `relation_fn`.
+
+**Log level.** `faction_hostility_check` moved from `logger.info` to `logger.debug` inside `_hostility_from_relation`. (`awareness_nearby` info-line is one-per-rebuild, not per-pair — left as is, out of scope.)
+
+Test discriminates the allocation: 8 nearby creatures went from 16 relation-fn builds to 1.

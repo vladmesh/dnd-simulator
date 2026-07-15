@@ -28,8 +28,8 @@ from dnd_simulator.i18n import language_context
 from dnd_simulator.round import Round
 from dnd_simulator.service.action_dispatcher import create_dispatcher
 from dnd_simulator.service.transport_payloads import (
-    _budget_to_dict,
     _reaction_to_dict,
+    build_action_result,
     build_round_state,
     build_turn_state,
 )
@@ -372,13 +372,9 @@ class GameSession:
             def on_action(creature: Creature, action: Action, budget: TurnBudget | None, error: str) -> None:
                 self._last_turn_msg = None  # turn is being processed
                 with language_context(self.lang):
-                    msg = build_round_state("action_result", player, game_round, creature_host, self.world)
-                msg["actor"] = creature.id
-                msg["action"] = action.name
-                if error:
-                    msg["error"] = error
-                if budget is not None and creature.id == player.id:
-                    msg["budget"] = _budget_to_dict(budget)
+                    msg = build_action_result(
+                        player, game_round, creature_host, self.world, creature, action, budget, error
+                    )
                 self._fire("on_action_result", msg)
 
             game_round.set_on_action(on_action)

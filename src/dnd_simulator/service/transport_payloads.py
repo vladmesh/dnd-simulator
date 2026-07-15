@@ -19,6 +19,7 @@ from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.service.dto import JourneyView, PlayerStatusData, ResourcePoolView
 
 if TYPE_CHECKING:
+    from dnd_simulator.core.action import Action
     from dnd_simulator.core.creature_host import CreatureHost
     from dnd_simulator.core.location import LocationGraph
     from dnd_simulator.core.world import World
@@ -230,6 +231,33 @@ def build_round_state(
         "player": dataclasses.asdict(build_player_status(player, world.location_graph)),
         "location": _location_data(world, player.location_id),
     }
+
+
+def build_action_result(
+    player: PlayerCharacter,
+    game_round: Round,
+    creature_host: CreatureHost,
+    world: World,
+    creature: Creature,
+    action: Action,
+    budget: TurnBudget | None,
+    error: str,
+) -> dict[str, Any]:
+    """Build the per-action broadcast message fired after every creature's action.
+
+    ``actor`` and ``action`` are broadcast for any creature. ``error`` and ``budget`` are
+    player-only: another creature's technical refusal (a blocked wolf move) and its turn
+    budget must never leak into the player's combat log.
+    """
+    msg = build_round_state("action_result", player, game_round, creature_host, world)
+    msg["actor"] = creature.id
+    msg["action"] = action.name
+    is_player = creature.id == player.id
+    if error and is_player:
+        msg["error"] = error
+    if budget is not None and is_player:
+        msg["budget"] = _budget_to_dict(budget)
+    return msg
 
 
 def build_turn_state(
