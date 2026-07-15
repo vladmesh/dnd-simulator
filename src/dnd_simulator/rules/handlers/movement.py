@@ -58,15 +58,26 @@ def handle_move(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
         if new_pos == cur_pos:
             return ActionResult(success=False, error=_("Cannot move there, blocked"))
 
+        # Grid distance of this single compass step (no diagonal 5/10 alternation, unlike MOVE_TO — fine per step).
+        moved_ft = grid_distance(cur_pos, new_pos)
+
+        # Movement budget lives here, not in the dispatcher (MOVE is cost_type=FREE). Reject the whole
+        # step if it can't be paid for — no partial placement, so the mover never lands where it can't afford.
+        budget = ctx.turn_budget
+        if budget is not None and moved_ft > budget.movement_remaining:
+            return ActionResult(success=False, error=_("Not enough movement"))
+
         # Check OA triggers
         triggers = find_oa_triggers([cur_pos, new_pos], actor, _get_combatants(ctx), bm, ctx.combat_state)
         for _step_idx, reactors in triggers:
             alive = ctx.on_leave_reach(actor, cur_pos, new_pos, reactors)
             if not alive:
+                # Mover died mid-step: nothing committed, so no budget spent.
                 return ActionResult()
 
         bm.set_position(actor.id, new_pos)
-        moved_ft = grid_distance(cur_pos, new_pos)
+        if budget is not None:
+            budget.movement_remaining -= moved_ft
 
         emit_fn(
             Event(
@@ -119,6 +130,11 @@ def handle_move_to(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Action
     reachable = compute_reachable(start_pos, budget.movement_remaining, bm, actor.id)
     path = reachable.get(target)
     if not path:
+        # Distinguish "sealed off by walls" from "reachable but past this turn's budget" so the
+        # brain/player gets an actionable reason. Only pay the extra Dijkstra on the failure path.
+        unbounded = compute_reachable(start_pos, bm.width * bm.height * 15, bm, actor.id)
+        if target in unbounded:
+            return ActionResult(success=False, error=_("Not enough movement to reach there"))
         return ActionResult(success=False, error=_("No path to target"))
 
     # Walk step-by-step, checking OA triggers at each step

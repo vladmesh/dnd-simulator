@@ -205,6 +205,56 @@ class TestHandleMoveTo:
         assert ctx.turn_budget is not None
         assert ctx.turn_budget.movement_remaining == 0
 
+    def test_move_to_beyond_budget_reports_movement_shortfall(self) -> None:
+        """Target reachable in principle but past the budget → 'not enough movement', not 'no path'."""
+        from dnd_simulator.i18n import set_language
+        from dnd_simulator.rules.handlers.movement import handle_move_to
+
+        set_language("en")
+        try:
+            bm = BattleMap(width=60, height=60)
+            bm.set_position("player", Position(0, 0))
+            ctx = self._make_ctx(bm, movement_remaining=10)  # only 2 cells
+            actor = self._make_creature()
+            action = Action(name=ActionType.MOVE_TO, params={"x": 50, "y": 0})  # 50ft away, open map
+
+            result = handle_move_to(actor, action, MagicMock(), ctx, MagicMock())
+
+            assert not result.success
+            assert result.error == "Not enough movement to reach there"
+            assert bm.get_position("player") == Position(0, 0)
+        finally:
+            set_language("en")
+
+    def test_move_to_walled_off_reports_no_path(self) -> None:
+        """Target sealed behind walls → 'no path', distinct from the budget-shortfall message."""
+        from dnd_simulator.i18n import set_language
+        from dnd_simulator.rules.handlers.movement import handle_move_to
+
+        set_language("en")
+        try:
+            bm = BattleMap(
+                width=30,
+                height=30,
+                walls=[
+                    Wall(10, 5, 10, 15),
+                    Wall(20, 5, 20, 15),
+                    Wall(10, 15, 20, 15),
+                    Wall(10, 5, 20, 5),
+                ],
+            )
+            bm.set_position("player", Position(0, 0))
+            ctx = self._make_ctx(bm, movement_remaining=30)
+            actor = self._make_creature()
+            action = Action(name=ActionType.MOVE_TO, params={"x": 15, "y": 10})
+
+            result = handle_move_to(actor, action, MagicMock(), ctx, MagicMock())
+
+            assert not result.success
+            assert result.error == "No path to target"
+        finally:
+            set_language("en")
+
     def test_existing_move_direction_still_works(self) -> None:
         """Regression: the original direction-based move action still works."""
         from dnd_simulator.rules.handlers.movement import handle_move

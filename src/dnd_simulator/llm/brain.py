@@ -157,6 +157,9 @@ def _peaceful_awareness_to_dict(aw: PeacefulAwareness) -> dict[str, object]:
 
 def _combat_awareness_to_dict(aw: CombatAwareness) -> dict[str, object]:
     """Convert CombatAwareness to dict format expected by prompt builders."""
+    # Movement left this turn drives kite planning ("close, hit, back off"). Fall back to full
+    # speed when no live budget is attached (e.g. awareness built outside a turn).
+    movement_remaining = aw.turn_budget.movement_remaining if aw.turn_budget is not None else aw.self_speed
     nearby_list: list[dict[str, object]] = []
     for e in aw.nearby:
         entry: dict[str, object] = {"id": e.id, "description": e.description}
@@ -164,6 +167,8 @@ def _combat_awareness_to_dict(aw: CombatAwareness) -> dict[str, object]:
             entry["is_wounded"] = True
         if e.distance_ft:
             entry["distance_ft"] = e.distance_ft
+            if e.distance_ft <= movement_remaining:
+                entry["reachable"] = True
         if e.direction:
             entry["direction"] = e.direction
         nearby_list.append(entry)
@@ -178,6 +183,7 @@ def _combat_awareness_to_dict(aw: CombatAwareness) -> dict[str, object]:
         "self_weapon": aw.self_weapon,
         "self_weapon_damage": aw.self_weapon_damage,
         "self_conditions": [c.value for c in aw.self_conditions],
+        "movement_remaining": movement_remaining,
         "nearby": nearby_list,
         "round_number": aw.round_number,
         "walls": aw.walls,

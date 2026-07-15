@@ -136,6 +136,16 @@ def check_budget(actor: Creature, action: Action, ctx: ActionContext) -> Validat
     return None
 
 
+def check_movement_available(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
+    """Compass MOVE needs movement left. MOVE is cost_type=FREE (handler owns the budget), so
+    check_budget can't gate it — this keeps a spent-out creature from being offered MOVE."""
+    if action.name is not ActionType.MOVE:
+        return None
+    if ctx.turn_budget is not None and ctx.turn_budget.movement_remaining <= 0:
+        return ValidationError("NO_MOVEMENT", _("No movement remaining"))
+    return None
+
+
 def check_target_valid(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
     """For targeted actions: target must exist, be a Creature, be alive, be at same location."""
     if get_action_def(action.name).target_mode != TargetMode.SINGLE:
@@ -366,6 +376,7 @@ _CHECKS = [
     check_action_mode,
     check_cost_mode,
     check_budget,
+    check_movement_available,
     check_has_item,
     check_target_valid,
     check_lootable_target,

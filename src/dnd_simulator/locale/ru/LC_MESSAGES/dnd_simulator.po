@@ -222,6 +222,18 @@ msgstr "Уже на этой позиции"
 msgid "No path to target"
 msgstr "Нет пути к цели"
 
+msgid "Not enough movement"
+msgstr "Движения не хватает"
+
+msgid "Not enough movement to reach there"
+msgstr "Не хватает движения, чтобы дойти туда"
+
+msgid "Movement remaining this turn: {n} ft"
+msgstr "Осталось движения на этот ход: {n} фт"
+
+msgid "(in reach this turn)"
+msgstr "(в пределах хода)"
+
 msgid "Cannot move, insufficient budget"
 msgstr "Не хватает запаса движения"
 

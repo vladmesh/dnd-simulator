@@ -46,9 +46,6 @@ def _cost_type_to_cost(cost_type: CostType, action: Action) -> ActionCost:
             return ActionCost(actions=1)
         case CostType.BONUS_ACTION:
             return ActionCost(bonus_actions=1)
-        case CostType.MOVEMENT:
-            ft = int(str(action.params["ft"])) if action.params and "ft" in action.params else 5
-            return ActionCost(movement_ft=ft)
         case CostType.REACTION:
             return ActionCost(reaction=1)
 

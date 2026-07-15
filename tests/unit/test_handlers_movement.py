@@ -16,6 +16,7 @@ from dnd_simulator.core.models import ActionResult, Event
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.i18n import set_language
 from dnd_simulator.rules.handlers.movement import handle_dash, handle_disengage, handle_move, handle_travel, handle_wait
+from dnd_simulator.rules.movement import grid_distance
 from dnd_simulator.rules.validation import ActionContext
 
 
@@ -132,6 +133,97 @@ class TestHandleMove:
 
         # Should fail since south would go to negative y which is off-map
         assert not result.success
+
+    def test_move_in_combat_consumes_budget(self) -> None:
+        """A single 5ft combat move decrements movement_remaining by the feet moved."""
+        mover = _creature("mover", speed=30)
+        assert mover.turn_budget is not None
+        bm = _battle_map()
+        bm.set_position("mover", Position(10, 10))
+        cs = _combat_state(bm, ["mover"])
+        on_leave_reach = MagicMock(return_value=True)
+        ctx = _ctx(mover, combat_state=cs, entities={"mover": mover}, on_leave_reach=on_leave_reach)
+        action = Action(name=ActionType.MOVE, params={"direction": "north", "ft": 5})
+        emit_fn = MagicMock(return_value=ActionResult())
+        world = MagicMock()
+
+        result = handle_move(mover, action, emit_fn, ctx, world)
+
+        assert result.success
+        assert bm.get_position("mover") == Position(10, 15)
+        assert mover.turn_budget.movement_remaining == 25
+
+    def test_move_series_depletes_budget_and_then_blocks(self) -> None:
+        """Repeated 5ft moves drain speed to zero; the move past the budget fails, position frozen."""
+        mover = _creature("mover", speed=30)
+        assert mover.turn_budget is not None
+        bm = _battle_map()
+        bm.set_position("mover", Position(10, 10))
+        cs = _combat_state(bm, ["mover"])
+        on_leave_reach = MagicMock(return_value=True)
+        ctx = _ctx(mover, combat_state=cs, entities={"mover": mover}, on_leave_reach=on_leave_reach)
+        action = Action(name=ActionType.MOVE, params={"direction": "north", "ft": 5})
+        emit_fn = MagicMock(return_value=ActionResult())
+        world = MagicMock()
+
+        # speed 30 → six 5ft steps, then dry
+        for _ in range(6):
+            assert handle_move(mover, action, emit_fn, ctx, world).success
+        assert mover.turn_budget.movement_remaining == 0
+        assert bm.get_position("mover") == Position(10, 40)
+        # Total distance never exceeded speed (10 → 40 == 30ft).
+        assert grid_distance(Position(10, 10), Position(10, 40)) == 30
+
+        # Seventh step has no budget left: rejected, position unchanged.
+        result = handle_move(mover, action, emit_fn, ctx, world)
+        assert not result.success
+        assert bm.get_position("mover") == Position(10, 40)
+        assert mover.turn_budget.movement_remaining == 0
+
+    def test_move_exceeding_remaining_budget_is_rejected_atomically(self) -> None:
+        """A 10ft move with only 5ft left fails and leaves the map position untouched (no partial move)."""
+        mover = _creature("mover", speed=30)
+        assert mover.turn_budget is not None
+        mover.turn_budget.movement_remaining = 5
+        bm = _battle_map()
+        bm.set_position("mover", Position(10, 10))
+        cs = _combat_state(bm, ["mover"])
+        on_leave_reach = MagicMock(return_value=True)
+        ctx = _ctx(mover, combat_state=cs, entities={"mover": mover}, on_leave_reach=on_leave_reach)
+        action = Action(name=ActionType.MOVE, params={"direction": "north", "ft": 10})
+        emit_fn = MagicMock(return_value=ActionResult())
+        world = MagicMock()
+
+        result = handle_move(mover, action, emit_fn, ctx, world)
+
+        assert not result.success
+        assert bm.get_position("mover") == Position(10, 10)
+        assert mover.turn_budget.movement_remaining == 5
+        emit_fn.assert_not_called()
+
+    def test_move_does_not_spend_budget_when_mover_dies_in_oa(self) -> None:
+        """If the mover dies to an opportunity attack, no step commits and no budget is spent."""
+        mover = _creature("mover", speed=30)
+        assert mover.turn_budget is not None
+        bm = _battle_map()
+        bm.set_position("mover", Position(10, 10))
+        # An enemy adjacent so leaving its reach triggers an OA.
+        enemy = _creature("enemy", speed=30)
+        bm.set_position("enemy", Position(10, 15))
+        cs = _combat_state(bm, ["mover", "enemy"])
+        # on_leave_reach reports the mover died (alive=False).
+        on_leave_reach = MagicMock(return_value=False)
+        ctx = _ctx(mover, combat_state=cs, entities={"mover": mover, "enemy": enemy}, on_leave_reach=on_leave_reach)
+        action = Action(name=ActionType.MOVE, params={"direction": "south", "ft": 5})
+        emit_fn = MagicMock(return_value=ActionResult())
+        world = MagicMock()
+
+        result = handle_move(mover, action, emit_fn, ctx, world)
+
+        # Move aborted by lethal OA — budget untouched, position not committed.
+        assert result.success  # early return with a neutral ActionResult
+        assert mover.turn_budget.movement_remaining == 30
+        assert bm.get_position("mover") == Position(10, 10)
 
 
 class TestMoveErrorI18n:

@@ -109,9 +109,12 @@ class TestActionCost:
         cost = action_cost(Action(name=ActionType.DODGE))
         assert cost.actions == 1
 
-    def test_move_costs_movement(self) -> None:
+    def test_move_is_free_at_dispatcher(self) -> None:
+        # MOVE is cost_type=FREE: handle_move charges the distance walked directly, so the
+        # dispatcher-level cost carries no movement (avoids double-counting with the handler).
         cost = action_cost(Action(name=ActionType.MOVE, params={"toward": "x"}))
-        assert cost.movement_ft == 5
+        assert cost.movement_ft == 0
+        assert cost.actions == 0 and cost.bonus_actions == 0 and cost.reaction == 0
 
 
 # -- Multi-action loop integration tests --

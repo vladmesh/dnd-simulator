@@ -92,7 +92,8 @@ class TestActionInfoCostType:
         by_name = {a["name"]: a for a in result["available_actions"]}
         assert by_name["attack"]["cost_type"] == "action"
         assert by_name["dodge"]["cost_type"] == "action"
-        assert by_name["move"]["cost_type"] == "movement"
+        # MOVE is FREE at the dispatcher; handle_move owns the movement budget (like MOVE_TO/DASH).
+        assert by_name["move"]["cost_type"] == "free"
         assert by_name["dash"]["cost_type"] == "action"
 
     def test_rogue_dash_has_cost_type_and_cost_options(self) -> None:
