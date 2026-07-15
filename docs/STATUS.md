@@ -2,14 +2,25 @@
 
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
-**Last updated:** 2026-07-14
-**Position:** Sprint 023 закрыл третий эпик simulation-core: typed event contracts, trigger table и событийный write-back смертей логова.
-**Next:** Активного спринта нет.
+**Last updated:** 2026-07-16
+**Position:** Sprint 024 (playtest-quick-wins) в планировании: быстрые UX-фиксы из живой партии 2026-07-15, план готов.
+**Next:** Генерация задач Phase 1.
 **Blockers:** Нет.
 
 ## Current Sprint
 
-No active sprint.
+**Sprint:** 024-playtest-quick-wins
+**Goal:** Быстрые UX-победы из живой партии 2026-07-15 — боевое движение и чистота лога/боевого UI, полировка торговли и i18n снаряжения, панель свойств предметов
+**Started:** 2026-07-16
+**Phase:** Planning (COMPLETE) — 2026-07-16
+
+Ready for Phase 1 task generation.
+
+### Phases
+
+1. Читаемость и тактика боя (movement budget, enemy-error log gate, faction-log spam, hide world travel, second-wind zero heal)
+2. Полировка торговли и экипировки (catalog prices, equip/unequip i18n)
+3. Панель свойств предметов (item-properties-ui)
 
 ## Recent activity (non-sprint)
 
