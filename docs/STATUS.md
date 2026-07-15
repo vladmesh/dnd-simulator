@@ -12,15 +12,17 @@
 **Sprint:** 024-playtest-quick-wins
 **Goal:** Быстрые UX-победы из живой партии 2026-07-15 — боевое движение и чистота лога/боевого UI, полировка торговли и i18n снаряжения, панель свойств предметов
 **Started:** 2026-07-16
-**Phase:** Planning (COMPLETE) — 2026-07-16
+**Phase:** 1 — Читаемость и тактика боя (tasks generated) — 2026-07-16
 
-Ready for Phase 1 task generation.
+Ready to start task 1.
 
 ### Phases
 
-1. Читаемость и тактика боя (movement budget, enemy-error log gate, faction-log spam, hide world travel, second-wind zero heal)
+1. Читаемость и тактика боя (movement budget, enemy-error log gate, faction-log spam, second-wind zero heal)
 2. Полировка торговли и экипировки (catalog prices, equip/unequip i18n)
 3. Панель свойств предметов (item-properties-ui)
+
+`hide-world-travel-in-combat` снят с фазы 1: буквальный гейт уже на месте (GameScreen right-column swap), остаток — десинк режима (`combat-status-single-source`, вне скоупа).
 
 ## Recent activity (non-sprint)
 

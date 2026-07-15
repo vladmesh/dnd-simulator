@@ -16,13 +16,17 @@
 
 ## Phase 1: Читаемость и тактика боя
 
-Самый плотный кластер из живой партии с 11 волками — всё про то, как бой ощущается и читается. Движение в бою начинает тратить бюджет (кайтинг работает, монстр не пересекает карту за ход), чужие отказы и faction-спам уходят из лога, боевой UI не показывает меню мира, Second Wind не пугает нулевым лечением. Проверка: боевой прогон (integration/WS) — шаги списывают `movement_remaining` и ход завершается, в логе игрока нет чужих отказов, бэкенд-лог не тонет в `faction_hostility_check`, в бою нет travel-меню.
+Самый плотный кластер из живой партии с 11 волками — всё про то, как бой ощущается и читается. Движение в бою начинает тратить бюджет (кайтинг работает, монстр не пересекает карту за ход), чужие отказы и faction-спам уходят из лога, Second Wind не пугает нулевым лечением. Проверка: боевой прогон (integration/WS) — шаги списывают `movement_remaining` и ход завершается, в логе игрока нет чужих отказов, бэкенд-лог не тонет в `faction_hostility_check`.
 
-**Айтемы:** `combat-move-budget-not-consumed`, `npc-action-errors-leak-to-log`, `faction-hostility-check-cost`, `hide-world-travel-in-combat`, `second-wind-zero-heal`
+**Айтемы:** `combat-move-budget-not-consumed`, `npc-action-errors-leak-to-log`, `faction-hostility-check-cost`, `second-wind-zero-heal`
+
+`hide-world-travel-in-combat` при разведке оказался уже закрыт: `GameScreen.tsx:112` свапает правую колонку (`isCombat ? <BattleMap /> : <LocationPanel />`) с Sprint 009, travel-меню в бою не рендерится. Playtest-симптом — десинк режима после flee (`combat-status-single-source`/`flee-scene-separation`, вне скоупа). Айтем помечен superseded в бэклоге.
 
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Бюджет движения в бою](tasks/phase1-task1-combat-move-budget.md) — `handle_move` списывает `movement_remaining`
+2. [Чистота боевого лога](tasks/phase1-task2-combat-log-noise.md) — чужие ошибки не текут игроку, faction-спам → DEBUG, relation_fn один раз на ребилд
+3. [Second Wind без «0 ОЗ»](tasks/phase1-task3-second-wind-zero-heal.md) — сообщение о полном здоровье при `healed == 0`
 
 ## Phase 2: Полировка торговли и экипировки
 
