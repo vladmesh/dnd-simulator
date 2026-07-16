@@ -50,6 +50,7 @@ class ItemInfo:
     description: str  # e.g. "Healing Potion (heals 2d4+2 HP)"
     item_type: str = ""  # "potion", "weapon", "armor", etc.
     price: int | None = None
+    props: dict[str, object] | None = None  # structured properties, see item_props()
 
 
 @dataclass(frozen=True)
@@ -60,6 +61,7 @@ class EquippedInfo:
     item_id: str
     name: str
     description: str
+    props: dict[str, object] | None = None
 
 
 def describe_item(item: Item) -> str:
@@ -90,6 +92,66 @@ def describe_item(item: Item) -> str:
             return f"{item.name} ({', '.join(parts)})"
         return item.name
     return item.name
+
+
+def item_props(item: Item) -> dict[str, object] | None:
+    """Build machine-readable item properties for the UI.
+
+    Values are pure JSON primitives (enums converted to ``.value`` here):
+    merchant and loot payloads go through ``dataclasses.asdict`` without a
+    blanket JSON pass, so nothing non-primitive may leak in. The frontend
+    renders localized labels from these values; ``None`` for items with no
+    typed def and no potion effect.
+    """
+    if item.weapon_def is not None:
+        wd = item.weapon_def
+        return {
+            "kind": "weapon",
+            "damage": [{"dice": d.dice, "type": d.type.value} for d in wd.damage],
+            "reach": wd.reach,
+            "category": wd.category.value,
+            "ability": wd.ability.value if wd.ability is not None else None,
+            "modifier": wd.modifier,
+            "is_magic": wd.is_magic,
+            "is_finesse": wd.is_finesse,
+            "is_two_handed": wd.is_two_handed,
+            "is_light": wd.is_light,
+            "is_heavy": wd.is_heavy,
+            "conditions": [c.value for c in wd.grant_conditions],
+        }
+    if item.armor_def is not None:
+        ad = item.armor_def
+        return {
+            "kind": "armor",
+            "category": ad.category.value,
+            "base_ac": ad.base_ac,
+            "max_dex_bonus": ad.max_dex_bonus,
+        }
+    if item.shield_def is not None:
+        return {"kind": "shield", "ac_bonus": item.shield_def.ac_bonus}
+    if item.accessory_def is not None:
+        acc = item.accessory_def
+        return {
+            "kind": "accessory",
+            "slot": acc.slot.value,
+            "modifiers": [{"stat": m.stat.value, "op": m.op.value, "value": m.value} for m in acc.grant_modifiers],
+        }
+    heal_dice = item.params.get("heal_dice")
+    if heal_dice:
+        return {"kind": "potion", "heal_dice": heal_dice}
+    return None
+
+
+def item_info(item: Item) -> ItemInfo:
+    """Build the standard ItemInfo view of an inventory item."""
+    return ItemInfo(
+        id=item.id,
+        name=item.name,
+        description=describe_item(item),
+        item_type=str(item.item_type),
+        price=item.price,
+        props=item_props(item),
+    )
 
 
 @dataclass(frozen=True)

@@ -1,3 +1,4 @@
 name: Health Potion
 type: potion
 heal_dice: "2d4+2"
+price: 50

@@ -6,3 +6,4 @@ attack_name: longsword slash
 damage:
   - dice: "1d8"
     type: slashing
+price: 15

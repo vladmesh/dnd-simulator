@@ -17,6 +17,7 @@ from dnd_simulator.core.events import (
     EntityDiedPayload,
     EntityLayOnHandsPayload,
     EntitySayPayload,
+    EntitySecondWindPayload,
     EntityUseItemPayload,
     EquipmentPayload,
     InspectPayload,
@@ -511,6 +512,46 @@ class TestCombatLogI18n:
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, equipper))
         assert "[T]Dagger" in result
+
+
+class TestPerceiveSecondWind:
+    """Second Wind perception: full-health case must not read as 'regaining 0 HP'."""
+
+    @staticmethod
+    def _event(entity_id: str, healed: int) -> Event:
+        return Event(
+            event_type=EventType.ENTITY_SECOND_WIND,
+            source_layer="entities",
+            data=EntitySecondWindPayload(entity_id=entity_id, healed=healed),
+        )
+
+    def test_zero_heal_self_reports_full_health(self) -> None:
+        observer = Character(id="fighter", name="Fighter", location_id="r1")
+        result = perceive_event(self._event("fighter", 0), observer, _get_entity_fn(observer))
+        assert "0" not in result
+        assert "you" in result.lower()
+        assert "full health" in result.lower()
+
+    def test_zero_heal_other_reports_full_health(self) -> None:
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        actor = Character(id="fighter", name="Fighter", location_id="r1", race=Race.ELF)
+        result = perceive_event(self._event("fighter", 0), observer, _get_entity_fn(observer, actor))
+        assert "0" not in result
+        assert "elf" in result.lower()
+        assert "full health" in result.lower()
+
+    def test_positive_heal_self_reports_amount(self) -> None:
+        observer = Character(id="fighter", name="Fighter", location_id="r1")
+        result = perceive_event(self._event("fighter", 7), observer, _get_entity_fn(observer))
+        assert "7" in result
+        assert "you" in result.lower()
+
+    def test_positive_heal_other_reports_amount(self) -> None:
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        actor = Character(id="fighter", name="Fighter", location_id="r1", race=Race.ELF)
+        result = perceive_event(self._event("fighter", 7), observer, _get_entity_fn(observer, actor))
+        assert "7" in result
+        assert "elf" in result.lower()
 
 
 class TestPerceptionDispatchAndFailFast:

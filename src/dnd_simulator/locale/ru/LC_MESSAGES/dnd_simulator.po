@@ -222,6 +222,18 @@ msgstr "Уже на этой позиции"
 msgid "No path to target"
 msgstr "Нет пути к цели"
 
+msgid "Not enough movement"
+msgstr "Движения не хватает"
+
+msgid "Not enough movement to reach there"
+msgstr "Не хватает движения, чтобы дойти туда"
+
+msgid "Movement remaining this turn: {n} ft"
+msgstr "Осталось движения на этот ход: {n} фт"
+
+msgid "(in reach this turn)"
+msgstr "(в пределах хода)"
+
 msgid "Cannot move, insufficient budget"
 msgstr "Не хватает запаса движения"
 
@@ -386,6 +398,12 @@ msgstr "Ты переводишь дух и восстанавливаешь {hp
 
 msgid "{entity} catches their breath, regaining {hp} HP"
 msgstr "{entity} переводит дух и восстанавливает {hp} ОЗ"
+
+msgid "You catch your breath, but you are already at full health"
+msgstr "Ты переводишь дух, но твоё здоровье уже полное"
+
+msgid "{entity} catches their breath, already at full health"
+msgstr "{entity} переводит дух; его здоровье уже полное"
 
 #: Action Surge
 msgid "You surge with energy, gaining an extra action"
@@ -1158,3 +1176,39 @@ msgstr "Активирующий триггер '{id}' снят со взвед�
 
 msgid "Activation trigger '{id}' is not active"
 msgstr "Активирующий триггер '{id}' не активен"
+
+msgid "Equip a weapon from your inventory."
+msgstr "Взять оружие из инвентаря."
+
+msgid "Put away your equipped weapon. You will fight with fists."
+msgstr "Убрать оружие. Вы будете драться кулаками."
+
+msgid "Equip armor from your inventory."
+msgstr "Надеть броню из инвентаря."
+
+msgid "Remove your equipped armor."
+msgstr "Снять надетую броню."
+
+msgid "Equip a shield from your inventory. +2 AC."
+msgstr "Взять щит из инвентаря. +2 к КЗ."
+
+msgid "Remove your equipped shield."
+msgstr "Убрать щит."
+
+msgid "Equip headgear from your inventory."
+msgstr "Надеть головной убор из инвентаря."
+
+msgid "Remove your equipped headgear."
+msgstr "Снять головной убор."
+
+msgid "Equip footwear from your inventory."
+msgstr "Надеть обувь из инвентаря."
+
+msgid "Remove your equipped footwear."
+msgstr "Снять обувь."
+
+msgid "Equip a ring from your inventory."
+msgstr "Надеть кольцо из инвентаря."
+
+msgid "Remove your equipped ring."
+msgstr "Снять кольцо."

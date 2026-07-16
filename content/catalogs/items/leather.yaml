@@ -3,3 +3,4 @@ type: armor
 armor_id: leather
 category: light
 base_ac: 11
+price: 10

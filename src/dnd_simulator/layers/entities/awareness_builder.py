@@ -17,6 +17,8 @@ from dnd_simulator.core.awareness import (
     PeacefulAwareness,
     ResourcePoolInfo,
     describe_item,
+    item_info,
+    item_props,
 )
 from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.combat import CombatState
@@ -41,6 +43,7 @@ if TYPE_CHECKING:
     from dnd_simulator.core.models import GameDateTime, QueryFn
     from dnd_simulator.core.turn_budget import TurnBudget
     from dnd_simulator.layers.entities.combat_manager import CombatManager
+    from dnd_simulator.rules.combat_sides import FactionRelationFn
 
 logger = structlog.get_logger(domain="entity")
 
@@ -81,16 +84,7 @@ class AwarenessBuilder:
     @staticmethod
     def build_available_items(creature: Creature) -> list[ItemInfo]:
         """Build item info list for awareness — full inventory."""
-        return [
-            ItemInfo(
-                id=item.id,
-                name=item.name,
-                description=describe_item(item),
-                item_type=str(item.item_type),
-                price=item.price,
-            )
-            for item in creature.inventory
-        ]
+        return [item_info(item) for item in creature.inventory]
 
     @staticmethod
     def build_equipped(creature: Creature) -> list[EquippedInfo]:
@@ -104,7 +98,9 @@ class AwarenessBuilder:
             (EquipmentSlot.RING, creature.equipped_ring),
         ]
         return [
-            EquippedInfo(slot=slot, item_id=item.id, name=item.name, description=describe_item(item))
+            EquippedInfo(
+                slot=slot, item_id=item.id, name=item.name, description=describe_item(item), props=item_props(item)
+            )
             for slot, item in slots
             if item is not None
         ]
@@ -126,17 +122,7 @@ class AwarenessBuilder:
         """Build merchant info for merchant NPCs at the creature's location."""
         result: list[MerchantInfo] = []
         for npc in active_merchants_at(self._entities, creature.location_id, hour):
-            items = [
-                ItemInfo(
-                    id=item.id,
-                    name=item.name,
-                    description=describe_item(item),
-                    item_type=str(item.item_type),
-                    price=item.price,
-                )
-                for item in npc.inventory
-                if item.price is not None
-            ]
+            items = [item_info(item) for item in npc.inventory if item.price is not None]
             result.append(MerchantInfo(id=npc.id, name=npc.name, gold=npc.gold, items=items))
         return result
 
@@ -212,6 +198,9 @@ class AwarenessBuilder:
         battle_map_positions: dict[str, Position] = dict(combat.battle_map.positions) if combat else {}
         my_pos = battle_map_positions.get(creature.id)
 
+        # Build the faction relation callback once per rebuild, not once per nearby entity.
+        relation_fn = make_relation_fn(query_fn) if query_fn is not None else None
+
         # Build nearby list (exclude dead creatures and containers — containers are loot, not combatants)
         from dnd_simulator.core.container import Container
 
@@ -240,7 +229,7 @@ class AwarenessBuilder:
             if combat and combat.entity_to_side and creature.id in combat.entity_to_side:
                 is_hostile = not are_allies(combat, creature.id, e.id)
             else:
-                is_hostile = self.check_faction_hostility(creature, e, query_fn)
+                is_hostile = self._hostility_from_relation(creature, e, relation_fn)
             nearby.append(
                 CombatEntity(
                     id=e.id,
@@ -305,7 +294,6 @@ class AwarenessBuilder:
         self, creature: Creature, hour: int, query_fn: QueryFn | None = None
     ) -> list[NearbyEntity]:
         """Build list of nearby entities for peaceful awareness."""
-        from dnd_simulator.core.awareness import ItemInfo, describe_item
         from dnd_simulator.core.loot import InventoryHolder
         from dnd_simulator.rules.loot import is_lootable
 
@@ -313,6 +301,8 @@ class AwarenessBuilder:
         creature_location = creature.location_id
         if isinstance(creature, Npc):
             creature_location = creature.current_location(hour)
+        # Build the faction relation callback once per rebuild, not once per nearby entity.
+        relation_fn = make_relation_fn(query_fn) if query_fn is not None else None
         for e in self._entities.values():
             if e.id == creature.id:
                 continue
@@ -333,21 +323,12 @@ class AwarenessBuilder:
             desc = creature.perceive(e) if isinstance(creature, Character) and isinstance(e, Entity) else e.name
             is_wounded = isinstance(e, Creature) and e.is_alive and e.current_hp < e.max_hp // 2
             is_dead = isinstance(e, Creature) and not e.is_alive
-            is_hostile = (not lootable) and self.check_faction_hostility(creature, e, query_fn)
-            relation = self._resolve_relation(creature, e, query_fn)
+            is_hostile = (not lootable) and self._hostility_from_relation(creature, e, relation_fn)
+            relation = self._resolve_relation(creature, e, relation_fn)
             loot_items: list[ItemInfo] = []
             loot_gold = 0
             if lootable and isinstance(e, InventoryHolder):
-                loot_items = [
-                    ItemInfo(
-                        id=i.id,
-                        name=i.name,
-                        description=describe_item(i),
-                        item_type=str(i.item_type),
-                        price=i.price,
-                    )
-                    for i in e.inventory
-                ]
+                loot_items = [item_info(i) for i in e.inventory]
                 loot_gold = e.gold
             # Structured fields for inspect card — all populated from AwarenessBuilder
             name = e.name
@@ -401,47 +382,43 @@ class AwarenessBuilder:
         except (KeyError, ValueError, LayerError):
             return ""
 
-    def _resolve_relation(self, observer: Entity, other: Entity, query_fn: QueryFn | None) -> str:
-        """Resolve the relation string between observer and other entity."""
+    def _resolve_relation(self, observer: Entity, other: Entity, relation_fn: FactionRelationFn | None) -> str:
+        """Resolve the relation string between observer and other entity against a prebuilt callback."""
         if not observer.faction_id or not other.faction_id:
             return FactionRelation.NEUTRAL.value
-        if query_fn is None:
+        if relation_fn is None:
             return FactionRelation.NEUTRAL.value
 
         try:
-            get_faction_relation = make_relation_fn(query_fn)
-
             if isinstance(observer, Creature) and isinstance(other, Creature):
-                relation = effective_relation(observer, other, get_faction_relation)
+                relation = effective_relation(observer, other, relation_fn)
             else:
                 if observer.faction_id == other.faction_id:
                     return FactionRelation.FRIENDLY.value
-                relation = get_faction_relation(observer.faction_id, other.faction_id)
+                relation = relation_fn(observer.faction_id, other.faction_id)
 
             return relation.value
         except (KeyError, ValueError, LayerError):
             return FactionRelation.NEUTRAL.value
 
-    def check_faction_hostility(self, observer: Entity, other: Entity, query_fn: QueryFn | None) -> bool:
-        """Check if two entities are hostile based on effective relation (reputation + faction)."""
+    def _hostility_from_relation(self, observer: Entity, other: Entity, relation_fn: FactionRelationFn | None) -> bool:
+        """Hostility check against a prebuilt relation callback (built once per awareness rebuild)."""
         if not observer.faction_id or not other.faction_id:
             return False
-        if query_fn is None:
+        if relation_fn is None:
             return False
 
         try:
-            get_faction_relation = make_relation_fn(query_fn)
-
             if isinstance(observer, Creature) and isinstance(other, Creature):
-                relation = effective_relation(observer, other, get_faction_relation)
+                relation = effective_relation(observer, other, relation_fn)
             else:
                 # Plain Entity — no reputation, use faction-only logic
                 if observer.faction_id == other.faction_id:
                     return False
-                relation = get_faction_relation(observer.faction_id, other.faction_id)
+                relation = relation_fn(observer.faction_id, other.faction_id)
 
             is_hostile = relation == FactionRelation.HOSTILE
-            logger.info(
+            logger.debug(
                 "faction_hostility_check",
                 observer=observer.id,
                 other=other.id,

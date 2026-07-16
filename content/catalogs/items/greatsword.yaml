@@ -8,3 +8,4 @@ damage:
     type: slashing
 is_two_handed: true
 is_heavy: true
+price: 50

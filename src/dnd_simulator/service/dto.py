@@ -52,5 +52,5 @@ class PlayerStatusData:
     ability_scores: dict[str, int]
     journey: JourneyView | None = None
     resource_pools: list[ResourcePoolView] = field(default_factory=list)
-    equipped: list[dict[str, str]] = field(default_factory=list)
+    equipped: list[dict[str, object]] = field(default_factory=list)
     inventory: list[dict[str, object]] = field(default_factory=list)

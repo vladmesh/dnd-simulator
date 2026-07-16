@@ -116,6 +116,7 @@ def build_npc_combat_prompt(
     weapon = combat_awareness["self_weapon"]
     weapon_dmg = combat_awareness["self_weapon_damage"]
     speed = combat_awareness.get("self_speed", 30)
+    movement_remaining = combat_awareness.get("movement_remaining", speed)
 
     hp_status = _("healthy")
     if hp < max_hp // 2:
@@ -130,7 +131,8 @@ def build_npc_combat_prompt(
         dist = e.get("distance_ft")
         direction = e.get("direction")
         if dist is not None and direction is not None:
-            entities_lines.append(f"- {e['description']} (id: {e['id']}) — {dist} ft {direction}")
+            reach_tag = " " + _("(in reach this turn)") if e.get("reachable") else ""
+            entities_lines.append(f"- {e['description']} (id: {e['id']}) — {dist} ft {direction}{reach_tag}")
         else:
             entities_lines.append(f"- {e['description']} (id: {e['id']})")
 
@@ -202,6 +204,9 @@ def build_npc_combat_prompt(
         + "\n"
         + "- "
         + _("Speed: {speed} ft").format(speed=speed)
+        + "\n"
+        + "- "
+        + _("Movement remaining this turn: {n} ft").format(n=movement_remaining)
         + f"{conditions_ctx}\n"
         + f"{entities_ctx}"
         f"{items_ctx}"

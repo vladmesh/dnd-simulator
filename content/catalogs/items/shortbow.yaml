@@ -8,3 +8,4 @@ damage:
     type: piercing
 ability: dex
 is_two_handed: true
+price: 25

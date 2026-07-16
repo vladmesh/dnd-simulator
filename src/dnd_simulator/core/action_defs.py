@@ -18,7 +18,6 @@ class CostType(StrEnum):
     FREE = "free"
     ACTION = "action"
     BONUS_ACTION = "bonus_action"
-    MOVEMENT = "movement"
     REACTION = "reaction"
 
 
@@ -209,7 +208,9 @@ _reg(
     ActionDef(
         action_type=ActionType.MOVE,
         description=N_("Move up to your speed."),
-        cost_type=CostType.MOVEMENT,
+        # FREE at the dispatcher: handle_move owns the movement-budget accounting (like MOVE_TO/DASH),
+        # charging the distance actually walked rather than the distance requested.
+        cost_type=CostType.FREE,
         combat_mode=CombatMode.COMBAT_ONLY,
         ends_peaceful_turn=True,
         params=(

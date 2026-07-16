@@ -1,12 +1,11 @@
-"""Dungeon Master — the LLM-powered orchestrator.
+"""Dungeon Master — reserved for the LLM-powered narrative orchestrator.
 
-The Master interprets player actions and translates them into world interactions:
-- Decides which layers to query or update
-- Manages time flow (how much to advance, when to interrupt)
-- Generates narrative descriptions of what happens
-- Subtly guides players toward authored content via hooks and hints
-- Resolves mechanical checks using rules (dice rolls, skill checks)
+The package is a skeleton from the original architecture and holds no code. Nothing imports it.
+The responsibilities it was drafted for are currently split elsewhere:
+- action interpretation and dispatch: service/ (GameService, ActionDispatcher)
+- time flow and interrupts: core/world.py and round.py
+- narrative text: layers/entities/perception.py, with LLM prompts in llm/
+- mechanical checks: rules/
 
-The Master has access to all layers and the full world state.
-It uses tool calling to interact with the simulation programmatically.
+Reintroducing a Master means taking work back from those modules, not adding a layer on top.
 """

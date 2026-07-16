@@ -228,6 +228,34 @@ class TestFighterFullTurn:
         finally:
             requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
 
+    def test_fighter_second_wind_at_full_hp_reports_full_health(
+        self, api_url: str, player_api_url: str, ws_base_url: str
+    ) -> None:
+        """Second Wind at full HP: healed == 0, message reports full health (not 'regaining 0 HP')."""
+        sid, pid = _create_session(api_url, player_api_url, "fighter")
+        try:
+            sock = ws_connect(ws_base_url, sid, pid)
+            try:
+                turn = _get_turn(sock)
+                turn = _ensure_combat(sock, turn, "target_dummy")
+
+                # No damage applied — fighter is at full HP.
+                ws_send_action(sock, "second_wind")
+                events, _turn2 = _collect_events_until_turn(sock)
+
+                sw_event = _find_event(events, "entity_second_wind")
+                assert sw_event is not None, (
+                    f"Expected entity_second_wind event, got: {[e.get('event_type') for e in events]}"
+                )
+                assert sw_event["data"]["healed"] == 0, "Second Wind at full HP should heal 0"
+                desc = sw_event.get("description", "")
+                assert "full health" in desc, f"Expected full-health message, got: {desc!r}"
+                assert "regaining 0" not in desc, f"Should not say 'regaining 0 HP', got: {desc!r}"
+            finally:
+                sock.close()
+        finally:
+            requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+
 
 # ── Test: Rogue Full Turn ────────────────────────────────────────────────
 

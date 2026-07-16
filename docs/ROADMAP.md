@@ -135,6 +135,10 @@ Paladin L1-L2 как первый caster-класс. Phase 1: spell slots как
 Третий эпик simulation-core. События получили строгие immutable payload-контракты, а YAML-триггеры `{on, until}` индексируются по `EventType`, активируют и гасят существ, переживают save/load и дополняются persistent GM override. Смерть materialized lair core сразу делает ecology-логово terminal depleted и не создаёт второй roster после save/load/reconnect. Post-audit refactor разделил event runtime, perception и transport; final audit triaged без sprint blockers, integration: 163/163, E2E зелёный.
 → [план спринта](sprints/023-trigger-table/sprint.md)
 
+### Sprint 024 — Playtest Quick Wins (фазы 1-3)
+UX-спринт по запросу оператора: сливки с кластера находок живой партии 2026-07-15, эпик simulation-core не двигает. Phase 1: единый учёт бюджета движения (`MOVE`→FREE, `handle_move` списывает фактический `moved_ft` атомарно, `CostType.MOVEMENT` удалён; премиса «бюджет не тратится» при разведке оказалась неверной, чинили раздвоенный учёт), чужие технические отказы и бюджет не текут в лог игрока (`build_action_result`), `faction_hostility_check` INFO→DEBUG и `relation_fn` один раз на ребилд, Second Wind на полном здоровье не пишет «0 ОЗ». Phase 2: SRD-цены в 31 каталожной записи (стартовое снаряжение продаётся торговцу), i18n кнопок и описаний надеть/снять. Phase 3: машиночитаемый `props` из типизированных дефов по всем четырём player-facing каналам + карточка `ItemDetails` (EN+RU) в инвентаре и торговле. Integration 166, post-audit E2E 26/26, аудит без блокеров.
+→ [план спринта](sprints/024-playtest-quick-wins/sprint.md)
+
 ## Planned
 
 ### Level 2 — Расходуемые ресурсы

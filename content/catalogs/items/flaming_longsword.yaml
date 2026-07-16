@@ -10,3 +10,4 @@ damage:
     type: fire
 modifier: 1
 is_magic: true
+price: 2500

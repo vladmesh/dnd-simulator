@@ -667,6 +667,7 @@ class TestStopRound:
         thread = session._round_thread
         assert brain is not None
         assert thread is not None
+        default_timeout = session._round_stop_timeout_seconds
         session._round_stop_timeout_seconds = 0.01
         assert callback_entered.wait(timeout=2)
 
@@ -684,6 +685,9 @@ class TestStopRound:
             session.session_id
         ]
 
+        # The 10ms deadline is only for the timeout path above. The stops below (and the fixture
+        # teardown) join a live thread for real, which does not fit in 10ms.
+        session._round_stop_timeout_seconds = default_timeout
         release_callback.set()
         session.stop_round()
         assert session._round is None

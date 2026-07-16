@@ -248,22 +248,40 @@ class TestDispatchBudget:
         assert not result.success
         assert budget.actions == 2  # unchanged
 
+    def _combat_move_ctx(self, budget: TurnBudget, creature: Creature) -> ActionContext:
+        """Full combat context so MOVE resolves in handle_move's combat branch (handler owns budget)."""
+        battle_map = BattleMap(width=60, height=60)
+        battle_map.set_position(creature.id, Position(10, 10))
+        combat = CombatState(location_id="loc", turn_order=[creature.id], battle_map=battle_map)
+        return ActionContext(
+            is_combat=True,
+            current_turn_entity_id=creature.id,
+            turn_budget=budget,
+            combat_state=combat,
+            get_entity=lambda eid: creature if eid == creature.id else None,
+            on_leave_reach=lambda _mover, _start, _end, _reactors: True,
+        )
+
     def test_move_consumes_movement(self) -> None:
+        # MOVE is FREE at the dispatcher now; the combat handler charges the distance actually walked.
         budget = TurnBudget(actions=1, bonus_actions=0, movement_remaining=30)
-        ctx = _combat_ctx(budget)
+        creature = _creature()
+        ctx = self._combat_move_ctx(budget, creature)
         d = create_dispatcher(_WORLD)
-        action = Action(name=ActionType.MOVE, params={"direction": "N", "ft": 10})
-        result = d.dispatch(_creature(), action, ctx, _noop_emit)
+        action = Action(name=ActionType.MOVE, params={"direction": "north", "ft": 10})
+        result = d.dispatch(creature, action, ctx, _noop_emit)
         assert result.success
         assert budget.movement_remaining == 20
 
     def test_move_insufficient_movement_rejected(self) -> None:
         budget = TurnBudget(actions=1, bonus_actions=0, movement_remaining=5)
-        ctx = _combat_ctx(budget)
+        creature = _creature()
+        ctx = self._combat_move_ctx(budget, creature)
         d = create_dispatcher(_WORLD)
-        action = Action(name=ActionType.MOVE, params={"direction": "N", "ft": 10})
-        result = d.dispatch(_creature(), action, ctx, _noop_emit)
+        action = Action(name=ActionType.MOVE, params={"direction": "north", "ft": 10})
+        result = d.dispatch(creature, action, ctx, _noop_emit)
         assert not result.success
+        assert budget.movement_remaining == 5
 
     def test_dash_adds_effective_speed_without_moving_then_move_spends_it(self) -> None:
         budget = TurnBudget(actions=1, bonus_actions=0, movement_remaining=10)

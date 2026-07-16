@@ -225,7 +225,7 @@ class PlayerStatusResponse(BaseModel):
     ability_scores: dict[str, int]
     journey: JourneyResponse | None = None
     resource_pools: list[dict[str, object]] = Field(default_factory=list)
-    equipped: list[dict[str, str]] = Field(default_factory=list)
+    equipped: list[dict[str, object]] = Field(default_factory=list)
     inventory: list[dict[str, object]] = Field(default_factory=list)
 
 

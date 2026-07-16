@@ -2,10 +2,11 @@
 
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
-**Last updated:** 2026-07-14
-**Position:** Sprint 023 закрыл третий эпик simulation-core: typed event contracts, trigger table и событийный write-back смертей логова.
-**Next:** Активного спринта нет.
+**Last updated:** 2026-07-16
+**Position:** Sprint 024 (playtest-quick-wins) закрыт: кластер находок живой партии 2026-07-15 снят, эпик simulation-core не двигался. Следующий шаг по ROADMAP — вернуться к simulation-core (Level 2 «Расходуемые ресурсы») либо добить боевой кластер.
+**Next:** Активного спринта нет. Кандидаты из BACKLOG (`must`/`should`): `ac-stale-on-unequip` (снятие брони повышает КЗ), `combat-status-single-source` (зонтик над `rest-in-combat-not-rejected`/`flee-scene-separation`), `load-combat-round-resume`, `hit-dice-short-rest`.
 **Blockers:** Нет.
+**Closure:** Ждём завершения CI для `sprint/024-playtest-quick-wins`.
 
 ## Current Sprint
 
@@ -25,6 +26,7 @@ No active sprint.
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 024-playtest-quick-wins | Быстрые UX-победы из живой партии 2026-07-15: боевое движение и чистота лога, полировка торговли и i18n снаряжения, панель свойств предметов | 2026-07-16 | 2026-07-16 |
 | 023-trigger-table | Парные триггеры `{on, until}` на типизированной таксономии событий; событийный write-back смертей логова | 2026-07-12 | 2026-07-14 |
 | 022-intents-travel | Player-agnostic якоря и сохраняемые wait/sleep/travel intent; travel по рёбрам; согласованный lifecycle save/load/autosave | 2026-07-10 | 2026-07-12 |
 | 021-save-schema | Версионированная Pydantic-схема сейва (schema_version=1, RNG в сейве, combat sides), воспроизводимость мира от DND_WORLD_SEED, периодический автосейв | 2026-07-10 | 2026-07-10 |

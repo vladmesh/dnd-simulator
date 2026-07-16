@@ -19,8 +19,15 @@ from dnd_simulator.core.queries import NationInfo, RegionInfo, SettlementInfo, W
 from dnd_simulator.core.world import LayerError
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc, NpcActivity, ScheduleEntry
+from dnd_simulator.rules.reputation import make_relation_fn
 
 _TIME = GameDateTime(year=1490, month=6, day=15, hour=14)
+
+
+def _check_hostility(layer: EntitiesLayer, observer: Entity, other: Entity, query_fn) -> bool:
+    """Mirror the production path: prebuild the relation callback, then check hostility."""
+    relation_fn = make_relation_fn(query_fn) if query_fn is not None else None
+    return layer._awareness._hostility_from_relation(observer, other, relation_fn)
 
 
 def _region_info(name: str) -> RegionInfo:
@@ -245,7 +252,7 @@ class TestNearbyEntitiesHostility:
 
 
 class TestFactionHostilityDelegatesToPoliticsQuery:
-    """_check_faction_hostility delegates to politics query_fn."""
+    """Hostility resolution delegates to the politics query_fn via the prebuilt relation callback."""
 
     def test_queries_politics_layer(self) -> None:
         observer = Entity(id="o1", name="Obs", location_id="road", faction_id="elves")
@@ -261,7 +268,7 @@ class TestFactionHostilityDelegatesToPoliticsQuery:
                 return Answer(value=FactionRelation.HOSTILE)
             return Answer(value=None)
 
-        result = layer._awareness.check_faction_hostility(observer, other, query_fn)
+        result = _check_hostility(layer, observer, other, query_fn)
         assert result is True
         assert len(calls) == 1
         assert calls[0].question == QueryType.FACTION_RELATION
@@ -279,7 +286,7 @@ class TestFactionHostilityDelegatesToPoliticsQuery:
                 return Answer(value=FactionRelation.NEUTRAL)
             return Answer(value=None)
 
-        result = layer._awareness.check_faction_hostility(observer, other, query_fn)
+        result = _check_hostility(layer, observer, other, query_fn)
         assert result is False
 
     def test_no_faction_returns_false(self) -> None:
@@ -291,7 +298,7 @@ class TestFactionHostilityDelegatesToPoliticsQuery:
         def query_fn(target: str, query: Query) -> Answer:
             raise AssertionError("Should not query for entities without factions")
 
-        result = layer._awareness.check_faction_hostility(observer, other, query_fn)
+        result = _check_hostility(layer, observer, other, query_fn)
         assert result is False
 
 
@@ -1018,7 +1025,7 @@ class TestFactionHostilityEdgeCases:
             calls.append(target)
             return Answer(value=None)
 
-        result = layer._awareness.check_faction_hostility(observer, other, query_fn)
+        result = _check_hostility(layer, observer, other, query_fn)
         assert result is False
         assert len(calls) == 0
 
@@ -1028,7 +1035,7 @@ class TestFactionHostilityEdgeCases:
 
         layer = EntitiesLayer([observer, other])
 
-        result = layer._awareness.check_faction_hostility(observer, other, None)
+        result = _check_hostility(layer, observer, other, None)
         assert result is False
 
     def test_politics_query_raises_returns_false(self) -> None:
@@ -1040,5 +1047,5 @@ class TestFactionHostilityEdgeCases:
         def query_fn(target: str, query: Query) -> Answer:
             raise LayerError("politics layer not found")
 
-        result = layer._awareness.check_faction_hostility(observer, other, query_fn)
+        result = _check_hostility(layer, observer, other, query_fn)
         assert result is False

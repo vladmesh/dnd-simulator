@@ -206,3 +206,28 @@ class TestCatalogRuntimeConversion:
         sd = items[0].shield_def
         assert sd is not None
         assert sd.ac_bonus == 2
+
+
+# ---------------------------------------------------------------------------
+# Prices — every catalog item must carry a sell/buy price
+# ---------------------------------------------------------------------------
+
+
+class TestCatalogPrices:
+    def test_every_catalog_entry_has_price(self, catalog: dict[str, ItemContent]) -> None:
+        """A catalog item with no price resolves to price=None and can't be traded.
+
+        Guards against a new catalog entry forgetting `price:` — it should fail here,
+        not in a live game when the player tries to sell it.
+        """
+        missing = [stem for stem, content in catalog.items() if content.price is None]
+        assert not missing, f"catalog entries missing a price: {missing}"
+
+    def test_prices_are_positive(self, catalog: dict[str, ItemContent]) -> None:
+        for stem, content in catalog.items():
+            assert content.price is not None and content.price > 0, f"non-positive price on '{stem}'"
+
+    def test_resolved_item_carries_price(self, catalog: dict[str, ItemContent]) -> None:
+        """Price survives ref-resolution into a runtime Item (the sell path reads Item.price)."""
+        items = parse_items([{"ref": "chain_mail"}], item_catalog=catalog)
+        assert items[0].price is not None and items[0].price > 0
