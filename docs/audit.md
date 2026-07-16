@@ -22,7 +22,7 @@
 
 | File | Issue | Action |
 |------|-------|--------|
-| `layers/entities/awareness_builder.py:404` | `new`: `check_faction_hostility(query_fn)` lost its last production caller in the sprint 024 relation-fn refactor — both awareness paths now call `_hostility_from_relation` with a prebuilt callback. The public wrapper is exercised only by tests (`test_awareness_builder.py`, `test_reputation_awareness.py`). | backlog: either repoint those tests at `_hostility_from_relation` and drop the wrapper, or keep it as the documented public seam and note that in a docstring |
+| `layers/entities/awareness_builder.py:404` | `new, FIXED in triage`: `check_faction_hostility(query_fn)` lost its last production caller in the sprint 024 relation-fn refactor — both awareness paths now call `_hostility_from_relation` with a prebuilt callback. The public wrapper was exercised only by tests. | fixed 2026-07-16: wrapper removed; tests repointed via a `_check_hostility` helper that mirrors the production path |
 
 `uv run ruff check src/ --select F401` is clean; no `TODO/FIXME/HACK/XXX` in `src/`. New sprint 024 helpers (`item_props`, `item_info`, `build_action_result`, `ItemDetails`) all have production callers.
 
@@ -32,7 +32,7 @@
 |------|-------|------------|
 | `src/dnd_simulator/service/session.py` (498 lines) | `known, improved`: `on_action` payload assembly moved to `build_action_result` (transport_payloads), dropping the module below 500 lines, but it still owns round lifecycle, listener dispatch, save snapshots, and three locking domains. | Keep `test-gap-session`; extract a lifecycle/locking collaborator before another session-control feature. |
 | `layers/entities/perception.py` (591 lines), `round.py` (574), `layers/entities/layer.py` (568), `core/action_defs.py` (565), `service/commands_worldbuilder.py` (535) | `known`: facades over the 400-line audit threshold; perception grew +6 lines (second-wind zero-heal branch). | Keep `entities-layer-regrowth`, `perception-fail-fast`, `round-growing`, `action-defs-growing`; extract only along an existing responsibility boundary. |
-| `service/session.py:31` | `new, low`: imports underscore-private `_reaction_to_dict` from `transport_payloads` across a module boundary (sprint 024 removed the sibling `_budget_to_dict` import). | Rename to `reaction_to_dict` or add a public wrapper next time transport_payloads is touched. |
+| `service/session.py:31` | `new, low, FIXED in triage`: imported underscore-private `_reaction_to_dict` from `transport_payloads` across a module boundary. | fixed 2026-07-16: renamed to public `reaction_to_dict`. |
 | `frontend/src/components/game/EventLog.tsx:244`, `frontend/src/components/master/SchemaForm.tsx:62` | `known`: two `eslint-disable react-hooks/exhaustive-deps` suppressions remain. | Keep `event-log-eslint-suppress`, `schema-form-eslint-suppress`; remove only with focused effect tests. |
 
 ## Security

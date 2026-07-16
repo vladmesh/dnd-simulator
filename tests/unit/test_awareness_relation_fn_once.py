@@ -1,6 +1,6 @@
 """Awareness rebuild builds the faction relation callback once, not once-per-pair.
 
-Guards the O(N²) allocation regression from sprint 024 task 2: check_faction_hostility
+Guards the O(N²) allocation regression from sprint 024 task 2: the hostility check
 and _resolve_relation used to each construct make_relation_fn(query_fn) for every nearby
 entity, so a scene of N creatures rebuilt the closure ~2N times per awareness rebuild.
 """

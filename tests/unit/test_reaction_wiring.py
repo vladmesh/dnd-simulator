@@ -110,11 +110,11 @@ class TestReactionPromptMessage:
 
     def test_reaction_prompt_structure(self) -> None:
         """on_reaction callback builds a message with type, trigger, and options."""
-        from dnd_simulator.service.transport_payloads import _reaction_to_dict
+        from dnd_simulator.service.transport_payloads import reaction_to_dict
 
         trigger = _make_trigger()
         options = _make_options()
-        msg = _reaction_to_dict(trigger, options)
+        msg = reaction_to_dict(trigger, options)
 
         assert msg["type"] == "reaction_prompt"
         assert msg["trigger"]["trigger_type"] == "leaving_reach"

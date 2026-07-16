@@ -3,8 +3,8 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-16
-**Position:** Sprint 024 (playtest-quick-wins): все три фазы COMPLETE.
-**Next:** Аудит (`/audit`).
+**Position:** Sprint 024 (playtest-quick-wins): все три фазы COMPLETE, аудит проведён и триажирован.
+**Next:** Post-audit E2E (`/e2e`), затем `/close-sprint`.
 **Blockers:** Нет.
 
 ## Current Sprint
@@ -12,7 +12,9 @@
 **Sprint:** 024-playtest-quick-wins
 **Goal:** Быстрые UX-победы из живой партии 2026-07-15 — боевое движение и чистота лога/боевого UI, полировка торговли и i18n снаряжения, панель свойств предметов
 **Started:** 2026-07-16
-**Phase:** 3 — Панель свойств предметов (COMPLETE) — 2026-07-16. All phases complete. Ready for audit.
+**Phase:** 3 — Панель свойств предметов (COMPLETE) — 2026-07-16. All phases complete.
+
+**Audit:** Triaged 2026-07-16. Quick-fix: 2 applied (rename `reaction_to_dict` в public, снос мёртвой обёртки `check_faction_hostility` с переводом тестов на `_hostility_from_relation`). Sprint-relevant: 0 отдельных (единственный айтем закрыт в quick-fix проходе). Backlog: 0 added — остальные 11 находок уже трекаются слагами в BACKLOG.md. Блокеров нет.
 
 Phase 3 закрыта: integration 166 green (+2 новых теста `TestTrading` — `props` у товаров торговца в awareness и на equipped в REST-статусе), E2E 15/15 по секциям 5/8/9 + карточки предметов (все пять видов props — weapon с флагами Finesse/Light, armor, shield, potion, accessory — в RU и EN, во всех четырёх точках рендера). Блокеров нет. Вне скоупа зафиксировано: КД (клиент) vs КЗ (сервер) и англ. имена предметов в списках при локализованном логе — кластер `ui-language-mixing`. Отчёт: `docs/sprints/024-playtest-quick-wins/e2e/phase3-report.md`.
 

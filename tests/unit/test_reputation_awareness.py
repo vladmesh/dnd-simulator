@@ -8,6 +8,13 @@ from dnd_simulator.content_loader.creatures import parse_npc, parse_player
 from dnd_simulator.core.character import Character
 from dnd_simulator.core.models import Answer, FactionRelation, Query, QueryType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
+from dnd_simulator.rules.reputation import make_relation_fn
+
+
+def _check_hostility(layer: EntitiesLayer, observer: Character, other: Character, query_fn) -> bool:
+    """Mirror the production path: prebuild the relation callback, then check hostility."""
+    relation_fn = make_relation_fn(query_fn) if query_fn is not None else None
+    return layer._awareness._hostility_from_relation(observer, other, relation_fn)
 
 
 def _query_fn_with_relation(relation: FactionRelation):
@@ -29,7 +36,7 @@ def _query_fn_with_relation(relation: FactionRelation):
 
 
 class TestAwarenessReputationHostility:
-    """check_faction_hostility uses effective_relation when both entities are Creatures."""
+    """_hostility_from_relation uses effective_relation when both entities are Creatures."""
 
     def test_personal_rep_makes_neutral_factions_hostile(self) -> None:
         """Observer has rep 10 with target's faction; factions are NEUTRAL by default → hostile."""
@@ -50,7 +57,7 @@ class TestAwarenessReputationHostility:
         layer = EntitiesLayer([observer, target])
         query_fn = _query_fn_with_relation(FactionRelation.NEUTRAL)
 
-        result = layer._awareness.check_faction_hostility(observer, target, query_fn)
+        result = _check_hostility(layer, observer, target, query_fn)
         assert result is True
 
     def test_personal_rep_overrides_hostile_factions_to_friendly(self) -> None:
@@ -72,7 +79,7 @@ class TestAwarenessReputationHostility:
         layer = EntitiesLayer([observer, target])
         query_fn = _query_fn_with_relation(FactionRelation.HOSTILE)
 
-        result = layer._awareness.check_faction_hostility(observer, target, query_fn)
+        result = _check_hostility(layer, observer, target, query_fn)
         assert result is False
 
     def test_exile_hostile_to_own_faction(self) -> None:
@@ -99,7 +106,7 @@ class TestAwarenessReputationHostility:
             # Same faction — should NOT need faction relation query
             raise AssertionError("Should not query faction relation for exile scenario")
 
-        result = layer._awareness.check_faction_hostility(exile, loyalist, query_fn)
+        result = _check_hostility(layer, exile, loyalist, query_fn)
         assert result is True
 
     def test_no_personal_rep_falls_back_to_faction_relation(self) -> None:
@@ -120,7 +127,7 @@ class TestAwarenessReputationHostility:
         layer = EntitiesLayer([observer, enemy])
         query_fn = _query_fn_with_relation(FactionRelation.HOSTILE)
 
-        result = layer._awareness.check_faction_hostility(observer, enemy, query_fn)
+        result = _check_hostility(layer, observer, enemy, query_fn)
         assert result is True
 
 

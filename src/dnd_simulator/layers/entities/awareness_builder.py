@@ -401,11 +401,6 @@ class AwarenessBuilder:
         except (KeyError, ValueError, LayerError):
             return FactionRelation.NEUTRAL.value
 
-    def check_faction_hostility(self, observer: Entity, other: Entity, query_fn: QueryFn | None) -> bool:
-        """Check if two entities are hostile based on effective relation (reputation + faction)."""
-        relation_fn = make_relation_fn(query_fn) if query_fn is not None else None
-        return self._hostility_from_relation(observer, other, relation_fn)
-
     def _hostility_from_relation(self, observer: Entity, other: Entity, relation_fn: FactionRelationFn | None) -> bool:
         """Hostility check against a prebuilt relation callback (built once per awareness rebuild)."""
         if not observer.faction_id or not other.faction_id:

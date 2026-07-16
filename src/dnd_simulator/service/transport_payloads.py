@@ -95,7 +95,7 @@ def _budget_to_dict(budget: TurnBudget) -> dict[str, Any]:
     return dataclasses.asdict(budget)
 
 
-def _reaction_to_dict(trigger: ReactionTrigger, options: list[ReactionOption]) -> dict[str, Any]:
+def reaction_to_dict(trigger: ReactionTrigger, options: list[ReactionOption]) -> dict[str, Any]:
     return {
         "type": "reaction_prompt",
         "trigger": {

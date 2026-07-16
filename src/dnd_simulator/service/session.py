@@ -28,10 +28,10 @@ from dnd_simulator.i18n import language_context
 from dnd_simulator.round import Round
 from dnd_simulator.service.action_dispatcher import create_dispatcher
 from dnd_simulator.service.transport_payloads import (
-    _reaction_to_dict,
     build_action_result,
     build_round_state,
     build_turn_state,
+    reaction_to_dict,
 )
 
 logger = structlog.get_logger(domain="session")
@@ -352,7 +352,7 @@ class GameSession:
                 trigger: ReactionTrigger,
                 options: list[ReactionOption],
             ) -> None:
-                msg = _reaction_to_dict(trigger, options)
+                msg = reaction_to_dict(trigger, options)
                 self._fire("on_reaction", msg)
 
             brain.set_on_reaction(on_reaction)
