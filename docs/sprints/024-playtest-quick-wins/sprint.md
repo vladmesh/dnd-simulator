@@ -30,9 +30,11 @@
 2. [Чистота боевого лога](tasks/phase1-task2-combat-log-noise.md) — чужие ошибки не текут игроку, faction-спам → DEBUG, relation_fn один раз на ребилд
 3. [Second Wind без «0 ОЗ»](tasks/phase1-task3-second-wind-zero-heal.md) — сообщение о полном здоровье при `healed == 0`
 
-## Phase 2: Полировка торговли и экипировки
+## Phase 2: Полировка торговли и экипировки ✓
 
 Стартовое снаряжение получает SRD-цены и продаётся торговцу из инвентаря; кнопки надеть/снять локализованы без сырых ID. Проверка: снять и продать стартовый предмет; кнопки equip/unequip показывают RU-метки и описания.
+
+Закрыта 2026-07-16: integration 164 green, E2E (trading + equip/unequip i18n + combat regress) 8/8. E2E вскрыл предсуществующий баг `ac-stale-on-unequip` (снятие брони повышает КЗ) — вне скоупа фазы, в бэклоге.
 
 **Айтемы:** `catalog-item-prices`, `action-bar-equip-i18n`, `action-bar-unequip-i18n`
 

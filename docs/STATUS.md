@@ -3,8 +3,8 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-16
-**Position:** Sprint 024 (playtest-quick-wins): Phase 1 COMPLETE; Phase 2 (полировка торговли и экипировки) — обе задачи done, фаза готова к закрытию.
-**Next:** Закрыть Phase 2 (`/close-phase`).
+**Position:** Sprint 024 (playtest-quick-wins): Phase 1 COMPLETE; Phase 2 COMPLETE (integration 164, E2E 8/8). Готова к планированию Phase 3 (панель свойств предметов).
+**Next:** Спланировать Phase 3 (`/plan-phase`).
 **Blockers:** Нет.
 
 ## Current Sprint
@@ -12,7 +12,9 @@
 **Sprint:** 024-playtest-quick-wins
 **Goal:** Быстрые UX-победы из живой партии 2026-07-15 — боевое движение и чистота лога/боевого UI, полировка торговли и i18n снаряжения, панель свойств предметов
 **Started:** 2026-07-16
-**Phase:** 2 — Полировка торговли и экипировки (task 1 done, task 2 done) — 2026-07-16
+**Phase:** 2 — Полировка торговли и экипировки (COMPLETE) — 2026-07-16. Ready for Phase 3 task generation.
+
+Phase 2 закрыта (2026-07-16): integration 164 green (данные+i18n, новых интеграционных тестов не требуется — плумбинг цены и i18n покрыты бэкенд-юнитами `TestCatalogPrices`/`test_equip_desc_i18n` + фронт `equipI18n.test.tsx`). E2E RU (`test_vale`): купля/продажа стартового `chain_mail` (75g SRD, gold 950→1025), equip/unequip i18n (Надеть/Убрать/Экипировать/Использовать, slot-метки Броня/Голова/Ноги/Кольцо/Сумка), combat-регресс — 8/8. Вскрыт предсуществующий баг `ac-stale-on-unequip` (снятие брони → КЗ растёт, `effective_ac` держит устаревший `creature.ac`) — вне скоупа, в бэклоге. Отчёт: `docs/sprints/024-playtest-quick-wins/e2e/phase2-report.md`.
 
 Task 2 (i18n надеть/снять) done: 10 slot-меток (`equip_armor`…`unequip_ring`) + короткий `use` в `en`/`ru` `game.json`; `USE`/`EQUIP` в `InventoryPanel` уведены в `t()` (EQUIP→`equip`, USE→новый `use`); 12 RU-описаний equip/unequip добавлены в `.po` руками (`make messages` не годится — гонит `pygettext --keyword=_` без `N_` и падает на f-строках), `.mo` перекомпилирован. Аддитивно, коллапс 12 ActionType не тронут. `make check` зелёный (backend 2565, frontend 291).
 
