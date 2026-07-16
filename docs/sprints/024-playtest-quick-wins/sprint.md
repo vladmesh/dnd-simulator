@@ -49,15 +49,18 @@
 
 **Айтемы:** `item-properties-ui`
 
+**Разведка (2026-07-16):** свойства предметов сейчас доезжают до UI только строкой `describe_item()` (`core/awareness.py:65`) — захардкоженный английский в native `title`; броня и щит не показывают ничего, кроме имени. Типизированные дефы до фронта не доходят. Решение — аддитивный машиночитаемый `props` в payload + клиентский рендер с i18n-метками, чтобы не завязываться на серверный язык (`ui-language-mixing` не трогаем). LLM-промпты берут из `ItemInfo` только `id`/`name`/`description`, `props` их не раздувает.
+
 **Tasks:**
 
-_(генерируются отдельно перед началом фазы)_
+1. [Структурные свойства предметов в player-facing payload](tasks/phase3-task1-item-props-payload.md) — `item_props()` из типизированных дефов, JSON-safe `props` на `ItemInfo`/`EquippedInfo`, прошивка в инвентарь/экипировку/товары торговца/лут
+2. [Панель деталей предмета в магазине и инвентаре](tasks/phase3-task2-item-details-tooltip.md) — компонент `ItemDetails` (CSS-hover карточка), рендер `props` с i18n-метками EN+RU в `InventoryPanel` и `TradePanel`, fallback на `description`
 
 ---
 
 ## Status
 
-**Current:** Phase 1 complete (all 3 tasks done, integration 164 green, E2E 9/9). Phase 2 tasks generated (2 tasks). Ready to start Phase 2 task 1.
+**Current:** Phases 1-2 complete. Phase 3 tasks generated (2 tasks). Ready to start Phase 3 task 1.
 
 ## Decisions
 

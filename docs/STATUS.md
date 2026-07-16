@@ -3,8 +3,8 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-16
-**Position:** Sprint 024 (playtest-quick-wins): Phase 1 COMPLETE; Phase 2 COMPLETE (integration 164, E2E 8/8). Готова к планированию Phase 3 (панель свойств предметов).
-**Next:** Спланировать Phase 3 (`/plan-phase`).
+**Position:** Sprint 024 (playtest-quick-wins): Phases 1-2 COMPLETE; Phase 3 (панель свойств предметов) — tasks generated (2 tasks).
+**Next:** Начать Phase 3 task 1 (`/implement`).
 **Blockers:** Нет.
 
 ## Current Sprint
@@ -12,7 +12,9 @@
 **Sprint:** 024-playtest-quick-wins
 **Goal:** Быстрые UX-победы из живой партии 2026-07-15 — боевое движение и чистота лога/боевого UI, полировка торговли и i18n снаряжения, панель свойств предметов
 **Started:** 2026-07-16
-**Phase:** 2 — Полировка торговли и экипировки (COMPLETE) — 2026-07-16. Ready for Phase 3 task generation.
+**Phase:** 3 — Панель свойств предметов (tasks generated) — 2026-07-16. Ready to start task 1.
+
+Phase 3 план: свойства сейчас доезжают до UI только английской строкой `describe_item()` в native `title` (броня/щит — вообще ничего). Task 1 — машиночитаемый JSON-safe `props` из типизированных дефов на `ItemInfo`/`EquippedInfo` по всем четырём каналам (инвентарь, экипировка, торговец, лут); task 2 — компонент `ItemDetails` (CSS-hover карточка, контент в DOM — тестируемо), рендер с i18n-метками EN+RU в `InventoryPanel`/`TradePanel`, fallback на `description`. Серверный язык не трогаем (`ui-language-mixing` вне скоупа), LLM-промпты `props` не раздувает.
 
 Phase 2 закрыта (2026-07-16): integration 164 green (данные+i18n, новых интеграционных тестов не требуется — плумбинг цены и i18n покрыты бэкенд-юнитами `TestCatalogPrices`/`test_equip_desc_i18n` + фронт `equipI18n.test.tsx`). E2E RU (`test_vale`): купля/продажа стартового `chain_mail` (75g SRD, gold 950→1025), equip/unequip i18n (Надеть/Убрать/Экипировать/Использовать, slot-метки Броня/Голова/Ноги/Кольцо/Сумка), combat-регресс — 8/8. Вскрыт предсуществующий баг `ac-stale-on-unequip` (снятие брони → КЗ растёт, `effective_ac` держит устаревший `creature.ac`) — вне скоупа, в бэклоге. Отчёт: `docs/sprints/024-playtest-quick-wins/e2e/phase2-report.md`.
 
