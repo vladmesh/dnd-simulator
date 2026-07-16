@@ -43,4 +43,16 @@
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Три слоя правок, все аддитивные — коллапс 12 ActionType не тронут:
+
+- **Frontend метки.** 10 slot-ключей (`equip_armor`…`unequip_ring`) добавлены в `en`/`ru` `game.json` рядом с существующими `equip`/`unequip`. `getActionLabel` уже резолвит `game:<name>` — данных не хватало, кода не трогал.
+- **InventoryPanel.** Литералы `USE`/`EQUIP` уведены в `t()`. Для EQUIP переиспользован короткий `equip` («Надеть»). Для USE добавлен новый короткий ключ `use` («Использовать») — `use_item` («Use Item»/«Использовать предмет») длинный для 10px-пилюли. `BagItem` получил `useTranslation`.
+- **Backend `.po`.** `make messages` не годится: цель гонит `pygettext3 --keyword=_` (без `N_`) в `messages.pot` и падает на f-строках. `.po` компилится напрямую pybabel, поэтому 12 msgid/msgstr добавлены руками в RU-каталог, `make compile-messages` перекомпилил `.mo`. EN base не трогал.
+
+Тесты: backend `test_equip_desc_i18n.py` строит payload через `_awareness_to_dict` под `language_context("ru")`, проверяет кириллицу в описаниях 11 equip/unequip действий; frontend `equipI18n.test.tsx` — `getActionLabel` не возвращает сырой ID под ru + InventoryPanel рендерит `t()`-метки, не `USE`/`EQUIP`.
+
+`make check`: backend 2565 passed, frontend 291 passed. (Первый прогон споткнулся о флейки-таймаут неродственного `CreatureForm` теста под нагрузкой — изолированно и на чистом фронт-прогоне зелёный.)

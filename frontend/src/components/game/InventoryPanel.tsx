@@ -73,6 +73,7 @@ function EquipmentSlot({ slot, item }: { slot: string; item?: EquippedInfo }) {
 }
 
 function BagItem({ item }: { item: ItemInfo }) {
+  const { t } = useTranslation(["game"])
   const waitingForAction = useGameStore((s) => s.waitingForAction)
 
   const equipSlot = getEquipSlot(item)
@@ -99,7 +100,7 @@ function BagItem({ item }: { item: ItemInfo }) {
           disabled={waitingForAction}
           onClick={() => sendAction("use_item", { item_id: item.id })}
         >
-          USE
+          {t("game:use")}
         </button>
       )}
       {equipSlot && (
@@ -108,7 +109,7 @@ function BagItem({ item }: { item: ItemInfo }) {
           disabled={waitingForAction}
           onClick={handleEquip}
         >
-          EQUIP
+          {t("game:equip")}
         </button>
       )}
     </div>

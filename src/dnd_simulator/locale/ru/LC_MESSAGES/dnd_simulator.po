@@ -1176,3 +1176,39 @@ msgstr "Активирующий триггер '{id}' снят со взвед�
 
 msgid "Activation trigger '{id}' is not active"
 msgstr "Активирующий триггер '{id}' не активен"
+
+msgid "Equip a weapon from your inventory."
+msgstr "Взять оружие из инвентаря."
+
+msgid "Put away your equipped weapon. You will fight with fists."
+msgstr "Убрать оружие. Вы будете драться кулаками."
+
+msgid "Equip armor from your inventory."
+msgstr "Надеть броню из инвентаря."
+
+msgid "Remove your equipped armor."
+msgstr "Снять надетую броню."
+
+msgid "Equip a shield from your inventory. +2 AC."
+msgstr "Взять щит из инвентаря. +2 к КЗ."
+
+msgid "Remove your equipped shield."
+msgstr "Убрать щит."
+
+msgid "Equip headgear from your inventory."
+msgstr "Надеть головной убор из инвентаря."
+
+msgid "Remove your equipped headgear."
+msgstr "Снять головной убор."
+
+msgid "Equip footwear from your inventory."
+msgstr "Надеть обувь из инвентаря."
+
+msgid "Remove your equipped footwear."
+msgstr "Снять обувь."
+
+msgid "Equip a ring from your inventory."
+msgstr "Надеть кольцо из инвентаря."
+
+msgid "Remove your equipped ring."
+msgstr "Снять кольцо."

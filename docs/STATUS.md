@@ -3,8 +3,8 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-16
-**Position:** Sprint 024 (playtest-quick-wins): Phase 1 COMPLETE; Phase 2 (полировка торговли и экипировки) — задачи сгенерированы (2 таска).
-**Next:** Phase 2 task 1 — SRD-цены для каталога предметов.
+**Position:** Sprint 024 (playtest-quick-wins): Phase 1 COMPLETE; Phase 2 (полировка торговли и экипировки) — обе задачи done, фаза готова к закрытию.
+**Next:** Закрыть Phase 2 (`/close-phase`).
 **Blockers:** Нет.
 
 ## Current Sprint
@@ -12,7 +12,9 @@
 **Sprint:** 024-playtest-quick-wins
 **Goal:** Быстрые UX-победы из живой партии 2026-07-15 — боевое движение и чистота лога/боевого UI, полировка торговли и i18n снаряжения, панель свойств предметов
 **Started:** 2026-07-16
-**Phase:** 2 — Полировка торговли и экипировки (task 1 done, task 2 pending) — 2026-07-16
+**Phase:** 2 — Полировка торговли и экипировки (task 1 done, task 2 done) — 2026-07-16
+
+Task 2 (i18n надеть/снять) done: 10 slot-меток (`equip_armor`…`unequip_ring`) + короткий `use` в `en`/`ru` `game.json`; `USE`/`EQUIP` в `InventoryPanel` уведены в `t()` (EQUIP→`equip`, USE→новый `use`); 12 RU-описаний equip/unequip добавлены в `.po` руками (`make messages` не годится — гонит `pygettext --keyword=_` без `N_` и падает на f-строках), `.mo` перекомпилирован. Аддитивно, коллапс 12 ActionType не тронут. `make check` зелёный (backend 2565, frontend 291).
 
 Task 1 (SRD-цены каталога) done: `price` проставлен в 31 каталожный YAML (PHB для манданого, редкость DMG для магии); плумбинг цены уже нёс её от каталога до `Item.price`, правок кода нет. Регресс-гварда `TestCatalogPrices` + продажа снятого `chain_mail` через реальный резолв каталога. `make check` зелёный (backend 2563, frontend 289).
 
