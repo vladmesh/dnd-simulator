@@ -59,4 +59,12 @@ potion:    {kind: "potion", heal_dice: "2d4+2"}
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+Реализовано по плану: `item_props()` и `props` на `ItemInfo`/`EquippedInfo` в `core/awareness.py`; заодно введён хелпер `item_info(item)`, который схлопнул три идентичные ручные сборки `ItemInfo` в `awareness_builder.py` (available_items, merchant stock, loot). `build_inventory_payload`/`build_equipped_payload` прошиты руками (они собирают dict сами).
+
+Интенциональное изменение контракта: `props` — dict, поэтому `equipped` расширен с `list[dict[str, str]]` до `list[dict[str, object]]` в двух местах — `PlayerStatusData` (`service/dto.py:55`) и REST-схема `PlayerStatusResponse` (`adapters/api/schemas.py:228`). Без второго 29 старых тестов падали 422 на создании персонажа — Pydantic отбивал dict в str-поле. Сами старые тесты не правились.
+
+Тесты: `test_item_props.py`, 8 шт — все четыре канала на реальном резолве каталога (plate/фрост-кинжал/зелье+щит в инвентаре, огненный меч у торговца, кольцо защиты в экипировке, длинный меч в луте трупа), `props is None` для предмета без дефов, JSON-гарда по всем 31 записям каталога (ловит Enum-утечку: merchant/loot едут через `asdict` без сквозного `_json_safe`). `make check` зелёный (backend 2573, frontend 291).

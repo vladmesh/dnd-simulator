@@ -114,17 +114,23 @@ def _reaction_to_dict(trigger: ReactionTrigger, options: list[ReactionOption]) -
     }
 
 
-def build_equipped_payload(player: PlayerCharacter) -> list[dict[str, str]]:
+def build_equipped_payload(player: PlayerCharacter) -> list[dict[str, object]]:
     from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder
 
     return [
-        {"slot": entry.slot.value, "item_id": entry.item_id, "name": entry.name, "description": entry.description}
+        {
+            "slot": entry.slot.value,
+            "item_id": entry.item_id,
+            "name": entry.name,
+            "description": entry.description,
+            "props": entry.props,
+        }
         for entry in AwarenessBuilder.build_equipped(player)
     ]
 
 
 def build_inventory_payload(player: PlayerCharacter) -> list[dict[str, object]]:
-    from dnd_simulator.core.awareness import describe_item
+    from dnd_simulator.core.awareness import describe_item, item_props
 
     inventory: list[dict[str, object]] = []
     for item in player.inventory:
@@ -134,6 +140,7 @@ def build_inventory_payload(player: PlayerCharacter) -> list[dict[str, object]]:
             "type": item.item_type.value,
             "description": describe_item(item),
             "price": item.price,
+            "props": item_props(item),
         }
         if item.accessory_def is not None:
             entry["slot"] = item.accessory_def.slot.value

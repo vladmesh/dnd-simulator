@@ -12,7 +12,9 @@
 **Sprint:** 024-playtest-quick-wins
 **Goal:** Быстрые UX-победы из живой партии 2026-07-15 — боевое движение и чистота лога/боевого UI, полировка торговли и i18n снаряжения, панель свойств предметов
 **Started:** 2026-07-16
-**Phase:** 3 — Панель свойств предметов (tasks generated) — 2026-07-16. Ready to start task 1.
+**Phase:** 3 — Панель свойств предметов (task 1 done, task 2 pending) — 2026-07-16.
+
+Task 1 (структурный `props` в payload) done: `item_props()` + `props` на `ItemInfo`/`EquippedInfo`, хелпер `item_info()` схлопнул три дублированные сборки в `awareness_builder`; все четыре канала (инвентарь, экипировка, торговец, лут) несут машиночитаемые свойства из типизированных дефов. `equipped` расширен до `list[dict[str, object]]` в `PlayerStatusData` и `PlayerStatusResponse` (props — dict, старая str-типизация отбивала 422). 8 новых тестов на реальном резолве каталога + JSON-гарда по всем 31 записям. `make check` зелёный (backend 2573, frontend 291).
 
 Phase 3 план: свойства сейчас доезжают до UI только английской строкой `describe_item()` в native `title` (броня/щит — вообще ничего). Task 1 — машиночитаемый JSON-safe `props` из типизированных дефов на `ItemInfo`/`EquippedInfo` по всем четырём каналам (инвентарь, экипировка, торговец, лут); task 2 — компонент `ItemDetails` (CSS-hover карточка, контент в DOM — тестируемо), рендер с i18n-метками EN+RU в `InventoryPanel`/`TradePanel`, fallback на `description`. Серверный язык не трогаем (`ui-language-mixing` вне скоупа), LLM-промпты `props` не раздувает.
 

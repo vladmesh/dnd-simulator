@@ -17,6 +17,8 @@ from dnd_simulator.core.awareness import (
     PeacefulAwareness,
     ResourcePoolInfo,
     describe_item,
+    item_info,
+    item_props,
 )
 from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.combat import CombatState
@@ -82,16 +84,7 @@ class AwarenessBuilder:
     @staticmethod
     def build_available_items(creature: Creature) -> list[ItemInfo]:
         """Build item info list for awareness — full inventory."""
-        return [
-            ItemInfo(
-                id=item.id,
-                name=item.name,
-                description=describe_item(item),
-                item_type=str(item.item_type),
-                price=item.price,
-            )
-            for item in creature.inventory
-        ]
+        return [item_info(item) for item in creature.inventory]
 
     @staticmethod
     def build_equipped(creature: Creature) -> list[EquippedInfo]:
@@ -105,7 +98,9 @@ class AwarenessBuilder:
             (EquipmentSlot.RING, creature.equipped_ring),
         ]
         return [
-            EquippedInfo(slot=slot, item_id=item.id, name=item.name, description=describe_item(item))
+            EquippedInfo(
+                slot=slot, item_id=item.id, name=item.name, description=describe_item(item), props=item_props(item)
+            )
             for slot, item in slots
             if item is not None
         ]
@@ -127,17 +122,7 @@ class AwarenessBuilder:
         """Build merchant info for merchant NPCs at the creature's location."""
         result: list[MerchantInfo] = []
         for npc in active_merchants_at(self._entities, creature.location_id, hour):
-            items = [
-                ItemInfo(
-                    id=item.id,
-                    name=item.name,
-                    description=describe_item(item),
-                    item_type=str(item.item_type),
-                    price=item.price,
-                )
-                for item in npc.inventory
-                if item.price is not None
-            ]
+            items = [item_info(item) for item in npc.inventory if item.price is not None]
             result.append(MerchantInfo(id=npc.id, name=npc.name, gold=npc.gold, items=items))
         return result
 
@@ -309,7 +294,6 @@ class AwarenessBuilder:
         self, creature: Creature, hour: int, query_fn: QueryFn | None = None
     ) -> list[NearbyEntity]:
         """Build list of nearby entities for peaceful awareness."""
-        from dnd_simulator.core.awareness import ItemInfo, describe_item
         from dnd_simulator.core.loot import InventoryHolder
         from dnd_simulator.rules.loot import is_lootable
 
@@ -344,16 +328,7 @@ class AwarenessBuilder:
             loot_items: list[ItemInfo] = []
             loot_gold = 0
             if lootable and isinstance(e, InventoryHolder):
-                loot_items = [
-                    ItemInfo(
-                        id=i.id,
-                        name=i.name,
-                        description=describe_item(i),
-                        item_type=str(i.item_type),
-                        price=i.price,
-                    )
-                    for i in e.inventory
-                ]
+                loot_items = [item_info(i) for i in e.inventory]
                 loot_gold = e.gold
             # Structured fields for inspect card — all populated from AwarenessBuilder
             name = e.name
