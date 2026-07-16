@@ -62,16 +62,34 @@
 
 ## Status
 
-**Current:** All phases complete (2026-07-16). Ready for audit.
+**Current:** CLOSED (2026-07-16).
 
 ## Decisions
 
-_(заполняется по ходу спринта)_
+- **Ось движения унифицирована на хендлерах.** `MOVE`→`CostType.FREE`, `CostType.MOVEMENT` удалён; `movement_remaining` списывают только movement-хендлеры по факту пройденного. Диспетчер владеет осью действий (action/bonus/reaction). Инвариант зафиксирован в CLAUDE.md.
+- **`props` считается на сервере, метки рисует клиент.** Машиночитаемый JSON-safe `props` из типизированных дефов вместо серверной строки `describe_item()`; i18n-метки живут во фронтовом `game.json`. Не завязываемся на серверный язык, пока `ui-language-mixing` открыт. Значения `props` обязаны оставаться JSON-примитивами: payload торговца и лута идут через `dataclasses.asdict` без JSON-прохода.
+- **`equipped` расширен до `list[dict[str, object]]`** в `PlayerStatusData` и `PlayerStatusResponse`: `props` — dict, старая str-типизация отбивала создание персонажа 422.
+- **Карточка `ItemDetails` на `fixed` вместо `absolute`** — все четыре точки рендера внутри `overflow-y-auto`, absolute клипался бы. Контент всегда в DOM (CSS-hover), поэтому тестируем без реального ховера.
+- **RU-описания equip/unequip дописаны в `.po` руками.** `make messages` не годится: гонит `pygettext --keyword=_` без `N_` и падает на f-строках.
 
 ## Deferred
 
-_(заполняется по ходу спринта)_
+- `ac-stale-on-unequip` — снятие брони повышает КЗ (`effective_ac` держит устаревший `creature.ac`). Вскрыт E2E фазы 2, предсуществующий, трогает backwards-compat `max()` для stat-block AC существ.
+- `use-item-zero-heal` — ветка `healed == 0` для зелий (Second Wind-половина закрыта в phase 1 task 3).
+- `ui-language-mixing` — пополнен находками спринта: КД (клиент) против КЗ (сервер), английские имена предметов в локализованном логе.
+- Остаток `faction-hostility-check-cost` — кросс-слойный faction-to-faction запрос на пару всё ещё без мемоизации, покрыт `awareness-rebuild-cache`.
+- `combat-status-single-source`, `flee-scene-separation`, `combat-pathfinding-avoidance`, `equip-action-collapse` — вне скоупа с планирования.
 
 ## Results
 
-_(заполняется в конце спринта)_
+**Completed:** 2026-07-16
+
+Восемь айтемов из живой партии 2026-07-15 закрыты за три фазы: бой стал читаться (единый учёт бюджета движения, чужие отказы не текут в лог игрока, `faction_hostility_check` INFO→DEBUG, Second Wind без «0 ОЗ»), снаряжение получило SRD-цены и локализованные кнопки, свойства предметов видно карточкой до покупки и надевания в RU и EN.
+
+Метрики: backend 2573 unit (+~30), frontend 299 (+10), integration 166 (+4). Post-audit E2E 26/26, 0 блокеров. Аудит 2026-07-16 — 13 находок, 2 применены quick-fix, остальные уже трекались в BACKLOG.
+
+Ключевое открытие: премиса `combat-move-budget-not-consumed` («бюджет не тратится, кайтинг бесконечен») оказалась неверной — диспетчер списывал бюджет, speed=30 честно упирался в 30 ft. Разведка кода до правки переформулировала таск в унификацию раздвоенного учёта, где и жили настоящие латентные баги: диагональ списывалась плоскими 5 ft вместо 5/10, частичный шаг списывал запрос, а не пройденное.
+
+`hide-world-travel-in-combat` при разведке оказался уже закрытым с Sprint 009 (`GameScreen` свапает правую колонку в бою) — помечен superseded, playtest-симптом ушёл в `combat-status-single-source`.
+
+При закрытии полный `/update-docs` вскрыл дрейф документации шире дельты спринта: `master/` описан как живой LLM-оркестратор (пустой стаб с первого коммита, никем не импортируется), CLI/Telegram-адаптеры как существующие, `xp_for_kill` вместо `xp_for_cr`, 7 сценариев e2e-плейбука расходились с поведением кода. Починен предсуществующий флейк `test_timeout_preserves_lifecycle_until_same_thread_stops` (тест не восстанавливал 10ms-таймаут, teardown гонялся с живым раунд-потоком).

@@ -3,46 +3,14 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-16
-**Position:** Sprint 024 (playtest-quick-wins): все три фазы COMPLETE, аудит проведён и триажирован.
-**Next:** Post-audit E2E (`/e2e`), затем `/close-sprint`.
+**Position:** Sprint 024 (playtest-quick-wins) закрыт: кластер находок живой партии 2026-07-15 снят, эпик simulation-core не двигался. Следующий шаг по ROADMAP — вернуться к simulation-core (Level 2 «Расходуемые ресурсы») либо добить боевой кластер.
+**Next:** Активного спринта нет. Кандидаты из BACKLOG (`must`/`should`): `ac-stale-on-unequip` (снятие брони повышает КЗ), `combat-status-single-source` (зонтик над `rest-in-combat-not-rejected`/`flee-scene-separation`), `load-combat-round-resume`, `hit-dice-short-rest`.
 **Blockers:** Нет.
+**Closure:** Ждём завершения CI для `sprint/024-playtest-quick-wins`.
 
 ## Current Sprint
 
-**Sprint:** 024-playtest-quick-wins
-**Goal:** Быстрые UX-победы из живой партии 2026-07-15 — боевое движение и чистота лога/боевого UI, полировка торговли и i18n снаряжения, панель свойств предметов
-**Started:** 2026-07-16
-**Phase:** 3 — Панель свойств предметов (COMPLETE) — 2026-07-16. All phases complete.
-
-**Audit:** Triaged 2026-07-16. Quick-fix: 2 applied (rename `reaction_to_dict` в public, снос мёртвой обёртки `check_faction_hostility` с переводом тестов на `_hostility_from_relation`). Sprint-relevant: 0 отдельных (единственный айтем закрыт в quick-fix проходе). Backlog: 0 added — остальные 11 находок уже трекаются слагами в BACKLOG.md. Блокеров нет.
-
-Phase 3 закрыта: integration 166 green (+2 новых теста `TestTrading` — `props` у товаров торговца в awareness и на equipped в REST-статусе), E2E 15/15 по секциям 5/8/9 + карточки предметов (все пять видов props — weapon с флагами Finesse/Light, armor, shield, potion, accessory — в RU и EN, во всех четырёх точках рендера). Блокеров нет. Вне скоупа зафиксировано: КД (клиент) vs КЗ (сервер) и англ. имена предметов в списках при локализованном логе — кластер `ui-language-mixing`. Отчёт: `docs/sprints/024-playtest-quick-wins/e2e/phase3-report.md`.
-
-Task 2 (карточка деталей предмета) done: компонент `ItemDetails` (CSS-hover, контент всегда в DOM) рендерит `props` локализованной карточкой во всех четырёх местах (инвентарь bag + слоты, торговец buy + sell), `title=`-атрибуты убраны, fallback на `description`. `ItemProps` discriminated union в `types/game.ts`, 21 новый i18n-ключ EN+RU (переиспользованы `dmg_*`/`slot_*`/`source_*`). Отклонение: карточка на `fixed` c auto-смещениями вместо `absolute` — все точки рендера внутри `overflow-y-auto`, absolute клипался бы. 8 новых компонентных тестов, включая регресс кликов unequip/buy. `make check` зелёный (backend 2573, frontend 299).
-
-Task 1 (структурный `props` в payload) done: `item_props()` + `props` на `ItemInfo`/`EquippedInfo`, хелпер `item_info()` схлопнул три дублированные сборки в `awareness_builder`; все четыре канала (инвентарь, экипировка, торговец, лут) несут машиночитаемые свойства из типизированных дефов. `equipped` расширен до `list[dict[str, object]]` в `PlayerStatusData` и `PlayerStatusResponse` (props — dict, старая str-типизация отбивала 422). 8 новых тестов на реальном резолве каталога + JSON-гарда по всем 31 записям. `make check` зелёный (backend 2573, frontend 291).
-
-Phase 3 план: свойства сейчас доезжают до UI только английской строкой `describe_item()` в native `title` (броня/щит — вообще ничего). Task 1 — машиночитаемый JSON-safe `props` из типизированных дефов на `ItemInfo`/`EquippedInfo` по всем четырём каналам (инвентарь, экипировка, торговец, лут); task 2 — компонент `ItemDetails` (CSS-hover карточка, контент в DOM — тестируемо), рендер с i18n-метками EN+RU в `InventoryPanel`/`TradePanel`, fallback на `description`. Серверный язык не трогаем (`ui-language-mixing` вне скоупа), LLM-промпты `props` не раздувает.
-
-Phase 2 закрыта (2026-07-16): integration 164 green (данные+i18n, новых интеграционных тестов не требуется — плумбинг цены и i18n покрыты бэкенд-юнитами `TestCatalogPrices`/`test_equip_desc_i18n` + фронт `equipI18n.test.tsx`). E2E RU (`test_vale`): купля/продажа стартового `chain_mail` (75g SRD, gold 950→1025), equip/unequip i18n (Надеть/Убрать/Экипировать/Использовать, slot-метки Броня/Голова/Ноги/Кольцо/Сумка), combat-регресс — 8/8. Вскрыт предсуществующий баг `ac-stale-on-unequip` (снятие брони → КЗ растёт, `effective_ac` держит устаревший `creature.ac`) — вне скоупа, в бэклоге. Отчёт: `docs/sprints/024-playtest-quick-wins/e2e/phase2-report.md`.
-
-Task 2 (i18n надеть/снять) done: 10 slot-меток (`equip_armor`…`unequip_ring`) + короткий `use` в `en`/`ru` `game.json`; `USE`/`EQUIP` в `InventoryPanel` уведены в `t()` (EQUIP→`equip`, USE→новый `use`); 12 RU-описаний equip/unequip добавлены в `.po` руками (`make messages` не годится — гонит `pygettext --keyword=_` без `N_` и падает на f-строках), `.mo` перекомпилирован. Аддитивно, коллапс 12 ActionType не тронут. `make check` зелёный (backend 2565, frontend 291).
-
-Task 1 (SRD-цены каталога) done: `price` проставлен в 31 каталожный YAML (PHB для манданого, редкость DMG для магии); плумбинг цены уже нёс её от каталога до `Item.price`, правок кода нет. Регресс-гварда `TestCatalogPrices` + продажа снятого `chain_mail` через реальный резолв каталога. `make check` зелёный (backend 2563, frontend 289).
-
-Task 1 (единый учёт бюджета движения) done: `MOVE`→FREE, `handle_move` списывает `moved_ft` атомарно, `check_movement_available` держит «0 движения → MOVE недоступен», внятная отбивка `move_to`, остаток движения + достижимость целей в LLM-промпт. Премиса `combat-move-budget-not-consumed` оказалась неверной (бюджет уже списывал диспетчер) — таск переформулирован в унификацию раздвоенного учёта. `make check` зелёный (backend 2550, frontend 289).
-
-Task 2 (чистота боевого лога) done: on_action вынесен в `build_action_result` (transport_payloads), `error`/`budget` гейтятся на игрока — чужие технические отказы (заблокированный ход волка) больше не текут в лог игрока. В awareness `make_relation_fn` строится один раз на ребилд (было ~2N на пару): hostility вынесен в приватный `_hostility_from_relation(relation_fn)`, публичная сигнатура `check_faction_hostility` сохранена. `faction_hostility_check` INFO→DEBUG. `make check` зелёный (backend 2554, frontend 289).
-
-Task 3 (Second Wind без «0 ОЗ») done: `_perceive_second_wind` получил ветку `healed == 0` (self/other) с сообщением о полном здоровье вместо «regaining 0 HP»; ненулевой путь не тронут. Новые EN-строки + RU-перевод, `.pot`/`.mo` перекомпилированы. `make check` зелёный (backend 2558, frontend 289). Фаза 1 полностью закрыта по задачам.
-
-### Phases
-
-1. Читаемость и тактика боя (movement budget, enemy-error log gate, faction-log spam, second-wind zero heal)
-2. Полировка торговли и экипировки (catalog prices, equip/unequip i18n)
-3. Панель свойств предметов (item-properties-ui)
-
-`hide-world-travel-in-combat` снят с фазы 1: буквальный гейт уже на месте (GameScreen right-column swap), остаток — десинк режима (`combat-status-single-source`, вне скоупа).
+No active sprint.
 
 ## Recent activity (non-sprint)
 
@@ -58,6 +26,7 @@ Task 3 (Second Wind без «0 ОЗ») done: `_perceive_second_wind` получ�
 
 | Sprint | Goal | Started | Completed |
 |--------|------|---------|-----------|
+| 024-playtest-quick-wins | Быстрые UX-победы из живой партии 2026-07-15: боевое движение и чистота лога, полировка торговли и i18n снаряжения, панель свойств предметов | 2026-07-16 | 2026-07-16 |
 | 023-trigger-table | Парные триггеры `{on, until}` на типизированной таксономии событий; событийный write-back смертей логова | 2026-07-12 | 2026-07-14 |
 | 022-intents-travel | Player-agnostic якоря и сохраняемые wait/sleep/travel intent; travel по рёбрам; согласованный lifecycle save/load/autosave | 2026-07-10 | 2026-07-12 |
 | 021-save-schema | Версионированная Pydantic-схема сейва (schema_version=1, RNG в сейве, combat sides), воспроизводимость мира от DND_WORLD_SEED, периодический автосейв | 2026-07-10 | 2026-07-10 |
