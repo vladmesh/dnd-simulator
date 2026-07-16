@@ -4,6 +4,7 @@ import { useGameStore } from "@/store/gameStore"
 import { wsClient } from "@/transport/wsClient"
 import { ChevronDown, ChevronRight, ShoppingBag, Coins } from "lucide-react"
 import type { MerchantInfo } from "@/types/game"
+import { ItemDetails } from "./ItemDetails"
 
 function sendAction(name: string, params?: Record<string, unknown>) {
   wsClient.send({ type: "action", name, params })
@@ -36,12 +37,14 @@ export function MerchantView({ merchant }: { merchant: MerchantInfo }) {
           <div className="max-h-32 space-y-0.5 overflow-y-auto">
             {merchant.items.map((item) => (
               <div key={item.id} className="flex items-center gap-1 text-xs">
-                <span className="min-w-0 flex-1 truncate" title={item.description}>
-                  {item.name}
-                  {item.price != null && (
-                    <span className="ml-1 text-muted-foreground">{item.price}g</span>
-                  )}
-                </span>
+                <ItemDetails item={item} className="min-w-0 flex-1">
+                  <span className="block truncate">
+                    {item.name}
+                    {item.price != null && (
+                      <span className="ml-1 text-muted-foreground">{item.price}g</span>
+                    )}
+                  </span>
+                </ItemDetails>
                 <button
                   className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[10px] hover:bg-accent/80 disabled:opacity-50"
                   disabled={waitingForAction || (item.price != null && playerGold < item.price)}
@@ -62,10 +65,12 @@ export function MerchantView({ merchant }: { merchant: MerchantInfo }) {
           <div className="max-h-32 space-y-0.5 overflow-y-auto">
             {sellableItems.map((item) => (
               <div key={item.id} className="flex items-center gap-1 text-xs">
-                <span className="min-w-0 flex-1 truncate" title={item.description}>
-                  {item.name}
-                  <span className="ml-1 text-muted-foreground">{item.price}g</span>
-                </span>
+                <ItemDetails item={item} className="min-w-0 flex-1">
+                  <span className="block truncate">
+                    {item.name}
+                    <span className="ml-1 text-muted-foreground">{item.price}g</span>
+                  </span>
+                </ItemDetails>
                 <button
                   className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[10px] hover:bg-accent/80 disabled:opacity-50"
                   disabled={waitingForAction || merchant.gold < (item.price ?? 0)}

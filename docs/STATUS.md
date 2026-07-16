@@ -3,8 +3,8 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-16
-**Position:** Sprint 024 (playtest-quick-wins): Phases 1-2 COMPLETE; Phase 3 (панель свойств предметов) — tasks generated (2 tasks).
-**Next:** Начать Phase 3 task 1 (`/implement`).
+**Position:** Sprint 024 (playtest-quick-wins): Phases 1-2 COMPLETE; Phase 3 (панель свойств предметов) — обе задачи done.
+**Next:** Закрыть Phase 3 (`/close-phase`).
 **Blockers:** Нет.
 
 ## Current Sprint
@@ -12,7 +12,9 @@
 **Sprint:** 024-playtest-quick-wins
 **Goal:** Быстрые UX-победы из живой партии 2026-07-15 — боевое движение и чистота лога/боевого UI, полировка торговли и i18n снаряжения, панель свойств предметов
 **Started:** 2026-07-16
-**Phase:** 3 — Панель свойств предметов (task 1 done, task 2 pending) — 2026-07-16.
+**Phase:** 3 — Панель свойств предметов (tasks 1-2 done) — 2026-07-16.
+
+Task 2 (карточка деталей предмета) done: компонент `ItemDetails` (CSS-hover, контент всегда в DOM) рендерит `props` локализованной карточкой во всех четырёх местах (инвентарь bag + слоты, торговец buy + sell), `title=`-атрибуты убраны, fallback на `description`. `ItemProps` discriminated union в `types/game.ts`, 21 новый i18n-ключ EN+RU (переиспользованы `dmg_*`/`slot_*`/`source_*`). Отклонение: карточка на `fixed` c auto-смещениями вместо `absolute` — все точки рендера внутри `overflow-y-auto`, absolute клипался бы. 8 новых компонентных тестов, включая регресс кликов unequip/buy. `make check` зелёный (backend 2573, frontend 299).
 
 Task 1 (структурный `props` в payload) done: `item_props()` + `props` на `ItemInfo`/`EquippedInfo`, хелпер `item_info()` схлопнул три дублированные сборки в `awareness_builder`; все четыре канала (инвентарь, экипировка, торговец, лут) несут машиночитаемые свойства из типизированных дефов. `equipped` расширен до `list[dict[str, object]]` в `PlayerStatusData` и `PlayerStatusResponse` (props — dict, старая str-типизация отбивала 422). 8 новых тестов на реальном резолве каталога + JSON-гарда по всем 31 записям. `make check` зелёный (backend 2573, frontend 291).
 

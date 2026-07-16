@@ -110,6 +110,59 @@ export interface CombatEntity {
   conditions?: string[]
 }
 
+// --- Item properties (backend awareness.item_props) ---
+
+export interface WeaponDamageProp {
+  dice: string
+  type: string
+}
+
+export interface WeaponProps {
+  kind: "weapon"
+  damage: WeaponDamageProp[]
+  reach: number
+  category: string
+  ability?: string | null
+  modifier?: number
+  is_magic?: boolean
+  is_finesse?: boolean
+  is_two_handed?: boolean
+  is_light?: boolean
+  is_heavy?: boolean
+  conditions?: string[]
+}
+
+export interface ArmorProps {
+  kind: "armor"
+  category: string
+  base_ac: number
+  max_dex_bonus?: number | null
+}
+
+export interface ShieldProps {
+  kind: "shield"
+  ac_bonus: number
+}
+
+export interface AccessoryModifierProp {
+  stat: string
+  op: string
+  value: number
+}
+
+export interface AccessoryProps {
+  kind: "accessory"
+  slot: string
+  modifiers: AccessoryModifierProp[]
+}
+
+export interface PotionProps {
+  kind: "potion"
+  heal_dice: string
+}
+
+export type ItemProps = WeaponProps | ArmorProps | ShieldProps | AccessoryProps | PotionProps
+
 export interface ItemInfo {
   id: string
   name: string
@@ -118,6 +171,7 @@ export interface ItemInfo {
   slot?: string
   description: string
   price?: number | null
+  props?: ItemProps | null
 }
 
 export interface EquippedInfo {
@@ -125,6 +179,7 @@ export interface EquippedInfo {
   item_id: string
   name: string
   description: string
+  props?: ItemProps | null
 }
 
 export interface ActionParamInfo {

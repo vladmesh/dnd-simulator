@@ -41,13 +41,22 @@ i18n (`frontend/src/i18n/locales/{en,ru}/game.json`): метки полей (у�
 
 ## Acceptance Criteria
 
-- [ ] Tests written and RED (before implementation)
-- [ ] Implementation makes tests GREEN
-- [ ] Existing tests still pass (`make check`)
-- [ ] В магазине и инвентаре по предмету видно урон/КЗ/эффект до покупки/надевания, EN и RU без сырых английских строк
-- [ ] Броня и щит впервые показывают свои свойства (раньше — только имя)
-- [ ] Fallback на `description` для предметов без `props`
+- [x] Tests written and RED (before implementation)
+- [x] Implementation makes tests GREEN
+- [x] Existing tests still pass (`make check`)
+- [x] В магазине и инвентаре по предмету видно урон/КЗ/эффект до покупки/надевания, EN и RU без сырых английских строк
+- [x] Броня и щит впервые показывают свои свойства (раньше — только имя)
+- [x] Fallback на `description` для предметов без `props`
 
 ## Status
 
-`pending`
+`done`
+
+## Developer Notes
+
+- Все четыре точки рендера (`InventoryPanel` bag + слоты экипировки, `TradePanel` buy + sell) переведены с `title=` на `ItemDetails`; `title`-атрибуты убраны, подсказка «Нажмите, чтобы снять» переехала внутрь карточки (`hint`-проп).
+- Отклонение от плана в позиционировании: план предполагал `absolute`, но все четыре места живут внутри `overflow-y-auto` контейнеров (и списки `max-h-32`, и сами колонки грида GameScreen), которые клипают absolute-потомков. Карточка использует `fixed` с auto-смещениями: статическая позиция якорит её под строкой предмета, а позиционирование от viewport выводит из-под клипа. Паттерн остаётся чистым CSS (`group/item` + `group-hover/item:visible`), контент всегда в DOM — тесты без симуляции hover.
+- Для правой колонки грида слотов карточка сдвигается `-translate-x-1/2` (`align="right"`), чтобы не уезжать в соседнюю колонку.
+- RU-терминология по существующей локали: «КД» (не «КЗ» из формулировки таска), досягаемость в фт. Переиспользованы существующие ключи `dmg_*` (все 13 типов урона уже были), `slot_*`, `source_str…cha`, `damage`, `advantage`/`disadvantage`; новых ключей 21 (метки полей, категории оружия/брони, флаги, статы). Цена в карточке — `{{n}}g` как в остальном UI.
+- Щит и ADD-модификаторы аксессуаров рендерятся одним форматом `+N <стат>`; grant_conditions — `t("condition_<id>", defaultValue)` без новых ключей, как и требовал план.
+- 8 новых компонентных тестов (`ItemDetails.test.tsx`): RU/EN карточки для брони/оружия/кольца/зелья, fallback на description, регресс кликов unequip и buy (те же WS-payload). RED подтверждён до имплементации (6 fail — карточки; 2 клик-регресса зелёные исходно, оставлены как гварды).

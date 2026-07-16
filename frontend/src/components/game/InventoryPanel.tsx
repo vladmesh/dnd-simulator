@@ -4,6 +4,7 @@ import { useGameStore } from "@/store/gameStore"
 import { wsClient } from "@/transport/wsClient"
 import { ChevronDown, ChevronRight, Package, Sword, Shield, Crown, Footprints, Gem, ShieldPlus } from "lucide-react"
 import type { EquippedInfo, ItemInfo } from "@/types/game"
+import { ItemDetails } from "./ItemDetails"
 
 const SLOT_ORDER = ["weapon", "armor", "shield", "head", "feet", "ring"] as const
 const SLOT_ICONS: Record<string, React.ElementType> = {
@@ -46,7 +47,7 @@ function getEquipSlot(item: ItemInfo): string | undefined {
   return undefined
 }
 
-function EquipmentSlot({ slot, item }: { slot: string; item?: EquippedInfo }) {
+function EquipmentSlot({ slot, item, align }: { slot: string; item?: EquippedInfo; align?: "left" | "right" }) {
   const { t } = useTranslation(["game"])
   const Icon = SLOT_ICONS[slot] ?? Package
   const waitingForAction = useGameStore((s) => s.waitingForAction)
@@ -55,14 +56,15 @@ function EquipmentSlot({ slot, item }: { slot: string; item?: EquippedInfo }) {
     <div className="flex items-center gap-2 rounded border border-border px-2 py-1">
       <Icon className="size-3 shrink-0 text-muted-foreground" />
       {item ? (
-        <button
-          className="min-w-0 flex-1 truncate text-left text-xs hover:text-primary disabled:opacity-50"
-          title={`${item.description}\n${t("game:click_to_unequip")}`}
-          disabled={waitingForAction}
-          onClick={() => sendAction(UNEQUIP_ACTION[slot] ?? "unequip")}
-        >
-          {item.name}
-        </button>
+        <ItemDetails item={item} align={align} hint={t("game:click_to_unequip")} className="min-w-0 flex-1">
+          <button
+            className="block w-full truncate text-left text-xs hover:text-primary disabled:opacity-50"
+            disabled={waitingForAction}
+            onClick={() => sendAction(UNEQUIP_ACTION[slot] ?? "unequip")}
+          >
+            {item.name}
+          </button>
+        </ItemDetails>
       ) : (
         <span className="flex-1 text-xs text-muted-foreground">
           {t(`game:slot_${slot}`, { defaultValue: slot })}
@@ -88,12 +90,14 @@ function BagItem({ item }: { item: ItemInfo }) {
 
   return (
     <div className="flex items-center gap-1 text-xs">
-      <span className="min-w-0 flex-1 truncate" title={item.description}>
-        {item.name}
-        {item.price != null && (
-          <span className="ml-1 text-muted-foreground">{item.price}g</span>
-        )}
-      </span>
+      <ItemDetails item={item} className="min-w-0 flex-1">
+        <span className="block truncate">
+          {item.name}
+          {item.price != null && (
+            <span className="ml-1 text-muted-foreground">{item.price}g</span>
+          )}
+        </span>
+      </ItemDetails>
       {isConsumable && (
         <button
           className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[10px] hover:bg-accent/80 disabled:opacity-50"
@@ -140,8 +144,8 @@ export function InventoryPanel() {
         <div className="space-y-2">
           {/* Equipment slots */}
           <div className="grid grid-cols-2 gap-1">
-            {SLOT_ORDER.map((slot) => (
-              <EquipmentSlot key={slot} slot={slot} item={equippedBySlot.get(slot)} />
+            {SLOT_ORDER.map((slot, i) => (
+              <EquipmentSlot key={slot} slot={slot} item={equippedBySlot.get(slot)} align={i % 2 === 1 ? "right" : "left"} />
             ))}
           </div>
 
