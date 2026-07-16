@@ -2,9 +2,9 @@
 
 ## Overview
 
-The simulator is built as a stack of simulation layers, each depending only on the layers below it. A World container manages global time and propagates events between layers. An LLM-powered Master (Dungeon Master) orchestrates everything — interpreting player actions, querying layers, advancing time, and composing narrative responses.
+The simulator is built as a stack of simulation layers, each depending only on the layers below it. A World container manages global time and propagates events between layers. The `Round` orchestrator drives creature turns; each creature's brain (rule-based, LLM, or player) decides what it does. `master/` is a stub reserved for a future LLM Dungeon Master that would narrate and guide; nothing runs there yet.
 
-The game logic is fully transport-agnostic: a `GameService` provides the interface, and thin adapters (CLI, REST API, Telegram) plug into it.
+The game logic is fully transport-agnostic: a `GameService` provides the interface, and thin adapters plug into it. The FastAPI REST + WebSocket adapter is the only one implemented; CLI and Telegram remain possible without touching game logic.
 
 ## Layer Stack
 
@@ -46,9 +46,9 @@ src/dnd_simulator/
 │       ├── activation_manager.py — ActivationManager (proximity activation + encounter rolling, region/time-of-day)
 │       ├── query_handler.py      — QueryHandler (layer query dispatch)
 │       └── perception.py         — event perception and visibility filtering
-├── master/        — DM orchestrator (LLM-powered)
-├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation (+ target scope), conditions, weapons, modifiers, proficiency, sneak attack, divine smite, fighting style, reactions, reputation, combat_sides, resources, character creation, leveling (XP/thresholds/perform_level_up), action providers, encounters (time-of-day gate), inventory (transfer_items), loot, abstract combat, physics, economics, RuleBrain (utility scoring)
-│   └── handlers/  — per-action-type execution (combat, attack_resolution, movement, equipment, items, rest, trade, loot, reactions)
+├── master/        — stub for a future LLM DM orchestrator (docstring only, no code)
+├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation (+ target scope), conditions, weapons, modifiers, proficiency, sneak attack, divine smite, fighting style, reactions, reputation, combat_sides, resources, character creation, leveling (XP/thresholds), perform_level_up, action providers, encounters (time-of-day gate), inventory (transfer_items), loot, trade, lairs, abstract combat, geography/politics/settlements formulas, dice, checks, RuleBrain (utility scoring)
+│   └── handlers/  — per-action-type execution (combat, attack_resolution, action_surge, movement, equipment, items, rest, trade, loot, reactions, triggers)
 ├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, MemorySummarizer (layer-agnostic: only depends on core/ and rules/)
 ├── i18n.py        — gettext internationalization, per-session language via contextvars
 ├── adapters/      — transport layer
@@ -83,7 +83,9 @@ src/dnd_simulator/
 │   ├── action_parsing.py    — parse JSON action payloads into Action (ActionParseError); keeps adapters off core Action/ActionType
 │   ├── brain_factory.py     — creates Brain instances from BrainType
 │   ├── base.py              — GameServiceProtocol base shared by the command mixins
-│   ├── dto.py               — typed DTOs returned by service methods (PlayerStatusData, ResourcePoolView)
+│   ├── dto.py               — typed DTOs returned by service methods (PlayerStatusData, ResourcePoolView, JourneyView)
+│   ├── transport_payloads.py — JSON-safe payload building for REST/WS
+│   ├── contextual_providers.py, errors.py
 │   └── commands_creatures.py, commands_politics.py, commands_save.py, commands_time.py, commands_world_state.py
 └── round.py       — Round orchestrator: multi-action turn loop with budget enforcement
 
@@ -104,12 +106,13 @@ frontend/          — React + TypeScript SPA (Vite + shadcn/ui + Zustand)
 ├── src/components/game/    — GameScreen (dashboard: 3-col grid), EventLog (compact strip + expand overlay),
 │                             BattleMap (interactive CSS Grid, click-to-move, click-to-inspect),
 │                             ActionBar (orchestrator) + action-bar/ (ActionButton, SayAction, drawers, utils),
-│                             CombatPanel, NpcInspectModal, Perception, LocationPanel
+│                             CombatPanel, NpcInspectModal, Perception, LocationPanel,
+│                             InventoryPanel / TradePanel / LootPanel + ItemDetails (localized card from item props)
 ├── src/components/master/  — MasterScreen (Worlds/Sessions tabs), WorldEditor (layer stepper),
 │                             EntityListEditor (schema-driven CRUD), SchemaForm, CatalogBrowser,
 │                             SessionView (WorldOverview, CreatureList, TimeControl, SavesPanel)
 ├── src/store/              — Zustand store (slices: connection, player, turn, log)
-├── src/transport/          — apiClient (REST), wsClient (WebSocket)
+├── src/transport/          — requestCore + per-area REST clients (player, master session/world/content/creature), wsClient (WebSocket)
 └── src/i18n/               — i18next with EN/RU locale files
 ```
 
@@ -139,7 +142,7 @@ run_loop:
         run_round → on_round_end callback
 
 Player input flow (service/, command-based):
-    Player input → Adapter (CLI/API/TG) → GameService → response
+    Player input → Adapter (REST/WS) → GameService → response
 
 REST API flow (adapters/api/):
     FastAPI routes → GameService methods → JSON responses
@@ -202,7 +205,9 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 
 **Turn order:** Initiative = d20 + DEX modifier, tiebreaker by DEX score. Order is fixed for the entire combat. Game loop iterates combatants in this order.
 
-**Battle map:** Each `CombatState` owns a `BattleMap` — a 2D grid (coordinates in feet, 5-ft cells). Entities have `Position`s on the map. `Wall` segments block movement between adjacent cells. Perimeter walls auto-generated from map dimensions. Movement uses `rules/movement.py`: atomic direction + distance steps, D&D 5e alternating diagonal cost (5/10/5/…), wall collision. Dash is a self-buff action that adds speed to the movement pool. Abstract moves (toward/away from target) are resolved to concrete directions server-side. Budget is consumed only on a successful action, so a blocked move costs nothing. `move_to(x, y)` uses BFS pathfinding with D&D 5e diagonal costs and budget-aware stepping; player-only (excluded from LLM schemas via `provider_managed`).
+**Battle map:** Each `CombatState` owns a `BattleMap` — a 2D grid (coordinates in feet, 5-ft cells). Entities have `Position`s on the map. `Wall` segments block movement between adjacent cells. Perimeter walls auto-generated from map dimensions. Movement uses `rules/movement.py`: atomic direction + distance steps, D&D 5e alternating diagonal cost (5/10/5/…), wall collision. Dash is a self-buff action that costs an action and adds speed to the movement pool. Abstract moves (toward/away from target) are resolved to concrete directions server-side. Budget is consumed only on a successful action, so a blocked move costs nothing. `move_to(x, y)` uses `compute_reachable` (Dijkstra with D&D 5e diagonal costs) and budget-aware stepping; player-only (excluded from LLM schemas via `provider_managed`).
+
+**Movement budget ownership:** `ActionDispatcher` charges action, bonus action and reaction costs; it never charges movement. `MOVE` and `MOVE_TO` are `CostType.FREE` in `core/action_defs.py`, and the handlers in `rules/handlers/movement.py` subtract the distance actually moved. `handle_move` prices the whole compass step up front and rejects it if the budget can't cover it, so a mover never lands where it can't pay; `handle_move_to` walks the path and charges what it spent, including when an OA kills the mover mid-path. `rules/validation.check_movement_available` only gates on having movement left.
 
 **Dual awareness:** Creatures in combat get a focused prompt (HP, weapon, nearby combatants with positions/distances, round number — no weather/time/politics). Peaceful creatures get full world awareness. Two separate tool sets: combat (attack/move/dodge/flee/idle, no say — use description for flavor) and peaceful (say/attack/idle).
 
@@ -221,7 +226,9 @@ Combat is managed by `EntitiesLayer` through `CombatState` and `BattleMap` (defi
 
 **Conditions** (`core/conditions.py`): D&D 5e status effects as a `Condition` enum (Blinded, Poisoned, Prone, Stunned, etc. + Blessed). `ConditionsMap` = `dict[Condition, int | None]` — maps active conditions to remaining rounds (`int`) or permanent (`None`). Pure mechanics in `rules/conditions.py`: `is_incapacitated()`, `effective_speed()`, `attack_advantage()`, `tick_conditions()` (decrement/expire at turn start).
 
-**Items** (`core/items.py`): `Item` dataclass with `ItemType` (WEAPON, POTION, ARMOR, SHIELD). Weapons carry a `WeaponDef` — attack name, damage components, reach, ability, magic bonus, finesse flag, `WeaponCategory` (simple/martial), and can grant passive conditions and bonus action types while equipped. Armor carries `ArmorDef` — base AC, DEX cap, `ArmorCategory` (light/medium/heavy). Shields carry `ShieldDef` — AC bonus. `rules/weapons.py`: `get_weapon_attack()` builds `Attack` from equipped weapon, falling back to `creature.attacks` or unarmed strike (1 bludgeoning). `rules/proficiency.py`: proficiency bonus by level, weapon/armor proficiency tables per class. `Creature.equipped_weapon`/`equipped_armor`/`equipped_shield` are the active equipment; inventory holds all items. Equip/unequip actions swap equipment from inventory.
+**Items** (`core/items.py`): `Item` dataclass with `ItemType` (WEAPON, POTION, ARMOR, SHIELD, ACCESSORY) and an optional SRD `price`. Weapons carry a `WeaponDef` — attack name, damage components, reach, ability, magic bonus, finesse/two-handed/light/heavy flags, `WeaponCategory` (simple/martial), and can grant passive conditions and bonus action types while equipped. Armor carries `ArmorDef` — base AC, DEX cap, `ArmorCategory` (light/medium/heavy). Shields carry `ShieldDef` — AC bonus. Accessories carry `AccessoryDef` — `EquipmentSlot` (HEAD/FEET/RING) and `grant_modifiers` applied while equipped. `rules/weapons.py`: `get_weapon_attack()` builds `Attack` from equipped weapon, falling back to `creature.attacks` or unarmed strike (1 bludgeoning). `rules/proficiency.py`: proficiency bonus by level, weapon/armor proficiency tables per class. `Creature.equipped_weapon`/`equipped_armor`/`equipped_shield` are the active equipment; inventory holds all items. Slot-based equip/unequip handlers live in `rules/handlers/equipment.py`, where `SlotConfig` maps each slot to its item type, creature field, and action types.
+
+**Item views:** `core/awareness.py` builds the views brains and UI see. `describe_item()` renders a human-readable string; `item_props()` returns JSON-primitive structured properties (`kind`, damage, reach, category, flags, modifiers) or `None` for items with no typed def and no potion effect. Both `ItemInfo` (inventory/loot/merchant) and `EquippedInfo` carry `props`, built via `item_info()` in `layers/entities/awareness_builder.py`. Merchant and loot payloads go through `dataclasses.asdict` without a JSON pass, so `item_props()` values must stay primitives. The frontend renders localized labels from `props` instead of parsing the description text.
 
 ## Lairs, Encounters & Loot
 
@@ -253,11 +260,11 @@ Composition-based class mechanics (`core/class_features.py`). Each D&D class get
 
 ## XP & Leveling
 
-Pure functions in `rules/leveling.py`: `xp_for_kill(cr)` (D&D 5e Monster Manual table, CR 0→10 XP … CR 30→155k), `level_for_xp(xp)` / `xp_to_next_level(xp)` (PHB thresholds, L1=0, L2=300, L3=900, …), `can_level_up(xp, level)`.
+Pure functions in `rules/leveling.py`: `xp_for_cr(cr)` (D&D 5e Monster Manual table, CR 0→10 XP … CR 30→155k), `level_for_xp(xp)` / `xp_to_next_level(xp)` (PHB thresholds, L1=0, L2=300, L3=900, …), `can_level_up(xp, level)`.
 
 **Grant on kill:** `CombatManager.resolve_attack` emits `XP_GAINED` and increments `Character.experience` for Character-class attackers when the target has non-zero `xp_value`. XP is omniscient (like reputation drops) — not perception-gated. Sets `Character.level_up_available` when crossing a threshold.
 
-**Level-up operation:** `perform_level_up(character, fighting_style=None)` mutates the character in-place: bumps `level`, adds hit-die-average HP, unlocks class-specific features (Fighter Action Surge pool, Paladin L2 Fighting Style/Smite/spell slot, Rogue HP only). It is stateful by design (pinned by unit-test invariant) and reachable only through `GameService.level_up_player(session_id, fighting_style)` — adapters translate HTTP to the service call and never import the rule directly. The companion `GameService.player_status(session_id, player_id=None)` returns a typed `PlayerStatusData` DTO (`service/dto.py`) with derived fields (`xp_to_next_level`, effective AC, resource pools) plus the player's `equipped` items and `inventory`, which `routes_player._player_status` then maps to the REST response.
+**Level-up operation:** `perform_level_up(character, fighting_style=None)` (in `rules/perform_level_up.py`) mutates the character in-place: bumps `level`, adds hit-die-average HP, unlocks class-specific features (Fighter Action Surge pool, Paladin L2 Fighting Style/Smite/spell slot, Rogue HP only). It is stateful by design (pinned by unit-test invariant) and reachable only through `GameService.level_up_player(session_id, fighting_style)` — adapters translate HTTP to the service call and never import the rule directly. The companion `GameService.player_status(session_id, player_id=None)` returns a typed `PlayerStatusData` DTO (`service/dto.py`) with derived fields (`xp_to_next_level`, effective AC, resource pools) plus the player's `equipped` items and `inventory`, which `routes_player._player_status` then maps to the REST response.
 
 **Transport:** `POST /api/player/sessions/{id}/level-up` (with optional `fighting_style` for Paladin L2) drives the modal. Player state payload (REST + WS) carries `experience`, `level`, `level_up_available`, `xp_to_next_level`. Frontend shows a Level Up button on the Character panel; `LevelUpModal` is class-switched (Fighter/Rogue confirm only, Paladin picks Fighting Style).
 

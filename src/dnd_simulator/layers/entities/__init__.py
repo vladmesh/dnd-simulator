@@ -2,6 +2,8 @@
 
 Includes attack resolution (via CombatManager), initiative/combat management,
 event perception, and visibility filtering. Manages CombatState per location.
+AwarenessBuilder assembles the PeacefulAwareness/CombatAwareness a brain sees,
+querying lower layers for the surroundings the creature can perceive.
 Anchor-based activation: update_activation() marks creatures near awake anchors as
 active and others as dormant; it completes or interrupts persisted wait/sleep/travel
 intents, while NPCs are moved to their scheduled location on

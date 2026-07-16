@@ -7,9 +7,12 @@
   listener dispatch, action submission
 - ActionDispatcher: validate → handler → budget consume pipeline
 - action_parsing: parse JSON payloads into Action (ActionParseError); keeps adapters off core Action types
-- BrainFactory: creates Brain instances from ai_type string
+- BrainFactory: creates Brain instances from a BrainType, falling back to RuleBrain when no LLM is configured
+- contextual_providers: action providers that need world/layer I/O (the pure ones live in rules/action_provider)
 - commands_*: domain-specific command modules (creatures, politics, time, save, world_state)
-- dto: typed DTOs returned by service methods (PlayerStatusData, ResourcePoolView)
+- transport_payloads: JSON-safe payload builders shared by commands and session callbacks
+- errors: domain exception types raised by service methods
+- dto: typed DTOs returned by service methods (PlayerStatusData, JourneyView, ResourcePoolView)
 """
 
 from dnd_simulator.service.game_service import GameService
