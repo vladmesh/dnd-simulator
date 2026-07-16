@@ -190,6 +190,44 @@ class TestTrading:
             sock.close()
             requests.delete(f"{urls[0]}/sessions/{sid}", timeout=10)
 
+    def test_merchant_items_carry_props(self, backend_url: str) -> None:
+        """Sprint 024 phase 3: merchant items in awareness carry structured props."""
+        urls = self._urls(backend_url)
+        ws_base, sid, pid = _make_trade_session(urls)
+        sock = ws_connect(ws_base, sid, pid)
+        try:
+            msg = ws_recv(sock)
+            assert msg["type"] == "turn"
+            masha = next(m for m in msg["awareness"]["merchants"] if m["id"] == "masha")
+
+            dagger = next(i for i in masha["items"] if i["name"] == "Dagger")
+            assert dagger["props"]["kind"] == "weapon"
+            assert dagger["props"]["damage"] == [{"dice": "1d4", "type": "piercing"}]
+
+            potion = next(i for i in masha["items"] if i["name"] == "Health Potion")
+            assert potion["props"] == {"kind": "potion", "heal_dice": "2d4+2"}
+        finally:
+            sock.close()
+            requests.delete(f"{urls[0]}/sessions/{sid}", timeout=10)
+
+    def test_player_status_equipped_carries_props(self, backend_url: str) -> None:
+        """Sprint 024 phase 3: REST player status carries props on equipped items."""
+        urls = self._urls(backend_url)
+        _, player_api, _ = urls
+        _, sid, _ = _make_trade_session(urls)
+        try:
+            resp = requests.get(f"{player_api}/sessions/{sid}/status", timeout=10)
+            resp.raise_for_status()
+            equipped = {e["slot"]: e for e in resp.json()["equipped"]}
+
+            # Fighter starting equipment: chain mail, longsword, shield
+            assert equipped["armor"]["props"]["kind"] == "armor"
+            assert equipped["armor"]["props"]["base_ac"] == 16
+            assert equipped["weapon"]["props"]["kind"] == "weapon"
+            assert equipped["shield"]["props"] == {"kind": "shield", "ac_bonus": 2}
+        finally:
+            requests.delete(f"{urls[0]}/sessions/{sid}", timeout=10)
+
     def test_buy_updates_merchant_inventory(self, backend_url: str) -> None:
         """After buying, next turn shows updated merchant inventory (item removed)."""
         urls = self._urls(backend_url)

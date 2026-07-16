@@ -43,7 +43,9 @@
 1. [SRD-цены для каталога предметов](tasks/phase2-task1-catalog-item-prices.md) — проставить `price` в 31 каталожный YAML (плумбинг цены уже на месте, не хватает данных); снятый стартовый предмет продаётся торговцу из инвентаря
 2. [i18n кнопок надеть/снять](tasks/phase2-task2-equip-unequip-i18n.md) — 10 slot-меток в `game.json` (EN+RU), хардкод `USE`/`EQUIP` в `InventoryPanel` через `t()`, 12 описаний equip/unequip в RU `.po`; `equip-action-collapse` вне скоупа
 
-## Phase 3: Панель свойств предметов
+## Phase 3: Панель свойств предметов ✓
+
+Закрыта 2026-07-16: integration 166 green (+2 новых теста на `props` в payload торговца и REST-статусе), E2E 15/15 (карточки всех пяти видов предметов в RU и EN, торговля, экипировка, аксессуары). Отчёт: [e2e/phase3-report.md](e2e/phase3-report.md). Найденное вне скоупа: терминологический рассинхрон КД (клиент) / КЗ (сервер) и нелокализованные имена предметов — оба в кластере `ui-language-mixing`.
 
 `WeaponDef`/`ArmorDef`/`ShieldDef`/`AccessoryDef` пробрасываются из каталога в player-facing awareness/схему и отрисовываются как tooltip/панель деталей в магазине и инвентаре: урон, свойства оружия (finesse/reach/two-handed/granted conditions), base AC / dex cap брони, эффект зелий, `grant_modifiers` колец. Проверка: в магазине и инвентаре по предмету видно, что он делает, до покупки/надевания (EN+RU).
 
@@ -60,7 +62,7 @@
 
 ## Status
 
-**Current:** Phases 1-2 complete. Phase 3 tasks generated (2 tasks). Ready to start Phase 3 task 1.
+**Current:** All phases complete (2026-07-16). Ready for audit.
 
 ## Decisions
 

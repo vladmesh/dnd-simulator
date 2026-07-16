@@ -3,8 +3,8 @@
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
 **Last updated:** 2026-07-16
-**Position:** Sprint 024 (playtest-quick-wins): Phases 1-2 COMPLETE; Phase 3 (панель свойств предметов) — обе задачи done.
-**Next:** Закрыть Phase 3 (`/close-phase`).
+**Position:** Sprint 024 (playtest-quick-wins): все три фазы COMPLETE.
+**Next:** Аудит (`/audit`).
 **Blockers:** Нет.
 
 ## Current Sprint
@@ -12,7 +12,9 @@
 **Sprint:** 024-playtest-quick-wins
 **Goal:** Быстрые UX-победы из живой партии 2026-07-15 — боевое движение и чистота лога/боевого UI, полировка торговли и i18n снаряжения, панель свойств предметов
 **Started:** 2026-07-16
-**Phase:** 3 — Панель свойств предметов (tasks 1-2 done) — 2026-07-16.
+**Phase:** 3 — Панель свойств предметов (COMPLETE) — 2026-07-16. All phases complete. Ready for audit.
+
+Phase 3 закрыта: integration 166 green (+2 новых теста `TestTrading` — `props` у товаров торговца в awareness и на equipped в REST-статусе), E2E 15/15 по секциям 5/8/9 + карточки предметов (все пять видов props — weapon с флагами Finesse/Light, armor, shield, potion, accessory — в RU и EN, во всех четырёх точках рендера). Блокеров нет. Вне скоупа зафиксировано: КД (клиент) vs КЗ (сервер) и англ. имена предметов в списках при локализованном логе — кластер `ui-language-mixing`. Отчёт: `docs/sprints/024-playtest-quick-wins/e2e/phase3-report.md`.
 
 Task 2 (карточка деталей предмета) done: компонент `ItemDetails` (CSS-hover, контент всегда в DOM) рендерит `props` локализованной карточкой во всех четырёх местах (инвентарь bag + слоты, торговец buy + sell), `title=`-атрибуты убраны, fallback на `description`. `ItemProps` discriminated union в `types/game.ts`, 21 новый i18n-ключ EN+RU (переиспользованы `dmg_*`/`slot_*`/`source_*`). Отклонение: карточка на `fixed` c auto-смещениями вместо `absolute` — все точки рендера внутри `overflow-y-auto`, absolute клипался бы. 8 новых компонентных тестов, включая регресс кликов unequip/buy. `make check` зелёный (backend 2573, frontend 299).
 
