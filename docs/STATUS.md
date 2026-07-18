@@ -6,7 +6,6 @@
 **Position:** Sprint 024 (playtest-quick-wins) закрыт: кластер находок живой партии 2026-07-15 снят, эпик simulation-core не двигался. Следующий шаг по ROADMAP — вернуться к simulation-core (Level 2 «Расходуемые ресурсы») либо добить боевой кластер.
 **Next:** Активного спринта нет. Кандидаты из BACKLOG (`must`/`should`): `ac-stale-on-unequip` (снятие брони повышает КЗ), `combat-status-single-source` (зонтик над `rest-in-combat-not-rejected`/`flee-scene-separation`), `load-combat-round-resume`, `hit-dice-short-rest`.
 **Blockers:** Нет.
-**Closure:** Ждём завершения CI для `sprint/024-playtest-quick-wins`.
 
 ## Current Sprint
 
