@@ -183,7 +183,7 @@ class TestCombatAwarenessBattleMapState:
         assert awareness.self_hp == 25
         assert awareness.self_max_hp == 30
         assert awareness.self_weapon == "longsword"
-        assert awareness.self_weapon_damage == "1d8"
+        assert awareness.self_weapon_damage == "1d8 slashing"
         assert awareness.self_x == 10
         assert awareness.self_y == 15
         assert awareness.round_number == 1

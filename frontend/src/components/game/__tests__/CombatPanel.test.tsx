@@ -99,6 +99,21 @@ describe("CombatPanel — player is canonical HP/AC source", () => {
     expect(screen.queryByText(/12\s*\/\s*12/)).not.toBeInTheDocument()
   })
 
+  it("renders the full multi-component weapon damage, not just the first die", () => {
+    useGameStore.setState({
+      player: makePlayer(),
+      awareness: makeAwareness({
+        self_weapon: "flaming slash",
+        self_weapon_damage: "1d8 slashing + 1d6 fire",
+      }),
+    })
+
+    render(<CombatPanel />)
+
+    // weapon_display: "Weapon: {name} ({damage})" — the fire rider must survive to the panel
+    expect(screen.getByText(/flaming slash \(1d8 slashing \+ 1d6 fire\)/)).toBeInTheDocument()
+  })
+
   it("renders spell slots from player.resource_pools, not awareness.self_resource_pools", () => {
     useGameStore.setState({
       player: makePlayer({

@@ -78,14 +78,30 @@ class TestBuildCombatAwareness:
         assert aw.self_hp == 15
         assert aw.self_max_hp == 20
         assert aw.self_weapon == "longsword"
-        assert aw.self_weapon_damage == "1d8"
+        assert aw.self_weapon_damage == "1d8 slashing"
 
     def test_unarmed_defaults(self) -> None:
         player = Character(id="p1", name="Hero", location_id="r1")
         layer = EntitiesLayer([player])
         aw = layer.build_combat_awareness(player)
         assert aw.self_weapon == "fists"
-        assert aw.self_weapon_damage == "1"
+        assert aw.self_weapon_damage == "1 bludgeoning"
+
+    def test_weapon_damage_includes_all_components(self) -> None:
+        """A multi-component weapon (e.g. flaming) shows every damage term, not just the first."""
+        flaming = Attack(
+            name="flaming slash",
+            ability=Ability.STR,
+            damage=(
+                DamageComponent("1d8", DamageType.SLASHING),
+                DamageComponent("1d6", DamageType.FIRE),
+            ),
+        )
+        player = Character(id="p1", name="Hero", location_id="r1", attacks=(flaming,))
+        layer = EntitiesLayer([player])
+        aw = layer.build_combat_awareness(player)
+        assert aw.self_weapon == "flaming slash"
+        assert aw.self_weapon_damage == "1d8 slashing + 1d6 fire"
 
     def test_nearby_excludes_self(self) -> None:
         player = Character(id="p1", name="Hero", location_id="r1")
