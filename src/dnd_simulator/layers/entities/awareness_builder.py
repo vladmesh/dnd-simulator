@@ -20,7 +20,7 @@ from dnd_simulator.core.awareness import (
     item_info,
     item_props,
 )
-from dnd_simulator.core.character import Character, Creature, Entity
+from dnd_simulator.core.character import Attack, Character, Creature, Entity
 from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.items import EquipmentSlot, Item
 from dnd_simulator.core.models import Event, FactionRelation
@@ -34,6 +34,7 @@ from dnd_simulator.core.queries import (
     query_weather,
 )
 from dnd_simulator.core.world import LayerError
+from dnd_simulator.i18n import _
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.rules.combat_sides import are_allies
 from dnd_simulator.rules.movement import compute_reachable as compute_reachable_cells
@@ -46,6 +47,19 @@ if TYPE_CHECKING:
     from dnd_simulator.rules.combat_sides import FactionRelationFn
 
 logger = structlog.get_logger(domain="entity")
+
+
+def format_weapon_damage(attack: Attack) -> str:
+    """Full damage summary for a weapon/attack: every component, not just the first.
+
+    Each component renders as ``"<dice> <type>"`` (type localized via gettext), joined by
+    ``" + "`` — the same shape the combat log uses, so the panel and log agree. Fixes
+    ``combat-panel-weapon-summary-truncated``, where only ``damage[0]`` was shown and riders
+    like ``+1d6 fire`` were dropped. Empty damage (shouldn't happen) falls back to ``"1"``.
+    """
+    if not attack.damage:
+        return "1"
+    return " + ".join(f"{component.dice} {_(component.type.value)}" for component in attack.damage)
 
 
 def active_merchants_at(entities: dict[str, Entity], location_id: str, hour: int) -> list[Npc]:
@@ -249,7 +263,7 @@ class AwarenessBuilder:
 
         weapon_attack = get_weapon_attack(creature)
         weapon_name = weapon_attack.name
-        weapon_damage = str(weapon_attack.damage[0].dice) if weapon_attack.damage else "1"
+        weapon_damage = format_weapon_damage(weapon_attack)
 
         wall_descriptions: list[str] = []
         battle_map_ascii = ""

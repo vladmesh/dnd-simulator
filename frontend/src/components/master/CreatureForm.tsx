@@ -24,8 +24,18 @@ interface Props {
   onSaved: () => void
 }
 
+const NPC_ROLES = [
+  "commoner",
+  "blacksmith",
+  "tavern_keeper",
+  "guard",
+  "merchant",
+  "farmer",
+  "gladiator",
+] as const
+
 export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
-  const { t } = useTranslation(["master", "common"])
+  const { t } = useTranslation(["master", "common", "game"])
   const isEdit = creature !== null
 
   const ALL_CONDITIONS = [
@@ -43,7 +53,7 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
     ac: creature?.ac ?? 10,
     speed: 30,
     start_location: creature?.location_id ?? "",
-    role: creature?.role ?? "",
+    role: creature?.role ?? "commoner",
     personality: creature?.personality ?? "",
     settlement_id: creature?.settlement_id ?? "",
     ai: creature?.ai_type ?? "rule_based",
@@ -186,8 +196,18 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
           </div>
 
           <div className="col-span-2">
-            <Label>{t("master:field_role")}</Label>
-            <Input value={form.role} onChange={(e) => set("role", e.target.value)} disabled={isEdit} />
+            <Label htmlFor="creature-role">{t("master:field_role")}</Label>
+            <select
+              id="creature-role"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              value={form.role}
+              onChange={(e) => set("role", e.target.value)}
+              disabled={isEdit}
+            >
+              {NPC_ROLES.map((role) => (
+                <option key={role} value={role}>{t(`game:role_${role}`)}</option>
+              ))}
+            </select>
           </div>
           <div className="col-span-2">
             <Label>{t("master:field_personality")}</Label>

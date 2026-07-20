@@ -2,9 +2,9 @@
 
 Текущее состояние проекта. Один файл — быстрый ответ на "где мы сейчас".
 
-**Last updated:** 2026-07-16
+**Last updated:** 2026-07-20
 **Position:** Sprint 024 (playtest-quick-wins) закрыт: кластер находок живой партии 2026-07-15 снят, эпик simulation-core не двигался. Следующий шаг по ROADMAP — вернуться к simulation-core (Level 2 «Расходуемые ресурсы») либо добить боевой кластер.
-**Next:** Активного спринта нет. Кандидаты из BACKLOG (`must`/`should`): `ac-stale-on-unequip` (снятие брони повышает КЗ), `combat-status-single-source` (зонтик над `rest-in-combat-not-rejected`/`flee-scene-separation`), `load-combat-round-resume`, `hit-dice-short-rest`.
+**Next:** Активного спринта нет. Кандидаты из BACKLOG (`must`/`should`): `combat-status-single-source` (зонтик над `rest-in-combat-not-rejected`/`flee-scene-separation`), `load-combat-round-resume`, `hit-dice-short-rest`.
 **Blockers:** Нет.
 
 ## Current Sprint
@@ -12,6 +12,8 @@
 No active sprint.
 
 ## Recent activity (non-sprint)
+
+- 2026-07-20 — Playtest-polish вне спринта: закрыты локальные AC, frontend/master UX, i18n, healing-zero и multi-damage summary находки перед следующим пользовательским прогоном.
 
 - 2026-07-10 — Sprint 021 save-schema закрыт: unit 2429, integration 160, два E2E-прогона, audit triaged (свежий риск `save-round-concurrency` в бэклоге), PR в main.
 

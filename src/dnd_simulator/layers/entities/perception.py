@@ -292,6 +292,11 @@ def _perceive_use_item(event: Event, observer: Character, get_entity: GetEntityF
     item_name = _(payload.item_name)
     healed = payload.healed
 
+    if healed == 0:
+        if entity_id == observer.id:
+            return _("You use {item}, but you are already at full health").format(item=item_name)
+        desc = _describe(observer, entity_id, get_entity)
+        return _("{entity} uses {item}, but is already at full health").format(entity=desc, item=item_name)
     if entity_id == observer.id:
         return _("You use {item} (healed {hp} HP)").format(item=item_name, hp=healed)
     desc = _describe(observer, entity_id, get_entity)
@@ -385,6 +390,19 @@ def _perceive_lay_on_hands(event: Event, observer: Character, get_entity: GetEnt
     self_acting = entity_id == observer.id
     self_target = target_id == observer.id
 
+    if healed == 0:
+        if self_acting and self_target:
+            return _("You lay hands on yourself, but you are already at full health")
+        if self_acting:
+            tdesc = _describe(observer, target_id, get_entity)
+            return _("You lay hands on {target}, but they are already at full health").format(target=tdesc)
+        edesc = _describe(observer, entity_id, get_entity)
+        if self_target:
+            return _("{entity} lays hands on you, but you are already at full health").format(entity=edesc)
+        tdesc = _describe(observer, target_id, get_entity)
+        return _("{entity} lays hands on {target}, but they are already at full health").format(
+            entity=edesc, target=tdesc
+        )
     if self_acting and self_target:
         return _("You lay hands on yourself, restoring {hp} HP (pool {before}→{after})").format(
             hp=healed, before=pool_before, after=pool_after

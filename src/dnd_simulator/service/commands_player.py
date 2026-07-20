@@ -40,7 +40,6 @@ class PlayerCommands(GameServiceProtocol):
             starting_equipment,
             validate_point_buy,
         )
-        from dnd_simulator.rules.modifiers import effective_ac
 
         session = self._get_session(session_id)
 
@@ -101,7 +100,7 @@ class PlayerCommands(GameServiceProtocol):
             "appearance": player_data.get("appearance", ""),
             "start_location": player_data.get("start_location", ""),
             "hp": max_hp,
-            "ac": 10,  # placeholder — effective_ac computed after construction
+            "ac": 10,  # natural unarmored AC; effective AC is derived on read via effective_ac
             "gold": STARTING_GOLD,
             "ability_scores": raw_scores,
             "items": items_data,
@@ -113,8 +112,9 @@ class PlayerCommands(GameServiceProtocol):
 
         player = parse_player(parse_data, item_catalog=item_catalog)
 
-        # --- Set correct AC from equipment + modifiers ---
-        player.ac = effective_ac(player)
+        # `.ac` stays the natural unarmored default (10); effective AC is always derived
+        # on read via `effective_ac`. Writing the equipped AC back here corrupted the field
+        # and made removing armor raise AC (`ac-stale-on-unequip`).
 
         # Default faction from world config if not specified by player
         if not player.faction_id and session.default_player_faction:

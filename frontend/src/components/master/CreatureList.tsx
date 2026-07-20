@@ -151,14 +151,21 @@ export function CreatureList({ sessionId }: Props) {
                   <td className="px-3 py-2">{c.ac}</td>
                   <td className="px-3 py-2 font-mono text-xs">{c.location_id}</td>
                   <td className="px-3 py-2">
-                    <button
-                      className="flex items-center gap-1 hover:underline"
-                      onClick={() => toggleBrain(c)}
-                      title={t("master:set_brain")}
-                    >
-                      <Brain className="size-3" />
-                      {c.ai_type || "rule_based"}
-                    </button>
+                    {c.entity_type === "player" ? (
+                      <span className="flex items-center gap-1">
+                        <Brain className="size-3" />
+                        {t("master:player")}
+                      </span>
+                    ) : (
+                      <button
+                        className="flex items-center gap-1 hover:underline"
+                        onClick={() => toggleBrain(c)}
+                        title={t("master:set_brain")}
+                      >
+                        <Brain className="size-3" />
+                        {c.ai_type || "rule_based"}
+                      </button>
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     <ActivationControls sessionId={sessionId} creature={c} onChanged={refresh} />

@@ -13,6 +13,7 @@ from dnd_simulator.core.character import (
     Race,
 )
 from dnd_simulator.core.items import ArmorCategory, ArmorDef, Item, ItemType, ShieldDef, WeaponCategory, WeaponDef
+from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.rules.modifiers import attack_modifiers, effective_ac
 from dnd_simulator.rules.proficiency import (
     is_proficient_with_armor,
@@ -125,6 +126,21 @@ def _character(
         race=Race.HUMAN,
         char_class=char_class,
         level=level,
+    )
+
+
+def _player(dexterity: int = 10) -> PlayerCharacter:
+    return PlayerCharacter(
+        id="test_player",
+        name="Hero",
+        location_id="arena",
+        max_hp=20,
+        current_hp=20,
+        ac=10,
+        ability_scores=AbilityScores(scores={**AbilityScores().scores, Ability.DEX: dexterity}),
+        race=Race.HUMAN,
+        char_class=CharClass.FIGHTER,
+        level=1,
     )
 
 
@@ -314,6 +330,22 @@ class TestEffectiveAc:
     def test_monster_stat_block_ac(self) -> None:
         wolf = _plain_creature()  # ac=13, this is stat-block
         assert effective_ac(wolf) == 13
+
+    def test_unarmored_player_ignores_ac_field(self) -> None:
+        """PlayerCharacter AC derives from equipment; `.ac` is never a floor.
+
+        A base Character (NPC) keeps its stat-block `.ac` (see
+        test_unarmored_character_backwards_compat); a PlayerCharacter must not, so a stale
+        armored value left in `.ac` cannot survive unequipping armor (`ac-stale-on-unequip`).
+        """
+        player = _player(dexterity=14)  # DEX mod +2
+        player.ac = 18  # type: ignore[misc]  # stale/corrupt value, must be ignored
+        assert effective_ac(player) == 12  # 10 + 2, not 18
+
+    def test_unarmored_player_shield_without_armor(self) -> None:
+        player = _player(dexterity=10)
+        player.equipped_shield = _shield_item()
+        assert effective_ac(player) == 12  # 10 + shield 2
 
     def test_non_proficient_armor_gives_attack_disadvantage(self) -> None:
         rogue = _character(CharClass.ROGUE, dexterity=14)

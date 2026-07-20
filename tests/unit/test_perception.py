@@ -430,6 +430,48 @@ class TestCombatLogI18n:
         result = perceive_event(event, observer, _get_entity_fn(observer, user))
         assert "[T]Health Potion" in result
 
+
+class TestPerceiveUseItemHealing:
+    def teardown_method(self) -> None:
+        set_language("en")
+
+    @staticmethod
+    def _event(entity_id: str, healed: int) -> Event:
+        return Event(
+            event_type=EventType.ENTITY_USE_ITEM,
+            source_layer="entities",
+            data=EntityUseItemPayload(entity_id=entity_id, item_name="Health Potion", healed=healed),
+        )
+
+    def test_zero_heal_self_reports_full_health(self) -> None:
+        observer = Character(id="player", name="Hero", location_id="r1")
+        result = perceive_event(self._event("player", 0), observer, _get_entity_fn(observer))
+        assert "0" not in result
+        assert "full health" in result.lower()
+
+    def test_zero_heal_other_reports_full_health(self) -> None:
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        user = Character(id="player", name="Hero", location_id="r1", race=Race.ELF)
+        result = perceive_event(self._event("player", 0), observer, _get_entity_fn(observer, user))
+        assert "0" not in result
+        assert "elf" in result.lower()
+        assert "full health" in result.lower()
+
+    def test_one_hp_self_renders_natural_russian(self) -> None:
+        set_language("ru")
+        observer = Character(id="player", name="Hero", location_id="r1")
+        result = perceive_event(self._event("player", 1), observer, _get_entity_fn(observer))
+        assert "1 ОЗ" in result
+        assert "восстанавливаешь" in result
+
+    def test_one_hp_other_renders_natural_russian(self) -> None:
+        set_language("ru")
+        observer = Character(id="guard", name="Guard", location_id="r1")
+        user = Character(id="player", name="Hero", location_id="r1", race=Race.ELF)
+        result = perceive_event(self._event("player", 1), observer, _get_entity_fn(observer, user))
+        assert "1 ОЗ" in result
+        assert "восстанавливает" in result
+
     def test_opportunity_attack_annotated(self) -> None:
         """OA attack event shows '(opportunity attack)' annotation."""
         observer = Character(id="guard", name="Guard", location_id="r1")
@@ -552,6 +594,46 @@ class TestPerceiveSecondWind:
         result = perceive_event(self._event("fighter", 7), observer, _get_entity_fn(observer, actor))
         assert "7" in result
         assert "elf" in result.lower()
+
+
+class TestPerceiveLayOnHandsZeroHealing:
+    def teardown_method(self) -> None:
+        set_language("en")
+
+    @staticmethod
+    def _event(entity_id: str, target_id: str, healed: int) -> Event:
+        return Event(
+            event_type=EventType.ENTITY_LAY_ON_HANDS,
+            source_layer="entities",
+            data=EntityLayOnHandsPayload(
+                entity_id=entity_id,
+                target_id=target_id,
+                healed=healed,
+                pool_before=5,
+                pool_after=5,
+            ),
+        )
+
+    def test_zero_heal_self_reports_full_health(self) -> None:
+        observer = Character(id="paladin", name="Paladin", location_id="r1")
+        result = perceive_event(self._event("paladin", "paladin", 0), observer, _get_entity_fn(observer))
+        assert "0" not in result
+        assert "full health" in result.lower()
+
+    def test_zero_heal_ally_reports_full_health(self) -> None:
+        observer = Character(id="paladin", name="Paladin", location_id="r1")
+        ally = Character(id="ally", name="Ally", location_id="r1", race=Race.ELF)
+        result = perceive_event(self._event("paladin", "ally", 0), observer, _get_entity_fn(observer, ally))
+        assert "0" not in result
+        assert "elf" in result.lower()
+        assert "full health" in result.lower()
+
+    def test_zero_heal_observer_target_reports_full_health(self) -> None:
+        observer = Character(id="ally", name="Ally", location_id="r1")
+        paladin = Character(id="paladin", name="Paladin", location_id="r1", race=Race.HUMAN)
+        result = perceive_event(self._event("paladin", "ally", 0), observer, _get_entity_fn(observer, paladin))
+        assert "0" not in result
+        assert "full health" in result.lower()
 
 
 class TestPerceptionDispatchAndFailFast:

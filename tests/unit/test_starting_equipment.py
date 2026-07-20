@@ -328,6 +328,49 @@ def _create_player_with_ring(item_catalog: dict[str, ItemContent]) -> PlayerChar
     return parse_player(parse_data, item_catalog=item_catalog)
 
 
+class TestUnequipAcRegression:
+    """`ac-stale-on-unequip`: removing armor must LOWER effective AC, never raise it.
+
+    The bug: create_player wrote the equipped effective AC back into `.ac`, and the
+    unarmored branch treated `.ac` as a floor, so unequipping armor kept the armored AC
+    (and a still-equipped shield stacked on top → AC went UP).
+    """
+
+    def test_unequip_armor_lowers_ac(self) -> None:
+        catalog = _load_item_catalog()
+        player = _create_fighter(catalog)  # Chain Mail (16) + Shield (2) + Defense (1)
+        assert effective_ac(player) == 19
+
+        player.equipped_armor = None  # drop the armor, keep the shield
+
+        # Unarmored: 10 + DEX 0 + shield 2, no Defense (Defense needs worn armor). Not 21.
+        assert effective_ac(player) == 12
+
+    def test_created_player_ac_field_is_natural_not_effective(self) -> None:
+        catalog = _load_item_catalog()
+        player = _create_fighter(catalog)
+        # `.ac` must stay the natural unarmored value, not the derived armored AC.
+        assert player.ac == 10
+        assert effective_ac(player) == 19
+
+    def test_stale_ac_field_does_not_floor_unarmored_player(self) -> None:
+        """Backward compat: an old save may carry a corrupted `.ac`; it must be ignored."""
+        catalog = _load_item_catalog()
+        player = _create_fighter(catalog)
+        player.ac = 19  # simulate a pre-fix save that stored the armored AC
+        player.equipped_armor = None
+
+        assert effective_ac(player) == 12  # shield only, stale 19 ignored
+
+    def test_unequip_shield_too_gives_bare_ac(self) -> None:
+        catalog = _load_item_catalog()
+        player = _create_fighter(catalog)
+        player.equipped_armor = None
+        player.equipped_shield = None
+
+        assert effective_ac(player) == 10  # 10 + DEX 0
+
+
 class TestAccessoryModifierRoundTrip:
     """Accessory grant_modifiers must survive to_full_save_data → parse_player."""
 

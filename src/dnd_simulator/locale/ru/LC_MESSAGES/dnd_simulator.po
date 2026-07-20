@@ -354,10 +354,16 @@ msgstr "{entity} ускоряется (+{ft} ft движения)"
 
 #: Use item
 msgid "You use {item} (healed {hp} HP)"
-msgstr "Ты используешь {item} (восстановлено {hp} HP)"
+msgstr "Ты используешь {item} и восстанавливаешь {hp} ОЗ"
 
 msgid "{entity} uses {item} (healed {hp} HP)"
-msgstr "{entity} использует {item} (восстановлено {hp} HP)"
+msgstr "{entity} использует {item} и восстанавливает {hp} ОЗ"
+
+msgid "You use {item}, but you are already at full health"
+msgstr "Ты используешь {item}, но лечение не требуется"
+
+msgid "{entity} uses {item}, but is already at full health"
+msgstr "{entity} использует {item}, но лечение не требуется"
 
 #: Inspect
 msgid "You look around but see no one matching '{id}'."
@@ -424,6 +430,21 @@ msgstr "{entity} возлагает руки на тебя, восстанавл
 
 msgid "{entity} lays hands on {target}, restoring {hp} HP"
 msgstr "{entity} возлагает руки на {target}, восстанавливая {hp} ОЗ"
+
+msgid "You lay hands on yourself, but you are already at full health"
+msgstr "Ты возлагаешь руки на себя, но лечение не требуется"
+
+msgid "You lay hands on {target}, but they are already at full health"
+msgstr "Ты возлагаешь руки на {target}, но лечение не требуется"
+
+msgid "{entity} lays hands on you, but you are already at full health"
+msgstr "{entity} возлагает руки на тебя, но лечение не требуется"
+
+msgid "{entity} lays hands on {target}, but they are already at full health"
+msgstr "{entity} возлагает руки на {target}, но лечение не требуется"
+
+msgid "Melee attack against {target}"
+msgstr "Рукопашная атака по цели {target}"
 
 #: Equip / Unequip
 msgid "You equip {weapon}"

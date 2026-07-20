@@ -29,6 +29,7 @@ from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType, Ga
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
+from dnd_simulator.i18n import _
 from dnd_simulator.rules.actions import (
     ends_peaceful_turn,
     get_num_actions,
@@ -443,7 +444,7 @@ class Round:
             options = [
                 ReactionOption(
                     action_type=ActionType.OPPORTUNITY_ATTACK,
-                    description=f"Melee attack against {mover.name}",
+                    description=_("Melee attack against {target}").format(target=mover.name),
                     params={"target_id": mover.id},
                 )
             ]
