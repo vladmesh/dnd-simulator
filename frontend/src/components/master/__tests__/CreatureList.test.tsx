@@ -93,6 +93,20 @@ describe("CreatureList — brain toggle warning", () => {
       expect(toastMock.warning).not.toHaveBeenCalled()
     })
   })
+
+  it("shows a localized player label without a brain toggle", async () => {
+    const { CreatureList } = await import("../CreatureList")
+    await i18n.changeLanguage("ru")
+    mockApi.getCreatures.mockResolvedValue([
+      makeCreature({ entity_type: "player", ai_type: "rule_based", name: "Герой" }),
+    ])
+
+    render(<CreatureList sessionId="sess-1" />)
+
+    expect(await screen.findByText("Игрок")).toBeInTheDocument()
+    expect(screen.queryByTitle("Сменить мозг")).not.toBeInTheDocument()
+    expect(mockApi.setBrain).not.toHaveBeenCalled()
+  })
 })
 
 describe("CreatureList — activation controls", () => {

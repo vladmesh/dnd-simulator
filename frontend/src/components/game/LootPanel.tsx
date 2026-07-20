@@ -4,6 +4,7 @@ import { useGameStore } from "@/store/gameStore"
 import { wsClient } from "@/transport/wsClient"
 import { ChevronDown, ChevronRight, Skull, Coins } from "lucide-react"
 import type { NearbyEntity } from "@/types/game"
+import { ItemDetails } from "./ItemDetails"
 
 function sendAction(name: string, params?: Record<string, unknown>) {
   wsClient.send({ type: "action", name, params })
@@ -41,9 +42,9 @@ export function LootView({ holder }: { holder: NearbyEntity }) {
             </div>
           )}
           {items.map((item) => (
-            <div key={item.id} className="truncate text-xs" title={item.description}>
-              {item.name}
-            </div>
+            <ItemDetails key={item.id} item={item} className="block min-w-0">
+              <span className="block truncate text-xs">{item.name}</span>
+            </ItemDetails>
           ))}
         </div>
       )}

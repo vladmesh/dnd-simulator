@@ -8,6 +8,7 @@ from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.brain import PlayerBrain
 from dnd_simulator.core.character import Character, Creature, Race
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
+from dnd_simulator.i18n import set_language
 
 
 def _make_creature(creature_id: str = "player") -> Creature:
@@ -108,6 +109,9 @@ class TestSessionReactionWiring:
 class TestReactionPromptMessage:
     """The reaction_prompt WS message has correct structure."""
 
+    def teardown_method(self) -> None:
+        set_language("en")
+
     def test_reaction_prompt_structure(self) -> None:
         """on_reaction callback builds a message with type, trigger, and options."""
         from dnd_simulator.service.transport_payloads import reaction_to_dict
@@ -123,3 +127,12 @@ class TestReactionPromptMessage:
         assert msg["options"][0]["action_type"] == "opportunity_attack"
         assert msg["options"][0]["description"] == "Melee attack against goblin_1"
         assert msg["options"][0]["params"]["target_id"] == "goblin_1"
+
+    def test_transport_preserves_prebuilt_description(self) -> None:
+        """Transport serializes descriptions and does not try to translate interpolated text."""
+        from dnd_simulator.service.transport_payloads import reaction_to_dict
+
+        set_language("ru")
+        msg = reaction_to_dict(_make_trigger(), _make_options())
+
+        assert msg["options"][0]["description"] == "Melee attack against goblin_1"

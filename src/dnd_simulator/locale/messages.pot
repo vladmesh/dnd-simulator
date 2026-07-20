@@ -767,6 +767,12 @@ msgstr ""
 msgid "{entity} uses {item} (healed {hp} HP)"
 msgstr ""
 
+msgid "You use {item}, but you are already at full health"
+msgstr ""
+
+msgid "{entity} uses {item}, but is already at full health"
+msgstr ""
+
 #: src/dnd_simulator/layers/entities/perception.py:312
 msgid "You look around but see no one matching '{id}'."
 msgstr ""
@@ -813,6 +819,21 @@ msgstr ""
 
 #: src/dnd_simulator/layers/entities/perception.py:359
 msgid "{entity} catches their breath, already at full health"
+msgstr ""
+
+msgid "You lay hands on yourself, but you are already at full health"
+msgstr ""
+
+msgid "You lay hands on {target}, but they are already at full health"
+msgstr ""
+
+msgid "{entity} lays hands on you, but you are already at full health"
+msgstr ""
+
+msgid "{entity} lays hands on {target}, but they are already at full health"
+msgstr ""
+
+msgid "Melee attack against {target}"
 msgstr ""
 
 #: src/dnd_simulator/layers/entities/perception.py:361

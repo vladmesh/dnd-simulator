@@ -210,24 +210,34 @@ export function CharacterForm({ sessionId, onCreated }: Props) {
       {/* Fighting style — fighter only */}
       {charClass === "fighter" && (
         <Field label={t("setup:field_fighting_style")}>
-          <select
-            data-testid="fighting-style-select"
-            value={fightingStyle}
-            onChange={(e) => {
-              setFightingStyle(e.target.value)
-              if (e.target.value) setSubmitAttempted(false)
-            }}
-            className={`h-8 w-full rounded-lg border bg-background px-2.5 text-sm text-foreground ${
-              submitAttempted && !fightingStyle 
-                ? "border-destructive ring-1 ring-destructive" 
-                : "border-input"
-            }`}
-          >
-            <option value="" disabled>{t("setup:fighting_style_none")}</option>
-            {FIGHTING_STYLES.map((s) => (
-              <option key={s} value={s}>{t(`setup:fighting_style_${s}`)}</option>
-            ))}
-          </select>
+          <div className="space-y-2">
+            <select
+              data-testid="fighting-style-select"
+              value={fightingStyle}
+              onChange={(e) => {
+                setFightingStyle(e.target.value)
+                if (e.target.value) setSubmitAttempted(false)
+              }}
+              className={`h-8 w-full rounded-lg border bg-background px-2.5 text-sm text-foreground ${
+                submitAttempted && !fightingStyle
+                  ? "border-destructive ring-1 ring-destructive"
+                  : "border-input"
+              }`}
+            >
+              <option value="" disabled>{t("setup:fighting_style_none")}</option>
+              {FIGHTING_STYLES.map((s) => (
+                <option key={s} value={s}>{t(`setup:fighting_style_${s}`)}</option>
+              ))}
+            </select>
+            {fightingStyle && (
+              <div
+                data-testid="fighting-style-description"
+                className="rounded border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
+              >
+                {t(`setup:fighting_style_${fightingStyle}_description`)}
+              </div>
+            )}
+          </div>
         </Field>
       )}
 

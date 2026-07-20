@@ -18,6 +18,7 @@
   "actions_label": "Действия: {{n}}",
   "bonus_label": "Бонус: {{n}}",
   "movement_label": "Движение: {{n}}фт",
+  "aggregated_move": "{{actor}} переместился ({{distance}} фт)",
   "reaction_label": "Реакция: {{n}}",
   "end_turn": "Конец хода",
   "look": "Осмотреться",

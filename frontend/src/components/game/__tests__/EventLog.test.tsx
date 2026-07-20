@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { describe, it, expect, vi, beforeEach } from "vitest"
-import "@/i18n"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import i18n from "@/i18n"
 import { useGameStore } from "@/store/gameStore"
 import { EventLog } from "../EventLog"
 import { EVENT_ICONS } from "@/lib/logProcessing"
@@ -46,6 +46,10 @@ function setLog(entries: LogEntry[]) {
 beforeEach(() => {
   _nextId = 1
   useGameStore.setState({ log: [] })
+})
+
+afterEach(async () => {
+  await i18n.changeLanguage("en")
 })
 
 // ---------------------------------------------------------------------------
@@ -105,6 +109,18 @@ describe("EventLog — turn headers", () => {
 // ---------------------------------------------------------------------------
 
 describe("EventLog — aggregated moves", () => {
+  it("localizes the collapsed summary in Russian", async () => {
+    await i18n.changeLanguage("ru")
+    setLog([
+      makeMoveEntry("goblin_1", 5),
+      makeMoveEntry("goblin_1", 10),
+      makeMoveEntry("goblin_1", 10),
+    ])
+    render(<EventLog compact onExpand={vi.fn()} />)
+
+    expect(screen.getByText("goblin_1 переместился (25 фт)")).toBeInTheDocument()
+  })
+
   it("renders 3 consecutive moves as a single collapsed summary", () => {
     setLog([
       makeMoveEntry("goblin_1", 5),

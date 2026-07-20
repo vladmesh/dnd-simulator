@@ -18,6 +18,7 @@
   "actions_label": "Actions: {{n}}",
   "bonus_label": "Bonus: {{n}}",
   "movement_label": "Movement: {{n}}ft",
+  "aggregated_move": "{{actor}} moved ({{distance}} ft)",
   "reaction_label": "Reaction: {{n}}",
   "end_turn": "End Turn",
   "look": "Look",

@@ -18,6 +18,7 @@ import { wsClient } from "@/transport/wsClient"
 import { useGameStore } from "@/store/gameStore"
 import { InventoryPanel } from "../InventoryPanel"
 import { TradePanel } from "../TradePanel"
+import { LootView } from "../LootPanel"
 
 const ru = i18n.getFixedT("ru", "game")
 const en = i18n.getFixedT("en", "game")
@@ -134,6 +135,24 @@ describe("ItemDetails card — RU", () => {
     expect(container.textContent).toContain("+1")
     expect(container.textContent).toContain(ru("prop_magic"))
     expect(container.textContent).toContain(ru("wpn_cat_martial"))
+  })
+
+  it("loot flame sword renders structured item properties", () => {
+    const { container } = render(
+      <LootView
+        holder={{
+          id: "corpse1",
+          name: "Павший маг",
+          description: "Тело мага",
+          lootable: true,
+          loot_items: [FLAME_SWORD],
+        }}
+      />,
+    )
+
+    expect(container.textContent).toContain(`1d8 ${ru("dmg_slashing")}`)
+    expect(container.textContent).toContain(`1d6 ${ru("dmg_fire")}`)
+    expect(container.textContent).toContain(ru("prop_magic"))
   })
 
   it("equipped ring of protection renders +1 AC", () => {

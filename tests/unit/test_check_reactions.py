@@ -15,6 +15,7 @@ from dnd_simulator.core.character import Creature
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
 from dnd_simulator.core.turn_budget import TurnBudget
+from dnd_simulator.i18n import set_language
 from dnd_simulator.rules.rule_brain import RuleBrain
 from dnd_simulator.rules.validation import ActionContext
 
@@ -215,6 +216,32 @@ class TestCheckReactions:
 
 
 class TestMakeOnLeaveReach:
+    def teardown_method(self) -> None:
+        set_language("en")
+
+    def test_option_description_is_localized_when_created(self) -> None:
+        mover = _creature("mover")
+        reactor = _creature("guard", brain=RuleBrain())
+        rnd = _make_round([mover, reactor])
+        captured: list[ReactionOption] = []
+
+        def capture(
+            trigger: ReactionTrigger,
+            options: list[ReactionOption],
+            candidates: list[Creature],
+            emit_fn: object,
+        ) -> list[Action]:
+            captured.extend(options)
+            return []
+
+        rnd.check_reactions = capture  # type: ignore[attr-defined]
+        set_language("ru")
+        callback = rnd._make_on_leave_reach(MagicMock(), MagicMock(), MagicMock(), MagicMock())  # type: ignore[attr-defined]
+        callback(mover, Position(10, 10), Position(10, 15), [reactor])
+
+        assert len(captured) == 1
+        assert captured[0].description == "Рукопашная атака по цели Mover"
+
     def test_returns_true_when_mover_alive(self) -> None:
         """Callback returns True if mover survives all reactions."""
         mover = _creature("mover")

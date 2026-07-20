@@ -144,6 +144,17 @@ describe("CharacterForm — Fighting Style", () => {
     expect(values).toContain("dueling")
     expect(values).toContain("great_weapon_fighting")
   })
+
+  it("shows the selected fighting style description", async () => {
+    const { user } = setup()
+
+    expect(screen.queryByTestId("fighting-style-description")).not.toBeInTheDocument()
+    await user.selectOptions(screen.getByTestId("fighting-style-select"), "dueling")
+
+    expect(screen.getByTestId("fighting-style-description")).toHaveTextContent(
+      "When wielding a melee weapon in one hand and no other weapons, you gain +2 to damage rolls.",
+    )
+  })
 })
 
 describe("CharacterForm — Preview", () => {

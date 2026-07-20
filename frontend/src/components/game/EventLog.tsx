@@ -56,6 +56,8 @@ function DisplayEntryRow({
   onToggleExpand?: () => void
   onAttackClick?: (entry: EventDisplayEntry) => void
 }) {
+  const { t } = useTranslation(["game"])
+
   if (entry.kind === "round_header") {
     return (
       <div
@@ -95,7 +97,10 @@ function DisplayEntryRow({
           </button>
           <EventIcon name={entry.icon} className="size-3 shrink-0 text-muted-foreground" />
           <span className={entry.colorClass}>
-            {entry.actorName} moved ({entry.totalDistanceFt} ft)
+            {t("game:aggregated_move", {
+              actor: entry.actorName,
+              distance: entry.totalDistanceFt,
+            })}
           </span>
         </div>
         {expanded && (

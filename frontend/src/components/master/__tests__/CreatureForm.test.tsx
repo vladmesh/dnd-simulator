@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { api } from "@/transport/apiClient"
 import type { CreatureResponse } from "@/types/api"
+import i18n from "@/i18n"
 
 vi.mock("@/transport/apiClient", () => ({
   api: {
@@ -37,7 +38,7 @@ function makeCreature(overrides: Partial<CreatureResponse> = {}): CreatureRespon
 }
 
 describe("CreatureForm — HP current/max fields", () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(async () => { vi.clearAllMocks(); await i18n.changeLanguage("en") })
 
   it("shows separate current_hp and max_hp inputs in edit mode", async () => {
     const { CreatureForm } = await import("../CreatureForm")
@@ -91,5 +92,76 @@ describe("CreatureForm — HP current/max fields", () => {
     expect(call[0]).toBe("sess-1")
     expect(call[1]).toBe("goblin_1")
     expect(call[2]).toMatchObject({ current_hp: 5, max_hp: 12 })
+  })
+})
+
+describe("CreatureForm — spawn role", () => {
+  beforeEach(async () => { vi.clearAllMocks(); await i18n.changeLanguage("en") })
+
+  it("offers every supported NPC role with friendly labels", async () => {
+    const { CreatureForm } = await import("../CreatureForm")
+
+    render(
+      <CreatureForm
+        sessionId="sess-1"
+        creature={null}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    )
+
+    const role = screen.getByLabelText("Role")
+    expect(role).toHaveValue("commoner")
+    expect(screen.getByRole("option", { name: "Commoner" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "Blacksmith" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "Tavern Keeper" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "Guard" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "Merchant" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "Farmer" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "Gladiator" })).toBeInTheDocument()
+  })
+
+  it("submits the selected enum value", async () => {
+    const user = userEvent.setup()
+    const { CreatureForm } = await import("../CreatureForm")
+    mockApi.spawnCreature.mockResolvedValue({ message: "ok" })
+
+    render(
+      <CreatureForm
+        sessionId="sess-1"
+        creature={null}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    )
+
+    await user.type(screen.getAllByRole("textbox")[0], "innkeeper_1")
+    await user.selectOptions(screen.getByLabelText("Role"), "tavern_keeper")
+    await user.click(screen.getByRole("button", { name: /spawn/i }))
+
+    expect(mockApi.spawnCreature).toHaveBeenCalledWith(
+      "sess-1",
+      expect.objectContaining({ role: "tavern_keeper" }),
+    )
+  })
+})
+
+describe("CreatureForm — condition translations", () => {
+  beforeEach(async () => { vi.clearAllMocks(); await i18n.changeLanguage("ru") })
+
+  it("distinguishes deafened from stunned in Russian", async () => {
+    const { CreatureForm } = await import("../CreatureForm")
+
+    render(
+      <CreatureForm
+        sessionId="sess-1"
+        creature={makeCreature()}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: "Оглохший" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Оглушён" })).toBeInTheDocument()
   })
 })
