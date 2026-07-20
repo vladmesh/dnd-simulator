@@ -11,6 +11,7 @@ from __future__ import annotations
 from dnd_simulator.core.character import Ability, Character, Creature
 from dnd_simulator.core.conditions import Condition, ConditionsMap
 from dnd_simulator.core.modifiers import AttackModifiers, Modifier, ModifierOp, RollComponent, StatType
+from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.rules.proficiency import (
     is_proficient_with_armor,
     is_proficient_with_shield,
@@ -210,9 +211,17 @@ def effective_speed(creature: Creature) -> int:
 def effective_ac(creature: Creature) -> int:
     """Compute effective AC after all modifiers.
 
-    Characters: armor base + DEX (capped by armor type) + shield + modifiers.
-    Unarmored Characters: max(creature.ac, 10 + DEX) for backwards compat.
-    Monsters (plain Creature): stat-block AC as-is (DEX already baked in).
+    AC source depends on the creature kind — this is the contract for the `.ac` field:
+
+    - Armored Character: armor base + DEX (capped by armor type) + shield + modifiers.
+      Worn armor is the source of truth; `.ac` is ignored.
+    - Unarmored PlayerCharacter: 10 + DEX (+ shield + modifiers). `.ac` is NOT a floor —
+      a player's AC derives purely from equipment, and `.ac` may still hold a stale
+      armored value in older saves (it was written back at creation before this fix),
+      so honoring it would keep AC high after the armor is removed (`ac-stale-on-unequip`).
+    - Unarmored non-player Character (Npc): max(.ac, 10 + DEX) — stat-block `.ac` is a
+      natural-armor floor, since NPCs may carry a hand-authored AC without an armor item.
+    - Plain Creature (monster): `.ac` as-is (DEX already baked into the stat block).
     """
     dex_mod = creature.ability_scores.modifier(Ability.DEX)
 
@@ -220,6 +229,8 @@ def effective_ac(creature: Creature) -> int:
         armor = creature.equipped_armor.armor_def
         dex_bonus = min(dex_mod, armor.max_dex_bonus) if armor.max_dex_bonus > 0 else 0
         base = armor.base_ac + dex_bonus
+    elif isinstance(creature, PlayerCharacter):
+        base = 10 + dex_mod
     elif isinstance(creature, Character):
         base = max(creature.ac, 10 + dex_mod)
     else:
