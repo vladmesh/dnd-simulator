@@ -204,5 +204,9 @@
   "levelup_rogue_proficiency": "Proficiency bonus improves",
   "levelup_button": "Level up",
   "levelup_confirm": "OK",
-  "levelup_error_generic": "Failed to apply level-up. Please retry."
+  "levelup_error_generic": "Failed to apply level-up. Please retry.",
+  "map_tabletop": "Tabletop view",
+  "map_you": "Your character",
+  "map_cell": "Move to {{x}}, {{y}}",
+  "map_hint": "Highlighted tile: move. Miniature: inspect. @ is your character."
 }
