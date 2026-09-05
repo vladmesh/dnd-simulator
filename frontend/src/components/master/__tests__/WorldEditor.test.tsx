@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { WorldEditor } from "../WorldEditor"
 import { api } from "@/transport/apiClient"
+import type { LayerInfo } from "@/types/api"
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -22,16 +23,16 @@ vi.mock("@/transport/apiClient", () => ({
 
 const mockApi = vi.mocked(api.master)
 
-const layers = [
-  { layer_type: "geography", source: "custom", template: null },
-  { layer_type: "politics", source: "custom", template: null },
-  { layer_type: "settlements", source: "custom", template: null },
-  { layer_type: "ecology", source: "custom", template: null },
-  { layer_type: "entities", source: "custom", template: null },
+const layers: LayerInfo[] = [
+  { layer_type: "geography", source: "custom", template: null, version: null },
+  { layer_type: "politics", source: "custom", template: null, version: null },
+  { layer_type: "settlements", source: "custom", template: null, version: null },
+  { layer_type: "ecology", source: "custom", template: null, version: null },
+  { layer_type: "entities", source: "custom", template: null, version: null },
 ]
 
 function setup(overrides: { readOnly?: boolean } = {}) {
-  mockApi.getWorldManifest.mockResolvedValue({ layers })
+  mockApi.getWorldManifest.mockResolvedValue({ world_id: "sword_vale", name: "Sword Vale", layers })
   mockApi.listEntities.mockResolvedValue([])
   mockApi.getSchema.mockResolvedValue({ type: "object", properties: {} })
   mockApi.getRefs.mockResolvedValue([])
@@ -91,10 +92,10 @@ describe("WorldEditor stepper", () => {
   it("never shows a fork button", async () => {
     const user = userEvent.setup()
     // Even with library layers, no fork button should appear
-    const libraryLayers = layers.map((l) =>
+    const libraryLayers = layers.map<LayerInfo>((l) =>
       l.layer_type === "ecology" ? { ...l, source: "library", template: "default_ecology" } : l,
     )
-    mockApi.getWorldManifest.mockResolvedValue({ layers: libraryLayers })
+    mockApi.getWorldManifest.mockResolvedValue({ world_id: "sword_vale", name: "Sword Vale", layers: libraryLayers })
     mockApi.listEntities.mockResolvedValue([])
     mockApi.getSchema.mockResolvedValue({ type: "object", properties: {} })
     mockApi.getRefs.mockResolvedValue([])
@@ -150,10 +151,10 @@ describe("WorldEditor readOnly", () => {
 
   it("does not show source badges", async () => {
     // Library layer present but no badge shown
-    const libraryLayers = layers.map((l) =>
+    const libraryLayers = layers.map<LayerInfo>((l) =>
       l.layer_type === "ecology" ? { ...l, source: "library", template: "default_ecology" } : l,
     )
-    mockApi.getWorldManifest.mockResolvedValue({ layers: libraryLayers })
+    mockApi.getWorldManifest.mockResolvedValue({ world_id: "sword_vale", name: "Sword Vale", layers: libraryLayers })
     mockApi.listEntities.mockResolvedValue([])
     mockApi.getSchema.mockResolvedValue({ type: "object", properties: {} })
     mockApi.getRefs.mockResolvedValue([])

@@ -1,8 +1,9 @@
-import { useMemo, useCallback } from "react"
+import { useMemo, useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useGameStore } from "@/store/gameStore"
 import { wsClient } from "@/transport/wsClient"
 import type { CombatAwareness, CombatEntity } from "@/types/game"
+import "./BattleMap.css"
 
 /** Which borders of a cell have walls. */
 interface CellWalls {
@@ -75,6 +76,7 @@ interface BattleMapProps {
 
 export function BattleMap({ onEntityClick }: BattleMapProps = {}) {
   const { t } = useTranslation(["game"])
+  const [tabletop, setTabletop] = useState(true)
   const awareness = useGameStore((s) => s.awareness)
   const isMyTurn = useGameStore((s) => s.isMyTurn)
   const waitingForAction = useGameStore((s) => s.waitingForAction)
@@ -164,29 +166,54 @@ export function BattleMap({ onEntityClick }: BattleMapProps = {}) {
             : "text-muted-foreground/30"
 
       cells.push(
-        <div
+        <button
+          type="button"
+          disabled={!isMovable && !isInspectable}
+          aria-label={entity ? (entity.isPlayer ? t("game:map_you") : entity.entity!.description) : t("game:map_cell", { x: col * 5, y: gridRow * 5 })}
           key={`${col}-${renderRow}`}
           data-testid={entity ? `cell-${col}-${gridRow}` : isReachable ? `reachable-${col}-${gridRow}` : undefined}
-          className={`aspect-square flex items-center justify-center text-xs font-mono ${wallClasses} ${bgClass} ${isMovable || isInspectable ? "cursor-pointer hover:bg-blue-500/40" : ""}`}
+          className={`battle-cell ${entity ? "battle-cell-occupied" : ""} aspect-square flex items-center justify-center text-xs font-mono ${wallClasses} ${bgClass} ${isMovable || isInspectable ? "cursor-pointer hover:bg-blue-500/40" : ""}`}
           onClick={isMovable ? () => handleCellClick(col * 5, gridRow * 5) : isInspectable ? () => onEntityClick!(entity!.entity!) : undefined}
         >
-          {entity ? entity.glyph : "·"}
-        </div>,
+          {entity ? (
+            <span className={`battle-token ${entity.isPlayer ? "battle-token-player" : entity.entity?.is_hostile ? "battle-token-hostile" : "battle-token-neutral"}`}>
+              <span className="battle-token-head" aria-hidden="true" />
+              <span className="battle-token-body" aria-hidden="true" />
+              <span className="battle-token-label">{entity.glyph}</span>
+            </span>
+          ) : <span aria-hidden="true">·</span>}
+          {Object.entries(walls).filter(([, present]) => present).map(([side]) => (
+            <span key={side} aria-hidden="true" className={`battle-wall battle-wall-${side}`} />
+          ))}
+        </button>,
       )
     }
   }
 
   return (
     <div className="space-y-1" data-testid="battle-map">
-      <h3 className="text-xs font-medium uppercase text-muted-foreground">
-        {t("game:battle_map")}
-      </h3>
-      <div
-        className="rounded border border-border bg-muted/50 p-1"
-        style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-      >
-        {cells}
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-xs font-medium uppercase text-muted-foreground">
+          {t("game:battle_map")}
+        </h3>
+        <button
+          type="button"
+          aria-pressed={tabletop}
+          onClick={() => setTabletop((value) => !value)}
+          className="rounded border border-border px-2 py-1 text-xs hover:bg-muted focus-visible:outline-2 focus-visible:outline-sky-400"
+        >
+          {t("game:map_tabletop")}
+        </button>
       </div>
+      <div className={`battle-stage ${tabletop ? "battle-stage-tabletop" : ""}`}>
+        <div
+          className="battle-board rounded border border-border bg-muted/50 p-1"
+          style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+        >
+          {cells}
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground">{t("game:map_hint")}</p>
     </div>
   )
 }

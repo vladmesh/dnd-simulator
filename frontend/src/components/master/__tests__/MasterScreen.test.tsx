@@ -151,7 +151,7 @@ describe("MasterScreen delete world", () => {
     expect(deleteButtons).toHaveLength(1)
 
     // The delete button should be on the editable world's card
-    const myValeCard = screen.getByText("My Vale").closest("[data-testid]")!
+    const myValeCard = screen.getByText("My Vale").closest<HTMLElement>("[data-testid]")!
     expect(within(myValeCard).getByRole("button", { name: /delete/i })).toBeInTheDocument()
   })
 
@@ -200,8 +200,8 @@ describe("MasterScreen world card click routing", () => {
     mockApi.getSessions.mockResolvedValue([])
     mockApi.getWorldManifest.mockResolvedValue({
       world_id: "sword_vale",
-      world_name: "Sword Vale",
-      layers: [{ layer_type: "geography", source: "library" }],
+      name: "Sword Vale",
+      layers: [{ layer_type: "geography", source: "library", template: "default_geography", version: "1" }],
     })
 
     render(

@@ -16,7 +16,7 @@ export function ActionBar() {
   const { t } = useTranslation(["game", "common"])
   const isMyTurn = useGameStore((s) => s.isMyTurn)
   const waitingForAction = useGameStore((s) => s.waitingForAction)
-  const budget = useGameStore((s) => s.budget)
+  const budget = useGameStore((s) => s.budget) ?? undefined
   const mode = useGameStore((s) => s.mode)
   const awareness = useGameStore((s) => s.awareness)
   const player = useGameStore((s) => s.player)

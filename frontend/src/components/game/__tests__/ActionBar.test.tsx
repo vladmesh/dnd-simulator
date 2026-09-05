@@ -224,7 +224,7 @@ describe("ActionBar — cost-type styling", () => {
       ],
       available_items: [],
       self_resource_pools: [
-        { id: "spell_slot_1", max_uses: 2, current_uses: 2, reset_on: "long_rest" },
+        { id: "spell_slot_1", max_uses: 2, current_uses: 2 },
       ],
     }
     useGameStore.setState({

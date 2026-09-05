@@ -33,6 +33,8 @@ function makeCreature(overrides: Partial<CreatureResponse> = {}): CreatureRespon
     role: "guard",
     personality: "aggressive",
     settlement_id: "town_1",
+    gm_activation_override: "automatic",
+    activation_triggers: [],
     ...overrides,
   }
 }
@@ -124,7 +126,7 @@ describe("CreatureForm — spawn role", () => {
   it("submits the selected enum value", async () => {
     const user = userEvent.setup()
     const { CreatureForm } = await import("../CreatureForm")
-    mockApi.spawnCreature.mockResolvedValue({ message: "ok" })
+    mockApi.spawnCreature.mockResolvedValue(makeCreature({ id: "innkeeper_1", role: "tavern_keeper" }))
 
     render(
       <CreatureForm

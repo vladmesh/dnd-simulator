@@ -30,7 +30,7 @@ lint-frontend:
 	cd frontend && npx eslint src/
 
 typecheck-frontend:
-	cd frontend && npx tsc --noEmit
+	cd frontend && npx tsc -b
 
 check-backend: lint typecheck test
 

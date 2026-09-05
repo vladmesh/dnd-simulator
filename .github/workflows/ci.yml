@@ -96,7 +96,7 @@ jobs:
 
       - name: Type check
         if: needs.detect-changes.outputs.scope == 'frontend' || needs.detect-changes.outputs.scope == 'mixed'
-        run: npx tsc --noEmit
+        run: npx tsc -b
 
       - name: Test
         if: needs.detect-changes.outputs.scope == 'frontend' || needs.detect-changes.outputs.scope == 'mixed'

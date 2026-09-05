@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react"
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest"
 import i18n from "@/i18n"
+import type { ItemInfo } from "@/types/game"
 
 // Mock wsClient BEFORE store imports it
 vi.mock("@/transport/wsClient", () => ({
@@ -32,7 +33,7 @@ const PLATE_ARMOR = {
   props: { kind: "armor", category: "heavy", base_ac: 18, max_dex_bonus: 0 },
 }
 
-const FLAME_SWORD = {
+const FLAME_SWORD: ItemInfo = {
   id: "sword1",
   name: "Огненный меч",
   type: "weapon",

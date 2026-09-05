@@ -26,7 +26,7 @@ const mockApi = vi.mocked(api.master)
 
 function setup() {
   mockApi.getWorlds.mockResolvedValue([
-    { id: "sword_vale", name: "Sword Vale", description: "A test world" },
+    { id: "sword_vale", name: "Sword Vale", description: "A test world", editable: false },
   ])
 
   return render(
@@ -50,7 +50,7 @@ describe("SetupScreen", () => {
 
   it("picks a world and goes straight to character creation", async () => {
     const user = userEvent.setup()
-    mockApi.createSession.mockResolvedValue({ session_id: "abc-123" })
+    mockApi.createSession.mockResolvedValue({ session_id: "abc-123", player_name: "", player_location: "", time: "Y1490 M6 D1 10:00" })
     setup()
 
     const worldBtn = await screen.findByText("New Session")
