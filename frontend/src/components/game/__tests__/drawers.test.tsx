@@ -4,7 +4,7 @@ import "@/i18n"
 import { ConsumableDrawer } from "../action-bar/ConsumableDrawer"
 import { ClassFeatureDrawer } from "../action-bar/ClassFeatureDrawer"
 import { InventoryDrawer } from "../action-bar/InventoryDrawer"
-import type { ActionInfo, ItemInfo } from "@/types/game"
+import type { ActionInfo, ItemInfo, CombatEntity } from "@/types/game"
 
 function makeAction(
   name: string,
@@ -76,7 +76,7 @@ describe("ConsumableDrawer", () => {
 describe("ClassFeatureDrawer", () => {
   const features = [makeAction("second_wind", "bonus_action")]
   const defaultDrawerProps = {
-    nearby: [] as { id: string; distance_ft?: number; is_hostile?: boolean }[],
+    nearby: [] as CombatEntity[],
     selfId: undefined,
     budget: undefined,
     openDropdown: null as string | null,

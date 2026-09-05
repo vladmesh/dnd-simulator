@@ -19,3 +19,5 @@ make test           # run tests only
 make serve          # start API server on :8001
 make frontend       # start Vite dev server on :5173, proxies /api to :8001
 ```
+
+Frontend type checking (`make typecheck-frontend` and CI) uses `tsc -b` to validate both referenced projects, including tests and the Vite configuration. Running `tsc --noEmit` against the root `frontend/tsconfig.json` does not check those projects because its own file list is empty. `cd frontend && npm run build` runs the same type check before bundling.

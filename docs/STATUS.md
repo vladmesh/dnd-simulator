@@ -13,6 +13,8 @@ No active sprint.
 
 ## Recent activity (non-sprint)
 
+- 2026-09-05 — TypeScript cleanup: исправлены 33 диагностики полной frontend-сборки, Makefile и CI переведены на `tsc -b`. Обновлены API-фикстуры; убраны обходы типов WS-сообщений в PlayerStats-тестах. `npm run build` проходит, проверка gate на заведомой ошибке сработала; общий `make check` прошёл (2589 backend + 307 frontend).
+
 - 2026-09-05 — Ветка `feat/tabletop-battle-map`: добавлен переключаемый CSS-объёмный вид боевой карты (плитки, фигурки, стены), доступные кнопки клеток и RU/EN подсказки. Проверены реальные движение/осмотр через браузер; 307 frontend-тестов passed, Vite bundle собран. Полный `npm run build` блокируют существующие ошибки TypeScript вне этой правки. Отчёт: [tabletop-map](e2e-reports/2026-09-05-tabletop-map.md).
 
 - 2026-07-20 — Playtest-polish вне спринта: закрыты локальные AC, frontend/master UX, i18n, healing-zero и multi-damage summary находки перед следующим пользовательским прогоном.

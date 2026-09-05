@@ -5,8 +5,7 @@ import "@/i18n"
 import { PlayerStats } from "../PlayerStats"
 import { useGameStore } from "@/store/gameStore"
 import { api, ApiError } from "@/transport/apiClient"
-import type { Awareness, PlayerStatus } from "@/types/game"
-import type { RoundResultMessage } from "@/types/ws"
+import type { PlayerStatus } from "@/types/game"
 
 vi.mock("@/transport/apiClient", async () => {
   const actual = await vi.importActual<typeof import("@/transport/apiClient")>(
@@ -108,13 +107,15 @@ describe("PlayerStats — level-up integration", () => {
           day: 1,
           month: 1,
           year: 1000,
-          location_id: "town",
+          location_name: "Town",
+          region_name: "Valley",
+          weather: {},
           nearby: [],
           turn_budget: null,
-        } as unknown as Awareness,
-        location: null,
+        },
+        location: { current_location: "Town", current_location_id: "town", description: "Town square", region_id: "valley", paths: [] },
         events: [{ description: "Combat ended", event_type: "combat_ended" }],
-      } as unknown as RoundResultMessage)
+      })
     })
 
     expect(useGameStore.getState().levelUpDismissed).toBe(true)
@@ -159,6 +160,8 @@ describe("PlayerStats — level-up integration", () => {
     act(() => {
       useGameStore.getState().onActionResult({
         type: "action_result",
+        actor: pending.player_id,
+        action: "attack",
         player: pending,
         mode: "peaceful",
         awareness: {
@@ -166,13 +169,15 @@ describe("PlayerStats — level-up integration", () => {
           day: 1,
           month: 1,
           year: 1000,
-          location_id: "town",
+          location_name: "Town",
+          region_name: "Valley",
+          weather: {},
           nearby: [],
           turn_budget: null,
         },
-        location: null,
+        location: { current_location: "Town", current_location_id: "town", description: "Town square", region_id: "valley", paths: [] },
         events: [],
-      } as unknown as RoundResultMessage)
+      })
     })
     expect(screen.getByTestId("level-up-modal")).toBeInTheDocument()
 
@@ -188,13 +193,15 @@ describe("PlayerStats — level-up integration", () => {
           day: 1,
           month: 1,
           year: 1000,
-          location_id: "town",
+          location_name: "Town",
+          region_name: "Valley",
+          weather: {},
           nearby: [],
           turn_budget: null,
         },
-        location: null,
+        location: { current_location: "Town", current_location_id: "town", description: "Town square", region_id: "valley", paths: [] },
         events: [{ description: "Combat ended", event_type: "combat_ended" }],
-      } as unknown as RoundResultMessage)
+      })
     })
     expect(screen.queryByTestId("level-up-modal")).not.toBeInTheDocument()
 

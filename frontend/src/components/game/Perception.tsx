@@ -51,6 +51,7 @@ export function Perception() {
       )}
       {nearby.map((entity) => {
         const targetName = entity.description || entity.id
+        const isLootable = "lootable" in entity && entity.lootable
         return (
         <div key={entity.id} className="rounded border border-border p-2 text-xs">
           <div className="flex items-start justify-between gap-1">
@@ -65,7 +66,7 @@ export function Perception() {
           {isMyTurn && (
             <div className="mt-1 space-y-1">
               <div className="flex gap-1">
-                {!entity.lootable && (
+                {!isLootable && (
                   <Button
                     size="xs"
                     variant="destructive"
@@ -81,7 +82,7 @@ export function Perception() {
                     <Sword className="mr-1 size-3" /> {t("game:attack")}
                   </Button>
                 )}
-                {!isCombat && !entity.lootable && (
+                {!isCombat && !isLootable && (
                   <Button
                     size="xs"
                     variant="secondary"

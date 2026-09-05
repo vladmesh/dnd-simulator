@@ -114,7 +114,7 @@ describe("LocationPanel journey", () => {
     act(() => {
       useGameStore.setState({
         player: { ...player, location_id: "bridge" },
-        location: { current_location: "Stone Bridge", current_location_id: "bridge", region_id: "r", paths: [] },
+        location: { current_location: "Stone Bridge", current_location_id: "bridge", description: "A stone bridge", region_id: "r", paths: [] },
       })
     })
 

@@ -34,7 +34,6 @@ const peacefulAwareness: PeacefulAwareness = {
   location_name: "Town Square",
   region_name: "Valley",
   nearby: [{ id: "npc_1", description: "Guard" }],
-  paths: [{ location_id: "loc_2", target_name: "Forest", distance_m: 200 }],
 }
 
 const combatAwareness: CombatAwareness = {

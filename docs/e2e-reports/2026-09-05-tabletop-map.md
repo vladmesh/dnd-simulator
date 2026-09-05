@@ -38,3 +38,9 @@ Left running as explicitly requested:
 - HTTP page and proxied health endpoint return 200 via the server's public IP. Browser session creation and combat used that same address. Access from the user's own network has not been independently tested.
 
 This is a running development preview, not a reboot-persistent production service.
+
+## Follow-up: TypeScript and external access
+
+- The 33 TypeScript diagnostics above were fixed later on 2026-09-05. `npm run build` now passes. Makefile and CI both use `tsc -b`; a temporary invalid application file was correctly rejected by the gate and then removed.
+- Full `make check`: 2589 backend tests and 307 frontend tests passed, with lint and type checks. Logs: `/tmp/dnd-types-check-all.log`, `/tmp/dnd-types-build.log`, `/tmp/dnd-typecheck-probe.log`.
+- Initial external access failed because UFW allowed only ports 22/80/443. Added a labelled temporary rule for TCP 5173; user confirmed the game opened afterward.
