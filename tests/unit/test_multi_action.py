@@ -8,7 +8,7 @@ from dnd_simulator.core.brain import Brain
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.location import Location, LocationEdge, LocationGraph
-from dnd_simulator.core.models import GameDateTime
+from dnd_simulator.core.models import EventType, GameDateTime
 from dnd_simulator.core.turn_budget import ActionCost, TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -289,7 +289,9 @@ class TestMultiActionLoop:
         combat and delete the ``CombatState`` mid-loop; later availability checks and
         dispatches in that same loop must see the post-flee membership, not the
         pre-flee snapshot — otherwise a peaceful-only action like ``travel`` is wrongly
-        rejected with ``WRONG_MODE`` in the same round the actor fled.
+        rejected with ``WRONG_MODE`` in the same round the actor fled. Also proves the
+        flee path actually records ``EventType.COMBAT_ENDED`` in the entities location
+        event log, not just that the in-memory ``CombatState`` disappeared.
         """
         brain = _ScriptedBrain(
             [
@@ -322,6 +324,10 @@ class TestMultiActionLoop:
         # Flee ended the final one-on-one combat: no authoritative combat membership remains.
         assert el._combat.get_active_combat_for(creature.id) is None
         assert el._combat.get_combat("r1") is None
+
+        # The flee path actually recorded combat end in the entities location event
+        # log (CombatManager._end_combat), not just removed the CombatState in memory.
+        assert any(e.event_type == EventType.COMBAT_ENDED for e in el._combat._location_log["r1"])
 
         # Travel started its normal journey and deactivated the traveler.
         assert creature.current_intent is not None
