@@ -72,6 +72,20 @@ class _EndTurnBrain(Brain):
         return END_TURN
 
 
+class _RecordingEndTurnBrain(_EndTurnBrain):
+    def __init__(self, turns: list[str]) -> None:
+        self._turns = turns
+
+    def choose_action(
+        self,
+        creature: Creature,
+        awareness: PeacefulAwareness | CombatAwareness,
+        events: list[PerceivedEvent],
+    ) -> Action:
+        self._turns.append(creature.id)
+        return END_TURN
+
+
 def _make_player_brain(action: Action) -> PlayerBrain:
     """Create a PlayerBrain that submits a fixed action then end_turn."""
     brain = PlayerBrain()
@@ -89,6 +103,21 @@ def _make_player_brain(action: Action) -> PlayerBrain:
 
 
 class TestRoundTimeAdvancement:
+    def test_combat_resume_cursor_skips_completed_initiative_and_clears_at_round_end(self) -> None:
+        turns: list[str] = []
+        npc = Creature(id="npc", name="NPC", location_id="r1", brain=_RecordingEndTurnBrain(turns))
+        player = PlayerCharacter(id="player", name="Player", location_id="r1", brain=_RecordingEndTurnBrain(turns))
+        world = _make_world([npc, player])
+        entities_layer = next(layer for layer in world.layers if isinstance(layer, EntitiesLayer))
+        combat = CombatState(location_id="r1", turn_order=[npc.id, player.id], resume_turn_index=1)
+        entities_layer._combat._combats["r1"] = combat
+
+        Round(world, entities_layer).run_round()
+
+        assert turns == [player.id]
+        assert combat.resume_turn_index is None
+        assert combat.round_number == 2
+
     def test_time_advances_by_one_round_per_round(self) -> None:
         """After all creatures act, world time advances by 6 seconds."""
         npc = Creature(id="npc1", name="Guard", location_id="r1", is_anchor=True, brain=_EndTurnBrain())

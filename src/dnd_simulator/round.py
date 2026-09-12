@@ -495,15 +495,28 @@ class Round:
             if not combat:
                 continue
             self._host.log_round_start(location_id, combat.round_number)
-            for entity_id in list(combat.turn_order):
+            resume_turn_index = combat.resume_turn_index
+            if resume_turn_index is None or not 0 <= resume_turn_index < len(combat.turn_order):
+                resume_turn_index = 0
+            remaining_turns = list(combat.turn_order)[resume_turn_index:]
+            for turn_index, entity_id in enumerate(remaining_turns, start=resume_turn_index):
                 entity = self._host.get_entity(entity_id)
                 # Membership in combat.turn_order (iterated above) is itself the
                 # authoritative combat check — Creature.in_combat is not consulted.
                 if isinstance(entity, Creature) and entity.is_alive and entity.active:
                     with self._mutation_scope():
+                        # Persist the active turn before a player brain can block
+                        # waiting for WebSocket input.
+                        combat.resume_turn_index = turn_index
                         entity.is_dodging = False  # dodge lasts until start of next turn
                         entity.is_disengaging = False
-                    self.run_creature_turn(entity, time, query_fn, emit_fn)
+                    try:
+                        self.run_creature_turn(entity, time, query_fn, emit_fn)
+                    finally:
+                        with self._mutation_scope():
+                            # Do not leave a completed turn as a resume target.
+                            if self._host.get_combat(location_id) is combat:
+                                combat.resume_turn_index = None
             # End of round — check for combat exit
             with self._mutation_scope():
                 self._host.end_combat_round(location_id)
