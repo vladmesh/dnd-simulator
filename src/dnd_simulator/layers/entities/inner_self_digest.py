@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.character import Creature
-from dnd_simulator.core.inner_self import DigestBoundary
+from dnd_simulator.core.inner_self import AlignmentAccumulation, DigestBoundary, InnerSelf
 from dnd_simulator.layers.entities.models import Npc
+from dnd_simulator.rules.inner_self_digest import DigestContext, apply_delta, derive_delta
 
 if TYPE_CHECKING:
     from dnd_simulator.llm.summarizer import MemorySummarizer
@@ -38,12 +39,15 @@ def digest(creature: Creature, boundary: DigestBoundary, summarizer: MemorySumma
 
     events = list(inner_self.perceived_event_buffer)
     inner_self.perceived_event_buffer.clear()
-    result = inner_self
+    result = apply_delta(inner_self, derive_delta(inner_self, events, DigestContext(creature.id)))
     try:
         if isinstance(creature, Npc) and summarizer is not None:
-            result = summarizer.summarize(inner_self, [event.description for event in events], boundary.value)
+            result = _with_summarized_journal(
+                result,
+                summarizer.summarize(result, [event.description for event in events], boundary.value),
+            )
             if summarizer.needs_compression(result):
-                result = summarizer.summarize(result, [], "journal_overflow")
+                result = _with_summarized_journal(result, summarizer.summarize(result, [], "journal_overflow"))
             logger.info(
                 "npc_inner_self_updated", entity_id=creature.id, entity_name=creature.name, trigger=boundary.value
             )
@@ -58,3 +62,20 @@ def digest(creature: Creature, boundary: DigestBoundary, summarizer: MemorySumma
         # buffer consumed above; this assignment is the sole write-back to core.
         result.perceived_event_buffer.clear()
         creature.inner_self = result
+
+
+def _with_summarized_journal(core: InnerSelf, summary: InnerSelf) -> InnerSelf:
+    """Keep a journal-only summarizer from replacing the structured rules core."""
+    return InnerSelf(
+        relations=list(core.relations),
+        mood=core.mood,
+        goals=list(core.goals),
+        alignment=AlignmentAccumulation(
+            law_chaos=core.alignment.law_chaos,
+            good_evil=core.alignment.good_evil,
+        ),
+        journal=summary.journal,
+        thoughts=list(core.thoughts),
+        current_conversation=summary.current_conversation,
+        perceived_event_buffer=list(core.perceived_event_buffer),
+    )

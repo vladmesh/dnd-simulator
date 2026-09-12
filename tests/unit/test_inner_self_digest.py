@@ -4,12 +4,17 @@ from __future__ import annotations
 
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.character import Creature, NpcRole
-from dnd_simulator.core.events import EntitySayPayload
+from dnd_simulator.core.events import EntityDiedPayload, EntitySayPayload, OpportunityAttackPayload
 from dnd_simulator.core.inner_self import (
     PERCEIVED_EVENT_BUFFER_CAPACITY,
     BufferedPerceivedEvent,
     DigestBoundary,
+    GoalType,
     InnerSelf,
+    Mood,
+    Relationship,
+    RelationshipType,
+    TypedGoal,
 )
 from dnd_simulator.core.intent import IntentInterruptReason, IntentType, TimedIntent
 from dnd_simulator.core.models import Event, EventType, GameDateTime
@@ -22,6 +27,7 @@ from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.rules.handlers.movement import handle_wait
 from dnd_simulator.rules.handlers.rest import handle_long_rest
+from dnd_simulator.rules.rule_brain import RuleBrain
 from dnd_simulator.rules.validation import ActionContext
 
 
@@ -41,6 +47,11 @@ class ReplacingSummarizer(FakeSummarizer):
     def summarize(self, inner_self: InnerSelf, events: list[str], trigger: str) -> InnerSelf:
         self.calls.append((events, trigger))
         return InnerSelf(perceived_event_buffer=[_buffer_event("stale")])
+
+
+class FailingSummarizer(FakeSummarizer):
+    def summarize(self, inner_self: InnerSelf, events: list[str], trigger: str) -> InnerSelf:
+        raise RuntimeError("LLM unavailable")
 
 
 def _npc(**kwargs: object) -> Npc:
@@ -66,6 +77,22 @@ def _say(text: str = "Hello", observer_ids: frozenset[str] | None = None) -> Eve
         source_layer="entities",
         data=EntitySayPayload(entity_id="speaker", text=text),
         observer_ids=observer_ids,
+    )
+
+
+def _opportunity_attack(attacker_id: str, target_id: str) -> Event:
+    return Event(
+        event_type=EventType.OPPORTUNITY_ATTACK,
+        source_layer="entities",
+        data=OpportunityAttackPayload(attacker_id, target_id),
+    )
+
+
+def _death(entity_id: str, killer_id: str | None = None) -> Event:
+    return Event(
+        event_type=EventType.ENTITY_DIED,
+        source_layer="entities",
+        data=EntityDiedPayload(entity_id, "square", killer_id),
     )
 
 
@@ -263,3 +290,62 @@ def test_perception_buffer_round_trips_and_missing_v2_field_defaults_empty() -> 
     assert isinstance(restored, Npc)
     assert restored.inner_self is not None
     assert restored.inner_self.perceived_event_buffer == []
+
+
+def test_event_log_normalizes_death_as_killer_and_dead_target() -> None:
+    npc = _npc()
+    killer = Creature(id="killer", name="Killer", location_id="square")
+    dead = Creature(id="dead", name="Dead", location_id="square")
+    log = EventLog({entity.id: entity for entity in (npc, killer, dead)})
+
+    log.record(_death("dead", "killer"))
+
+    assert npc.inner_self is not None
+    participants = [(event.actor_id, event.target_id) for event in npc.inner_self.perceived_event_buffer]
+    assert participants == [("killer", "dead")]
+
+
+def test_rule_brain_digest_applies_battle_outcome_without_summarizer_and_round_trips() -> None:
+    npc = _npc(
+        brain=RuleBrain(),
+        inner_self=InnerSelf(
+            relations=[Relationship("ally", RelationshipType.LOVES)],
+            goals=[TypedGoal(GoalType.KILL, "enemy"), TypedGoal(GoalType.PROTECT, "ward")],
+        ),
+    )
+    attacker = Creature(id="attacker", name="Attacker", location_id="square")
+    ally = Creature(id="ally", name="Ally", location_id="square")
+    enemy = Creature(id="enemy", name="Enemy", location_id="square")
+    ward = Creature(id="ward", name="Ward", location_id="square")
+    log = EventLog({entity.id: entity for entity in (npc, attacker, ally, enemy, ward)})
+
+    log.record(_opportunity_attack("attacker", "npc"))
+    log.record(_death("ally"))
+    log.record(_death("enemy"))
+    log.record(_death("ward"))
+    digest(npc, DigestBoundary.COMBAT_ENDED, summarizer=None)
+
+    assert npc.inner_self is not None
+    assert npc.inner_self.relation_targets(RelationshipType.HATES) == {"attacker"}
+    assert npc.inner_self.mood is Mood.GRIEVING
+    assert [goal.status.value for goal in npc.inner_self.goals] == ["achieved", "failed"]
+    assert npc.inner_self.perceived_event_buffer == []
+    restored_layer = EntitiesLayer()
+    restored_layer.load_state(EntitiesLayer([npc]).get_state())
+    restored = restored_layer.get_entity("npc")
+    assert isinstance(restored, Npc)
+    assert restored.inner_self == npc.inner_self
+
+
+def test_failed_summarizer_does_not_rollback_rule_delta() -> None:
+    npc = _npc()
+    assert npc.inner_self is not None
+    npc.inner_self.perceived_event_buffer.append(
+        BufferedPerceivedEvent(EventType.ENTITY_ATTACK, "attacker", "npc", "Attack", 1)
+    )
+
+    digest(npc, DigestBoundary.COMBAT_ENDED, FailingSummarizer())  # type: ignore[arg-type]
+
+    assert npc.inner_self.relation_targets(RelationshipType.HATES) == {"attacker"}
+    assert npc.inner_self.mood is Mood.ANGRY
+    assert npc.inner_self.perceived_event_buffer == []
