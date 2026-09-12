@@ -22,49 +22,49 @@
 
 ---
 
-## Phase 2 — NPC Memory & Awareness MVP DONE
+## Phase 2 — NPC inner self & awareness DONE
 
 ### Goal
 
-NPCs remember what happened. LLM gets delta instead of full log. Structured tags enable RuleBrain reactions without LLM.
+NPCs retain a typed inner self. LLM gets delta instead of a full log; RuleBrain reads typed mood and relationships without LLM.
 
 ### Decisions
 
-**NpcMemory model** — new dataclass on `Npc`, replaces `conversation_summary`:
+**InnerSelf model** — a core-domain dataclass on persistent NPCs, replacing the former memory fields:
 
 ```python
 @dataclass
-class NpcMemory:
-    tags: list[str]            # ["grieving", "hates:orcs", "trusts:player"]
-    recent: str                # compressed recent events
-    inner_state: str           # "worried about family"
+class InnerSelf:
+    relations: list[Relationship]
+    mood: Mood
+    goals: list[TypedGoal | FreeformGoal]
+    alignment: AlignmentAccumulation
+    journal: str
+    thoughts: list[str]
     current_conversation: str  # summary of ongoing conversation
 ```
 
-Serialized as JSON. `conversation_summary` field migrated into `memory.current_conversation`.
+Serialized as JSON. Released v1 saves migrate the former fields into `inner_self`.
 
-**Structured tags** — flat enum-like strings. Relationships via `:creature_id`. ~15 base tags. RuleBrain reads them in `choose_action()`. Only LLM writes tags (for MVP).
+**Typed core** — relationships are `(target_id, type, intensity)`, mood is a single enum, and goals have an explicit status. RuleBrain reads hates/fears and scared mood in `choose_action()`.
 
-Base tag vocabulary:
-- Emotions: `angry`, `tired`, `happy`, `scared`, `grieving`, `suspicious`, `alerted`
-- Relations: `loves:<id>`, `hates:<id>`, `trusts:<id>`, `fears:<id>`, `loyal_to:<id>`
-- Situational: `in_mourning`, `fleeing`
+Mood vocabulary: `neutral`, `angry`, `tired`, `happy`, `scared`, `grieving`, `suspicious`, `alerted`. Relationship types: `loves`, `hates`, `trusts`, `fears`, `loyal_to`.
 
 **Delta log instead of full log** — `LlmBrain` sends only new events since last turn (switch from `get_perceived_log` to `get_new_perceived_events` or equivalent with ~15 line cap).
 
-**Summarizer** — `llm/summarizer.py`. Pure function: takes current `NpcMemory` JSON + delta events → returns updated `NpcMemory` JSON. One cheap LLM call. Triggered by `EntitiesLayer` on context change.
+**Summarizer** — `llm/summarizer.py`. It receives InnerSelf JSON and delta events, preserves the typed core, and rewrites only the journal/conversation layer. One cheap LLM call, triggered by `EntitiesLayer` on context change.
 
 Summarizer triggers:
-- End of conversation → compress `current_conversation` into `recent`
-- End of combat → compress combat events into `recent`
-- `recent` exceeds character limit → compress `recent`
+- End of conversation → compress `current_conversation` into `journal`
+- End of combat → compress combat events into `journal`
+- `journal` exceeds character limit → compress `journal`
 
-**Combat memory** — no summarization during combat. LLM sees rolling window of ~15 log lines. After combat ends → summarizer writes outcome to `recent`. Long combats: old lines fall out of window, but summarizer captures the result.
+**Combat journal** — no summarization during combat. LLM sees a rolling window of ~15 log lines. After combat ends the summarizer writes the outcome to `journal`.
 
 ### Implementation order
 
-1. `NpcMemory` model + migrate `conversation_summary` → `memory`
-2. Tag vocabulary enum + RuleBrain reads tags in `choose_action()`
+1. `InnerSelf` model + v1 save migration
+2. Typed relationships/mood + RuleBrain reads them in `choose_action()`
 3. Delta log — switch LlmBrain to send only new events
 4. Summarizer (`llm/summarizer.py`) + triggers in EntitiesLayer
 
@@ -116,7 +116,7 @@ Connect the summarizer to actual game events. Give RuleBrain NPCs minimal dialog
 - `canned_line(role, activity, tags)` — mood override > role+activity > activity-only > "..." fallback.
 - `RuleBrain._peaceful_action()` queries `new_raw_events` (raw Event objects, not translated strings) for `ENTITY_SAY` from someone else. Responds with canned line via `Action(name="say")`.
 - `EntitiesLayer.get_new_raw_events()` — peeks at raw events without advancing the index (non-destructive, safe alongside `get_new_perceived_events`).
-- `content_loader.parse_npc()` now loads `memory` from YAML (tags, recent, inner_state, current_conversation).
+- `content_loader.parse_npc()` loads `inner_self` from YAML (relationships, mood, goals, alignment, journal, thoughts, conversation).
 - Test script: `scripts/test_village_dialogue.py`, test world: `content/worlds/village.yaml`.
 
 **Deferred / future expansion:**

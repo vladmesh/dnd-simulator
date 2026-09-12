@@ -8,8 +8,7 @@ from typing import Any
 
 from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.character import Character, NpcRole
-from dnd_simulator.core.npc_memory import NpcMemory
-from dnd_simulator.core.tags import NpcTag, has_tag
+from dnd_simulator.core.inner_self import InnerSelf, Mood
 from dnd_simulator.i18n import _
 
 
@@ -45,7 +44,7 @@ class Npc(Character):
     settlement_id: str = ""
     schedule: list[ScheduleEntry] = field(default_factory=list)
     location_override: str | None = None
-    memory: NpcMemory = field(default_factory=NpcMemory)
+    inner_self: InnerSelf | None = field(default_factory=InnerSelf)
     ai_type: BrainType = BrainType.RULE_BASED
 
     def scheduled_location(self, hour: int) -> str:
@@ -73,14 +72,10 @@ class Npc(Character):
         """Whether this NPC is a merchant (derived from role)."""
         return self.role == NpcRole.MERCHANT
 
-    @property
-    def memory_tags(self) -> list[str]:
-        return self.memory.tags
-
     def get_canned_response(self, hour: int) -> str | None:
         """Return a canned dialogue line based on role, activity, and mood."""
         activity = self.scheduled_activity(hour)
-        return canned_line(self.role, activity, self.memory.tags)
+        return canned_line(self.role, activity, self.inner_self.mood if self.inner_self else Mood.NEUTRAL)
 
     def get_npc_data(self) -> dict[str, Any]:
         """Return NPC metadata for LLM prompts."""
@@ -88,7 +83,7 @@ class Npc(Character):
             "name": self.name,
             "role": self.role.value,
             "personality": self.personality,
-            "memory": self.memory.to_dict(),
+            "inner_self": self.inner_self.to_dict() if self.inner_self else None,
         }
 
 
@@ -120,8 +115,7 @@ def activity_flavor(role: NpcRole, activity: NpcActivity) -> str:
 
 
 # Canned dialogue for RuleBrain NPCs — response when someone talks to them.
-# Priority: mood tag override > (role, activity) > activity-only > generic fallback.
-# Future: add relationship overrides (hates:player → hostile line, trusts:player → friendly).
+# Priority: mood override > (role, activity) > activity-only > generic fallback.
 CANNED_DIALOGUE: dict[tuple[NpcRole, NpcActivity], str] = {
     # Blacksmith
     (NpcRole.BLACKSMITH, NpcActivity.WORKING): _("Need something forged?"),
@@ -147,19 +141,18 @@ _DIALOGUE_GENERIC: dict[NpcActivity, str] = {
 }
 
 # Mood overrides — if NPC has this tag, use this line regardless of role/activity.
-MOOD_DIALOGUE: dict[str, str] = {
-    NpcTag.ANGRY: _("Leave me alone!"),
-    NpcTag.SCARED: _("Shh... Something's not right."),
-    NpcTag.GRIEVING: _("I... I can't talk right now."),
-    NpcTag.SUSPICIOUS: _("What do you want?"),
+MOOD_DIALOGUE: dict[Mood, str] = {
+    Mood.ANGRY: _("Leave me alone!"),
+    Mood.SCARED: _("Shh... Something's not right."),
+    Mood.GRIEVING: _("I... I can't talk right now."),
+    Mood.SUSPICIOUS: _("What do you want?"),
 }
 
 
-def canned_line(role: NpcRole, activity: NpcActivity, tags: list[str]) -> str:
+def canned_line(role: NpcRole, activity: NpcActivity, mood: Mood = Mood.NEUTRAL) -> str:
     """Pick a canned dialogue line. Mood overrides role+activity."""
-    for tag, line in MOOD_DIALOGUE.items():
-        if has_tag(tags, tag):
-            return line
+    if mood in MOOD_DIALOGUE:
+        return MOOD_DIALOGUE[mood]
     return CANNED_DIALOGUE.get((role, activity), _DIALOGUE_GENERIC.get(activity, "..."))
 
 

@@ -35,7 +35,7 @@ from dnd_simulator.core.class_features import (
     PaladinFeatures,
     RogueFeatures,
 )
-from dnd_simulator.core.npc_memory import NpcMemory
+from dnd_simulator.core.inner_self import InnerSelf
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.triggers import ActivationTrigger, EventCondition, TriggerDefinition
 from dnd_simulator.layers.entities.models import Npc, resolve_schedule
@@ -128,7 +128,7 @@ def _to_npc(
             f"Known: {sorted(known_locations)}"
         )
 
-    memory = NpcMemory.from_dict(model.memory.model_dump()) if model.memory else NpcMemory()
+    inner_self = InnerSelf.from_dict(model.inner_self.model_dump(mode="json")) if model.inner_self else InnerSelf()
 
     all_items = parse_items(
         [item.model_dump(exclude_none=True, exclude_unset=True) for item in model.items],
@@ -161,7 +161,7 @@ def _to_npc(
         ac=model.ac,
         ability_scores=_to_ability_scores(model),
         ai_type=model.ai,
-        memory=memory,
+        inner_self=inner_self,
         gold=model.gold,
         inventory=inventory,
         equipped=equipped,

@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from dnd_simulator.layers.common.rng_state import load_rng_state
 from dnd_simulator.service.base import GameServiceProtocol
 from dnd_simulator.service.session import GameSession
-from dnd_simulator.storage.save_schema import SaveGame
+from dnd_simulator.storage.save_schema import SaveGame, migrate_v1_save
 
 logger = structlog.get_logger(domain="save")
 
@@ -21,9 +21,9 @@ class SaveCommands(GameServiceProtocol):
     @staticmethod
     def _validate_save(data: object) -> SaveGame:
         try:
-            return SaveGame.model_validate(data)
+            return SaveGame.model_validate(migrate_v1_save(data))
         except ValidationError as exc:
-            raise ValueError("incompatible save: expected schema_version=1") from exc
+            raise ValueError("incompatible save: expected schema_version=2") from exc
 
     def save_game(self, session_id: str, name: str | None = None) -> str:
         """Save game state. Returns the save name."""

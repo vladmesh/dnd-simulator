@@ -10,6 +10,7 @@ import structlog
 
 from dnd_simulator.core.class_features import ClassFeatures
 from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.inner_self import InnerSelf
 from dnd_simulator.core.intent import CreatureIntent
 from dnd_simulator.core.items import EquipmentSlot, Item
 from dnd_simulator.core.resource import ResourcePool
@@ -239,6 +240,7 @@ class Creature(Entity):
     current_intent: CreatureIntent | None = None
     combat_position: tuple[int, int] | None = None  # fixed starting position on battle map (x, y in feet)
     brain: Brain | None = field(default=None, repr=False)
+    inner_self: InnerSelf | None = None
 
     # Compat accessors over the `equipped` slot registry. Readers/writers across the codebase
     # (weapons, modifiers, awareness, serialization, equip handlers) use these named slots;
@@ -299,11 +301,6 @@ class Creature(Entity):
     @equipped_ring.setter
     def equipped_ring(self, item: Item | None) -> None:
         self._set_slot(EquipmentSlot.RING, item)
-
-    @property
-    def memory_tags(self) -> list[str]:
-        """Structured tags for brain decisions. Override in subclasses with memory."""
-        return []
 
     @property
     def is_alive(self) -> bool:

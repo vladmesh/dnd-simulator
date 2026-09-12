@@ -199,7 +199,7 @@
 - [x] `silent-failure-movement` — ~~handle_wait except ValueError: pass~~ FIXED Sprint 020 phase 1 task 2: недостижимый/несуществующий travel-таргет → `ActionResult(success=False)`
 - [x] **should** `action-error-kills-round-loop` — FIXED Sprint 023 phase 4: required/type validation возвращает failed `ActionResult`, ожидаемые handler-отказы используют узкий `ActionRejectedError`, live WS regression подтверждает следующий играбельный ход; programming errors не поглощаются.
 - [x] `schema-form-growing` — ~~frontend SchemaForm.tsx 488 строк, 30+ nested helpers~~ FIXED Sprint 020 phase 4: `FieldShell`, `schemaResolve.ts`, `localizedCodec.ts`, один `buildDefaults`; `SchemaForm.tsx` 373 строки
-- [ ] **should** `llm-imports-layer-models` — llm/brain.py и llm/summarizer.py импортируют из layers.entities.models (Npc, NpcMemory). llm не должен зависеть от layers
+- [ ] **should** `llm-imports-layer-models` — llm/brain.py импортирует из layers.entities.models (`Npc`). llm не должен зависеть от layers; `InnerSelf` уже находится в core.
 - [ ] **should** `round-imports-entities-layer-v2` — round.py:31 напрямую импортирует EntitiesLayer (sprint 012 re-introduced coupling). Взаимодействовать через World/Layer interface
 - [ ] **should** `mutable-dataclass-models` — Region, Nation, Settlement, Leader — @dataclass без frozen=True. Аудит: мутируются ли in-place или можно frozen
 - [ ] **should** `proficiency-hardcoded-weapons` — rules/proficiency.py:33-34 хардкоженные строки оружия ("rapier", "shortsword"). Использовать enum или catalog ref

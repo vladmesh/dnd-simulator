@@ -41,9 +41,9 @@ def build_npc_system_prompt(
 
     # NPC memory
     memory_ctx = ""
-    memory = npc_data.get("memory")
-    if memory and any(memory.get(k) for k in ("tags", "recent", "inner_state", "current_conversation")):
-        memory_ctx = "\n\n" + _("Your memory:") + "\n" + json.dumps(memory, ensure_ascii=False, indent=2)
+    inner_self = npc_data.get("inner_self")
+    if inner_self and any(inner_self.values()):
+        memory_ctx = "\n\n" + _("Your inner self:") + "\n" + json.dumps(inner_self, ensure_ascii=False, indent=2)
 
     # Nearby entities
     entities_ctx = ""

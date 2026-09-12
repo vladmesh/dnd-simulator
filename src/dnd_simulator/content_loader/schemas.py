@@ -25,6 +25,15 @@ from dnd_simulator.core.character import (
     NpcRole,
     Race,
 )
+from dnd_simulator.core.inner_self import (
+    DEFAULT_RELATIONSHIP_INTENSITY,
+    RELATIONSHIP_INTENSITY_MAX,
+    RELATIONSHIP_INTENSITY_MIN,
+    GoalStatus,
+    GoalType,
+    Mood,
+    RelationshipType,
+)
 from dnd_simulator.core.items import ItemType
 from dnd_simulator.core.models import EventType, TerrainType, TimeOfDay
 from dnd_simulator.core.squad import SquadBehavior, SquadType
@@ -75,7 +84,7 @@ class AttackContent(BaseModel):
 class AbilityScoresContent(BaseModel):
     """Six ability scores with D&D defaults."""
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
     str_: int = Field(10, alias="str")
     dex: int = 10
@@ -85,13 +94,57 @@ class AbilityScoresContent(BaseModel):
     cha: int = 10
 
 
-class NpcMemoryContent(BaseModel):
-    """Structured NPC memory from YAML."""
+class RelationshipContent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
-    tags: list[str] = []
-    recent: str = ""
-    inner_state: str = ""
+    target_id: str = Field(min_length=1)
+    type: RelationshipType
+    intensity: int = Field(DEFAULT_RELATIONSHIP_INTENSITY, ge=RELATIONSHIP_INTENSITY_MIN, le=RELATIONSHIP_INTENSITY_MAX)
+
+
+class GoalContent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: GoalType | None = None
+    target_id: str | None = None
+    text: str | None = None
+    status: GoalStatus = GoalStatus.ACTIVE
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> GoalContent:
+        if self.type is not None and self.target_id and self.text is None:
+            return self
+        if self.type is None and self.target_id is None and self.text:
+            return self
+        raise ValueError("goal must be typed (type + target_id) or freeform (text)")
+
+
+class AlignmentAccumulationContent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    law_chaos: int = 0
+    good_evil: int = 0
+
+
+class InnerSelfContent(BaseModel):
+    """Typed inner self and free personal layer from YAML."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    relations: list[RelationshipContent] = Field(default_factory=list)
+    mood: Mood = Mood.NEUTRAL
+    goals: list[GoalContent] = Field(default_factory=list)
+    alignment: AlignmentAccumulationContent = Field(default_factory=AlignmentAccumulationContent)
+    journal: str = ""
+    thoughts: list[str] = Field(default_factory=list)
     current_conversation: str = ""
+
+    @model_validator(mode="after")
+    def validate_relations(self) -> InnerSelfContent:
+        keys = [(relation.target_id, relation.type) for relation in self.relations]
+        if len(keys) != len(set(keys)):
+            raise ValueError("duplicate relationship type for target")
+        return self
 
 
 def _coerce_ability_scores(v: object) -> AbilityScoresContent:
@@ -459,12 +512,19 @@ class NpcContent(BaseModel):
     class_features: dict[str, Any] = {}
     combat_position: list[int] | None = None
     reputation: dict[str, int] = {}
-    memory: NpcMemoryContent | None = None
+    inner_self: InnerSelfContent | None = None
     xp_value: int = 0
     always_active: bool = False
     triggers: list[ActivationTriggerContent] = Field(default_factory=list)
 
     _validate_combat_position = field_validator("combat_position")(_validate_combat_position)
+
+    @model_validator(mode="before")
+    @classmethod
+    def reject_legacy_memory(cls, data: object) -> object:
+        if isinstance(data, dict) and "memory" in data:
+            raise ValueError("NPC content uses inner_self, not memory")
+        return data
 
     @model_validator(mode="after")
     def validate_trigger_ids(self) -> NpcContent:

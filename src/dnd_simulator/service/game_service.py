@@ -304,6 +304,7 @@ class GameService(
         match the (possibly restored) ai_type field.
         """
         from dnd_simulator.core.character import Creature
+        from dnd_simulator.core.inner_self import InnerSelf
         from dnd_simulator.core.player import PlayerCharacter
         from dnd_simulator.layers.entities.models import Npc
 
@@ -314,6 +315,8 @@ class GameService(
                 entity.brain = None
             elif isinstance(entity, Creature) and entity.brain is None:
                 entity.brain = self._brain_factory.create(BrainType.RULE_BASED)
+            if isinstance(entity, Creature) and not isinstance(entity, PlayerCharacter) and not entity.temporary:
+                entity.inner_self = entity.inner_self or InnerSelf()
 
     def _get_session(self, session_id: str) -> GameSession:
         from dnd_simulator.service.errors import SessionNotFoundError

@@ -16,6 +16,7 @@ from dnd_simulator.content_loader.schemas import (
     ConnectionContent,
     DamageComponentContent,
     EncounterEntryContent,
+    InnerSelfContent,
     ItemContent,
     LeaderContent,
     LocationContent,
@@ -23,7 +24,6 @@ from dnd_simulator.content_loader.schemas import (
     NationContent,
     NeighborContent,
     NpcContent,
-    NpcMemoryContent,
     PlayerContent,
     RegionContent,
     SettlementContent,
@@ -58,11 +58,11 @@ class TestMinimalConstruction:
         assert m.wis == 10
         assert m.cha == 10
 
-    def test_npc_memory(self) -> None:
-        m = NpcMemoryContent()
-        assert m.tags == []
-        assert m.recent == ""
-        assert m.inner_state == ""
+    def test_inner_self(self) -> None:
+        m = InnerSelfContent()
+        assert m.relations == []
+        assert m.mood.value == "neutral"
+        assert m.journal == ""
         assert m.current_conversation == ""
 
     def test_connection(self) -> None:
@@ -203,7 +203,7 @@ class TestFullConstruction:
             ],
             ability_scores={"str": 16, "dex": 10, "con": 14, "int": 10, "wis": 12, "cha": 8},
             class_features={"fighting_style": "defense"},
-            memory={"tags": ["angry"], "recent": "Was robbed", "inner_state": "furious", "current_conversation": ""},
+            inner_self={"mood": "angry", "journal": "Was robbed", "current_conversation": ""},
         )
         assert m.race.value == "dwarf"
         assert m.char_class.value == "fighter"
@@ -214,7 +214,7 @@ class TestFullConstruction:
         assert len(m.attacks) == 1
         assert m.attacks[0].damage[0].type.value == "bludgeoning"
         assert m.ability_scores.str_ == 16  # type: ignore[union-attr]
-        assert m.memory.tags == ["angry"]  # type: ignore[union-attr]
+        assert m.inner_self.mood.value == "angry"  # type: ignore[union-attr]
 
     def test_player_full(self) -> None:
         m = PlayerContent(
@@ -460,18 +460,20 @@ class TestNestedModels:
         assert isinstance(m.items[0], ItemContent)
         assert m.items[0].type.value == "weapon"
 
-    def test_npc_with_memory(self) -> None:
+    def test_npc_with_inner_self_and_rejects_legacy_memory(self) -> None:
         m = NpcContent(
             name={"en": "X"},
-            memory={
-                "tags": ["angry", "hates:orcs"],
-                "recent": "Lost a fight",
-                "inner_state": "vengeful",
+            inner_self={
+                "mood": "angry",
+                "relations": [{"type": "hates", "target_id": "orcs"}],
+                "journal": "Lost a fight",
                 "current_conversation": "",
             },
         )
-        assert isinstance(m.memory, NpcMemoryContent)
-        assert m.memory.tags == ["angry", "hates:orcs"]
+        assert isinstance(m.inner_self, InnerSelfContent)
+        assert m.inner_self.mood.value == "angry"
+        with pytest.raises(ValidationError):
+            NpcContent(name={"en": "X"}, inner_self={"tags": ["angry"]})
 
     def test_region_with_connections(self) -> None:
         m = RegionContent(

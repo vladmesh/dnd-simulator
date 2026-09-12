@@ -27,10 +27,10 @@ from dnd_simulator.core.events import (
     EntityDiedPayload,
     RoundStartPayload,
 )
+from dnd_simulator.core.inner_self import InnerSelf
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, EntityKind, Event, EventType, Query
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
-from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.resource import RestType
 from dnd_simulator.core.turn_budget import TurnBudget
@@ -316,7 +316,7 @@ class EntitiesLayer(Layer):
         return self._query_handler.get_new_raw_events(observer)
 
     def _on_combat_ended(self, location_id: str) -> None:
-        """After combat ends, summarize combat events into each NPC participant's memory."""
+        """After combat ends, summarize combat events into each NPC participant's journal."""
         if not self._summarizer:
             return
 
@@ -351,11 +351,15 @@ class EntitiesLayer(Layer):
             if not perceived:
                 continue
 
+            if entity.inner_self is None:
+                continue
             try:
-                entity.memory = self._summarizer.summarize(entity.memory, perceived, "combat_ended")
-                if self._summarizer.needs_compression(entity.memory):
-                    entity.memory = self._summarizer.summarize(entity.memory, [], "recent_overflow")
-                logger.info("npc_memory_updated", entity_id=entity.id, entity_name=entity.name, trigger="combat_ended")
+                entity.inner_self = self._summarizer.summarize(entity.inner_self, perceived, "combat_ended")
+                if self._summarizer.needs_compression(entity.inner_self):
+                    entity.inner_self = self._summarizer.summarize(entity.inner_self, [], "journal_overflow")
+                logger.info(
+                    "npc_inner_self_updated", entity_id=entity.id, entity_name=entity.name, trigger="combat_ended"
+                )
             except Exception:
                 logger.exception("npc_memory_summarize_failed", entity_id=entity.id, entity_name=entity.name)
 
@@ -419,6 +423,11 @@ class EntitiesLayer(Layer):
                         speed=int(edata["speed"]),
                         ability_scores=parse_ability_scores(edata),
                         attacks=parse_attacks(edata.get("attacks") or []),
+                        inner_self=(
+                            InnerSelf.from_dict(edata["inner_self"])
+                            if isinstance(edata.get("inner_self"), dict)
+                            else None
+                        ),
                     )
                     self.add_entity(entity)
                     # Fall through to mutable state restoration below
@@ -552,12 +561,10 @@ class EntitiesLayer(Layer):
                         entity.ai_type = BrainType(ai_type)
                     override = edata.get("location_override")
                     entity.location_override = str(override) if override else None
-                    memory_data = edata.get("memory")
-                    if isinstance(memory_data, dict):
-                        entity.memory = NpcMemory.from_dict(memory_data)
-                    else:
-                        legacy = str(edata.get("conversation_summary", ""))
-                        entity.memory = NpcMemory(current_conversation=legacy) if legacy else NpcMemory()
+                    inner_self_data = edata.get("inner_self")
+                    entity.inner_self = (
+                        InnerSelf.from_dict(inner_self_data) if isinstance(inner_self_data, dict) else InnerSelf()
+                    )
                 elif isinstance(entity, Creature):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
                 elif isinstance(entity, Container):

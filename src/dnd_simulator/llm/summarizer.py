@@ -1,4 +1,4 @@
-"""Memory summarizer — compresses NPC events into structured memory."""
+"""Memory summarizer — compresses NPC events into their inner journal."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from dnd_simulator.core.npc_memory import NpcMemory
+from dnd_simulator.core.inner_self import InnerSelf
 
 if TYPE_CHECKING:
     from dnd_simulator.llm.client import LlmClient
@@ -24,18 +24,18 @@ New events that happened (trigger: {trigger}):
 {events}
 
 Update the memory JSON. Rules:
-- If trigger is "conversation_ended": merge current_conversation into recent, clear current_conversation
-- If trigger is "combat_ended": add combat outcome to recent
-- If trigger is "recent_overflow": compress recent to be shorter while keeping key facts
-- Keep recent under 300 characters
-- Update inner_state to reflect how the NPC feels now
-- Do NOT modify tags (those are managed separately)
+- If trigger is "conversation_ended": merge current_conversation into journal, clear current_conversation
+- If trigger is "combat_ended": add combat outcome to journal
+- If trigger is "journal_overflow": compress journal to be shorter while keeping key facts
+- Keep journal under 300 characters
+- Do NOT modify relations, mood, goals, alignment, or thoughts
 - Return ONLY valid JSON, no explanation
 
-Return the updated memory object with keys: tags, recent, inner_state, current_conversation"""
+Return the updated inner-self object with keys: relations, mood, goals, alignment,
+journal, thoughts, current_conversation"""
 
-# Character limit for 'recent' before triggering overflow compression
-RECENT_LIMIT = 300
+# Character limit for journal before triggering overflow compression
+JOURNAL_LIMIT = 300
 
 
 class MemorySummarizer:
@@ -44,13 +44,13 @@ class MemorySummarizer:
     def __init__(self, llm: LlmClient) -> None:
         self._llm = llm
 
-    def summarize(self, memory: NpcMemory, new_events: list[str], trigger: str) -> NpcMemory:
-        """Compress events into memory. Returns updated NpcMemory."""
-        if not new_events and trigger not in ("recent_overflow", "conversation_ended"):
-            return memory
+    def summarize(self, inner_self: InnerSelf, new_events: list[str], trigger: str) -> InnerSelf:
+        """Compress events into the free journal. Typed state is preserved."""
+        if not new_events and trigger not in ("journal_overflow", "conversation_ended"):
+            return inner_self
 
         events_text = "\n".join(f"- {e}" for e in new_events) if new_events else "(no new events)"
-        memory_json = json.dumps(memory.to_dict(), ensure_ascii=False, indent=2)
+        memory_json = json.dumps(inner_self.to_dict(), ensure_ascii=False, indent=2)
 
         prompt = _SUMMARIZE_PROMPT.format(
             memory_json=memory_json,
@@ -74,14 +74,17 @@ class MemorySummarizer:
                 cleaned = cleaned.strip()
 
             data = json.loads(cleaned)
-            # Preserve original tags (summarizer must not modify them)
-            result = NpcMemory.from_dict(data)
-            result.tags = list(memory.tags)
+            result = InnerSelf.from_dict(data)
+            result.relations = list(inner_self.relations)
+            result.mood = inner_self.mood
+            result.goals = list(inner_self.goals)
+            result.alignment = inner_self.alignment
+            result.thoughts = list(inner_self.thoughts)
             return result
         except (json.JSONDecodeError, KeyError, TypeError):
             logger.warning("summarizer_parse_failed")
-            return memory
+            return inner_self
 
-    def needs_compression(self, memory: NpcMemory) -> bool:
-        """Check if recent memory exceeds the size limit."""
-        return len(memory.recent) > RECENT_LIMIT
+    def needs_compression(self, inner_self: InnerSelf) -> bool:
+        """Check if the journal exceeds the size limit."""
+        return len(inner_self.journal) > JOURNAL_LIMIT

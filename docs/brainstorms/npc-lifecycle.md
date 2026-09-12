@@ -52,24 +52,24 @@
 
 LlmBrain переключен с `perceived_log` (полная история) на `new_perceived_events` (дельта с последнего хода), лимит 15 строк. Память в JSON формате вставляется в system prompt.
 
-### NpcMemory (замена conversation_summary) ✅
+### InnerSelf (замена прежней памяти) ✅
 
-`NpcMemory` dataclass: `tags`, `recent`, `inner_state`, `current_conversation`. Заменяет `conversation_summary`. Сериализация в JSON, backward compat со старыми сейвами.
+`InnerSelf` dataclass: typed relations, one mood, goals with statuses, alignment accumulation, journal, bounded thoughts and `current_conversation`. Сериализация в JSON, v1 saves migrate on load.
 
-### Structured tags ✅
+### Typed core ✅
 
-`NpcTag` — словарь тегов (emotions: angry/scared/..., relations: hates/loves/...:creature_id). `RuleBrain` читает теги: `hates:X` → приоритет цели, `scared` → раньше убегает.
+`RuleBrain` читает typed relations и mood: `hates`/`fears` меняют приоритет цели, `scared` раньше запускает бегство.
 
 ### MemorySummarizer ✅
 
-`llm/summarizer.py` — сжимает события в memory через дешёвый LLM-вызов. Триггеры: `conversation_ended`, `combat_ended`, `recent_overflow`. Защита тегов от изменения LLM.
+`llm/summarizer.py` — сжимает события в journal через дешёвый LLM-вызов. Триггеры: `conversation_ended`, `combat_ended`, `journal_overflow`. Typed core не меняется LLM.
 
 ### Не подключено (Phase 2.5) ⬜
 
 - Триггеры сумарайзера не вызываются из `EntitiesLayer` (код есть, wiring нет)
 - RuleBrain canned dialogue (таблица реплик по role+activity)
 
-**Итог:** НПС помнят, что было. Structured tags работают в бою. Сумарайзер готов к подключению.
+**Итог:** НПС помнят, что было. Typed core работает в бою. Сумарайзер готов к подключению.
 
 ---
 

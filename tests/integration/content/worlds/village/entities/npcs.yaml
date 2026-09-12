@@ -51,9 +51,8 @@ ivan:
   role: farmer
   personality: Молчаливый старик.
   settlement_id: millbrook
-  memory:
-    tags:
-    - grieving
+  inner_self:
+    mood: grieving
 tanya:
   name: Таня-трактирщица
   start_location: millbrook_tavern

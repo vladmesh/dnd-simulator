@@ -10,6 +10,15 @@ from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.character import Ability, Alignment, CharClass, DamageType, NpcRole, Race
 from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.inner_self import (
+    DEFAULT_RELATIONSHIP_INTENSITY,
+    RELATIONSHIP_INTENSITY_MAX,
+    RELATIONSHIP_INTENSITY_MIN,
+    GoalStatus,
+    GoalType,
+    Mood,
+    RelationshipType,
+)
 from dnd_simulator.core.intent import IntentType
 from dnd_simulator.core.items import ArmorCategory, EquipmentSlot, ItemType, WeaponCategory
 from dnd_simulator.core.lair import LairMemberRole
@@ -89,11 +98,47 @@ class ClassFeaturesSave(SaveModel):
     sneak_attack_dice: int | None = None
 
 
-class NpcMemorySave(SaveModel):
-    tags: list[str] = Field(default_factory=list)
-    recent: str = ""
-    inner_state: str = ""
+class RelationshipSave(SaveModel):
+    target_id: str = Field(min_length=1)
+    type: RelationshipType
+    intensity: int = Field(DEFAULT_RELATIONSHIP_INTENSITY, ge=RELATIONSHIP_INTENSITY_MIN, le=RELATIONSHIP_INTENSITY_MAX)
+
+
+class GoalSave(SaveModel):
+    type: GoalType | None = None
+    target_id: str | None = None
+    text: str | None = None
+    status: GoalStatus = GoalStatus.ACTIVE
+
+    @model_validator(mode="after")
+    def validate_shape(self) -> GoalSave:
+        if self.type is not None and self.target_id and self.text is None:
+            return self
+        if self.type is None and self.target_id is None and self.text:
+            return self
+        raise ValueError("goal must be typed (type + target_id) or freeform (text)")
+
+
+class AlignmentAccumulationSave(SaveModel):
+    law_chaos: int = 0
+    good_evil: int = 0
+
+
+class InnerSelfSave(SaveModel):
+    relations: list[RelationshipSave] = Field(default_factory=list)
+    mood: Mood = Mood.NEUTRAL
+    goals: list[GoalSave] = Field(default_factory=list)
+    alignment: AlignmentAccumulationSave = Field(default_factory=AlignmentAccumulationSave)
+    journal: str = ""
+    thoughts: list[str] = Field(default_factory=list)
     current_conversation: str = ""
+
+    @model_validator(mode="after")
+    def validate_relations(self) -> InnerSelfSave:
+        keys = [(relation.target_id, relation.type) for relation in self.relations]
+        if len(keys) != len(set(keys)):
+            raise ValueError("duplicate relationship type for target")
+        return self
 
 
 class ResourcePoolSave(SaveModel):
@@ -222,6 +267,7 @@ class CreatureFields(EntitySaveBase):
 
 class CreatureSave(CreatureFields):
     entity_type: Literal[EntityKind.CREATURE]
+    inner_self: InnerSelfSave | None = None
 
 
 class PlayerSave(CreatureFields):
@@ -249,7 +295,7 @@ class NpcSave(CreatureFields):
     description: str = ""
     settlement_id: str
     location_override: str | None = None
-    memory: NpcMemorySave
+    inner_self: InnerSelfSave
     ai_type: BrainType
     hp: int
     ai: BrainType

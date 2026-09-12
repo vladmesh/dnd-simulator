@@ -3,7 +3,7 @@
 Abstracts how world state is persisted:
 - SaveStore: abstract interface (save, load, list, delete)
 - JsonFileStore: saves as JSON files in a directory
-- save_schema: versioned Pydantic envelope — SaveGame(schema_version=1, meta,
+- save_schema: versioned Pydantic envelope — SaveGame(schema_version=2, meta,
   world) with typed layer states, world seed and RNG states; legacy saves
   without schema_version are rejected on load
 
