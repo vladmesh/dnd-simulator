@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.character import Creature, NpcRole
 from dnd_simulator.core.events import EntitySayPayload
 from dnd_simulator.core.inner_self import (
@@ -13,11 +14,15 @@ from dnd_simulator.core.inner_self import (
 from dnd_simulator.core.intent import IntentInterruptReason, IntentType, TimedIntent
 from dnd_simulator.core.models import Event, EventType, GameDateTime
 from dnd_simulator.core.player import PlayerCharacter
+from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.event_log import EventLog
 from dnd_simulator.layers.entities.inner_self_digest import digest
 from dnd_simulator.layers.entities.intent_completion import interrupt_intent
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
+from dnd_simulator.rules.handlers.movement import handle_wait
+from dnd_simulator.rules.handlers.rest import handle_long_rest
+from dnd_simulator.rules.validation import ActionContext
 
 
 class FakeSummarizer:
@@ -30,6 +35,12 @@ class FakeSummarizer:
 
     def needs_compression(self, inner_self: InnerSelf) -> bool:
         return False
+
+
+class ReplacingSummarizer(FakeSummarizer):
+    def summarize(self, inner_self: InnerSelf, events: list[str], trigger: str) -> InnerSelf:
+        self.calls.append((events, trigger))
+        return InnerSelf(perceived_event_buffer=[_buffer_event("stale")])
 
 
 def _npc(**kwargs: object) -> Npc:
@@ -141,6 +152,57 @@ def test_buffer_overflow_digests_before_accepting_next_event() -> None:
     assert npc.inner_self is not None
     assert [event.description for event in npc.inner_self.perceived_event_buffer] == ['Speaker says: "20"']
     assert npc.inner_self.perceived_event_buffer[0].at_seconds == 456
+
+
+def test_buffer_overflow_appends_to_replaced_inner_self() -> None:
+    summarizer = ReplacingSummarizer()
+    npc = _npc()
+    log = EventLog(
+        {npc.id: npc, "speaker": Creature(id="speaker", name="Speaker", location_id="square")},
+        digest=lambda creature, boundary: digest(creature, boundary, summarizer),  # type: ignore[arg-type]
+    )
+
+    for index in range(PERCEIVED_EVENT_BUFFER_CAPACITY + 1):
+        log.record(_say(str(index)))
+
+    expected_events = [f'Speaker says: "{index}"' for index in range(PERCEIVED_EVENT_BUFFER_CAPACITY)]
+    assert summarizer.calls == [(expected_events, DigestBoundary.BUFFER_FULL.value)]
+    assert npc.inner_self is not None
+    assert [event.description for event in npc.inner_self.perceived_event_buffer] == ['Speaker says: "20"']
+
+
+def test_wait_dormifies_through_digest_boundary_once() -> None:
+    summarizer = FakeSummarizer()
+    npc = _npc()
+    assert npc.inner_self is not None
+    npc.inner_self.perceived_event_buffer.append(_buffer_event())
+    layer = EntitiesLayer([npc], summarizer=summarizer)  # type: ignore[arg-type]
+    world = World([layer], time=GameDateTime())
+
+    result = handle_wait(npc, Action(ActionType.WAIT, {"hours": 1}), lambda _event: None, ActionContext(False), world)
+
+    assert result.success
+    assert summarizer.calls == [(["Something happened"], DigestBoundary.DORMANT.value)]
+    assert npc.inner_self.perceived_event_buffer == []
+    layer.update_activation(GameDateTime())
+    assert len(summarizer.calls) == 1
+
+
+def test_long_rest_dormifies_through_digest_boundary_once() -> None:
+    summarizer = FakeSummarizer()
+    npc = _npc()
+    assert npc.inner_self is not None
+    npc.inner_self.perceived_event_buffer.append(_buffer_event())
+    layer = EntitiesLayer([npc], summarizer=summarizer)  # type: ignore[arg-type]
+    world = World([layer], time=GameDateTime())
+
+    result = handle_long_rest(npc, Action(ActionType.LONG_REST), lambda _event: None, ActionContext(False), world)
+
+    assert result.success
+    assert summarizer.calls == [(["Something happened"], DigestBoundary.DORMANT.value)]
+    assert npc.inner_self.perceived_event_buffer == []
+    layer.update_activation(GameDateTime())
+    assert len(summarizer.calls) == 1
 
 
 def test_empty_and_coincident_boundaries_call_digest_body_once() -> None:

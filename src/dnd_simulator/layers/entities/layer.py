@@ -40,6 +40,7 @@ from dnd_simulator.layers.entities.combat_manager import CombatManager
 from dnd_simulator.layers.entities.event_log import EventLog
 from dnd_simulator.layers.entities.event_runtime import TriggerRuntime
 from dnd_simulator.layers.entities.inner_self_digest import digest
+from dnd_simulator.layers.entities.inner_self_digest import dormify as transition_to_dormant
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.query_handler import QueryHandler
 from dnd_simulator.layers.entities.save_models import CreatureFields, EntitiesState
@@ -106,6 +107,7 @@ class EntitiesLayer(Layer):
             self._materialized_lairs,
             self._rng,
             self._digest_inner_self,
+            self.dormify,
             self._event_log.record,
         )
         self._query_handler = QueryHandler(
@@ -179,6 +181,10 @@ class EntitiesLayer(Layer):
     def _digest_inner_self(self, creature: Creature, boundary: DigestBoundary) -> None:
         """Route every digest boundary through the one entities-layer entry point."""
         digest(creature, boundary, self._summarizer)
+
+    def dormify(self, creature: Creature) -> None:
+        """Route every active-to-dormant transition through its digest boundary."""
+        transition_to_dormant(creature, self._digest_inner_self)
 
     # -- Combat (delegated to CombatManager) --
 

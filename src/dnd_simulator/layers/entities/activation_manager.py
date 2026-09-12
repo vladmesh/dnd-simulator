@@ -56,6 +56,7 @@ class ActivationManager:
         materialized_lairs: dict[str, tuple[list[str], str | None, list[str]]],
         rng: random.Random,
         digest: Callable[[Creature, DigestBoundary], None],
+        dormify: Callable[[Creature], None],
         record_event: Callable[[Event], None],
     ) -> None:
         self._entities = entities
@@ -69,6 +70,7 @@ class ActivationManager:
         self._materialized_lairs = materialized_lairs
         self._rng = rng
         self._digest = digest
+        self._dormify = dormify
         self._record_event = record_event
         self._spawn_counter = 0
 
@@ -109,7 +111,7 @@ class ActivationManager:
             if not isinstance(e, Creature):
                 continue
             if not e.is_alive:
-                e.active = False
+                self._dormify(e)
                 e.current_intent = None
                 continue
             if e.is_anchor and e.current_intent is None:
@@ -146,7 +148,7 @@ class ActivationManager:
             if not isinstance(e, Creature):
                 continue
             if not e.is_alive:
-                e.active = False
+                self._dormify(e)
                 continue
 
             effective_location = e.location_id
@@ -161,10 +163,10 @@ class ActivationManager:
             # a stale flag must not dormify an actual active-CombatState participant.
             in_combat = self._combat.get_active_combat_for(e.id) is not None
             should_activate = in_combat or scene_active or e.always_active or automatic_active or manual_active
-            was_active = e.active
-            e.active = should_activate
-            if was_active and not should_activate:
-                self._digest(e, DigestBoundary.DORMANT)
+            if should_activate:
+                e.active = True
+            else:
+                self._dormify(e)
 
             # Move NPC to their scheduled location when activated
             if should_activate and effective_location != e.location_id:

@@ -65,6 +65,10 @@ def _ctx(
     )
 
 
+def _dormify_mock_world(world: MagicMock) -> None:
+    world.creature_host.dormify.side_effect = lambda creature: setattr(creature, "active", False)
+
+
 # ---------------------------------------------------------------------------
 # handle_move
 # ---------------------------------------------------------------------------
@@ -363,6 +367,7 @@ class TestHandleWait:
         mover = _creature("mover")
         world = MagicMock()
         world.time.to_total_seconds.return_value = 10000
+        _dormify_mock_world(world)
         ctx = _ctx(mover)
         action = Action(name=ActionType.WAIT, params={"hours": 2})
         emit_fn = MagicMock(return_value=ActionResult())
@@ -379,6 +384,7 @@ class TestHandleWait:
         mover = _creature("mover")
         world = MagicMock()
         world.time.to_total_seconds.return_value = 5000
+        _dormify_mock_world(world)
         ctx = _ctx(mover)
         action = Action(name=ActionType.WAIT, params={})
         emit_fn = MagicMock(return_value=ActionResult())
@@ -393,6 +399,7 @@ class TestHandleWait:
         mover.location_id = "town_square"
         world = MagicMock()
         world.time.to_total_seconds.return_value = 100
+        _dormify_mock_world(world)
         ctx = _ctx(mover)
         action = Action(name=ActionType.WAIT, params={"travel_to": "tavern"})
         emit_fn = MagicMock(return_value=ActionResult())
@@ -411,6 +418,7 @@ class TestHandleTravel:
         mover.location_id = "start"
         world = MagicMock()
         world.time.to_total_seconds.return_value = 100
+        _dormify_mock_world(world)
         world.location_graph = LocationGraph(
             [
                 Location("start", "Start", "r", edges=(LocationEdge("road", 1000),)),

@@ -103,10 +103,17 @@ class EventLog:
                 or (event.observer_ids is not None and entity.id not in event.observer_ids)
             ):
                 continue
-            buffer = entity.inner_self.perceived_event_buffer
-            if len(buffer) >= PERCEIVED_EVENT_BUFFER_CAPACITY and self._digest is not None:
+            if (
+                len(entity.inner_self.perceived_event_buffer) >= PERCEIVED_EVENT_BUFFER_CAPACITY
+                and self._digest is not None
+            ):
                 self._digest(entity, DigestBoundary.BUFFER_FULL)
-            buffer.append(
+            # Digest bodies may replace InnerSelf, so never append through the
+            # buffer reference that existed before the boundary.
+            current_inner_self = entity.inner_self
+            if current_inner_self is None:
+                continue
+            current_inner_self.perceived_event_buffer.append(
                 BufferedPerceivedEvent(
                     event_type=event.event_type,
                     actor_id=actor_id if isinstance(actor_id, str) else None,

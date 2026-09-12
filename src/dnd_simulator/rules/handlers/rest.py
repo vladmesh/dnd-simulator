@@ -38,7 +38,7 @@ def handle_long_rest(
 
     now = world.time.to_total_seconds()
     actor.current_intent = TimedIntent(IntentType.SLEEP, now, now + _LONG_REST_SECONDS, rest_type=RestType.LONG_REST)
-    actor.active = False
+    world.creature_host.dormify(actor)
 
     logger.info("long_rest", wake_at=actor.current_intent.wake_at_seconds)
     return ActionResult()
@@ -58,7 +58,7 @@ def handle_short_rest(
 
     now = world.time.to_total_seconds()
     actor.current_intent = TimedIntent(IntentType.SLEEP, now, now + _SHORT_REST_SECONDS, rest_type=RestType.SHORT_REST)
-    actor.active = False
+    world.creature_host.dormify(actor)
 
     logger.info("short_rest", wake_at=actor.current_intent.wake_at_seconds)
     return ActionResult()
