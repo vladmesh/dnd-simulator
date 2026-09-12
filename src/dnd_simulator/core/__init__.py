@@ -28,7 +28,7 @@ Defines the core abstractions that everything else builds on:
 - Location, LocationEdge, LocationGraph — flat navigation graph mapping locations to regions/settlements
 - PeacefulAwareness, CombatAwareness, PerceivedEvent — structured awareness data passed to Brain.choose_action;
   ItemInfo/EquippedInfo carry a JSON-safe props dict (item_props) the frontend renders localized labels from
-- NpcMemory, NpcTag — structured NPC memory read by both LlmBrain and RuleBrain
+- InnerSelf — typed relations, mood, goals, alignment accumulation, journal and thoughts
 - MonsterTemplate, EncounterEntry, Squad, SquadType, SquadBehavior — data models for spawned and abstract populations
 - Container — Entity sibling with inventory/gold but no HP/turn/brain (chests, lair treasury); EntityKind.CONTAINER
 - InventoryHolder — protocol (inventory + gold) shared by creatures and containers; substrate for the transfer primitive

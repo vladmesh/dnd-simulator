@@ -12,8 +12,8 @@ from dnd_simulator.core.character import (
     NpcRole,
 )
 from dnd_simulator.core.combat import BattleMap, Position
+from dnd_simulator.core.inner_self import InnerSelf, Mood, Relationship, RelationshipType
 from dnd_simulator.core.models import EventType
-from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.rules.movement import direction_label, grid_distance
 from dnd_simulator.rules.rule_brain import RuleBrain
@@ -124,7 +124,7 @@ class TestRuleBrainPeaceful:
             name="Merchant",
             location_id="market",
             role=NpcRole.MERCHANT,
-            memory=NpcMemory(tags=["angry"]),
+            inner_self=InnerSelf(mood=Mood.ANGRY),
         )
         merchant.in_combat = False
 
@@ -241,7 +241,7 @@ class TestRuleBrainCombat:
         assert action.params["target_id"] == "close"
 
 
-class TestRuleBrainTags:
+class TestRuleBrainInnerSelf:
     def test_hated_target_preferred_over_closer(self) -> None:
         npc = Npc(
             id="n1",
@@ -250,7 +250,7 @@ class TestRuleBrainTags:
             attacks=(_SWORD,),
             max_hp=20,
             current_hp=20,
-            memory=NpcMemory(tags=["hates:far"]),
+            inner_self=InnerSelf(relations=[Relationship("far", RelationshipType.HATES)]),
         )
         far = Npc(id="far", name="Far", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         close = Npc(id="close", name="Close", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
@@ -274,7 +274,7 @@ class TestRuleBrainTags:
             attacks=(_SWORD,),
             max_hp=100,
             current_hp=20,
-            memory=NpcMemory(tags=["scared"]),
+            inner_self=InnerSelf(mood=Mood.SCARED),
         )
         enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=60, height=60)
@@ -285,7 +285,7 @@ class TestRuleBrainTags:
         action = brain.choose_action(npc, awareness, [])
         assert action.name == "disengage"
 
-    def test_no_tags_unchanged_behavior(self) -> None:
+    def test_neutral_inner_self_keeps_default_behavior(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=60, height=60)
@@ -639,7 +639,7 @@ class TestRuleBrainTacticalDisengage:
             attacks=(_SWORD,),
             max_hp=100,
             current_hp=30,
-            memory=NpcMemory(tags=["scared"]),
+            inner_self=InnerSelf(mood=Mood.SCARED),
         )
         enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
         bm = BattleMap(width=60, height=60)

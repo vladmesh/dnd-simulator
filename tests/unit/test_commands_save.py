@@ -36,7 +36,7 @@ class TestLoadGameRoundTrip:
         svc.save_game(sid, "snap")
 
         data = svc._store.load("snap", world=session.world_name)
-        assert data["schema_version"] == 1
+        assert data["schema_version"] == 2
         assert data["meta"] == {
             "session_id": sid,
             "world_name": "sword_vale",

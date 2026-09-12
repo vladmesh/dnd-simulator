@@ -25,6 +25,7 @@ from dnd_simulator.core.character import (
     NpcRole,
     Race,
 )
+from dnd_simulator.core.inner_self import Mood, RelationshipType
 from dnd_simulator.core.items import ItemType
 from dnd_simulator.core.squad import SquadBehavior, SquadType
 
@@ -95,10 +96,10 @@ class TestNpcFullRoundTrip:
                 },
             ],
             "class_features": {"fighting_style": "defense"},
-            "memory": {
-                "tags": ["loyal", "brave"],
-                "recent": "Defended the gate",
-                "inner_state": "Vigilant",
+            "inner_self": {
+                "mood": "alerted",
+                "relations": [{"type": "loyal_to", "target_id": "king"}],
+                "journal": "Defended the gate",
                 "current_conversation": "",
             },
         }
@@ -112,8 +113,8 @@ class TestNpcFullRoundTrip:
         assert model.ability_scores.str_ == 16
         assert len(model.attacks) == 1
         assert len(model.items) == 3
-        assert model.memory is not None
-        assert model.memory.tags == ["loyal", "brave"]
+        assert model.inner_self is not None
+        assert model.inner_self.mood is Mood.ALERTED
 
         # Parse to runtime Npc
         npc = parse_npc("galahad", npc_data, lang="en")
@@ -130,7 +131,8 @@ class TestNpcFullRoundTrip:
         assert npc.equipped_shield.name == "Shield"
         assert npc.ability_scores[Ability.STR] == 16
         assert len(npc.attacks) == 1
-        assert npc.memory.tags == ["loyal", "brave"]
+        assert npc.inner_self is not None
+        assert npc.inner_self.relations[0].type is RelationshipType.LOYAL_TO
         assert len(npc.class_features) == 1  # FighterFeatures
 
 

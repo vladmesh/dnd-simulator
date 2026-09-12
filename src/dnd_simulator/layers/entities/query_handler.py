@@ -296,7 +296,7 @@ class QueryHandler:
                     "personality": entity.personality,
                     "settlement_id": entity.settlement_id,
                     "ai_type": entity.ai_type,
-                    "memory": entity.memory.to_dict(),
+                    "inner_self": entity.inner_self.to_dict() if entity.inner_self else None,
                 }
             )
         elif isinstance(entity, Creature):

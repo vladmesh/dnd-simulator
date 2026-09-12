@@ -6,6 +6,7 @@ import inspect
 from pathlib import Path
 
 from dnd_simulator.core.character import NpcRole
+from dnd_simulator.core.inner_self import Mood
 from dnd_simulator.layers.entities.models import (
     NpcActivity,
     activity_flavor,
@@ -74,13 +75,13 @@ class TestDialogueStillWorks:
     """Dialogue stays in Python for i18n — verify it still functions."""
 
     def test_merchant_working_dialogue(self) -> None:
-        line = canned_line(NpcRole.MERCHANT, NpcActivity.WORKING, [])
+        line = canned_line(NpcRole.MERCHANT, NpcActivity.WORKING)
         assert "buy" in line.lower()
 
     def test_mood_override_takes_priority(self) -> None:
-        line = canned_line(NpcRole.MERCHANT, NpcActivity.WORKING, ["angry"])
+        line = canned_line(NpcRole.MERCHANT, NpcActivity.WORKING, Mood.ANGRY)
         assert line == "Leave me alone!"
 
     def test_generic_fallback_for_sleeping(self) -> None:
-        line = canned_line(NpcRole.GUARD, NpcActivity.SLEEPING, [])
+        line = canned_line(NpcRole.GUARD, NpcActivity.SLEEPING)
         assert line == "Zzz..."

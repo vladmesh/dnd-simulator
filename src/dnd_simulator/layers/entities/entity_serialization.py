@@ -7,6 +7,7 @@ from typing import cast
 from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.class_features import FighterFeatures, PaladinFeatures, RogueFeatures
 from dnd_simulator.core.container import Container
+from dnd_simulator.core.inner_self import InnerSelf
 from dnd_simulator.core.intent import CreatureIntent, IntentType, TravelIntent
 from dnd_simulator.core.items import Item
 from dnd_simulator.core.models import EntityKind
@@ -22,9 +23,9 @@ from dnd_simulator.layers.entities.save_models import (
     DamageComponentSave,
     EntitySave,
     EventConditionSave,
+    InnerSelfSave,
     ItemSave,
     LairOriginSave,
-    NpcMemorySave,
     NpcSave,
     PlayerSave,
     ResourcePoolSave,
@@ -90,7 +91,13 @@ def entity_to_save_model(entity: Entity) -> EntitySave:
 
 
 def _creature_save(entity: Creature) -> CreatureSave:
-    return CreatureSave.model_validate({"entity_type": EntityKind.CREATURE, **_creature_fields(entity)})
+    return CreatureSave.model_validate(
+        {
+            "entity_type": EntityKind.CREATURE,
+            **_creature_fields(entity),
+            "inner_self": InnerSelfSave.model_validate(entity.inner_self.to_dict()) if entity.inner_self else None,
+        }
+    )
 
 
 def _player_save(player: PlayerCharacter) -> PlayerSave:
@@ -127,7 +134,7 @@ def _npc_save(npc: Npc) -> NpcSave:
             "description": npc.description,
             "settlement_id": npc.settlement_id,
             "location_override": npc.location_override,
-            "memory": NpcMemorySave.model_validate(npc.memory.to_dict()),
+            "inner_self": InnerSelfSave.model_validate((npc.inner_self or InnerSelf()).to_dict()),
             "ai_type": npc.ai_type,
             "hp": npc.max_hp,
             "ai": npc.ai_type,

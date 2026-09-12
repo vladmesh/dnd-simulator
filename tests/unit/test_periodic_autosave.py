@@ -85,7 +85,7 @@ async def test_periodic_autosave_persists_fresh_session_state(
         await _cancel(task)
 
     saved = service._store.load(f"session_{session.session_id}", world=session.world_name)
-    assert saved["schema_version"] == 1
+    assert saved["schema_version"] == 2
     entities = saved["world"]["layers"]["entities"]["entities"]
     saved_player = entities[player.id]
     assert saved_player["location_id"] == "blacksmith"

@@ -264,7 +264,7 @@ class CreatureResponse(BaseModel):
     personality: str = ""
     ai_type: str = ""
     settlement_id: str = ""
-    memory: dict[str, object] | None = None
+    inner_self: dict[str, object] | None = None
     # Inventory & equipment
     inventory: list[dict[str, str]] = Field(default_factory=list)
     equipped_weapon: dict[str, str] | None = None

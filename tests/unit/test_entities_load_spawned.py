@@ -14,8 +14,8 @@ from dnd_simulator.core.character import (
     NpcRole,
 )
 from dnd_simulator.core.conditions import Condition
+from dnd_simulator.core.inner_self import InnerSelf, Mood, Relationship, RelationshipType
 from dnd_simulator.core.items import Item, ItemType
-from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
@@ -50,10 +50,10 @@ class TestSpawnedNpcRoundTrip:
             ac=15,
             speed=30,
         )
-        spawned_npc.memory = NpcMemory(
-            tags=["hostile", "leader"],
-            recent="Fought adventurers.",
-            inner_state="Wary.",
+        spawned_npc.inner_self = InnerSelf(
+            mood=Mood.SUSPICIOUS,
+            relations=[Relationship("player", RelationshipType.HATES)],
+            journal="Fought adventurers.",
         )
 
         layer = EntitiesLayer(entities=[template_npc, spawned_npc])
@@ -74,9 +74,10 @@ class TestSpawnedNpcRoundTrip:
         assert restored.ai_type == "rule_based"
         assert restored.max_hp == 30
         assert restored.current_hp == 22
-        assert restored.memory.tags == ["hostile", "leader"]
-        assert restored.memory.recent == "Fought adventurers."
-        assert restored.memory.inner_state == "Wary."
+        assert restored.inner_self is not None
+        assert restored.inner_self.mood is Mood.SUSPICIOUS
+        assert restored.inner_self.relations == [Relationship("player", RelationshipType.HATES)]
+        assert restored.inner_self.journal == "Fought adventurers."
 
 
 class TestSpawnedCreatureRoundTrip:

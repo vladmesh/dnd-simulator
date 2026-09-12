@@ -12,9 +12,9 @@ from typing import TYPE_CHECKING
 from dnd_simulator.core.action import END_TURN, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, CombatEntity, ItemInfo, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain
+from dnd_simulator.core.inner_self import Mood, RelationshipType
 from dnd_simulator.core.models import EventType
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
-from dnd_simulator.core.tags import NpcTag, find_tags, has_tag
 from dnd_simulator.rules.actions import collect_cost_overrides
 from dnd_simulator.rules.movement import calculate_away_direction, calculate_direction
 from dnd_simulator.rules.resources import get_available_spell_slots
@@ -43,15 +43,13 @@ class _CombatContext:
     flee_threshold: float
     dodge_threshold: float
     target: CombatEntity | None
-    tags: list[str]
 
 
 class RuleBrain(Brain):
     """Utility-scoring combat AI. Peaceful mode = idle.
 
-    Target selection scores each enemy by distance, wound level, and NPC tags
-    (hates/fears). Scared NPCs flee earlier. Tag-aware targeting prefers
-    hated enemies and avoids loved ones.
+    Target selection scores each enemy by distance, wound level, and typed
+    relationships. Scared creatures flee earlier.
     """
 
     def choose_action(
@@ -109,10 +107,6 @@ class RuleBrain(Brain):
 
         return Action(name=ActionType.SAY, params={"text": response})
 
-    def _get_tags(self, creature: Creature) -> list[str]:
-        """Get NPC tags if available, empty list otherwise."""
-        return creature.memory_tags
-
     def _choose_combat_action(self, creature: Creature, awareness: CombatAwareness) -> Action:
         if not awareness.nearby:
             return Action(name=ActionType.IDLE)
@@ -141,11 +135,10 @@ class RuleBrain(Brain):
         max_hp = awareness.self_max_hp
         hp_ratio = hp / max_hp if max_hp > 0 else 0.0
         primary_reach = get_weapon_attack(creature).reach
-        tags = self._get_tags(creature)
-        is_scared = has_tag(tags, NpcTag.SCARED)
-
-        hated_ids = find_tags(tags, NpcTag.HATES)
-        feared_ids = find_tags(tags, NpcTag.FEARS)
+        inner_self = creature.inner_self
+        is_scared = inner_self is not None and inner_self.mood is Mood.SCARED
+        hated_ids = list(inner_self.relation_targets(RelationshipType.HATES)) if inner_self else []
+        feared_ids = list(inner_self.relation_targets(RelationshipType.FEARS)) if inner_self else []
         target = self._pick_target(awareness.nearby, primary_reach, hated_ids, feared_ids)
 
         return _CombatContext(
@@ -157,7 +150,6 @@ class RuleBrain(Brain):
             flee_threshold=SCARED_FLEE_HP_THRESHOLD if is_scared else FLEE_HP_THRESHOLD,
             dodge_threshold=SCARED_DODGE_HP_THRESHOLD if is_scared else DODGE_HP_THRESHOLD,
             target=target,
-            tags=tags,
         )
 
     @staticmethod

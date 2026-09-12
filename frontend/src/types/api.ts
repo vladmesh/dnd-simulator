@@ -207,6 +207,16 @@ export interface EquippedWeapon {
   damage: string
 }
 
+export interface InnerSelfResponse {
+  relations: Array<{ target_id: string; type: string; intensity: number }>
+  mood: string
+  goals: Array<{ type?: string; target_id?: string; text?: string; status: string }>
+  alignment: { law_chaos: number; good_evil: number }
+  journal: string
+  thoughts: string[]
+  current_conversation: string
+}
+
 export interface CreatureResponse {
   id: string
   name: string
@@ -225,7 +235,7 @@ export interface CreatureResponse {
   personality?: string
   ai_type?: string
   settlement_id?: string
-  memory?: Record<string, unknown> | null
+  inner_self?: InnerSelfResponse | null
   inventory?: InventoryItem[]
   equipped_weapon?: EquippedWeapon | null
   gm_activation_override: GmActivationOverride

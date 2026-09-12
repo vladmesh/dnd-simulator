@@ -38,7 +38,7 @@ Checks control read depth/fidelity:
 
 ## Implementation Notes
 
-- All mental spells become operations on `NpcMemory` / traits / schedule — no special-case code per spell
+- All mental spells become operations on `InnerSelf` / traits / schedule — no special-case code per spell
 - `inner_state` field in memory JSON is the key enabler — without it, Detect Thoughts and Insight have nothing to read
 - Concentration spells = temporary overlays that get removed on concentration break
 - Saving throws gate whether the write/read succeeds, not what happens after

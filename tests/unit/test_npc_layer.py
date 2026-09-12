@@ -6,8 +6,8 @@ import pytest
 
 from dnd_simulator.core.character import Creature, Entity, NpcRole
 from dnd_simulator.core.events import AttackRequestedPayload, WeatherChangedPayload
+from dnd_simulator.core.inner_self import InnerSelf, Mood, Relationship, RelationshipType
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query, QueryType, TimeDelta
-from dnd_simulator.core.npc_memory import NpcMemory
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import (
@@ -226,14 +226,14 @@ class TestSaveLoad:
         info = new_layer.query(Query(question=QueryType.ENTITY_INFO, params={"entity_id": "smith"}))
         assert info.value["location_id"] == "silverport"
 
-    def test_npc_memory_persists(self) -> None:
+    def test_npc_inner_self_persists(self) -> None:
         layer = _make_layer()
         smith = layer.get_entity("smith")
         assert isinstance(smith, Npc)
-        smith.memory = NpcMemory(
-            tags=["angry", "hates:orcs"],
-            recent="War was declared last week.",
-            inner_state="worried about iron supply",
+        smith.inner_self = InnerSelf(
+            mood=Mood.ANGRY,
+            relations=[Relationship("orcs", RelationshipType.HATES)],
+            journal="War was declared last week.",
             current_conversation="Player asked about iron supply.",
         )
 
@@ -243,13 +243,37 @@ class TestSaveLoad:
 
         restored = new_layer.get_entity("smith")
         assert isinstance(restored, Npc)
-        assert restored.memory.tags == ["angry", "hates:orcs"]
-        assert restored.memory.recent == "War was declared last week."
-        assert restored.memory.inner_state == "worried about iron supply"
-        assert restored.memory.current_conversation == "Player asked about iron supply."
+        assert restored.inner_self is not None
+        assert restored.inner_self.mood is Mood.ANGRY
+        assert restored.inner_self.relations == [Relationship("orcs", RelationshipType.HATES)]
+        assert restored.inner_self.journal == "War was declared last week."
+        assert restored.inner_self.current_conversation == "Player asked about iron supply."
 
-    def test_legacy_conversation_summary_without_memory_is_invalid(self) -> None:
-        """Old saves without structured NPC memory fail validation."""
+    def test_existing_persistent_creature_inner_self_persists(self) -> None:
+        creature = Creature(
+            id="named_wolf",
+            name="Named Wolf",
+            location_id="forest",
+            inner_self=InnerSelf(mood=Mood.SUSPICIOUS, journal="Saved state."),
+        )
+        state = EntitiesLayer(entities=[creature]).get_state()
+        existing = Creature(
+            id="named_wolf",
+            name="Named Wolf",
+            location_id="forest",
+            inner_self=InnerSelf(mood=Mood.HAPPY, journal="Live state."),
+        )
+        layer = EntitiesLayer(entities=[existing])
+
+        layer.load_state(state)
+
+        restored = layer.get_entity("named_wolf")
+        assert isinstance(restored, Creature)
+        assert restored is existing
+        assert restored.inner_self == creature.inner_self
+
+    def test_legacy_conversation_summary_without_inner_self_is_invalid(self) -> None:
+        """Layer state must carry typed inner self; v1 migration happens at envelope load."""
         layer = _make_layer()
         # Simulate old save format
         state = layer.get_state()
@@ -257,12 +281,12 @@ class TestSaveLoad:
         assert isinstance(entities, dict)
         smith_data = entities["smith"]
         assert isinstance(smith_data, dict)
-        # Replace new memory format with legacy field
-        del smith_data["memory"]
+        # Replace the current inner-self field with an obsolete layer-only field.
+        del smith_data["inner_self"]
         smith_data["conversation_summary"] = "Old conversation data."
 
         new_layer = EntitiesLayer(entities=_make_npcs())
-        with pytest.raises(ValueError, match="memory"):
+        with pytest.raises(ValueError, match="inner_self"):
             new_layer.load_state(state)
 
     def test_activation_persists(self) -> None:
@@ -294,15 +318,18 @@ class TestSaveLoad:
         assert restored.location_override == "custom_spot"
 
 
-def _mock_summarizer(updated_recent: str = "Fought in combat.") -> MagicMock:
-    """Create a mock MemorySummarizer that returns updated memory."""
+def _mock_summarizer(updated_journal: str = "Fought in combat.") -> MagicMock:
+    """Create a mock MemorySummarizer that returns an updated journal."""
     summarizer = MagicMock()
 
-    def _summarize(memory: NpcMemory, events: list[str], trigger: str) -> NpcMemory:
-        return NpcMemory(
-            tags=list(memory.tags),
-            recent=updated_recent,
-            inner_state="shaken",
+    def _summarize(inner_self: InnerSelf, events: list[str], trigger: str) -> InnerSelf:
+        return InnerSelf(
+            relations=list(inner_self.relations),
+            mood=inner_self.mood,
+            goals=list(inner_self.goals),
+            alignment=inner_self.alignment,
+            journal=updated_journal,
+            thoughts=list(inner_self.thoughts),
             current_conversation="",
         )
 
@@ -326,7 +353,7 @@ class TestCombatSummarization:
             role=NpcRole.GUARD,
             personality="Brave.",
             settlement_id="town",
-            memory=NpcMemory(tags=["loyal_to:player"]),
+            inner_self=InnerSelf(relations=[Relationship("player", RelationshipType.LOYAL_TO)]),
         )
         guard.max_hp = 100
         guard.current_hp = 100
@@ -337,7 +364,7 @@ class TestCombatSummarization:
             role=NpcRole.COMMONER,
             personality="Ruthless.",
             settlement_id="town",
-            memory=NpcMemory(tags=["hates:player"]),
+            inner_self=InnerSelf(relations=[Relationship("player", RelationshipType.HATES)]),
         )
         bandit.max_hp = 100
         bandit.current_hp = 100
@@ -370,17 +397,17 @@ class TestCombatSummarization:
 
         # Summarizer called for guard and bandit, not for player
         assert summarizer.summarize.call_count == 2
-        call_npcs = {call.args[0].tags[0] for call in summarizer.summarize.call_args_list}
-        assert call_npcs == {"loyal_to:player", "hates:player"}
+        call_npcs = {call.args[0].relations[0].type for call in summarizer.summarize.call_args_list}
+        assert call_npcs == {RelationshipType.LOYAL_TO, RelationshipType.HATES}
 
-    def test_combat_ended_updates_npc_memory(self) -> None:
+    def test_combat_ended_updates_npc_journal(self) -> None:
         layer, _ = self._setup_combat()
         self._end_combat_by_idle(layer)
 
         guard = layer.get_entity("guard")
         assert isinstance(guard, Npc)
-        assert guard.memory.recent == "Fought in combat."
-        assert guard.memory.inner_state == "shaken"
+        assert guard.inner_self is not None
+        assert guard.inner_self.journal == "Fought in combat."
 
     def test_no_summarizer_does_nothing(self) -> None:
         """Without a summarizer, combat end doesn't crash."""
@@ -403,13 +430,13 @@ class TestCombatSummarization:
         layer.end_combat_round("loc")
         layer.end_combat_round("loc")
 
-    def test_recent_overflow_triggers_second_call(self) -> None:
+    def test_journal_overflow_triggers_second_call(self) -> None:
         layer, summarizer = self._setup_combat()
         summarizer.needs_compression.return_value = True
         self._end_combat_by_idle(layer)
 
-        # 2 NPCs x (combat_ended + recent_overflow) = 4 calls
+        # 2 NPCs x (combat_ended + journal_overflow) = 4 calls
         assert summarizer.summarize.call_count == 4
         triggers = [call.args[2] for call in summarizer.summarize.call_args_list]
         assert triggers.count("combat_ended") == 2
-        assert triggers.count("recent_overflow") == 2
+        assert triggers.count("journal_overflow") == 2

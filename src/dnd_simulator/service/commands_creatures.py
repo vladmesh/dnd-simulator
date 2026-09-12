@@ -84,7 +84,7 @@ class CreatureCommands(GameServiceProtocol):
         """Spawn a creature into a live session.
 
         entity_type in data determines what gets created:
-        - "npc" → Npc (with role, personality, schedule, memory)
+        - "npc" → Npc (with role, personality, schedule, inner self)
         - "monster" → Creature (bare creature with attacks)
         """
         session = self._get_session(session_id)
@@ -92,12 +92,16 @@ class CreatureCommands(GameServiceProtocol):
         entity = _parse_spawn(data, known_locations=known_locations)
         # Assign brain via factory
         from dnd_simulator.core.character import Creature
+        from dnd_simulator.core.inner_self import InnerSelf
+        from dnd_simulator.core.player import PlayerCharacter
         from dnd_simulator.layers.entities.models import Npc
 
         if isinstance(entity, Npc):
             entity.brain = self._brain_factory.create(entity.ai_type)
         elif isinstance(entity, Creature):
             entity.brain = self._brain_factory.create(BrainType(data.get("ai", BrainType.RULE_BASED.value)))
+            if not isinstance(entity, PlayerCharacter) and not entity.temporary:
+                entity.inner_self = entity.inner_self or InnerSelf()
         self._get_entities_layer(session).add_entity(entity)
         return entity
 
@@ -221,6 +225,8 @@ class CreatureCommands(GameServiceProtocol):
     def set_creature_brain(self, session_id: str, entity_id: str, brain_type: BrainType, model: str = "") -> BrainType:
         """Switch creature brain (rule_based or llm). Returns actual brain type set."""
         from dnd_simulator.core.character import Creature
+        from dnd_simulator.core.inner_self import InnerSelf
+        from dnd_simulator.core.player import PlayerCharacter
         from dnd_simulator.layers.entities.models import Npc
         from dnd_simulator.llm.brain import LlmBrain
 
@@ -229,6 +235,8 @@ class CreatureCommands(GameServiceProtocol):
         if entity is None or not isinstance(entity, Creature):
             raise ValueError(f"Creature '{entity_id}' not found")
         entity.brain = self._brain_factory.create(brain_type)
+        if not isinstance(entity, PlayerCharacter) and not entity.temporary:
+            entity.inner_self = entity.inner_self or InnerSelf()
         actual_type = BrainType.LLM if isinstance(entity.brain, LlmBrain) else BrainType.RULE_BASED
         if isinstance(entity, Npc):
             entity.ai_type = actual_type
