@@ -425,6 +425,7 @@ class TestHandleWait:
     def test_wait_sets_wake_at_and_dormant(self) -> None:
         world = MagicMock()
         world.time.to_total_seconds.return_value = 10000
+        world.creature_host.dormify.side_effect = lambda actor: setattr(actor, "active", False)
         creature = _creature()
         action = Action(name=ActionType.WAIT, params={"hours": 2})
         result = handle_wait(creature, action, _noop_emit, _PEACEFUL, world)
@@ -436,6 +437,7 @@ class TestHandleWait:
     def test_wait_default_1_hour(self) -> None:
         world = MagicMock()
         world.time.to_total_seconds.return_value = 5000
+        world.creature_host.dormify.side_effect = lambda actor: setattr(actor, "active", False)
         creature = _creature()
         action = Action(name=ActionType.WAIT)
         result = handle_wait(creature, action, _noop_emit, _PEACEFUL, world)
@@ -446,6 +448,7 @@ class TestHandleWait:
     def test_wait_emits_no_event(self) -> None:
         world = MagicMock()
         world.time.to_total_seconds.return_value = 0
+        world.creature_host.dormify.side_effect = lambda actor: setattr(actor, "active", False)
         emitted, emit = _capture_emit()
         action = Action(name=ActionType.WAIT, params={"hours": 1})
         handle_wait(_creature(), action, emit, _PEACEFUL, world)
@@ -454,6 +457,7 @@ class TestHandleWait:
     def test_wait_does_not_travel(self) -> None:
         world = MagicMock()
         world.time.to_total_seconds.return_value = 0
+        world.creature_host.dormify.side_effect = lambda actor: setattr(actor, "active", False)
         creature = _creature()
         creature.location_id = "loc_a"
         action = Action(name=ActionType.WAIT, params={"travel_to": "loc_b"})

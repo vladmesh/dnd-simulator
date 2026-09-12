@@ -59,6 +59,10 @@ class CreatureHost(Protocol):
         """Refresh active/dormant state based on proximity to awake anchors."""
         ...
 
+    def dormify(self, creature: Creature) -> None:
+        """Transition an active creature to dormant state at the digest boundary."""
+        ...
+
     def get_combat_locations(self) -> list[str]:
         """Return location ids where an active combat exists."""
         ...

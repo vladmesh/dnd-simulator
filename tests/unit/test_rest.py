@@ -258,7 +258,7 @@ class _StubTime:
 
 
 class _StubHost:
-    """Minimal CreatureHost stub — only get_active_combat_for is touched by rest handlers."""
+    """Minimal CreatureHost stub used by rest handlers."""
 
     def __init__(self, combat: CombatState | None) -> None:
         self._combat = combat
@@ -267,6 +267,9 @@ class _StubHost:
         if self._combat is not None and entity_id in self._combat.turn_order:
             return self._combat
         return None
+
+    def dormify(self, creature: Creature) -> None:
+        creature.active = False
 
 
 class _StubWorld:

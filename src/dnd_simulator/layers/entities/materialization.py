@@ -127,7 +127,7 @@ def materialize_squad(mgr: ActivationManager, squad_id: str, info: SquadInfo, br
         data=SquadMaterializedPayload(squad_id, squad_name, location, len(creature_ids)),
         description=f"{squad_name} materialized at {location}",
     )
-    mgr._location_log[location].append(mat_event)
+    mgr._record_event(mat_event)
 
 
 def dematerialize_squad(

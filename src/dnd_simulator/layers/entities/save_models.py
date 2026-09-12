@@ -124,6 +124,14 @@ class AlignmentAccumulationSave(SaveModel):
     good_evil: int = 0
 
 
+class BufferedPerceivedEventSave(SaveModel):
+    event_type: EventType
+    actor_id: str | None = None
+    target_id: str | None = None
+    description: str
+    at_seconds: int
+
+
 class InnerSelfSave(SaveModel):
     relations: list[RelationshipSave] = Field(default_factory=list)
     mood: Mood = Mood.NEUTRAL
@@ -132,6 +140,7 @@ class InnerSelfSave(SaveModel):
     journal: str = ""
     thoughts: list[str] = Field(default_factory=list)
     current_conversation: str = ""
+    perceived_event_buffer: list[BufferedPerceivedEventSave] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_relations(self) -> InnerSelfSave:

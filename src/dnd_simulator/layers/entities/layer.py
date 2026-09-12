@@ -23,11 +23,10 @@ from dnd_simulator.core.combat import BattleMap, CombatState
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.container import Container
 from dnd_simulator.core.events import (
-    CombatStartedPayload,
     EntityDiedPayload,
     RoundStartPayload,
 )
-from dnd_simulator.core.inner_self import InnerSelf
+from dnd_simulator.core.inner_self import DigestBoundary, InnerSelf
 from dnd_simulator.core.layer import Layer
 from dnd_simulator.core.models import ActionResult, Answer, EntityKind, Event, EventType, Query
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
@@ -40,8 +39,9 @@ from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder, ac
 from dnd_simulator.layers.entities.combat_manager import CombatManager
 from dnd_simulator.layers.entities.event_log import EventLog
 from dnd_simulator.layers.entities.event_runtime import TriggerRuntime
+from dnd_simulator.layers.entities.inner_self_digest import digest
+from dnd_simulator.layers.entities.inner_self_digest import dormify as transition_to_dormant
 from dnd_simulator.layers.entities.models import Npc
-from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.layers.entities.query_handler import QueryHandler
 from dnd_simulator.layers.entities.save_models import CreatureFields, EntitiesState
 from dnd_simulator.layers.entities.trigger_index import TriggerIndex, TriggerMatch
@@ -84,9 +84,16 @@ class EntitiesLayer(Layer):
             for e in entities:
                 self._entities[e.id] = e
         self._trigger_index = TriggerIndex(list(self._entities.values()))
-        self._trigger_runtime = TriggerRuntime(self._trigger_index)
-        self._event_log = EventLog(self._entities, self._location_log)
-        self._combat = CombatManager(self._entities, self._location_log, battle_map_configs, rng=dice_rng)
+        self._trigger_runtime = TriggerRuntime(self._trigger_index, self._digest_inner_self)
+        self._event_log = EventLog(self._entities, self._location_log, self._digest_inner_self)
+        self._combat = CombatManager(
+            self._entities,
+            self._location_log,
+            battle_map_configs,
+            rng=dice_rng,
+            record_event=self._event_log.record,
+            digest=self._digest_inner_self,
+        )
         self._awareness = AwarenessBuilder(self._entities, self._location_log, self._combat)
         self._activation = ActivationManager(
             self._entities,
@@ -99,6 +106,9 @@ class EntitiesLayer(Layer):
             self._materialized_squads,
             self._materialized_lairs,
             self._rng,
+            self._digest_inner_self,
+            self.dormify,
+            self._event_log.record,
         )
         self._query_handler = QueryHandler(
             self._entities,
@@ -165,7 +175,16 @@ class EntitiesLayer(Layer):
         location_graph: LocationGraph | None = None,
     ) -> None:
         """Activate creatures near awake anchors, dormify the rest."""
+        self._event_log.set_current_time(time.to_total_seconds())
         self._activation.update_activation(time, query_fn, emit_fn, location_graph)
+
+    def _digest_inner_self(self, creature: Creature, boundary: DigestBoundary) -> None:
+        """Route every digest boundary through the one entities-layer entry point."""
+        digest(creature, boundary, self._summarizer)
+
+    def dormify(self, creature: Creature) -> None:
+        """Route every active-to-dormant transition through its digest boundary."""
+        transition_to_dormant(creature, self._digest_inner_self)
 
     # -- Combat (delegated to CombatManager) --
 
@@ -316,52 +335,11 @@ class EntitiesLayer(Layer):
         return self._query_handler.get_new_raw_events(observer)
 
     def _on_combat_ended(self, location_id: str) -> None:
-        """After combat ends, summarize combat events into each NPC participant's journal."""
-        if not self._summarizer:
-            return
-
-        log = self._location_log.get(location_id, [])
-
-        # Find the matching COMBAT_STARTED — scan backward from the end
-        start_idx = None
-        for i in range(len(log) - 1, -1, -1):
-            if log[i].event_type == EventType.COMBAT_STARTED:
-                start_idx = i
-                break
-        if start_idx is None:
-            return
-
-        combat_events = log[start_idx:]
-        participant_ids: list[str] = []
-        payload = log[start_idx].data
-        if not isinstance(payload, CombatStartedPayload):
-            return
-        participant_ids = list(payload.turn_order)
-
-        for pid in participant_ids:
-            entity = self._entities.get(pid)
-            if not isinstance(entity, Npc):
-                continue
-
-            perceived = [
-                perceive_event(e, entity, self.get_entity)
-                for e in combat_events
-                if e.observer_ids is None or entity.id in e.observer_ids
-            ]
-            if not perceived:
-                continue
-
-            if entity.inner_self is None:
-                continue
-            try:
-                entity.inner_self = self._summarizer.summarize(entity.inner_self, perceived, "combat_ended")
-                if self._summarizer.needs_compression(entity.inner_self):
-                    entity.inner_self = self._summarizer.summarize(entity.inner_self, [], "journal_overflow")
-                logger.info(
-                    "npc_inner_self_updated", entity_id=entity.id, entity_name=entity.name, trigger="combat_ended"
-                )
-            except Exception:
-                logger.exception("npc_memory_summarize_failed", entity_id=entity.id, entity_name=entity.name)
+        """Consume each just-ended combat participant's perception buffer."""
+        for entity_id in self._combat.consume_last_ended_participants(location_id):
+            entity = self._entities.get(entity_id)
+            if isinstance(entity, Creature):
+                self._digest_inner_self(entity, DigestBoundary.COMBAT_ENDED)
 
     # -- Query (delegated to QueryHandler) --
 
@@ -407,6 +385,9 @@ class EntitiesLayer(Layer):
 
                     npc_data = dict(edata)
                     npc_data["triggers"] = []
+                    # Buffer state is save-only, not declarative NPC content. The
+                    # mutable restore below applies it losslessly after parsing.
+                    npc_data.pop("inner_self", None)
                     entity = parse_npc(str(eid), npc_data)
                     self.add_entity(entity)
                     # Fall through to mutable state restoration below
@@ -579,5 +560,5 @@ class EntitiesLayer(Layer):
                         entity.inventory = [deserialize_item(d) for d in inv_raw]
 
         self._trigger_index = TriggerIndex(list(self._entities.values()))
-        self._trigger_runtime = TriggerRuntime(self._trigger_index)
+        self._trigger_runtime = TriggerRuntime(self._trigger_index, self._digest_inner_self)
         self._combat.load_combats_state(state_data["combats"])

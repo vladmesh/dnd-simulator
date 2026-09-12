@@ -7,7 +7,9 @@ from collections.abc import Callable
 from dnd_simulator.core.awareness import PerceivedEvent
 from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.events import SquadMovePayload, TypedPayload, payload_to_data
+from dnd_simulator.core.inner_self import PERCEIVED_EVENT_BUFFER_CAPACITY, BufferedPerceivedEvent, DigestBoundary
 from dnd_simulator.core.models import Event, EventType
+from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.perception import perceive_event
 
 _LOGGED_EVENTS = frozenset(
@@ -28,6 +30,8 @@ _LOGGED_EVENTS = frozenset(
         EventType.ENTITY_ACTION_SURGE,
         EventType.ENTITY_LAY_ON_HANDS,
         EventType.OPPORTUNITY_ATTACK,
+        EventType.REPUTATION_CHANGED,
+        EventType.XP_GAINED,
         EventType.COMBAT_STARTED,
         EventType.COMBAT_ENDED,
         EventType.ENCOUNTER_SPAWNED,
@@ -42,9 +46,20 @@ _LOGGED_EVENTS = frozenset(
 class EventLog:
     """Record typed events at locations and expose structured perception."""
 
-    def __init__(self, entities: dict[str, Entity], location_log: dict[str, list[Event]] | None = None) -> None:
+    def __init__(
+        self,
+        entities: dict[str, Entity],
+        location_log: dict[str, list[Event]] | None = None,
+        digest: Callable[[Creature, DigestBoundary], None] | None = None,
+    ) -> None:
         self._entities = entities
         self._location_log = location_log if location_log is not None else {}
+        self._digest = digest
+        self._current_time_seconds = 0
+
+    def set_current_time(self, at_seconds: int) -> None:
+        """Set the game time stamped on subsequently recorded perceptions."""
+        self._current_time_seconds = at_seconds
 
     def location_for(self, event: Event) -> str | None:
         payload = event.payload
@@ -66,9 +81,47 @@ class EventLog:
             for location_id in (payload.from_location_id, payload.to_location_id):
                 if location_id:
                     self._location_log.setdefault(location_id, []).append(event)
+                    self._buffer_perceived_event(event, location_id)
             return
         if event_location := self.location_for(event):
             self._location_log.setdefault(event_location, []).append(event)
+            self._buffer_perceived_event(event, event_location)
+
+    def _buffer_perceived_event(self, event: Event, location_id: str) -> None:
+        """Fan one logged event into active core-bearer buffers at its location."""
+        payload = event.payload
+        actor_id = getattr(payload, "entity_id", None) or getattr(payload, "attacker_id", None)
+        target_id = getattr(payload, "target_id", None)
+        for entity in self._entities.values():
+            if (
+                not isinstance(entity, Creature)
+                or not entity.active
+                or entity.temporary
+                or isinstance(entity, PlayerCharacter)
+                or entity.inner_self is None
+                or entity.location_id != location_id
+                or (event.observer_ids is not None and entity.id not in event.observer_ids)
+            ):
+                continue
+            if (
+                len(entity.inner_self.perceived_event_buffer) >= PERCEIVED_EVENT_BUFFER_CAPACITY
+                and self._digest is not None
+            ):
+                self._digest(entity, DigestBoundary.BUFFER_FULL)
+            # Digest bodies may replace InnerSelf, so never append through the
+            # buffer reference that existed before the boundary.
+            current_inner_self = entity.inner_self
+            if current_inner_self is None:
+                continue
+            current_inner_self.perceived_event_buffer.append(
+                BufferedPerceivedEvent(
+                    event_type=event.event_type,
+                    actor_id=actor_id if isinstance(actor_id, str) else None,
+                    target_id=target_id if isinstance(target_id, str) else None,
+                    description=perceive_event(event, entity, self._entities.get),
+                    at_seconds=self._current_time_seconds,
+                )
+            )
 
     def perceived_events(self, creature: Creature, get_entity: Callable[[str], Entity | None]) -> list[PerceivedEvent]:
         if not isinstance(creature, Character):

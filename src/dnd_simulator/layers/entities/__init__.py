@@ -11,9 +11,11 @@ activation. Activation also rolls location encounter tables (cooldown-gated
 and time-of-day filtered) to spawn transient monsters. Npc is a pure data model
 (role, personality, schedule, inner self, ai_type); decision-making is delegated to
 the brain field on Creature. InnerSelf holds typed state plus a journal, thoughts,
-and conversation context.
-MemorySummarizer (in llm/) compresses events into the journal after combat
-ends. Direct access: get_entity, add_entity, remove_entity for hot controls.
+conversation context, and a persisted structured perception buffer. Active core-bearers
+append visible events without affecting brain cursors. One digest entry point consumes
+that buffer at combat end, active → dormant, intent completion/interruption, and capacity;
+the current body delegates to MemorySummarizer (in llm/) for NPC journals.
+Direct access: get_entity, add_entity, remove_entity for hot controls.
 Save format is defined by Pydantic models in save_models.py (EntitiesState:
 discriminated entity union, combat state incl. sides, layer RNG state);
 entity_serialization.py builds them directly from live objects.

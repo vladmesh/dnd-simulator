@@ -235,7 +235,7 @@ def handle_wait(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
     if hours > 0:
         now = world.time.to_total_seconds()
         actor.current_intent = TimedIntent(IntentType.WAIT, now, now + hours * 3600)
-        actor.active = False
+        world.creature_host.dormify(actor)
         logger.info("wait_sleep", hours=hours, wake_at=actor.current_intent.wake_at_seconds)
     return ActionResult()
 
@@ -258,7 +258,7 @@ def handle_travel(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionC
     now = world.time.to_total_seconds()
     next_arrival = now + world.location_graph.travel_seconds(actor.location_id, route[0])
     actor.current_intent = TravelIntent(now, destination_id, route, next_arrival)
-    actor.active = False
+    world.creature_host.dormify(actor)
     logger.info(
         "travel_start",
         entity_id=actor.id,

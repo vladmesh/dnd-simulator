@@ -142,7 +142,7 @@ def roll_encounters(
                 spawned_entity_ids=tuple(creature.id for creature in spawned_creatures),
             ),
         )
-        mgr._location_log[location_id].append(event)
+        mgr._record_event(event)
 
         # Auto-start combat if spawned creatures are hostile to anyone at this location
         if query_fn is not None and location_id not in mgr._combat.get_combat_locations():

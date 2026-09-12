@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import random
+from collections.abc import Callable
 
 import structlog
 
 from dnd_simulator.core.character import Creature, Entity
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.core.events import CombatEndedPayload, CombatStartedPayload
+from dnd_simulator.core.inner_self import DigestBoundary
 from dnd_simulator.core.intent import IntentInterruptReason
 from dnd_simulator.core.models import ActionResult, Event, EventType, FactionRelation, QueryFn
 from dnd_simulator.core.turn_budget import TurnBudget
@@ -40,6 +42,8 @@ class CombatManager:
         location_log: dict[str, list[Event]],
         battle_map_configs: dict[str, BattleMap] | None = None,
         rng: random.Random | None = None,
+        record_event: Callable[[Event], None] | None = None,
+        digest: Callable[[Creature, DigestBoundary], None] | None = None,
     ) -> None:
         self._entities = entities
         self._location_log = location_log
@@ -48,6 +52,15 @@ class CombatManager:
         self._sneak_attack_used: set[str] = set()  # creature IDs that used SA this round
         self._battle_map_configs: dict[str, BattleMap] = battle_map_configs or {}
         self._rng = rng or random.Random()
+        self._record_event = record_event or self._record_directly
+        self._digest = digest
+        self._combat_participants: dict[str, tuple[str, ...]] = {}
+        self._last_ended_participants: dict[str, tuple[str, ...]] = {}
+
+    def _record_directly(self, event: Event) -> None:
+        location_id = self._event_location(event)
+        if location_id:
+            self._location_log[location_id].append(event)
 
     def get_combat_locations(self) -> list[str]:
         """Return location IDs with active combats."""
@@ -112,9 +125,10 @@ class CombatManager:
             )
 
         self._combats[location_id] = combat
+        self._combat_participants[location_id] = tuple(c.id for c in creatures)
         self._attack_this_round[location_id] = False
         for c in creatures:
-            interrupt_intent(c, IntentInterruptReason.COMBAT)
+            interrupt_intent(c, IntentInterruptReason.COMBAT, self._digest)
             c.in_combat = True
             if c.turn_budget is None:  # reaction-only budget for OA before first turn
                 c.turn_budget = TurnBudget(
@@ -128,7 +142,7 @@ class CombatManager:
             map_size=f"{battle_map.width}x{battle_map.height}",
             positions={eid: (pos.x, pos.y) for eid, pos in battle_map.positions.items()},
         )
-        self._location_log[location_id].append(
+        self._record_event(
             Event(
                 event_type=EventType.COMBAT_STARTED,
                 source_layer="entities",
@@ -167,20 +181,27 @@ class CombatManager:
 
     def _end_combat(self, location_id: str) -> None:
         """End combat at a location: clear in_combat and dodge flags, remove state."""
+        combat = self._combats[location_id]
         for c in self._active_creatures_at_location(location_id):
             c.in_combat = False
             c.is_dodging = False
+        participants = self._combat_participants.pop(location_id, tuple(combat.turn_order))
+        self._last_ended_participants[location_id] = participants
         self._combats.pop(location_id, None)
         self._attack_this_round.pop(location_id, None)
 
         logger.info("combat_end", location_id=location_id)
-        self._location_log[location_id].append(
+        self._record_event(
             Event(
                 event_type=EventType.COMBAT_ENDED,
                 source_layer="entities",
                 data=CombatEndedPayload(location_id),
             )
         )
+
+    def consume_last_ended_participants(self, location_id: str) -> tuple[str, ...]:
+        """Return and clear the original roster for a just-ended combat."""
+        return self._last_ended_participants.pop(location_id, ())
 
     def _remove_from_combat(self, location_id: str, entity_id: str) -> None:
         """Remove an entity from combat turn order, map, and sides. End combat if no hostility remains."""

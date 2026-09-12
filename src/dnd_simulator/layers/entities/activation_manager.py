@@ -8,11 +8,13 @@ rolling and squad/lair materialization are isolated in sibling modules (``encoun
 from __future__ import annotations
 
 import random
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import structlog
 
 from dnd_simulator.core.character import Creature, Entity
+from dnd_simulator.core.inner_self import DigestBoundary
 from dnd_simulator.core.intent import IntentInterruptReason, TimedIntent, TravelIntent
 from dnd_simulator.core.models import Event
 from dnd_simulator.core.monster import EncounterEntry
@@ -53,6 +55,9 @@ class ActivationManager:
         materialized_squads: dict[str, tuple[list[str], int, int]],
         materialized_lairs: dict[str, tuple[list[str], str | None, list[str]]],
         rng: random.Random,
+        digest: Callable[[Creature, DigestBoundary], None],
+        dormify: Callable[[Creature], None],
+        record_event: Callable[[Event], None],
     ) -> None:
         self._entities = entities
         self._location_log = location_log
@@ -64,6 +69,9 @@ class ActivationManager:
         self._materialized_squads = materialized_squads
         self._materialized_lairs = materialized_lairs
         self._rng = rng
+        self._digest = digest
+        self._dormify = dormify
+        self._record_event = record_event
         self._spawn_counter = 0
 
     def update_activation(
@@ -103,7 +111,7 @@ class ActivationManager:
             if not isinstance(e, Creature):
                 continue
             if not e.is_alive:
-                e.active = False
+                self._dormify(e)
                 e.current_intent = None
                 continue
             if e.is_anchor and e.current_intent is None:
@@ -115,15 +123,15 @@ class ActivationManager:
             if not isinstance(e, Creature) or not e.is_alive:
                 continue
             if isinstance(e.current_intent, TimedIntent) and now >= e.current_intent.wake_at_seconds:
-                complete_timed_intent(e, e.current_intent)
+                complete_timed_intent(e, e.current_intent, self._digest)
                 e.current_intent = None
                 logger.info("activation_wake_timer", entity_id=e.id)
             while isinstance(e.current_intent, TravelIntent) and now >= e.current_intent.next_arrival_seconds:
                 if location_graph is None:
                     raise RuntimeError("location graph is required to advance travel")
-                e.current_intent = advance_travel_leg(e, e.current_intent, location_graph)
+                e.current_intent = advance_travel_leg(e, e.current_intent, location_graph, self._digest)
                 if e.current_intent is not None and e.location_id in occupied_scene_locations:
-                    interrupt_intent(e, IntentInterruptReason.SCENE)
+                    interrupt_intent(e, IntentInterruptReason.SCENE, self._digest)
                     break
 
         # Collect locations held after completions and interruptions.
@@ -140,7 +148,7 @@ class ActivationManager:
             if not isinstance(e, Creature):
                 continue
             if not e.is_alive:
-                e.active = False
+                self._dormify(e)
                 continue
 
             effective_location = e.location_id
@@ -155,7 +163,10 @@ class ActivationManager:
             # a stale flag must not dormify an actual active-CombatState participant.
             in_combat = self._combat.get_active_combat_for(e.id) is not None
             should_activate = in_combat or scene_active or e.always_active or automatic_active or manual_active
-            e.active = should_activate
+            if should_activate:
+                e.active = True
+            else:
+                self._dormify(e)
 
             # Move NPC to their scheduled location when activated
             if should_activate and effective_location != e.location_id:

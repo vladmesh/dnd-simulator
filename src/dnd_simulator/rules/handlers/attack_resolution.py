@@ -7,6 +7,7 @@ separate from combat lifecycle management.
 from __future__ import annotations
 
 import random
+from collections.abc import Callable
 
 import structlog
 
@@ -98,7 +99,7 @@ def resolve_combat_move(
     entity: Creature,
     event: Event,
     combat: CombatState,
-    location_log: dict[str, list[Event]],
+    record_event: Callable[[Event], None],
 ) -> ActionResult:
     """Resolve an atomic combat move: single step in a compass direction.
 
@@ -129,7 +130,7 @@ def resolve_combat_move(
     bm.set_position(entity_id, new_pos)
     moved_ft = grid_distance(cur_pos, new_pos)
 
-    location_log[entity.location_id].append(
+    record_event(
         Event(
             event_type=EventType.ENTITY_MOVE,
             source_layer="entities",
