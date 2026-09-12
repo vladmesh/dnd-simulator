@@ -7,7 +7,7 @@ from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, Per
 from dnd_simulator.core.brain import Brain
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.combat import CombatState
-from dnd_simulator.core.location import Location, LocationGraph
+from dnd_simulator.core.location import Location, LocationEdge, LocationGraph
 from dnd_simulator.core.models import GameDateTime
 from dnd_simulator.core.turn_budget import ActionCost, TurnBudget
 from dnd_simulator.core.world import World
@@ -282,6 +282,85 @@ class TestMultiActionLoop:
         assert budget.actions == 1
         assert budget.bonus_actions == 1
         assert budget.movement_remaining == creature.speed
+
+    def test_flee_then_travel_same_turn_uses_refreshed_combat_context(self) -> None:
+        """Regression (dnd-simulator-265): ``run_combat_turn`` builds one ``ActionContext``
+        before its multi-action loop starts. A synchronous ``flee`` can end a one-on-one
+        combat and delete the ``CombatState`` mid-loop; later availability checks and
+        dispatches in that same loop must see the post-flee membership, not the
+        pre-flee snapshot — otherwise a peaceful-only action like ``travel`` is wrongly
+        rejected with ``WRONG_MODE`` in the same round the actor fled.
+        """
+        brain = _ScriptedBrain(
+            [
+                Action(name=ActionType.FLEE, params={"description": "run"}),
+                Action(name=ActionType.TRAVEL, params={"destination_id": "goal"}),
+                END_TURN,
+            ]
+        )
+        creature = Creature(id="c1", name="A", location_id="r1", brain=brain, in_combat=True)
+        foe = Creature(id="foe", name="Foe", location_id="r1", in_combat=True)
+
+        world = _make_world([creature, foe])
+        world.location_graph = LocationGraph(
+            [
+                Location(id="r1", name="Field", region_id="r1", edges=(LocationEdge("goal", 1000),)),
+                Location(id="goal", name="Goal", region_id="r1"),
+            ]
+        )
+        el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        el._combat._combats["r1"] = CombatState(location_id="r1", turn_order=[creature.id, foe.id])
+        game_round = Round(world, el)
+
+        query_fn = world.make_query_fn("entities")
+        emit_fn = world.make_emit_fn("entities")
+        actions = game_round.run_combat_turn(creature, world.time, query_fn, emit_fn)
+
+        # Both actions succeeded in the same turn — travel was not rejected as WRONG_MODE.
+        assert [a.name for a in actions] == [ActionType.FLEE, ActionType.TRAVEL]
+
+        # Flee ended the final one-on-one combat: no authoritative combat membership remains.
+        assert el._combat.get_active_combat_for(creature.id) is None
+        assert el._combat.get_combat("r1") is None
+
+        # Travel started its normal journey and deactivated the traveler.
+        assert creature.current_intent is not None
+        assert creature.current_intent.destination_id == "goal"
+        assert creature.active is False
+
+    def test_loop_stops_after_peaceful_turn_ending_action_post_flee(self) -> None:
+        """After flee ends combat and travel (a peaceful turn-ending action) succeeds,
+        the combat-turn loop must not call the brain again this turn — a scripted
+        third action must never be dispatched.
+        """
+        brain = _ScriptedBrain(
+            [
+                Action(name=ActionType.FLEE, params={"description": "run"}),
+                Action(name=ActionType.TRAVEL, params={"destination_id": "goal"}),
+                Action(name=ActionType.DODGE),  # must never be reached
+            ]
+        )
+        creature = Creature(id="c1", name="A", location_id="r1", brain=brain, in_combat=True)
+        foe = Creature(id="foe", name="Foe", location_id="r1", in_combat=True)
+
+        world = _make_world([creature, foe])
+        world.location_graph = LocationGraph(
+            [
+                Location(id="r1", name="Field", region_id="r1", edges=(LocationEdge("goal", 1000),)),
+                Location(id="goal", name="Goal", region_id="r1"),
+            ]
+        )
+        el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        el._combat._combats["r1"] = CombatState(location_id="r1", turn_order=[creature.id, foe.id])
+        game_round = Round(world, el)
+
+        query_fn = world.make_query_fn("entities")
+        emit_fn = world.make_emit_fn("entities")
+        actions = game_round.run_combat_turn(creature, world.time, query_fn, emit_fn)
+
+        assert [a.name for a in actions] == [ActionType.FLEE, ActionType.TRAVEL]
+        # The brain was consulted exactly twice — DODGE was never chosen/dispatched.
+        assert brain._index == 2
 
 
 # -- Peaceful turn tests --
