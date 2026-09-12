@@ -298,6 +298,10 @@ class CombatState:
     turn_order: list[str] = field(default_factory=list)  # entity IDs in initiative order
     round_number: int = 1
     rounds_without_attack: int = 0
+    # Set only while a creature's combat turn is in progress.  A save made while
+    # its brain is waiting resumes this turn rather than replaying earlier
+    # initiative actors after loading.
+    resume_turn_index: int | None = None
     battle_map: BattleMap = field(default_factory=lambda: BattleMap(width=60, height=60))
     sides: dict[int, set[str]] = field(default_factory=dict)  # side index → entity IDs
     entity_to_side: dict[str, int] = field(default_factory=dict)  # entity ID → side index

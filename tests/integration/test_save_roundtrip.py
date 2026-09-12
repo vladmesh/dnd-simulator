@@ -6,13 +6,61 @@ time, creature HP/locations, NPC ai_type, player gold.
 
 from __future__ import annotations
 
+import time
 from http import HTTPStatus
 
 import requests
+from conftest import ws_connect, ws_recv, ws_send_action
 
 
 class TestSaveLoadRoundTrip:
     """Save a village session, mutate state, save again, load first save, verify restored."""
+
+    def test_load_combat_save_resumes_saved_player_turn_after_websocket_reconnect(
+        self, api_url: str, player_api_url: str, ws_base_url: str
+    ) -> None:
+        """A loaded player turn resumes before any earlier initiative actor can run."""
+        from test_combat_turns import _create_session, _ensure_combat, _get_turn
+
+        session_id, player_id = _create_session(api_url, player_api_url, "fighter")
+        save_name = "resume_player_turn"
+        try:
+            sock = ws_connect(ws_base_url, session_id, player_id)
+            try:
+                turn = _ensure_combat(sock, _get_turn(sock), "target_dummy")
+                saved_round = turn["awareness"]["round_number"]
+                assert turn["player"]["player_id"] == player_id
+
+                response = requests.post(f"{api_url}/sessions/{session_id}/save?name={save_name}", timeout=10)
+                assert response.status_code == HTTPStatus.OK
+
+                # Let the live game diverge before replacing it with the save.
+                ws_send_action(sock, "end_turn")
+                _get_turn(sock)
+            finally:
+                sock.close()
+
+            response = requests.post(f"{api_url}/sessions/{session_id}/saves/{save_name}/load", timeout=10)
+            assert response.status_code == HTTPStatus.OK
+
+            # A restored world remains stopped until this listener is registered.
+            time.sleep(0.5)
+            reconnected = ws_connect(ws_base_url, session_id, player_id)
+            try:
+                for _ in range(10):
+                    message = ws_recv(reconnected)
+                    assert message["type"] not in {"action_result", "round_result"}
+                    if message["type"] == "turn":
+                        assert message["player"]["player_id"] == player_id
+                        assert message["awareness"]["round_number"] == saved_round
+                        break
+                else:
+                    raise AssertionError("Reconnect did not resume the saved player turn")
+            finally:
+                reconnected.close()
+        finally:
+            requests.delete(f"{api_url}/sessions/{session_id}/saves/{save_name}", timeout=5)
+            requests.delete(f"{api_url}/sessions/{session_id}", timeout=5)
 
     def test_save_load_preserves_state(
         self,

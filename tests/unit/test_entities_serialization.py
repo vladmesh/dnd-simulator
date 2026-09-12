@@ -184,6 +184,7 @@ class TestCombatStateRoundTrip:
             turn_order=["fighter", "goblin"],
             round_number=3,
             rounds_without_attack=1,
+            resume_turn_index=1,
             battle_map=bm,
         )
         layer._combat._combats["arena"] = combat
@@ -201,10 +202,31 @@ class TestCombatStateRoundTrip:
         assert restored_combat.turn_order == ["fighter", "goblin"]
         assert restored_combat.round_number == 3
         assert restored_combat.rounds_without_attack == 1
+        assert restored_combat.resume_turn_index == 1
         assert restored_combat.battle_map.get_position("fighter") == Position(10, 15)
         assert restored_combat.battle_map.get_position("goblin") == Position(30, 25)
         assert restored_combat.battle_map.width == 60
         assert restored_combat.battle_map.height == 60
+
+    def test_released_combat_save_without_resume_cursor_starts_at_round_beginning(self) -> None:
+        """The optional cursor is absent from already released current-schema saves."""
+        c1 = _make_creature("fighter")
+        c2 = _make_creature("goblin")
+        layer = EntitiesLayer(entities=[c1, c2])
+        layer._combat._combats["arena"] = CombatState(
+            location_id="arena", turn_order=["fighter", "goblin"], round_number=3
+        )
+        state = layer.get_state()
+        combat_state = state["combats"]["arena"]
+        assert isinstance(combat_state, dict)
+        combat_state.pop("resume_turn_index")
+
+        fresh_layer = EntitiesLayer(entities=[_make_creature("fighter"), _make_creature("goblin")])
+        fresh_layer.load_state(state)
+
+        restored = fresh_layer.get_combat("arena")
+        assert restored is not None
+        assert restored.resume_turn_index is None
 
     def test_battle_map_walls_preserved(self) -> None:
         """Inner walls survive round-trip and still block movement."""
