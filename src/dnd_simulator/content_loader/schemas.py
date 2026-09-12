@@ -495,6 +495,7 @@ class NpcContent(BaseModel):
     race: Race = Race.HUMAN
     char_class: CharClass = Field(CharClass.COMMONER, alias="class")
     level: int = 1
+    alignment: Alignment = Alignment.TRUE_NEUTRAL
     role: NpcRole = NpcRole.COMMONER
     start_location: str = ""
     settlement_id: str = ""

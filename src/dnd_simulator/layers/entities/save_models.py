@@ -299,6 +299,7 @@ class NpcSave(CreatureFields):
     race: Race
     class_: CharClass = Field(alias="class")
     level: int = 1
+    alignment: Alignment = Alignment.TRUE_NEUTRAL
     role: NpcRole
     personality: str
     description: str = ""

@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from dnd_simulator.core.character import Alignment
 from dnd_simulator.core.inner_self import (
     AlignmentAccumulation,
     BufferedPerceivedEvent,
@@ -20,7 +21,13 @@ from dnd_simulator.core.inner_self import (
     TypedGoal,
 )
 from dnd_simulator.core.models import EventType
-from dnd_simulator.rules.inner_self_digest import DigestContext, apply_delta, derive_delta
+from dnd_simulator.rules.inner_self_digest import (
+    ALIGNMENT_SHIFT_THRESHOLD,
+    DigestContext,
+    apply_delta,
+    derive_delta,
+    shift_alignment,
+)
 
 
 def _event(event_type: EventType, actor_id: str | None, target_id: str | None) -> BufferedPerceivedEvent:
@@ -47,6 +54,91 @@ def test_repeated_attacks_strengthen_hate_without_exceeding_maximum() -> None:
     )
 
     assert result.relations == [Relationship("attacker", RelationshipType.HATES, 100)]
+
+
+def test_opportunity_attack_log_does_not_double_count_resolved_attack_evidence() -> None:
+    victim = InnerSelf(relations=[Relationship("attacker", RelationshipType.HATES, 20)])
+    victim_result = _digest(
+        victim,
+        _event(EventType.ENTITY_ATTACK, "attacker", "self"),
+        _event(EventType.OPPORTUNITY_ATTACK, "attacker", "self"),
+    )
+    attacker = InnerSelf(relations=[Relationship("ally", RelationshipType.TRUSTS)])
+    attacker_delta = derive_delta(
+        attacker,
+        [
+            _event(EventType.ENTITY_ATTACK, "self", "ally"),
+            _event(EventType.OPPORTUNITY_ATTACK, "self", "ally"),
+        ],
+        DigestContext("self"),
+    )
+
+    assert victim_result.relations == [Relationship("attacker", RelationshipType.HATES, 30)]
+    assert attacker_delta.law_chaos_delta == 1
+    assert attacker_delta.good_evil_delta == 1
+
+
+@pytest.mark.parametrize(
+    ("alignment", "accumulation", "expected"),
+    [
+        (Alignment.LAWFUL_NEUTRAL, AlignmentAccumulation(ALIGNMENT_SHIFT_THRESHOLD, 0), Alignment.TRUE_NEUTRAL),
+        (Alignment.CHAOTIC_NEUTRAL, AlignmentAccumulation(-ALIGNMENT_SHIFT_THRESHOLD, 0), Alignment.TRUE_NEUTRAL),
+        (Alignment.NEUTRAL_GOOD, AlignmentAccumulation(0, ALIGNMENT_SHIFT_THRESHOLD), Alignment.TRUE_NEUTRAL),
+        (Alignment.NEUTRAL_EVIL, AlignmentAccumulation(0, -ALIGNMENT_SHIFT_THRESHOLD), Alignment.TRUE_NEUTRAL),
+    ],
+    ids=["toward_chaos", "toward_law", "toward_evil", "toward_good"],
+)
+def test_shift_alignment_moves_one_axis_one_step(
+    alignment: Alignment, accumulation: AlignmentAccumulation, expected: Alignment
+) -> None:
+    shifted, remaining = shift_alignment(alignment, accumulation)
+
+    assert shifted is expected
+    assert remaining == AlignmentAccumulation(
+        law_chaos=int(accumulation.law_chaos * 0.5),
+        good_evil=int(accumulation.good_evil * 0.5),
+    )
+
+
+def test_shift_alignment_ignores_pressure_below_threshold_without_mutating_input() -> None:
+    accumulation = AlignmentAccumulation(ALIGNMENT_SHIFT_THRESHOLD - 1, -(ALIGNMENT_SHIFT_THRESHOLD - 1))
+
+    shifted, remaining = shift_alignment(Alignment.TRUE_NEUTRAL, accumulation)
+
+    assert shifted is Alignment.TRUE_NEUTRAL
+    assert remaining == accumulation
+    assert remaining is not accumulation
+
+
+def test_shift_alignment_hysteresis_requires_more_than_one_opposite_evidence_step() -> None:
+    shifted, remaining = shift_alignment(Alignment.LAWFUL_NEUTRAL, AlignmentAccumulation(ALIGNMENT_SHIFT_THRESHOLD, 0))
+    after_one_opposite, opposite_remaining = shift_alignment(
+        shifted, AlignmentAccumulation(remaining.law_chaos - 1, remaining.good_evil)
+    )
+    shifted_again, _ = shift_alignment(shifted, AlignmentAccumulation(ALIGNMENT_SHIFT_THRESHOLD, 0))
+
+    assert after_one_opposite is Alignment.TRUE_NEUTRAL
+    assert opposite_remaining.law_chaos == 0
+    assert shifted_again is Alignment.CHAOTIC_NEUTRAL
+
+
+@pytest.mark.parametrize(
+    ("alignment", "accumulation"),
+    [
+        (Alignment.CHAOTIC_NEUTRAL, AlignmentAccumulation(99, 0)),
+        (Alignment.LAWFUL_NEUTRAL, AlignmentAccumulation(-99, 0)),
+        (Alignment.NEUTRAL_EVIL, AlignmentAccumulation(0, 99)),
+        (Alignment.NEUTRAL_GOOD, AlignmentAccumulation(0, -99)),
+    ],
+    ids=["chaotic", "lawful", "evil", "good"],
+)
+def test_shift_alignment_caps_pressure_at_terminal_axis(
+    alignment: Alignment, accumulation: AlignmentAccumulation
+) -> None:
+    shifted, remaining = shift_alignment(alignment, accumulation)
+
+    assert shifted is alignment
+    assert max(abs(remaining.law_chaos), abs(remaining.good_evil)) == ALIGNMENT_SHIFT_THRESHOLD - 1
 
 
 @pytest.mark.parametrize(

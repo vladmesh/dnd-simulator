@@ -115,7 +115,13 @@ Goal = TypedGoal | FreeformGoal
 
 @dataclass
 class AlignmentAccumulation:
-    """Stored pressure along the two alignment axes; no shifting policy lives here."""
+    """Stored alignment evidence.
+
+    Positive ``law_chaos`` pressure points toward chaos and negative pressure
+    toward law. Positive ``good_evil`` pressure points toward evil and negative
+    pressure toward good. Thresholds, hysteresis, and alignment changes belong
+    to the pure digest rules, not this persisted value object.
+    """
 
     law_chaos: int = 0
     good_evil: int = 0

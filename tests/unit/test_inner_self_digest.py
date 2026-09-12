@@ -2,11 +2,21 @@
 
 from __future__ import annotations
 
+import random
+
 from dnd_simulator.core.action import Action, ActionType
-from dnd_simulator.core.character import Creature, NpcRole
-from dnd_simulator.core.events import EntityDiedPayload, EntitySayPayload, OpportunityAttackPayload
+from dnd_simulator.core.character import Alignment, Creature, NpcRole
+from dnd_simulator.core.events import (
+    AttackRequestedPayload,
+    AttackResolvedPayload,
+    AttackRollPayload,
+    EntityDiedPayload,
+    EntitySayPayload,
+    OpportunityAttackPayload,
+)
 from dnd_simulator.core.inner_self import (
     PERCEIVED_EVENT_BUFFER_CAPACITY,
+    AlignmentAccumulation,
     BufferedPerceivedEvent,
     DigestBoundary,
     GoalType,
@@ -85,6 +95,22 @@ def _opportunity_attack(attacker_id: str, target_id: str) -> Event:
         event_type=EventType.OPPORTUNITY_ATTACK,
         source_layer="entities",
         data=OpportunityAttackPayload(attacker_id, target_id),
+    )
+
+
+def _resolved_attack(attacker_id: str, target_id: str) -> Event:
+    return Event(
+        event_type=EventType.ENTITY_ATTACK,
+        source_layer="entities",
+        data=AttackResolvedPayload(
+            attacker_id=attacker_id,
+            target_id=target_id,
+            hit=True,
+            weapon="fists",
+            critical=False,
+            ac=10,
+            attack_roll=AttackRollPayload(10, (), 10, False, False),
+        ),
     )
 
 
@@ -319,6 +345,7 @@ def test_rule_brain_digest_applies_battle_outcome_without_summarizer_and_round_t
     ward = Creature(id="ward", name="Ward", location_id="square")
     log = EventLog({entity.id: entity for entity in (npc, attacker, ally, enemy, ward)})
 
+    log.record(_resolved_attack("attacker", "npc"))
     log.record(_opportunity_attack("attacker", "npc"))
     log.record(_death("ally"))
     log.record(_death("enemy"))
@@ -348,4 +375,128 @@ def test_failed_summarizer_does_not_rollback_rule_delta() -> None:
 
     assert npc.inner_self.relation_targets(RelationshipType.HATES) == {"attacker"}
     assert npc.inner_self.mood is Mood.ANGRY
+    assert npc.inner_self.perceived_event_buffer == []
+
+
+def test_digest_shifts_npc_alignment_and_round_trips_shifted_state() -> None:
+    npc = _npc(
+        alignment=Alignment.TRUE_NEUTRAL,
+        inner_self=InnerSelf(
+            relations=[Relationship("ally", RelationshipType.TRUSTS)],
+            alignment=AlignmentAccumulation(law_chaos=2, good_evil=2),
+            perceived_event_buffer=[
+                BufferedPerceivedEvent(EventType.ENTITY_ATTACK, "npc", "ally", "Attack", 1),
+            ],
+        ),
+    )
+
+    digest(npc, DigestBoundary.COMBAT_ENDED, summarizer=None)
+
+    assert npc.alignment is Alignment.CHAOTIC_EVIL
+    assert npc.inner_self is not None
+    assert npc.inner_self.alignment == AlignmentAccumulation(law_chaos=1, good_evil=1)
+    restored_layer = EntitiesLayer()
+    restored_layer.load_state(EntitiesLayer([npc]).get_state())
+    restored = restored_layer.get_entity("npc")
+    assert isinstance(restored, Npc)
+    assert restored.alignment is Alignment.CHAOTIC_EVIL
+    assert restored.inner_self is not None
+    assert restored.inner_self.alignment == AlignmentAccumulation(law_chaos=1, good_evil=1)
+
+
+def test_player_alignment_never_shifts_even_with_artificial_inner_self() -> None:
+    player = PlayerCharacter(
+        id="player",
+        name="Player",
+        location_id="square",
+        alignment=Alignment.LAWFUL_GOOD,
+        inner_self=InnerSelf(
+            relations=[Relationship("ally", RelationshipType.TRUSTS)],
+            alignment=AlignmentAccumulation(law_chaos=2, good_evil=2),
+            perceived_event_buffer=[
+                BufferedPerceivedEvent(EventType.ENTITY_ATTACK, "player", "ally", "Attack", 1),
+            ],
+        ),
+    )
+
+    digest(player, DigestBoundary.COMBAT_ENDED, summarizer=None)
+
+    assert player.alignment is Alignment.LAWFUL_GOOD
+    assert player.inner_self is not None
+    assert player.inner_self.alignment == AlignmentAccumulation(law_chaos=3, good_evil=3)
+
+
+def test_core_bearing_creature_without_alignment_still_accumulates() -> None:
+    monster = Creature(
+        id="monster",
+        name="Monster",
+        location_id="square",
+        inner_self=InnerSelf(
+            relations=[Relationship("ally", RelationshipType.TRUSTS)],
+            perceived_event_buffer=[
+                BufferedPerceivedEvent(EventType.ENTITY_ATTACK, "monster", "ally", "Attack", 1),
+            ],
+        ),
+    )
+
+    digest(monster, DigestBoundary.COMBAT_ENDED, summarizer=None)
+
+    assert monster.inner_self is not None
+    assert monster.inner_self.alignment == AlignmentAccumulation(law_chaos=1, good_evil=1)
+
+
+def test_failing_summarizer_does_not_rollback_alignment_shift() -> None:
+    npc = _npc(
+        inner_self=InnerSelf(
+            relations=[Relationship("ally", RelationshipType.TRUSTS)],
+            alignment=AlignmentAccumulation(law_chaos=2, good_evil=2),
+            perceived_event_buffer=[
+                BufferedPerceivedEvent(EventType.ENTITY_ATTACK, "npc", "ally", "Attack", 1),
+            ],
+        )
+    )
+
+    digest(npc, DigestBoundary.COMBAT_ENDED, FailingSummarizer())  # type: ignore[arg-type]
+
+    assert npc.alignment is Alignment.CHAOTIC_EVIL
+    assert npc.inner_self is not None
+    assert npc.inner_self.alignment == AlignmentAccumulation(law_chaos=1, good_evil=1)
+    assert npc.inner_self.perceived_event_buffer == []
+
+
+def test_real_combat_chain_digests_outcome_without_llm_client() -> None:
+    npc = _npc(
+        max_hp=10,
+        current_hp=10,
+        inner_self=InnerSelf(
+            relations=[Relationship("ally", RelationshipType.LOVES)],
+            goals=[TypedGoal(GoalType.KILL, "enemy"), TypedGoal(GoalType.PROTECT, "ward")],
+        ),
+    )
+    attacker = Creature(id="attacker", name="Attacker", location_id="square")
+    ally = Creature(id="ally", name="Ally", location_id="square", max_hp=1, current_hp=1)
+    enemy = Creature(id="enemy", name="Enemy", location_id="square", max_hp=1, current_hp=1)
+    ward = Creature(id="ward", name="Ward", location_id="square", max_hp=1, current_hp=1)
+    layer = EntitiesLayer([npc, attacker, ally, enemy, ward], dice_rng=random.Random(0))
+    world = World([layer], time=GameDateTime())
+    layer._combat._rng.randint = lambda _a, b: b  # type: ignore[method-assign]
+
+    for target_id in ("npc", "ally", "enemy", "ward"):
+        world.handle_event(
+            Event(
+                EventType.ENTITY_ATTACK_REQUESTED,
+                "entities",
+                AttackRequestedPayload("attacker", target_id),
+            )
+        )
+
+    assert layer.get_combat("square") is not None
+    layer.end_combat_round("square")
+    layer.end_combat_round("square")
+    layer.end_combat_round("square")
+
+    assert npc.inner_self is not None
+    assert npc.inner_self.relation_targets(RelationshipType.HATES) == {"attacker"}
+    assert npc.inner_self.mood is Mood.GRIEVING
+    assert [goal.status.value for goal in npc.inner_self.goals] == ["achieved", "failed"]
     assert npc.inner_self.perceived_event_buffer == []
