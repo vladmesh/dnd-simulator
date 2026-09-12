@@ -2,10 +2,9 @@
 name: e2e
 description: >
   Run E2E regression tests via Playwright against the live app. Follows the playbook in docs/e2e-playbook.md
-  plus auto-discovered scenarios from recent changes. Writes a report to docs/e2e-reports/. Use when user
+  plus auto-discovered scenarios from recent changes. Writes a report to /tmp/e2e-reports/ (summary goes into the card's worker report). Use when user
   says "e2e", "run e2e", "regression", "test everything", "full test", "smoke test", or wants to validate
   the app works end-to-end. By default skips LLM scenarios; pass --with-llm to include them.
-  Can also be invoked by other skills (close-phase, close-sprint) as part of their workflow.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Agent, mcp__playwright__browser_navigate, mcp__playwright__browser_snapshot, mcp__playwright__browser_click, mcp__playwright__browser_fill_form, mcp__playwright__browser_press_key, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_console_messages, mcp__playwright__browser_wait_for, mcp__playwright__browser_evaluate, mcp__playwright__browser_tabs, mcp__playwright__browser_navigate_back, mcp__playwright__browser_select_option, mcp__playwright__browser_hover
 argument-hint: "[--with-llm] [--section N[,N...]]"
 ---
@@ -20,7 +19,7 @@ Run end-to-end regression tests through the real UI using Playwright. Tests foll
 - Without this flag, section 8 is skipped (default).
 - `--section N[,N...]` — run only specific playbook sections (e.g. `--section 3,4` for combat + class features). Useful for targeted testing.
 - `--context LABEL` — label for the report filename and title (e.g. `sprint017-phase3`). Defaults to `regression`.
-- `--report PATH` — write the report to PATH instead of the default `docs/e2e-reports/<date>-<context>.md`. Used by `/close-phase` for its per-phase report.
+- `--report PATH` — write the report to PATH instead of the default `/tmp/e2e-reports/<date>-<context>.md`.
 
 ## Protocol
 
@@ -35,7 +34,7 @@ Unless `--with-llm` was passed: skip section 8 entirely.
 Find the date of the last E2E report:
 
 ```bash
-ls -t docs/e2e-reports/*.md 2>/dev/null | head -1
+ls -t /tmp/e2e-reports/*.md 2>/dev/null | head -1   # previous local run, if any; historical reports live in secretary knowledge projects/dnd-simulator/e2e-reports/
 ```
 
 If a previous report exists, read its date. Then check what changed since:
@@ -174,7 +173,7 @@ Read any log files that look relevant. Note silent errors — things that didn't
 
 ### 6. Write the report
 
-Create the report at `--report PATH` if it was provided, otherwise `docs/e2e-reports/<date>-<context>.md` (e.g. `2026-03-25-regression.md` or `2026-03-25-sprint003-phase2.md`):
+Create the report at `--report PATH` if it was provided, otherwise `/tmp/e2e-reports/<date>-<context>.md` (create the directory if needed). Reports are not committed to the repo: put the summary into the card's worker report:
 
 ```markdown
 # E2E Report: <context>
@@ -250,7 +249,7 @@ E2E: <context>
   Failed: N
   Quick fixes: N
   Blockers: N
-  Report: docs/e2e-reports/<filename>.md
+  Report: /tmp/e2e-reports/<filename>.md
 ```
 
 If there are blockers — list them. If clean — say so.

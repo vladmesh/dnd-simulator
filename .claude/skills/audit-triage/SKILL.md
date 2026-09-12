@@ -21,13 +21,17 @@ Read `docs/audit.md`. If it doesn't exist or is empty — tell the user to run `
 
 ### 2. Determine context
 
-Check if there's an active sprint: read `docs/STATUS.md` and the sprint's `sprint.md` from `docs/sprints/NNN-slug/`.
+Sprint state lives on the secretary board, not in the repo. Check for an open sprint reserving this project:
 
-**If active sprint exists:**
-- Note the sprint goal, current phase, and which code areas the sprint touches
+```bash
+/home/dev/secretary/.venv/bin/secretary sprint list --status open
+```
+
+**If an open sprint reserves `dnd-simulator`:**
+- Note its goal, Definition of Done and the current card (`sprint show --ref sprint:<ID>`), and which code areas that work touches
 - This context determines what's "sprint-relevant" vs "backlog"
 
-**If no active sprint:**
+**If no open sprint:**
 - Triage is general: "sprint-relevant" bucket becomes "high-impact" — things that affect the most code or the most critical paths
 
 ### 3. Analyze each finding
@@ -96,10 +100,6 @@ Not urgent, not blocking. Candidates for BACKLOG.md:
 
 ### 6. Wait for user
 
-**Autonomous runs (`/meta-go`):** there is no user — the orchestrator is the decision authority. Skip this wait entirely: apply bucket-1 quick-fixes, fix sprint-relevant items <5min (route >5min into a refactor phase), append bucket-3 to BACKLOG.md, then go to step 7.
-
-Otherwise (interactive `/go`):
-
 Do NOT:
 - Apply any fixes
 - Create tasks
@@ -110,7 +110,7 @@ Do NOT:
 Just present the triage and wait. The user decides:
 - "Fix quick-fixes" → apply bucket 1
 - "Add to backlog" → append bucket 3 to BACKLOG.md (skip items already tracked there; mark a finding already fixed in code as done rather than re-adding it)
-- "Create refactor task" → create a task file for bucket 2 items
+- "Create refactor task" → describe bucket 2 as input for a new card (the PO files it via spec-card)
 - Or any combination / custom decision
 
 ### 7. Mark triage complete (ONLY after all items are handled)
@@ -120,19 +120,11 @@ This step happens ONLY when the user has given the go-ahead AND every finding ha
 - Sprint-relevant items either in a refactor phase or explicitly deferred
 - Backlog items added to BACKLOG.md or explicitly dismissed
 
-Only then — append audit triage note to `docs/STATUS.md`:
-
-```markdown
-**Audit:** Triaged <date>. Quick-fix: N applied. Sprint-relevant: N (→ refactor phase / deferred). Backlog: N added.
-```
-
-Then commit the marker (and any backlog/task files changed during triage):
+Then commit the backlog changes made during triage:
 
 ```bash
-git add docs/STATUS.md docs/BACKLOG.md docs/sprints/NNN-slug/
-git commit -m "sprint NNN: audit triaged"
+git add docs/BACKLOG.md
+git commit -m "audit triaged: <date>"
 ```
 
-Do NOT push.
-
-Do NOT write this marker at the start of the triage or after just presenting the report. It signals to `/go` and `/close-sprint` that the audit cycle is complete.
+Do NOT push. If the triage ran inside a sprint card, list the dispositions in the card's worker report; the observer reads them there.
