@@ -121,6 +121,31 @@ class Round:
         with self._action_scope(), self._mutation_scope():
             return self._dispatcher.dispatch(creature, action, ctx, emit_fn)
 
+    def _build_action_context(
+        self,
+        creature: Creature,
+        turn_budget: TurnBudget | None = None,
+    ) -> ActionContext:
+        """Single ActionContext factory for every production dispatch route.
+
+        Combat turns (``_prepare_combat_turn``), peaceful turns (``run_peaceful_turn``),
+        and reactions (``check_reactions``) all build their ``ActionContext`` here — there
+        is exactly one place that decides ``combat_state``, and it always comes from the
+        authoritative ``CreatureHost.get_active_combat_for(creature.id)`` query, never from
+        which branch the caller is on. ``is_combat`` is derived from that same result for
+        logging/legacy readers; it carries no independent authority (see
+        ``rules.validation.check_action_mode``, which reads ``combat_state`` only).
+        """
+        combat_state = self._host.get_active_combat_for(creature.id)
+        return ActionContext(
+            is_combat=combat_state is not None,
+            current_turn_entity_id=creature.id,
+            turn_budget=turn_budget,
+            combat_state=combat_state,
+            get_entity=self._host.get_entity,
+            rng=self._rng,
+        )
+
     def get_perceived_events(self, creature: Creature) -> list[PerceivedEvent]:
         """Return perceived events for a creature (delegates to CreatureHost)."""
         return self._host.get_perceived_events(creature)
@@ -202,15 +227,7 @@ class Round:
             )
             creature.is_disengaging = False
 
-        combat_state = self._host.get_active_combat_for(creature.id)
-        return ActionContext(
-            is_combat=True,
-            current_turn_entity_id=creature.id,
-            turn_budget=creature.turn_budget,
-            combat_state=combat_state,
-            get_entity=self._host.get_entity,
-            rng=self._rng,
-        )
+        return self._build_action_context(creature, turn_budget=creature.turn_budget)
 
     def _build_combat_awareness(
         self,
@@ -326,12 +343,7 @@ class Round:
             return []
 
         actions: list[Action] = []
-        ctx = ActionContext(
-            is_combat=False,
-            current_turn_entity_id=creature.id,
-            get_entity=self._host.get_entity,
-            rng=self._rng,
-        )
+        ctx = self._build_action_context(creature)
 
         while True:
             if not creature.is_alive:
@@ -404,15 +416,7 @@ class Round:
             if action.name == ActionType.SKIP:
                 continue
 
-            combat_state = self._host.get_active_combat_for(creature.id)
-            ctx = ActionContext(
-                is_combat=True,
-                current_turn_entity_id=creature.id,
-                turn_budget=creature.turn_budget,
-                combat_state=combat_state,
-                get_entity=self._host.get_entity,
-                rng=self._rng,
-            )
+            ctx = self._build_action_context(creature, turn_budget=creature.turn_budget)
             result = self._execute_action(creature, action, ctx, _emit)
             if result.success:
                 reactions.append(action)
