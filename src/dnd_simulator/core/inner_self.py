@@ -10,10 +10,13 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
+from dnd_simulator.core.models import EventType
+
 RELATIONSHIP_INTENSITY_MIN = 1
 RELATIONSHIP_INTENSITY_MAX = 100
 DEFAULT_RELATIONSHIP_INTENSITY = 50
 THOUGHT_BUFFER_CAPACITY = 20
+PERCEIVED_EVENT_BUFFER_CAPACITY = 20
 
 
 class RelationshipType(StrEnum):
@@ -48,6 +51,27 @@ class GoalStatus(StrEnum):
     ACTIVE = "active"
     ACHIEVED = "achieved"
     FAILED = "failed"
+
+
+class DigestBoundary(StrEnum):
+    """Stable reasons for consuming an inner-self perception buffer."""
+
+    COMBAT_ENDED = "combat_ended"
+    DORMANT = "became_dormant"
+    INTENT_COMPLETED = "intent_completed"
+    INTENT_INTERRUPTED = "intent_interrupted"
+    BUFFER_FULL = "buffer_full"
+
+
+@dataclass(frozen=True)
+class BufferedPerceivedEvent:
+    """An event retained exactly as one creature perceived it."""
+
+    event_type: EventType
+    actor_id: str | None
+    target_id: str | None
+    description: str
+    at_seconds: int
 
 
 @dataclass(frozen=True)
@@ -108,6 +132,7 @@ class InnerSelf:
     journal: str = ""
     thoughts: list[str] = field(default_factory=list)
     current_conversation: str = ""
+    perceived_event_buffer: list[BufferedPerceivedEvent] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         keys = [(relation.target_id, relation.type) for relation in self.relations]
@@ -143,6 +168,16 @@ class InnerSelf:
             "journal": self.journal,
             "thoughts": list(self.thoughts),
             "current_conversation": self.current_conversation,
+            "perceived_event_buffer": [
+                {
+                    "event_type": event.event_type.value,
+                    "actor_id": event.actor_id,
+                    "target_id": event.target_id,
+                    "description": event.description,
+                    "at_seconds": event.at_seconds,
+                }
+                for event in self.perceived_event_buffer
+            ],
         }
 
     @classmethod
@@ -180,4 +215,14 @@ class InnerSelf:
             journal=str(data.get("journal", "")),
             thoughts=[str(thought) for thought in data.get("thoughts", [])],
             current_conversation=str(data.get("current_conversation", "")),
+            perceived_event_buffer=[
+                BufferedPerceivedEvent(
+                    event_type=EventType(str(event["event_type"])),
+                    actor_id=str(event["actor_id"]) if event.get("actor_id") is not None else None,
+                    target_id=str(event["target_id"]) if event.get("target_id") is not None else None,
+                    description=str(event["description"]),
+                    at_seconds=int(event["at_seconds"]),
+                )
+                for event in data.get("perceived_event_buffer", [])
+            ],
         )

@@ -67,7 +67,7 @@ def resolve_dodge(mgr: CombatManager, event: Event) -> ActionResult:
         entity.conditions[Condition.DODGING] = 1
     location_id = mgr._event_location(event)
     if location_id:
-        mgr._location_log[location_id].append(event)
+        mgr._record_event(event)
     return ActionResult()
 
 
@@ -82,7 +82,7 @@ def resolve_flee(mgr: CombatManager, event: Event) -> ActionResult:
         mgr._remove_from_combat(entity.location_id, entity_id)
     location_id = mgr._event_location(event)
     if location_id:
-        mgr._location_log[location_id].append(event)
+        mgr._record_event(event)
     return ActionResult()
 
 
@@ -97,7 +97,7 @@ def resolve_move(mgr: CombatManager, event: Event) -> ActionResult:
     combat = mgr._combats.get(entity.location_id)
     if not combat:
         return ActionResult(success=False, error=_("No active combat for movement."))
-    return resolve_combat_move(entity, event, combat, mgr._location_log)
+    return resolve_combat_move(entity, event, combat, mgr._record_event)
 
 
 def is_faction_friendly(mgr: CombatManager, attacker: Creature, candidate_id: str, query_fn: QueryFn | None) -> bool:
@@ -214,7 +214,7 @@ def resolve_attack(mgr: CombatManager, event: Event, query_fn: QueryFn | None = 
     if result.hit:
         actual_damage = target.take_damage(result.total_damage)
         if actual_damage > 0:
-            interrupt_intent(target, IntentInterruptReason.DAMAGE)
+            interrupt_intent(target, IntentInterruptReason.DAMAGE, mgr._digest)
         log_payload = replace(
             log_payload,
             damage=actual_damage,
@@ -229,9 +229,7 @@ def resolve_attack(mgr: CombatManager, event: Event, query_fn: QueryFn | None = 
         if smite_slot_level is not None:
             use_resource(attacker, spell_slot_pool_id(smite_slot_level))
 
-    mgr._location_log[attacker.location_id].append(
-        Event(event_type=EventType.ENTITY_ATTACK, source_layer="entities", data=log_payload)
-    )
+    mgr._record_event(Event(event_type=EventType.ENTITY_ATTACK, source_layer="entities", data=log_payload))
 
     return handle_death(mgr, attacker, target, target_id, result, query_fn)
 
@@ -256,7 +254,7 @@ def handle_death(
         source_layer="entities",
         data=EntityDiedPayload(target_id, target.location_id, attacker.id, target.lair_origin),
     )
-    mgr._location_log[target.location_id].append(death_event)
+    mgr._record_event(death_event)
     events.append(death_event)
 
     # Build faction relation lookup for proper initial rep calculation
@@ -292,7 +290,7 @@ def handle_death(
                 location_id=target.location_id,
             ),
         )
-        mgr._location_log[target.location_id].append(rep_event)
+        mgr._record_event(rep_event)
         events.append(rep_event)
 
     # XP grant on kill (Character attackers only, skip zero-value targets like other Characters)
@@ -311,7 +309,7 @@ def handle_death(
                 location_id=target.location_id,
             ),
         )
-        mgr._location_log[target.location_id].append(xp_event)
+        mgr._record_event(xp_event)
         events.append(xp_event)
 
     mgr._remove_from_combat(target.location_id, target_id)

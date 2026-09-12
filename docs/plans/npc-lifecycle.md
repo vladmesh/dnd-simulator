@@ -97,10 +97,10 @@ Connect the summarizer to actual game events. Give RuleBrain NPCs minimal dialog
 **Decisions:**
 
 - `EntitiesLayer` gets optional `summarizer: MemorySummarizer | None`, injected at construction. `None` = skip summarization.
-- `_on_combat_ended(location_id)` triggers when combat ends — detected in `end_combat_round()` (idle timeout) and `handle_event()` (last fighter killed/fled).
-- Scans `_location_log` backward to find `COMBAT_STARTED`, extracts `turn_order` for participant list.
-- Each NPC participant gets combat events perceived from their own POV via `perceive_event`.
-- After summarization, checks `needs_compression()` → second call with `"recent_overflow"` if needed.
+- Active core-bearers now retain a structured, saveable perception buffer without changing their brain log cursor. One digest entry point is called at combat end, active → dormant, intent completion/interruption, and buffer capacity.
+- Combat consumes buffers for the recorded combat participants; it no longer rebuilds events by scanning `_location_log` from `COMBAT_STARTED`.
+- The current digest body remains NPC journal summarization, then calls `needs_compression()` for `journal_overflow`; non-NPC core-bearers consume the buffer as a no-op pending the rules digest.
+- A failed summarizer call logs `inner_self_digest_failed` after clearing the buffer, so it cannot retry stale events indefinitely.
 - `conversation_ended` trigger: deferred (needs conversation detection — manual command or timeout).
 - Both `cli.py` (GameService) and `cli_loop.py` inject summarizer when LLM is configured.
 - Integration test script: `scripts/test_arena_summarizer.py`.

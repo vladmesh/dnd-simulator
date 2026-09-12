@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from dnd_simulator.core.character import Character, Entity
+from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.events import (
     ActionFlavorPayload,
     AttackResolvedPayload,
@@ -63,14 +63,14 @@ _TRANSLATABLE_STRINGS = [
 # fmt: on
 
 
-def _describe(observer: Character, entity_id: str, get_entity: GetEntityFn) -> str:
+def _describe(observer: Creature, entity_id: str, get_entity: GetEntityFn) -> str:
     """Get observer's perception of an entity by ID."""
     entity = get_entity(entity_id)
     if entity is None:
         return _("someone")
     if entity.id == observer.id:
         return _("you")
-    return observer.perceive(entity)
+    return observer.perceive(entity) if isinstance(observer, Character) else entity.name
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +78,7 @@ def _describe(observer: Character, entity_id: str, get_entity: GetEntityFn) -> s
 # ---------------------------------------------------------------------------
 
 
-def _perceive_say(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_say(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, EntitySayPayload)
     speaker_id = payload.entity_id
@@ -135,7 +135,7 @@ def _format_damage(damage: int, damage_components: tuple[DamageComponentPayload,
     return _(", {damage} damage{detail}").format(damage=damage, detail=detail)
 
 
-def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_attack(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, AttackResolvedPayload)
     attacker_id = payload.attacker_id
@@ -172,13 +172,13 @@ def _perceive_attack(event: Event, observer: Character, get_entity: GetEntityFn)
     )
 
 
-def _perceive_combat_ended(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_combat_ended(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, CombatEndedPayload)
     return _("Combat ended.")
 
 
-def _perceive_disengage(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_disengage(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, EntityActorPayload)
     entity_id = payload.entity_id
@@ -188,7 +188,7 @@ def _perceive_disengage(event: Event, observer: Character, get_entity: GetEntity
     return _("{entity} disengages").format(entity=desc)
 
 
-def _perceive_opportunity_attack(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_opportunity_attack(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     """Brief contextual note for the OA log marker.
 
     The detailed attack info is in the preceding ENTITY_ATTACK event
@@ -207,7 +207,7 @@ def _perceive_opportunity_attack(event: Event, observer: Character, get_entity: 
     return _("{attacker} seizes the opening against {target}!").format(attacker=attacker, target=target)
 
 
-def _perceive_death(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_death(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, EntityDiedPayload)
     entity_id = payload.entity_id
@@ -217,7 +217,7 @@ def _perceive_death(event: Event, observer: Character, get_entity: GetEntityFn) 
     return _("{entity} dies").format(entity=desc)
 
 
-def _perceive_dodge(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_dodge(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, ActionFlavorPayload)
     entity_id = payload.entity_id
@@ -230,7 +230,7 @@ def _perceive_dodge(event: Event, observer: Character, get_entity: GetEntityFn) 
     return _("{entity} takes a defensive stance{desc}").format(entity=desc, desc=desc_suffix)
 
 
-def _perceive_flee(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_flee(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, ActionFlavorPayload)
     entity_id = payload.entity_id
@@ -243,7 +243,7 @@ def _perceive_flee(event: Event, observer: Character, get_entity: GetEntityFn) -
     return _("{entity} tries to flee{desc}").format(entity=desc, desc=desc_suffix)
 
 
-def _perceive_move(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_move(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     from dnd_simulator.rules.movement import direction_label
 
     payload = event.payload
@@ -274,7 +274,7 @@ def _perceive_move(event: Event, observer: Character, get_entity: GetEntityFn) -
     )
 
 
-def _perceive_dash(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_dash(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, EntityDashPayload)
     entity_id = payload.entity_id
@@ -285,7 +285,7 @@ def _perceive_dash(event: Event, observer: Character, get_entity: GetEntityFn) -
     return _("{entity} dashes (+{ft} ft movement)").format(entity=desc, ft=extra_ft)
 
 
-def _perceive_use_item(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_use_item(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, EntityUseItemPayload)
     entity_id = payload.entity_id
@@ -303,7 +303,7 @@ def _perceive_use_item(event: Event, observer: Character, get_entity: GetEntityF
     return _("{entity} uses {item} (healed {hp} HP)").format(entity=desc, item=item_name, hp=healed)
 
 
-def _perceive_inspect(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_inspect(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     from dnd_simulator.core.character import Creature
 
     payload = event.payload
@@ -312,7 +312,7 @@ def _perceive_inspect(event: Event, observer: Character, get_entity: GetEntityFn
     target = get_entity(target_id)
     if target is None:
         return _("You look around but see no one matching '{id}'.").format(id=target_id)
-    desc = observer.perceive(target)
+    desc = _describe(observer, target_id, get_entity)
     parts = [_("You inspect {desc}.").format(desc=desc)]
     if isinstance(target, Creature):
         if target.current_hp < target.max_hp // 2:
@@ -327,7 +327,7 @@ def _perceive_inspect(event: Event, observer: Character, get_entity: GetEntityFn
     return " ".join(parts)
 
 
-def _perceive_turn_skipped(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_turn_skipped(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, TurnSkippedPayload)
     entity_id = payload.entity_id
@@ -340,7 +340,7 @@ def _perceive_turn_skipped(event: Event, observer: Character, get_entity: GetEnt
     return _("{entity} can't act ({conditions}) — turn skipped").format(entity=desc, conditions=cond_str)
 
 
-def _perceive_bless(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_bless(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, EntityBlessPayload)
     entity_id = payload.entity_id
@@ -351,7 +351,7 @@ def _perceive_bless(event: Event, observer: Character, get_entity: GetEntityFn) 
     return _("{entity} invokes a blessing (+d4 to attack rolls for {n} rounds)").format(entity=desc, n=duration)
 
 
-def _perceive_second_wind(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_second_wind(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, EntitySecondWindPayload)
     entity_id = payload.entity_id
@@ -368,7 +368,7 @@ def _perceive_second_wind(event: Event, observer: Character, get_entity: GetEnti
     return _("{entity} catches their breath, regaining {hp} HP").format(entity=desc, hp=healed)
 
 
-def _perceive_action_surge(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_action_surge(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, EntityActorPayload)
     entity_id = payload.entity_id
@@ -378,7 +378,7 @@ def _perceive_action_surge(event: Event, observer: Character, get_entity: GetEnt
     return _("{entity} surges with energy, gaining an extra action").format(entity=desc)
 
 
-def _perceive_lay_on_hands(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_lay_on_hands(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, EntityLayOnHandsPayload)
     entity_id = payload.entity_id
@@ -419,7 +419,7 @@ def _perceive_lay_on_hands(event: Event, observer: Character, get_entity: GetEnt
     return _("{entity} lays hands on {target}, restoring {hp} HP").format(entity=edesc, target=tdesc, hp=healed)
 
 
-def _perceive_equip(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_equip(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, EquipmentPayload)
     entity_id = payload.entity_id
@@ -430,7 +430,7 @@ def _perceive_equip(event: Event, observer: Character, get_entity: GetEntityFn) 
     return _("{entity} equips {weapon}").format(entity=desc, weapon=item_name)
 
 
-def _perceive_unequip(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_unequip(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, EquipmentPayload)
     entity_id = payload.entity_id
@@ -441,7 +441,7 @@ def _perceive_unequip(event: Event, observer: Character, get_entity: GetEntityFn
     return _("{entity} puts away {weapon}").format(entity=desc, weapon=item_name)
 
 
-def _perceive_buy(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_buy(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, BuyPayload)
     buyer_id = payload.buyer_id
@@ -460,7 +460,7 @@ def _perceive_buy(event: Event, observer: Character, get_entity: GetEntityFn) ->
     )
 
 
-def _perceive_sell(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_sell(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, SellPayload)
     seller_id = payload.seller_id
@@ -479,7 +479,7 @@ def _perceive_sell(event: Event, observer: Character, get_entity: GetEntityFn) -
     )
 
 
-def _perceive_take(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_take(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, TakePayload)
     actor_id = payload.actor_id
@@ -501,7 +501,7 @@ def _perceive_take(event: Event, observer: Character, get_entity: GetEntityFn) -
     return _("{actor} loots {target} ({loot})").format(actor=actor, target=target, loot=loot)
 
 
-def _perceive_squad_materialized(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_squad_materialized(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     d = event.payload
     assert isinstance(d, SquadMaterializedPayload)
     name = d.squad_name
@@ -509,20 +509,20 @@ def _perceive_squad_materialized(event: Event, observer: Character, get_entity: 
     return _("{name} appears — {count} creatures materialize").format(name=name, count=count)
 
 
-def _perceive_squad_dematerialized(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_squad_dematerialized(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, SquadDematerializedPayload)
     name = payload.squad_name
     return _("{name} moves on, disappearing into the distance").format(name=name)
 
 
-def _perceive_encounter_spawned(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_encounter_spawned(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     """Vague flavor for an encounter spawn. Deliberately hides the monster roster —
     danger-by-place is intentional, the player gets no advance roster."""
     return _("Something stirs nearby")
 
 
-def _perceive_xp_gained(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_xp_gained(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, XpGainedPayload)
     entity_id = payload.entity_id
@@ -535,7 +535,7 @@ def _perceive_xp_gained(event: Event, observer: Character, get_entity: GetEntity
     return _("{entity} gains {amount} XP for defeating {source}").format(entity=desc, amount=amount, source=source)
 
 
-def _perceive_reputation_change(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def _perceive_reputation_change(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
     assert isinstance(payload, ReputationChangedPayload)
     entity_id = payload.entity_id
@@ -555,7 +555,7 @@ def _perceive_reputation_change(event: Event, observer: Character, get_entity: G
 # Dispatch table: EventType → handler
 # ---------------------------------------------------------------------------
 
-_PerceiveHandler = Callable[[Event, Character, GetEntityFn], str]
+_PerceiveHandler = Callable[[Event, Creature, GetEntityFn], str]
 
 _DISPATCH: dict[EventType, _PerceiveHandler] = {
     EventType.ENTITY_SAY: _perceive_say,
@@ -588,7 +588,7 @@ _DISPATCH: dict[EventType, _PerceiveHandler] = {
 _DISPATCH.update(WORLD_DISPATCH)
 
 
-def perceive_event(event: Event, observer: Character, get_entity: GetEntityFn) -> str:
+def perceive_event(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     """Describe an event from the observer's point of view.
 
     Uses observer.perceive() to describe participants, so the same event
