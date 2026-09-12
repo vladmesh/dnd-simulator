@@ -5,6 +5,7 @@ from __future__ import annotations
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.character import Character, CharClass, Creature, Race
 from dnd_simulator.core.class_features import FighterFeatures, FightingStyle
+from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.models import ActionResult, Event
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.core.turn_budget import TurnBudget
@@ -50,9 +51,13 @@ def _fighter_l1() -> Character:
     )
 
 
+_ACTIVE_COMBAT = CombatState(location_id="arena", turn_order=["fighter", "fighter1", "wolf", "rogue"])
+
+
 def _ctx(*, is_combat: bool = True, budget: TurnBudget | None = None) -> ActionContext:
     return ActionContext(
         is_combat=is_combat,
+        combat_state=_ACTIVE_COMBAT if is_combat else None,
         turn_budget=budget or TurnBudget(actions=1, bonus_actions=1, movement_remaining=30),
     )
 

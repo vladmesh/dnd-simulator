@@ -67,6 +67,14 @@ class CreatureHost(Protocol):
         """Return the CombatState at a location, or None if no combat is active."""
         ...
 
+    def get_active_combat_for(self, entity_id: str) -> CombatState | None:
+        """Return the active CombatState the entity is a member of, or None.
+
+        The single authoritative combat-membership query used to decide combat
+        vs. peaceful semantics — independent of ``Creature.in_combat``.
+        """
+        ...
+
     def log_round_start(self, location_id: str, round_number: int) -> None:
         """Append a ROUND_START marker to the location's event log."""
         ...

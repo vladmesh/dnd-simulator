@@ -12,6 +12,7 @@ from unittest.mock import MagicMock
 
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.character import Creature
+from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.container import Container
 from dnd_simulator.core.items import Item, ItemType
 from dnd_simulator.core.models import Event, EventType
@@ -77,6 +78,7 @@ def _ctx(entities: dict[str, Entity], *, is_combat: bool = False) -> ActionConte
     return ActionContext(
         is_combat=is_combat,
         current_turn_entity_id="player_1",
+        combat_state=CombatState(location_id=CAVE, turn_order=["player_1"]) if is_combat else None,
         get_entity=lambda eid: entities.get(eid),
     )
 

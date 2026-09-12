@@ -90,8 +90,13 @@ class AwarenessBuilder:
     def build_awareness(
         self, creature: Creature, time: GameDateTime, query_fn: QueryFn
     ) -> PeacefulAwareness | CombatAwareness:
-        """Build awareness for a creature — dispatches by combat state."""
-        if creature.in_combat:
+        """Build awareness for a creature — dispatches by authoritative combat membership.
+
+        Uses ``CombatManager.get_active_combat_for``, not ``Creature.in_combat``:
+        a stale/false ``in_combat`` flag must not hide combat mode from a real
+        combat participant (or vice versa).
+        """
+        if self._combat.get_active_combat_for(creature.id) is not None:
             return self.build_combat_awareness(creature, query_fn)
         return self.build_peaceful_awareness(creature, time, query_fn)
 

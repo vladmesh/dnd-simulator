@@ -63,11 +63,13 @@ def _make_round_with_creature(creature: Creature) -> Round:
     entities.get_entity.return_value = creature
     entities.get_active_creatures.return_value = [creature]
     entities.get_combat_locations.return_value = ["arena"]
-    entities.get_combat.return_value = CombatState(
+    combat_state = CombatState(
         location_id="arena",
         turn_order=[creature.id],
         battle_map=BattleMap(width=60, height=60, positions={creature.id: Position(10, 10)}),
     )
+    entities.get_combat.return_value = combat_state
+    entities.get_active_combat_for.return_value = combat_state
     entities.build_awareness.return_value = CombatAwareness(
         self_hp=creature.current_hp,
         self_max_hp=creature.max_hp,

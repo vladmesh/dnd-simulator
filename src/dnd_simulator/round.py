@@ -132,14 +132,20 @@ class Round:
         query_fn: QueryFn,
         emit_fn: EmitFn,
     ) -> list[Action]:
-        """Dispatch to combat or peaceful turn based on creature state."""
+        """Dispatch to combat or peaceful turn based on authoritative combat membership.
+
+        Uses ``CreatureHost.get_active_combat_for``, not ``Creature.in_combat`` —
+        a stale flag must not route an active combat participant into the
+        peaceful turn loop (or vice versa).
+        """
+        in_combat = self._host.get_active_combat_for(creature.id) is not None
         with structlog.contextvars.bound_contextvars(
             entity_id=creature.id,
             entity_name=creature.name,
-            phase="combat" if creature.in_combat else "peaceful",
+            phase="combat" if in_combat else "peaceful",
             location_id=creature.location_id,
         ):
-            if creature.in_combat:
+            if in_combat:
                 return self.run_combat_turn(creature, time, query_fn, emit_fn)
             return self.run_peaceful_turn(creature, time, query_fn, emit_fn)
 
@@ -196,7 +202,7 @@ class Round:
             )
             creature.is_disengaging = False
 
-        combat_state = self._host.get_combat(creature.location_id)
+        combat_state = self._host.get_active_combat_for(creature.id)
         return ActionContext(
             is_combat=True,
             current_turn_entity_id=creature.id,
@@ -398,7 +404,7 @@ class Round:
             if action.name == ActionType.SKIP:
                 continue
 
-            combat_state = self._host.get_combat(creature.location_id)
+            combat_state = self._host.get_active_combat_for(creature.id)
             ctx = ActionContext(
                 is_combat=True,
                 current_turn_entity_id=creature.id,
@@ -487,7 +493,9 @@ class Round:
             self._host.log_round_start(location_id, combat.round_number)
             for entity_id in list(combat.turn_order):
                 entity = self._host.get_entity(entity_id)
-                if isinstance(entity, Creature) and entity.is_alive and entity.active and entity.in_combat:
+                # Membership in combat.turn_order (iterated above) is itself the
+                # authoritative combat check — Creature.in_combat is not consulted.
+                if isinstance(entity, Creature) and entity.is_alive and entity.active:
                     with self._mutation_scope():
                         entity.is_dodging = False  # dodge lasts until start of next turn
                         entity.is_disengaging = False
@@ -496,9 +504,11 @@ class Round:
             with self._mutation_scope():
                 self._host.end_combat_round(location_id)
 
-        # Peaceful turns: creatures not in combat
+        # Peaceful turns: creatures not in an active combat (authoritative membership query)
         for creature in self._host.get_active_creatures():
-            if creature.in_combat or not creature.is_alive or not creature.active:
+            if not creature.is_alive or not creature.active:
+                continue
+            if self._host.get_active_combat_for(creature.id) is not None:
                 continue
             self.run_creature_turn(creature, time, query_fn, emit_fn)
 

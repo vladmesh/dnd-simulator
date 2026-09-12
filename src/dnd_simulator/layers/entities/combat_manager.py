@@ -57,6 +57,19 @@ class CombatManager:
         """Get combat state for a location, or None if no active combat."""
         return self._combats.get(location_id)
 
+    def get_active_combat_for(self, entity_id: str) -> CombatState | None:
+        """Return the active CombatState the entity is a member of, or None.
+
+        The single authoritative combat-membership query: independent of
+        ``Creature.in_combat`` (which can drift stale) and of which round branch
+        (combat/peaceful) the caller is on. Membership is defined by presence in
+        a CombatState's turn order.
+        """
+        for combat in self._combats.values():
+            if entity_id in combat.turn_order:
+                return combat
+        return None
+
     def start_combat(
         self,
         location_id: str,
