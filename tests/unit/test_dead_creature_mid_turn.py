@@ -6,6 +6,7 @@ from dnd_simulator.core.action import END_TURN, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain
 from dnd_simulator.core.character import Creature
+from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.location import Location, LocationGraph
 from dnd_simulator.core.models import GameDateTime
 from dnd_simulator.core.turn_budget import TurnBudget
@@ -89,6 +90,7 @@ class TestDeadCreatureMidTurn:
 
         world = _make_world([creature, target])
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        el._combat._combats["r1"] = CombatState(location_id="r1", turn_order=[creature.id, target.id])
         game_round = Round(world, el)
 
         query_fn = world.make_query_fn("entities")
@@ -146,6 +148,7 @@ class TestDeadCreatureMidTurn:
 
         world = _make_world([dead_creature, alive_creature])
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        el._combat._combats["r1"] = CombatState(location_id="r1", turn_order=[dead_creature.id, alive_creature.id])
         game_round = Round(world, el)
 
         # run_round checks is_alive before starting a turn — this test

@@ -177,6 +177,10 @@ class EntitiesLayer(Layer):
         """Get combat state for a location, or None if no active combat."""
         return self._combat.get_combat(location_id)
 
+    def get_active_combat_for(self, entity_id: str) -> CombatState | None:
+        """Return the active CombatState the entity is a member of, or None."""
+        return self._combat.get_active_combat_for(entity_id)
+
     def log_round_start(self, location_id: str, round_number: int) -> None:
         """Append a ROUND_START event to the location log."""
         self._location_log[location_id].append(

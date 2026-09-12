@@ -121,6 +121,31 @@ class Round:
         with self._action_scope(), self._mutation_scope():
             return self._dispatcher.dispatch(creature, action, ctx, emit_fn)
 
+    def _build_action_context(
+        self,
+        creature: Creature,
+        turn_budget: TurnBudget | None = None,
+    ) -> ActionContext:
+        """Single ActionContext factory for every production dispatch route.
+
+        Combat turns (``_prepare_combat_turn``), peaceful turns (``run_peaceful_turn``),
+        and reactions (``check_reactions``) all build their ``ActionContext`` here — there
+        is exactly one place that decides ``combat_state``, and it always comes from the
+        authoritative ``CreatureHost.get_active_combat_for(creature.id)`` query, never from
+        which branch the caller is on. ``is_combat`` is derived from that same result for
+        logging/legacy readers; it carries no independent authority (see
+        ``rules.validation.check_action_mode``, which reads ``combat_state`` only).
+        """
+        combat_state = self._host.get_active_combat_for(creature.id)
+        return ActionContext(
+            is_combat=combat_state is not None,
+            current_turn_entity_id=creature.id,
+            turn_budget=turn_budget,
+            combat_state=combat_state,
+            get_entity=self._host.get_entity,
+            rng=self._rng,
+        )
+
     def get_perceived_events(self, creature: Creature) -> list[PerceivedEvent]:
         """Return perceived events for a creature (delegates to CreatureHost)."""
         return self._host.get_perceived_events(creature)
@@ -132,14 +157,20 @@ class Round:
         query_fn: QueryFn,
         emit_fn: EmitFn,
     ) -> list[Action]:
-        """Dispatch to combat or peaceful turn based on creature state."""
+        """Dispatch to combat or peaceful turn based on authoritative combat membership.
+
+        Uses ``CreatureHost.get_active_combat_for``, not ``Creature.in_combat`` —
+        a stale flag must not route an active combat participant into the
+        peaceful turn loop (or vice versa).
+        """
+        in_combat = self._host.get_active_combat_for(creature.id) is not None
         with structlog.contextvars.bound_contextvars(
             entity_id=creature.id,
             entity_name=creature.name,
-            phase="combat" if creature.in_combat else "peaceful",
+            phase="combat" if in_combat else "peaceful",
             location_id=creature.location_id,
         ):
-            if creature.in_combat:
+            if in_combat:
                 return self.run_combat_turn(creature, time, query_fn, emit_fn)
             return self.run_peaceful_turn(creature, time, query_fn, emit_fn)
 
@@ -196,15 +227,7 @@ class Round:
             )
             creature.is_disengaging = False
 
-        combat_state = self._host.get_combat(creature.location_id)
-        return ActionContext(
-            is_combat=True,
-            current_turn_entity_id=creature.id,
-            turn_budget=creature.turn_budget,
-            combat_state=combat_state,
-            get_entity=self._host.get_entity,
-            rng=self._rng,
-        )
+        return self._build_action_context(creature, turn_budget=creature.turn_budget)
 
     def _build_combat_awareness(
         self,
@@ -320,12 +343,7 @@ class Round:
             return []
 
         actions: list[Action] = []
-        ctx = ActionContext(
-            is_combat=False,
-            current_turn_entity_id=creature.id,
-            get_entity=self._host.get_entity,
-            rng=self._rng,
-        )
+        ctx = self._build_action_context(creature)
 
         while True:
             if not creature.is_alive:
@@ -398,15 +416,7 @@ class Round:
             if action.name == ActionType.SKIP:
                 continue
 
-            combat_state = self._host.get_combat(creature.location_id)
-            ctx = ActionContext(
-                is_combat=True,
-                current_turn_entity_id=creature.id,
-                turn_budget=creature.turn_budget,
-                combat_state=combat_state,
-                get_entity=self._host.get_entity,
-                rng=self._rng,
-            )
+            ctx = self._build_action_context(creature, turn_budget=creature.turn_budget)
             result = self._execute_action(creature, action, ctx, _emit)
             if result.success:
                 reactions.append(action)
@@ -487,7 +497,9 @@ class Round:
             self._host.log_round_start(location_id, combat.round_number)
             for entity_id in list(combat.turn_order):
                 entity = self._host.get_entity(entity_id)
-                if isinstance(entity, Creature) and entity.is_alive and entity.active and entity.in_combat:
+                # Membership in combat.turn_order (iterated above) is itself the
+                # authoritative combat check — Creature.in_combat is not consulted.
+                if isinstance(entity, Creature) and entity.is_alive and entity.active:
                     with self._mutation_scope():
                         entity.is_dodging = False  # dodge lasts until start of next turn
                         entity.is_disengaging = False
@@ -496,9 +508,11 @@ class Round:
             with self._mutation_scope():
                 self._host.end_combat_round(location_id)
 
-        # Peaceful turns: creatures not in combat
+        # Peaceful turns: creatures not in an active combat (authoritative membership query)
         for creature in self._host.get_active_creatures():
-            if creature.in_combat or not creature.is_alive or not creature.active:
+            if not creature.is_alive or not creature.active:
+                continue
+            if self._host.get_active_combat_for(creature.id) is not None:
                 continue
             self.run_creature_turn(creature, time, query_fn, emit_fn)
 

@@ -151,7 +151,10 @@ class ActivationManager:
             trigger_active = any(trigger.armed and trigger.active for trigger in e.triggers)
             automatic_active = trigger_active and e.gm_activation_override is not GmActivationOverride.DORMANT
             manual_active = e.gm_activation_override is GmActivationOverride.ACTIVE
-            should_activate = e.in_combat or scene_active or e.always_active or automatic_active or manual_active
+            # Authoritative combat membership, not the transitional Creature.in_combat flag —
+            # a stale flag must not dormify an actual active-CombatState participant.
+            in_combat = self._combat.get_active_combat_for(e.id) is not None
+            should_activate = in_combat or scene_active or e.always_active or automatic_active or manual_active
             e.active = should_activate
 
             # Move NPC to their scheduled location when activated

@@ -30,12 +30,22 @@ OnLeaveReachFn = Callable[["Creature", "Position", "Position", "list[Creature]"]
 
 @dataclass(frozen=True)
 class ActionContext:
-    """Context needed for action validation."""
+    """Context needed for action validation.
+
+    ``is_combat`` is caller-supplied and advisory only — it records which branch
+    (combat/peaceful turn loop) built this context, for logging and legacy call
+    sites. It is NOT authoritative: a stale or legacy caller can pass the wrong
+    value here. The one authoritative signal for "is the actor actually in
+    combat" is ``combat_state`` — callers must populate it from the single
+    combat-membership query (``CombatManager.get_active_combat_for`` /
+    ``CreatureHost.get_active_combat_for``), which only returns a ``CombatState``
+    when the actor is an actual member of it. See ``check_action_mode``.
+    """
 
     is_combat: bool
     current_turn_entity_id: str | None = None  # whose turn (None = outside round)
     turn_budget: TurnBudget | None = None
-    combat_state: CombatState | None = None  # for reach checks via BattleMap
+    combat_state: CombatState | None = None  # authoritative: actor's active combat, or None
     get_entity: EntityLookup | None = field(default=None, repr=False)  # for target validation
     on_leave_reach: OnLeaveReachFn | None = field(default=None, repr=False)  # OA callback
     rng: random.Random | None = field(default=None, repr=False)  # seeded rng for reproducible rolls
@@ -90,14 +100,21 @@ def check_required_params(actor: Creature, action: Action, ctx: ActionContext) -
 
 
 def check_action_mode(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
-    """Combat-only actions outside combat and vice versa."""
+    """Combat-only actions outside combat and vice versa.
+
+    Mode is decided by ``ctx.combat_state`` (the authoritative combat-membership
+    query result), never by ``ctx.is_combat`` — a caller can pass a stale or
+    legacy ``is_combat`` value while the actor is still an active combat member
+    (or vice versa); only ``combat_state`` reflects reality.
+    """
     d = get_action_def(action.name)
-    if ctx.is_combat and d.combat_mode == CombatMode.PEACEFUL_ONLY:
+    in_combat = ctx.combat_state is not None
+    if in_combat and d.combat_mode == CombatMode.PEACEFUL_ONLY:
         return ValidationError(
             "WRONG_MODE",
             _("'{action}' is not available in combat").format(action=action.name),
         )
-    if not ctx.is_combat and d.combat_mode == CombatMode.COMBAT_ONLY:
+    if not in_combat and d.combat_mode == CombatMode.COMBAT_ONLY:
         return ValidationError(
             "WRONG_MODE",
             _("'{action}' is not available outside combat").format(action=action.name),

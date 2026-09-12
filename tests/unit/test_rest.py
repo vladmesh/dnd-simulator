@@ -5,6 +5,7 @@ from __future__ import annotations
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.action_defs import CombatMode, get_action_def
 from dnd_simulator.core.character import Creature
+from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.rules.validation import ActionContext, validate_action
 
@@ -19,6 +20,10 @@ def _creature(
     c.resource_pools = list(pools)
     c.in_combat = in_combat
     return c
+
+
+def _active_combat(*member_ids: str) -> CombatState:
+    return CombatState(location_id="arena", turn_order=list(member_ids) or ["test"])
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +125,7 @@ class TestRestBlockedInCombat:
         """Long rest is PEACEFUL_ONLY — cannot be used in combat."""
         creature = _creature(in_combat=True)
         action = Action(name=ActionType.LONG_REST)
-        ctx = ActionContext(is_combat=True)
+        ctx = ActionContext(is_combat=True, combat_state=_active_combat("test"))
         error = validate_action(creature, action, ctx)
         assert error is not None
         assert error.code == "WRONG_MODE"
@@ -129,10 +134,70 @@ class TestRestBlockedInCombat:
         """Short rest is PEACEFUL_ONLY — cannot be used in combat."""
         creature = _creature(in_combat=True)
         action = Action(name=ActionType.SHORT_REST)
-        ctx = ActionContext(is_combat=True)
+        ctx = ActionContext(is_combat=True, combat_state=_active_combat("test"))
         error = validate_action(creature, action, ctx)
         assert error is not None
         assert error.code == "WRONG_MODE"
+
+    def test_long_rest_blocked_despite_stale_peaceful_flag(self) -> None:
+        """Regression (2026-07-15): in_combat=False + is_combat=False, but the actor
+        is still a member of the active CombatState — must still be blocked.
+        """
+        creature = _creature(in_combat=False)
+        action = Action(name=ActionType.LONG_REST)
+        ctx = ActionContext(is_combat=False, combat_state=_active_combat("test"))
+        error = validate_action(creature, action, ctx)
+        assert error is not None
+        assert error.code == "WRONG_MODE"
+
+    def test_short_rest_blocked_despite_stale_peaceful_flag(self) -> None:
+        """Regression (2026-07-15): same scenario as long rest, for short rest."""
+        creature = _creature(in_combat=False)
+        action = Action(name=ActionType.SHORT_REST)
+        ctx = ActionContext(is_combat=False, combat_state=_active_combat("test"))
+        error = validate_action(creature, action, ctx)
+        assert error is not None
+        assert error.code == "WRONG_MODE"
+
+
+# ---------------------------------------------------------------------------
+# Handler-level defense-in-depth: authoritative combat membership re-checked
+# directly against the world, independent of the dispatch context.
+# ---------------------------------------------------------------------------
+
+
+class TestRestHandlerDefenseInDepth:
+    def test_long_rest_handler_refuses_when_actor_in_active_combat(self) -> None:
+        """Regression (2026-07-15): actor is a member of an active CombatState,
+        Creature.in_combat is stale False, and the handler is invoked with a
+        false/peaceful legacy context. The handler must refuse independently —
+        no TimedIntent, no deactivation.
+        """
+        from dnd_simulator.rules.handlers.rest import handle_long_rest
+
+        creature = _creature(in_combat=False)
+        ctx = ActionContext(is_combat=False)  # stale/legacy peaceful context
+        world = _stub_world(combat=_active_combat("test"))
+
+        result = handle_long_rest(creature, Action(name=ActionType.LONG_REST), lambda *a: None, ctx, world)
+
+        assert not result.success
+        assert creature.current_intent is None
+        assert creature.active is True
+
+    def test_short_rest_handler_refuses_when_actor_in_active_combat(self) -> None:
+        """Regression (2026-07-15): same scenario as long rest, for short rest."""
+        from dnd_simulator.rules.handlers.rest import handle_short_rest
+
+        creature = _creature(in_combat=False)
+        ctx = ActionContext(is_combat=False)  # stale/legacy peaceful context
+        world = _stub_world(combat=_active_combat("test"))
+
+        result = handle_short_rest(creature, Action(name=ActionType.SHORT_REST), lambda *a: None, ctx, world)
+
+        assert not result.success
+        assert creature.current_intent is None
+        assert creature.active is True
 
 
 # ---------------------------------------------------------------------------
@@ -155,7 +220,7 @@ class TestRestActionProvider:
     def test_rest_hidden_in_combat(self) -> None:
         """Rest actions should not be offered in combat."""
         creature = _creature(in_combat=True)
-        ctx = ActionContext(is_combat=True)
+        ctx = ActionContext(is_combat=True, combat_state=_active_combat("test"))
 
         for at in (ActionType.LONG_REST, ActionType.SHORT_REST):
             error = validate_action(creature, Action(name=at), ctx)
@@ -192,10 +257,23 @@ class _StubTime:
         return self._seconds
 
 
+class _StubHost:
+    """Minimal CreatureHost stub — only get_active_combat_for is touched by rest handlers."""
+
+    def __init__(self, combat: CombatState | None) -> None:
+        self._combat = combat
+
+    def get_active_combat_for(self, entity_id: str) -> CombatState | None:
+        if self._combat is not None and entity_id in self._combat.turn_order:
+            return self._combat
+        return None
+
+
 class _StubWorld:
-    def __init__(self, time_seconds: int = 0) -> None:
+    def __init__(self, time_seconds: int = 0, combat: CombatState | None = None) -> None:
         self.time = _StubTime(time_seconds)
+        self.creature_host = _StubHost(combat)
 
 
-def _stub_world(time_seconds: int = 0) -> object:
-    return _StubWorld(time_seconds)
+def _stub_world(time_seconds: int = 0, combat: CombatState | None = None) -> object:
+    return _StubWorld(time_seconds, combat)

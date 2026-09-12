@@ -16,6 +16,7 @@ from dnd_simulator.core.character import (
     NpcRole,
     Race,
 )
+from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.events import ActionFlavorPayload, AttackRequestedPayload, EntitySecondWindPayload
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query
@@ -399,6 +400,7 @@ class TestNpcCombatTurn:
         npc = Npc(id="n1", name="Guard", location_id="r1", role=NpcRole.GUARD, attacks=(_DAGGER,), in_combat=True)
         player = Character(id="p1", name="Hero", location_id="r1", race=Race.HUMAN)
         layer = EntitiesLayer([npc, player])
+        layer._combat._combats["r1"] = CombatState(location_id="r1", turn_order=[npc.id, player.id])
 
         mock_llm = MagicMock()
         atk_tc = ToolCall(id="tc_1", name="attack", arguments={"target_id": "p1", "description": "Бью кинжалом!"})
@@ -428,6 +430,7 @@ class TestNpcCombatTurn:
     def test_combat_turn_dodge(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="r1", role=NpcRole.GUARD, in_combat=True)
         layer = EntitiesLayer([npc])
+        layer._combat._combats["r1"] = CombatState(location_id="r1", turn_order=[npc.id])
         mock_llm = MagicMock()
         dodge_tc = ToolCall(id="tc_1", name="dodge", arguments={"description": "Прячусь за щит"})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=dodge_tc, raw_message=None)
@@ -451,6 +454,7 @@ class TestNpcCombatTurn:
     def test_combat_turn_flee(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="r1", role=NpcRole.GUARD, in_combat=True)
         layer = EntitiesLayer([npc])
+        layer._combat._combats["r1"] = CombatState(location_id="r1", turn_order=[npc.id])
         mock_llm = MagicMock()
         flee_tc = ToolCall(id="tc_1", name="flee", arguments={"description": "Бегу к двери!"})
         mock_llm.generate_with_tools.return_value = LlmResponse(text=None, tool_call=flee_tc, raw_message=None)

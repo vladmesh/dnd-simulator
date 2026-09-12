@@ -6,6 +6,7 @@ import pytest
 
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.character import Creature
+from dnd_simulator.core.combat import CombatState
 from dnd_simulator.rules.validation import (
     ActionContext,
     check_action_mode,
@@ -24,7 +25,8 @@ def _creature(*, alive: bool = True, active: bool = True) -> Creature:
     return c
 
 
-_COMBAT = ActionContext(is_combat=True, current_turn_entity_id="test")
+_ACTIVE_COMBAT = CombatState(location_id="loc", turn_order=["test"])
+_COMBAT = ActionContext(is_combat=True, current_turn_entity_id="test", combat_state=_ACTIVE_COMBAT)
 _PEACEFUL = ActionContext(is_combat=False, current_turn_entity_id="test")
 
 
@@ -152,3 +154,40 @@ class TestValidateAction:
         # Unknown actions crash — they're programming errors, not user input
         with pytest.raises(KeyError):
             validate_action(_creature(), Action(name="unknown_spell"), _COMBAT)
+
+
+# ---------------------------------------------------------------------------
+# Regression (2026-07-15): Creature.in_combat drifted stale but the actor was
+# still a member of the location's active CombatState — the peaceful branch
+# ran anyway and let a PEACEFUL_ONLY action (rest) through mid-combat.
+# check_action_mode must decide purely from ctx.combat_state, never from the
+# is_combat flag a stale/legacy dispatch context happens to carry.
+# ---------------------------------------------------------------------------
+
+
+class TestActionModeAuthoritativeCombatState:
+    def test_peaceful_only_action_rejected_despite_stale_peaceful_flag(self) -> None:
+        """IDLE (PEACEFUL_ONLY) must be rejected when the actor is an active
+        CombatState member, even though the context's is_combat is False.
+        """
+        ctx = ActionContext(is_combat=False, current_turn_entity_id="test", combat_state=_ACTIVE_COMBAT)
+        error = check_action_mode(_creature(), Action(name=ActionType.IDLE), ctx)
+        assert error is not None
+        assert error.code == "WRONG_MODE"
+
+    def test_combat_only_action_allowed_despite_stale_combat_flag_false(self) -> None:
+        """DODGE (COMBAT_ONLY) must be allowed when the actor is an active
+        CombatState member, even though the context's is_combat is False.
+        """
+        ctx = ActionContext(is_combat=False, current_turn_entity_id="test", combat_state=_ACTIVE_COMBAT)
+        error = check_action_mode(_creature(), Action(name=ActionType.DODGE), ctx)
+        assert error is None
+
+    def test_combat_only_action_rejected_despite_stale_combat_flag_true(self) -> None:
+        """DODGE (COMBAT_ONLY) must be rejected when the actor is NOT an active
+        CombatState member, even though the context's is_combat is True.
+        """
+        ctx = ActionContext(is_combat=True, current_turn_entity_id="test", combat_state=None)
+        error = check_action_mode(_creature(), Action(name=ActionType.DODGE), ctx)
+        assert error is not None
+        assert error.code == "WRONG_MODE"

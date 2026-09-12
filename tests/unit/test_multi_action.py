@@ -6,6 +6,7 @@ from dnd_simulator.core.action import END_TURN, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain
 from dnd_simulator.core.character import Creature
+from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.location import Location, LocationGraph
 from dnd_simulator.core.models import GameDateTime
 from dnd_simulator.core.turn_budget import ActionCost, TurnBudget
@@ -153,6 +154,7 @@ class TestMultiActionLoop:
 
         world = _make_world([creature])
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        el._combat._combats["r1"] = CombatState(location_id="r1", turn_order=[creature.id])
         game_round = Round(world, el)
         callback_log: list[tuple[ActionType, int, str]] = []
 
@@ -214,6 +216,7 @@ class TestMultiActionLoop:
 
         world = _make_world([creature, target])
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        el._combat._combats["r1"] = CombatState(location_id="r1", turn_order=[creature.id, target.id])
         game_round = Round(world, el)
 
         query_fn = world.make_query_fn("entities")
@@ -231,6 +234,7 @@ class TestMultiActionLoop:
 
         world = _make_world([creature])
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        el._combat._combats["r1"] = CombatState(location_id="r1", turn_order=[creature.id])
         game_round = Round(world, el)
 
         callback_log: list[tuple[str, str, int]] = []
@@ -265,6 +269,7 @@ class TestMultiActionLoop:
         creature = Creature(id="c1", name="A", location_id="r1", brain=BudgetCaptureBrain(), in_combat=True)
         world = _make_world([creature])
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        el._combat._combats["r1"] = CombatState(location_id="r1", turn_order=[creature.id])
         game_round = Round(world, el)
 
         query_fn = world.make_query_fn("entities")
@@ -315,6 +320,32 @@ class TestPeacefulTurn:
         # First idle ends the turn — second idle and end_turn never reached
         assert len(actions) == 1
         assert actions[0].name == ActionType.IDLE
+
+    def test_peaceful_turn_rejects_wait_for_stale_combat_member(self) -> None:
+        """Regression (BLOCKER-peaceful-context-unpopulated): run_peaceful_turn is the
+        supported legacy/internal dispatch path for a stale combat member
+        (in_combat=False, still in active CombatState.turn_order). Its ActionContext
+        must carry the authoritative combat_state so a non-rest PEACEFUL_ONLY action
+        (WAIT here) is rejected by check_action_mode before the handler mutates
+        anything — not just LONG_REST/SHORT_REST via their own defense-in-depth gate.
+        """
+        brain = _ScriptedBrain([Action(name=ActionType.WAIT, params={"hours": 1})])
+        creature = Creature(id="c1", name="A", location_id="r1", brain=brain, in_combat=False)
+        foe = Creature(id="foe", name="Foe", location_id="r1", in_combat=False)
+
+        world = _make_world([creature, foe])
+        el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        el._combat._combats["r1"] = CombatState(location_id="r1", turn_order=[creature.id, foe.id])
+        game_round = Round(world, el)
+
+        query_fn = world.make_query_fn("entities")
+        emit_fn = world.make_emit_fn("entities")
+        actions = game_round.run_peaceful_turn(creature, world.time, query_fn, emit_fn)
+
+        # Rejected at validation — no action recorded, no mutation reached the handler.
+        assert actions == []
+        assert creature.current_intent is None
+        assert creature.active is True
 
     def test_no_budget_in_peaceful(self) -> None:
         """Peaceful awareness has turn_budget=None."""

@@ -6,6 +6,7 @@ from dnd_simulator.core.action import END_TURN, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain, PlayerBrain
 from dnd_simulator.core.character import Creature
+from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
 from dnd_simulator.core.location import Location, LocationEdge, LocationGraph
 from dnd_simulator.core.models import GameDateTime, TimeDelta
@@ -233,11 +234,44 @@ class TestProximityActivation:
         fighter = Creature(id="orc", name="Orc", location_id="r2", in_combat=True, brain=_EndTurnBrain())
         world = _make_world([player, fighter])
         entities_layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        entities_layer._combat._combats["r2"] = CombatState(location_id="r2", turn_order=[fighter.id])
 
         game_round = Round(world, entities_layer)
         game_round.run_round()
 
         assert fighter.active is True
+
+    def test_combat_member_stays_active_and_gets_combat_turn_despite_stale_flag(self) -> None:
+        """Regression (BLOCKER-combat-member-dormified): active non-anchor combatants
+        with a stale Creature.in_combat=False must still be kept active by
+        get_active_combat_for and routed to a combat (not peaceful) turn.
+        """
+        received: list[CombatAwareness | PeacefulAwareness] = []
+
+        class RecordingBrain(Brain):
+            def choose_action(
+                self,
+                creature: Creature,
+                awareness: PeacefulAwareness | CombatAwareness,
+                events: list[PerceivedEvent],
+            ) -> Action:
+                received.append(awareness)
+                return END_TURN
+
+        actor = Creature(id="actor", name="Actor", location_id="r1", active=True, in_combat=False)
+        actor.brain = RecordingBrain()
+        foe = Creature(id="foe", name="Foe", location_id="r1", active=True, in_combat=False, brain=_EndTurnBrain())
+        world = _make_world([actor, foe])
+        entities_layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        entities_layer._combat._combats["r1"] = CombatState(location_id="r1", turn_order=[actor.id, foe.id])
+
+        game_round = Round(world, entities_layer)
+        game_round.run_round()
+
+        assert actor.active is True
+        assert foe.active is True
+        assert len(received) == 1
+        assert isinstance(received[0], CombatAwareness)
 
     def test_dead_creature_not_reactivated(self) -> None:
         """Dead creatures are not reactivated by proximity."""

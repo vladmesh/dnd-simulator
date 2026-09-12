@@ -12,6 +12,7 @@ from dnd_simulator.core.character import (
     DamageComponent,
     DamageType,
 )
+from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
 from dnd_simulator.core.location import Location, LocationEdge, LocationGraph
 from dnd_simulator.core.models import (
@@ -152,10 +153,27 @@ class TestProximityActivation:
 
     def test_combat_stays_active_without_anchor(self) -> None:
         fighter = Creature(id="fighter", name="Fighter", location_id="arena", active=False, in_combat=True)
+        layer = EntitiesLayer([fighter])
+        layer._combat._combats["arena"] = CombatState(location_id="arena", turn_order=[fighter.id])
 
-        EntitiesLayer([fighter]).update_activation(_TIME_0)
+        layer.update_activation(_TIME_0)
 
         assert fighter.active is True
+
+    def test_combat_member_stays_active_despite_stale_in_combat_false(self) -> None:
+        """Regression: activation must derive from get_active_combat_for, not the
+        transitional Creature.in_combat flag — a drifted-stale flag must not
+        dormify an actual active-CombatState participant (BLOCKER-combat-member-dormified).
+        """
+        actor = Creature(id="actor", name="Actor", location_id="arena", active=True, in_combat=False)
+        foe = Creature(id="foe", name="Foe", location_id="arena", active=True, in_combat=False)
+        layer = EntitiesLayer([actor, foe])
+        layer._combat._combats["arena"] = CombatState(location_id="arena", turn_order=[actor.id, foe.id])
+
+        layer.update_activation(_TIME_0)
+
+        assert actor.active is True
+        assert foe.active is True
 
     def test_completed_long_rest_applies_rewards_once(self) -> None:
         now = _TIME_0.to_total_seconds()

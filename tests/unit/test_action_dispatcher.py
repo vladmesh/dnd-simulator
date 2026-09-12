@@ -83,12 +83,21 @@ def _capture_emit() -> tuple[list[Event], EmitFn]:
 _WORLD = cast(World, MagicMock(spec=World))
 cast(MagicMock, _WORLD).find_layer.return_value = None
 
-_COMBAT = ActionContext(is_combat=True, current_turn_entity_id="test", get_entity=_get_entity)
+_COMBAT_STATE = CombatState(location_id="loc", turn_order=["test"])
+_COMBAT = ActionContext(
+    is_combat=True, current_turn_entity_id="test", get_entity=_get_entity, combat_state=_COMBAT_STATE
+)
 _PEACEFUL = ActionContext(is_combat=False, current_turn_entity_id="test", get_entity=_get_entity)
 
 
 def _combat_ctx(budget: TurnBudget) -> ActionContext:
-    return ActionContext(is_combat=True, current_turn_entity_id="test", turn_budget=budget, get_entity=_get_entity)
+    return ActionContext(
+        is_combat=True,
+        current_turn_entity_id="test",
+        turn_budget=budget,
+        combat_state=_COMBAT_STATE,
+        get_entity=_get_entity,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -653,7 +662,8 @@ class TestTargetValidation:
 
     def test_non_targeted_action_skips_check(self) -> None:
         actor = _creature()
-        ctx = ActionContext(is_combat=True, current_turn_entity_id="test", get_entity=_get_entity)
+        combat = CombatState(location_id="loc", turn_order=["test"])
+        ctx = ActionContext(is_combat=True, current_turn_entity_id="test", get_entity=_get_entity, combat_state=combat)
         error = validate_action(actor, Action(name=ActionType.DODGE), ctx)
         assert error is None
 

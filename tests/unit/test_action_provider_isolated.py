@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.character import Character, CharClass, Creature
+from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.items import (
     ArmorCategory,
     ArmorDef,
@@ -62,6 +63,7 @@ class TestBaseActionProvider:
             is_combat=True,
             current_turn_entity_id="c1",
             turn_budget=TurnBudget(),
+            combat_state=CombatState(location_id="arena", turn_order=["c1"]),
         )
         provider = BaseActionProvider(_ALL_BASE)
         actions = provider.get_action_types(creature, ctx)
