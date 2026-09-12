@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from dnd_simulator.adapters.api.app import app
 from dnd_simulator.adapters.api.deps import set_service
 from dnd_simulator.content_loader import parse_npc
+from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.events import WarDeclaredPayload
 from dnd_simulator.core.models import Event, EventType, GameDateTime
 from dnd_simulator.core.triggers import GmActivationOverride
@@ -114,6 +115,7 @@ def test_manual_dormant_cannot_suppress_combat_anchor_scene_or_always_active() -
         npc.gm_activation_override = GmActivationOverride.DORMANT
 
     layer = EntitiesLayer([anchor, scene_npc, combatant, permanent, dead])
+    layer._combat._combats["far_keep"] = CombatState(location_id="far_keep", turn_order=[combatant.id])
     layer.update_activation(TIME)
 
     assert anchor.active is True

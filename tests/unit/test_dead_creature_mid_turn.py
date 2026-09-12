@@ -148,6 +148,7 @@ class TestDeadCreatureMidTurn:
 
         world = _make_world([dead_creature, alive_creature])
         el = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+        el._combat._combats["r1"] = CombatState(location_id="r1", turn_order=[dead_creature.id, alive_creature.id])
         game_round = Round(world, el)
 
         # run_round checks is_alive before starting a turn — this test
