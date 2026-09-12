@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from dnd_simulator.core.inner_self import InnerSelf
+from dnd_simulator.core.inner_self import AlignmentAccumulation, InnerSelf
 
 if TYPE_CHECKING:
     from dnd_simulator.llm.client import LlmClient
@@ -23,16 +23,14 @@ The NPC's current memory is:
 New events that happened (trigger: {trigger}):
 {events}
 
-Update the memory JSON. Rules:
+Update only the free layer of this memory. Rules:
 - If trigger is "conversation_ended": merge current_conversation into journal, clear current_conversation
 - If trigger is "combat_ended": add combat outcome to journal
 - If trigger is "journal_overflow": compress journal to be shorter while keeping key facts
 - Keep journal under 300 characters
-- Do NOT modify relations, mood, goals, alignment, or thoughts
 - Return ONLY valid JSON, no explanation
 
-Return the updated inner-self object with keys: relations, mood, goals, alignment,
-journal, thoughts, current_conversation"""
+Return an object with only these keys: journal, current_conversation"""
 
 # Character limit for journal before triggering overflow compression
 JOURNAL_LIMIT = 300
@@ -74,14 +72,21 @@ class MemorySummarizer:
                 cleaned = cleaned.strip()
 
             data = json.loads(cleaned)
-            result = InnerSelf.from_dict(data)
-            result.relations = list(inner_self.relations)
-            result.mood = inner_self.mood
-            result.goals = list(inner_self.goals)
-            result.alignment = inner_self.alignment
-            result.thoughts = list(inner_self.thoughts)
-            return result
-        except (json.JSONDecodeError, KeyError, TypeError):
+            if not isinstance(data, dict):
+                raise TypeError("summarizer response must be an object")
+            return InnerSelf(
+                relations=list(inner_self.relations),
+                mood=inner_self.mood,
+                goals=list(inner_self.goals),
+                alignment=AlignmentAccumulation(
+                    law_chaos=inner_self.alignment.law_chaos,
+                    good_evil=inner_self.alignment.good_evil,
+                ),
+                journal=str(data.get("journal", "")),
+                thoughts=list(inner_self.thoughts),
+                current_conversation=str(data.get("current_conversation", "")),
+            )
+        except (json.JSONDecodeError, TypeError):
             logger.warning("summarizer_parse_failed")
             return inner_self
 

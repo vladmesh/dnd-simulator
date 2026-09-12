@@ -249,6 +249,29 @@ class TestSaveLoad:
         assert restored.inner_self.journal == "War was declared last week."
         assert restored.inner_self.current_conversation == "Player asked about iron supply."
 
+    def test_existing_persistent_creature_inner_self_persists(self) -> None:
+        creature = Creature(
+            id="named_wolf",
+            name="Named Wolf",
+            location_id="forest",
+            inner_self=InnerSelf(mood=Mood.SUSPICIOUS, journal="Saved state."),
+        )
+        state = EntitiesLayer(entities=[creature]).get_state()
+        existing = Creature(
+            id="named_wolf",
+            name="Named Wolf",
+            location_id="forest",
+            inner_self=InnerSelf(mood=Mood.HAPPY, journal="Live state."),
+        )
+        layer = EntitiesLayer(entities=[existing])
+
+        layer.load_state(state)
+
+        restored = layer.get_entity("named_wolf")
+        assert isinstance(restored, Creature)
+        assert restored is existing
+        assert restored.inner_self == creature.inner_self
+
     def test_legacy_conversation_summary_without_inner_self_is_invalid(self) -> None:
         """Layer state must carry typed inner self; v1 migration happens at envelope load."""
         layer = _make_layer()

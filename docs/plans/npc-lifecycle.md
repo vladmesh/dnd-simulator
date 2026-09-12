@@ -112,8 +112,8 @@ Connect the summarizer to actual game events. Give RuleBrain NPCs minimal dialog
 **Decisions:**
 
 - `CANNED_DIALOGUE` table keyed by `(role, activity)` in `models.py` — 5 roles x 2 activities.
-- `MOOD_DIALOGUE` table keyed by mood tag — overrides role+activity when present (angry, scared, grieving, suspicious).
-- `canned_line(role, activity, tags)` — mood override > role+activity > activity-only > "..." fallback.
+- `MOOD_DIALOGUE` table keyed by inner-self mood — overrides role+activity when present (angry, scared, grieving, suspicious).
+- `canned_line(role, activity, mood)` — mood override > role+activity > activity-only > "..." fallback.
 - `RuleBrain._peaceful_action()` queries `new_raw_events` (raw Event objects, not translated strings) for `ENTITY_SAY` from someone else. Responds with canned line via `Action(name="say")`.
 - `EntitiesLayer.get_new_raw_events()` — peeks at raw events without advancing the index (non-destructive, safe alongside `get_new_perceived_events`).
 - `content_loader.parse_npc()` loads `inner_self` from YAML (relationships, mood, goals, alignment, journal, thoughts, conversation).
@@ -121,7 +121,7 @@ Connect the summarizer to actual game events. Give RuleBrain NPCs minimal dialog
 
 **Deferred / future expansion:**
 - i18n: wrap canned lines in `_()` for translation
-- Relationship overrides: `hates:player` → hostile line, `trusts:player` → friendly line
+- Relationship overrides: a hate relation to the player → hostile line, a trust relation → friendly line
 - Multiple lines per key (random pick)
 - Sleeping NPCs: respond only if attacked/shaken, not to speech
 

@@ -5,7 +5,8 @@ from __future__ import annotations
 from copy import deepcopy
 from pathlib import Path
 
-from dnd_simulator.core.character import AbilityScores
+from dnd_simulator.core.brain import BrainType
+from dnd_simulator.core.character import AbilityScores, Creature
 from dnd_simulator.core.inner_self import (
     THOUGHT_BUFFER_CAPACITY,
     AlignmentAccumulation,
@@ -72,6 +73,47 @@ def test_player_and_temporary_spawn_do_not_carry_inner_self() -> None:
     assert temporary.inner_self is None
 
 
+def test_service_core_attachment_excludes_player_and_temporary_creatures(tmp_path: Path) -> None:
+    service = GameService(store=JsonFileStore(tmp_path / "saves"))
+    session = service.start_game("sword_vale")
+    layer = service._get_entities_layer(session)
+    player = PlayerCharacter(id="test-player", name="Hero", location_id="silverport_city_gate")
+    temporary = Creature(id="temporary", name="Temporary", location_id="silverport_city_gate", temporary=True)
+    persistent = Creature(id="persistent", name="Persistent", location_id="silverport_city_gate")
+    for entity in (player, temporary, persistent):
+        layer.add_entity(entity)
+
+    service._assign_brains(layer)
+
+    assert player.inner_self is None
+    assert temporary.inner_self is None
+    assert persistent.inner_self is not None
+
+    for entity in (player, temporary, persistent):
+        entity.inner_self = None
+        service.set_creature_brain(session.session_id, entity.id, BrainType.RULE_BASED)
+
+    assert player.inner_self is None
+    assert temporary.inner_self is None
+    assert persistent.inner_self is not None
+
+    spawned = service.spawn_creature(
+        session.session_id,
+        {
+            "id": "spawned-persistent",
+            "name": "Spawned Persistent",
+            "entity_type": "monster",
+            "start_location": "silverport_city_gate",
+            "hp": 8,
+            "ac": 12,
+            "speed": 30,
+        },
+    )
+    assert isinstance(spawned, Creature)
+    assert spawned.temporary is False
+    assert spawned.inner_self is not None
+
+
 def test_v1_save_migrates_relations_mood_and_journal_then_resaves_v2(tmp_path: Path) -> None:
     service = GameService(store=JsonFileStore(tmp_path / "saves"))
     session = service.start_game("sword_vale")
@@ -82,7 +124,17 @@ def test_v1_save_migrates_relations_mood_and_journal_then_resaves_v2(tmp_path: P
     npc_data = next(data for data in entities.values() if data["entity_type"] == "npc")
     npc_data.pop("inner_self")
     npc_data["memory"] = {
-        "tags": ["hates:orc", "fears:dragon", "happy", "scared", "in_mourning", "fleeing", "unknown"],
+        "tags": [
+            "hates:orc",
+            "hates:orc",
+            "fears:dragon",
+            "happy",
+            "happy",
+            "scared",
+            "in_mourning",
+            "fleeing",
+            "unknown",
+        ],
         "recent": "Saw danger.",
         "inner_state": "Still standing.",
         "current_conversation": "Run!",
@@ -96,6 +148,7 @@ def test_v1_save_migrates_relations_mood_and_journal_then_resaves_v2(tmp_path: P
     assert restored.inner_self.mood is Mood.SCARED
     assert restored.inner_self.relation_targets(RelationshipType.HATES) == {"orc"}
     assert restored.inner_self.relation_targets(RelationshipType.FEARS) == {"dragon"}
+    assert len(restored.inner_self.relations) == 2
     assert restored.inner_self.journal == "Saw danger.\n\nStill standing."
     assert restored.inner_self.current_conversation == "Run!"
 

@@ -567,6 +567,10 @@ class EntitiesLayer(Layer):
                     )
                 elif isinstance(entity, Creature):
                     entity.current_hp = int(edata.get("current_hp", entity.current_hp))
+                    inner_self_data = edata.get("inner_self")
+                    entity.inner_self = (
+                        InnerSelf.from_dict(inner_self_data) if isinstance(inner_self_data, dict) else None
+                    )
                 elif isinstance(entity, Container):
                     entity.gold = int(edata.get("gold", entity.gold))
                     entity.is_open = bool(edata.get("is_open", entity.is_open))

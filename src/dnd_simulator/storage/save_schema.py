@@ -63,7 +63,7 @@ class SaveGame(BaseModel):
 
 _LEGACY_RELATIONS = {"loves", "hates", "trusts", "fears", "loyal_to"}
 _LEGACY_MOODS = {"angry", "tired", "happy", "scared", "grieving", "suspicious", "alerted"}
-_LEGACY_TAGS_KEY = "ta" + "gs"
+_LEGACY_TAGS_KEY = "tags"
 # First matching mood in this order wins.  It favors immediate danger over the
 # more ambient emotions that could coexist in a flat legacy list.
 _LEGACY_MOOD_PRIORITY = ("scared", "alerted", "angry", "grieving", "suspicious", "tired", "happy")
@@ -90,6 +90,7 @@ def migrate_v1_save(data: object) -> object:
         raw_entries = legacy_memory.get(_LEGACY_TAGS_KEY, [])
         entries = raw_entries if isinstance(raw_entries, list) else []
         relations: list[dict[str, object]] = []
+        relation_keys: set[tuple[str, str]] = set()
         moods: set[str] = set()
         for raw_tag in entries:
             if not isinstance(raw_tag, str):
@@ -98,6 +99,11 @@ def migrate_v1_save(data: object) -> object:
             if ":" in raw_tag:
                 relation_type, target_id = raw_tag.split(":", 1)
                 if relation_type in _LEGACY_RELATIONS and target_id:
+                    relation_key = (relation_type, target_id)
+                    if relation_key in relation_keys:
+                        logger.warning("legacy_inner_self_tag_dropped", entity_id=entity_id, tag=raw_tag)
+                        continue
+                    relation_keys.add(relation_key)
                     relations.append({"type": relation_type, "target_id": target_id})
                     continue
             if raw_tag in _LEGACY_MOODS:

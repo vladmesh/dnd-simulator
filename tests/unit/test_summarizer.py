@@ -5,7 +5,15 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock
 
-from dnd_simulator.core.inner_self import InnerSelf, Mood, Relationship, RelationshipType
+from dnd_simulator.core.inner_self import (
+    AlignmentAccumulation,
+    FreeformGoal,
+    GoalStatus,
+    InnerSelf,
+    Mood,
+    Relationship,
+    RelationshipType,
+)
 from dnd_simulator.llm.summarizer import JOURNAL_LIMIT, MemorySummarizer
 
 
@@ -59,6 +67,46 @@ class TestMemorySummarizer:
         )
         result = MemorySummarizer(llm).summarize(inner_self, ["Wolf attacks."], "combat_ended")
         assert result.journal == "Fought a wolf."
+
+    def test_noncompliant_typed_payload_still_updates_journal_without_aliasing_core(self) -> None:
+        inner_self = InnerSelf(
+            relations=[Relationship("orc", RelationshipType.HATES)],
+            mood=Mood.ANGRY,
+            goals=[FreeformGoal("Guard the bridge", GoalStatus.ACTIVE)],
+            alignment=AlignmentAccumulation(law_chaos=12, good_evil=-8),
+            journal="Before the fight.",
+            thoughts=["Stay watchful."],
+            current_conversation="Old conversation.",
+        )
+        llm = _mock_llm(
+            {
+                "mood": "vengeful",
+                "relations": [{"type": "hates", "target_id": "orc", "intensity": 0}],
+                "journal": "The orcs attacked the bridge.",
+                "current_conversation": None,
+            }
+        )
+
+        result = MemorySummarizer(llm).summarize(inner_self, ["Orcs attack."], "combat_ended")
+
+        assert result.journal == "The orcs attacked the bridge."
+        assert result.current_conversation == "None"
+        assert result.relations == inner_self.relations
+        assert result.mood is inner_self.mood
+        assert result.goals == inner_self.goals
+        assert result.alignment == inner_self.alignment
+        assert result.thoughts == inner_self.thoughts
+        assert result.relations is not inner_self.relations
+        assert result.goals is not inner_self.goals
+        assert result.alignment is not inner_self.alignment
+        assert result.thoughts is not inner_self.thoughts
+
+    def test_json_value_other_than_object_returns_original(self) -> None:
+        inner_self = InnerSelf(journal="Old stuff.")
+        llm = MagicMock()
+        llm.generate.return_value = "[]"
+
+        assert MemorySummarizer(llm).summarize(inner_self, ["Event."], "combat_ended") is inner_self
 
     def test_needs_compression(self) -> None:
         summarizer = MemorySummarizer(MagicMock())
