@@ -47,6 +47,10 @@ Then use the Read tool on the log file to inspect any section. If nothing change
 
 `.githooks/pre-push` classifies the files being pushed via `scripts/classify-scope.sh` (the same classifier CI's `detect-changes` job uses) and runs only the relevant half: frontend-only changes run `make check-frontend`, backend-only run `make check-backend`, docs-only run nothing, anything mixed or touching infra (Makefile, scripts/, .github/, orca.yaml, docker*, ...) runs the full `make check`. Any classification error or empty input also falls back to the full `make check`. After pulling changes to the hook scripts, re-run `make setup-hooks` to pick them up.
 
+## Process
+
+Sprints run on the secretary board, not in this repo: see [docs/SPRINT_PIPELINE.md](docs/SPRINT_PIPELINE.md) and [docs/STATUS.md](docs/STATUS.md) for the read-only pointers. Past sprint docs (001-024) and E2E reports live in the secretary instance knowledge under `projects/dnd-simulator/`. Commit messages carry no AI co-authorship trailers.
+
 ## Product Vision
 
 See [docs/VISION.md](docs/VISION.md) for product vision and [docs/ROADMAP.md](docs/ROADMAP.md) for current status and plans.
