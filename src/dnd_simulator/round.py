@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.action import Action, ActionType
+from dnd_simulator.core.action_defs import CombatMode, get_action_def
 from dnd_simulator.core.awareness import (
     CombatAwareness,
     PeacefulAwareness,
@@ -304,9 +305,7 @@ class Round:
 
             result = self._execute_action(creature, action, ctx, emit_fn)
 
-            if result.success:
-                consecutive_failures = 0
-            else:
+            if not result.success:
                 consecutive_failures += 1
                 logger.info("action_failed", action=action.name.value, error=result.error)
                 if self._on_action:
@@ -316,10 +315,28 @@ class Round:
                     break
                 continue
 
+            consecutive_failures = 0
             actions.append(action)
 
             if self._on_action:
                 self._on_action(creature, action, creature.turn_budget, result.error)
+
+            # Re-derive the authoritative combat context: the action just executed
+            # (e.g. flee) may have changed the actor's combat membership, and a
+            # later availability check or dispatch in this same loop must see the
+            # post-action state, not the snapshot taken before the mutation.
+            ctx = self._build_action_context(creature, turn_budget=creature.turn_budget)
+            if ctx.combat_state is not None:
+                on_leave_reach = self._make_on_leave_reach(ctx.combat_state, time, query_fn, emit_fn)
+                ctx = replace(ctx, on_leave_reach=on_leave_reach)
+
+            # A peaceful-only action (e.g. travel) that ends a peaceful turn must
+            # stop the loop here once dispatched — the actor is no longer a combat
+            # participant and must not be prompted again this turn. Checked against
+            # the action's own declared mode, not the refreshed combat_state above,
+            # so a combat-only action that happens to end combat (flee) is unaffected.
+            if get_action_def(action.name).combat_mode == CombatMode.PEACEFUL_ONLY and ends_peaceful_turn(action):
+                break
 
             if creature.turn_budget.turn_over:
                 break
