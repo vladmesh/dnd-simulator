@@ -89,9 +89,7 @@ class EventLog:
 
     def _buffer_perceived_event(self, event: Event, location_id: str) -> None:
         """Fan one logged event into active core-bearer buffers at its location."""
-        payload = event.payload
-        actor_id = getattr(payload, "entity_id", None) or getattr(payload, "attacker_id", None)
-        target_id = getattr(payload, "target_id", None)
+        actor_id, target_id = _event_actor_target_ids(event)
         for entity in self._entities.values():
             if (
                 not isinstance(entity, Creature)
@@ -134,8 +132,7 @@ class EventLog:
             if event.observer_ids is not None and creature.id not in event.observer_ids:
                 continue
             payload = event.payload
-            actor_id = getattr(payload, "entity_id", None) or getattr(payload, "attacker_id", None)
-            target_id = getattr(payload, "target_id", None)
+            actor_id, target_id = _event_actor_target_ids(event)
             actor = get_entity(actor_id) if isinstance(actor_id, str) else None
             result.append(
                 PerceivedEvent(
@@ -148,3 +145,21 @@ class EventLog:
                 )
             )
         return result
+
+
+def _event_actor_target_ids(event: Event) -> tuple[str | None, str | None]:
+    """Normalize event participants for perception and rule digestion."""
+    payload = event.payload
+    if event.event_type is EventType.ENTITY_DIED:
+        killer_id = getattr(payload, "killer_id", None)
+        entity_id = getattr(payload, "entity_id", None)
+        return (
+            killer_id if isinstance(killer_id, str) else None,
+            entity_id if isinstance(entity_id, str) else None,
+        )
+    actor_id = getattr(payload, "entity_id", None) or getattr(payload, "attacker_id", None)
+    target_id = getattr(payload, "target_id", None)
+    return (
+        actor_id if isinstance(actor_id, str) else None,
+        target_id if isinstance(target_id, str) else None,
+    )

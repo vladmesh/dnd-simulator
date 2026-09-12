@@ -99,7 +99,8 @@ Connect the summarizer to actual game events. Give RuleBrain NPCs minimal dialog
 - `EntitiesLayer` gets optional `summarizer: MemorySummarizer | None`, injected at construction. `None` = skip summarization.
 - Active core-bearers now retain a structured, saveable perception buffer without changing their brain log cursor. One digest entry point is called at combat end, active → dormant, intent completion/interruption, and buffer capacity.
 - Combat consumes buffers for the recorded combat participants; it no longer rebuilds events by scanning `_location_log` from `COMBAT_STARTED`.
-- The current digest body remains NPC journal summarization, then calls `needs_compression()` for `journal_overflow`; non-NPC core-bearers consume the buffer as a no-op pending the rules digest.
+- Every core-bearer first receives the pure rules digest, including RuleBrain and LlmBrain: attacks on the bearer create or strengthen `hates` and set `angry`; allied deaths set `grieving`; deaths resolve active `kill`/`protect` goals; the bearer's attack on an ally accumulates chaos/evil evidence. Grieving wins over angry. The rules use only core relationships, active protect targets, and optional caller-supplied ally IDs; they do not change combat sides or effective faction relation.
+- The NPC journal summarizer runs after the rule delta and may still call `needs_compression()` for `journal_overflow`. A summarizer failure leaves the already-applied rules delta intact. Alignment evidence is stored only; threshold shift and hysteresis remain deferred.
 - A failed summarizer call logs `inner_self_digest_failed` after clearing the buffer, so it cannot retry stale events indefinitely.
 - `conversation_ended` trigger: deferred (needs conversation detection — manual command or timeout).
 - Both `cli.py` (GameService) and `cli_loop.py` inject summarizer when LLM is configured.
