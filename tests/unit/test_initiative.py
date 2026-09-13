@@ -119,7 +119,10 @@ class TestCombatState:
 class TestEntitiesLayerCombat:
     def _make_layer(self) -> tuple[EntitiesLayer, Creature, Creature, Creature]:
         c1 = Character(id="c1", name="Fighter", location_id="r1", max_hp=20, current_hp=20, ac=15, attacks=(_SWORD,))
-        c2 = Character(id="c2", name="Rogue", location_id="r1", max_hp=15, current_hp=15, ac=12, attacks=(_SWORD,))
+        # The triggering attack is resolved after combat starts. Keep its target
+        # alive even on a critical hit so these tests assert combat creation, not
+        # a random immediate death/removal from turn order.
+        c2 = Character(id="c2", name="Rogue", location_id="r1", max_hp=100, current_hp=100, ac=12, attacks=(_SWORD,))
         c3 = Character(id="c3", name="Bystander", location_id="r1", max_hp=10, current_hp=10)
         layer = EntitiesLayer([c1, c2, c3])
         return layer, c1, c2, c3

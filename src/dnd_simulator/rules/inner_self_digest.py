@@ -142,7 +142,11 @@ def derive_delta(core: InnerSelf, events: list[BufferedPerceivedEvent], context:
 
 
 def apply_delta(core: InnerSelf, delta: InnerSelfDigestDelta) -> InnerSelf:
-    """Return a new inner self with *delta* applied, without mutating *core*."""
+    """Return a rules-only core with *delta* applied, without mutating *core*.
+
+    The returned free layer is intentionally empty; the entities digest entry
+    point restores journal, thoughts, and current conversation from *core*.
+    """
     relationship_updates = {(relation.target_id, relation.type): relation for relation in delta.relationship_updates}
     relations = [relationship_updates.pop((relation.target_id, relation.type), relation) for relation in core.relations]
     relations.extend(relationship_updates.values())

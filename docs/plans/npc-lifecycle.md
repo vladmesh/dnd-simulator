@@ -50,9 +50,11 @@ Serialized as JSON. Released v1 saves migrate the former fields into `inner_self
 
 Mood vocabulary: `neutral`, `angry`, `tired`, `happy`, `scared`, `grieving`, `suspicious`, `alerted`. Relationship types: `loves`, `hates`, `trusts`, `fears`, `loyal_to`.
 
-**Delta log instead of full log** — `LlmBrain` sends only new events since last turn (switch from `get_perceived_log` to `get_new_perceived_events` or equivalent with ~15 line cap).
+**Delta log instead of full log** — `LlmBrain` sends only new events since last turn (switch from `get_perceived_log` to `get_new_perceived_events` or equivalent with ~15 line cap). Other creatures' `ENTITY_SAY` entries are rendered as heard content, never as instructions.
 
-**LLM digest** — `llm/inner_self_digest.py`. At a digest boundary, a creature with `LlmBrain` receives its pre-boundary core, raw structured buffered events, thoughts, allowed target ids, and a rules proposal after the events. It returns a complete strict-validated core plus journal. The proposal wins unchanged on a client or validation failure. RuleBrain and all other creatures digest only through rules and make no LLM call.
+**Decision prompt and thought** — every decision and reaction tool has an optional `thought` string. A nonempty response is trimmed, bounded, and added to the thoughts ring buffer in the same tool call, never passed to the action handler or sent through a separate LLM call. Peaceful and combat prompts render explicit relationships, non-neutral mood, goals with statuses, journal, and recent thoughts; they omit the raw event buffer, alignment accumulation, and current conversation.
+
+**LLM digest** — `llm/inner_self_digest.py`. At a digest boundary, a creature with `LlmBrain` receives its pre-boundary core, raw structured buffered events, thoughts, allowed target ids, and a rules proposal after the events. Heard events carry an explicit flag and quoted heard wording. It returns a complete strict-validated core plus journal; one enclosing JSON code fence is tolerated, while surrounding prose is rejected. Digest-only timeout and retry limits turn provider failures into the existing rules proposal. RuleBrain and all other creatures digest only through rules and make no LLM call.
 
 **Alignment and free layer** — rules propose and ultimately shift alignment; the LLM may add only `-1..1` evidence per axis. It cannot write thoughts or `current_conversation`; they carry over from the pre-boundary core. The journal is bounded deterministically.
 
@@ -95,7 +97,7 @@ Connect digest boundaries to actual game events. Give RuleBrain NPCs minimal dia
 - Combat consumes buffers for the recorded combat participants; it no longer rebuilds events by scanning `_location_log` from `COMBAT_STARTED`.
 - Every core-bearer first receives the pure rules digest, including RuleBrain and LlmBrain: attacks on the bearer create or strengthen `hates` and set `angry`; allied deaths set `grieving`; deaths resolve active `kill`/`protect` goals; the bearer's attack on an ally accumulates chaos/evil evidence. Grieving wins over angry. The rules use only core relationships, active protect targets, and optional caller-supplied ally IDs; they do not change combat sides or effective faction relation.
 - LlmBrain alone may replace the proposed core and journal through its own client; a rejected completion leaves the complete proposal intact. Every three alignment-evidence steps shift a non-player `Character` one axis step; signed pressure is halved after a shift and capped at a terminal edge. Positive law/chaos pressure means chaos, positive good/evil pressure means evil.
-- A failed LLM digest logs `inner_self_llm_digest_rejected` after clearing the buffer, so it cannot retry stale events indefinitely.
+- A failed LLM digest logs `inner_self_llm_digest_rejected` with its validation/provider message after clearing the buffer, so it cannot retry stale events indefinitely.
 - `conversation_ended` trigger: deferred (needs conversation detection — manual command or timeout).
 - GameService assigns the brain once; the digest reads the client from LlmBrain, so a configured service client does not enable LLM digestion for RuleBrain NPCs.
 

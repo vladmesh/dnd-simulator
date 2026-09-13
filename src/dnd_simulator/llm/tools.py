@@ -13,6 +13,11 @@ from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.action_defs import ActionDef, get_action_def
 from dnd_simulator.core.reactions import ReactionOption
 
+_THOUGHT_PROPERTY = {
+    "type": "string",
+    "description": "A short private inner thought, not speech. Do not include it in action parameters.",
+}
+
 # ---------------------------------------------------------------------------
 # Schema builder
 # ---------------------------------------------------------------------------
@@ -26,6 +31,10 @@ def _build_schema(d: ActionDef) -> dict[str, Any]:
         properties[p.name] = {"type": p.param_type, "description": p.description}
         if p.required:
             required.append(p.name)
+
+    if "thought" in properties:
+        raise ValueError(f"action parameter conflicts with reserved LLM field: {d.action_type.value}.thought")
+    properties["thought"] = dict(_THOUGHT_PROPERTY)
 
     desc = d.llm_hint or d.description
     schema: dict[str, Any] = {
@@ -64,6 +73,9 @@ def get_reaction_tools(options: list[ReactionOption]) -> list[dict[str, Any]]:
         for key, value in opt.params.items():
             properties[key] = {"type": "string", "description": f"Value: {value}"}
             required.append(key)
+        if "thought" in properties:
+            raise ValueError(f"reaction parameter conflicts with reserved LLM field: {opt.action_type.value}.thought")
+        properties["thought"] = dict(_THOUGHT_PROPERTY)
 
         schema: dict[str, Any] = {
             "type": "function",
