@@ -69,8 +69,10 @@ class ScenarioTestTransport:
     def __init__(self, client: TestClient) -> None:
         self.client = client
         self.snapshot_sessions: list[str] = []
+        self.requests: list[tuple[str, str, object | None]] = []
 
     def request(self, method: str, path: str, body: object | None = None) -> dict[str, object]:
+        self.requests.append((method, path, body))
         response = self.client.request(method.upper(), path, json=body)
         if not response.is_success:
             raise RuntimeError(f"{method} {path}: HTTP {response.status_code}: {response.json()}")
@@ -99,6 +101,7 @@ def fake_model_server(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterat
     monkeypatch.setattr(app_module, "LlmClient", FakeLlmClient)
     with TestClient(app_module.app) as client:
         yield client, log_dir
+    FakeLlmClient.raise_decision = False
 
 
 @pytest.mark.parametrize("raises_decision", [False, True])
@@ -116,6 +119,11 @@ def test_real_driver_completes_and_cleans_up_with_fake_model(
     assert result.exit_code == 0
     assert result.completed is True
     assert transport.snapshot_sessions == [result.session_id, result.session_id, result.session_id]
+    activation_requests = [
+        body for method, path, body in transport.requests if method == "put" and path.endswith("/live_npc/activation")
+    ]
+    assert activation_requests == [{"override": "automatic"}]
+    assert all(body != {"override": "dormant"} for _, _, body in transport.requests)
     assert result.metrics["fallback_digests"] >= 1
     records = [
         json.loads(line) for line in (log_dir / f"session_{result.session_id}" / "full.jsonl").read_text().splitlines()
@@ -127,7 +135,8 @@ def test_real_driver_completes_and_cleans_up_with_fake_model(
         for record in records
     )
     assert any("After combat" in line for line in output)
-    assert any("After anchor leaves" in line for line in output)
+    assert any("After anchor departure" in line for line in output)
+    assert any("HTTP/WebSocket receive 60s" in line for line in output)
     assert any(line == "WARN: LLM digest accepted" for line in output)
     with pytest.raises(ValueError, match="not found"):
         get_service().get_session(result.session_id)

@@ -4,7 +4,9 @@
 Export OPENROUTER_API_KEY and LLM_MODEL in both the server and this shell.
 Start the server with LOG_LEVEL=DEBUG LOG_DIR=./logs, export
 DND_LIVE_LOG=./logs (the log directory), then run ``make live-inner-self``.
-The script never prints the API key and never starts a server.
+The script never prints the API key and never starts a server. It exits 0 when
+the scenario completes, 1 when it does not, and 2 when it is skipped as not
+runnable. WARN lines can appear with exit 0; read the report checks as well.
 """
 
 from __future__ import annotations
@@ -23,10 +25,15 @@ import requests
 import websocket  # type: ignore[import-untyped]
 
 from dnd_simulator.live_inner_self_report import classify_report, parse_session_jsonl
+from dnd_simulator.llm.inner_self_digest import LLM_DIGEST_TIMEOUT_SECONDS
 
 BASE = "http://localhost:8001"
 WS_BASE = "ws://localhost:8001"
-DRIVE_DEADLINE_SECONDS = 90.0
+# A GM request can wait for a 20-second LLM digest while the session gate is
+# held. Leave another 40 seconds for that gate wait rather than timing out
+# before the server completes the work the scenario asked it to do.
+CLIENT_WAIT_TIMEOUT_SECONDS = LLM_DIGEST_TIMEOUT_SECONDS + 40.0
+DRIVE_DEADLINE_SECONDS = CLIENT_WAIT_TIMEOUT_SECONDS * 3
 
 
 class WebSocketConnection(Protocol):
@@ -65,7 +72,7 @@ class HttpTransport:
         self._ws_base_url = ws_base_url.rstrip("/")
 
     def request(self, method: str, path: str, body: object | None = None) -> dict[str, object]:
-        response = requests.request(method, f"{self._base_url}{path}", json=body, timeout=20)
+        response = requests.request(method, f"{self._base_url}{path}", json=body, timeout=CLIENT_WAIT_TIMEOUT_SECONDS)
         try:
             data = response.json()
         except ValueError:
@@ -77,7 +84,9 @@ class HttpTransport:
         return data
 
     def connect(self, session_id: str, player_id: str) -> WebSocketConnection:
-        return websocket.create_connection(f"{self._ws_base_url}/api/ws/{session_id}?player_id={player_id}", timeout=10)
+        return websocket.create_connection(
+            f"{self._ws_base_url}/api/ws/{session_id}?player_id={player_id}", timeout=CLIENT_WAIT_TIMEOUT_SECONDS
+        )
 
 
 def section(title: str, output: Callable[[str], None] = print) -> None:
@@ -172,6 +181,13 @@ def run_scenario(
     output: Callable[[str], None] = print,
 ) -> ScenarioResult:
     """Run the REST/WebSocket scenario and always produce a result plus cleanup."""
+    section("Live inner-self scenario", output)
+    output(
+        "Timing: "
+        f"server digest {LLM_DIGEST_TIMEOUT_SECONDS:.0f}s; "
+        f"HTTP/WebSocket receive {CLIENT_WAIT_TIMEOUT_SECONDS:.0f}s; "
+        f"scenario deadline {deadline_seconds:.0f}s."
+    )
     session = transport.request("post", "/api/master/sessions", {"world_name": "sword_vale", "lang": "en"})
     session_id = str(session["session_id"])
     result = ScenarioResult(session_id=session_id)
@@ -226,9 +242,9 @@ def run_scenario(
                 "patch", f"/api/master/sessions/{session_id}/creatures/{player_id}", {"location_id": "silverport_city"}
             )
             transport.request(
-                "put", f"/api/master/sessions/{session_id}/creatures/live_npc/activation", {"override": "dormant"}
+                "put", f"/api/master/sessions/{session_id}/creatures/live_npc/activation", {"override": "automatic"}
             )
-            result.after_anchor = _snapshot(transport, session_id, "After anchor leaves / dormancy boundary", output)
+            result.after_anchor = _snapshot(transport, session_id, "After anchor departure / dormancy boundary", output)
             result.completed = True
         finally:
             ws.close()
@@ -236,7 +252,7 @@ def run_scenario(
         result.warnings.append(str(error) or type(error).__name__)
         partial_snapshots = (
             ("After combat (partial)", "after_combat"),
-            ("After anchor leaves (partial)", "after_anchor"),
+            ("After anchor departure (partial)", "after_anchor"),
         )
         for label, attr in partial_snapshots:
             if getattr(result, attr):

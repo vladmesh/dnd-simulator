@@ -184,7 +184,8 @@ Kill reputation drop (`rules/reputation.py`): omniscient, delta scaled by victim
   `DND_LIVE_LOG` is the server `LOG_DIR` directory, not a glob or an individual mirrored log file. The scenario creates
   and deletes its own session, keeps its player WebSocket open through the final snapshot, and prints core snapshots
   before combat, after combat and after the anchor departure boundary. It exits 2 with `SKIPPED / NOT RUNNABLE` if the
-  credentials or server are absent.
+  credentials or server are absent; it exits 1 if the scenario does not complete and 0 if it completes. `WARN` lines
+  can still appear with exit 0, so read the report checks as well.
 
   `PASS` confirms a measured prerequisite, such as a completed scenario, an observed digest boundary, an accepted LLM
   digest, or a retry that actually occurred. `INFO` describes non-failing model behaviour: a rules fallback, no thought,
