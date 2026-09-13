@@ -6,6 +6,8 @@ import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import structlog
+
 from dnd_simulator.core.inner_self import (
     RELATIONSHIP_INTENSITY_MAX,
     RELATIONSHIP_INTENSITY_MIN,
@@ -29,6 +31,7 @@ if TYPE_CHECKING:
 JOURNAL_LIMIT = 300
 LLM_DIGEST_TIMEOUT_SECONDS = 20.0
 LLM_DIGEST_MAX_RETRIES = 0
+logger = structlog.get_logger(domain="llm.inner_self_digest")
 
 
 class LlmDigestRejectedError(ValueError):
@@ -65,6 +68,7 @@ def digest_with_llm(
         max_retries=LLM_DIGEST_MAX_RETRIES,
     )
     parsed = _parse_response(response, allowed_target_ids, self_id)
+    logger.info("inner_self_llm_digest_accepted", response_format=_response_format(response))
     return InnerSelf(
         relations=parsed.relations,
         mood=parsed.mood,
@@ -215,6 +219,11 @@ def _remove_single_code_fence(response: str) -> str:
     if not stripped.endswith("\n```"):
         return response
     return stripped[newline + 1 : -4]
+
+
+def _response_format(response: str) -> str:
+    """Describe the accepted wire shape without retaining model output in logs."""
+    return "fenced_json" if _remove_single_code_fence(response) != response else "bare_json"
 
 
 def _parse_relation(item: object, allowed_target_ids: set[str], self_id: str) -> Relationship:

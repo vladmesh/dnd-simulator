@@ -176,4 +176,10 @@ Kill reputation drop (`rules/reputation.py`): omniscient, delta scaled by victim
 - Frontend: `make frontend` → http://localhost:5173 (entry point, proxies /api to :8001)
 - GM inner-self API: `GET /api/master/sessions/{session_id}/creatures/{entity_id}/inner-self` returns the complete
   typed core and read-only personal layer. `PUT .../inner-self/core` completely replaces only `relations`, `mood`, and
-  `goals`; its candidate is validated by the domain model and assigned once under the session world-state gate.
+  `goals`; its candidate is validated by the domain model and assigned once under the session world-state gate. Goal
+  payloads explicitly discriminate `kind: typed` and `kind: freeform`; mood, relationship type, goal type and status
+  are OpenAPI enums. Temporary creatures are not inner-self API bearers.
+- Real-model smoke: start `make serve` with `OPENROUTER_API_KEY` and `LLM_MODEL`, then run `make live-inner-self`.
+  It creates and deletes its own session, prints core snapshots before combat, after combat and after the anchor
+  boundary, and exits 2 with `SKIPPED / NOT RUNNABLE` if credentials or the server are absent. Set `DND_LIVE_LOG` to a
+  fresh server JSON log to include accepted/rejected digests, JSON/fence form and tool-call retry counts in its report.

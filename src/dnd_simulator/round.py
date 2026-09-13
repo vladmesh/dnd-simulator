@@ -294,7 +294,7 @@ class Round:
             awareness = self._build_combat_awareness(creature, ctx, time, query_fn)
             events = self._host.get_perceived_events(creature)
 
-            action = creature.brain.choose_action(creature, awareness, events)
+            action = self._choose_action(creature, awareness, events)
 
             if action.name == ActionType.END_TURN:
                 break
@@ -383,7 +383,7 @@ class Round:
                 items=[{"id": i.id, "type": i.item_type, "name": i.name} for i in awareness.available_items],
             )
 
-            action = creature.brain.choose_action(creature, awareness, events)
+            action = self._choose_action(creature, awareness, events)
 
             if action.name == ActionType.END_TURN:
                 break
@@ -428,7 +428,7 @@ class Round:
             if creature.turn_budget is None or creature.turn_budget.reaction <= 0:
                 continue
 
-            action = creature.brain.choose_reaction(creature, trigger, options)
+            action = self._choose_reaction(creature, trigger, options)
 
             if action.name == ActionType.SKIP:
                 continue
@@ -439,6 +439,36 @@ class Round:
                 reactions.append(action)
 
         return reactions
+
+    def _choose_action(
+        self,
+        creature: Creature,
+        awareness: PeacefulAwareness | CombatAwareness,
+        events: list[PerceivedEvent],
+    ) -> Action:
+        """Protect an LLM thought write without holding the gate for player input."""
+        from dnd_simulator.llm.brain import LlmBrain
+
+        assert creature.brain is not None
+        if isinstance(creature.brain, LlmBrain):
+            with self._mutation_scope():
+                return creature.brain.choose_action(creature, awareness, events)
+        return creature.brain.choose_action(creature, awareness, events)
+
+    def _choose_reaction(
+        self,
+        creature: Creature,
+        trigger: ReactionTrigger,
+        options: list[ReactionOption],
+    ) -> Action:
+        """Protect LLM thought writes while leaving PlayerBrain waits unlocked."""
+        from dnd_simulator.llm.brain import LlmBrain
+
+        assert creature.brain is not None
+        if isinstance(creature.brain, LlmBrain):
+            with self._mutation_scope():
+                return creature.brain.choose_reaction(creature, trigger, options)
+        return creature.brain.choose_reaction(creature, trigger, options)
 
     def _make_on_leave_reach(
         self,

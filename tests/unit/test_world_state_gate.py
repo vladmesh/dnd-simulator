@@ -8,9 +8,11 @@ from unittest.mock import MagicMock
 
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.character import Creature
+from dnd_simulator.core.inner_self import InnerSelf
 from dnd_simulator.core.models import ActionResult, TimeDelta
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
 from dnd_simulator.core.turn_budget import TurnBudget
+from dnd_simulator.llm.brain import LlmBrain
 from dnd_simulator.round import Round
 from dnd_simulator.rules.rule_brain import RuleBrain
 from dnd_simulator.rules.validation import ActionContext
@@ -102,7 +104,7 @@ def test_action_and_nested_reaction_use_one_reentrant_gate() -> None:
             finally:
                 depth -= 1
 
-    reactor = Creature(id="guard", name="Guard", location_id="arena")
+    reactor = Creature(id="guard", name="Guard", location_id="arena", inner_self=InnerSelf())
     reactor.brain = RuleBrain()
     reactor.turn_budget = TurnBudget(actions=1, bonus_actions=0, movement_remaining=30, reaction=1)
     host = MagicMock()
@@ -133,6 +135,43 @@ def test_action_and_nested_reaction_use_one_reentrant_gate() -> None:
     )
 
     assert observed_depths == [1, 2]
+
+
+def test_llm_reaction_thought_is_written_under_world_gate() -> None:
+    depth = 0
+    observed_depths: list[int] = []
+
+    @contextmanager
+    def mutation_scope() -> Any:
+        nonlocal depth
+        depth += 1
+        try:
+            yield
+        finally:
+            depth -= 1
+
+    llm = MagicMock()
+    response = MagicMock(is_tool_call=True)
+    response.tool_call.name = ActionType.OPPORTUNITY_ATTACK.value
+    response.tool_call.arguments = {"target_id": "mover", "thought": "Hold the line."}
+    llm.generate_with_tools.return_value = response
+    reactor = Creature(id="guard", name="Guard", location_id="arena", inner_self=InnerSelf())
+    reactor.brain = LlmBrain(llm)
+    reactor.turn_budget = TurnBudget(actions=1, bonus_actions=0, movement_remaining=30, reaction=1)
+    host = MagicMock()
+    dispatcher = MagicMock()
+    dispatcher.dispatch.side_effect = lambda *args: observed_depths.append(depth) or ActionResult()
+    game_round = Round(MagicMock(), host, dispatcher=dispatcher, mutation_scope=mutation_scope)
+
+    game_round.check_reactions(
+        ReactionTrigger(trigger_type=TriggerType.LEAVING_REACH, source_creature_id="mover"),
+        [ReactionOption(action_type=ActionType.OPPORTUNITY_ATTACK, description="OA")],
+        [reactor],
+    )
+
+    assert reactor.inner_self is not None
+    assert reactor.inner_self.thoughts == ["Hold the line."]
+    assert observed_depths == [1]
 
 
 def test_stop_round_and_concurrent_snapshot_finish_without_deadlock(tmp_path: Path) -> None:

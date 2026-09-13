@@ -124,7 +124,10 @@ class LlmBrain(Brain):
                 tc = response.tool_call
                 resolved = _action_from_tool_call(creature, tc.name, tc.arguments, _offered_action_types(tools))
                 if resolved.action is not None:
+                    logger.info("llm_tool_call_accepted", tool_name=tc.name, retries=_attempt)
                     return resolved.action
+                if resolved.reason is not None:
+                    retry_hint = _retry_hint(resolved.reason)
             # No tool call — ask LLM to retry
             messages.append({"role": "assistant", "content": response.text or ""})
             messages.append({"role": "user", "content": retry_hint})
@@ -199,6 +202,11 @@ def _rejected_tool_call(name: object, reason: str) -> ToolCallResolution:
     """Log a provider tool-call rejection and return the explicit fallback signal."""
     logger.warning("llm_tool_call_rejected", tool_name=name, reason=reason)
     return ToolCallResolution(action=None, reason=reason)
+
+
+def _retry_hint(reason: str) -> str:
+    """Give the provider a short corrective reason without exposing internals."""
+    return _("Previous tool call was rejected: {reason}. Choose one of the offered tools.").format(reason=reason)
 
 
 def _offered_action_types(tools: list[dict[str, object]]) -> set[ActionType]:
