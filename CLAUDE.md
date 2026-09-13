@@ -179,8 +179,16 @@ Kill reputation drop (`rules/reputation.py`): omniscient, delta scaled by victim
   `goals`; its candidate is validated by the domain model and assigned once under the session world-state gate. Goal
   payloads explicitly discriminate `kind: typed` and `kind: freeform`; mood, relationship type, goal type and status
   are OpenAPI enums. Temporary creatures are not inner-self API bearers.
-- Real-model smoke: start `make serve` with `OPENROUTER_API_KEY` and `LLM_MODEL`, then run `make live-inner-self`.
-  It creates and deletes its own session, prints core snapshots before combat, after combat and after moving the anchor
-  away, and exits 2 with `SKIPPED / NOT RUNNABLE` if credentials or the server are absent. Start the server with
-  `LOG_LEVEL=DEBUG LOG_DIR=./logs` and set `DND_LIVE_LOG=./logs` before the scenario to include digest acceptance or
-  rules fallback, bare/fenced JSON form, rejected tool calls and retry counts in its PASS/WARN report.
+- Real-model smoke: export `OPENROUTER_API_KEY` and `LLM_MODEL` in both the server shell and the scenario shell. Start
+  the server as `LOG_LEVEL=DEBUG LOG_DIR=./logs make serve`, then run `DND_LIVE_LOG=./logs make live-inner-self`.
+  `DND_LIVE_LOG` is the server `LOG_DIR` directory, not a glob or an individual mirrored log file. The scenario creates
+  and deletes its own session, keeps its player WebSocket open through the final snapshot, and prints core snapshots
+  before combat, after combat and after the anchor departure boundary. It exits 2 with `SKIPPED / NOT RUNNABLE` if the
+  credentials or server are absent.
+
+  `PASS` confirms a measured prerequisite, such as a completed scenario, an observed digest boundary, an accepted LLM
+  digest, or a retry that actually occurred. `INFO` describes non-failing model behaviour: a rules fallback, no thought,
+  no core/journal rewrite, or no retry can all be legitimate. `WARN` means the PO acceptance did not establish a
+  required condition: in particular, the scenario did not finish, no digest reached a boundary, or no LLM digest was
+  accepted. The report reads only the current session's `full.jsonl`, so its counts exclude mirrored streams and earlier
+  sessions.

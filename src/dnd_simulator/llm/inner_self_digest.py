@@ -68,7 +68,7 @@ def digest_with_llm(
         max_retries=LLM_DIGEST_MAX_RETRIES,
     )
     parsed = _parse_response(response, allowed_target_ids, self_id)
-    logger.info("inner_self_llm_digest_accepted", response_format=_response_format(response))
+    logger.info("inner_self_llm_digest_accepted", entity_id=self_id, response_format=_response_format(response))
     return InnerSelf(
         relations=parsed.relations,
         mood=parsed.mood,

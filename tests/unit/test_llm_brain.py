@@ -144,6 +144,33 @@ class TestLlmBrainScheduledActivity:
 
 
 class TestLlmBrainThoughts:
+    def test_provider_failure_idles_without_recording_a_thought(self) -> None:
+        npc = Npc(id="smith", name="Smith", location_id="square")
+        llm = MagicMock()
+        llm.generate_with_tools.side_effect = TimeoutError("provider timeout")
+
+        action = LlmBrain(llm).choose_action(npc, _awareness(hour=10), [])
+
+        assert action.name is ActionType.IDLE
+        assert npc.inner_self is not None
+        assert npc.inner_self.thoughts == []
+        assert llm.generate_with_tools.call_count == 1
+
+    def test_provider_failure_skips_reaction_without_recording_a_thought(self) -> None:
+        npc = Npc(id="guard", name="Guard", location_id="square")
+        llm = MagicMock()
+        llm.generate_with_tools.side_effect = TimeoutError("provider timeout")
+
+        action = LlmBrain(llm).choose_reaction(
+            npc,
+            ReactionTrigger(TriggerType.LEAVING_REACH, "thief"),
+            [ReactionOption(ActionType.OPPORTUNITY_ATTACK, "Strike", {"target_id": "thief"})],
+        )
+
+        assert action.name is ActionType.SKIP
+        assert npc.inner_self is not None
+        assert npc.inner_self.thoughts == []
+
     def test_missing_empty_and_nonstring_thoughts_are_ignored(self) -> None:
         for thought in (None, "   ", 12):
             npc = Npc(id="smith", name="Smith", location_id="square")

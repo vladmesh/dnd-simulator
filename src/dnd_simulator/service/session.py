@@ -127,12 +127,14 @@ class GameSession:
     @contextlib.contextmanager
     def read_world(self) -> Iterator[None]:
         """Hold the session gate while reading a consistent world snapshot."""
+        self._bind_session_context()
         with self._world_state_lock:
             yield
 
     @contextlib.contextmanager
     def mutate_world(self) -> Iterator[None]:
         """Hold the re-entrant session gate while mutating world state."""
+        self._bind_session_context()
         with self._world_state_lock:
             yield
 

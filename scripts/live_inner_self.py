@@ -1,29 +1,87 @@
 #!/usr/bin/env python3
 """Run the manual real-model inner-self scenario against ``make serve``.
 
-The script never starts a server. Export OPENROUTER_API_KEY and LLM_MODEL in
-the server environment, then run ``make live-inner-self`` from another shell.
-Set DND_LIVE_LOG to that server's fresh JSON log file for digest/retry counts.
+Export OPENROUTER_API_KEY and LLM_MODEL in both the server and this shell.
+Start the server with LOG_LEVEL=DEBUG LOG_DIR=./logs, export
+DND_LIVE_LOG=./logs (the log directory), then run ``make live-inner-self``.
+The script never prints the API key and never starts a server.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import threading
+import time
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Never
+from queue import Queue
+from typing import Never, Protocol
 
 import requests
 import websocket  # type: ignore[import-untyped]
 
-from dnd_simulator.live_inner_self_report import classify_report
+from dnd_simulator.live_inner_self_report import classify_report, parse_session_jsonl
 
 BASE = "http://localhost:8001"
 WS_BASE = "ws://localhost:8001"
+DRIVE_DEADLINE_SECONDS = 90.0
 
 
-def section(title: str) -> None:
-    print(f"\n{'=' * 60}\n{title}\n{'=' * 60}")
+class WebSocketConnection(Protocol):
+    def send(self, payload: str) -> object: ...
+    def recv(self) -> str: ...
+    def close(self) -> object: ...
+
+
+class Transport(Protocol):
+    def request(self, method: str, path: str, body: object | None = None) -> dict[str, object]: ...
+    def connect(self, session_id: str, player_id: str) -> WebSocketConnection: ...
+
+
+class ScenarioDeadlineError(RuntimeError):
+    """The driver used its entire wall-clock budget."""
+
+
+@dataclass
+class ScenarioResult:
+    session_id: str
+    before: dict[str, object] = field(default_factory=dict)
+    after_combat: dict[str, object] = field(default_factory=dict)
+    after_anchor: dict[str, object] = field(default_factory=dict)
+    metrics: dict[str, object] = field(default_factory=dict)
+    warnings: list[str] = field(default_factory=list)
+    completed: bool = False
+
+    @property
+    def exit_code(self) -> int:
+        return 0 if self.completed else 1
+
+
+class HttpTransport:
+    def __init__(self, base_url: str, ws_base_url: str) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._ws_base_url = ws_base_url.rstrip("/")
+
+    def request(self, method: str, path: str, body: object | None = None) -> dict[str, object]:
+        response = requests.request(method, f"{self._base_url}{path}", json=body, timeout=20)
+        try:
+            data = response.json()
+        except ValueError:
+            data = {"detail": response.text}
+        if not response.ok:
+            raise RuntimeError(f"{method} {path}: HTTP {response.status_code}: {data}")
+        if not isinstance(data, dict):
+            raise RuntimeError(f"{method} {path}: expected JSON object")
+        return data
+
+    def connect(self, session_id: str, player_id: str) -> WebSocketConnection:
+        return websocket.create_connection(f"{self._ws_base_url}/api/ws/{session_id}?player_id={player_id}", timeout=10)
+
+
+def section(title: str, output: Callable[[str], None] = print) -> None:
+    output(f"\n{'=' * 60}\n{title}\n{'=' * 60}")
 
 
 def skipped(message: str) -> Never:
@@ -31,110 +89,114 @@ def skipped(message: str) -> Never:
     raise SystemExit(2)
 
 
-def rest(method: str, path: str, body: object | None = None) -> dict[str, object]:
-    response = requests.request(method, f"{BASE}{path}", json=body, timeout=20)
+def _read_metrics(log_dir: Path | None, session_id: str) -> dict[str, object]:
+    if log_dir is None:
+        return {"available": False, "reason": "Set DND_LIVE_LOG to the server LOG_DIR directory."}
+    path = log_dir / f"session_{session_id}" / "full.jsonl"
     try:
-        data = response.json()
-    except ValueError:
-        data = {"detail": response.text}
-    if not response.ok:
-        raise RuntimeError(f"{method} {path}: HTTP {response.status_code}: {data}")
-    if not isinstance(data, dict):
-        raise RuntimeError(f"{method} {path}: expected JSON object")
-    return data
+        return parse_session_jsonl(path.read_text(encoding="utf-8").splitlines(), session_id)
+    except OSError as error:
+        return {"available": False, "reason": f"Cannot read current session full.jsonl: {error}"}
 
 
-def snapshot(sid: str, label: str) -> dict[str, object]:
-    state = rest("get", f"/api/master/sessions/{sid}/creatures/live_npc/inner-self")
-    section(label)
-    print(json.dumps(state, ensure_ascii=False, indent=2, default=str))
+def _snapshot(transport: Transport, session_id: str, label: str, output: Callable[[str], None]) -> dict[str, object]:
+    state = transport.request("get", f"/api/master/sessions/{session_id}/creatures/live_npc/inner-self")
+    section(label, output)
+    output(json.dumps(state, ensure_ascii=False, indent=2, default=str))
     return state
 
 
-def drive_player(sid: str) -> None:
-    """Attack the NPC, then leave combat; tolerate model-specific combat length."""
-    ws = websocket.create_connection(f"{WS_BASE}/api/ws/{sid}", timeout=45)
-    try:
-        ws.recv()  # initial player turn
-        for action in (
-            {"type": "action", "name": "attack", "params": {"target_id": "live_npc"}},
-            {"type": "action", "name": "flee", "params": {}},
-            {"type": "action", "name": "wait", "params": {"hours": 1}},
-        ):
-            ws.send(json.dumps(action))
-            for _ in range(12):
-                message = json.loads(ws.recv())
-                if message.get("type") == "turn":
-                    break
-    finally:
+def _recv_before_deadline(ws: WebSocketConnection, deadline: float) -> dict[str, object]:
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise ScenarioDeadlineError("scenario deadline elapsed while waiting for a WebSocket message")
+    received: Queue[object] = Queue(maxsize=1)
+
+    def receive() -> None:
+        try:
+            received.put(ws.recv())
+        except Exception as error:
+            received.put(error)
+
+    thread = threading.Thread(target=receive, daemon=True)
+    thread.start()
+    thread.join(remaining)
+    if thread.is_alive():
         ws.close()
+        raise ScenarioDeadlineError("scenario deadline elapsed while waiting for a WebSocket message")
+    raw = received.get_nowait()
+    if isinstance(raw, Exception):
+        raise raw
+    message = json.loads(raw)
+    if not isinstance(message, dict):
+        raise RuntimeError("WebSocket message was not an object")
+    return message
 
 
-def log_metrics() -> dict[str, object]:
-    log_path = os.getenv("DND_LIVE_LOG")
-    if not log_path:
-        return {"available": False, "reason": "Set DND_LIVE_LOG to the fresh server JSON log."}
-    try:
-        paths = [Path(log_path)]
-        if paths[0].is_dir():
-            paths = list(paths[0].rglob("*.jsonl"))
-        records = [json.loads(line) for path in paths for line in path.read_text().splitlines() if line.strip()]
-    except (OSError, json.JSONDecodeError) as error:
-        return {"available": False, "reason": f"Cannot read DND_LIVE_LOG: {error}"}
-    events = [record.get("event") for record in records if isinstance(record, dict)]
-    accepted = [
-        record for record in records if isinstance(record, dict) and record.get("event") == "llm_tool_call_accepted"
-    ]
+def _wait_for_turn(ws: WebSocketConnection, deadline: float) -> None:
+    while True:
+        if _recv_before_deadline(ws, deadline).get("type") == "turn":
+            return
+
+
+def _drive_player(ws: WebSocketConnection, deadline: float) -> None:
+    """Create one combat exchange while retaining the player listener."""
+    _wait_for_turn(ws, deadline)
+    for action in (
+        {"type": "action", "name": "attack", "params": {"target_id": "live_npc"}},
+        {"type": "action", "name": "flee", "params": {}},
+    ):
+        ws.send(json.dumps(action))
+        _wait_for_turn(ws, deadline)
+
+
+def _record_departure_event(ws: WebSocketConnection, deadline: float) -> None:
+    """Leave one observed event for the anchor-departure digest boundary."""
+    ws.send(json.dumps({"type": "action", "name": "say", "params": {"text": "I am leaving the tavern."}}))
+    _wait_for_turn(ws, deadline)
+
+
+def _core_payload(player_id: str) -> dict[str, object]:
     return {
-        "available": True,
-        "accepted_digests": events.count("inner_self_llm_digest_accepted"),
-        "fallback_digests": events.count("inner_self_llm_digest_rejected"),
-        "rejected_tool_calls": events.count("llm_tool_call_rejected"),
-        "accepted_tool_calls": len(accepted),
-        "retries_before_valid": [record.get("retries") for record in accepted],
-        "digest_response_formats": [
-            record.get("response_format")
-            for record in records
-            if isinstance(record, dict) and record.get("event") == "inner_self_llm_digest_accepted"
-        ],
+        "relations": [{"target_id": player_id, "type": "loyal_to", "intensity": 80}],
+        "mood": "alerted",
+        "goals": [{"kind": "typed", "type": "protect", "target_id": player_id, "status": "active"}],
     }
 
 
-def report(before: dict[str, object], after_combat: dict[str, object], after_anchor: dict[str, object]) -> None:
-    metrics = log_metrics()
-    section("Real-model assumptions")
-    print(f"LLM_MODEL={os.environ['LLM_MODEL']}")
-    print(json.dumps(metrics, ensure_ascii=False, indent=2, default=str))
-    for check in classify_report(before, after_combat, after_anchor, metrics):
-        print(f"{'PASS' if check['passed'] else 'WARN'}: {check['name']}")
-
-
-def main() -> None:
-    if not os.getenv("OPENROUTER_API_KEY") or not os.getenv("LLM_MODEL"):
-        skipped("OPENROUTER_API_KEY and LLM_MODEL must be exported for this real-model scenario.")
+def run_scenario(
+    transport: Transport,
+    *,
+    log_dir: Path | None,
+    deadline_seconds: float = DRIVE_DEADLINE_SECONDS,
+    output: Callable[[str], None] = print,
+) -> ScenarioResult:
+    """Run the REST/WebSocket scenario and always produce a result plus cleanup."""
+    session = transport.request("post", "/api/master/sessions", {"world_name": "sword_vale", "lang": "en"})
+    session_id = str(session["session_id"])
+    result = ScenarioResult(session_id=session_id)
+    deadline = time.monotonic() + deadline_seconds
     try:
-        requests.get(f"{BASE}/health", timeout=3).raise_for_status()
-    except requests.RequestException:
-        skipped("Server is not running at http://localhost:8001. Start it with make serve.")
-
-    session = rest("post", "/api/master/sessions", {"world_name": "sword_vale", "lang": "en"})
-    sid = str(session["session_id"])
-    try:
-        player = rest(
+        player = transport.request(
             "post",
-            f"/api/player/sessions/{sid}/character",
+            f"/api/player/sessions/{session_id}/character",
             {
                 "name": "Anchor",
                 "race": "human",
                 "char_class": "fighter",
+                "fighting_style": "defense",
                 "start_location": "silverport_city_tavern",
-                "ability_scores": {"str": 16, "dex": 12, "con": 14, "int": 10, "wis": 10, "cha": 10},
+                "ability_scores": {"str": 15, "dex": 12, "con": 14, "int": 13, "wis": 10, "cha": 8},
             },
         )
+        player_id = str(player["player_id"])
         location = str(player["location_id"])
-        rest(
+        # The stock Sword Vale tavern contains Marta. The scenario needs its own
+        # two-creature combat so another NPC cannot keep the scene in combat.
+        transport.request("delete", f"/api/master/sessions/{session_id}/creatures/marta")
+        transport.request(
             "post",
-            f"/api/master/sessions/{sid}/creatures",
+            f"/api/master/sessions/{session_id}/creatures",
             {
                 "id": "live_npc",
                 "name": "Live Witness",
@@ -148,36 +210,69 @@ def main() -> None:
                 "ai": "rule_based",
             },
         )
-        brain = rest("put", f"/api/master/sessions/{sid}/creatures/live_npc/brain", {"type": "llm"})
+        brain = transport.request("put", f"/api/master/sessions/{session_id}/creatures/live_npc/brain", {"type": "llm"})
         if brain.get("brain_type") != "llm":
-            skipped("Server did not configure LlmBrain; check its OPENROUTER_API_KEY and LLM_MODEL environment.")
-        rest(
-            "put",
-            f"/api/master/sessions/{sid}/creatures/live_npc/inner-self/core",
-            {
-                "relations": [{"target_id": str(player["player_id"]), "type": "loyal_to", "intensity": 80}],
-                "mood": "alerted",
-                "goals": [
-                    {"kind": "typed", "type": "protect", "target_id": str(player["player_id"]), "status": "active"}
-                ],
-            },
+            raise RuntimeError("server did not configure LlmBrain")
+        transport.request(
+            "put", f"/api/master/sessions/{session_id}/creatures/live_npc/inner-self/core", _core_payload(player_id)
         )
-        before = snapshot(sid, "Before combat")
-        drive_player(sid)
-        after_combat = snapshot(sid, "After combat")
-        rest(
-            "patch",
-            f"/api/master/sessions/{sid}/creatures/{player['player_id']}",
-            {"location_id": "silverport_city"},
-        )
-        rest("post", f"/api/master/sessions/{sid}/time/advance", {"hours": 1})
-        after_anchor = snapshot(sid, "After anchor leaves / dormancy boundary")
-        report(before, after_combat, after_anchor)
-    finally:
+        result.before = _snapshot(transport, session_id, "Before combat", output)
+        ws = transport.connect(session_id, player_id)
         try:
-            rest("delete", f"/api/master/sessions/{sid}")
-        except (RuntimeError, requests.RequestException) as error:
-            print(f"WARN: cleanup failed for {sid}: {error}")
+            _drive_player(ws, deadline)
+            result.after_combat = _snapshot(transport, session_id, "After combat", output)
+            _record_departure_event(ws, deadline)
+            transport.request(
+                "patch", f"/api/master/sessions/{session_id}/creatures/{player_id}", {"location_id": "silverport_city"}
+            )
+            transport.request(
+                "put", f"/api/master/sessions/{session_id}/creatures/live_npc/activation", {"override": "dormant"}
+            )
+            result.after_anchor = _snapshot(transport, session_id, "After anchor leaves / dormancy boundary", output)
+            result.completed = True
+        finally:
+            ws.close()
+    except Exception as error:
+        result.warnings.append(str(error) or type(error).__name__)
+        partial_snapshots = (
+            ("After combat (partial)", "after_combat"),
+            ("After anchor leaves (partial)", "after_anchor"),
+        )
+        for label, attr in partial_snapshots:
+            if getattr(result, attr):
+                continue
+            try:
+                setattr(result, attr, _snapshot(transport, session_id, label, output))
+            except Exception as snapshot_error:
+                result.warnings.append(f"{label} snapshot failed: {snapshot_error}")
+    finally:
+        result.metrics = _read_metrics(log_dir, session_id)
+        section("Real-model assumptions", output)
+        output(json.dumps(result.metrics, ensure_ascii=False, indent=2, default=str))
+        for warning in result.warnings:
+            output(f"WARN: {warning}")
+        for check in classify_report(
+            result.before, result.after_combat, result.after_anchor, result.metrics, completed=result.completed
+        ):
+            output(f"{check['status']}: {check['name']}")
+        try:
+            transport.request("delete", f"/api/master/sessions/{session_id}")
+        except Exception as error:
+            result.warnings.append(f"cleanup failed: {error}")
+            result.completed = False
+    return result
+
+
+def main() -> None:
+    if not os.getenv("OPENROUTER_API_KEY") or not os.getenv("LLM_MODEL"):
+        skipped("OPENROUTER_API_KEY and LLM_MODEL must be exported for this real-model scenario.")
+    transport = HttpTransport(BASE, WS_BASE)
+    try:
+        requests.get(f"{BASE}/health", timeout=3).raise_for_status()
+    except requests.RequestException:
+        skipped("Server is not running at http://localhost:8001. Start it with make serve.")
+    log_dir = Path(os.environ["DND_LIVE_LOG"]) if os.getenv("DND_LIVE_LOG") else None
+    raise SystemExit(run_scenario(transport, log_dir=log_dir).exit_code)
 
 
 if __name__ == "__main__":

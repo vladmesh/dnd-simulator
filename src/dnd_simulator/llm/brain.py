@@ -118,7 +118,11 @@ class LlmBrain(Brain):
         ]
 
         for _attempt in range(_MAX_RETRIES):
-            response = self._llm.generate_with_tools(messages, tools)
+            try:
+                response = self._llm.generate_with_tools(messages, tools)
+            except Exception as error:
+                logger.warning("llm_decision_failed", reason=str(error) or type(error).__name__)
+                return Action(name=ActionType.IDLE)
             if response.is_tool_call:
                 assert response.tool_call is not None
                 tc = response.tool_call
@@ -154,7 +158,11 @@ class LlmBrain(Brain):
             {"role": "user", "content": trigger_desc},
         ]
 
-        response = self._llm.generate_with_tools(messages, tools)
+        try:
+            response = self._llm.generate_with_tools(messages, tools)
+        except Exception as error:
+            logger.warning("llm_reaction_failed", reason=str(error) or type(error).__name__)
+            return SKIP
         if response.is_tool_call:
             assert response.tool_call is not None
             tc = response.tool_call
