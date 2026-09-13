@@ -176,4 +176,20 @@ Kill reputation drop (`rules/reputation.py`): omniscient, delta scaled by victim
 - Frontend: `make frontend` → http://localhost:5173 (entry point, proxies /api to :8001)
 - GM inner-self API: `GET /api/master/sessions/{session_id}/creatures/{entity_id}/inner-self` returns the complete
   typed core and read-only personal layer. `PUT .../inner-self/core` completely replaces only `relations`, `mood`, and
-  `goals`; its candidate is validated by the domain model and assigned once under the session world-state gate.
+  `goals`; its candidate is validated by the domain model and assigned once under the session world-state gate. Goal
+  payloads explicitly discriminate `kind: typed` and `kind: freeform`; mood, relationship type, goal type and status
+  are OpenAPI enums. Temporary creatures are not inner-self API bearers.
+- Real-model smoke: export `OPENROUTER_API_KEY` and `LLM_MODEL` in both the server shell and the scenario shell. Start
+  the server as `LOG_LEVEL=DEBUG LOG_DIR=./logs make serve`, then run `DND_LIVE_LOG=./logs make live-inner-self`.
+  `DND_LIVE_LOG` is the server `LOG_DIR` directory, not a glob or an individual mirrored log file. The scenario creates
+  and deletes its own session, keeps its player WebSocket open through the final snapshot, and prints core snapshots
+  before combat, after combat and after the anchor departure boundary. It exits 2 with `SKIPPED / NOT RUNNABLE` if the
+  credentials or server are absent; it exits 1 if the scenario does not complete and 0 if it completes. `WARN` lines
+  can still appear with exit 0, so read the report checks as well.
+
+  `PASS` confirms a measured prerequisite, such as a completed scenario, an observed digest boundary, an accepted LLM
+  digest, or a retry that actually occurred. `INFO` describes non-failing model behaviour: a rules fallback, no thought,
+  no core/journal rewrite, or no retry can all be legitimate. `WARN` means the PO acceptance did not establish a
+  required condition: in particular, the scenario did not finish, no digest reached a boundary, or no LLM digest was
+  accepted. The report reads only the current session's `full.jsonl`, so its counts exclude mirrored streams and earlier
+  sessions.

@@ -46,6 +46,8 @@ class CreatureCommands(GameServiceProtocol):
             entity = self._get_entities_layer(session).get_entity(entity_id)
             if not isinstance(entity, Creature):
                 raise InnerSelfNotFoundError(f"Creature '{entity_id}' not found")
+            if entity.temporary:
+                raise InnerSelfNotFoundError(f"Creature '{entity_id}' does not have an inner self")
             if entity.inner_self is None:
                 raise InnerSelfNotFoundError(f"Creature '{entity_id}' does not have an inner self")
             return _inner_self_response(entity, entity.inner_self)
@@ -79,6 +81,8 @@ class CreatureCommands(GameServiceProtocol):
             entity = self._get_entities_layer(session).get_entity(entity_id)
             if not isinstance(entity, Creature):
                 raise InnerSelfNotFoundError(f"Creature '{entity_id}' not found")
+            if entity.temporary:
+                raise InnerSelfNotFoundError(f"Creature '{entity_id}' does not have an inner self")
             previous = entity.inner_self
             if previous is None:
                 raise InnerSelfNotFoundError(f"Creature '{entity_id}' does not have an inner self")

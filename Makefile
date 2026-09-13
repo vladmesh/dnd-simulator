@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test test-unit test-integration check check-backend check-frontend setup-hooks messages compile-messages serve stop frontend up clean test-frontend lint-frontend typecheck-frontend
+.PHONY: install lint format typecheck test test-unit test-integration check check-backend check-frontend setup-hooks messages compile-messages serve stop frontend up clean test-frontend lint-frontend typecheck-frontend live-inner-self
 
 install:
 	uv sync
@@ -19,6 +19,9 @@ test:
 
 test-unit:
 	uv run pytest tests/unit/ -q
+
+live-inner-self:
+	uv run python scripts/live_inner_self.py
 
 test-integration:
 	UID=$$(id -u) GID=$$(id -g) docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from integration-tests

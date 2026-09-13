@@ -127,25 +127,29 @@ class InnerSelfRelationshipCoreRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     target_id: str
-    type: str
+    type: RelationshipType
     intensity: int = 50
 
 
 class TypedGoalCoreRequest(BaseModel):
+    """A structured goal; ``kind: typed`` selects this form."""
+
     model_config = ConfigDict(extra="forbid")
 
     kind: Literal["typed"]
-    type: str
+    type: GoalType
     target_id: str
-    status: str = GoalStatus.ACTIVE.value
+    status: GoalStatus = GoalStatus.ACTIVE
 
 
 class FreeformGoalCoreRequest(BaseModel):
+    """A prose goal; ``kind: freeform`` selects this form."""
+
     model_config = ConfigDict(extra="forbid")
 
     kind: Literal["freeform"]
     text: str
-    status: str = GoalStatus.ACTIVE.value
+    status: GoalStatus = GoalStatus.ACTIVE
 
 
 InnerSelfGoalCoreRequest = Annotated[
@@ -160,7 +164,7 @@ class ReplaceInnerSelfCoreRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     relations: list[InnerSelfRelationshipCoreRequest]
-    mood: str
+    mood: Mood
     goals: list[InnerSelfGoalCoreRequest]
 
 

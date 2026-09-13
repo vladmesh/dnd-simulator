@@ -144,6 +144,33 @@ class TestLlmBrainScheduledActivity:
 
 
 class TestLlmBrainThoughts:
+    def test_provider_failure_idles_without_recording_a_thought(self) -> None:
+        npc = Npc(id="smith", name="Smith", location_id="square")
+        llm = MagicMock()
+        llm.generate_with_tools.side_effect = TimeoutError("provider timeout")
+
+        action = LlmBrain(llm).choose_action(npc, _awareness(hour=10), [])
+
+        assert action.name is ActionType.IDLE
+        assert npc.inner_self is not None
+        assert npc.inner_self.thoughts == []
+        assert llm.generate_with_tools.call_count == 1
+
+    def test_provider_failure_skips_reaction_without_recording_a_thought(self) -> None:
+        npc = Npc(id="guard", name="Guard", location_id="square")
+        llm = MagicMock()
+        llm.generate_with_tools.side_effect = TimeoutError("provider timeout")
+
+        action = LlmBrain(llm).choose_reaction(
+            npc,
+            ReactionTrigger(TriggerType.LEAVING_REACH, "thief"),
+            [ReactionOption(ActionType.OPPORTUNITY_ATTACK, "Strike", {"target_id": "thief"})],
+        )
+
+        assert action.name is ActionType.SKIP
+        assert npc.inner_self is not None
+        assert npc.inner_self.thoughts == []
+
     def test_missing_empty_and_nonstring_thoughts_are_ignored(self) -> None:
         for thought in (None, "   ", 12):
             npc = Npc(id="smith", name="Smith", location_id="square")
@@ -221,6 +248,23 @@ class TestLlmBrainThoughts:
         assert npc.inner_self is not None
         assert npc.inner_self.thoughts == ["accepted"]
         assert llm.generate_with_tools.call_count == 2
+
+    def test_rejected_tool_call_explains_the_reason_to_the_retry(self) -> None:
+        npc = Npc(id="smith", name="Smith", location_id="square")
+        llm = MagicMock()
+        llm.generate_with_tools.side_effect = [
+            _tool_response(ActionType.DODGE.value, {}),
+            _tool_response(ActionType.IDLE.value, {}),
+        ]
+
+        action = LlmBrain(llm).choose_action(npc, _awareness(hour=10), [])
+
+        assert action.name is ActionType.IDLE
+        retry_messages = llm.generate_with_tools.call_args_list[1].args[0]
+        assert retry_messages[-1] == {
+            "role": "user",
+            "content": "Previous tool call was rejected: action was not offered. Choose one of the offered tools.",
+        }
 
     def test_reaction_stores_bounded_thought_and_labels_heard_speech(self) -> None:
         npc = Npc(id="guard", name="Guard", location_id="square")

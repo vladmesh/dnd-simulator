@@ -121,7 +121,15 @@ def test_get_inner_self_rejects_non_bearers_and_unknown_creatures(tmp_path: Path
     session = service._get_session(session_id)
     layer = service._get_entities_layer(session)
     layer.add_entity(PlayerCharacter(id="player", name="Player", location_id="silverport_city"))
-    layer.add_entity(Creature(id="temporary", name="Temporary", location_id="silverport_city", temporary=True))
+    layer.add_entity(
+        Creature(
+            id="temporary",
+            name="Temporary",
+            location_id="silverport_city",
+            temporary=True,
+            inner_self=InnerSelf(),
+        )
+    )
 
     for entity_id in ("player", "temporary", "missing"):
         response = client.get(_inner_self_url(session_id, entity_id))
@@ -202,6 +210,7 @@ def test_inner_self_openapi_declares_routes_models_and_enums(tmp_path: Path) -> 
     assert set(components["Mood"]["enum"]) == {member.value for member in Mood}
     assert set(components["RelationshipType"]["enum"]) == {member.value for member in RelationshipType}
     assert set(components["GoalType"]["enum"]) == {member.value for member in GoalType}
+    assert set(components["GoalStatus"]["enum"]) == {member.value for member in GoalStatus}
 
 
 def test_inner_self_core_edit_survives_save_and_load(tmp_path: Path) -> None:
