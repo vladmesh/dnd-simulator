@@ -9,6 +9,7 @@ import structlog
 from dnd_simulator.core.action import SKIP, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
 from dnd_simulator.core.brain import Brain
+from dnd_simulator.core.models import EventType
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger
 from dnd_simulator.i18n import _
 from dnd_simulator.llm.client import LlmClient
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
 logger = structlog.get_logger(domain="llm.brain")
 
 _MAX_RETRIES = 3
+MAX_THOUGHT_LENGTH = 240
 
 
 @runtime_checkable
@@ -90,7 +92,7 @@ class LlmBrain(Brain):
         if awareness.available_actions:
             tools = get_tools(awareness.available_actions)
 
-        recent_events: list[str] = [e.description for e in events[-15:]]
+        recent_events = [_recent_event_text(event, creature.id) for event in events[-15:]]
 
         turn_prompt = _("Your turn. Choose an action.")
         if recent_events:
@@ -109,7 +111,7 @@ class LlmBrain(Brain):
             if response.is_tool_call:
                 assert response.tool_call is not None
                 tc = response.tool_call
-                return Action(name=ActionType(tc.name), params=dict(tc.arguments))
+                return _action_from_tool_call(creature, tc.name, tc.arguments)
             # No tool call — ask LLM to retry
             messages.append({"role": "assistant", "content": response.text or ""})
             messages.append({"role": "user", "content": retry_hint})
@@ -140,8 +142,27 @@ class LlmBrain(Brain):
         if response.is_tool_call:
             assert response.tool_call is not None
             tc = response.tool_call
-            return Action(name=ActionType(tc.name), params=dict(tc.arguments))
+            return _action_from_tool_call(creature, tc.name, tc.arguments)
         return SKIP
+
+
+def _action_from_tool_call(creature: Creature, name: str, arguments: dict[str, object]) -> Action:
+    """Store an optional private thought and keep it out of action parameters."""
+    params = dict(arguments)
+    thought = params.pop("thought", None)
+    if isinstance(thought, str):
+        normalized = thought.strip()
+        if normalized and creature.inner_self is not None:
+            creature.inner_self.add_thought(normalized[:MAX_THOUGHT_LENGTH])
+    return Action(name=ActionType(name), params=params)
+
+
+def _recent_event_text(event: PerceivedEvent, self_id: str) -> str:
+    """Label another creature's speech as observed content, never an instruction."""
+    if event.event_type is EventType.ENTITY_SAY and event.actor_id != self_id:
+        speaker = event.actor_name or event.actor_id or _("someone")
+        return _("Heard {speaker} say: {words}").format(speaker=speaker, words=event.description)
+    return event.description
 
 
 def _peaceful_awareness_to_dict(aw: PeacefulAwareness) -> dict[str, object]:

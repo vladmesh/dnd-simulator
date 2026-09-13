@@ -26,6 +26,8 @@ if TYPE_CHECKING:
     from dnd_simulator.llm.client import LlmClient
 
 JOURNAL_LIMIT = 300
+LLM_DIGEST_TIMEOUT_SECONDS = 20.0
+LLM_DIGEST_MAX_RETRIES = 0
 
 
 class LlmDigestRejectedError(ValueError):
@@ -58,6 +60,8 @@ def digest_with_llm(
         build_messages(core_before, events, boundary, proposal, self_id, allowed_target_ids),
         max_tokens=800,
         temperature=0.3,
+        timeout=LLM_DIGEST_TIMEOUT_SECONDS,
+        max_retries=LLM_DIGEST_MAX_RETRIES,
     )
     parsed = _parse_response(response, allowed_target_ids, self_id)
     return InnerSelf(
@@ -143,14 +147,23 @@ def _event_data(event: BufferedPerceivedEvent) -> dict[str, object]:
         "type": event.event_type.value,
         "actor": event.actor_id,
         "target": event.target_id,
-        "description": event.description,
+        "description": _digest_event_description(event),
         "at_seconds": event.at_seconds,
+        "heard": event.heard,
     }
+
+
+def _digest_event_description(event: BufferedPerceivedEvent) -> str:
+    """Present foreign speech as quoted observed content, never as an instruction."""
+    if event.heard:
+        speaker = event.actor_id or "someone"
+        return f"Heard {speaker} say: {event.description}"
+    return event.description
 
 
 def _parse_response(response: str, allowed_target_ids: set[str], self_id: str) -> LlmDigest:
     try:
-        data = json.loads(response)
+        data = json.loads(_remove_single_code_fence(response))
     except (TypeError, json.JSONDecodeError) as error:
         raise LlmDigestRejectedError("invalid JSON") from error
     if not isinstance(data, dict):
@@ -183,6 +196,23 @@ def _parse_response(response: str, allowed_target_ids: set[str], self_id: str) -
         law_chaos_evidence=_evidence(evidence["law_chaos"], "law_chaos"),
         good_evil_evidence=_evidence(evidence["good_evil"], "good_evil"),
     )
+
+
+def _remove_single_code_fence(response: str) -> str:
+    """Accept one complete JSON markdown fence and reject surrounding prose."""
+    if not isinstance(response, str):
+        return response
+    if not response.startswith("```"):
+        return response
+    newline = response.find("\n")
+    if newline == -1:
+        return response
+    language = response[3:newline]
+    if language not in ("", "json"):
+        return response
+    if not response.endswith("\n```"):
+        return response
+    return response[newline + 1 : -4]
 
 
 def _parse_relation(item: object, allowed_target_ids: set[str], self_id: str) -> Relationship:

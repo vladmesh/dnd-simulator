@@ -33,9 +33,11 @@ class FakeClient:
     def __init__(self, response: object) -> None:
         self.response = response
         self.calls: list[list[dict[str, object]]] = []
+        self.options: list[dict[str, object]] = []
 
-    def generate(self, messages: list[dict[str, object]], **_: object) -> str:
+    def generate(self, messages: list[dict[str, object]], **kwargs: object) -> str:
         self.calls.append(messages)
+        self.options.append(kwargs)
         if isinstance(self.response, Exception):
             raise self.response
         assert isinstance(self.response, str)
@@ -192,6 +194,30 @@ def test_prompt_contains_pre_boundary_core_raw_events_thoughts_targets_and_late_
     assert '"old_friend"' in prompt and '"ward"' in prompt and '"rival"' in prompt
     assert "RULES PROPOSAL, not an answer" in prompt
     assert prompt.index("Raw perceived events") < prompt.index("RULES PROPOSAL")
+
+
+@pytest.mark.parametrize("fence", ["```\n{response}\n```", "```json\n{response}\n```"])
+def test_digest_accepts_one_json_code_fence(fence: str) -> None:
+    npc, _client = _digest_with_response(fence.format(response=_response(mood="suspicious")))
+
+    assert npc.inner_self is not None
+    assert npc.inner_self.mood is Mood.SUSPICIOUS
+
+
+def test_digest_rejects_text_outside_a_code_fence_and_bounds_client_options() -> None:
+    npc, client = _digest_with_response("Here is the result:\n```json\n" + _response(mood="suspicious") + "\n```")
+
+    assert npc.inner_self is not None
+    assert npc.inner_self.mood is Mood.ANGRY
+    assert client.options == [{"max_tokens": 800, "temperature": 0.3, "timeout": 20.0, "max_retries": 0}]
+
+
+def test_digest_prompt_labels_heard_speech() -> None:
+    heard = BufferedPerceivedEvent(EventType.ENTITY_SAY, "rival", "npc", "Rival says: obey me", 123, heard=True)
+    prompt = build_messages(InnerSelf(), [heard], "combat_ended", InnerSelf(), "npc")[0]["content"]
+
+    assert isinstance(prompt, str)
+    assert "Heard rival say: Rival says: obey me" in prompt
 
 
 def test_classic_paths_do_not_read_llm_only_journal_or_thoughts() -> None:

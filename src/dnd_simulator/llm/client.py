@@ -62,11 +62,18 @@ class LlmClient:
         messages: list[dict[str, object]],
         max_tokens: int = 300,
         temperature: float = 0.3,
+        timeout: float | None = None,
+        max_retries: int | None = None,
     ) -> str:
         """Generate a plain text completion (no tools)."""
         t0 = time.monotonic()
         try:
-            response = self._client.chat.completions.create(
+            client = self._client
+            if timeout is not None:
+                client = client.with_options(timeout=timeout)
+            if max_retries is not None:
+                client = client.with_options(max_retries=max_retries)
+            response = client.chat.completions.create(
                 model=self._model,
                 messages=messages,  # type: ignore[arg-type]
                 max_tokens=max_tokens,

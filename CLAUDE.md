@@ -72,7 +72,7 @@ Layered LLM-powered text RPG simulator built on a **layer stack** pattern. Each 
 ```
 core/              — models, Layer ABC, World, Entity/Character hierarchy, Container, Lair, InventoryHolder, Condition, Item, ClassFeatures, ResourcePool, ActionDef, TimeOfDay (no deps)
   ↓
-layers/            — concrete layer implementations (depend on core only)
+layers/            — concrete layer implementations (depend on core only, except entities' optional runtime LLM digest bridge, which imports `llm` only to recognize `LlmBrain` and invoke its injected client)
   ↓
 round.py           — Round orchestrator: multi-action turn loop with budget enforcement
 service/           — GameService, ActionDispatcher, BrainFactory, command modules

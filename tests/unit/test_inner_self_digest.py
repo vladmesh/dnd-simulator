@@ -235,7 +235,9 @@ def test_only_active_eligible_observers_buffer_events_without_moving_brain_curso
 def test_perception_buffer_round_trips_and_missing_v2_field_defaults_empty() -> None:
     npc = _npc()
     assert npc.inner_self is not None
-    npc.inner_self.perceived_event_buffer.append(_buffer_event())
+    npc.inner_self.perceived_event_buffer.append(
+        BufferedPerceivedEvent(EventType.ENTITY_SAY, "speaker", None, "Heard a speaker", 123, heard=True)
+    )
     state = EntitiesLayer([npc]).get_state()
 
     restored_layer = EntitiesLayer()
@@ -253,6 +255,24 @@ def test_perception_buffer_round_trips_and_missing_v2_field_defaults_empty() -> 
     assert isinstance(restored, Npc)
     assert restored.inner_self is not None
     assert restored.inner_self.perceived_event_buffer == []
+
+
+def test_foreign_speech_is_buffered_as_heard_but_own_speech_is_not() -> None:
+    npc = _npc()
+    speaker = Creature(id="speaker", name="Speaker", location_id="square")
+    log = EventLog({npc.id: npc, speaker.id: speaker})
+
+    log.record(_say("Foreign words"))
+    log.record(
+        Event(
+            event_type=EventType.ENTITY_SAY,
+            source_layer="entities",
+            data=EntitySayPayload(entity_id=npc.id, text="My own words"),
+        )
+    )
+
+    assert npc.inner_self is not None
+    assert [event.heard for event in npc.inner_self.perceived_event_buffer] == [True, False]
 
 
 def test_event_log_normalizes_death_as_killer_and_dead_target() -> None:

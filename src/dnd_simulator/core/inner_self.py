@@ -72,6 +72,7 @@ class BufferedPerceivedEvent:
     target_id: str | None
     description: str
     at_seconds: int
+    heard: bool = False
 
 
 @dataclass(frozen=True)
@@ -181,6 +182,7 @@ class InnerSelf:
                     "target_id": event.target_id,
                     "description": event.description,
                     "at_seconds": event.at_seconds,
+                    "heard": event.heard,
                 }
                 for event in self.perceived_event_buffer
             ],
@@ -228,6 +230,7 @@ class InnerSelf:
                     target_id=str(event["target_id"]) if event.get("target_id") is not None else None,
                     description=str(event["description"]),
                     at_seconds=int(event["at_seconds"]),
+                    heard=bool(event.get("heard", False)),
                 )
                 for event in data.get("perceived_event_buffer", [])
             ],

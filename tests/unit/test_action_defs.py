@@ -40,6 +40,12 @@ class TestActionDefRegistry:
 
 
 class TestToolSchemaGeneration:
+    def test_every_action_tool_has_optional_private_thought(self) -> None:
+        for schema in get_tools(list(ActionType)):
+            parameters = schema["function"]["parameters"]
+            assert parameters["properties"]["thought"]["type"] == "string"
+            assert "thought" not in parameters.get("required", [])
+
     def test_internal_actions_excluded_from_tools(self) -> None:
         """END_TURN and SKIP should not appear as LLM tools."""
         all_actions = list(ActionType)
@@ -62,10 +68,10 @@ class TestToolSchemaGeneration:
         schema = tools[0]
         assert "required" not in schema["function"]["parameters"]
 
-    def test_dash_schema_only_adds_movement_budget(self) -> None:
+    def test_dash_schema_adds_movement_budget_and_private_thought(self) -> None:
         schema = get_tools([ActionType.DASH])[0]["function"]
 
-        assert set(schema["parameters"]["properties"]) == {"description", "cost_mode"}
+        assert set(schema["parameters"]["properties"]) == {"description", "cost_mode", "thought"}
         assert "movement budget" in schema["description"]
         assert "separate move" in schema["description"]
 

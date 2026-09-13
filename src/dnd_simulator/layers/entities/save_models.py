@@ -130,6 +130,7 @@ class BufferedPerceivedEventSave(SaveModel):
     target_id: str | None = None
     description: str
     at_seconds: int
+    heard: bool = False
 
 
 class InnerSelfSave(SaveModel):

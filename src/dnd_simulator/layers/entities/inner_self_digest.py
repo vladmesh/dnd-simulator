@@ -50,7 +50,7 @@ def digest(creature: Creature, boundary: DigestBoundary) -> None:
             entity_id=creature.id,
             entity_name=creature.name,
             boundary=boundary.value,
-            reason=type(error).__name__,
+            reason=str(error) or type(error).__name__,
         )
     finally:
         if isinstance(creature, Character) and not isinstance(creature, PlayerCharacter):

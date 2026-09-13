@@ -118,6 +118,7 @@ class EventLog:
                     target_id=target_id if isinstance(target_id, str) else None,
                     description=perceive_event(event, entity, self._entities.get),
                     at_seconds=self._current_time_seconds,
+                    heard=event.event_type is EventType.ENTITY_SAY and actor_id != entity.id,
                 )
             )
 

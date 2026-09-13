@@ -62,6 +62,20 @@ def test_thought_buffer_evicts_oldest_entry() -> None:
     assert inner_self.thoughts == [str(index) for index in range(1, THOUGHT_BUFFER_CAPACITY + 1)]
 
 
+def test_buffered_heard_flag_round_trips_and_missing_field_defaults_false() -> None:
+    from dnd_simulator.core.inner_self import BufferedPerceivedEvent
+    from dnd_simulator.core.models import EventType
+
+    inner_self = InnerSelf(
+        perceived_event_buffer=[BufferedPerceivedEvent(EventType.ENTITY_SAY, "speaker", None, "Hi", 1, True)]
+    )
+    restored = InnerSelf.from_dict(inner_self.to_dict())
+    assert restored == inner_self
+    data = inner_self.to_dict()
+    data["perceived_event_buffer"][0].pop("heard")
+    assert InnerSelf.from_dict(data).perceived_event_buffer[0].heard is False
+
+
 def test_player_and_temporary_spawn_do_not_carry_inner_self() -> None:
     player = PlayerCharacter(id="player", name="Hero", location_id="square")
     template = MonsterTemplate(

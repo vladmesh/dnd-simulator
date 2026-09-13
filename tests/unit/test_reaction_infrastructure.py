@@ -224,6 +224,12 @@ class TestPlayerBrainReaction:
 
 
 class TestReactionTools:
+    def test_each_reaction_tool_has_optional_private_thought(self) -> None:
+        for tool in get_reaction_tools([_oa_option()]):
+            parameters = tool["function"]["parameters"]
+            assert parameters["properties"]["thought"]["type"] == "string"
+            assert "thought" not in parameters.get("required", [])
+
     def test_builds_tools_from_options(self) -> None:
         """get_reaction_tools converts ReactionOptions to OpenAI tool schema."""
         options = [

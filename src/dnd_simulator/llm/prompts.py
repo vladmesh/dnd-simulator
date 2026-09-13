@@ -7,7 +7,6 @@ Only situational hints (e.g. "you are unarmed but have weapons") are added.
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from dnd_simulator.i18n import _
@@ -39,11 +38,7 @@ def build_npc_system_prompt(
         names = [f"{s['name']} ({s['type']})" for s in awareness["settlements"]]
         settlement_lines = "\n" + _("Settlements: {names}").format(names=", ".join(names))
 
-    # NPC memory
-    memory_ctx = ""
-    inner_self = npc_data.get("inner_self")
-    if inner_self and any(inner_self.values()):
-        memory_ctx = "\n\n" + _("Your inner self:") + "\n" + json.dumps(inner_self, ensure_ascii=False, indent=2)
+    memory_ctx = _inner_self_context(npc_data.get("inner_self"))
 
     # Nearby entities
     entities_ctx = ""
@@ -182,6 +177,8 @@ def build_npc_combat_prompt(
     if hints:
         hints_ctx = "\n" + "\n".join(hints) + "\n"
 
+    memory_ctx = _inner_self_context(npc_data.get("inner_self"))
+
     rules = _(
         "Rules:\n"
         "- Choose one of the available tools\n"
@@ -210,8 +207,68 @@ def build_npc_combat_prompt(
         + f"{conditions_ctx}\n"
         + f"{entities_ctx}"
         f"{items_ctx}"
+        f"{memory_ctx}"
         f"{hints_ctx}"
         f"{walls_ctx}"
         f"{map_ctx}\n" + _("Round {num}.").format(num=round_num) + "\n"
         "\n" + rules
     )
+
+
+def _inner_self_context(value: object) -> str:
+    """Render decision-relevant personal state without exposing raw persistence data."""
+    if not isinstance(value, dict):
+        return ""
+    sections: list[str] = []
+
+    relations = value.get("relations")
+    if isinstance(relations, list) and relations:
+        lines = []
+        for relation in relations:
+            if isinstance(relation, dict):
+                target = relation.get("target_id")
+                relation_type = relation.get("type")
+                intensity = relation.get("intensity")
+                if isinstance(target, str) and isinstance(relation_type, str) and isinstance(intensity, int):
+                    lines.append(
+                        _("- {target}: {kind} ({intensity})").format(
+                            target=target, kind=relation_type, intensity=intensity
+                        )
+                    )
+        if lines:
+            sections.append(_("Relationships:") + "\n" + "\n".join(lines))
+
+    mood = value.get("mood")
+    if isinstance(mood, str) and mood != "neutral":
+        sections.append(_("Mood: {mood}").format(mood=mood))
+
+    goals = value.get("goals")
+    if isinstance(goals, list) and goals:
+        lines = []
+        for goal in goals:
+            if not isinstance(goal, dict):
+                continue
+            status = goal.get("status")
+            if not isinstance(status, str):
+                continue
+            goal_type = goal.get("type")
+            target = goal.get("target_id")
+            text = goal.get("text")
+            if isinstance(goal_type, str) and isinstance(target, str):
+                lines.append(_("- {goal} {target} ({status})").format(goal=goal_type, target=target, status=status))
+            elif isinstance(text, str) and text:
+                lines.append(_("- {goal} ({status})").format(goal=text, status=status))
+        if lines:
+            sections.append(_("Goals:") + "\n" + "\n".join(lines))
+
+    journal = value.get("journal")
+    if isinstance(journal, str) and journal.strip():
+        sections.append(_("Journal:") + "\n" + journal)
+
+    thoughts = value.get("thoughts")
+    if isinstance(thoughts, list):
+        lines = [f"- {thought}" for thought in thoughts if isinstance(thought, str) and thought.strip()]
+        if lines:
+            sections.append(_("Recent thoughts:") + "\n" + "\n".join(lines))
+
+    return "\n\n" + "\n\n".join(sections) if sections else ""
