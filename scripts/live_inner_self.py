@@ -16,6 +16,8 @@ from typing import Never
 import requests
 import websocket  # type: ignore[import-untyped]
 
+from dnd_simulator.live_inner_self_report import classify_report
+
 BASE = "http://localhost:8001"
 WS_BASE = "ws://localhost:8001"
 
@@ -73,7 +75,10 @@ def log_metrics() -> dict[str, object]:
     if not log_path:
         return {"available": False, "reason": "Set DND_LIVE_LOG to the fresh server JSON log."}
     try:
-        records = [json.loads(line) for line in Path(log_path).read_text().splitlines() if line.strip()]
+        paths = [Path(log_path)]
+        if paths[0].is_dir():
+            paths = list(paths[0].rglob("*.jsonl"))
+        records = [json.loads(line) for path in paths for line in path.read_text().splitlines() if line.strip()]
     except (OSError, json.JSONDecodeError) as error:
         return {"available": False, "reason": f"Cannot read DND_LIVE_LOG: {error}"}
     events = [record.get("event") for record in records if isinstance(record, dict)]
@@ -83,7 +88,7 @@ def log_metrics() -> dict[str, object]:
     return {
         "available": True,
         "accepted_digests": events.count("inner_self_llm_digest_accepted"),
-        "rejected_digests": events.count("inner_self_llm_digest_rejected"),
+        "fallback_digests": events.count("inner_self_llm_digest_rejected"),
         "rejected_tool_calls": events.count("llm_tool_call_rejected"),
         "accepted_tool_calls": len(accepted),
         "retries_before_valid": [record.get("retries") for record in accepted],
@@ -100,15 +105,8 @@ def report(before: dict[str, object], after_combat: dict[str, object], after_anc
     section("Real-model assumptions")
     print(f"LLM_MODEL={os.environ['LLM_MODEL']}")
     print(json.dumps(metrics, ensure_ascii=False, indent=2, default=str))
-    checks = {
-        "digest accepted": bool(metrics.get("accepted_digests", 0)),
-        "thought recorded": bool(after_combat.get("thoughts") or after_anchor.get("thoughts")),
-        "core or journal changed": before != after_combat or after_combat != after_anchor,
-        "digest response shape available": bool(metrics.get("digest_response_formats")),
-        "tool-call convergence available": metrics.get("available") is True,
-    }
-    for name, passed in checks.items():
-        print(f"{'PASS' if passed else 'WARN'}: {name}")
+    for check in classify_report(before, after_combat, after_anchor, metrics):
+        print(f"{'PASS' if check['passed'] else 'WARN'}: {check['name']}")
 
 
 def main() -> None:
@@ -129,6 +127,7 @@ def main() -> None:
                 "name": "Anchor",
                 "race": "human",
                 "char_class": "fighter",
+                "start_location": "silverport_city_tavern",
                 "ability_scores": {"str": 16, "dex": 12, "con": 14, "int": 10, "wis": 10, "cha": 10},
             },
         )
@@ -156,14 +155,21 @@ def main() -> None:
             "put",
             f"/api/master/sessions/{sid}/creatures/live_npc/inner-self/core",
             {
-                "relations": [{"target_id": "player", "type": "loyal_to", "intensity": 80}],
+                "relations": [{"target_id": str(player["player_id"]), "type": "loyal_to", "intensity": 80}],
                 "mood": "alerted",
-                "goals": [{"kind": "typed", "type": "protect", "target_id": "player", "status": "active"}],
+                "goals": [
+                    {"kind": "typed", "type": "protect", "target_id": str(player["player_id"]), "status": "active"}
+                ],
             },
         )
         before = snapshot(sid, "Before combat")
         drive_player(sid)
         after_combat = snapshot(sid, "After combat")
+        rest(
+            "patch",
+            f"/api/master/sessions/{sid}/creatures/{player['player_id']}",
+            {"location_id": "silverport_city"},
+        )
         rest("post", f"/api/master/sessions/{sid}/time/advance", {"hours": 1})
         after_anchor = snapshot(sid, "After anchor leaves / dormancy boundary")
         report(before, after_combat, after_anchor)
