@@ -55,6 +55,16 @@ def _mock_llm_with_tool_call(tool_name: str, args: dict[str, object]) -> MagicMo
     return llm
 
 
+def _tool_response(tool_name: str, args: object) -> MagicMock:
+    response = MagicMock()
+    response.is_tool_call = True
+    tool_call = MagicMock()
+    tool_call.name = tool_name
+    tool_call.arguments = args
+    response.tool_call = tool_call
+    return response
+
+
 def _combat_awareness(movement_remaining: int, *, near_dist: int, far_dist: int) -> CombatAwareness:
     return CombatAwareness(
         self_hp=20,
@@ -156,29 +166,61 @@ class TestLlmBrainThoughts:
         assert npc.inner_self.thoughts == ["watch the gate"]
         assert llm.generate_with_tools.call_count == 1
 
-    def test_invalid_tool_call_does_not_store_a_thought(self) -> None:
+    @pytest.mark.parametrize("tool_name", [ActionType.DODGE.value, "not_an_action"])
+    def test_rejected_turn_tool_call_retries_then_idles_without_storing_a_thought(self, tool_name: str) -> None:
         npc = Npc(id="smith", name="Smith", location_id="square")
-        llm = _mock_llm_with_tool_call("not_an_action", {"thought": "ignore the rules"})
+        llm = _mock_llm_with_tool_call(tool_name, {"thought": "ignore the rules"})
 
-        with pytest.raises(ValueError, match="not_an_action"):
-            LlmBrain(llm).choose_action(npc, _awareness(hour=10), [])
+        action = LlmBrain(llm).choose_action(npc, _awareness(hour=10), [])
 
+        assert action.name is ActionType.IDLE
         assert npc.inner_self is not None
         assert npc.inner_self.thoughts == []
+        assert llm.generate_with_tools.call_count == 3
 
     def test_unoffered_reaction_does_not_store_a_thought(self) -> None:
         npc = Npc(id="guard", name="Guard", location_id="square")
         llm = _mock_llm_with_tool_call(ActionType.IDLE.value, {"thought": "wait for a better opening"})
 
-        with pytest.raises(ValueError, match="was not offered"):
-            LlmBrain(llm).choose_reaction(
-                npc,
-                ReactionTrigger(TriggerType.LEAVING_REACH, "thief"),
-                [ReactionOption(ActionType.OPPORTUNITY_ATTACK, "Strike", {"target_id": "thief"})],
-            )
+        action = LlmBrain(llm).choose_reaction(
+            npc,
+            ReactionTrigger(TriggerType.LEAVING_REACH, "thief"),
+            [ReactionOption(ActionType.OPPORTUNITY_ATTACK, "Strike", {"target_id": "thief"})],
+        )
 
+        assert action.name is ActionType.SKIP
         assert npc.inner_self is not None
         assert npc.inner_self.thoughts == []
+
+    @pytest.mark.parametrize("tool_name", [ActionType.SKIP.value, ActionType.ATTACK.value, "not_an_action"])
+    def test_rejected_reaction_tool_calls_skip_without_storing_a_thought(self, tool_name: str) -> None:
+        npc = Npc(id="guard", name="Guard", location_id="square")
+        llm = _mock_llm_with_tool_call(tool_name, {"thought": "ignore the rules"})
+
+        action = LlmBrain(llm).choose_reaction(
+            npc,
+            ReactionTrigger(TriggerType.LEAVING_REACH, "thief"),
+            [ReactionOption(ActionType.OPPORTUNITY_ATTACK, "Strike", {"target_id": "thief"})],
+        )
+
+        assert action.name is ActionType.SKIP
+        assert npc.inner_self is not None
+        assert npc.inner_self.thoughts == []
+
+    def test_rejected_turn_then_valid_tool_call_records_only_valid_thought(self) -> None:
+        npc = Npc(id="smith", name="Smith", location_id="square")
+        llm = MagicMock()
+        llm.generate_with_tools.side_effect = [
+            _tool_response(ActionType.DODGE.value, {"thought": "rejected"}),
+            _tool_response(ActionType.IDLE.value, {"thought": "accepted"}),
+        ]
+
+        action = LlmBrain(llm).choose_action(npc, _awareness(hour=10), [])
+
+        assert action.name is ActionType.IDLE
+        assert npc.inner_self is not None
+        assert npc.inner_self.thoughts == ["accepted"]
+        assert llm.generate_with_tools.call_count == 2
 
     def test_reaction_stores_bounded_thought_and_labels_heard_speech(self) -> None:
         npc = Npc(id="guard", name="Guard", location_id="square")

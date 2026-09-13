@@ -13,9 +13,12 @@ from unittest.mock import MagicMock
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
+from dnd_simulator.core.models import ActionResult
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.i18n import set_language
+from dnd_simulator.layers.entities.models import Npc
+from dnd_simulator.llm.brain import LlmBrain
 from dnd_simulator.rules.rule_brain import RuleBrain
 from dnd_simulator.rules.validation import ActionContext
 
@@ -62,8 +65,6 @@ def _make_round(creatures: list[Creature]) -> object:
     entities.get_entity = MagicMock(side_effect=lambda id: next((c for c in creatures if c.id == id), None))
     dispatcher = MagicMock()
     # dispatcher.dispatch should succeed by default
-    from dnd_simulator.core.models import ActionResult
-
     dispatcher.dispatch = MagicMock(return_value=ActionResult(success=True))
 
     r = Round.__new__(Round)
@@ -101,6 +102,32 @@ class TestActionContextOnLeaveReach:
 
 
 class TestCheckReactions:
+    def test_llm_skip_at_opportunity_trigger_does_not_escape_round(self) -> None:
+        """An unoffered model ``skip`` at an OA trigger is a safe round-level skip."""
+        response = MagicMock(is_tool_call=True)
+        response.tool_call = MagicMock(name="skip", arguments={"thought": "do not store"})
+        response.tool_call.name = "skip"
+        response.tool_call.arguments = {"thought": "do not store"}
+        llm = MagicMock()
+        llm.generate_with_tools.return_value = response
+        reactor = Npc(id="guard", name="Guard", location_id="arena")
+        reactor.brain = LlmBrain(llm)
+        reactor.turn_budget = TurnBudget(actions=1, bonus_actions=0, movement_remaining=30, reaction=1)
+        mover = _creature("mover")
+        rnd = _make_round([reactor, mover])
+
+        still_alive = rnd._make_on_leave_reach(  # type: ignore[attr-defined]
+            CombatState("arena", [mover.id, reactor.id], 1, 0, BattleMap(50, 50)),
+            MagicMock(),
+            MagicMock(),
+            MagicMock(return_value=ActionResult()),
+        )(mover, Position(10, 10), Position(10, 15), [reactor])
+
+        assert still_alive is True
+        assert reactor.inner_self is not None
+        assert reactor.inner_self.thoughts == []
+        assert llm.generate_with_tools.call_count == 1
+
     def test_calls_choose_reaction_not_choose_action(self) -> None:
         """check_reactions calls choose_reaction with trigger and options, not choose_action."""
         brain = MagicMock()
