@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+from typing import Annotated, Literal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from dnd_simulator.core.brain import BrainType
-from dnd_simulator.core.models import EntityKind
+from dnd_simulator.core.character import Alignment
+from dnd_simulator.core.inner_self import GoalStatus, GoalType, Mood, RelationshipType
+from dnd_simulator.core.models import EntityKind, EventType
 from dnd_simulator.core.triggers import GmActivationOverride
 
 # -- Requests --
@@ -117,10 +121,103 @@ class SetActivationTriggerRequest(BaseModel):
     armed: bool
 
 
+class InnerSelfRelationshipCoreRequest(BaseModel):
+    """A relationship replacement value. Domain constructors enforce its rules."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    target_id: str
+    type: str
+    intensity: int = 50
+
+
+class TypedGoalCoreRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["typed"]
+    type: str
+    target_id: str
+    status: str = GoalStatus.ACTIVE.value
+
+
+class FreeformGoalCoreRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["freeform"]
+    text: str
+    status: str = GoalStatus.ACTIVE.value
+
+
+InnerSelfGoalCoreRequest = Annotated[
+    TypedGoalCoreRequest | FreeformGoalCoreRequest,
+    Field(discriminator="kind"),
+]
+
+
+class ReplaceInnerSelfCoreRequest(BaseModel):
+    """Complete replacement of the GM-editable structured core only."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    relations: list[InnerSelfRelationshipCoreRequest]
+    mood: str
+    goals: list[InnerSelfGoalCoreRequest]
+
+
 class ActivationTriggerResponse(BaseModel):
     id: str
     armed: bool
     active: bool
+
+
+class InnerSelfRelationshipResponse(BaseModel):
+    target_id: str
+    type: RelationshipType
+    intensity: int
+
+
+class TypedGoalResponse(BaseModel):
+    kind: Literal["typed"]
+    type: GoalType
+    target_id: str
+    status: GoalStatus
+
+
+class FreeformGoalResponse(BaseModel):
+    kind: Literal["freeform"]
+    text: str
+    status: GoalStatus
+
+
+InnerSelfGoalResponse = Annotated[TypedGoalResponse | FreeformGoalResponse, Field(discriminator="kind")]
+
+
+class AlignmentAccumulationResponse(BaseModel):
+    law_chaos: int
+    good_evil: int
+
+
+class BufferedPerceivedEventResponse(BaseModel):
+    event_type: EventType
+    actor_id: str | None
+    target_id: str | None
+    description: str
+    at_seconds: int
+    heard: bool
+
+
+class InnerSelfResponse(BaseModel):
+    """Complete read-only view of a core-bearer's inner self."""
+
+    relations: list[InnerSelfRelationshipResponse]
+    mood: Mood
+    goals: list[InnerSelfGoalResponse]
+    character_alignment: Alignment | None
+    alignment_accumulation: AlignmentAccumulationResponse
+    journal: str
+    thoughts: list[str]
+    current_conversation: str
+    perceived_event_buffer: list[BufferedPerceivedEventResponse]
 
 
 class PatchNationRequest(BaseModel):

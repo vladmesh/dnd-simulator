@@ -156,6 +156,11 @@ class InnerSelf:
     def relation_targets(self, relation_type: RelationshipType) -> set[str]:
         return {relation.target_id for relation in self.relations if relation.type is relation_type}
 
+    def validate_for_creature(self, creature_id: str) -> None:
+        """Validate invariants that need the identity of this core's bearer."""
+        if any(relation.target_id == creature_id for relation in self.relations):
+            raise ValueError("a creature cannot have a relationship with itself")
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "relations": [

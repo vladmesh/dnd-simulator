@@ -17,3 +17,9 @@ class PlayerNotFoundError(ValueError):
 
 class InvalidLevelUpError(ValueError):
     pass
+
+
+class InnerSelfNotFoundError(ValueError):
+    """Raised when a requested creature cannot expose an inner self."""
+
+    pass
