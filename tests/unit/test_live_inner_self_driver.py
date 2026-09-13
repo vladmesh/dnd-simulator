@@ -118,8 +118,7 @@ def test_real_driver_completes_and_cleans_up_with_fake_model(
     assert transport.snapshot_sessions == [result.session_id, result.session_id, result.session_id]
     assert result.metrics["fallback_digests"] >= 1
     records = [
-        json.loads(line)
-        for line in (log_dir / f"session_{result.session_id}" / "full.jsonl").read_text().splitlines()
+        json.loads(line) for line in (log_dir / f"session_{result.session_id}" / "full.jsonl").read_text().splitlines()
     ]
     assert any(
         record.get("event") == "inner_self_llm_digest_rejected"

@@ -32,4 +32,4 @@ $S issue list --product dnd-simulator        # продуктовые issue (в�
 причину, а безопасные логи фиксируют число retry и форму принятого digest. Переваривание принимает один
 JSON fence и быстро возвращается к rules fallback при ограниченном timeout/retry. `make live-inner-self`
 даёт ручной real-model отчёт через GM API и не входит в CI; для него нужны `OPENROUTER_API_KEY` и
-`LLM_MODEL` на сервере.
+`LLM_MODEL` в оболочках сервера и сценария.

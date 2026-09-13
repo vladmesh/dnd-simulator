@@ -247,6 +247,11 @@ def run_scenario(
                 result.warnings.append(f"{label} snapshot failed: {snapshot_error}")
     finally:
         result.metrics = _read_metrics(log_dir, session_id)
+        try:
+            transport.request("delete", f"/api/master/sessions/{session_id}")
+        except Exception as error:
+            result.warnings.append(f"cleanup failed: {error}")
+            result.completed = False
         section("Real-model assumptions", output)
         output(json.dumps(result.metrics, ensure_ascii=False, indent=2, default=str))
         for warning in result.warnings:
@@ -255,11 +260,6 @@ def run_scenario(
             result.before, result.after_combat, result.after_anchor, result.metrics, completed=result.completed
         ):
             output(f"{check['status']}: {check['name']}")
-        try:
-            transport.request("delete", f"/api/master/sessions/{session_id}")
-        except Exception as error:
-            result.warnings.append(f"cleanup failed: {error}")
-            result.completed = False
     return result
 
 
