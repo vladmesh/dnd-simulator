@@ -145,6 +145,7 @@ class TestMinimalConstruction:
         m = NpcContent(name={"en": "Guard"})
         assert m.race.value == "human"
         assert m.char_class.value == "commoner"
+        assert m.alignment.value == "true_neutral"
         assert m.hp == 4
         assert m.ac == 10
         assert m.speed == 30

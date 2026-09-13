@@ -149,6 +149,7 @@ def _to_npc(
         race=model.race,
         char_class=model.char_class,
         level=model.level,
+        alignment=model.alignment,
         role=model.role,
         personality=resolve_text(model.personality, lang) if model.personality else "",
         description=resolve_text(model.description, lang) if model.description else "",

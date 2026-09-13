@@ -7,10 +7,11 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from dnd_simulator.core.character import Creature
+from dnd_simulator.core.character import Alignment, Character, Creature
 from dnd_simulator.core.inner_self import AlignmentAccumulation, DigestBoundary, InnerSelf
+from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.layers.entities.models import Npc
-from dnd_simulator.rules.inner_self_digest import DigestContext, apply_delta, derive_delta
+from dnd_simulator.rules.inner_self_digest import DigestContext, apply_delta, derive_delta, shift_alignment
 
 if TYPE_CHECKING:
     from dnd_simulator.llm.summarizer import MemorySummarizer
@@ -40,6 +41,12 @@ def digest(creature: Creature, boundary: DigestBoundary, summarizer: MemorySumma
     events = list(inner_self.perceived_event_buffer)
     inner_self.perceived_event_buffer.clear()
     result = apply_delta(inner_self, derive_delta(inner_self, events, DigestContext(creature.id)))
+    shifted_character: Character | None = None
+    shifted_alignment: Alignment | None = None
+    if isinstance(creature, Character) and not isinstance(creature, PlayerCharacter):
+        shifted_character = creature
+        shifted_alignment, accumulation = shift_alignment(creature.alignment, result.alignment)
+        result = _with_alignment(result, accumulation)
     try:
         if isinstance(creature, Npc) and summarizer is not None:
             result = _with_summarized_journal(
@@ -62,6 +69,8 @@ def digest(creature: Creature, boundary: DigestBoundary, summarizer: MemorySumma
         # buffer consumed above; this assignment is the sole write-back to core.
         result.perceived_event_buffer.clear()
         creature.inner_self = result
+        if shifted_character is not None and shifted_alignment is not None:
+            shifted_character.alignment = shifted_alignment
 
 
 def _with_summarized_journal(core: InnerSelf, summary: InnerSelf) -> InnerSelf:
@@ -77,5 +86,19 @@ def _with_summarized_journal(core: InnerSelf, summary: InnerSelf) -> InnerSelf:
         journal=summary.journal,
         thoughts=list(core.thoughts),
         current_conversation=summary.current_conversation,
+        perceived_event_buffer=list(core.perceived_event_buffer),
+    )
+
+
+def _with_alignment(core: InnerSelf, alignment: AlignmentAccumulation) -> InnerSelf:
+    """Return *core* with its rule-derived alignment evidence replaced."""
+    return InnerSelf(
+        relations=list(core.relations),
+        mood=core.mood,
+        goals=list(core.goals),
+        alignment=alignment,
+        journal=core.journal,
+        thoughts=list(core.thoughts),
+        current_conversation=core.current_conversation,
         perceived_event_buffer=list(core.perceived_event_buffer),
     )

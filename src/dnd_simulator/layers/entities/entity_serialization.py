@@ -129,6 +129,7 @@ def _npc_save(npc: Npc) -> NpcSave:
             "race": npc.race,
             "class": npc.char_class,
             "level": npc.level,
+            "alignment": npc.alignment,
             "role": npc.role,
             "personality": npc.personality,
             "description": npc.description,

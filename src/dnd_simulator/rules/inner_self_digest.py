@@ -3,9 +3,12 @@
 The rules consume perceived events in their buffered order.  An attack against
 the core bearer creates or strengthens ``hates`` and proposes ``angry``; the
 death of an ally proposes ``grieving``.  Death completes active ``kill`` goals
-and fails active ``protect`` goals.  A core bearer's own attack on an ally adds
-one step each toward chaos and evil.  Alignment accumulation is evidence only:
-this module never changes a creature's D&D alignment.
+and fails active ``protect`` goals. A core bearer's own attack on an ally adds
+one step each toward chaos and evil. ``ENTITY_ATTACK`` is the canonical evidence
+for a resolved attack; ``OPPORTUNITY_ATTACK`` is a separate combat-log event and
+is deliberately not counted again. Positive ``law_chaos`` pressure points toward
+chaos and negative pressure toward law; positive ``good_evil`` pressure points
+toward evil and negative pressure toward good.
 
 When several moods are evidenced, ``MOOD_PRIORITY`` chooses the highest one,
 so grieving wins over angry regardless of event order.
@@ -15,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from dnd_simulator.core.character import Alignment
 from dnd_simulator.core.inner_self import (
     DEFAULT_RELATIONSHIP_INTENSITY,
     RELATIONSHIP_INTENSITY_MAX,
@@ -32,7 +36,22 @@ from dnd_simulator.core.models import EventType
 
 HATE_INTENSITY_STEP = 10
 ALIGNMENT_EVIDENCE_STEP = 1
+ALIGNMENT_SHIFT_THRESHOLD = 3
+ALIGNMENT_HYSTERESIS_RETENTION = 0.5
 MOOD_PRIORITY: dict[Mood, int] = {Mood.ANGRY: 1, Mood.GRIEVING: 2}
+
+_ALIGNMENT_FROM_AXES: dict[tuple[int, int], Alignment] = {
+    (0, 0): Alignment.LAWFUL_GOOD,
+    (1, 0): Alignment.NEUTRAL_GOOD,
+    (2, 0): Alignment.CHAOTIC_GOOD,
+    (0, 1): Alignment.LAWFUL_NEUTRAL,
+    (1, 1): Alignment.TRUE_NEUTRAL,
+    (2, 1): Alignment.CHAOTIC_NEUTRAL,
+    (0, 2): Alignment.LAWFUL_EVIL,
+    (1, 2): Alignment.NEUTRAL_EVIL,
+    (2, 2): Alignment.CHAOTIC_EVIL,
+}
+_AXES_FROM_ALIGNMENT = {alignment: axes for axes, alignment in _ALIGNMENT_FROM_AXES.items()}
 
 
 @dataclass(frozen=True)
@@ -74,7 +93,9 @@ def derive_delta(core: InnerSelf, events: list[BufferedPerceivedEvent], context:
     good_evil_delta = 0
 
     for event in events:
-        if event.event_type in {EventType.ENTITY_ATTACK, EventType.OPPORTUNITY_ATTACK}:
+        # An opportunity attack emits its resolved ENTITY_ATTACK before its
+        # OPPORTUNITY_ATTACK log event. Only the resolved attack is evidence.
+        if event.event_type is EventType.ENTITY_ATTACK:
             actor_id = event.actor_id
             if event.target_id == context.self_id and isinstance(actor_id, str) and actor_id != context.self_id:
                 key = (actor_id, RelationshipType.HATES)
@@ -149,6 +170,43 @@ def apply_delta(core: InnerSelf, delta: InnerSelfDigestDelta) -> InnerSelf:
         current_conversation=core.current_conversation,
         perceived_event_buffer=list(core.perceived_event_buffer),
     )
+
+
+def shift_alignment(
+    alignment: Alignment, accumulation: AlignmentAccumulation
+) -> tuple[Alignment, AlignmentAccumulation]:
+    """Move at most one alignment step per axis and return fresh values.
+
+    Three evidence steps form a threshold. Positive ``law_chaos`` moves
+    lawful → neutral → chaotic, while negative pressure moves the other way;
+    positive ``good_evil`` moves good → neutral → evil, while negative pressure
+    moves the other way. The axes are independent.
+
+    After a move, signed pressure is halved toward zero and then capped to
+    ``±(threshold - 1)``. Thus retained pressure is always strictly below the
+    threshold, including an overshooting batch, and a later shift needs new
+    evidence. One opposite evidence step cannot reverse a threshold crossing.
+    At a terminal axis value, pressure pushing beyond that edge is clamped to
+    ``±(threshold - 1)``: it cannot grow unbounded, and opposite evidence must
+    first work through the retained pressure. Inputs are never mutated.
+    """
+    law_chaos, good_evil = _AXES_FROM_ALIGNMENT[alignment]
+    law_chaos, law_evidence = _shift_axis(law_chaos, accumulation.law_chaos)
+    good_evil, good_evidence = _shift_axis(good_evil, accumulation.good_evil)
+    return _ALIGNMENT_FROM_AXES[(law_chaos, good_evil)], AlignmentAccumulation(law_evidence, good_evidence)
+
+
+def _shift_axis(position: int, pressure: int) -> tuple[int, int]:
+    """Apply one threshold crossing to one ordered three-value alignment axis."""
+    if pressure >= ALIGNMENT_SHIFT_THRESHOLD:
+        if position < 2:
+            return position + 1, min(int(pressure * ALIGNMENT_HYSTERESIS_RETENTION), ALIGNMENT_SHIFT_THRESHOLD - 1)
+        return position, ALIGNMENT_SHIFT_THRESHOLD - 1
+    if pressure <= -ALIGNMENT_SHIFT_THRESHOLD:
+        if position > 0:
+            return position - 1, max(int(pressure * ALIGNMENT_HYSTERESIS_RETENTION), -(ALIGNMENT_SHIFT_THRESHOLD - 1))
+        return position, -(ALIGNMENT_SHIFT_THRESHOLD - 1)
+    return position, pressure
 
 
 def _allied_ids(core: InnerSelf, context: DigestContext) -> frozenset[str]:
