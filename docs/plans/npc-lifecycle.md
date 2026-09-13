@@ -58,6 +58,13 @@ Mood vocabulary: `neutral`, `angry`, `tired`, `happy`, `scared`, `grieving`, `su
 
 **Alignment and free layer** — rules propose and ultimately shift alignment; the LLM may add only `-1..1` evidence per axis. It cannot write thoughts or `current_conversation`; they carry over from the pre-boundary core. The journal is bounded deterministically.
 
+**GM API** — `GET /api/master/sessions/{session_id}/creatures/{entity_id}/inner-self` exposes the complete typed
+inner self, including the read-only journal, thoughts, perceived-event buffer, character alignment and accumulated
+pressure. `PUT .../inner-self/core` has full-replacement semantics for `relations`, `mood`, and `goals` only. The
+request forbids extra fields; domain `InnerSelf` constructors remain the source of core validation. The service builds
+a replacement with the old free layer, buffer and accumulation, validates it, then performs one assignment under the
+same session world-state gate used by world mutations.
+
 ### Implementation order
 
 1. `InnerSelf` model + v1 save migration

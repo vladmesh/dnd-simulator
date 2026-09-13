@@ -9,10 +9,12 @@ from dnd_simulator.adapters.api.schemas import (
     CreateSessionRequest,
     CreatureResponse,
     GiveItemRequest,
+    InnerSelfResponse,
     MessageResponse,
     PatchCreatureRequest,
     PatchNationRequest,
     PatchSettlementRequest,
+    ReplaceInnerSelfCoreRequest,
     SessionResponse,
     SetActivationOverrideRequest,
     SetActivationTriggerRequest,
@@ -25,6 +27,7 @@ from dnd_simulator.adapters.api.schemas import (
 from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.models import EntityKind
 from dnd_simulator.i18n import _
+from dnd_simulator.service.errors import InnerSelfNotFoundError
 from dnd_simulator.service.game_service import GameService
 from dnd_simulator.service.session import GameSession
 
@@ -100,6 +103,35 @@ def get_creature(session_id: str, entity_id: str) -> CreatureResponse:
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
     return CreatureResponse.model_validate(info)
+
+
+@router.get("/sessions/{session_id}/creatures/{entity_id}/inner-self", response_model=InnerSelfResponse)
+def get_creature_inner_self(session_id: str, entity_id: str) -> InnerSelfResponse:
+    """Read a core-bearer's complete inner self."""
+    service = get_service()
+    _get_session(service, session_id)
+    try:
+        return InnerSelfResponse.model_validate(service.get_creature_inner_self(session_id, entity_id))
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+
+@router.put("/sessions/{session_id}/creatures/{entity_id}/inner-self/core", response_model=InnerSelfResponse)
+def replace_creature_inner_self_core(
+    session_id: str,
+    entity_id: str,
+    body: ReplaceInnerSelfCoreRequest,
+) -> InnerSelfResponse:
+    """Completely replace the relations, mood, and goals of an inner-self core."""
+    service = get_service()
+    _get_session(service, session_id)
+    try:
+        result = service.replace_creature_inner_self_core(session_id, entity_id, body.model_dump())
+    except InnerSelfNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return InnerSelfResponse.model_validate(result)
 
 
 @router.put("/sessions/{session_id}/creatures/{entity_id}/activation", response_model=CreatureResponse)

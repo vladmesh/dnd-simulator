@@ -8,6 +8,7 @@ from dnd_simulator.core.models import EntityKind
 from dnd_simulator.core.queries import query_all_creatures, query_entity_info
 from dnd_simulator.core.triggers import GmActivationOverride
 from dnd_simulator.service.base import GameServiceProtocol
+from dnd_simulator.service.errors import InnerSelfNotFoundError
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Entity
@@ -35,6 +36,94 @@ class CreatureCommands(GameServiceProtocol):
         """Get single entity detail."""
         session = self._get_session(session_id)
         return query_entity_info(session.world.query_layer, entity_id)
+
+    def get_creature_inner_self(self, session_id: str, entity_id: str) -> dict[str, object]:
+        """Read a core-bearer's complete inner self under the session state gate."""
+        from dnd_simulator.core.character import Creature
+
+        session = self._get_session(session_id)
+        with session.read_world():
+            entity = self._get_entities_layer(session).get_entity(entity_id)
+            if not isinstance(entity, Creature):
+                raise InnerSelfNotFoundError(f"Creature '{entity_id}' not found")
+            if entity.inner_self is None:
+                raise InnerSelfNotFoundError(f"Creature '{entity_id}' does not have an inner self")
+            return _inner_self_response(entity, entity.inner_self)
+
+    def replace_creature_inner_self_core(
+        self,
+        session_id: str,
+        entity_id: str,
+        core: dict[str, object],
+    ) -> dict[str, object]:
+        """Replace only an inner self's structured core in one world-state mutation.
+
+        The candidate is constructed and fully validated before it replaces the
+        bearer value, retaining the current free layer and digest state.
+        """
+        from dnd_simulator.core.character import Creature
+        from dnd_simulator.core.inner_self import (
+            AlignmentAccumulation,
+            FreeformGoal,
+            GoalStatus,
+            GoalType,
+            InnerSelf,
+            Mood,
+            Relationship,
+            RelationshipType,
+            TypedGoal,
+        )
+
+        session = self._get_session(session_id)
+        with session.mutate_world():
+            entity = self._get_entities_layer(session).get_entity(entity_id)
+            if not isinstance(entity, Creature):
+                raise InnerSelfNotFoundError(f"Creature '{entity_id}' not found")
+            previous = entity.inner_self
+            if previous is None:
+                raise InnerSelfNotFoundError(f"Creature '{entity_id}' does not have an inner self")
+
+            raw_relations = core["relations"]
+            raw_goals = core["goals"]
+            if not isinstance(raw_relations, list) or not isinstance(raw_goals, list):
+                raise ValueError("inner self core fields must be lists")
+            relations = [
+                Relationship(
+                    target_id=str(item["target_id"]),
+                    type=RelationshipType(str(item["type"])),
+                    intensity=int(item.get("intensity", 50)),
+                )
+                for item in raw_relations
+                if isinstance(item, dict)
+            ]
+            if len(relations) != len(raw_relations):
+                raise ValueError("relationship must be an object")
+            goals: list[TypedGoal | FreeformGoal] = []
+            for item in raw_goals:
+                if not isinstance(item, dict):
+                    raise ValueError("goal must be an object")
+                status = GoalStatus(str(item.get("status", GoalStatus.ACTIVE)))
+                if item["kind"] == "typed":
+                    goals.append(TypedGoal(GoalType(str(item["type"])), str(item["target_id"]), status))
+                else:
+                    goals.append(FreeformGoal(str(item["text"]), status))
+
+            replacement = InnerSelf(
+                relations=relations,
+                mood=Mood(str(core["mood"])),
+                goals=goals,
+                alignment=AlignmentAccumulation(
+                    law_chaos=previous.alignment.law_chaos,
+                    good_evil=previous.alignment.good_evil,
+                ),
+                journal=previous.journal,
+                thoughts=list(previous.thoughts),
+                current_conversation=previous.current_conversation,
+                perceived_event_buffer=list(previous.perceived_event_buffer),
+            )
+            replacement.validate_for_creature(entity.id)
+            entity.inner_self = replacement
+            return _inner_self_response(entity, replacement)
 
     def set_creature_activation_override(
         self,
@@ -241,6 +330,48 @@ class CreatureCommands(GameServiceProtocol):
         if isinstance(entity, Npc):
             entity.ai_type = actual_type
         return actual_type
+
+
+def _inner_self_response(entity: object, inner_self: object) -> dict[str, object]:
+    """Translate domain data into the explicit GM API representation."""
+    from dnd_simulator.core.character import Character
+    from dnd_simulator.core.inner_self import InnerSelf, TypedGoal
+
+    assert isinstance(inner_self, InnerSelf)
+    return {
+        "relations": [
+            {"target_id": relation.target_id, "type": relation.type, "intensity": relation.intensity}
+            for relation in inner_self.relations
+        ],
+        "mood": inner_self.mood,
+        "goals": [
+            (
+                {"kind": "typed", "type": goal.type, "target_id": goal.target_id, "status": goal.status}
+                if isinstance(goal, TypedGoal)
+                else {"kind": "freeform", "text": goal.text, "status": goal.status}
+            )
+            for goal in inner_self.goals
+        ],
+        "character_alignment": entity.alignment if isinstance(entity, Character) else None,
+        "alignment_accumulation": {
+            "law_chaos": inner_self.alignment.law_chaos,
+            "good_evil": inner_self.alignment.good_evil,
+        },
+        "journal": inner_self.journal,
+        "thoughts": list(inner_self.thoughts),
+        "current_conversation": inner_self.current_conversation,
+        "perceived_event_buffer": [
+            {
+                "event_type": event.event_type,
+                "actor_id": event.actor_id,
+                "target_id": event.target_id,
+                "description": event.description,
+                "at_seconds": event.at_seconds,
+                "heard": event.heard,
+            }
+            for event in inner_self.perceived_event_buffer
+        ],
+    }
 
 
 def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) -> Entity:

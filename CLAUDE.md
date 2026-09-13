@@ -174,3 +174,6 @@ Kill reputation drop (`rules/reputation.py`): omniscient, delta scaled by victim
 - Save files: `saves/` directory (JSON)
 - Backend API: `make serve` → http://localhost:8001/docs (Swagger UI)
 - Frontend: `make frontend` → http://localhost:5173 (entry point, proxies /api to :8001)
+- GM inner-self API: `GET /api/master/sessions/{session_id}/creatures/{entity_id}/inner-self` returns the complete
+  typed core and read-only personal layer. `PUT .../inner-self/core` completely replaces only `relations`, `mood`, and
+  `goals`; its candidate is validated by the domain model and assigned once under the session world-state gate.
