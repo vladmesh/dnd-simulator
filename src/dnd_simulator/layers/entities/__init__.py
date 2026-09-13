@@ -13,8 +13,9 @@ and time-of-day filtered) to spawn transient monsters. Npc is a pure data model
 the brain field on Creature. InnerSelf holds typed state plus a journal, thoughts,
 conversation context, and a persisted structured perception buffer. Active core-bearers
 append visible events without affecting brain cursors. One digest entry point consumes
-that buffer at combat end, active → dormant, intent completion/interruption, and capacity;
-the current body delegates to MemorySummarizer (in llm/) for NPC journals.
+that buffer at combat end, active → dormant, intent completion/interruption, and capacity.
+Rule digestion is always applied; LlmBrain creatures may replace the proposed core and
+journal through their own LLM client, while every other brain remains rule-only.
 Direct access: get_entity, add_entity, remove_entity for hot controls.
 Save format is defined by Pydantic models in save_models.py (EntitiesState:
 discriminated entity union, combat state incl. sides, layer RNG state);

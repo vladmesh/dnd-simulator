@@ -186,11 +186,6 @@ class GameService(
             faction_names=faction_data.names,
             seed=layer_seeds["politics"],
         )
-        summarizer = None
-        if self._llm:
-            from dnd_simulator.llm.summarizer import MemorySummarizer
-
-            summarizer = MemorySummarizer(self._llm)
         # Resolve member CRs from monster templates for abstract combat
         for squad in squads.values():
             squad.member_crs = [monster_templates[tid].cr for tid in squad.member_templates]
@@ -213,7 +208,6 @@ class GameService(
 
         entities_layer = EntitiesLayer(
             entities=entities,
-            summarizer=summarizer,
             monster_templates=monster_templates,
             encounter_tables=effective_encounters,
             battle_map_configs=battle_map_configs,

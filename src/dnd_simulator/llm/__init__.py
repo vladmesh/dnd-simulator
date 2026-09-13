@@ -1,5 +1,4 @@
-"""LLM client with logging, prompt builders, tool schemas, LlmBrain for NPC actions,
-and MemorySummarizer for compressing NPC event logs into structured memory."""
+"""LLM client, prompts, tools, brains, and validated inner-self digestion."""
 
 from dnd_simulator.llm.client import LlmClient, LlmResponse, ToolCall
 

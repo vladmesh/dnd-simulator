@@ -42,29 +42,6 @@ from dnd_simulator.rules.rule_brain import RuleBrain
 from dnd_simulator.rules.validation import ActionContext
 
 
-class FakeSummarizer:
-    def __init__(self) -> None:
-        self.calls: list[tuple[list[str], str]] = []
-
-    def summarize(self, inner_self: InnerSelf, events: list[str], trigger: str) -> InnerSelf:
-        self.calls.append((events, trigger))
-        return inner_self
-
-    def needs_compression(self, inner_self: InnerSelf) -> bool:
-        return False
-
-
-class ReplacingSummarizer(FakeSummarizer):
-    def summarize(self, inner_self: InnerSelf, events: list[str], trigger: str) -> InnerSelf:
-        self.calls.append((events, trigger))
-        return InnerSelf(perceived_event_buffer=[_buffer_event("stale")])
-
-
-class FailingSummarizer(FakeSummarizer):
-    def summarize(self, inner_self: InnerSelf, events: list[str], trigger: str) -> InnerSelf:
-        raise RuntimeError("LLM unavailable")
-
-
 def _npc(**kwargs: object) -> Npc:
     fields: dict[str, object] = {
         "id": "npc",
@@ -124,34 +101,26 @@ def _death(entity_id: str, killer_id: str | None = None) -> Event:
 
 
 def test_active_to_dormant_digests_once_and_clears_buffer() -> None:
-    summarizer = FakeSummarizer()
     npc = _npc()
     speaker = Creature(id="speaker", name="Speaker", location_id="square")
-    layer = EntitiesLayer([npc, speaker], summarizer=summarizer)  # type: ignore[arg-type]
+    layer = EntitiesLayer([npc, speaker])
     layer._event_log.record(_say())
 
     layer.update_activation(GameDateTime())
 
-    assert summarizer.calls == [(['Speaker says: "Hello"'], DigestBoundary.DORMANT.value)]
     assert npc.inner_self is not None
     assert npc.inner_self.perceived_event_buffer == []
 
 
 def test_combat_end_digests_each_core_participant_once() -> None:
-    summarizer = FakeSummarizer()
     npc = _npc()
     foe = Creature(id="foe", name="Foe", location_id="square", inner_self=InnerSelf())
-    layer = EntitiesLayer([npc, foe], summarizer=summarizer)  # type: ignore[arg-type]
+    layer = EntitiesLayer([npc, foe])
 
     assert layer._combat.start_combat("square") is not None
     layer.end_combat_round("square")
     layer.end_combat_round("square")
 
-    assert len(summarizer.calls) == 1
-    events, boundary = summarizer.calls[0]
-    assert events[-1] == "Combat ended."
-    assert events[0].startswith("Combat started! Initiative order:")
-    assert boundary == DigestBoundary.COMBAT_ENDED.value
     assert npc.inner_self is not None
     assert npc.inner_self.perceived_event_buffer == []
     assert foe.inner_self is not None
@@ -159,21 +128,18 @@ def test_combat_end_digests_each_core_participant_once() -> None:
 
 
 def test_timed_intent_completion_digests_once_and_clears_buffer() -> None:
-    summarizer = FakeSummarizer()
     now = GameDateTime().to_total_seconds()
     npc = _npc(is_anchor=True, current_intent=TimedIntent(IntentType.WAIT, now - 1, now))
     assert npc.inner_self is not None
     npc.inner_self.perceived_event_buffer.append(_buffer_event())
-    layer = EntitiesLayer([npc], summarizer=summarizer)  # type: ignore[arg-type]
+    layer = EntitiesLayer([npc])
 
     layer.update_activation(GameDateTime())
 
-    assert summarizer.calls == [(["Something happened"], DigestBoundary.INTENT_COMPLETED.value)]
     assert npc.inner_self.perceived_event_buffer == []
 
 
 def test_intent_interruption_digests_once_and_clears_buffer() -> None:
-    summarizer = FakeSummarizer()
     npc = _npc(current_intent=TimedIntent(IntentType.WAIT, 0, 3600))
     assert npc.inner_self is not None
     npc.inner_self.perceived_event_buffer.append(_buffer_event())
@@ -181,98 +147,68 @@ def test_intent_interruption_digests_once_and_clears_buffer() -> None:
     assert interrupt_intent(
         npc,
         IntentInterruptReason.DAMAGE,
-        lambda creature, boundary: digest(creature, boundary, summarizer),  # type: ignore[arg-type]
+        digest,
     )
 
-    assert summarizer.calls == [(["Something happened"], DigestBoundary.INTENT_INTERRUPTED.value)]
     assert npc.inner_self.perceived_event_buffer == []
 
 
 def test_buffer_overflow_digests_before_accepting_next_event() -> None:
-    summarizer = FakeSummarizer()
     npc = _npc()
     log = EventLog(
         {npc.id: npc, "speaker": Creature(id="speaker", name="Speaker", location_id="square")},
-        digest=lambda creature, boundary: digest(creature, boundary, summarizer),  # type: ignore[arg-type]
+        digest=digest,
     )
     log.set_current_time(456)
 
     for index in range(PERCEIVED_EVENT_BUFFER_CAPACITY + 1):
         log.record(_say(str(index)))
 
-    assert len(summarizer.calls) == 1
-    assert len(summarizer.calls[0][0]) == PERCEIVED_EVENT_BUFFER_CAPACITY
-    assert summarizer.calls[0][1] == DigestBoundary.BUFFER_FULL.value
     assert npc.inner_self is not None
     assert [event.description for event in npc.inner_self.perceived_event_buffer] == ['Speaker says: "20"']
     assert npc.inner_self.perceived_event_buffer[0].at_seconds == 456
 
 
-def test_buffer_overflow_appends_to_replaced_inner_self() -> None:
-    summarizer = ReplacingSummarizer()
-    npc = _npc()
-    log = EventLog(
-        {npc.id: npc, "speaker": Creature(id="speaker", name="Speaker", location_id="square")},
-        digest=lambda creature, boundary: digest(creature, boundary, summarizer),  # type: ignore[arg-type]
-    )
-
-    for index in range(PERCEIVED_EVENT_BUFFER_CAPACITY + 1):
-        log.record(_say(str(index)))
-
-    expected_events = [f'Speaker says: "{index}"' for index in range(PERCEIVED_EVENT_BUFFER_CAPACITY)]
-    assert summarizer.calls == [(expected_events, DigestBoundary.BUFFER_FULL.value)]
-    assert npc.inner_self is not None
-    assert [event.description for event in npc.inner_self.perceived_event_buffer] == ['Speaker says: "20"']
-
-
 def test_wait_dormifies_through_digest_boundary_once() -> None:
-    summarizer = FakeSummarizer()
     npc = _npc()
     assert npc.inner_self is not None
     npc.inner_self.perceived_event_buffer.append(_buffer_event())
-    layer = EntitiesLayer([npc], summarizer=summarizer)  # type: ignore[arg-type]
+    layer = EntitiesLayer([npc])
     world = World([layer], time=GameDateTime())
 
     result = handle_wait(npc, Action(ActionType.WAIT, {"hours": 1}), lambda _event: None, ActionContext(False), world)
 
     assert result.success
-    assert summarizer.calls == [(["Something happened"], DigestBoundary.DORMANT.value)]
     assert npc.inner_self.perceived_event_buffer == []
     layer.update_activation(GameDateTime())
-    assert len(summarizer.calls) == 1
 
 
 def test_long_rest_dormifies_through_digest_boundary_once() -> None:
-    summarizer = FakeSummarizer()
     npc = _npc()
     assert npc.inner_self is not None
     npc.inner_self.perceived_event_buffer.append(_buffer_event())
-    layer = EntitiesLayer([npc], summarizer=summarizer)  # type: ignore[arg-type]
+    layer = EntitiesLayer([npc])
     world = World([layer], time=GameDateTime())
 
     result = handle_long_rest(npc, Action(ActionType.LONG_REST), lambda _event: None, ActionContext(False), world)
 
     assert result.success
-    assert summarizer.calls == [(["Something happened"], DigestBoundary.DORMANT.value)]
     assert npc.inner_self.perceived_event_buffer == []
     layer.update_activation(GameDateTime())
-    assert len(summarizer.calls) == 1
 
 
 def test_empty_and_coincident_boundaries_call_digest_body_once() -> None:
-    summarizer = FakeSummarizer()
     empty = _npc()
-    digest(empty, DigestBoundary.COMBAT_ENDED, summarizer)  # type: ignore[arg-type]
-    assert summarizer.calls == []
+    digest(empty, DigestBoundary.COMBAT_ENDED)
 
     now = GameDateTime().to_total_seconds()
     npc = _npc(current_intent=TimedIntent(IntentType.WAIT, now - 1, now))
     assert npc.inner_self is not None
     npc.inner_self.perceived_event_buffer.append(_buffer_event())
-    layer = EntitiesLayer([npc], summarizer=summarizer)  # type: ignore[arg-type]
+    layer = EntitiesLayer([npc])
     layer.update_activation(GameDateTime())  # completes intent, then makes the creature dormant
 
-    assert summarizer.calls == [(["Something happened"], DigestBoundary.INTENT_COMPLETED.value)]
+    assert npc.inner_self.perceived_event_buffer == []
 
 
 def test_only_active_eligible_observers_buffer_events_without_moving_brain_cursor() -> None:
@@ -332,7 +268,7 @@ def test_event_log_normalizes_death_as_killer_and_dead_target() -> None:
     assert participants == [("killer", "dead")]
 
 
-def test_rule_brain_digest_applies_battle_outcome_without_summarizer_and_round_trips() -> None:
+def test_rule_brain_digest_applies_battle_outcome_and_round_trips() -> None:
     npc = _npc(
         brain=RuleBrain(),
         inner_self=InnerSelf(
@@ -351,7 +287,7 @@ def test_rule_brain_digest_applies_battle_outcome_without_summarizer_and_round_t
     log.record(_death("ally"))
     log.record(_death("enemy"))
     log.record(_death("ward"))
-    digest(npc, DigestBoundary.COMBAT_ENDED, summarizer=None)
+    digest(npc, DigestBoundary.COMBAT_ENDED)
 
     assert npc.inner_self is not None
     assert npc.inner_self.relation_targets(RelationshipType.HATES) == {"attacker"}
@@ -363,20 +299,6 @@ def test_rule_brain_digest_applies_battle_outcome_without_summarizer_and_round_t
     restored = restored_layer.get_entity("npc")
     assert isinstance(restored, Npc)
     assert restored.inner_self == npc.inner_self
-
-
-def test_failed_summarizer_does_not_rollback_rule_delta() -> None:
-    npc = _npc()
-    assert npc.inner_self is not None
-    npc.inner_self.perceived_event_buffer.append(
-        BufferedPerceivedEvent(EventType.ENTITY_ATTACK, "attacker", "npc", "Attack", 1)
-    )
-
-    digest(npc, DigestBoundary.COMBAT_ENDED, FailingSummarizer())  # type: ignore[arg-type]
-
-    assert npc.inner_self.relation_targets(RelationshipType.HATES) == {"attacker"}
-    assert npc.inner_self.mood is Mood.ANGRY
-    assert npc.inner_self.perceived_event_buffer == []
 
 
 def test_digest_shifts_npc_alignment_and_round_trips_shifted_state() -> None:
@@ -391,7 +313,7 @@ def test_digest_shifts_npc_alignment_and_round_trips_shifted_state() -> None:
         ),
     )
 
-    digest(npc, DigestBoundary.COMBAT_ENDED, summarizer=None)
+    digest(npc, DigestBoundary.COMBAT_ENDED)
 
     assert npc.alignment is Alignment.CHAOTIC_EVIL
     assert npc.inner_self is not None
@@ -420,7 +342,7 @@ def test_player_alignment_never_shifts_even_with_artificial_inner_self() -> None
         ),
     )
 
-    digest(player, DigestBoundary.COMBAT_ENDED, summarizer=None)
+    digest(player, DigestBoundary.COMBAT_ENDED)
 
     assert player.alignment is Alignment.LAWFUL_GOOD
     assert player.inner_self is not None
@@ -440,29 +362,10 @@ def test_core_bearing_creature_without_alignment_still_accumulates() -> None:
         ),
     )
 
-    digest(monster, DigestBoundary.COMBAT_ENDED, summarizer=None)
+    digest(monster, DigestBoundary.COMBAT_ENDED)
 
     assert monster.inner_self is not None
     assert monster.inner_self.alignment == AlignmentAccumulation(law_chaos=1, good_evil=1)
-
-
-def test_failing_summarizer_does_not_rollback_alignment_shift() -> None:
-    npc = _npc(
-        inner_self=InnerSelf(
-            relations=[Relationship("ally", RelationshipType.TRUSTS)],
-            alignment=AlignmentAccumulation(law_chaos=2, good_evil=2),
-            perceived_event_buffer=[
-                BufferedPerceivedEvent(EventType.ENTITY_ATTACK, "npc", "ally", "Attack", 1),
-            ],
-        )
-    )
-
-    digest(npc, DigestBoundary.COMBAT_ENDED, FailingSummarizer())  # type: ignore[arg-type]
-
-    assert npc.alignment is Alignment.CHAOTIC_EVIL
-    assert npc.inner_self is not None
-    assert npc.inner_self.alignment == AlignmentAccumulation(law_chaos=1, good_evil=1)
-    assert npc.inner_self.perceived_event_buffer == []
 
 
 def test_real_combat_chain_digests_outcome_without_llm_client() -> None:
