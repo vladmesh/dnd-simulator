@@ -182,9 +182,10 @@ def shift_alignment(
     positive ``good_evil`` moves good → neutral → evil, while negative pressure
     moves the other way. The axes are independent.
 
-    After a move, signed pressure is retained at ``int(pressure * 0.5)``. This
-    halves the existing pressure toward zero, so a threshold crossing leaves
-    one step of pressure and one opposite evidence step cannot reverse it.
+    After a move, signed pressure is halved toward zero and then capped to
+    ``±(threshold - 1)``. Thus retained pressure is always strictly below the
+    threshold, including an overshooting batch, and a later shift needs new
+    evidence. One opposite evidence step cannot reverse a threshold crossing.
     At a terminal axis value, pressure pushing beyond that edge is clamped to
     ``±(threshold - 1)``: it cannot grow unbounded, and opposite evidence must
     first work through the retained pressure. Inputs are never mutated.
@@ -199,11 +200,11 @@ def _shift_axis(position: int, pressure: int) -> tuple[int, int]:
     """Apply one threshold crossing to one ordered three-value alignment axis."""
     if pressure >= ALIGNMENT_SHIFT_THRESHOLD:
         if position < 2:
-            return position + 1, int(pressure * ALIGNMENT_HYSTERESIS_RETENTION)
+            return position + 1, min(int(pressure * ALIGNMENT_HYSTERESIS_RETENTION), ALIGNMENT_SHIFT_THRESHOLD - 1)
         return position, ALIGNMENT_SHIFT_THRESHOLD - 1
     if pressure <= -ALIGNMENT_SHIFT_THRESHOLD:
         if position > 0:
-            return position - 1, int(pressure * ALIGNMENT_HYSTERESIS_RETENTION)
+            return position - 1, max(int(pressure * ALIGNMENT_HYSTERESIS_RETENTION), -(ALIGNMENT_SHIFT_THRESHOLD - 1))
         return position, -(ALIGNMENT_SHIFT_THRESHOLD - 1)
     return position, pressure
 

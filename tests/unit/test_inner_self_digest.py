@@ -36,6 +36,7 @@ from dnd_simulator.layers.entities.intent_completion import interrupt_intent
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.rules.handlers.movement import handle_wait
+from dnd_simulator.rules.handlers.reactions import handle_opportunity_attack
 from dnd_simulator.rules.handlers.rest import handle_long_rest
 from dnd_simulator.rules.rule_brain import RuleBrain
 from dnd_simulator.rules.validation import ActionContext
@@ -469,11 +470,19 @@ def test_real_combat_chain_digests_outcome_without_llm_client() -> None:
         max_hp=10,
         current_hp=10,
         inner_self=InnerSelf(
-            relations=[Relationship("ally", RelationshipType.LOVES)],
+            relations=[
+                Relationship("ally", RelationshipType.LOVES),
+                Relationship("attacker", RelationshipType.HATES),
+            ],
             goals=[TypedGoal(GoalType.KILL, "enemy"), TypedGoal(GoalType.PROTECT, "ward")],
         ),
     )
-    attacker = Creature(id="attacker", name="Attacker", location_id="square")
+    attacker = Creature(
+        id="attacker",
+        name="Attacker",
+        location_id="square",
+        inner_self=InnerSelf(relations=[Relationship("npc", RelationshipType.TRUSTS)]),
+    )
     ally = Creature(id="ally", name="Ally", location_id="square", max_hp=1, current_hp=1)
     enemy = Creature(id="enemy", name="Enemy", location_id="square", max_hp=1, current_hp=1)
     ward = Creature(id="ward", name="Ward", location_id="square", max_hp=1, current_hp=1)
@@ -481,7 +490,15 @@ def test_real_combat_chain_digests_outcome_without_llm_client() -> None:
     world = World([layer], time=GameDateTime())
     layer._combat._rng.randint = lambda _a, b: b  # type: ignore[method-assign]
 
-    for target_id in ("npc", "ally", "enemy", "ward"):
+    result = handle_opportunity_attack(
+        attacker,
+        Action(ActionType.OPPORTUNITY_ATTACK, {"target_id": "npc"}),
+        world.handle_event,
+        ActionContext(False),
+        world,
+    )
+    assert result.success
+    for target_id in ("ally", "enemy", "ward"):
         world.handle_event(
             Event(
                 EventType.ENTITY_ATTACK_REQUESTED,
@@ -497,6 +514,12 @@ def test_real_combat_chain_digests_outcome_without_llm_client() -> None:
 
     assert npc.inner_self is not None
     assert npc.inner_self.relation_targets(RelationshipType.HATES) == {"attacker"}
+    assert (
+        next(relation for relation in npc.inner_self.relations if relation.type is RelationshipType.HATES).intensity
+        == 60
+    )
     assert npc.inner_self.mood is Mood.GRIEVING
     assert [goal.status.value for goal in npc.inner_self.goals] == ["achieved", "failed"]
     assert npc.inner_self.perceived_event_buffer == []
+    assert attacker.inner_self is not None
+    assert attacker.inner_self.alignment == AlignmentAccumulation(law_chaos=1, good_evil=1)

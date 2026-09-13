@@ -123,6 +123,28 @@ def test_shift_alignment_hysteresis_requires_more_than_one_opposite_evidence_ste
 
 
 @pytest.mark.parametrize(
+    ("alignment", "pressure", "expected"),
+    [
+        (Alignment.LAWFUL_NEUTRAL, 6, Alignment.TRUE_NEUTRAL),
+        (Alignment.LAWFUL_NEUTRAL, 10, Alignment.TRUE_NEUTRAL),
+        (Alignment.CHAOTIC_NEUTRAL, -6, Alignment.TRUE_NEUTRAL),
+        (Alignment.CHAOTIC_NEUTRAL, -10, Alignment.TRUE_NEUTRAL),
+    ],
+    ids=["positive_double_threshold", "positive_large", "negative_double_threshold", "negative_large"],
+)
+def test_shift_alignment_caps_overshoot_before_next_digest(
+    alignment: Alignment, pressure: int, expected: Alignment
+) -> None:
+    shifted, remaining = shift_alignment(alignment, AlignmentAccumulation(law_chaos=pressure))
+    shifted_again, remaining_again = shift_alignment(shifted, remaining)
+
+    assert shifted is expected
+    assert abs(remaining.law_chaos) == ALIGNMENT_SHIFT_THRESHOLD - 1
+    assert shifted_again is expected
+    assert remaining_again == remaining
+
+
+@pytest.mark.parametrize(
     ("alignment", "accumulation"),
     [
         (Alignment.CHAOTIC_NEUTRAL, AlignmentAccumulation(99, 0)),
