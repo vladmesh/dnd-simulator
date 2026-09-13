@@ -49,7 +49,6 @@ from dnd_simulator.layers.entities.trigger_index import TriggerIndex, TriggerMat
 if TYPE_CHECKING:
     from dnd_simulator.core.location import LocationGraph
     from dnd_simulator.core.models import EmitFn, GameDateTime, QueryFn, TimeDelta
-    from dnd_simulator.llm.summarizer import MemorySummarizer
 
 logger = structlog.get_logger(domain="entity")
 
@@ -61,7 +60,6 @@ class EntitiesLayer(Layer):
         self,
         entities: list[Entity] | None = None,
         battle_map_configs: dict[str, BattleMap] | None = None,
-        summarizer: MemorySummarizer | None = None,
         monster_templates: dict[str, MonsterTemplate] | None = None,
         encounter_tables: dict[str, list[EncounterEntry]] | None = None,
         seed: int | None = None,
@@ -69,7 +67,6 @@ class EntitiesLayer(Layer):
     ) -> None:
         self._entities: dict[str, Entity] = {}
         self._location_log: dict[str, list[Event]] = defaultdict(list)
-        self._summarizer = summarizer
         self._monster_templates = monster_templates or {}
         self._encounter_tables = encounter_tables or {}
         self._encounter_cooldowns: dict[str, int] = {}  # location_id → last spawn time (seconds)
@@ -180,7 +177,7 @@ class EntitiesLayer(Layer):
 
     def _digest_inner_self(self, creature: Creature, boundary: DigestBoundary) -> None:
         """Route every digest boundary through the one entities-layer entry point."""
-        digest(creature, boundary, self._summarizer)
+        digest(creature, boundary)
 
     def dormify(self, creature: Creature) -> None:
         """Route every active-to-dormant transition through its digest boundary."""

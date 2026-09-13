@@ -74,7 +74,7 @@ class LlmClient:
             )
         except Exception:
             elapsed_ms = (time.monotonic() - t0) * 1000
-            logger.error("llm_error", caller="summarizer", elapsed_ms=round(elapsed_ms))
+            logger.error("llm_error", caller="inner_self_digest", elapsed_ms=round(elapsed_ms))
             raise
         elapsed_ms = (time.monotonic() - t0) * 1000
 
@@ -82,7 +82,7 @@ class LlmClient:
         usage = response.usage
 
         text = msg.content or ""
-        logger.info("llm_response", caller="summarizer", elapsed_ms=round(elapsed_ms), **_usage_kwargs(usage))
+        logger.info("llm_response", caller="inner_self_digest", elapsed_ms=round(elapsed_ms), **_usage_kwargs(usage))
         return text
 
     def generate_with_tools(

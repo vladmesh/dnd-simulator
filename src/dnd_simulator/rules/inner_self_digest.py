@@ -165,10 +165,12 @@ def apply_delta(core: InnerSelf, delta: InnerSelfDigestDelta) -> InnerSelf:
             law_chaos=core.alignment.law_chaos + delta.law_chaos_delta,
             good_evil=core.alignment.good_evil + delta.good_evil_delta,
         ),
-        journal=core.journal,
-        thoughts=list(core.thoughts),
-        current_conversation=core.current_conversation,
-        perceived_event_buffer=list(core.perceived_event_buffer),
+        # The free layer is retained by the entities digest entry point. Rules
+        # deliberately never read journal or thoughts, which only LLM code owns.
+        journal="",
+        thoughts=[],
+        current_conversation="",
+        perceived_event_buffer=[],
     )
 
 

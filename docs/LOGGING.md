@@ -35,7 +35,7 @@ Every logger is tagged with a `domain` for routing and filtering:
 | `llm`             | `llm/client.py`               | API requests, tool calls, responses, errors        |
 | `llm.brain`       | `llm/brain.py`                | NPC turn start, mode (peaceful/combat)             |
 | `llm.context`     | `llm/client.py`               | Full prompt + response (debug, file dispatch only) |
-| `llm.summarizer`  | `llm/summarizer.py`           | Memory summarization calls                         |
+| `entity`          | `layers/entities/inner_self_digest.py` | Rejected LLM inner-self digests and rules fallback |
 | `brain`           | `core/brain.py`               | RuleBrain decisions (target selection, actions)     |
 | `action`          | `rules/action_handlers.py`    | Action execution (attack, move, say, equip, etc.)  |
 | `combat`          | `layers/entities/combat_manager.py` | Combat start/end, attack resolution, movement |

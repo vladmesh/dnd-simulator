@@ -41,6 +41,11 @@ class LlmBrain(Brain):
     def __init__(self, llm: LlmClient) -> None:
         self._llm = llm
 
+    @property
+    def llm(self) -> LlmClient:
+        """The client shared by this brain's decisions and experience digest."""
+        return self._llm
+
     def choose_action(
         self,
         creature: Creature,

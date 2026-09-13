@@ -254,7 +254,7 @@ def test_derivation_is_deterministic_and_does_not_mutate_input() -> None:
     assert first == second
     assert core == before
     assert applied is not core
-    assert applied.perceived_event_buffer == core.perceived_event_buffer
+    assert applied.perceived_event_buffer == []
 
 
 def test_rules_module_only_depends_on_core_domain() -> None:

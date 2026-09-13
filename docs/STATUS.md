@@ -23,3 +23,7 @@ $S issue list --product dnd-simulator        # продуктовые issue (в�
 нет, блокеров нет. Кандидаты на следующий спринт из BACKLOG: `combat-status-single-source` (зонтик над
 `rest-in-combat-not-rejected` и `flee-scene-separation`), `load-combat-round-resume`, `hit-dice-short-rest`;
 либо возврат к эпику simulation-core (`inner-self`).
+
+Техническое обновление 2026-09-13: переваривание внутреннего я применяет правила для всех носителей ядра;
+только `LlmBrain` поверх этого предложения вызывает свой клиент, валидирует полное ядро и дневник и при
+ошибке оставляет предложение. Alignment сдвигают только правила.

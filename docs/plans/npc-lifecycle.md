@@ -52,21 +52,16 @@ Mood vocabulary: `neutral`, `angry`, `tired`, `happy`, `scared`, `grieving`, `su
 
 **Delta log instead of full log** — `LlmBrain` sends only new events since last turn (switch from `get_perceived_log` to `get_new_perceived_events` or equivalent with ~15 line cap).
 
-**Summarizer** — `llm/summarizer.py`. It receives InnerSelf JSON and delta events, preserves the typed core, and rewrites only the journal/conversation layer. One cheap LLM call, triggered by `EntitiesLayer` on context change.
+**LLM digest** — `llm/inner_self_digest.py`. At a digest boundary, a creature with `LlmBrain` receives its pre-boundary core, raw structured buffered events, thoughts, allowed target ids, and a rules proposal after the events. It returns a complete strict-validated core plus journal. The proposal wins unchanged on a client or validation failure. RuleBrain and all other creatures digest only through rules and make no LLM call.
 
-Summarizer triggers:
-- End of conversation → compress `current_conversation` into `journal`
-- End of combat → compress combat events into `journal`
-- `journal` exceeds character limit → compress `journal`
-
-**Combat journal** — no summarization during combat. LLM sees a rolling window of ~15 log lines. After combat ends the summarizer writes the outcome to `journal`.
+**Alignment and free layer** — rules propose and ultimately shift alignment; the LLM may add only `-1..1` evidence per axis. It cannot write thoughts or `current_conversation`; they carry over from the pre-boundary core. The journal is bounded deterministically.
 
 ### Implementation order
 
 1. `InnerSelf` model + v1 save migration
 2. Typed relationships/mood + RuleBrain reads them in `choose_action()`
 3. Delta log — switch LlmBrain to send only new events
-4. Summarizer (`llm/summarizer.py`) + triggers in EntitiesLayer
+4. LLM digest (`llm/inner_self_digest.py`) at the existing entity digest boundaries
 
 ### Open questions
 
@@ -84,27 +79,25 @@ Summarizer triggers:
 
 ---
 
-## Phase 2.5 — Wire Summarizer Triggers + RuleBrain Dialogue
+## Phase 2.5 — Digest Boundaries + RuleBrain Dialogue
 
 ### Goal
 
-Connect the summarizer to actual game events. Give RuleBrain NPCs minimal dialogue without LLM.
+Connect digest boundaries to actual game events. Give RuleBrain NPCs minimal dialogue without LLM.
 
-### 2.5a — Summarizer triggers DONE
+### 2.5a — Digest boundaries DONE
 
 > Implemented in commit `ebac0a6`
 
 **Decisions:**
 
-- `EntitiesLayer` gets optional `summarizer: MemorySummarizer | None`, injected at construction. `None` = skip summarization.
 - Active core-bearers now retain a structured, saveable perception buffer without changing their brain log cursor. One digest entry point is called at combat end, active → dormant, intent completion/interruption, and buffer capacity.
 - Combat consumes buffers for the recorded combat participants; it no longer rebuilds events by scanning `_location_log` from `COMBAT_STARTED`.
 - Every core-bearer first receives the pure rules digest, including RuleBrain and LlmBrain: attacks on the bearer create or strengthen `hates` and set `angry`; allied deaths set `grieving`; deaths resolve active `kill`/`protect` goals; the bearer's attack on an ally accumulates chaos/evil evidence. Grieving wins over angry. The rules use only core relationships, active protect targets, and optional caller-supplied ally IDs; they do not change combat sides or effective faction relation.
-- The NPC journal summarizer runs after the rule delta and may still call `needs_compression()` for `journal_overflow`. A summarizer failure leaves the already-applied rules delta intact. Every three alignment-evidence steps shift a non-player `Character` one axis step; signed pressure is halved after a shift and capped at a terminal edge. Positive law/chaos pressure means chaos, positive good/evil pressure means evil.
-- A failed summarizer call logs `inner_self_digest_failed` after clearing the buffer, so it cannot retry stale events indefinitely.
+- LlmBrain alone may replace the proposed core and journal through its own client; a rejected completion leaves the complete proposal intact. Every three alignment-evidence steps shift a non-player `Character` one axis step; signed pressure is halved after a shift and capped at a terminal edge. Positive law/chaos pressure means chaos, positive good/evil pressure means evil.
+- A failed LLM digest logs `inner_self_llm_digest_rejected` after clearing the buffer, so it cannot retry stale events indefinitely.
 - `conversation_ended` trigger: deferred (needs conversation detection — manual command or timeout).
-- Both `cli.py` (GameService) and `cli_loop.py` inject summarizer when LLM is configured.
-- Integration test script: `scripts/test_arena_summarizer.py`.
+- GameService assigns the brain once; the digest reads the client from LlmBrain, so a configured service client does not enable LLM digestion for RuleBrain NPCs.
 
 ### 2.5b — RuleBrain canned dialogue DONE
 
