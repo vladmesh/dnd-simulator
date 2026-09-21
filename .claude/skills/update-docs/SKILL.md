@@ -23,8 +23,7 @@ Keep living docs in sync with the codebase. Documentation lives in two places: m
 | `CLAUDE.md` | Dev commands, architecture overview, code style, environment | `pyproject.toml`, `Makefile`, `src/dnd_simulator/core/`, new layers, new adapters | **Conservative** — see below |
 | `ARCHITECTURE.md` | Detailed system design, module map, data flow, principles | `core/`, `layers/`, `service/`, `adapters/`, `llm/`, `storage/` | Keep accurate |
 | `README.md` | Project overview, quick start | Major feature additions, new dependencies | Keep accurate |
-| `docs/ROADMAP.md` | Dev phases, current status, links to plans | Completed phases, new plans in `docs/plans/` | Move done items, add new plans |
-| `docs/BACKLOG.md` | Prioritized backlog: bugs, tech debt, test gaps, small features (must/should/could) | Bug fixes, feature implementations | Mark fixed items done; keep priorities/tags |
+| `docs/ROADMAP.md` | **Planned work only** — what is not built yet | Work that shipped and closes a planned item | Remove or strike shipped items; never add a Done section |
 | `docs/e2e-playbook.md` | E2E regression scenarios for Playwright | New game mechanics in `rules/`, `core/`, `adapters/`, `layers/`, `frontend/` | Add scenarios for new features, remove for deleted ones |
 
 #### CLAUDE.md update policy
@@ -40,18 +39,16 @@ Do NOT update CLAUDE.md for: minor refactors, internal renames, new tests, new c
 
 #### docs/ROADMAP.md update policy
 
-The roadmap tracks macro progress. When updating:
-- **Move completed work** from "In Progress" or "Planned" to "Done" — write a brief summary in the same style as existing Done entries (Russian, 1-3 sentences)
-- **Add new planned work** if a new `docs/plans/` or `docs/brainstorms/` file appeared and isn't referenced yet
-- **Don't invent phases** — only reflect what actually shipped or what has a plan/brainstorm doc
-- Keep the existing structure: Done → In Progress → Planned → Known Issues
+Since 2026-09-21 the roadmap holds **only the Planned section** plus pointers. History (Phase 1 …
+Sprint 024, sprint:1439, sprint:1440) lives in the secretary instance knowledge under
+`state/knowledge/projects/dnd-simulator/`, and the backlog lives on the board as issues of the
+`dnd-simulator` product. When updating:
 
-#### docs/BACKLOG.md update policy
-
-BACKLOG.md is the prioritized backlog (must/should/could) of bugs, tech debt, test gaps and small features. When updating:
-- **Mark items done** when the underlying issue was fixed — check git log for evidence (relevant commits, changed files). Match the file's convention: `[x]` with a `~~strikethrough~~` and a `FIXED Sprint NNN` note, rather than deleting the line.
-- **Add new items** only if a bug or small feature request was explicitly discussed and not yet tracked, with a priority and kebab-case tag matching the existing format.
-- Don't speculatively add items you noticed while reading code — the backlog is curated by the user, this skill just keeps it in sync with reality
+- **Remove or strike a planned item** when the work actually shipped — evidence in git log, not a
+  guess. Do not re-create a "Done" section and do not write sprint history here.
+- **Do not add new planned work on your own.** New work becomes an issue on the board (the PO files
+  it); the roadmap only names epics that are already agreed.
+- Keep the pointers at the top and bottom of the file accurate (knowledge path, `issue list` command).
 
 #### docs/e2e-playbook.md update policy
 
@@ -89,7 +86,10 @@ When updating a docstring, match the existing style: top-level packages (`core`,
 - `docs/VISION.md` — product vision, changes only when the user rewrites it
 - `content/*.yaml` — game data, not documentation
 - `.claude/skills/*/SKILL.md` — managed by `/skill-creator`
-- `docs/brainstorms/`, `docs/plans/` — working docs, not living documentation
+- Brainstorms, plans, project history and decisions — they live in the secretary instance knowledge
+  (`state/knowledge/projects/dnd-simulator/`) and are written through the `secretary knowledge` CLI,
+  never from this repository
+- The board (issues, sprints, cards) — this skill never touches it
 - Class-level and function-level docstrings — too granular, updated inline when code changes
 
 ## Modes
@@ -133,9 +133,7 @@ git log --oneline --since="<last_run>" --name-only
 
 From changed files, use the "Code signals" column to determine which docs are potentially affected. Only review those.
 
-For `docs/BACKLOG.md` — also check commit messages for keywords like "fix", "resolve", "close" that might indicate a backlog item was addressed. Read backlog items and see if any match the recently changed code.
-
-For `docs/ROADMAP.md` — check if any commit messages or changed files suggest a phase/feature was completed or a new plan was added.
+For `docs/ROADMAP.md` — check whether any commit closes a planned item. If a change looks like it should be tracked but has no home here, report it so the PO can file an issue; do not invent a file for it.
 
 If nothing changed — say so and exit.
 
@@ -188,7 +186,9 @@ git add <updated docs> .claude/skills/update-docs/state.json
 git commit -m "docs: update living docs (<mode> sync, <N> files)"
 ```
 
-Do NOT push.
+Do NOT push. Never create `docs/BACKLOG.md`, `docs/STATUS.md`, `docs/audit.md` or any similar
+state/backlog file — they were removed deliberately on 2026-09-21 and their content lives on the
+board and in knowledge.
 
 ### 5. Report
 

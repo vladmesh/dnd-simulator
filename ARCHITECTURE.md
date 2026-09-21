@@ -33,7 +33,7 @@ Every layer implements the same interface:
 
 ```
 src/dnd_simulator/
-├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/BrainType/Action, CreatureHost protocol, LocationGraph, Condition, Item/WeaponDef/ArmorDef, Modifier, ClassFeatures, ResourcePool, ActionDef/TargetMode/TargetScope, EntityKind, NpcMemory, Squad, Lair/LairState, Container, InventoryHolder/Lootable, TimeOfDay
+├── core/          — foundation types, abstract Layer, World container, CombatState, Brain/BrainType/Action, CreatureHost protocol, LocationGraph, Condition, Item/WeaponDef/ArmorDef, Modifier, ClassFeatures, ResourcePool, ActionDef/TargetMode/TargetScope, EntityKind, InnerSelf, Squad, Lair/LairState, Container, InventoryHolder/Lootable, TimeOfDay
 ├── layers/        — concrete layer implementations
 │   ├── geography/ — physical world simulation
 │   ├── politics/  — factions and diplomacy
@@ -49,7 +49,7 @@ src/dnd_simulator/
 ├── master/        — stub for a future LLM DM orchestrator (docstring only, no code)
 ├── rules/         — pure functions: D&D mechanics, combat/initiative, movement, validation (+ target scope), conditions, weapons, modifiers, proficiency, sneak attack, divine smite, fighting style, reactions, reputation, combat_sides, resources, character creation, leveling (XP/thresholds), perform_level_up, action providers, encounters (time-of-day gate), inventory (transfer_items), loot, trade, lairs, abstract combat, geography/politics/settlements formulas, dice, checks, RuleBrain (utility scoring)
 │   └── handlers/  — per-action-type execution (combat, attack_resolution, action_surge, movement, equipment, items, rest, trade, loot, reactions, triggers)
-├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, MemorySummarizer (layer-agnostic: only depends on core/ and rules/)
+├── llm/           — LLM client (with logging), LlmBrain, prompt builders (peaceful + combat), tool schemas, inner-self digest (layer-agnostic: only depends on core/ and rules/)
 ├── i18n.py        — gettext internationalization, per-session language via contextvars
 ├── adapters/      — transport layer
 │   └── api/       — FastAPI REST + WebSocket adapter
@@ -182,7 +182,7 @@ Entity (id, name, location_id, active, on_tick)
 └── Creature (ability_scores, HP, AC, in_combat, is_dodging, is_disengaging, is_anchor, current_intent, brain, turn_budget, combat_position, equipment, resource_pools, faction_id, reputation, squad_id, xp_value, execute_action)
     └── Character (race, class, alignment, gold, appearance, class_features, level, experience, level_up_available, perceive_by_id, get_npc_data)
         ├── PlayerCharacter (interactive I/O, overrides take_turn directly)
-        └── Npc (role, personality, schedule, memory: NpcMemory, ai_type — brain assigned by content_loader/adapter)
+        └── Npc (role, personality, schedule, ai_type — brain assigned by content_loader/adapter)
 ```
 
 All tracked entities live on the `EntitiesLayer`. The layer's `tick()` is a no-op — the Round orchestrator calls `run_creature_turn` directly for both combat and peaceful turns. `Entity.on_tick(hour)` is called by the Round to update NPC activity based on daily schedule.
@@ -191,9 +191,15 @@ All tracked entities live on the `EntitiesLayer`. The layer's `tick()` is a no-o
 
 `World.location_graph` (`LocationGraph`) provides a flat graph of all locations. Each `Location` node has a `region_id` tag (for weather/terrain lookups) and an optional `settlement_id` tag (for economy/NPC binding). Entities hold a `location_id` and the graph resolves which region/settlement they are in. Edges between locations carry distances in meters; `travel_seconds()` computes travel time.
 
-### NPC Memory
+### Inner Self
 
-NPCs carry structured memory via `NpcMemory` (tags, recent, inner_state, current_conversation). Tags use `NpcTag` vocabulary — emotions (`angry`, `scared`) and relations (`hates:orc_chief`, `fears:player`). Tags are readable by both `RuleBrain` (direct checks for target selection, flee thresholds, mood-based canned dialogue) and `LlmBrain` (included in prompt context). A `MemorySummarizer` (in `llm/summarizer.py`) compresses NPC event logs into memory via a cheap LLM call, triggered after combat ends or when the `recent` field overflows 300 characters. Memory can be pre-loaded from YAML content files.
+Creatures carry a structured inner life via `InnerSelf` (`core/inner_self.py`, held as `Character.inner_self`). It has a **structural core** read by rules, triggers and the master panel — `relations` (`Relationship`: target, `RelationshipType`, intensity), `mood` (`Mood` enum), `goals` (`TypedGoal` with `GoalType`/`GoalStatus`, or `FreeformGoal` free text), `alignment` (`AlignmentAccumulation`, shifted by rules on accumulated evidence) — plus an **open personal layer** read only by the LLM: `journal`, a fixed-capacity `thoughts` ring buffer, `current_conversation` and the `perceived_event_buffer`.
+
+Both brains read the core: `RuleBrain` checks relations and mood directly (target selection, flee thresholds, canned dialogue), `LlmBrain` receives relations, mood, goals, journal and recent thoughts as separate prompt sections.
+
+**Digest** compresses experience into the core at boundaries (`DigestBoundary`: scene end, intent end, buffer overflow). The rules twin `rules/inner_self_digest.py` always runs and is the only mechanism in Classic mode; for an LLM brain its result is an explicitly non-authoritative proposal passed to `llm/inner_self_digest.py`, which writes a full validated core and journal, falling back to the rules proposal on failure. Inner selves can be pre-loaded from YAML content files, and the master reads the whole thing but may only replace relations, mood and goals.
+
+The older tag-based `NpcMemory` / `NpcTag` model and `llm/summarizer.py` no longer exist — they were replaced by `InnerSelf` in sprint:1440.
 
 `Character.perceive(target: Entity) -> str` — observer extracts visible traits from target (name if same settlement, otherwise race + appearance). Health and conditions are surfaced through the inspect action, not baked into the perceived name (keeps event logs readable). LLM never receives raw character data, only what the observer can perceive.
 

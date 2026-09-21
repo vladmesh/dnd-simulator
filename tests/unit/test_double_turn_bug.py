@@ -1,6 +1,6 @@
 """Investigation: NPC gets more turns per round than expected.
 
-Reproduces the bug from docs/bug_double_attack.md:
+Reproduces the historical double-attack bug:
   - 1v1 Goblin vs Hero, 3 attack+end_turn cycles
   - Goblin should attack at most 3 times, but actually attacks more
 """
