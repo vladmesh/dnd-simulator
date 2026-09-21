@@ -91,6 +91,7 @@ export function GameScreen() {
                 <CombatPanel />
                 <div className="my-3 border-t border-border" />
                 <Perception />
+                <LootPanel />
               </>
             ) : (
               <>

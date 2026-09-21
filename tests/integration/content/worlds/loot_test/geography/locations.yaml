@@ -1,0 +1,4 @@
+loot_floor:
+  name: Loot Arena Floor
+  region: loot_arena
+  description: An arena for testing looting in combat.

@@ -223,6 +223,9 @@ def check_target_valid(actor: Creature, action: Action, ctx: ActionContext) -> V
 def check_lootable_target(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
     """For TAKE: target must exist, be at the same location, and be a lootable holder.
 
+    In combat the holder must also be within loot reach on the battle map
+    (`rules/loot.loot_reach`: adjacent cell, diagonals count).
+
     A lootable holder is a dead creature (corpse) or an open container — see
     `rules/loot.is_lootable`. Faction/scope is irrelevant: a corpse has no useful
     relation, so TAKE bypasses check_target_scope.
@@ -248,6 +251,13 @@ def check_lootable_target(actor: Creature, action: Action, ctx: ActionContext) -
 
     if not is_lootable(target):
         return ValidationError("TARGET_NOT_LOOTABLE", _("Target '{id}' cannot be looted.").format(id=target_id))
+
+    if ctx.combat_state is not None:
+        from dnd_simulator.rules.loot import loot_block_message, loot_reach
+
+        reach = loot_reach(ctx.combat_state.battle_map, actor.id, target.id)
+        if reach.block is not None:
+            return ValidationError("TARGET_OUT_OF_REACH", loot_block_message(reach))
 
     return None
 

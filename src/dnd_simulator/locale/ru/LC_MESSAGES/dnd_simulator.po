@@ -1197,6 +1197,17 @@ msgstr "Всплеск действий требует активного ход
 msgid "Target '{id}' cannot be looted"
 msgstr "Цель '{id}' нельзя обыскать"
 
+# rules/loot.py — combat loot reach (take)
+
+msgid "Too far to loot ({dist} ft); it must be in an adjacent cell."
+msgstr "Слишком далеко, чтобы обыскать ({dist} ft): нужно стоять в соседней клетке."
+
+msgid "Out of reach in combat: it is not on the battle map."
+msgstr "В бою недоступно: этого нет на поле боя."
+
+msgid "Take all items and gold from a lootable corpse or container. In combat: an Action, adjacent cell only."
+msgstr "Забрать все предметы и золото с трупа или из контейнера. В бою: за действие, только из соседней клетки."
+
 # =========================================================================
 # Trigger completion
 # =========================================================================

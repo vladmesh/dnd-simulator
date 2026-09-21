@@ -10,6 +10,7 @@ import structlog
 from dnd_simulator.core.awareness import (
     CombatAwareness,
     CombatEntity,
+    CombatLootable,
     EquippedInfo,
     ItemInfo,
     MerchantInfo,
@@ -289,6 +290,7 @@ class AwarenessBuilder:
         )
 
         return CombatAwareness(
+            lootables=self._build_combat_lootables(creature, combat),
             self_hp=creature.current_hp,
             self_max_hp=creature.max_hp,
             self_ac=effective_ac(creature),
@@ -308,6 +310,41 @@ class AwarenessBuilder:
             is_disengaging=creature.is_disengaging,
             self_resource_pools=resource_pools,
         )
+
+    def _build_combat_lootables(self, creature: Creature, combat: CombatState | None) -> list[CombatLootable]:
+        """Lootable holders at the creature's location, each with its combat loot reach."""
+        from dnd_simulator.core.loot import InventoryHolder
+        from dnd_simulator.rules.loot import is_lootable, loot_block_message, loot_reach
+
+        result: list[CombatLootable] = []
+        for e in self._entities.values():
+            if e.id == creature.id or e.location_id != creature.location_id or not is_lootable(e):
+                continue
+            assert isinstance(e, InventoryHolder)  # is_lootable ⇒ Creature or Container
+            distance_ft: int | None = None
+            reason_key: str | None = None
+            reason: str | None = None
+            if combat is not None:
+                reach = loot_reach(combat.battle_map, creature.id, e.id)
+                distance_ft = reach.distance_ft
+                if reach.block is not None:
+                    reason_key = reach.block.value
+                    reason = loot_block_message(reach)
+            desc = creature.perceive(e) if isinstance(creature, Character) else e.name
+            result.append(
+                CombatLootable(
+                    id=e.id,
+                    name=e.name,
+                    description=desc,
+                    in_reach=reason_key is None,
+                    distance_ft=distance_ft,
+                    reason_key=reason_key,
+                    reason=reason,
+                    loot_items=[item_info(i) for i in e.inventory],
+                    loot_gold=e.gold,
+                )
+            )
+        return result
 
     def build_nearby_entities(
         self, creature: Creature, hour: int, query_fn: QueryFn | None = None

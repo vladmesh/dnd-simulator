@@ -94,6 +94,8 @@ class EquipActionSpec:
     param_description: str
     unequip_action: ActionType
     unequip_description: str
+    cost_type: CostType = CostType.FREE
+    combat_mode: CombatMode = CombatMode.ANY
     ends_peaceful_turn: bool = False
     equip_llm_hint: str = ""
 
@@ -329,6 +331,7 @@ _reg(
         description=N_("Invoke a blessing. Grants +d4 to attack rolls for several rounds."),
         cost_type=CostType.BONUS_ACTION,
         target_mode=TargetMode.SELF,
+        ends_peaceful_turn=True,
         provider_managed=True,
         llm_hint=(
             "Invoke a blessing from your weapon. Costs a bonus action. "
@@ -338,8 +341,10 @@ _reg(
 )
 
 # Equip/unequip ActionDefs — one per slot per direction, registered via a loop.
-# Each spec keeps its exact N_() msgid (i18n) and per-slot flags. The weapon slot is the
-# only one that ends a peaceful turn and carries an llm_hint (it existed before the others).
+# Each spec keeps its exact N_() msgid (i18n) and per-slot flags. Only the weapon carries
+# an llm_hint (it existed before the others). Combat costs follow 5e: drawing/stowing a
+# weapon is a free object interaction, donning/doffing a shield takes an Action, and armor
+# or accessories cannot be changed mid-fight at all (armor takes minutes to don).
 _EQUIP_ACTION_SPECS: tuple[EquipActionSpec, ...] = (
     EquipActionSpec(
         equip_action=ActionType.EQUIP,
@@ -362,6 +367,7 @@ _EQUIP_ACTION_SPECS: tuple[EquipActionSpec, ...] = (
         param_description=N_("ID of the armor to equip"),
         unequip_action=ActionType.UNEQUIP_ARMOR,
         unequip_description=N_("Remove your equipped armor."),
+        combat_mode=CombatMode.PEACEFUL_ONLY,
     ),
     EquipActionSpec(
         equip_action=ActionType.EQUIP_SHIELD,
@@ -370,6 +376,8 @@ _EQUIP_ACTION_SPECS: tuple[EquipActionSpec, ...] = (
         param_description=N_("ID of the shield to equip"),
         unequip_action=ActionType.UNEQUIP_SHIELD,
         unequip_description=N_("Remove your equipped shield."),
+        cost_type=CostType.ACTION,
+        ends_peaceful_turn=True,
     ),
     EquipActionSpec(
         equip_action=ActionType.EQUIP_HEAD,
@@ -378,6 +386,7 @@ _EQUIP_ACTION_SPECS: tuple[EquipActionSpec, ...] = (
         param_description=N_("ID of the headgear to equip"),
         unequip_action=ActionType.UNEQUIP_HEAD,
         unequip_description=N_("Remove your equipped headgear."),
+        combat_mode=CombatMode.PEACEFUL_ONLY,
     ),
     EquipActionSpec(
         equip_action=ActionType.EQUIP_FEET,
@@ -386,6 +395,7 @@ _EQUIP_ACTION_SPECS: tuple[EquipActionSpec, ...] = (
         param_description=N_("ID of the footwear to equip"),
         unequip_action=ActionType.UNEQUIP_FEET,
         unequip_description=N_("Remove your equipped footwear."),
+        combat_mode=CombatMode.PEACEFUL_ONLY,
     ),
     EquipActionSpec(
         equip_action=ActionType.EQUIP_RING,
@@ -394,6 +404,7 @@ _EQUIP_ACTION_SPECS: tuple[EquipActionSpec, ...] = (
         param_description=N_("ID of the ring to equip"),
         unequip_action=ActionType.UNEQUIP_RING,
         unequip_description=N_("Remove your equipped ring."),
+        combat_mode=CombatMode.PEACEFUL_ONLY,
     ),
 )
 
@@ -402,7 +413,8 @@ for _spec in _EQUIP_ACTION_SPECS:
         ActionDef(
             action_type=_spec.equip_action,
             description=_spec.equip_description,
-            cost_type=CostType.FREE,
+            cost_type=_spec.cost_type,
+            combat_mode=_spec.combat_mode,
             ends_peaceful_turn=_spec.ends_peaceful_turn,
             provider_managed=True,
             params=(ParamDef(_spec.param_key, "string", _spec.param_description, required=True),),
@@ -413,7 +425,8 @@ for _spec in _EQUIP_ACTION_SPECS:
         ActionDef(
             action_type=_spec.unequip_action,
             description=_spec.unequip_description,
-            cost_type=CostType.FREE,
+            cost_type=_spec.cost_type,
+            combat_mode=_spec.combat_mode,
             ends_peaceful_turn=_spec.ends_peaceful_turn,
             provider_managed=True,
         )
@@ -425,6 +438,7 @@ _reg(
         description=N_("Heal yourself for 1d10 + fighter level HP. Once per short rest."),
         cost_type=CostType.BONUS_ACTION,
         target_mode=TargetMode.SELF,
+        ends_peaceful_turn=True,
         provider_managed=True,
         llm_hint=(
             "Second Wind: heal yourself for 1d10 + your fighter level HP. Costs a bonus action. Once per short rest."
@@ -481,6 +495,7 @@ _reg(
         cost_type=CostType.ACTION,
         target_mode=TargetMode.SINGLE,
         target_scope=TargetScope.ALLY,
+        ends_peaceful_turn=True,
         provider_managed=True,
         params=(
             ParamDef("target_id", "string", N_("ID of creature to heal (omit for self)")),
@@ -496,16 +511,18 @@ _reg(
 _reg(
     ActionDef(
         action_type=ActionType.TAKE,
-        description=N_("Take all items and gold from a lootable corpse or container."),
+        description=N_(
+            "Take all items and gold from a lootable corpse or container. In combat: an Action, adjacent cell only."
+        ),
         cost_type=CostType.ACTION,
-        combat_mode=CombatMode.PEACEFUL_ONLY,
         target_mode=TargetMode.SINGLE,
         target_scope=TargetScope.ANY,
         provider_managed=True,
         params=(ParamDef("target_id", "string", N_("ID of the corpse or container to loot"), required=True),),
         llm_hint=(
             "Take all items and gold from a lootable corpse or open container at your location. "
-            "Costs 1 action. Only available outside combat."
+            "In combat it costs 1 action and the corpse or container must be in a cell adjacent to yours "
+            "(5 ft, diagonals count); outside combat it does not end your turn."
         ),
     )
 )

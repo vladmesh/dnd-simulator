@@ -236,7 +236,9 @@ class TestLootProvider:
         actions = provider.get_action_types(player, _ctx(entities))
         assert ActionType.TAKE not in actions
 
-    def test_take_absent_in_combat(self) -> None:
+    def test_take_absent_in_combat_when_no_holder_is_on_the_battle_map(self) -> None:
+        # TAKE is combat_mode=ANY now; in combat it needs a holder within loot reach on the grid,
+        # and this corpse has no cell on the (empty) battle map.
         corpse = _corpse(items=[_longsword()])
         player = _player()
         entities: dict[str, Entity] = {"player_1": player, "goblin_corpse": corpse}

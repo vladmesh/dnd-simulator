@@ -220,13 +220,20 @@ class CombatManager:
         return [c.id for c in self._active_creatures_at_location(location_id) if c.id not in members]
 
     def _remove_from_combat(self, location_id: str, entity_id: str) -> None:
-        """Remove an entity from combat turn order, map, and sides. End combat if no hostility remains."""
+        """Remove an entity from combat turn order, map, and sides. End combat if no hostility remains.
+
+        A dead creature leaves its last cell behind as a corpse cell (``BattleMap.corpses``).
+        """
         combat = self._combats.get(location_id)
         if not combat:
             return
         if entity_id in combat.turn_order:
             combat.turn_order.remove(entity_id)
-        combat.battle_map.remove(entity_id)
+        entity = self._entities.get(entity_id)
+        if isinstance(entity, Creature) and not entity.is_alive:
+            combat.battle_map.leave_corpse(entity_id)  # the corpse stays lootable from an adjacent cell
+        else:
+            combat.battle_map.remove(entity_id)
         # Clean up sides tracking
         side = combat.entity_to_side.pop(entity_id, None)
         if side is not None and side in combat.sides:

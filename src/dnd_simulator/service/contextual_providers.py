@@ -42,15 +42,23 @@ class MerchantActionProvider:
 
 
 class LootActionProvider:
-    """Provides TAKE when a lootable holder (corpse/container) is at the actor's location."""
+    """Provides TAKE when a lootable holder (corpse/container) is at the actor's location.
+
+    In combat TAKE is offered only when at least one holder passes the full validation
+    for that target — i.e. is within loot reach on the battle map.
+    """
 
     def __init__(self, get_nearby_lootables: NearbyLootablesFn) -> None:
         self._get_nearby_lootables = get_nearby_lootables
 
     def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
-        if not self._get_nearby_lootables(creature.location_id):
+        holders = self._get_nearby_lootables(creature.location_id)
+        if not holders:
             return []
-        probe = Action(name=ActionType.TAKE)
-        if validate_action(creature, probe, ctx) is not None:
+        if ctx.combat_state is None:
+            probes = [Action(name=ActionType.TAKE)]
+        else:
+            probes = [Action(name=ActionType.TAKE, params={"target_id": h.id}) for h in holders]
+        if all(validate_action(creature, probe, ctx) is not None for probe in probes):
             return []
         return [ActionType.TAKE]
