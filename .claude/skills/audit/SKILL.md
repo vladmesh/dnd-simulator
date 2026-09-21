@@ -1,7 +1,7 @@
 ---
 name: audit
-description: Scan the dnd_simulator codebase for dead code, code smells, security issues, architecture violations, and test gaps. Creates/updates docs/audit.md with actionable findings. Use when user says "audit", "scan", "check code quality", "check architecture", or wants to find layer dependency violations, impure rules, missing tests, or drift from design principles in CLAUDE.md.
-allowed-tools: Bash, Read, Write, Edit, Grep, Glob
+description: Scan the dnd_simulator codebase for dead code, code smells, security issues, architecture violations, and test gaps. Produces a findings report for the PO (no files written in this repo). Use when user says "audit", "scan", "check code quality", "check architecture", or wants to find layer dependency violations, impure rules, missing tests, or drift from design principles in CLAUDE.md.
+allowed-tools: Bash, Read, Grep, Glob
 argument-hint: "[--scope <path>]"
 ---
 
@@ -359,99 +359,56 @@ If nothing drifted — say so and move on. This section should be empty most of 
 
 ---
 
-### 2. Write Report
+### 2. Report the findings
 
-Write/overwrite `docs/audit.md`:
+This skill writes **no files in this repository**. There is no `docs/audit.md` and no backlog file
+here: state and findings live on the secretary board as issues of the `dnd-simulator` product, and
+the PO decides which findings become issues.
+
+Produce the report as your output — printed to the console when run interactively, or in the worker
+report / task result when run from a card. Use this shape:
 
 ```markdown
-# Code Audit
-
-> **Date**: <today>
-> **Scope**: <full | path>
+# Code Audit — <today> (scope: <full | path>)
 
 ## Summary
-- Dead code: N issues
-- Code smells: N issues
-- Security: N issues
-- Architecture violations: N issues
-- Convention violations: N issues
-- Layer contract: N issues
-- Test gaps: N issues
-- Vision drift: N issues
+Dead code N · Code smells N · Security N · Architecture N · Conventions N · Layer contract N ·
+Test gaps N · Vision drift N
 
-## Dead Code
-| File | Issue | Action |
-|------|-------|--------|
-| ... | ... | remove / backlog / ignore (reason) |
+## Findings
 
-## Code Smells
-| File | Issue | Suggestion |
-|------|-------|------------|
-| ... | ... | ... |
+### <category>
+| File:Line | Finding | Severity | Suggested action |
+|---|---|---|---|
+| `layers/entities/layer.py:15` | imports from `layers.settlements` | high | use events via `handle_event` |
 
-## Security
-| File:Line | Issue | Severity |
-|-----------|-------|----------|
-| ... | ... | high/medium/low |
+(one table per non-empty category: Dead Code, Code Smells, Security, Architecture Violations,
+Convention Violations, Layer Contract, Test Gaps, Vision Drift; skip empty ones and say so)
 
-## Architecture Violations
-| File:Line | Violation | Should Be | Severity |
-|-----------|-----------|-----------|----------|
-| `layers/entities/layer.py:15` | imports from `layers.settlements` | use events via `handle_event` | high |
+## Already known
+Findings that duplicate an open issue of the product — name the issue ref instead of repeating the
+detail. Check with `issue list --product dnd-simulator` if you can reach the board; otherwise say
+which findings look long-standing.
 
-## Convention Violations
-| File:Line | Violation | Rule |
-|-----------|-----------|------|
-| `core/models.py:42` | `@dataclass` without frozen | Use `@dataclass(frozen=True)` |
-
-## Layer Contract
-| Layer | Issue |
-|-------|-------|
-| ... | ... |
-
-## Test Gaps
-| Source File | Expected Test | Status |
-|-------------|---------------|--------|
-| `rules/combat.py` | `tests/unit/test_rules_combat.py` | missing |
-
-## Vision Drift
-| Change | Invariant Violated | Impact |
-|--------|-------------------|--------|
-| ... | ... | ... |
+## Top 3 to address first
+1. … 2. … 3. …
 ```
 
-### 3. Commit
+Rules for the report:
 
-```bash
-git add docs/audit.md
-git commit -m "audit: <scope> — <N> issues found"
-```
-
-Do NOT push — doc-only commits stay local.
-
-### 4. Report
-
-Print to console:
-- Total issues found
-- Breakdown by category
-- Top 3 highest-severity items to address first
+- Every finding carries `file:line` evidence. A finding that cannot be pointed at is not a finding.
+- Do not open issues yourself and do not edit the board — that is the PO's step.
+- Do not create, restore or append to `docs/audit.md`, `docs/BACKLOG.md`, `docs/STATUS.md` or any
+  similar file. They were removed deliberately on 2026-09-21.
+- Do not commit anything. An audit changes no code.
+- If a finding is worth fixing on the spot and is a one-line obvious fix, still only report it —
+  the fix belongs to a card, not to the audit.
 
 ---
 
 ## Self-Feedback
 
-During your final review, if you encountered any of these — append to `docs/skill-feedback.md`:
-
-- A grep pattern in this skill was wrong or missed real violations
-- A category was missing something that should be checked
-- A step was ambiguous and led to a wrong first attempt
-
-Format:
-
-```markdown
-## [audit] — <today's date>
-- **Type**: bug | missing-info | optimization
-- **Quote**: "<exact line or section>"
-- **Problem**: <what went wrong>
-- **Suggested fix**: <concrete change>
-```
+If a grep pattern in this skill was wrong, a category missed something real, or a step was ambiguous —
+say so in a short `## Skill feedback` section at the end of the same report (type: bug /
+missing-info / optimization, the exact quote, what went wrong, the concrete suggested change). Do not
+write it to a file in this repository.

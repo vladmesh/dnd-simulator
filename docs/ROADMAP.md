@@ -1,165 +1,49 @@
 # Roadmap
 
-Этапы разработки, текущий статус, ссылки на детальные планы.
-
-## Done
-
-### Phase 1 — Локации, расписание, перемещение
-Граф локаций (~40 для Sword Vale). NPC-расписание через чистые функции. Перемещение между локациями с расчётом времени. `look` фильтрует по локации и расписанию.
-
-### Phase 2 — Память NPC и awareness
-InnerSelf: типизированные отношения, настроение, цели и накопление alignment плюс журнал, мысли, текущий разговор и персистентный структурный буфер воспринятых событий. На границе LlmBrain получает сырой буфер и rules proposal, затем валидируемо переписывает полное ядро и журнал; Classic остаётся полностью rules-only.
-
-### Phase 2.5a — Wiring суммаризатора
-Активные носители InnerSelf копят события через фильтр восприятия. Одна точка переваривания срабатывает на конце боя, active → dormant, завершении/прерывании намерения и переполнении буфера. Она всегда применяет чистую правиловую дельту: атака на носителя → `hates` + `angry`, смерть союзника → `grieving`, смерть цели → `kill achieved`/`protect failed`; собственная атака на союзника копит chaos/evil evidence. Чужая `say` сохраняется признаком heard и в decision/digest prompt оформляется как услышанная речь. Только LlmBrain может заменить это предложение после строгой валидации, включая один JSON code fence; timeout и retries ограничены, поэтому ошибка оставляет предложение. Принятый digest безопасно логирует форму ответа, а tool-call путь логирует отклонения и число retry до принятия. Alignment сдвигает `shift_alignment`, а LLM добавляет не более одного свидетельства на ось. Мысль LlmBrain возвращает в уже существующем tool call хода или реакции и хранит в кольцевом буфере под session gate без нового вызова. Ручной `make live-inner-self` снимает API-состояние до боя, после боя и после ухода якоря; он требует реальный ключ и модель и не входит в CI.
-
-### Phase 2.5b — Canned dialogue для RuleBrain
-Таблицы реплик по (role, activity, mood). RuleBrain отвечает на события осмысленными фразами без LLM.
-
-### Round system — Раунд-оркестратор
-Multi-action turn loop с TurnBudget. Единый раунд для боя и мирного режима. Бюджет действий (action, bonus_action, movement, reaction). PlayerBrain через queue + callback.
-
-### Unified entity model
-Все существа на EntitiesLayer. Убран session.player, заменён единой моделью. Brain как strategy pattern (RuleBrain / LlmBrain / PlayerBrain).
-
-### Combat system
-BattleMap (2D grid), инициатива, auto-exit после 2 idle раундов. D&D 5e diagonal distance, стены, коллизии.
-
-### Frontend — React веб-интерфейс
-React + TypeScript + shadcn/ui, dark theme. Игровой экран (EventLog, BattleMap, ActionBar, Nearby/Location/Character панели) + мастер-панель (World/Creatures/Time/Saves). WebSocket для real-time взаимодействия.
-
-### Level 0 — Фундамент game loop
-Anchor-based активация существ: NPC рядом с бодрствующим якорем active, остальные dormant. Wait/sleep/travel хранятся как типизированные intent; Round.run_loop() мотает время до ближайшей границы намерения. Explicit locations — каждый мир обязан определить locations явно, убрана автогенерация из регионов. NPC перемещаются по расписанию при активации. Round lifecycle в GameSession.
-→ [брейншторм](brainstorms/ecs-and-content.md)
-
-### Level 1 — Conditions, BrainFactory, валидация
-D&D 5e conditions (Prone, Poisoned, Stunned и др.) с `ConditionsMap` (rounds-based или permanent). Pure mechanics: `is_incapacitated()`, `effective_speed()`, `attack_advantage()`, `tick_conditions()`. BrainFactory — единая точка создания Brain из ai_type. ActionValidator — pipeline проверок (alive, active, action mode).
-→ [брейншторм](brainstorms/ecs-and-content.md)
-
-### Level 1.5 — ActionDispatcher, оружие, предметы
-ActionDispatcher (`service/action_dispatcher.py`) — единый entry point: validate → handler → budget consume. ActionProvider определяет доступные действия по состоянию, инвентарю и оружию. Система предметов: `Item`/`WeaponDef` (`core/items.py`), `get_weapon_attack()` строит `Attack` из экипированного оружия. Healing potion как USE_ITEM. Dynamic ActionBar во фронте.
-→ [план](plans/action-dispatcher.md)
-
-### Level 1.5a — Modifier pipeline, equip/unequip, logging
-Централизованный pipeline модификаторов (`core/modifiers.py` + `rules/modifiers.py`) — заменил разрозненную логику в combat_manager и conditions. Новые действия equip/unequip для смены оружия. Structlog логирование с file dispatch. Фикс awareness: LLM теперь видит регион/поселение текущей локации.
-→ [брейншторм](brainstorms/logging-architecture.md)
-
-### Audit quick wins
-Фиксы по результатам аудита: безопасность, конвенции, fail-fast. Тестовая инфраструктура: Docker integration tests, git hooks (pre-commit, pre-push).
-
-### Sprint 001 — Class Mechanics: Fighter & Rogue L1 (фазы 1-3.5)
-Инфраструктура классовых механик: proficiency system, armor/shield экипировка, ResourcePool (расходуемые ресурсы), ClassFeatures (композиция вместо наследования), ActionDef (централизованный реестр действий). Fighter L1: Fighting Style (Defense/Dueling) через modifier pipeline, Second Wind (bonus action heal). Rogue L1: Sneak Attack (+Nd6 finesse/ranged при advantage/ally adjacent), Cunning Action (Dash/Disengage как bonus action через CostOverride). Generic attack perception — компонентный лог атак вместо ad-hoc полей.
-→ история: knowledge `projects/dnd-simulator/sprints/001-class-mechanics.md`
-
-### Sprint 003 — Inventory & Trading (фазы 1-4)
-Полноценная система инвентаря и торговли. Phase 1: generic equip/unequip + accessory slots (head, feet, ring) с модификаторами через modifier pipeline. Phase 2: awareness для инвентаря/экипировки + фронтенд панель (6 слотов + сумка + золото). Phase 3: Merchant-флаг на NPC, buy/sell экшены, Trade UI. Phase 4 (audit refactor): NpcRole enum, вынос контента NPC в YAML, фикс rules→layers зависимости.
-→ история: knowledge `projects/dnd-simulator/sprints/003-inventory-trading.md`
-
-### Sprint 004 — Living World: Squads & Encounters (фазы 1-4)
-Живой мир: абстрактные группы (squads) перемещаются по графу локаций, сталкиваются друг с другом и с active characters. EcologyLayer — tick-based движение сквадов. Faction relations: faction_id на Creature/Squad, матрица отношений на PoliticsLayer. Encounter tables как свойство зоны для любого active character. Hostile AI: faction-aware, враг по faction relations → атака. Abstract combat formula (squad vs squad). Materialization: squad при контакте с active character → конкретные Creature. YAML контент: фракции, 4 сквада, 8 monster templates для Sword Vale.
-→ история: knowledge `projects/dnd-simulator/sprints/004-monster-encounters.md`
-
-### Sprint 005 — Tech Sweep (фазы 1-5)
-God-класс EntitiesLayer расщеплён на AwarenessBuilder/ActivationManager/QueryHandler/CombatManager/Perception. action_handlers.py → rules/handlers/ package, content_loader.py → content_loader/ package. Убран legacy single-file content format. Service mixins получили Protocol base. Round больше не обращается к приватным методам EntitiesLayer. Answer.value Any → object. Unit-тесты для критических путей: AwarenessBuilder, World layer isolation, ActionProvider/BrainFactory. 81 файлов, +5751/−2964 строк.
-→ история: knowledge `projects/dnd-simulator/sprints/005-tech-sweep.md`
-
-### Sprint 006 — Layer Composition (фазы 1-4)
-Мир собирается из переиспользуемых шаблонов слоёв. Library (`content/library/`) хранит 5 шаблонов на слой (geography, politics, settlements, ecology, entities) с metadata.yaml. Мир — manifest.yaml со ссылками на library или custom. Content loader резолвит манифест. API: каталог шаблонов с фильтрацией совместимости, сборка мира из шаблонов, fork слоя в custom. Frontend: WorldBuilder wizard (6 шагов), альтернатива quick-start. Старый формат (без манифеста) убран, content_saver удалён.
-→ история: knowledge `projects/dnd-simulator/sprints/006-layer-composition.md`
-
-### Sprint 007 — World Builder + Session Robustness (фазы 1-5)
-Save/load completeness (resource pools, combat state, spawned creatures, brain reassignment). Give Item UI. Fork UI + World Inspector на /master. Layer editor (YAML read/write API + textarea). Partial worlds: incomplete manifests, scaffold endpoint, fork world with layer truncation, delete world. Фазы 6-7 (structured forms, DM restructure) deferred — superseded by sprint 008.
-→ история: knowledge `projects/dnd-simulator/sprints/007-world-session.md`
-
-### Sprint 008 — Content Schema & Catalogs (фазы 1-5)
-Pydantic content models как единый source of truth для структуры контента. Phase 1: Pydantic-модели + перепись парсеров на model_validate. Phase 2: каталоги monsters + items — вынос из слоёв, ref-resolution между мирами и каталогами. Phase 3: entity CRUD API + JSON Schema endpoints + cross-layer refs. Phase 4: frontend schema-driven forms (SchemaForm, EntityListEditor, CatalogBrowser), DM restructure (Worlds/Sessions tabs, landing page Player/DM). Phase 5: DM world management (fork world, delete world, player flow simplified — no world builder).
-→ история: knowledge `projects/dnd-simulator/sprints/008-content-schema.md`
-
-### Sprint 009 — UI Layout: Dashboard + Combat Map (фазы 1-5)
-Переработка игрового экрана в dashboard: три колонки панелей (Nearby, Character+Inventory, Location) всегда видны. Компактный лог (1-2 строки + expand overlay). Action bar с budget display, drawers для зелий/классовых умений/инвентаря. NPC inspect modal (описание, фракция, действия). Боевой layout: CombatPanel в левой колонке, интерактивная CSS Grid BattleMap в правой (заменяет LocationPanel в бою). Click-to-move: BFS pathfinding + подсветка доступных клеток + `move_to(x, y)` action на бэкенде.
-→ история: knowledge `projects/dnd-simulator/sprints/009-ui-layout.md`
-
-### Sprint 010 — E2E Polish + ActionBar Decomposition (фазы 1-2)
-Закрытие UX-багов из e2e-отчёта sprint 009: combat log i18n, click-to-inspect на BattleMap (клик по фигурке → карточка существа, combatants list убран), NPC inspect faction display, HP edit current/max, brain toggle warning toast, consumable drawer tooltip, log overlay backfill. ActionBar.tsx (532 строк) декомпозирован на 8 субкомпонентов (action-bar/), оркестратор < 150 строк.
-→ история: knowledge `projects/dnd-simulator/sprints/010-e2e-polish.md`
-
-### Sprint 011 — Class Mechanics L1 Completion (фазы 0-4)
-Structured dice pipeline (DiceResult, D20Result, reroll_below для GWF). BattleMap reachability на бэкенде (Dijkstra, единый BFS, фронт = рендерер). Типизированное оружие/броня с D&D 5e свойствами (`is_two_handed`, `light`, `heavy`), Great Weapon Fighting style, Cunning Action с выбором cost_mode (bonus/action), SA faction check (ally detection через faction relations). SRD каталог оружия (12 видов) и брони (12 видов + shield). Fighter/Rogue NPC с полной экипировкой, 106 integration tests. Кликабельный лог бросков (RollBreakdown, AttackCardModal). Fix: equipment persistence в save/load, potion crash.
-→ история: knowledge `projects/dnd-simulator/sprints/011-class-mechanics-l1.md`
-
-### Sprint 012 — Reactions & Opportunity Attacks (фазы 1-4)
-Система реакций D&D 5e. Brain.choose_reaction() — единый метод на ABC для RuleBrain/LlmBrain/PlayerBrain. Opportunity attacks при выходе из reach врага, Disengage предотвращает OA. TurnBudget на Creature (персистирует между ходами для реакций). Movement handlers вызывают on_leave_reach callback. check_reactions рекурсивный (reaction → reaction). Frontend: reaction prompt UI, disengage indicator, perception handlers для OA/Disengage. Creature.combat_position для детерминированной расстановки на карте. BattleMap.set_position raises ValueError на out-of-bounds. Phase 4 (audit refactor): perception dispatch dict, session closure dedup, awareness exception narrowing, round helpers extraction, unit tests для reactions/handlers/movement.
-→ история: knowledge `projects/dnd-simulator/sprints/012-reactions-oa.md`
-
-### Sprint 013 — Character Creation Overhaul (фазы 1-3)
-Экран создания персонажа из "впиши любые цифры" → D&D-подобный flow. Phase 1: HP формула (max hit die + CON mod), point buy валидация (27 очков, 8-15), starting equipment по классу. Phase 2: backend derive stats + API, frontend CharacterForm с point buy UI (+/− кнопками, preview HP/AC/gold), Fighting Style selector для Fighter. Phase 3: Guard monster template для Kingdom Patrol, integration tests squad materialization. GWF fighter получает greatsword вместо longsword+shield. Crit dice отделены от base dice для корректного GWF reroll.
-→ история: knowledge `projects/dnd-simulator/sprints/013-char-creation.md`
-
-### Sprint 014 — Faction Relations & Reputation (фазы 0-4)
-Бои с правильными сторонами из faction relations. CombatSides — граф отношений при старте боя: FRIENDLY → одна сторона, HOSTILE → разные, forced_opponents для атак. Personal reputation: числовой `reputation: dict[str, int]` на Creature (sparse, fallback на faction defaults). `effective_relation(A, B)` — единая функция: personal rep → thresholds (75+ FRIENDLY, 25-74 NEUTRAL, <25 HOSTILE) → faction fallback. Kill reputation drop (omniscient, масштабируется по репутации жертвы). Auto-hostility: атака NPC вне боя → бой с правильными сторонами. Phase 0 refactor: PoliticsLayer split (diplomacy/warfare/economy), CombatManager split, Brain decompose. Phase 4 bugfixes: starting equipment → реальные Item + equip, skip dead creatures в round loop, RuleBrain movement budget check.
-→ история: knowledge `projects/dnd-simulator/sprints/014-faction-reputation.md`
-
-### Sprint 015 — Paladin Class & Spell Slots (фазы 1-7)
-Paladin L1-L2 как первый caster-класс. Phase 1: spell slots как `ResourcePool` (reset on LONG_REST). Phase 2: `PaladinFeatures` (fighting style + cost overrides), Lay on Hands (pool = 5 × level), стартовая экипировка. Phase 3: Divine Smite (`rules/divine_smite.py`) — тратим spell slot после melee hit, +2d8 radiant базово, +1d8 на уровень слота. Phase 4: multi-damage weapons (attack carries `tuple[DamageComponent, ...]`), UI breakdown по типам урона. Phase 5: Smite + Magic Weapon combo, spell slot UI, integration tests. Phase 6: `TargetMode`/`TargetScope` enums (NONE/SELF/SINGLE × HOSTILE/ALLY/ANY), валидация scope в `rules/validation.py`, frontend routing. Phase 7: Smite choice UI во время атаки, level 1 spell slot на персонаже.
-→ история: knowledge `projects/dnd-simulator/sprints/015-paladin-smite.md`
-
-### Sprint 016 — Tech Sweep (фазы 1-4)
-Техспринт после 10 продуктовых спринтов. Phase 1: bug sweep — class_features save/load (AC Defense bug), 26 pre-existing frontend test failures, action bar display (raw snake_case имена, cost labels, drawer tooltips), Second Wind perception formatter, battle map configs из regions.yaml. Phase 2: split `routes_master.py` на `routes_session.py` + `routes_world.py`; extract `get_session_state()` из adapter в service. Phase 3: core boundaries — `CreatureHost` protocol в `core/creature_host.py` развязывает `round.py` от `EntitiesLayer`, `RuleBrain` переехал в `rules/rule_brain.py` (core не импортирует rules), `llm/` использует `ScheduledNpc` Protocol вместо импорта `Npc`, `InnerSelf` в `core/`, `ClassFeatures.collect_self_modifiers/collect_attack_modifiers` — каждый класс декларирует свои модификаторы. Phase 4: `EntityKind(StrEnum)` runtime дискриминатор, `BrainType(StrEnum)` для ai_type, fail-fast cleanup (attack target_id на входе dispatcher, autosave log+continue, HTTPStatus в тестах). Post-audit: fix auto-hostility — HOSTILE scope без combat_state пропускает faction check, чтобы attack handler мог запустить бой через forced_opponents.
-→ история: knowledge `projects/dnd-simulator/sprints/016-tech-sweep.md`
-
-### Sprint 017 — XP & Leveling (фазы 1-5)
-Система опыта и уровней + исправление уровней классовых фич по PHB. Phase 1: `rules/leveling.py` — XP-by-CR (D&D 5e MM), PHB thresholds, `can_level_up`. XP начисляется при kill (omniscient, как reputation drop), эмитится `xp_gained`, флаг `level_up_available` на Character. Phase 2: `perform_level_up` + `POST /level-up`, level-aware class features (`collect_*_modifiers` гейтят по `creature.level`) — Paladin L1 теперь без FS/Smite/slots (исправлен PHB-баг sprint 015), L2 Paladin получает Fighting Style + Divine Smite + spell slot, Fighter L2 — Action Surge (extra action / short rest), Rogue L2 — только HP. Phase 3: `LevelUpModal` с класс-условной формой (Paladin выбирает Fighting Style, остальные — confirm-only), dedicated `level_up_test` world для E2E. Phase 4: bug sweep из phase-3 E2E — per-location battle_map override, fail-fast coord validator (x = width, y = height), единый canonical player для combat sidebar HP/AC, Cancel в LevelUpModal = defer (не delete). Phase 5: post-audit cleanup — перенос level-up+status логики в `GameService.level_up_player` / `player_status` (DTO layer), unit tests для `rules/leveling` и `perform_level_up`, schemas `Any → object`, fix non-determinism в `roll_initiative` / `BattleMap.place_randomly` (используют `get_global_rng()`, больше не обходят `DND_DICE_SEED`).
-→ история: knowledge `projects/dnd-simulator/sprints/017-xp-leveling.md`
-
-### Sprint 018 — Lairs, Encounters & Loot (фазы 1-4)
-Монстры населяют мир независимо от игрока; опасность фиксирована местом и временем и не масштабируется под уровень партии (кенши-стиль). Phase 1: логова (`core/lair.py`) — `Lair`/`LairState` машина состояний `active → depleted`, ростер с ядром материализуется при входе игрока, респавн до капа на тике ecology пока живо ядро, смерть ядра деплитит навсегда (опц. `depletion_chance`), состояние переживает save/load. Phase 2: лут и контейнеры — `InventoryHolder` Protocol + `is_lootable`, `Container`-сущность (`EntityKind.CONTAINER`), общий примитив `transfer_items` (торговля переведена на него), action `take` (take-all) + LootPanel UI, казна логова как персистентный `Container` за ядром. Phase 3: региональные encounter-таблицы (`region_encounters` по region_id в `ecology/monsters.yaml`) — локация без своей таблицы фоллбечится на региональную, своя перекрывает; резолв load-time через общий `_flatten_region_defaults`. Phase 4: время суток — `TimeOfDay` enum (day/night), geography `IS_DAYLIGHT` query, тег `time_of_day` на встречах, жёсткий гейт через чистое `rules/encounters.is_active_at_time` в `ActivationManager`. Закрывает backlog must-айтем `monster-spawn`.
-→ история: knowledge `projects/dnd-simulator/sprints/018-lairs-encounters-loot.md`
-
-### Sprint 019 — Control-Plane Prep (фазы 1-3)
-Техспринт: отвердить control-plane (GameService / session / commands / адаптеры) под будущий разрез на роли в спринте `control-interfaces` — раздробить god-class под защитой тестов, развязать core/adapter, попутно закрыть видимые дырки. Phase 1: characterization-сетка на `session.py` (listener dispatch, round lifecycle) + `commands_save` round-trip + fail-fast в `get_world_state` (вместо `assert`). Phase 2: deeper peel — `GameService` 1044 → 357 строк через миксины `WorldBuilderCommands` (world/content/catalog CRUD) и `PlayerCommands` (create_player/level_up/status); `parse_action`/`ActionParseError` вынесены в `service/action_parsing.py` (адаптеры больше не импортируют `Action`/`ActionType` из core); `World.make_query_fn`/`make_emit_fn` сделаны public. Phase 3: видимые дырки — combat-log i18n (сырые `error=` в `movement.py` обёрнуты в `_()`, прогон каталога), encounter-перцептор («Поблизости что-то шевелится» вместо утечки ростера), фронт-гейт Attack/Talk на трупах (`!entity.lootable`), удаление 4 мёртвых функций (`refund`/`walk_path`/`prone_stand_cost`/`to_save_data`), сверка бэклога.
-→ история: knowledge `projects/dnd-simulator/sprints/019-control-plane-prep.md`
-
-### Sprint 020 — Thermo Sweep (фазы 1-4)
-Техспринт по результатам термоядерного ревью. Phase 1: save/load integrity (accessory modifiers, XP), visible bugs, deterministic handlers, i18n errors, pure action providers. Phase 2: typed query accessors, SquadInfo/LairInfo payloads, LayerSource/BrainType/EntityKind cleanup, `World.get_layer`, app-level exception handlers, unified player-status. Phase 3: backend decomposition — `combat_manager` lifecycle vs `combat_resolution`, `activation_manager` → encounters/materialization, ecology submodules, `AwarenessBuilder`, entity serialization split, backend equipment registry. Phase 4: frontend decomposition — `TargetDropdown`, `SchemaForm`, `EventLog`, `WorldOverview`, shared `PlayerStatus`, typed world-state rows, store/transport dedup. Audit closed with no blockers; deferred RNG threading filed for simulation-core determinism.
-→ история: knowledge `projects/dnd-simulator/sprints/020-thermo-sweep.md`
-
-### Sprint 021 — Save Schema & World Reproducibility (фазы 1-3)
-Первый эпик цепочки simulation-core. Phase 1: единый `DND_WORLD_SEED` — слоевые сиды выводятся детерминированно в `game_service`, слои владеют своими `random.Random` (погода, политика, roam/retreat/деплит логова, encounter rolls), процесс-глобальный `random` из `layers/` убран, сквозной пин детерминизма (`test_world_seed.py`: один сид → идентичный `World.save()`). Phase 2: версионированная Pydantic-схема сейва — `SaveGame(schema_version=2)` в `storage/save_schema.py`, типизированные state-модели слоёв (`extra="forbid"`), entity-сейвы как discriminated union, построение напрямую из объектов, combat sides в сейве (закрыт lossless-пробел), состояние RNG (слоевые + dice) сериализуется и продолжает последовательности после load, v1 мигрирует в v2. Phase 3: периодический автосейв (`DND_AUTOSAVE_SECONDS`, cancel до финального сейва), ошибки автосейва логируются вместо suppress, гвард на evict-после-DELETE (заодно закрыл воскрешение удалённой сессии), интеграционный стек чистит `saves/`. Закрыты backlog: `save-schema`, `layer-rng-threading`, `test-gap-world-rng-determinism`, `periodic-autosave-scheduler`, `silent-failure-autosave`.
-→ история: knowledge `projects/dnd-simulator/sprints/021-save-schema.md`
-
-### Sprint 022 — Intentions & Travel (фазы 1-5)
-Второй эпик simulation-core. Якорь стал свойством любого существа; wait, sleep и travel представлены строгими сохраняемыми intent. Travel идёт по кратчайшему маршруту по рёбрам графа, сохраняется посреди пути и прерывается телесным событием, боем или встречей в активной сцене. Session-owned dice RNG, единый world-mutation gate и bounded round shutdown согласовали save/load/autosave с живым раундом. Post-audit E2E: 8/8, integration: 160/160.
-→ история: knowledge `projects/dnd-simulator/sprints/022-intents-travel.md`
-
-### Sprint 023 — Trigger Table (фазы 1-8)
-Третий эпик simulation-core. События получили строгие immutable payload-контракты, а YAML-триггеры `{on, until}` индексируются по `EventType`, активируют и гасят существ, переживают save/load и дополняются persistent GM override. Смерть materialized lair core сразу делает ecology-логово terminal depleted и не создаёт второй roster после save/load/reconnect. Post-audit refactor разделил event runtime, perception и transport; final audit triaged без sprint blockers, integration: 163/163, E2E зелёный.
-→ история: knowledge `projects/dnd-simulator/sprints/023-trigger-table.md`
-
-### Sprint 024 — Playtest Quick Wins (фазы 1-3)
-UX-спринт по запросу оператора: сливки с кластера находок живой партии 2026-07-15, эпик simulation-core не двигает. Phase 1: единый учёт бюджета движения (`MOVE`→FREE, `handle_move` списывает фактический `moved_ft` атомарно, `CostType.MOVEMENT` удалён; премиса «бюджет не тратится» при разведке оказалась неверной, чинили раздвоенный учёт), чужие технические отказы и бюджет не текут в лог игрока (`build_action_result`), `faction_hostility_check` INFO→DEBUG и `relation_fn` один раз на ребилд, Second Wind на полном здоровье не пишет «0 ОЗ». Phase 2: SRD-цены в 31 каталожной записи (стартовое снаряжение продаётся торговцу), i18n кнопок и описаний надеть/снять. Phase 3: машиночитаемый `props` из типизированных дефов по всем четырём player-facing каналам + карточка `ItemDetails` (EN+RU) в инвентаре и торговле. Integration 166, post-audit E2E 26/26, аудит без блокеров.
-→ история: knowledge `projects/dnd-simulator/sprints/024-playtest-quick-wins.md`
+Здесь только то, что ещё не сделано. История спринтов (Phase 1 … Sprint 024 и далее sprint:1439,
+sprint:1440) живёт в knowledge инстанса секретаря — `state/knowledge/projects/dnd-simulator/`
+(таблица Sprint History в `README.md`, документы `sprints/NNN-*.md`, снимок прежнего раздела Done —
+`archive/roadmap-2026-09-21.md`). Баги, tech debt и «что болит» — issue продукта на доске:
+`issue list --product dnd-simulator`.
 
 ## Planned
 
 ### Level 2 — Расходуемые ресурсы
 Spell slots, ki, rage. Дополнительные типы брони и оружия.
-→ [брейншторм](brainstorms/ecs-and-content.md)
+→ брейншторм `brainstorms/ecs-and-content.md` в knowledge
 
 ### Level 3 — Заклинания, пропсы
 Заклинания как YAML, интерактивные объекты (двери, сундуки).
-→ [брейншторм](brainstorms/ecs-and-content.md)
+→ брейншторм `brainstorms/ecs-and-content.md` в knowledge; issue «Заклинания как контент»
 
-### Simulation Core — триггеры, внутреннее я, лестница детализации
-Заменяет прежний план «Phase 3 — Автономные тики» (периодические тики отброшены в пользу decision-точек). Единая схема сейва и воспроизводимость закрыты Sprint 021, якоря и намерения закрыты Sprint 022, парные триггеры `{on, until}` и событийный write-back закрыты Sprint 023. Цепочка эпиков: ~~единая схема сейва~~ → ~~якорь-как-свойство + намерения~~ → ~~парные триггеры `{on, until}` активации/гашения~~ → внутреннее я NPC (цели, отношения, живой alignment, переваривание + правиловый близнец) → лестница детализации поселений (событийная запись, храповик субъектности) → квесты как контент поверх целей и триггеров.
-→ [брейншторм](brainstorms/simulation-core.md), эпики в [BACKLOG](BACKLOG.md#simulation-core-брейншторм-2026-07-04)
+### Simulation Core — лестница детализации и квесты
+Заменяет прежний план «Phase 3 — Автономные тики» (периодические тики отброшены в пользу
+decision-точек). Цепочка эпиков: ~~единая схема сейва~~ (Sprint 021) → ~~якорь-как-свойство +
+намерения~~ (Sprint 022) → ~~парные триггеры `{on, until}` активации/гашения~~ (Sprint 023) →
+~~внутреннее я NPC: цели, отношения, живой alignment, переваривание + правиловый близнец~~
+(sprint:1440, issue:31d690479658e3a80c1d) → лестница детализации поселений (событийная запись,
+храповик субъектности) → квесты как контент поверх целей и триггеров.
+
+Боевой статус как единый источник истины закрыт sprint:1439 (issue:0eaae2e74620d18ca1b0); открытый
+продуктовый остаток той же линии — редизайн побега (issue:163d78f9e6ed548c25af).
+→ брейншторм `brainstorms/simulation-core.md` в knowledge; issue «Лестница детализации поселений
+и инструменты ГМ», «Квесты как типизированные цели поверх inner-self»
 
 ### World Builder (advanced)
-Расширенный world builder: редактор слоёв (YAML editor в UI), превью мира перед стартом, маркетплейс шаблонов. Базовый wizard (выбор из библиотеки) реализован в Sprint 006.
-→ [план](plans/world-builder.md)
+Расширенный world builder: редактор слоёв (YAML editor в UI), превью мира перед стартом,
+маркетплейс шаблонов. Базовый wizard (выбор из библиотеки) реализован в Sprint 006.
+→ план `archive/plan-world-builder.md` в knowledge (карта файлов устарела)
 
 ### Мультиплеер
-Несколько игроков в одном мире. Механика активности уже поддерживает это — игре всё равно, PlayerBrain или LlmBrain. Темп: опциональный таймер хода (как в Героях), по таймауту «продолжаю намерение / end_turn» ([simulation-core](brainstorms/simulation-core.md)).
+Несколько игроков в одном мире. Механика активности уже поддерживает это — игре всё равно,
+PlayerBrain или LlmBrain. Темп: опциональный таймер хода (как в Героях), по таймауту «продолжаю
+намерение / end_turn» (`brainstorms/simulation-core.md`). Предпосылка — issue про контур доступа
+(identity / ownership / roles).
 
-## Known Issues
+## Где искать остальное
 
-См. [e2e-reports/](e2e-reports/) — результаты E2E-тестирования, [BACKLOG.md](BACKLOG.md) — баги и tech debt.
+- **Что болит** (баги, tech debt, тестовые дыры, фичи-кандидаты) — доска:
+  `issue list --product dnd-simulator`.
+- **История и дизайн** — knowledge инстанса, `state/knowledge/projects/dnd-simulator/`
+  (`README.md` — точка входа, `brainstorms/` — живые дизайн-документы, `archive/` — реализованное
+  и отменённое, `decisions/` — решения, `e2e-reports/` — отчёты живых прогонов).

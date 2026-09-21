@@ -5,7 +5,12 @@ Text RPG with multi-level LLM simulation, inspired by classic text adventures an
 A layered world simulation where each layer builds on top of the previous one, from geography and weather up to individual NPC conversations. NPCs are driven by swappable brains: rule-based utility scoring, or an LLM.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for details on how the system is structured.
-See [docs/VISION.md](docs/VISION.md) for product vision and [docs/ROADMAP.md](docs/ROADMAP.md) for current status and plans.
+See [docs/VISION.md](docs/VISION.md) for product vision and [docs/ROADMAP.md](docs/ROADMAP.md) for what is still planned.
+
+Project state, bugs and backlog live on the secretary board as issues of the `dnd-simulator` product
+(`issue list --product dnd-simulator`); project history, brainstorms and decisions live in the
+secretary instance knowledge under `state/knowledge/projects/dnd-simulator/`. This repository keeps
+no state or backlog file.
 
 ## Development
 

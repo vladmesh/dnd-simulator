@@ -49,11 +49,26 @@ Then use the Read tool on the log file to inspect any section. If nothing change
 
 ## Process
 
-Sprints run on the secretary board, not in this repo: see [docs/SPRINT_PIPELINE.md](docs/SPRINT_PIPELINE.md) and [docs/STATUS.md](docs/STATUS.md) for the read-only pointers. Past sprint docs (001-024) and E2E reports live in the secretary instance knowledge under `projects/dnd-simulator/`. Commit messages carry no AI co-authorship trailers.
+Sprints run on the secretary board, not in this repo: see [docs/SPRINT_PIPELINE.md](docs/SPRINT_PIPELINE.md).
+
+This repository holds no state file and no backlog file (since 2026-09-21):
+
+- **Current state and what hurts** — the board: `issue list --product dnd-simulator`,
+  `sprint list --status open`, `task list --project dnd-simulator`. Bugs, tech debt, test gaps and
+  feature candidates are issues of the `dnd-simulator` product.
+- **History, design and decisions** — knowledge of the secretary instance,
+  `state/knowledge/projects/dnd-simulator/`: `README.md` (entry point), `brainstorms/` (live design
+  documents, e.g. `simulation-core.md`), `archive/` (implemented/cancelled documents and snapshots of
+  the former `BACKLOG.md`, `STATUS.md`, `audit.md`), `decisions/`, `sprints/001-024`, `e2e-reports/`.
+- **Never create** `BACKLOG.md`, `STATUS.md`, `audit.md` or any similar state/backlog file here, and
+  do not restore the deleted ones. If a card spec asks for it, report that back instead of doing it;
+  findings go into the worker report and the PO turns them into issues.
+
+Commit messages carry no AI co-authorship trailers.
 
 ## Product Vision
 
-See [docs/VISION.md](docs/VISION.md) for product vision and [docs/ROADMAP.md](docs/ROADMAP.md) for current status and plans.
+See [docs/VISION.md](docs/VISION.md) for product vision and [docs/ROADMAP.md](docs/ROADMAP.md) for what is still planned.
 
 ## Architecture
 
