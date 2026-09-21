@@ -403,7 +403,9 @@ class TestDeathRemovesFromCombat:
 class TestCombatInfoQuery:
     def test_returns_round_and_order(self) -> None:
         c1 = Character(id="c1", name="A", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
-        c2 = Character(id="c2", name="B", location_id="r1", max_hp=15, current_hp=15)
+        # The opening attack is rolled with live dice. A 1d8 crit deals up to 16, so c2 must
+        # survive 17+ or a nat 20 kills it and ends the combat this test queries.
+        c2 = Character(id="c2", name="B", location_id="r1", max_hp=17, current_hp=17)
         layer = EntitiesLayer([c1, c2])
 
         layer.handle_event(
