@@ -4,8 +4,9 @@ Runs against the live backend in docker compose (DND_DICE_SEED=42) with ``encoun
 ``border_post`` has no encounter table and two neighbours — ``wild_trail`` (500 m, regional
 goblin table with chance 1.0) and ``night_marsh``. ``wild_den`` is not adjacent to it.
 
-The player starts at ``border_post`` at (0, 0); two GM-spawned brutes stand far away, so a
-three-participant fight starts when the player attacks and the flee is allowed.
+The player starts at ``border_post`` at (0, 0); two slow GM-spawned brutes (speed 10) join
+the fight the player starts, so it has three participants and, with the seeded placement,
+no brute is within 15 ft on the player's next combat turn — the flee is allowed.
 """
 
 from __future__ import annotations
@@ -40,7 +41,7 @@ def _create_session(api_url: str, player_api_url: str) -> tuple[str, str]:
     )
     resp.raise_for_status()
     pid = resp.json()["player_id"]
-    for brute_id, position in (("brute_a", [55, 55]), ("brute_b", [55, 45])):
+    for brute_id in ("brute_a", "brute_b"):
         resp = requests.post(
             f"{api_url}/sessions/{sid}/creatures",
             json={
@@ -50,8 +51,7 @@ def _create_session(api_url: str, player_api_url: str) -> tuple[str, str]:
                 "start_location": START,
                 "hp": 40,
                 "ac": 12,
-                "speed": 30,
-                "combat_position": position,
+                "speed": 10,
             },
             timeout=10,
         )
