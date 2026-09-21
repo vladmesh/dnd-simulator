@@ -129,6 +129,12 @@ export const createTurnSlice: StateCreator<
       if (msg.budget != null) {
         extra.budget = msg.budget
       }
+      // A successful player flee ends the turn on the server with no further prompt;
+      // the next `turn` arrives on arrival, so the action bar must stop offering actions.
+      if (msg.action === "flee" && !msg.error && msg.actor === msg.player.player_id) {
+        extra.isMyTurn = false
+        extra.budget = null
+      }
       applyCommon(msg, events, extra)
     },
 

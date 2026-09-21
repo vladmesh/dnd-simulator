@@ -11,6 +11,7 @@ import { ActionButton } from "./action-bar/ActionButton"
 import { ConsumableDrawer } from "./action-bar/ConsumableDrawer"
 import { ClassFeatureDrawer } from "./action-bar/ClassFeatureDrawer"
 import { InventoryDrawer } from "./action-bar/InventoryDrawer"
+import { FleeControl } from "./action-bar/FleeControl"
 
 export function ActionBar() {
   const { t } = useTranslation(["game", "common"])
@@ -52,6 +53,11 @@ export function ActionBar() {
     player?.resource_pools
 
   const groups = categorizeActions(available)
+  // In combat, flee availability comes from `awareness.flee` (the action is listed only
+  // while allowed), so the flee control replaces the plain flee button there.
+  const flee = isCombat && "flee" in awareness ? awareness.flee ?? null : null
+  const fleeAction = groups.core.find((a) => a.name === "flee")
+  const coreActions = flee ? groups.core.filter((a) => a.name !== "flee") : groups.core
 
   const consumableItems = availableItems.filter((item) => {
     const t = item.item_type ?? item.type
@@ -90,9 +96,22 @@ export function ActionBar() {
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        {groups.core.map((action) => (
+        {coreActions.map((action) => (
           <ActionButton key={action.name} action={action} {...actionButtonProps} />
         ))}
+
+        {flee && (
+          <FleeControl
+            flee={flee}
+            action={fleeAction}
+            disabled={waitingForAction}
+            budget={budget}
+            openDropdown={openDropdown}
+            setOpenDropdown={setOpenDropdown}
+            sendAction={sendAction}
+            t={t}
+          />
+        )}
 
         {groups.other.map((action) => (
           <ActionButton key={action.name} action={action} {...actionButtonProps} />

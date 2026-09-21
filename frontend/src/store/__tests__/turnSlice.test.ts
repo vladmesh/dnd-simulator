@@ -14,7 +14,7 @@ vi.mock("@/transport/wsClient", () => ({
 import { useGameStore } from "@/store/gameStore"
 import { extractGameTime } from "@/store/slices/turnSlice"
 import type { Awareness, PlayerStatus, TurnBudget } from "@/types/game"
-import type { TurnMessage, RoundResultMessage } from "@/types/ws"
+import type { ActionResultMessage, TurnMessage, RoundResultMessage } from "@/types/ws"
 
 const budget: TurnBudget = { actions: 1, bonus_actions: 1, movement_remaining: 30, reaction: 1 }
 
@@ -91,6 +91,63 @@ describe("turn handlers", () => {
     const s = useGameStore.getState()
     expect(s.gameTime).toEqual({ hour: 5, day: 1, month: 1, year: 1 })
     expect(s.isMyTurn).toBe(false)
+  })
+})
+
+describe("post-flee handling", () => {
+  const journey = {
+    destination_id: "forest",
+    destination_name: "Dark Forest",
+    current_location_name: "Camp",
+    next_location_name: "Dark Forest",
+    remaining_route: ["Dark Forest"],
+    next_arrival_seconds: 1800,
+  }
+  const location = { current_location: "Camp", current_location_id: "loc1", description: "", region_id: "r", paths: [] }
+
+  function fleeResult(overrides: Partial<ActionResultMessage> = {}): ActionResultMessage {
+    return {
+      type: "action_result",
+      actor: "p1",
+      action: "flee",
+      mode: "peaceful",
+      awareness: peaceful,
+      events: [],
+      budget,
+      player: { ...player, journey },
+      location,
+      ...overrides,
+    }
+  }
+
+  beforeEach(() => {
+    useGameStore.setState({ mode: "combat", awareness: combat, isMyTurn: true, waitingForAction: true, budget })
+  })
+
+  it("a successful player flee leaves combat and ends the turn without waiting for a prompt", () => {
+    useGameStore.getState().onActionResult(fleeResult())
+    const s = useGameStore.getState()
+    expect(s.mode).toBe("peaceful")
+    expect(s.isMyTurn).toBe(false)
+    expect(s.waitingForAction).toBe(false)
+    expect(s.budget).toBeNull()
+    expect(s.player?.journey).toEqual(journey)
+  })
+
+  it("a rejected flee keeps the turn and logs the error like other actions", () => {
+    useGameStore.getState().onActionResult(
+      fleeResult({ mode: "combat", awareness: combat, error: "Enemies are too close", player }),
+    )
+    const s = useGameStore.getState()
+    expect(s.mode).toBe("combat")
+    expect(s.isMyTurn).toBe(true)
+    expect(s.waitingForAction).toBe(false)
+    expect(s.log.some(({ event }) => event.event_type === "action_error" && event.description === "Enemies are too close")).toBe(true)
+  })
+
+  it("another creature's flee does not end the player's turn", () => {
+    useGameStore.getState().onActionResult(fleeResult({ actor: "goblin-1", mode: "combat", awareness: combat, player }))
+    expect(useGameStore.getState().isMyTurn).toBe(true)
   })
 })
 
