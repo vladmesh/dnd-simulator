@@ -78,17 +78,8 @@ def check_actor_alive(actor: Creature, action: Action, ctx: ActionContext) -> Va
 
 
 def check_actor_active(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
-    """Dormant creatures cannot act.
-
-    One exception: a creature already on the road (a flee that just left the
-    scene is a journey) may re-plan that journey with ``travel`` for the rest of
-    its turn. It can do nothing else there — it is no longer on the scene.
-    """
+    """Dormant creatures cannot act."""
     if not actor.active:
-        from dnd_simulator.core.intent import TravelIntent
-
-        if action.name is ActionType.TRAVEL and isinstance(actor.current_intent, TravelIntent):
-            return None
         return ValidationError("DORMANT_ACTOR", _("Dormant creatures cannot act"))
     return None
 

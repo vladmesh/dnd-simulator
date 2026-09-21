@@ -9,6 +9,7 @@ import structlog
 from dnd_simulator.core.action import ActionRejectedError
 from dnd_simulator.core.events import ActionFlavorPayload, AttackRequestedPayload, EntityFleePayload
 from dnd_simulator.core.models import ActionResult, Event, EventType
+from dnd_simulator.core.queries import query_lairs_at_location, query_squad_info
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.action_params import integer_param
 
@@ -53,23 +54,24 @@ def handle_flee(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
     """Flee: leave the fight and the scene along one edge to a neighbouring location.
 
     Eligibility (no enemy within 15 ft) is already enforced by validation. Here the
-    destination is fixed: a player must name an adjacent location; an NPC picks one
-    by rule. The entities layer resolves the event — the exit itself happens there.
+    destination is fixed: a player must name an adjacent location; an NPC's
+    destination always comes from the NPC rule — a brain-supplied ``destination_id``
+    is ignored. The entities layer resolves the event — the exit itself happens there.
     """
     from dnd_simulator.core.player import PlayerCharacter
     from dnd_simulator.rules.flee import flee_destinations
 
     graph = world.location_graph
     destinations = flee_destinations(graph, actor.location_id)
-    raw_destination = action.params.get("destination_id")
-    if raw_destination is None:
-        if isinstance(actor, PlayerCharacter):
+    if isinstance(actor, PlayerCharacter):
+        raw_destination = action.params.get("destination_id")
+        if raw_destination is None:
             raise ActionRejectedError(_("Choose a neighbouring location to flee to"))
+        destination_id: str | None = str(raw_destination)
+    else:
         destination_id = _npc_flee_destination(actor, destinations, ctx, world)
         if destination_id is None:
             raise ActionRejectedError(_("There is nowhere to flee"))
-    else:
-        destination_id = str(raw_destination)
     destination = next((d for d in destinations if d.id == destination_id), None)
     if destination is None:
         raise ActionRejectedError(_("You can only flee to a neighbouring location"))
@@ -93,6 +95,35 @@ def handle_flee(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionCon
     )
 
 
+def _npc_home(actor: Creature, destinations: tuple[FleeDestination, ...], world: World) -> str | None:
+    """Where a fleeing NPC belongs: its scheduled place, its squad, or its lair.
+
+    - a named NPC: its scheduled location for this hour (``Npc.scheduled_location``;
+      rules/ must not import the entities layer, so the schedule is read structurally);
+    - a squad member: its squad's current location (ecology ``SQUAD_INFO``);
+    - a lair member: its lair's location (ecology ``LAIRS_AT_LOCATION``, looked up here and
+      at the neighbours — lair members never wander further than that).
+    """
+    from dnd_simulator.core.world import LayerError
+
+    scheduled_location = getattr(actor, "scheduled_location", None)
+    if callable(scheduled_location):
+        return str(scheduled_location(world.time.hour))
+    if actor.squad_id is None and actor.lair_origin is None:
+        return None
+    try:
+        query_fn = world.make_query_fn("entities")
+        if actor.squad_id is not None:
+            return query_squad_info(query_fn, actor.squad_id).current_location_id
+        assert actor.lair_origin is not None
+        for location_id in (actor.location_id, *(d.id for d in destinations)):
+            if any(lair.id == actor.lair_origin.lair_id for lair in query_lairs_at_location(query_fn, location_id)):
+                return location_id
+    except (KeyError, LayerError):
+        return None  # no ecology layer / roster gone: no home to head for
+    return None
+
+
 def _npc_flee_destination(
     actor: Creature, destinations: tuple[FleeDestination, ...], ctx: ActionContext, world: World
 ) -> str | None:
@@ -101,17 +132,13 @@ def _npc_flee_destination(
     from dnd_simulator.rules.flee import choose_flee_destination, is_enemy
 
     home_first_hop: str | None = None
-    # Named NPCs carry a daily schedule (``Npc.scheduled_location``); rules/ must not
-    # import the entities layer, so the schedule is read structurally.
-    scheduled_location = getattr(actor, "scheduled_location", None)
-    if callable(scheduled_location):
-        home = str(scheduled_location(world.time.hour))
-        if home != actor.location_id:
-            try:
-                route = world.location_graph.shortest_route(actor.location_id, home)
-            except ValueError:
-                route = ()
-            home_first_hop = route[0] if route else None
+    home = _npc_home(actor, destinations, world)
+    if home is not None and home != actor.location_id:
+        try:
+            route = world.location_graph.shortest_route(actor.location_id, home)
+        except ValueError:
+            route = ()
+        home_first_hop = route[0] if route else None
 
     enemy_factions: set[str] = set()
     combat = ctx.combat_state

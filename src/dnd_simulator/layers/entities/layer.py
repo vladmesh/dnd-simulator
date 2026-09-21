@@ -366,7 +366,12 @@ class EntitiesLayer(Layer):
         entities: dict[str, Any] = {eid: serialize_entity(e) for eid, e in self._entities.items()}
         combats = self._combat.get_combats_state()
         state = EntitiesState.model_validate(
-            {"entities": entities, "combats": combats, "rng_state": dump_rng_state(self._rng)}
+            {
+                "entities": entities,
+                "combats": combats,
+                "rng_state": dump_rng_state(self._rng),
+                "materialization": self._activation.materialization_state(),
+            }
         )
         return state.model_dump(mode="json", by_alias=True)
 
@@ -377,6 +382,7 @@ class EntitiesLayer(Layer):
 
         save_state = EntitiesState.model_validate(state)
         load_rng_state(self._rng, save_state.rng_state)
+        self._activation.load_materialization_state(save_state.materialization)
         state_data = save_state.model_dump(mode="json", by_alias=True)
         entities_data = save_state.entities
 

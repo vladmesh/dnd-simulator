@@ -118,16 +118,13 @@ class TestPlayerFlee:
             result = _next(sock, "action_result")
             assert "error" not in result
             assert result["mode"] == "peaceful"
-            turn = _next(sock, "turn")
-            journey = turn["player"]["journey"]
-            assert journey["destination_id"] == "wild_trail"
-            assert [a["name"] for a in turn["awareness"]["available_actions"]] == ["travel"]
-            ws_send_action(sock, "end_turn")
 
-            # (4) Travel time passes, the player arrives and the regional table is rolled.
+            # (4) Flee ends the player's turn: no further prompt until the journey is over.
+            # Travel time passes, the player arrives and the regional table is rolled.
             for _ in range(2000):
                 msg = ws_recv(sock)
-                if msg["type"] == "turn" and msg["location"].get("current_location_id") == "wild_trail":
+                if msg["type"] == "turn":
+                    assert msg["location"].get("current_location_id") == "wild_trail", "prompted before arrival"
                     break
             else:
                 raise AssertionError("Player never arrived at wild_trail")

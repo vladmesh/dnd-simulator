@@ -63,7 +63,8 @@ def exit_scene(
     )
     if isinstance(creature, Npc):
         # A named NPC stays where it fled to; its schedule must not pull it back
-        # onto the scene it just left.
+        # onto the scene it just left. While the journey is pending the override
+        # is not read (``Npc.current_location``): it takes effect on arrival.
         creature.location_override = destination
     dormify(creature)
     logger.info(

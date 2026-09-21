@@ -9,6 +9,7 @@ from typing import Any
 from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.character import Character, NpcRole
 from dnd_simulator.core.inner_self import InnerSelf, Mood
+from dnd_simulator.core.intent import TravelIntent
 from dnd_simulator.i18n import _
 
 
@@ -62,7 +63,13 @@ class Npc(Character):
         return NpcActivity.IDLE
 
     def current_location(self, hour: int) -> str:
-        """Where the NPC actually is: override if set, else schedule."""
+        """Where the NPC actually is: on the road where the journey has reached, else override, else schedule.
+
+        A pending journey beats both: a fleeing NPC's override names its destination,
+        and it must not appear there before the journey's arrival boundary.
+        """
+        if isinstance(self.current_intent, TravelIntent):
+            return self.location_id
         if self.location_override is not None:
             return self.location_override
         return self.scheduled_location(hour)

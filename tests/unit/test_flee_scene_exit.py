@@ -40,6 +40,7 @@ from dnd_simulator.core.class_features import FighterFeatures, FightingStyle
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.core.events import EntityDiedPayload
 from dnd_simulator.core.intent import TravelIntent
+from dnd_simulator.core.lair import Lair, LairMemberRole, LairOrigin
 from dnd_simulator.core.location import Location, LocationEdge, LocationGraph
 from dnd_simulator.core.models import Event, EventType, FactionRelation, GameDateTime, TimeDelta
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
@@ -255,7 +256,7 @@ class _Scene:
     Player (+ optional guard) of faction ``vale`` against wolves + bandit (friendly to each other).
     """
 
-    def __init__(self, *, with_guard: bool = False) -> None:
+    def __init__(self, *, with_guard: bool = False, start_fight: bool = True, lairs: list[Lair] | None = None) -> None:
         self.graph = LocationGraph(
             [
                 Location(
@@ -328,7 +329,7 @@ class _Scene:
             self.guard.brain = _ScriptedBrain()
             entities.append(self.guard)
 
-        self.ecology = EcologyLayer(squads=[self.squad], location_graph=self.graph)
+        self.ecology = EcologyLayer(squads=[self.squad], location_graph=self.graph, lairs=lairs)
         self.entities = EntitiesLayer(
             entities=list(entities),
             monster_templates={"wolf": _template("wolf", "wildlife"), "boar": _template("boar", "beasts")},
@@ -354,6 +355,8 @@ class _Scene:
             location_graph=self.graph,
         )
         self.round = Round(self.world, self.entities, rng=random.Random(7))
+        if not start_fight:
+            return  # a bare world, e.g. the target of a save/load
 
         # Materialize the pack, then start the fight with sides and fixed positions.
         self.round._activate()
@@ -637,6 +640,80 @@ class TestNpcFlee:
             e.event_type is EventType.XP_GAINED for log in scene.entities._location_log.values() for e in log
         )
 
+    def test_npc_ignores_brain_supplied_destination(self) -> None:
+        """An LLM-style NPC action naming a foreign neighbour does not steer the flee."""
+        scene = _Scene()
+        scene.bandit.current_hp = 2
+        # The rule's pick: no home to head for, nobody anywhere else → the quicker edge, ``road``.
+        result = scene.dispatch(scene.bandit, _flee_to("ridge"))
+        assert result.success is True
+        assert isinstance(scene.bandit.current_intent, TravelIntent)
+        assert scene.bandit.current_intent.destination_id == "road"
+
+    def test_squad_member_heads_for_its_squad(self) -> None:
+        scene = _Scene()
+        scene.squad.current_location_id = "ridge"  # the pack has moved on to a neighbour
+        wolf = scene.wolves[0]
+        result = scene.dispatch(wolf, _flee_to("road"))  # a brain-supplied direction is ignored
+        assert result.success is True
+        assert scene.entities.get_entity(wolf.id) is None
+        fled = [e for e in scene.entities._location_log["clearing"] if e.event_type is EventType.ENTITY_FLEE]
+        assert [e.data.destination_id for e in fled] == ["ridge"]  # type: ignore[union-attr]
+        seen = scene.entities.get_perceived_events(scene.player)
+        assert any(e.event_type is EventType.ENTITY_FLEE and "Ridge" in e.description for e in seen)
+
+    def test_lair_member_heads_for_its_lair(self) -> None:
+        den = Lair(id="den", name="Den", faction_id="wildlife", location_id="ridge", members=["wolf"])
+        scene = _Scene(lairs=[den])
+        denizen = _template("wolf", "wildlife").spawn("clearing", "wolf_den_1")
+        denizen.lair_origin = LairOrigin(lair_id="den", template_id="wolf", role=LairMemberRole.MEMBER)
+        denizen.brain = RuleBrain()
+        denizen.in_combat = True
+        scene.entities.add_entity(denizen)
+        side = scene.combat.entity_to_side[scene.wolves[0].id]
+        scene.combat.turn_order.append(denizen.id)
+        scene.combat.entity_to_side[denizen.id] = side
+        scene.combat.sides[side].add(denizen.id)
+        scene.place(denizen.id, 60, 0)
+
+        assert scene.dispatch(denizen, Action(name=ActionType.FLEE)).success is True
+        fled = [e for e in scene.entities._location_log["clearing"] if e.event_type is EventType.ENTITY_FLEE]
+        assert [e.data.destination_id for e in fled] == ["ridge"]  # type: ignore[union-attr]
+
+    def test_squad_member_without_a_home_hop_flees_away(self) -> None:
+        scene = _Scene()  # the pack is right here: no hop home, the quicker empty edge wins
+        assert scene.dispatch(scene.wolves[0], Action(name=ActionType.FLEE)).success is True
+        fled = [e for e in scene.entities._location_log["clearing"] if e.event_type is EventType.ENTITY_FLEE]
+        assert [e.data.destination_id for e in fled] == ["road"]  # type: ignore[union-attr]
+
+    def test_always_active_named_fleer_arrives_only_at_the_boundary(self) -> None:
+        scene = _Scene(with_guard=True)
+        bandit = scene.bandit
+        bandit.always_active = True
+        bandit.current_hp = 2
+        assert [a.name for a in scene.combat_turn(bandit)] == [ActionType.FLEE]
+        intent = bandit.current_intent
+        assert isinstance(intent, TravelIntent)
+        destination = intent.destination_id
+
+        # The next activation pass, before arrival: still on the road, not at the destination,
+        # and not an active outsider on the scene it left.
+        scene.round._activate()
+        assert scene.world.time.to_total_seconds() < intent.next_arrival_seconds
+        assert bandit.location_id == "clearing"
+        assert bandit.current_location(scene.world.time.hour) == "clearing"
+        assert bandit.active is False
+        assert bandit.current_intent == intent
+        scene.assert_no_ghosts()
+
+        scene.world.advance_time(TimeDelta(seconds=intent.next_arrival_seconds - scene.world.time.to_total_seconds()))
+        scene.round._activate()
+        assert bandit.current_intent is None
+        assert bandit.location_id == destination
+        assert bandit.current_location(scene.world.time.hour) == destination
+        assert bandit.current_hp == 2
+        assert bandit.active is True  # always_active again once it has arrived
+
     def test_last_enemy_fleeing_ends_combat(self) -> None:
         scene = _Scene()
         scene.kill(scene.wolves[0])
@@ -704,3 +781,40 @@ class TestSaveLoadAfterFlee:
         combat = loaded.get_combat("clearing")
         assert combat is not None
         assert "grak" not in combat.turn_order and scene.wolves[0].id not in combat.turn_order
+
+    def test_fled_squad_member_still_counted_alive_after_save_load(self) -> None:
+        def strength_after_fled_wolf(save_load: bool) -> int:
+            scene = _Scene()
+            wolf = scene.wolves[0]
+            wolf.current_hp = 1
+            assert [a.name for a in scene.combat_turn(wolf)] == [ActionType.FLEE]
+            scene.kill(scene.wolves[1])
+            target = scene
+            if save_load:
+                state = json.loads(json.dumps(scene.world.save()))
+                target = _Scene(start_fight=False)
+                target.world.load(state)
+                assert target.entities.get_entity(wolf.id) is None
+                assert target.entities._activation._spawn_counter == scene.entities._activation._spawn_counter
+            target.entities._combat._end_combat("clearing")
+            target.player.location_id = "road"  # the player leaves the clearing
+            target.round._activate()
+            assert not [
+                e for e in target.entities._entities.values() if isinstance(e, Creature) and e.squad_id == "pack"
+            ]
+            return target.squad.strength
+
+        # 2 of 3 spawned wolves survived (one of them fled) → 6 * 2/3, with or without a save in between.
+        assert strength_after_fled_wolf(save_load=False) == 4
+        assert strength_after_fled_wolf(save_load=True) == 4
+
+    def test_save_without_materialization_loads_empty_trackers(self) -> None:
+        scene = _Scene()
+        state = json.loads(json.dumps(scene.entities.get_state()))
+        assert state["materialization"]["squads"]["pack"]["creature_ids"] == [w.id for w in scene.wolves]
+        del state["materialization"]  # a save written before the trackers were persisted
+        fresh = EntitiesLayer(monster_templates={"wolf": _template("wolf", "wildlife")})
+        fresh.load_state(state)
+        assert fresh._materialized_squads == {}
+        assert fresh._materialized_lairs == {}
+        assert fresh._activation._withdrawn_survivors == set()
