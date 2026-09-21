@@ -234,6 +234,27 @@ export interface ResourcePoolInfo {
   current_uses: number
 }
 
+/** A neighbouring location the player may flee to (backend `FleeDestination`). */
+export interface FleeDestination {
+  id: string
+  name: string
+  travel_seconds: number
+}
+
+/** Known flee blockers; the server may add others, which fall back to its localised `reason`. */
+export type FleeReasonKey = "enemies_too_close" | "no_exit"
+
+/**
+ * Flee availability in combat (backend `FleeStatus`). `destinations` is filled even
+ * when `allowed` is false; `reason_key`/`reason` are null when allowed.
+ */
+export interface FleeStatus {
+  allowed: boolean
+  reason_key: FleeReasonKey | (string & {}) | null
+  reason: string | null
+  destinations: FleeDestination[]
+}
+
 export interface CombatAwareness {
   self_hp: number
   self_max_hp: number
@@ -257,6 +278,7 @@ export interface CombatAwareness {
   reachable?: number[][]
   is_disengaging?: boolean
   self_resource_pools?: ResourcePoolInfo[]
+  flee?: FleeStatus | null
 }
 
 export type Awareness = PeacefulAwareness | CombatAwareness
