@@ -96,7 +96,7 @@ class LlmClient:
         self,
         messages: list[dict[str, object]],
         tools: list[dict[str, object]],
-        max_tokens: int = 200,
+        max_tokens: int = 700,
         temperature: float = 0.8,
     ) -> LlmResponse:
         """Generate a completion that may include a tool call."""
