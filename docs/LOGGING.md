@@ -24,7 +24,21 @@ LOG_LEVEL=DEBUG LOG_DIR=./logs make serve
 | `LOG_LEVEL` | Verbosity: DEBUG, INFO, WARNING (default), ERROR, CRITICAL. Pretty console when DEBUG + TTY. |
 | `LOG_DIR`   | Enable file dispatch — denormalized JSONL per session/domain  |
 
-Processor chain: `merge_contextvars → add_log_level → timestamp → [file_dispatch] → renderer`
+Processor chain, in order:
+
+1. `merge_contextvars` — session/creature context bound via `structlog.contextvars`.
+2. `add_log_level`.
+3. `TimeStamper(fmt="iso")`.
+4. `format_exc_info` — JSON mode only (everything except DEBUG + TTY). Replaces `exc_info`
+   (`logger.exception(...)`, `exc_info=True`) with a plain-text `exception` field holding the standard
+   Python traceback. `format_exc_info` rather than `dict_tracebacks`: the structured form dumps frame
+   locals by default (secrets such as the LLM client's key, large world objects) and bloats each record,
+   while the text traceback stays readable in JSONL and greppable.
+5. `FileDispatchProcessor` — only with DEBUG + `LOG_DIR`. Writes the record to its JSONL files; when
+   `exc_info` is still raw (console mode) it writes a copy formatted by `format_exc_info` and passes the
+   original event on unchanged.
+6. Renderer — `ConsoleRenderer` for DEBUG + TTY (pretty-prints the exception from the raw `exc_info`),
+   otherwise `JSONRenderer`.
 
 ## Domains
 

@@ -38,6 +38,12 @@ class FileDispatchProcessor:
         method_name: str,
         event_dict: MutableMapping[str, Any],
     ) -> MutableMapping[str, Any]:
+        # In console mode exc_info is still raw here (ConsoleRenderer formats it later), so the
+        # files get their own formatted copy and event_dict passes through untouched.
+        record: MutableMapping[str, Any] = event_dict
+        if "exc_info" in event_dict:
+            record = structlog.processors.format_exc_info(logger, method_name, dict(event_dict))
+
         session_id = event_dict.get("session_id", "unknown")
         session_dir = self._base / f"session_{session_id}"
 
@@ -47,10 +53,10 @@ class FileDispatchProcessor:
 
         # LLM full context → separate JSON file, not JSONL
         if domain == "llm.context":
-            self._write_llm_context(session_dir, event_dict, entity_id)
+            self._write_llm_context(session_dir, record, entity_id)
             return event_dict
 
-        json_line = json.dumps(event_dict, default=str, ensure_ascii=False) + "\n"
+        json_line = json.dumps(record, default=str, ensure_ascii=False) + "\n"
 
         targets: list[Path] = [session_dir / "full.jsonl"]
 

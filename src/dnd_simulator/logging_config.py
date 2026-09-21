@@ -26,12 +26,18 @@ def configure_logging(
         structlog.processors.TimeStamper(fmt="iso"),
     ]
 
+    pretty_console = log_level <= logging.DEBUG and sys.stderr.isatty()
+    if not pretty_console:
+        # JSON records carry `exc_info` as a plain-text "exception" field. ConsoleRenderer
+        # needs the raw exc_info to pretty-print, so it is left alone in console mode.
+        processors.append(structlog.processors.format_exc_info)
+
     if log_level <= logging.DEBUG and log_dir:
         from dnd_simulator.logging_file_dispatch import FileDispatchProcessor
 
         processors.append(FileDispatchProcessor(log_dir))
 
-    if log_level <= logging.DEBUG and sys.stderr.isatty():
+    if pretty_console:
         processors.append(structlog.dev.ConsoleRenderer())
     else:
         processors.append(structlog.processors.JSONRenderer(ensure_ascii=False))
