@@ -654,6 +654,23 @@ class TestCombatAwarenessBattleMapWalls:
         assert awareness.nearby == []
         assert awareness.walls == []
         assert awareness.battle_map_ascii == ""
+        assert awareness.occupied_cells == frozenset()
+
+    def test_occupied_cells_are_the_other_combatants_cells(self) -> None:
+        """Brains plan paths from these cells, so they mirror the map's positions minus the observer."""
+        player = Character(id="p1", name="Hero", location_id="arena", in_combat=True, attacks=(_SWORD,))
+        other = Character(id="e1", name="Foe", location_id="arena", in_combat=True, attacks=(_SWORD,))
+        layer = EntitiesLayer([player, other])
+        battle_map = BattleMap(width=60, height=60)
+        battle_map.set_position("p1", Position(10, 10))
+        battle_map.set_position("e1", Position(15, 20))
+        layer._combat._combats["arena"] = CombatState(
+            location_id="arena", turn_order=["p1", "e1"], battle_map=battle_map
+        )
+
+        awareness = layer.build_combat_awareness(player)
+
+        assert awareness.occupied_cells == frozenset({(15, 20)})
 
 
 class TestCombatAwarenessStructuredGrid:

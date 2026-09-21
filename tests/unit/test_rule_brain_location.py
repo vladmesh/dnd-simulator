@@ -60,6 +60,9 @@ def _build_combat_awareness(npc: Npc, enemies: list[Npc], battle_map: BattleMap)
         self_x=my_pos.x,
         self_y=my_pos.y,
         nearby=nearby,
+        battle_map_width=battle_map.width,
+        battle_map_height=battle_map.height,
+        occupied_cells=frozenset((p.x, p.y) for eid, p in battle_map.positions.items() if eid != npc.id),
         turn_budget=TurnBudget(actions=1, bonus_actions=1, movement_remaining=npc.speed, reaction=True),
         available_actions=[ActionType.ATTACK, ActionType.MOVE, ActionType.DISENGAGE],
     )
@@ -116,11 +119,12 @@ def test_rule_brain_retreat_when_disengaging_low_hp() -> None:
     enemy = Npc(id="e1", name="Bandit", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20)
     bm = BattleMap(width=30, height=30)
     bm.set_position("n1", Position(10, 10))
-    bm.set_position("e1", Position(10, 11))
+    bm.set_position("e1", Position(10, 15))
     awareness = _build_combat_awareness(npc, [npc, enemy], bm)
 
     action = RuleBrain().choose_action(npc, awareness, [])
 
-    assert action.name == ActionType.MOVE
-    # Moving away from enemy to the north means direction should take us further from (10, 11)
-    assert "direction" in action.params
+    assert action.name == ActionType.MOVE_TO
+    # The retreat cell is farther from the enemy at (10, 15) than the starting cell.
+    goal = Position(int(str(action.params["x"])), int(str(action.params["y"])))
+    assert grid_distance(goal, Position(10, 15)) > grid_distance(Position(10, 10), Position(10, 15))

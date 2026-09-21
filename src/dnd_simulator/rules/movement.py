@@ -7,7 +7,7 @@ Uses DMG optional diagonal rule: first diagonal = 5 ft, second = 10 ft, alternat
 from __future__ import annotations
 
 import heapq
-from itertools import count
+from itertools import count, pairwise
 
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.character import Creature
@@ -194,6 +194,21 @@ def compute_reachable(
                 heapq.heappush(heap, (new_cost, next(counter), neighbor, new_diag, new_path))
 
     return result
+
+
+def unbounded_budget(battle_map: BattleMap) -> int:
+    """A movement budget larger than the cost of any path on *battle_map* (for unbounded searches)."""
+    return battle_map.width * battle_map.height * 15
+
+
+def path_cost(path: list[Position]) -> int:
+    """Movement cost in feet of walking *path* (start inclusive) under the alternating diagonal rule."""
+    spent = 0
+    diag_count = 0
+    for cur, nxt in pairwise(path):
+        cost, diag_count = step_cost(cur, nxt, diag_count)
+        spent += cost
+    return spent
 
 
 def find_path(start: Position, goal: Position, battle_map: BattleMap, mover_id: str) -> list[Position]:

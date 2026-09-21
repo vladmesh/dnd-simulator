@@ -17,12 +17,13 @@ from dnd_simulator.core.models import EventType
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
 from dnd_simulator.rules.actions import collect_cost_overrides
 from dnd_simulator.rules.flee import enemy_blocks_flee
-from dnd_simulator.rules.movement import calculate_away_direction, calculate_direction
+from dnd_simulator.rules.movement import compute_reachable, grid_distance, path_cost, unbounded_budget
 from dnd_simulator.rules.resources import get_available_spell_slots
 from dnd_simulator.rules.weapons import get_weapon_attack
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
+    from dnd_simulator.core.combat import BattleMap, Position
 
 # --- RuleBrain threshold constants ---
 FLEE_HP_THRESHOLD = 0.15
@@ -30,6 +31,9 @@ DODGE_HP_THRESHOLD = 0.25
 POTION_HP_THRESHOLD = 0.50
 SCARED_FLEE_HP_THRESHOLD = 0.25
 SCARED_DODGE_HP_THRESHOLD = 0.35
+
+# Map id of the deciding creature on the brain's reconstructed battle-map view.
+_SELF_ID = "__self__"
 
 
 @dataclass(frozen=True)
@@ -44,6 +48,14 @@ class _CombatContext:
     flee_threshold: float
     dodge_threshold: float
     target: CombatEntity | None
+
+
+@dataclass(frozen=True)
+class _Approach:
+    """The cheapest walk to a free cell from which ``target`` is within primary reach."""
+
+    target: CombatEntity
+    path: list[Position]  # start inclusive; a single cell means the target is already in reach
 
 
 class RuleBrain(Brain):
@@ -127,6 +139,7 @@ class RuleBrain(Brain):
             self._try_attack,
             self._try_advance,
             self._try_dash,
+            self._try_dodge,
         ]
         for rule in rules:
             result = rule(ctx)
@@ -199,10 +212,7 @@ class RuleBrain(Brain):
         budget = awareness.turn_budget
         if not creature.is_disengaging or (budget.movement_remaining if budget else 0) < 5:
             return None
-        nearest_hostile = min((e for e in awareness.nearby if e.is_hostile), key=lambda e: e.distance_ft, default=None)
-        if nearest_hostile is None:
-            return None
-        return self._move_away_from(nearest_hostile, awareness)
+        return self._move_away_from([e for e in awareness.nearby if e.is_hostile], awareness)
 
     @staticmethod
     def _flee_allowed(awareness: CombatAwareness) -> bool:
@@ -227,7 +237,7 @@ class RuleBrain(Brain):
         nearest = min(hostiles, key=lambda e: e.distance_ft)
         if nearest.distance_ft <= ctx.primary_reach or not enemy_blocks_flee(nearest.distance_ft):
             return None
-        return self._move_away_from(nearest, ctx.awareness)
+        return self._move_away_from(hostiles, ctx.awareness)
 
     @staticmethod
     def _try_disengage(ctx: _CombatContext) -> Action | None:
@@ -252,16 +262,18 @@ class RuleBrain(Brain):
             return None
         if ctx.target is None:
             return None
-        dist = ctx.target.distance_ft
-        if dist <= ctx.primary_reach:
-            params: dict[str, object] = {"target_id": ctx.target.id}
-            # Divine Smite: always smite in melee when spell slots available.
-            if not ctx.is_ranged:
-                smite_level = self._pick_smite_level(ctx.creature)
-                if smite_level is not None:
-                    params["smite_slot_level"] = smite_level
-            return Action(name=ActionType.ATTACK, params=params)
+        if ctx.target.distance_ft <= ctx.primary_reach:
+            return self._attack(ctx, ctx.target)
         return None
+
+    def _attack(self, ctx: _CombatContext, target: CombatEntity) -> Action:
+        params: dict[str, object] = {"target_id": target.id}
+        # Divine Smite: always smite in melee when spell slots available.
+        if not ctx.is_ranged:
+            smite_level = self._pick_smite_level(ctx.creature)
+            if smite_level is not None:
+                params["smite_slot_level"] = smite_level
+        return Action(name=ActionType.ATTACK, params=params)
 
     @staticmethod
     def _pick_smite_level(creature: Creature) -> int | None:
@@ -276,18 +288,33 @@ class RuleBrain(Brain):
         return min(slots)
 
     def _try_advance(self, ctx: _CombatContext) -> Action | None:
-        if ctx.target is None:
+        """Walk toward a free attack cell along a real path, as far as this turn's movement allows.
+
+        An enemy that is already in reach but is not the chosen target (the target has no path) is attacked.
+        """
+        if ctx.target is None or ctx.target.distance_ft <= ctx.primary_reach:
             return None
-        if ctx.target.distance_ft <= ctx.primary_reach:
+        approach = self._plan_approach(ctx)
+        if approach is None:
             return None
         budget = ctx.awareness.turn_budget
+        if len(approach.path) == 1:
+            if approach.target is not ctx.target and (budget.actions if budget else 0) > 0:
+                return self._attack(ctx, approach.target)
+            return None
+        view = self._map_view(ctx.awareness)
+        assert view is not None  # an approach was planned on it
         movement_left = budget.movement_remaining if budget else 0
-        if movement_left >= 5:
-            return self.move_toward_target(ctx.target, ctx.awareness)
-        return None
+        affordable = compute_reachable(approach.path[0], movement_left, view, _SELF_ID)
+        goal = next((cell for cell in reversed(approach.path[1:]) if cell in affordable), None)
+        if goal is None:
+            return None
+        return Action(name=ActionType.MOVE_TO, params={"x": goal.x, "y": goal.y})
 
     def _try_dash(self, ctx: _CombatContext) -> Action | None:
-        if ctx.target is None:
+        """Dash only when an attack cell has a path but this turn's movement cannot finish it."""
+        approach = self._plan_approach(ctx)
+        if approach is None or len(approach.path) == 1:
             return None
         budget = ctx.awareness.turn_budget
         dash_params = self._dash_params(ctx.creature)
@@ -300,30 +327,80 @@ class RuleBrain(Brain):
             return Action(name=ActionType.DASH)
         return None
 
-    @staticmethod
-    def move_toward_target(target: CombatEntity, awareness: CombatAwareness, ft: int = 5) -> Action:
-        """Calculate a concrete move action toward a combat target.
-
-        Uses grid positions from awareness to determine compass direction.
-        """
-        from dnd_simulator.core.combat import Position
-
-        origin = Position(awareness.self_x, awareness.self_y)
-        dest = Position(target.x, target.y)
-        direction = calculate_direction(origin, dest)
-        if not direction:
-            return END_TURN  # already at target
-        return Action(name=ActionType.MOVE, params={"direction": direction, "ft": ft})
+    def _try_dodge(self, ctx: _CombatContext) -> Action | None:
+        """No path leads to any enemy's attack cell: defend instead of issuing moves that fail."""
+        budget = ctx.awareness.turn_budget
+        if ctx.target is None or (budget.actions if budget else 0) <= 0:
+            return None
+        if self._plan_approach(ctx) is not None:
+            return None
+        return Action(name=ActionType.DODGE)
 
     @staticmethod
-    def _move_away_from(target: CombatEntity, awareness: CombatAwareness, ft: int = 5) -> Action:
-        """Calculate a concrete move action away from a combat target."""
+    def _map_view(awareness: CombatAwareness) -> BattleMap | None:
+        """The battle map as the brain knows it: bounds, walls, and every other combatant's cell."""
+        from dnd_simulator.core.combat import BattleMap, Position, Wall
+
+        if awareness.battle_map_width <= 0 or awareness.battle_map_height <= 0:
+            return None
+        positions = {f"occupied_{x}_{y}": Position(x, y) for x, y in awareness.occupied_cells}
+        positions[_SELF_ID] = Position(awareness.self_x, awareness.self_y)
+        return BattleMap(
+            width=awareness.battle_map_width,
+            height=awareness.battle_map_height,
+            positions=positions,
+            walls=[Wall(**wall) for wall in awareness.battle_map_walls],
+        )
+
+    def _plan_approach(self, ctx: _CombatContext) -> _Approach | None:
+        """Cheapest path to an attack cell of the chosen target, else of the nearest other reachable enemy."""
         from dnd_simulator.core.combat import Position
 
-        origin = Position(awareness.self_x, awareness.self_y)
-        dest = Position(target.x, target.y)
-        direction = calculate_away_direction(origin, dest)
-        return Action(name=ActionType.MOVE, params={"direction": direction, "ft": ft})
+        view = self._map_view(ctx.awareness)
+        if ctx.target is None or view is None:
+            return None
+        start = Position(ctx.awareness.self_x, ctx.awareness.self_y)
+        paths = compute_reachable(start, unbounded_budget(view), view, _SELF_ID)
+        others = sorted(
+            (e for e in ctx.awareness.nearby if e.is_hostile and e.id != ctx.target.id), key=lambda e: e.distance_ft
+        )
+        for target in [ctx.target, *others]:
+            target_pos = Position(target.x, target.y)
+            reach = ctx.primary_reach
+            attack_paths = [path for cell, path in paths.items() if grid_distance(cell, target_pos) <= reach]
+            if attack_paths:
+                # Equal cost: prefer the cell squarest to the target, then a fixed order for determinism.
+                best = min(
+                    attack_paths,
+                    key=lambda path: (
+                        path_cost(path),
+                        (path[-1].x - target_pos.x) ** 2 + (path[-1].y - target_pos.y) ** 2,
+                        path[-1].x,
+                        path[-1].y,
+                    ),
+                )
+                return _Approach(target=target, path=best)
+        return None
+
+    def _move_away_from(self, threats: list[CombatEntity], awareness: CombatAwareness) -> Action | None:
+        """Move to the affordable free cell farthest from the nearest threat; None when no cell gains distance."""
+        from dnd_simulator.core.combat import Position
+
+        view = self._map_view(awareness)
+        budget = awareness.turn_budget
+        if view is None or not threats or budget is None:
+            return None
+        threat_cells = [Position(t.x, t.y) for t in threats]
+
+        def clearance(cell: Position) -> int:
+            return min(grid_distance(cell, threat) for threat in threat_cells)
+
+        start = Position(awareness.self_x, awareness.self_y)
+        affordable = compute_reachable(start, budget.movement_remaining, view, _SELF_ID)
+        goal = max(affordable, key=lambda cell: (clearance(cell), -path_cost(affordable[cell]), -cell.x, -cell.y))
+        if clearance(goal) <= clearance(start):
+            return None
+        return Action(name=ActionType.MOVE_TO, params={"x": goal.x, "y": goal.y})
 
     @staticmethod
     def _dash_params(creature: Creature) -> dict[str, object]:

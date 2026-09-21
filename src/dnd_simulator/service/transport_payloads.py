@@ -35,6 +35,7 @@ def _awareness_to_dict(
     data["reachable"] = sorted([x, y] for x, y in awareness.reachable)
     if isinstance(awareness, CombatAwareness):
         data["self_conditions"] = sorted(condition.value for condition in awareness.self_conditions)
+        data["occupied_cells"] = sorted([x, y] for x, y in awareness.occupied_cells)
         for index, nearby_entry in enumerate(awareness.nearby):
             data["nearby"][index]["conditions"] = sorted(condition.value for condition in nearby_entry.conditions)
         data["self_resource_pools"] = [

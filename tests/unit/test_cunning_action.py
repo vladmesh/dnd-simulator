@@ -252,6 +252,9 @@ class TestRuleBrainCunningAction:
                     y=60,
                 ),
             ],
+            battle_map_width=60,
+            battle_map_height=60,
+            occupied_cells=frozenset({(0, 60)}),
             turn_budget=TurnBudget(actions=1, bonus_actions=1, movement_remaining=0),
         )
         brain = RuleBrain()
@@ -287,6 +290,9 @@ class TestRuleBrainCunningAction:
                     y=60,
                 ),
             ],
+            battle_map_width=60,
+            battle_map_height=60,
+            occupied_cells=frozenset({(0, 60)}),
             turn_budget=TurnBudget(actions=1, bonus_actions=1, movement_remaining=0),
         )
         brain = RuleBrain()

@@ -269,6 +269,9 @@ class CombatAwareness:
     battle_map_width: int = 0
     battle_map_height: int = 0
     battle_map_walls: list[dict[str, int]] = field(default_factory=list)
+    # Battle-map cells held by other combatants — together with the walls and bounds above,
+    # everything a brain needs to plan a path the MOVE_TO handler will accept.
+    occupied_cells: frozenset[tuple[int, int]] = field(default_factory=frozenset)
     turn_budget: TurnBudget | None = None
     self_conditions: frozenset[Condition] = field(default_factory=frozenset)
     available_actions: list[ActionType] = field(default_factory=list)

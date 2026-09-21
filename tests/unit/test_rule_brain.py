@@ -74,6 +74,9 @@ def _build_combat_awareness(
         self_x=my_pos.x if my_pos else 0,
         self_y=my_pos.y if my_pos else 0,
         nearby=nearby,
+        battle_map_width=battle_map.width,
+        battle_map_height=battle_map.height,
+        occupied_cells=frozenset((p.x, p.y) for eid, p in battle_map.positions.items() if eid != npc.id),
         turn_budget=budget,
     )
 
@@ -169,9 +172,9 @@ class TestRuleBrainCombat:
         awareness = _build_combat_awareness(npc, [npc, enemy], bm)
         brain = RuleBrain()
         action = brain.choose_action(npc, awareness, [])
-        assert action.name == "move"
-        assert action.params["direction"] == "north"  # e1 is directly north
-        assert action.params["ft"] == 5
+        # Walks straight north to the free cell adjacent to e1, spending 15 ft in one action.
+        assert action.name == ActionType.MOVE_TO
+        assert action.params == {"x": 10, "y": 25}
 
     def test_dash_when_no_movement_left(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="arena", attacks=(_SWORD,), max_hp=20, current_hp=20, speed=30)
@@ -564,9 +567,10 @@ class TestRuleBrainDecisionRules:
         awareness = _build_combat_awareness(npc, [npc, enemy], bm)
         brain = RuleBrain()
 
-        # First call: should move toward
+        # First call: should move toward, as far as the 30-ft speed allows
         action1 = brain.choose_action(npc, awareness, [])
-        assert action1.name == "move"
+        assert action1.name == ActionType.MOVE_TO
+        assert action1.params == {"x": 10, "y": 40}
 
         # Simulate movement exhausted
         assert awareness.turn_budget is not None
@@ -601,9 +605,9 @@ class TestRuleBrainTacticalDisengage:
         awareness = _build_combat_awareness(npc, [npc, enemy], bm)
         brain = RuleBrain()
         action = brain.choose_action(npc, awareness, [])
-        assert action.name == "move"
+        assert action.name == ActionType.MOVE_TO
         # Should move away from enemy (south, since enemy is north)
-        assert action.params["direction"] == "south"
+        assert int(str(action.params["y"])) < 15
 
     def test_flee_when_low_hp_no_enemies_in_reach(self) -> None:
         """NPC at 10% HP, enemy at 30ft → FLEE directly (no Disengage needed)."""
@@ -827,8 +831,9 @@ class TestRuleBrainMovementBudget:
         awareness.turn_budget.movement_remaining = 15  # still has movement
         brain = RuleBrain()
         action = brain.choose_action(npc, awareness, [])
-        # Should move toward target — not end turn
-        assert action.name == ActionType.MOVE
+        # Should move toward target — not end turn — with the 15 ft it has left
+        assert action.name == ActionType.MOVE_TO
+        assert action.params == {"x": 10, "y": 25}
 
     def test_end_turn_when_all_budget_exhausted(self) -> None:
         """NPC with no actions, no bonus, no movement → END_TURN."""
