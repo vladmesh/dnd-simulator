@@ -352,6 +352,7 @@ class CombatStateSave(SaveModel):
     round_number: int
     rounds_without_attack: int
     resume_turn_index: int | None = None
+    resume_turn_started: bool = False
     battle_map: BattleMapSave
     sides: dict[int, set[str]] = Field(default_factory=dict)
     entity_to_side: dict[str, int] = Field(default_factory=dict)

@@ -1185,11 +1185,11 @@ msgid "'{action}' requires parameter '{param}'."
 msgstr ""
 
 #: src/dnd_simulator/rules/validation.py:115
-msgid "'{action}' is not available in combat"
+msgid "This is not available in combat: {action}"
 msgstr ""
 
 #: src/dnd_simulator/rules/validation.py:120
-msgid "'{action}' is not available outside combat"
+msgid "This is not available outside combat: {action}"
 msgstr ""
 
 #: src/dnd_simulator/rules/validation.py:139

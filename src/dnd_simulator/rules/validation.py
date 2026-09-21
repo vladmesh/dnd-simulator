@@ -111,15 +111,16 @@ def check_action_mode(actor: Creature, action: Action, ctx: ActionContext) -> Va
     """
     d = get_action_def(action.name)
     in_combat = ctx.combat_state is not None
+    # Name the action by its localised description, never by its raw id.
     if in_combat and d.combat_mode == CombatMode.PEACEFUL_ONLY:
         return ValidationError(
             "WRONG_MODE",
-            _("'{action}' is not available in combat").format(action=action.name),
+            _("This is not available in combat: {action}").format(action=_(d.description)),
         )
     if not in_combat and d.combat_mode == CombatMode.COMBAT_ONLY:
         return ValidationError(
             "WRONG_MODE",
-            _("'{action}' is not available outside combat").format(action=action.name),
+            _("This is not available outside combat: {action}").format(action=_(d.description)),
         )
     return None
 

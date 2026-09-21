@@ -316,6 +316,10 @@ class CombatState:
     # its brain is waiting resumes this turn rather than replaying earlier
     # initiative actors after loading.
     resume_turn_index: int | None = None
+    # True once the turn at ``resume_turn_index`` has started (conditions ticked,
+    # budget granted). A resumed started turn continues with its persisted budget
+    # instead of starting over, so nothing in it runs twice.
+    resume_turn_started: bool = False
     battle_map: BattleMap = field(default_factory=lambda: BattleMap(width=60, height=60))
     sides: dict[int, set[str]] = field(default_factory=dict)  # side index → entity IDs
     entity_to_side: dict[str, int] = field(default_factory=dict)  # entity ID → side index

@@ -302,6 +302,10 @@ class GameSession:
         with self._lock:
             listeners = self._listeners + self._spectators
         for listener in listeners:
+            # A listener removed after the snapshot (its socket is closing) gets nothing more.
+            with self._lock:
+                if listener not in self._listeners and listener not in self._spectators:
+                    continue
             try:
                 getattr(listener, method)(*args)
             except Exception:

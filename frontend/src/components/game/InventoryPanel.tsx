@@ -5,6 +5,7 @@ import { wsClient } from "@/transport/wsClient"
 import { ChevronDown, ChevronRight, Package, Sword, Shield, Crown, Footprints, Gem, ShieldPlus } from "lucide-react"
 import type { EquippedInfo, ItemInfo } from "@/types/game"
 import { ItemDetails } from "./ItemDetails"
+import { isCostDepleted } from "./action-bar/utils"
 
 const SLOT_ORDER = ["weapon", "armor", "shield", "head", "feet", "ring"] as const
 const SLOT_ICONS: Record<string, React.ElementType> = {
@@ -47,20 +48,57 @@ function getEquipSlot(item: ItemInfo): string | undefined {
   return undefined
 }
 
+/**
+ * Why an equip/unequip action cannot be taken right now, or null. Only combat restricts it:
+ * the server withholds the action from `available_actions` and says why in `blocked_actions`
+ * (armor/accessories: wrong mode; shield: no Action left). Frontend text is keyed by the
+ * server's `reason_key`, falling back to its localised `reason`.
+ */
+function useEquipBlockedReason(action: string | undefined): string | null {
+  const { t } = useTranslation(["game"])
+  const mode = useGameStore((s) => s.mode)
+  const isMyTurn = useGameStore((s) => s.isMyTurn)
+  const budget = useGameStore((s) => s.budget)
+  const awareness = useGameStore((s) => s.awareness)
+
+  if (mode !== "combat" || !action) return null
+  const blocked = (awareness && "blocked_actions" in awareness ? awareness.blocked_actions : undefined) ?? []
+  const block = blocked.find((b) => b.name === action)
+  const blockText = block
+    ? t(`game:equip_reason_${block.reason_key.toLowerCase()}`, { defaultValue: block.reason })
+    : null
+  // Not available in combat at all outranks "not your turn": waiting will not help.
+  if (block?.reason_key === "WRONG_MODE") return blockText
+  if (!isMyTurn) return t("game:equip_not_your_turn")
+  if (blockText) return blockText
+  const info = (awareness?.available_actions ?? []).find((a) => a.name === action)
+  if (info && isCostDepleted(info.cost_type, budget ?? undefined)) return t("game:equip_reason_insufficient_budget")
+  return null
+}
+
 function EquipmentSlot({ slot, item, align }: { slot: string; item?: EquippedInfo; align?: "left" | "right" }) {
   const { t } = useTranslation(["game"])
   const Icon = SLOT_ICONS[slot] ?? Package
   const waitingForAction = useGameStore((s) => s.waitingForAction)
+  const unequipAction = UNEQUIP_ACTION[slot] ?? "unequip"
+  const blockedReason = useEquipBlockedReason(item ? unequipAction : undefined)
 
   return (
     <div className="flex items-center gap-2 rounded border border-border px-2 py-1">
       <Icon className="size-3 shrink-0 text-muted-foreground" />
       {item ? (
-        <ItemDetails item={item} align={align} hint={t("game:click_to_unequip")} className="min-w-0 flex-1">
+        <ItemDetails
+          item={item}
+          align={align}
+          hint={blockedReason ?? t("game:click_to_unequip")}
+          className="min-w-0 flex-1"
+        >
           <button
             className="block w-full truncate text-left text-xs hover:text-primary disabled:opacity-50"
-            disabled={waitingForAction}
-            onClick={() => sendAction(UNEQUIP_ACTION[slot] ?? "unequip")}
+            disabled={waitingForAction || !!blockedReason}
+            title={blockedReason ?? undefined}
+            data-testid={`unequip-${slot}`}
+            onClick={() => sendAction(unequipAction)}
           >
             {item.name}
           </button>
@@ -80,6 +118,7 @@ function BagItem({ item }: { item: ItemInfo }) {
 
   const equipSlot = getEquipSlot(item)
   const isConsumable = item.type === "potion"
+  const blockedReason = useEquipBlockedReason(equipSlot ? EQUIP_ACTION[equipSlot]?.action : undefined)
 
   const handleEquip = () => {
     if (!equipSlot) return
@@ -89,32 +128,40 @@ function BagItem({ item }: { item: ItemInfo }) {
   }
 
   return (
-    <div className="flex items-center gap-1 text-xs">
-      <ItemDetails item={item} className="min-w-0 flex-1">
-        <span className="block truncate">
-          {item.name}
-          {item.price != null && (
-            <span className="ml-1 text-muted-foreground">{item.price}g</span>
-          )}
-        </span>
-      </ItemDetails>
-      {isConsumable && (
-        <button
-          className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[10px] hover:bg-accent/80 disabled:opacity-50"
-          disabled={waitingForAction}
-          onClick={() => sendAction("use_item", { item_id: item.id })}
-        >
-          {t("game:use")}
-        </button>
-      )}
-      {equipSlot && (
-        <button
-          className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[10px] hover:bg-accent/80 disabled:opacity-50"
-          disabled={waitingForAction}
-          onClick={handleEquip}
-        >
-          {t("game:equip")}
-        </button>
+    <div data-testid={`bag-${item.id}`}>
+      <div className="flex items-center gap-1 text-xs">
+        <ItemDetails item={item} className="min-w-0 flex-1">
+          <span className="block truncate">
+            {item.name}
+            {item.price != null && (
+              <span className="ml-1 text-muted-foreground">{item.price}g</span>
+            )}
+          </span>
+        </ItemDetails>
+        {isConsumable && (
+          <button
+            className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[10px] hover:bg-accent/80 disabled:opacity-50"
+            disabled={waitingForAction}
+            onClick={() => sendAction("use_item", { item_id: item.id })}
+          >
+            {t("game:use")}
+          </button>
+        )}
+        {equipSlot && (
+          <button
+            className="shrink-0 rounded bg-accent px-1.5 py-0.5 text-[10px] hover:bg-accent/80 disabled:opacity-50"
+            disabled={waitingForAction || !!blockedReason}
+            title={blockedReason ?? undefined}
+            onClick={handleEquip}
+          >
+            {t("game:equip")}
+          </button>
+        )}
+      </div>
+      {equipSlot && blockedReason && (
+        <div className="text-[10px] text-muted-foreground" data-testid="equip-reason">
+          {blockedReason}
+        </div>
       )}
     </div>
   )
