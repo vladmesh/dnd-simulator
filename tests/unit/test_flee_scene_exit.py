@@ -65,6 +65,7 @@ from dnd_simulator.rules.flee import (
     flee_blocker,
     flee_status,
 )
+from dnd_simulator.rules.movement import grid_distance
 from dnd_simulator.rules.rule_brain import RuleBrain
 from dnd_simulator.rules.validation import ActionContext, validate_action
 
@@ -179,6 +180,9 @@ def _npc_awareness(distance: int, *, hp: int = 1, flee: FleeStatus | None = None
                 id="foe", description="Foe", is_wounded=False, is_hostile=True, distance_ft=distance, x=distance, y=0
             )
         ],
+        battle_map_width=60,
+        battle_map_height=60,
+        occupied_cells=frozenset({(distance, 0)}),
         turn_budget=TurnBudget(actions=1, bonus_actions=1, movement_remaining=30, reaction=1),
         flee=flee,
     )
@@ -197,7 +201,10 @@ class TestRuleBrainObeysEligibility:
     def test_backs_off_when_pinned_outside_reach(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="arena", max_hp=20, current_hp=1)
         action = RuleBrain().choose_action(npc, _npc_awareness(10), [])
-        assert action.name is ActionType.MOVE
+        assert action.name is ActionType.MOVE_TO
+        # Backs off out of the 15-ft flee-blocking radius so a later turn can flee.
+        goal = Position(int(str(action.params["x"])), int(str(action.params["y"])))
+        assert grid_distance(goal, Position(10, 0)) > 15
 
     def test_flees_at_20ft(self) -> None:
         npc = Npc(id="n1", name="Guard", location_id="arena", max_hp=20, current_hp=1)

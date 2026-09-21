@@ -276,6 +276,7 @@ class AwarenessBuilder:
         battle_map_width = 0
         battle_map_height = 0
         battle_map_walls: list[dict[str, int]] = []
+        occupied_cells: frozenset[tuple[int, int]] = frozenset()
         if combat:
             wall_descriptions = combat.battle_map.describe_walls()
             battle_map_ascii = combat.battle_map.render_ascii(creature.id)
@@ -284,6 +285,7 @@ class AwarenessBuilder:
             battle_map_walls = [
                 {"x1": w.x1, "y1": w.y1, "x2": w.x2, "y2": w.y2} for w in combat.battle_map._inner_walls
             ]
+            occupied_cells = frozenset((p.x, p.y) for eid, p in battle_map_positions.items() if eid != creature.id)
 
         resource_pools = tuple(
             ResourcePoolInfo(id=p.id, max_uses=p.max_uses, current_uses=p.current_uses) for p in creature.resource_pools
@@ -306,6 +308,7 @@ class AwarenessBuilder:
             battle_map_width=battle_map_width,
             battle_map_height=battle_map_height,
             battle_map_walls=battle_map_walls,
+            occupied_cells=occupied_cells,
             self_conditions=frozenset(creature.conditions),
             is_disengaging=creature.is_disengaging,
             self_resource_pools=resource_pools,

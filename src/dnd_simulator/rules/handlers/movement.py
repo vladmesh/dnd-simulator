@@ -12,7 +12,13 @@ from dnd_simulator.core.models import ActionResult, Event, EventType
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.action_params import integer_param
 from dnd_simulator.rules.modifiers import effective_speed
-from dnd_simulator.rules.movement import compute_reachable, grid_distance, move_direction, step_cost
+from dnd_simulator.rules.movement import (
+    compute_reachable,
+    grid_distance,
+    move_direction,
+    step_cost,
+    unbounded_budget,
+)
 from dnd_simulator.rules.reactions import find_oa_triggers
 
 if TYPE_CHECKING:
@@ -132,7 +138,7 @@ def handle_move_to(actor: Creature, action: Action, emit_fn: EmitFn, ctx: Action
     if not path:
         # Distinguish "sealed off by walls" from "reachable but past this turn's budget" so the
         # brain/player gets an actionable reason. Only pay the extra Dijkstra on the failure path.
-        unbounded = compute_reachable(start_pos, bm.width * bm.height * 15, bm, actor.id)
+        unbounded = compute_reachable(start_pos, unbounded_budget(bm), bm, actor.id)
         if target in unbounded:
             return ActionResult(success=False, error=_("Not enough movement to reach there"))
         return ActionResult(success=False, error=_("No path to target"))
