@@ -251,6 +251,19 @@ class CombatLootable:
 
 
 @dataclass(frozen=True)
+class BlockedAction:
+    """An action the creature has the means for (e.g. an item) but cannot take right now.
+
+    ``reason_key`` is the validation code (``WRONG_MODE``, ``INSUFFICIENT_BUDGET``, ...);
+    ``reason`` is the localized validation message.
+    """
+
+    name: str
+    reason_key: str
+    reason: str
+
+
+@dataclass(frozen=True)
 class CombatAwareness:
     """What a creature knows in combat — stats, enemies, terrain."""
 
@@ -282,6 +295,8 @@ class CombatAwareness:
     self_resource_pools: tuple[ResourcePoolInfo, ...] = ()
     flee: FleeStatus | None = None  # filled per turn by the Round (needs the location graph)
     lootables: list[CombatLootable] = field(default_factory=list)
+    # Equipment actions withheld from ``available_actions``, with why (filled per turn by the Round).
+    blocked_actions: list[BlockedAction] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

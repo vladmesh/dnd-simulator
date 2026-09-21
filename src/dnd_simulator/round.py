@@ -31,6 +31,7 @@ from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, Trigge
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.i18n import _
+from dnd_simulator.rules.action_provider import blocked_actions_view
 from dnd_simulator.rules.actions import (
     ends_peaceful_turn,
     get_num_actions,
@@ -58,6 +59,13 @@ class RoundResult:
 
     events: list[Event] = field(default_factory=list)
     should_stop: bool = False
+    # The round was cut short by ``Round.stop()``: time did not advance and the
+    # combat cursor names the turn to continue from.
+    interrupted: bool = False
+
+
+class _RoundInterruptedError(Exception):
+    """Raised inside a turn when ``Round.stop()`` was requested; never escapes ``run_round``."""
 
 
 class Round:
@@ -66,6 +74,8 @@ class Round:
     Combat: multi-action loop with budget (actions, bonus, movement).
     Peaceful: no budget — turn-ending actions auto-end, queries loop.
     """
+
+    _stop_flag: bool = False
 
     def __init__(
         self,
@@ -91,8 +101,20 @@ class Round:
         self._on_action: OnActionCallback | None = None
 
     def stop(self) -> None:
-        """Signal the run_loop to exit after current round completes."""
+        """Interrupt the round at the next safe point.
+
+        No further turn starts and no decision returned after this call is
+        applied: an in-flight brain decision may finish, but its action is
+        discarded. An action already being dispatched completes atomically. The
+        interrupted round does not advance time; a combat turn keeps its cursor
+        (``resume_turn_index`` / ``resume_turn_started``) so the next round
+        continues exactly there.
+        """
         self._stop_flag = True
+
+    def _check_interrupted(self) -> None:
+        if self._stop_flag:
+            raise _RoundInterruptedError
 
     @property
     def is_stopped(self) -> bool:
@@ -149,6 +171,10 @@ class Round:
             location_graph=self._world.location_graph,
         )
 
+    def action_context_for(self, creature: Creature) -> ActionContext:
+        """The context an out-of-turn snapshot validates against: the creature's persisted budget."""
+        return self._build_action_context(creature, turn_budget=creature.turn_budget)
+
     def get_perceived_events(self, creature: Creature) -> list[PerceivedEvent]:
         """Return perceived events for a creature (delegates to CreatureHost)."""
         return self._host.get_perceived_events(creature)
@@ -159,6 +185,8 @@ class Round:
         time: GameDateTime,
         query_fn: QueryFn,
         emit_fn: EmitFn,
+        *,
+        resume_started: bool = False,
     ) -> list[Action]:
         """Dispatch to combat or peaceful turn based on authoritative combat membership.
 
@@ -174,7 +202,7 @@ class Round:
             location_id=creature.location_id,
         ):
             if in_combat:
-                return self.run_combat_turn(creature, time, query_fn, emit_fn)
+                return self.run_combat_turn(creature, time, query_fn, emit_fn, resume_started=resume_started)
             return self.run_peaceful_turn(creature, time, query_fn, emit_fn)
 
     def _prepare_combat_turn(
@@ -251,9 +279,12 @@ class Round:
             reachable=self._host.compute_reachable(creature, ctx.combat_state, creature.turn_budget),
         )
         if isinstance(awareness, CombatAwareness):
+            with self._action_scope():
+                blocked = blocked_actions_view(creature, ctx)
             awareness = replace(
                 awareness,
                 flee=flee_status(creature, ctx.combat_state, self._host.get_entity, self._world.location_graph),
+                blocked_actions=blocked,
             )
 
         if isinstance(awareness, CombatAwareness):
@@ -272,16 +303,26 @@ class Round:
         time: GameDateTime,
         query_fn: QueryFn,
         emit_fn: EmitFn,
+        *,
+        resume_started: bool = False,
     ) -> list[Action]:
         """Run one creature's combat turn as a multi-action loop with budget.
 
+        ``resume_started`` continues a turn interrupted by ``stop()`` (or saved
+        mid-turn) with its persisted budget, without ticking conditions again.
         Returns the list of actions taken (excluding end_turn).
         """
         if creature.brain is None:
             return []
 
-        with self._mutation_scope():
-            ctx = self._prepare_combat_turn(creature, emit_fn)
+        ctx: ActionContext | None
+        if resume_started and creature.turn_budget is not None:
+            ctx = self._build_action_context(creature, turn_budget=creature.turn_budget)
+        else:
+            with self._mutation_scope():
+                ctx = self._prepare_combat_turn(creature, emit_fn)
+                if ctx is not None and ctx.combat_state is not None:
+                    ctx.combat_state.resume_turn_started = True
         if ctx is None:
             return []
 
@@ -298,11 +339,15 @@ class Round:
             # An anonymous fleer leaves the world entirely — nothing left to act with.
             if not creature.is_alive or self._host.get_entity(creature.id) is not creature:
                 break
+            self._check_interrupted()
 
             awareness = self._build_combat_awareness(creature, ctx, time, query_fn)
             events = self._host.get_perceived_events(creature)
 
             action = self._choose_action(creature, awareness, events)
+            # A decision that returns after stop() (including the END_TURN the
+            # session injects to wake a waiting player) is discarded, not applied.
+            self._check_interrupted()
 
             if action.name == ActionType.END_TURN:
                 break
@@ -378,6 +423,7 @@ class Round:
         while True:
             if not creature.is_alive:
                 break
+            self._check_interrupted()
 
             available = self._dispatcher.get_available_actions(creature, ctx)
             awareness = replace(
@@ -397,6 +443,7 @@ class Round:
             )
 
             action = self._choose_action(creature, awareness, events)
+            self._check_interrupted()
 
             if action.name == ActionType.END_TURN:
                 break
@@ -443,7 +490,9 @@ class Round:
 
             action = self._choose_reaction(creature, trigger, options)
 
-            if action.name == ActionType.SKIP:
+            # After stop() a reaction decision is dropped (declining is always legal);
+            # the triggering action itself completes atomically.
+            if action.name == ActionType.SKIP or self._stop_flag:
                 continue
 
             ctx = self._build_action_context(creature, turn_budget=creature.turn_budget)
@@ -554,40 +603,28 @@ class Round:
             combat = self._host.get_combat(location_id)
             if not combat:
                 continue
-            self._host.log_round_start(location_id, combat.round_number)
-            resume_turn_index = combat.resume_turn_index
-            if resume_turn_index is None or not 0 <= resume_turn_index < len(combat.turn_order):
-                resume_turn_index = 0
-            remaining_turns = list(combat.turn_order)[resume_turn_index:]
-            for turn_index, entity_id in enumerate(remaining_turns, start=resume_turn_index):
-                entity = self._host.get_entity(entity_id)
-                # Membership in combat.turn_order (iterated above) is itself the
-                # authoritative combat check — Creature.in_combat is not consulted.
-                if isinstance(entity, Creature) and entity.is_alive and entity.active:
-                    with self._mutation_scope():
-                        # Persist the active turn before a player brain can block
-                        # waiting for WebSocket input.
-                        combat.resume_turn_index = turn_index
-                        entity.is_dodging = False  # dodge lasts until start of next turn
-                        entity.is_disengaging = False
-                    try:
-                        self.run_creature_turn(entity, time, query_fn, emit_fn)
-                    finally:
-                        with self._mutation_scope():
-                            # Do not leave a completed turn as a resume target.
-                            if self._host.get_combat(location_id) is combat:
-                                combat.resume_turn_index = None
+            if self._run_combat_turns(combat, time, query_fn, emit_fn):
+                return self._interrupted_result()
             # End of round — check for combat exit
             with self._mutation_scope():
                 self._host.end_combat_round(location_id)
 
-        # Peaceful turns: creatures not in an active combat (authoritative membership query)
+        # Peaceful turns: creatures not in an active combat (authoritative membership query).
+        # They have no resume cursor: an interrupted round skips the rest of them and
+        # the next round runs every active creature again.
         for creature in self._host.get_active_creatures():
             if not creature.is_alive or not creature.active:
                 continue
             if self._host.get_active_combat_for(creature.id) is not None:
                 continue
-            self.run_creature_turn(creature, time, query_fn, emit_fn)
+            if self._stop_flag:
+                return self._interrupted_result()
+            try:
+                self.run_creature_turn(creature, time, query_fn, emit_fn)
+            except _RoundInterruptedError:
+                return self._interrupted_result()
+        if self._stop_flag:
+            return self._interrupted_result()
 
         # Advance time by one round (6 seconds)
         with self._mutation_scope():
@@ -595,6 +632,67 @@ class Round:
 
         logger.info("round_end", game_time=str(self._world.time), tick_events=len(tick_events))
         return RoundResult(events=tick_events)
+
+    def _run_combat_turns(
+        self,
+        combat: CombatState,
+        time: GameDateTime,
+        query_fn: QueryFn,
+        emit_fn: EmitFn,
+    ) -> bool:
+        """Run the remaining initiative turns of one combat. Returns True if stop() interrupted it.
+
+        On interruption the cursor keeps the turn to continue: the interrupted turn
+        itself (``resume_turn_started`` tells whether it had begun), or the next turn
+        when the stop fell between turns. Nothing after it runs in this round.
+        """
+        location_id = combat.location_id
+        self._host.log_round_start(location_id, combat.round_number)
+        resume_turn_index = combat.resume_turn_index
+        resume_started = combat.resume_turn_started
+        if resume_turn_index is None or not 0 <= resume_turn_index < len(combat.turn_order):
+            resume_turn_index = 0
+            resume_started = False
+        remaining_turns = list(combat.turn_order)[resume_turn_index:]
+        for turn_index, entity_id in enumerate(remaining_turns, start=resume_turn_index):
+            continue_started = resume_started and turn_index == resume_turn_index
+            if self._stop_flag:
+                with self._mutation_scope():
+                    combat.resume_turn_index = turn_index
+                    combat.resume_turn_started = continue_started
+                return True
+            entity = self._host.get_entity(entity_id)
+            # Membership in combat.turn_order (iterated above) is itself the
+            # authoritative combat check — Creature.in_combat is not consulted.
+            if not (isinstance(entity, Creature) and entity.is_alive and entity.active):
+                continue
+            with self._mutation_scope():
+                # Persist the active turn before a player brain can block
+                # waiting for WebSocket input.
+                combat.resume_turn_index = turn_index
+                combat.resume_turn_started = continue_started
+                if not continue_started:
+                    entity.is_dodging = False  # dodge lasts until start of next turn
+                    entity.is_disengaging = False
+            interrupted = False
+            try:
+                self.run_creature_turn(entity, time, query_fn, emit_fn, resume_started=continue_started)
+            except _RoundInterruptedError:
+                interrupted = True
+                logger.info("combat_turn_interrupted", turn_index=turn_index, entity_id=entity_id)
+                return True
+            finally:
+                if not interrupted:
+                    with self._mutation_scope():
+                        # Do not leave a completed turn as a resume target.
+                        if self._host.get_combat(location_id) is combat:
+                            combat.resume_turn_index = None
+                            combat.resume_turn_started = False
+        return False
+
+    def _interrupted_result(self) -> RoundResult:
+        logger.info("round_interrupted", game_time=str(self._world.time))
+        return RoundResult(should_stop=True, interrupted=True)
 
     def _activate(self) -> None:
         """Update activation with materialization support."""
@@ -619,12 +717,14 @@ class Round:
                 stop_flag=self._stop_flag,
             )
             if not active:
-                if not self._fast_forward():
+                if self._stop_flag or not self._fast_forward():
                     logger.debug("loop_exit_no_active")
                     break
                 continue  # re-check active after fast-forward
             # run_loop already activated this iteration — don't re-run it inside run_round.
             result = self.run_round(skip_activation=True)
+            if result.interrupted:
+                break
             rounds_run += 1
             if self._on_round_end:
                 self._on_round_end(result)

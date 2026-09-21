@@ -13,6 +13,7 @@ from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.i18n import _
+from dnd_simulator.rules.action_provider import blocked_actions_view
 from dnd_simulator.rules.actions import collect_cost_overrides
 from dnd_simulator.rules.flee import flee_status
 from dnd_simulator.rules.leveling import xp_to_next_level
@@ -235,7 +236,9 @@ def build_round_state(
     if isinstance(awareness, CombatAwareness):
         combat = creature_host.get_active_combat_for(player.id)
         awareness = dataclasses.replace(
-            awareness, flee=flee_status(player, combat, creature_host.get_entity, world.location_graph)
+            awareness,
+            flee=flee_status(player, combat, creature_host.get_entity, world.location_graph),
+            blocked_actions=blocked_actions_view(player, game_round.action_context_for(player)),
         )
     return {
         "type": msg_type,

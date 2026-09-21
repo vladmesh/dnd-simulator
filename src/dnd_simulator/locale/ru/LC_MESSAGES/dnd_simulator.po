@@ -728,11 +728,11 @@ msgstr "Мёртвые существа не могут действовать"
 msgid "Dormant creatures cannot act"
 msgstr "Спящие существа не могут действовать"
 
-msgid "'{action}' is not available in combat"
-msgstr "'{action}' недоступно в бою"
+msgid "This is not available in combat: {action}"
+msgstr "Это недоступно в бою: {action}"
 
-msgid "'{action}' is not available outside combat"
-msgstr "'{action}' недоступно вне боя"
+msgid "This is not available outside combat: {action}"
+msgstr "Это недоступно вне боя: {action}"
 
 msgid "Insufficient budget for '{action}'"
 msgstr "Недостаточно ресурсов для '{action}'"

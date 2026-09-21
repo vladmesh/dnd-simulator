@@ -33,9 +33,11 @@ from dnd_simulator.core.models import ActionResult, Event
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
+from dnd_simulator.i18n import language_context
 from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder
 from dnd_simulator.layers.entities.combat_manager import CombatManager
 from dnd_simulator.layers.entities.combat_serialization import deserialize_combats, serialize_combats
+from dnd_simulator.rules.action_provider import EquipmentActionProvider, blocked_equipment_actions
 from dnd_simulator.rules.actions import ends_peaceful_turn
 from dnd_simulator.rules.loot import LootBlock
 from dnd_simulator.rules.validation import ActionContext
@@ -154,6 +156,36 @@ class TestEquipmentInCombat:
         assert budget == TurnBudget()
 
     @pytest.mark.parametrize(
+        ("lang", "expected"),
+        [
+            ("en", "This is not available in combat: Equip armor from your inventory."),
+            ("ru", "Это недоступно в бою: Надеть броню из инвентаря."),
+        ],
+    )
+    def test_wrong_mode_rejection_names_the_action_not_its_id(self, lang: str, expected: str) -> None:
+        player = _player()
+        item = _chain_mail()
+        player.inventory.append(item)
+        ctx = _ctx({"player_1": player}, combat=_combat({"player_1": Position(10, 10)}), budget=TurnBudget())
+
+        with language_context(lang):
+            result = _dispatch(player, Action(name=ActionType.EQUIP_ARMOR, params={"armor_id": item.id}), ctx)
+
+        assert result.error == expected
+        assert "equip_armor" not in result.error
+
+    def test_wrong_mode_rejection_outside_combat_names_the_action(self) -> None:
+        player = _player()
+        ctx = _ctx({"player_1": player})
+
+        with language_context("ru"):
+            result = _dispatch(player, Action(name=ActionType.DISENGAGE), ctx)
+
+        assert not result.success
+        assert (result.error or "").startswith("Это недоступно вне боя: ")
+        assert "disengage" not in (result.error or "")
+
+    @pytest.mark.parametrize(
         ("item_factory", "action_type", "param", "field"),
         [
             (_chain_mail, ActionType.EQUIP_ARMOR, "armor_id", "equipped_armor"),
@@ -263,6 +295,28 @@ class TestEquipmentInCombat:
 
 
 # ── TAKE in combat ───────────────────────────────────────────────────
+
+
+class TestBlockedEquipmentActions:
+    def test_combat_withholds_armor_by_mode_and_shield_by_budget_with_reason_codes(self) -> None:
+        player = _player()
+        player.inventory.extend([_chain_mail(), _shield(), _sword(), _ring()])
+        ctx = _ctx({"player_1": player}, combat=_combat({"player_1": Position(10, 10)}), budget=TurnBudget(actions=0))
+
+        blocked = {action: error.code for action, error in blocked_equipment_actions(player, ctx)}
+        available = EquipmentActionProvider().get_action_types(player, ctx)
+
+        assert blocked[ActionType.EQUIP_ARMOR] == "WRONG_MODE"
+        assert blocked[ActionType.EQUIP_SHIELD] == "INSUFFICIENT_BUDGET"
+        assert blocked[ActionType.EQUIP_RING] == "WRONG_MODE"
+        assert ActionType.EQUIP not in blocked
+        assert available == [ActionType.EQUIP]
+
+    def test_nothing_is_blocked_out_of_combat(self) -> None:
+        player = _player()
+        player.inventory.extend([_chain_mail(), _shield(), _sword(), _ring()])
+
+        assert blocked_equipment_actions(player, _ctx({"player_1": player})) == []
 
 
 class TestTakeInCombat:

@@ -275,6 +275,17 @@ export interface CombatLootable {
   loot_gold: number
 }
 
+/**
+ * An equipment action the player has the item for but cannot take now (backend `BlockedAction`).
+ * `reason_key` is the server validation code (`WRONG_MODE`, `INSUFFICIENT_BUDGET`, ...);
+ * `reason` is the server's localised message, used when the frontend has no text for the key.
+ */
+export interface BlockedAction {
+  name: string
+  reason_key: string
+  reason: string
+}
+
 export interface CombatAwareness {
   self_hp: number
   self_max_hp: number
@@ -300,6 +311,7 @@ export interface CombatAwareness {
   self_resource_pools?: ResourcePoolInfo[]
   flee?: FleeStatus | null
   lootables?: CombatLootable[]
+  blocked_actions?: BlockedAction[]
 }
 
 export type Awareness = PeacefulAwareness | CombatAwareness

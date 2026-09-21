@@ -168,6 +168,7 @@ class CombatManager:
         # A cursor only describes an interrupted turn in this round.  Never
         # carry it into the next round, including one which ends combat.
         combat.resume_turn_index = None
+        combat.resume_turn_started = False
         if self._attack_this_round.get(location_id, False):
             combat.rounds_without_attack = 0
         else:

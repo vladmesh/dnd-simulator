@@ -61,12 +61,22 @@ class WsEventListener:
     def __init__(self, ws: WebSocket, loop: asyncio.AbstractEventLoop) -> None:
         self._ws = ws
         self._loop = loop
+        self._closed = False
+
+    def close(self) -> None:
+        """Stop all further sends. Called on the event loop as soon as the socket is gone."""
+        self._closed = True
+
+    async def _send_if_open(self, msg: dict[str, Any]) -> None:
+        # Checked on the loop itself: a send scheduled before close() but run after it is dropped.
+        if not self._closed:
+            await self._ws.send_json(msg)
 
     def _send(self, msg: dict[str, Any]) -> None:
-        if self._loop.is_closed():
+        if self._closed or self._loop.is_closed():
             return
         try:
-            future = asyncio.run_coroutine_threadsafe(self._ws.send_json(msg), self._loop)
+            future = asyncio.run_coroutine_threadsafe(self._send_if_open(msg), self._loop)
             future.result(timeout=30)
         except (TimeoutError, _StarletteDisconnect, ConnectionError):
             logger.debug("ws_send_failed")
@@ -146,6 +156,7 @@ async def _run_spectator(ws: WebSocket, session: GameSession, session_id: str) -
     finally:
         # Symmetric with the player path's to_thread, though remove_spectator never
         # joins the round thread because a spectator leaving never stops the round.
+        listener.close()
         await asyncio.to_thread(session.remove_spectator, listener)
 
 
@@ -258,5 +269,7 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
         # thread can be blocked in _send (run_coroutine_threadsafe awaiting this loop),
         # so a blocking join on the event loop thread would deadlock until the join
         # times out, freezing all sessions. Run it in a worker thread so the loop stays
-        # free to drain the round thread's pending send.
+        # free to drain the round thread's pending send. The listener is closed first so
+        # the round thread never sends to the closed socket.
+        listener.close()
         await asyncio.to_thread(session.remove_listener, listener)

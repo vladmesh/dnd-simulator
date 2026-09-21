@@ -17,11 +17,12 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from dnd_simulator.core.action import Action, ActionType
+from dnd_simulator.core.awareness import BlockedAction
 from dnd_simulator.rules.validation import validate_action
 
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature
-    from dnd_simulator.rules.validation import ActionContext
+    from dnd_simulator.rules.validation import ActionContext, ValidationError
 
 
 class ActionProvider(Protocol):
@@ -73,25 +74,51 @@ class TriggerActionProvider:
         return [ActionType.COMPLETE_TRIGGER]
 
 
+def _equipment_candidates(creature: Creature) -> list[ActionType]:
+    """Equip actions for slots with a matching bag item, unequip actions for occupied slots."""
+    from dnd_simulator.rules.handlers import SLOT_CONFIGS
+
+    result: list[ActionType] = []
+    for cfg in SLOT_CONFIGS.values():
+        if any(i.item_type == cfg.item_type for i in creature.inventory):
+            result.append(cfg.equip_action)
+        if getattr(creature, cfg.creature_field) is not None:
+            result.append(cfg.unequip_action)
+    return result
+
+
 class EquipmentActionProvider:
     """Slot-driven equipment provider — handles all equipment slots generically."""
 
     def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
-        from dnd_simulator.rules.handlers import SLOT_CONFIGS
+        return [a for a in _equipment_candidates(creature) if validate_action(creature, Action(name=a), ctx) is None]
 
-        result: list[ActionType] = []
-        for cfg in SLOT_CONFIGS.values():
-            has_items = any(i.item_type == cfg.item_type for i in creature.inventory)
-            if has_items:
-                probe = Action(name=cfg.equip_action)
-                if validate_action(creature, probe, ctx) is None:
-                    result.append(cfg.equip_action)
-            equipped = getattr(creature, cfg.creature_field)
-            if equipped is not None:
-                probe = Action(name=cfg.unequip_action)
-                if validate_action(creature, probe, ctx) is None:
-                    result.append(cfg.unequip_action)
-        return result
+
+def blocked_actions_view(creature: Creature, ctx: ActionContext) -> list[BlockedAction]:
+    """``CombatAwareness.blocked_actions`` for a creature — the one builder for every snapshot.
+
+    Both the Round's turn snapshot and the transport's action/round-result snapshot attach
+    this, so every message carrying combat awareness has the same authoritative blocks.
+    Messages are localised in the caller's language context.
+    """
+    return [
+        BlockedAction(name=action_type.value, reason_key=error.code, reason=error.message)
+        for action_type, error in blocked_equipment_actions(creature, ctx)
+    ]
+
+
+def blocked_equipment_actions(creature: Creature, ctx: ActionContext) -> list[tuple[ActionType, ValidationError]]:
+    """The equipment actions the creature has the items for but cannot take now, each with why.
+
+    The complement of ``EquipmentActionProvider`` over the same candidates, so a UI can
+    disable a control with the validation's own reason (wrong mode, no Action left, ...).
+    """
+    blocked: list[tuple[ActionType, ValidationError]] = []
+    for action_type in _equipment_candidates(creature):
+        error = validate_action(creature, Action(name=action_type), ctx)
+        if error is not None:
+            blocked.append((action_type, error))
+    return blocked
 
 
 # Backward compatibility alias — remove after callers migrate.
