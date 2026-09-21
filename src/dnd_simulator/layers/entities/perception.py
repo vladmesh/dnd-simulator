@@ -16,6 +16,7 @@ from dnd_simulator.core.events import (
     EntityBlessPayload,
     EntityDashPayload,
     EntityDiedPayload,
+    EntityFleePayload,
     EntityLayOnHandsPayload,
     EntityMovePayload,
     EntitySayPayload,
@@ -232,15 +233,21 @@ def _perceive_dodge(event: Event, observer: Creature, get_entity: GetEntityFn) -
 
 def _perceive_flee(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
     payload = event.payload
-    assert isinstance(payload, ActionFlavorPayload)
+    assert isinstance(payload, EntityFleePayload)
     entity_id = payload.entity_id
     description = payload.description
+    destination = payload.destination_name or payload.destination_id
 
     desc_suffix = f" \u00ab{description}\u00bb" if description else ""
     if entity_id == observer.id:
-        return _("You try to flee{desc}").format(desc=desc_suffix)
-    desc = _describe(observer, entity_id, get_entity)
-    return _("{entity} tries to flee{desc}").format(entity=desc, desc=desc_suffix)
+        return _("You flee the fight toward {destination}{desc}").format(destination=destination, desc=desc_suffix)
+    if get_entity(entity_id) is None and payload.entity_name:
+        desc = payload.entity_name
+    else:
+        desc = _describe(observer, entity_id, get_entity)
+    return _("{entity} flees the fight toward {destination}{desc}").format(
+        entity=desc, destination=destination, desc=desc_suffix
+    )
 
 
 def _perceive_move(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:

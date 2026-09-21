@@ -212,6 +212,25 @@ class PeacefulAwareness:
 
 
 @dataclass(frozen=True)
+class FleeDestination:
+    """A neighbouring location a creature may flee to."""
+
+    id: str
+    name: str
+    travel_seconds: int
+
+
+@dataclass(frozen=True)
+class FleeStatus:
+    """Whether the creature may flee now, why not (key + localized text), and where to."""
+
+    allowed: bool
+    reason_key: str | None = None
+    reason: str | None = None
+    destinations: tuple[FleeDestination, ...] = ()
+
+
+@dataclass(frozen=True)
 class CombatAwareness:
     """What a creature knows in combat — stats, enemies, terrain."""
 
@@ -238,6 +257,7 @@ class CombatAwareness:
     reachable: frozenset[tuple[int, int]] = field(default_factory=frozenset)
     is_disengaging: bool = False
     self_resource_pools: tuple[ResourcePoolInfo, ...] = ()
+    flee: FleeStatus | None = None  # filled per turn by the Round (needs the location graph)
 
 
 @dataclass(frozen=True)

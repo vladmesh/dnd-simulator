@@ -356,7 +356,29 @@ class CombatStateSave(SaveModel):
     entity_to_side: dict[str, int] = Field(default_factory=dict)
 
 
+class MaterializedSquadSave(SaveModel):
+    creature_ids: list[str]
+    original_strength: int
+    spawn_count: int
+
+
+class MaterializedLairSave(SaveModel):
+    creature_ids: list[str]
+    core_creature_id: str | None = None
+    minion_templates: list[str]
+
+
+class MaterializationSave(SaveModel):
+    """Roster trackers of materialized squads/lairs; older saves load with empty trackers."""
+
+    spawn_counter: int = 0
+    squads: dict[str, MaterializedSquadSave] = Field(default_factory=dict)
+    lairs: dict[str, MaterializedLairSave] = Field(default_factory=dict)
+    withdrawn_survivors: list[str] = Field(default_factory=list)
+
+
 class EntitiesState(SaveModel):
     entities: dict[str, EntitySave]
     combats: dict[str, CombatStateSave]
     rng_state: list[Any]
+    materialization: MaterializationSave = Field(default_factory=MaterializationSave)

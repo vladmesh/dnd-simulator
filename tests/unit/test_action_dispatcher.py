@@ -402,11 +402,31 @@ class TestHandleDodge:
 
 class TestHandleFlee:
     def test_flee_emits_event(self) -> None:
+        # Flee is a one-edge journey now: the handler needs the location graph and the clock.
+        from types import SimpleNamespace
+
+        from dnd_simulator.core.events import EntityFleePayload
+        from dnd_simulator.core.location import Location, LocationEdge, LocationGraph
+        from dnd_simulator.core.models import GameDateTime
+
+        world = cast(
+            World,
+            SimpleNamespace(
+                location_graph=LocationGraph(
+                    [Location("loc", "Loc", "r", edges=(LocationEdge("gate", 1000),)), Location("gate", "Gate", "r")]
+                ),
+                time=GameDateTime(hour=12),
+                creature_host=SimpleNamespace(get_active_creatures=lambda: []),
+            ),
+        )
         emitted, emit = _capture_emit()
-        result = handle_flee(_creature(), Action(name=ActionType.FLEE), emit, _COMBAT, _WORLD)
+        result = handle_flee(_creature(), Action(name=ActionType.FLEE), emit, _COMBAT, world)
         assert result.success
         assert len(emitted) == 1
         assert emitted[0].event_type == EventType.ENTITY_FLEE
+        payload = emitted[0].payload
+        assert isinstance(payload, EntityFleePayload)
+        assert payload.destination_id == "gate"
 
 
 class TestHandleMove:

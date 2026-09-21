@@ -195,12 +195,19 @@ _reg(
 _reg(
     ActionDef(
         action_type=ActionType.FLEE,
-        description=N_("Try to escape from combat."),
+        description=N_("Leave the fight and the scene for a neighbouring location."),
         cost_type=CostType.ACTION,
         combat_mode=CombatMode.COMBAT_ONLY,
         target_mode=TargetMode.SELF,
         ends_peaceful_turn=True,
-        params=(ParamDef("description", "string", N_("Flavor text")),),
+        params=(
+            ParamDef("destination_id", "string", N_("Neighbouring location ID to flee to")),
+            ParamDef("description", "string", N_("Flavor text")),
+        ),
+        llm_hint=(
+            "Only with no enemy within 15 ft. Leaves the scene along one edge to a neighbouring location; "
+            "the direction is chosen for you (towards home, else away from enemies). Ends your turn."
+        ),
     )
 )
 

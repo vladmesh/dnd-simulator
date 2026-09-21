@@ -14,7 +14,7 @@ from dnd_simulator.core.character import (
     DamageType,
 )
 from dnd_simulator.core.combat import CombatState
-from dnd_simulator.core.events import ActionFlavorPayload, AttackRequestedPayload
+from dnd_simulator.core.events import AttackRequestedPayload, EntityFleePayload
 from dnd_simulator.core.location import Location, LocationGraph
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query, QueryType
 from dnd_simulator.core.world import World
@@ -293,7 +293,9 @@ class TestFleeRemovesFromCombat:
             Event(
                 event_type=EventType.ENTITY_FLEE,
                 source_layer="entities",
-                data=ActionFlavorPayload(**{"entity_id": "c3"}),
+                data=EntityFleePayload(
+                    entity_id="c3", destination_id="r2", departed_at_seconds=0, arrival_at_seconds=60
+                ),
             ),
             _noop_query_fn,
             _noop_emit_fn,
@@ -324,7 +326,9 @@ class TestFleeRemovesFromCombat:
             Event(
                 event_type=EventType.ENTITY_FLEE,
                 source_layer="entities",
-                data=ActionFlavorPayload(**{"entity_id": "c2"}),
+                data=EntityFleePayload(
+                    entity_id="c2", destination_id="r2", departed_at_seconds=0, arrival_at_seconds=60
+                ),
             ),
             _noop_query_fn,
             _noop_emit_fn,

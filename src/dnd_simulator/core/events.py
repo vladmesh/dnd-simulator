@@ -280,6 +280,19 @@ class ActionFlavorPayload(TypedPayload):
 
 
 @dataclass(frozen=True)
+class EntityFleePayload(TypedPayload):
+    """A creature left the fight and the scene, heading along one edge to a neighbour."""
+
+    entity_id: str
+    destination_id: str
+    departed_at_seconds: int
+    arrival_at_seconds: int
+    destination_name: str = ""
+    entity_name: str = ""  # kept for witnesses: an anonymous fleer leaves the world entirely
+    description: str = ""
+
+
+@dataclass(frozen=True)
 class EntityDashPayload(TypedPayload):
     entity_id: str
     extra_movement_ft: int
@@ -400,6 +413,7 @@ EventPayload = (
     | AttackResolvedPayload
     | EntitySayPayload
     | ActionFlavorPayload
+    | EntityFleePayload
     | EntityDashPayload
     | EntityActorPayload
     | EntityUseItemPayload
@@ -444,7 +458,7 @@ EVENT_PAYLOAD_TYPES: dict[EventType, type[object]] = {
     EventType.ENTITY_ATTACK: AttackResolvedPayload,
     EventType.ENTITY_SAY: EntitySayPayload,
     EventType.ENTITY_DODGE: ActionFlavorPayload,
-    EventType.ENTITY_FLEE: ActionFlavorPayload,
+    EventType.ENTITY_FLEE: EntityFleePayload,
     EventType.ENTITY_DASH: EntityDashPayload,
     EventType.ENTITY_DISENGAGE: EntityActorPayload,
     EventType.ENTITY_USE_ITEM: EntityUseItemPayload,

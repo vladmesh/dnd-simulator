@@ -142,21 +142,26 @@ def _recv_before_deadline(ws: WebSocketConnection, deadline: float) -> dict[str,
     return message
 
 
-def _wait_for_turn(ws: WebSocketConnection, deadline: float) -> None:
+def _wait_for_turn(ws: WebSocketConnection, deadline: float) -> dict[str, object]:
     while True:
-        if _recv_before_deadline(ws, deadline).get("type") == "turn":
-            return
+        message = _recv_before_deadline(ws, deadline)
+        if message.get("type") == "turn":
+            return message
 
 
 def _drive_player(ws: WebSocketConnection, deadline: float) -> None:
-    """Create one combat exchange while retaining the player listener."""
+    """Create one combat exchange, then hold still until the fight dies down.
+
+    The player stays on the scene: after one attack it only ends its turns, so the
+    combat ends by itself (no attacks for two rounds) and the witness digests the
+    fight at the combat-end boundary while the anchor is still present.
+    """
     _wait_for_turn(ws, deadline)
-    for action in (
-        {"type": "action", "name": "attack", "params": {"target_id": "live_npc"}},
-        {"type": "action", "name": "flee", "params": {}},
-    ):
-        ws.send(json.dumps(action))
-        _wait_for_turn(ws, deadline)
+    ws.send(json.dumps({"type": "action", "name": "attack", "params": {"target_id": "live_npc"}}))
+    turn = _wait_for_turn(ws, deadline)
+    while turn.get("mode") == "combat":
+        ws.send(json.dumps({"type": "action", "name": "end_turn", "params": {}}))
+        turn = _wait_for_turn(ws, deadline)
 
 
 def _record_departure_event(ws: WebSocketConnection, deadline: float) -> None:

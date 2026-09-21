@@ -25,7 +25,13 @@ from dnd_simulator.layers.entities.intent_completion import (
     complete_timed_intent,
     interrupt_intent,
 )
-from dnd_simulator.layers.entities.materialization import update_lair_materialization, update_squad_materialization
+from dnd_simulator.layers.entities.materialization import (
+    dematerialize_unobserved_encounters,
+    update_lair_materialization,
+    update_squad_materialization,
+    withdraw_survivor,
+)
+from dnd_simulator.layers.entities.save_models import MaterializationSave, MaterializedLairSave, MaterializedSquadSave
 
 if TYPE_CHECKING:
     from dnd_simulator.core.location import LocationGraph
@@ -73,6 +79,62 @@ class ActivationManager:
         self._dormify = dormify
         self._record_event = record_event
         self._spawn_counter = 0
+        # Squad/lair members that fled alive: removed from the world, still counted by their roster.
+        self._withdrawn_survivors: set[str] = set()
+
+    def materialization_state(self) -> MaterializationSave:
+        """Roster trackers for the save: who each materialized squad/lair spawned and who fled alive."""
+        return MaterializationSave(
+            spawn_counter=self._spawn_counter,
+            squads={
+                squad_id: MaterializedSquadSave(creature_ids=list(ids), original_strength=strength, spawn_count=count)
+                for squad_id, (ids, strength, count) in self._materialized_squads.items()
+            },
+            lairs={
+                lair_id: MaterializedLairSave(
+                    creature_ids=list(ids), core_creature_id=core_id, minion_templates=list(minions)
+                )
+                for lair_id, (ids, core_id, minions) in self._materialized_lairs.items()
+            },
+            withdrawn_survivors=sorted(self._withdrawn_survivors),
+        )
+
+    def load_materialization_state(self, save: MaterializationSave) -> None:
+        """Restore the roster trackers in place (the dicts are shared with the layer and QueryHandler)."""
+        self._spawn_counter = save.spawn_counter
+        self._materialized_squads.clear()
+        self._materialized_squads.update(
+            {
+                squad_id: (list(squad.creature_ids), squad.original_strength, squad.spawn_count)
+                for squad_id, squad in save.squads.items()
+            }
+        )
+        self._materialized_lairs.clear()
+        self._materialized_lairs.update(
+            {
+                lair_id: (list(lair.creature_ids), lair.core_creature_id, list(lair.minion_templates))
+                for lair_id, lair in save.lairs.items()
+            }
+        )
+        self._withdrawn_survivors = set(save.withdrawn_survivors)
+
+    def withdraw_anonymous(self, creature: Creature) -> None:
+        """Take an anonymous creature off the world; a squad/lair member stays in its roster alive."""
+        withdraw_survivor(self, creature)
+
+    def release_scene(self, location_id: str) -> None:
+        """A fight ended at a location no anchor holds: its random encounter goes back.
+
+        Squads and lairs dematerialize on the next activation pass with their strength
+        accounting; named creatures stay as they are.
+        """
+        if any(
+            isinstance(e, Creature) and e.is_alive and e.is_anchor and e.current_intent is None
+            for e in self._entities.values()
+            if e.location_id == location_id
+        ):
+            return
+        dematerialize_unobserved_encounters(self, location_id)
 
     def update_activation(
         self,
@@ -88,6 +150,7 @@ class ActivationManager:
         - An anchor with a timed intent is dormant until its timer expires.
         - Creatures at an anchor's location are active.
         - Creatures in combat are active (don't interrupt fights).
+        - A creature on a pending journey (``TravelIntent``) is dormant unless in combat.
         - Proximity never cancels a timed intent.
         - Everyone else is dormant (active=False).
 
@@ -162,7 +225,12 @@ class ActivationManager:
             # Authoritative combat membership, not the transitional Creature.in_combat flag —
             # a stale flag must not dormify an actual active-CombatState participant.
             in_combat = self._combat.get_active_combat_for(e.id) is not None
-            should_activate = in_combat or scene_active or e.always_active or automatic_active or manual_active
+            # A creature on the road (e.g. a fleer) is on no scene until its arrival boundary:
+            # no standing activation reason may wake it where it set out from.
+            on_the_road = isinstance(e.current_intent, TravelIntent)
+            should_activate = in_combat or (
+                not on_the_road and (scene_active or e.always_active or automatic_active or manual_active)
+            )
             if should_activate:
                 e.active = True
             else:

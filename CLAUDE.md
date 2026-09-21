@@ -128,6 +128,22 @@ Each creature's turn is a multi-action loop orchestrated by `Round` (in `round.p
 
 D&D 5e reaction system. `Brain.choose_reaction(creature, trigger, available_reactions)` — unified method on ABC (RuleBrain: always attack, LlmBrain: LLM call, PlayerBrain: callback + queue). `ReactionTrigger` typed data object (extensible: `TriggerType.LEAVING_REACH` for OA, future: Counterspell, Shield). Movement handlers call `on_leave_reach` callback (injected via `ActionContext`) when a mover exits an enemy's reach. `check_reactions` in Round is recursive — a reaction can trigger another reaction, depth limited naturally (1 reaction per creature per round). `rules/reactions.py`: pure function `find_oa_triggers()`. OA handler in `rules/handlers/reactions.py`. Disengage sets `creature.is_disengaging = True` (reset at turn start), prevents OA. `Creature.combat_position` enables deterministic battle map placement from YAML/API.
 
+### Flee (leaving the scene)
+
+A location with an active `CombatState` is a scene; flee leaves both the fight and the scene. `rules/flee.py::flee_blocker`
+is the one eligibility rule for every brain (enforced by `rules/validation.check_flee_allowed`): no living enemy within 15 ft
+on the battle map and at least one neighbouring location — no roll. The player must name an adjacent `destination_id`; an
+NPC's destination is always server-resolved (a brain-supplied one is ignored): the first hop towards its home (scheduled
+location, its squad's location, or its lair), else the neighbour with the fewest enemies. `layers/entities/scene_exit.exit_scene`
+is the single place a flee takes effect: the fleer leaves the combat (which ends if no opposing sides remain), then an
+anonymous template spawn leaves the world (a squad/lair member is counted as a survivor at dematerialization; the
+materialization trackers, including withdrawn survivors, persist in `EntitiesState.materialization`), while a named
+creature starts an ordinary one-edge `TravelIntent` and goes dormant (a named NPC gets `location_override`, which
+`Npc.current_location` ignores while a journey is pending; activation keeps any creature on a pending journey
+dormant unless it is in combat). Flee ends the fleer's turn. When a fight ends at a location no
+anchor holds, its random encounter spawns dematerialize. `CombatAwareness.flee` (`FleeStatus`: `allowed`, `reason_key`, `reason`, `destinations`)
+carries availability and the neighbour list to the player's UI.
+
 ### Conditions & Items
 
 D&D 5e conditions (`core/conditions.py`) — `Condition` enum + `ConditionsMap` (condition → remaining rounds or permanent). Pure mechanics in `rules/conditions.py`: `is_incapacitated()`, `tick_conditions()`; condition effects on stats go through the modifier pipeline (`rules/modifiers.py`). Conditions tick down at turn start; weapons can grant permanent conditions while equipped.

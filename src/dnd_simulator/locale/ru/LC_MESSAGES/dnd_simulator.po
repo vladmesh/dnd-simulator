@@ -332,11 +332,29 @@ msgid "{entity} takes a defensive stance{desc}"
 msgstr "{entity} принимает защитную стойку{desc}"
 
 #: Flee
-msgid "You try to flee{desc}"
-msgstr "Ты пытаешься сбежать{desc}"
+msgid "You flee the fight toward {destination}{desc}"
+msgstr "Ты сбегаешь из боя, направление: {destination}{desc}"
 
-msgid "{entity} tries to flee{desc}"
-msgstr "{entity} пытается сбежать{desc}"
+msgid "{entity} flees the fight toward {destination}{desc}"
+msgstr "{entity} сбегает из боя, направление: {destination}{desc}"
+
+msgid "Enemies are too close to flee"
+msgstr "Враги слишком близко, сбежать не выйдет"
+
+msgid "There is nowhere to flee"
+msgstr "Бежать некуда"
+
+msgid "Choose a neighbouring location to flee to"
+msgstr "Выбери соседнюю локацию, куда бежать"
+
+msgid "You can only flee to a neighbouring location"
+msgstr "Сбежать можно только в соседнюю локацию"
+
+msgid "Leave the fight and the scene for a neighbouring location."
+msgstr "Покинуть бой и уйти со сцены в соседнюю локацию."
+
+msgid "Neighbouring location ID to flee to"
+msgstr "ID соседней локации, куда бежать"
 
 #: Move
 msgid "You move {direction} ({distance} ft){desc}"

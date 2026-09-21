@@ -16,6 +16,7 @@ from dnd_simulator.core.inner_self import Mood, RelationshipType
 from dnd_simulator.core.models import EventType
 from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
 from dnd_simulator.rules.actions import collect_cost_overrides
+from dnd_simulator.rules.flee import enemy_blocks_flee
 from dnd_simulator.rules.movement import calculate_away_direction, calculate_direction
 from dnd_simulator.rules.resources import get_available_spell_slots
 from dnd_simulator.rules.weapons import get_weapon_attack
@@ -92,7 +93,10 @@ class RuleBrain(Brain):
 
         Returns end_turn instead of idle — in multi-action loop, idle would
         loop forever (it's free). end_turn signals the turn is done.
+        A creature that has left the scene (a flee is a journey) has nothing to do here.
         """
+        if not creature.active:
+            return END_TURN
         hostile = next((n for n in awareness.nearby if n.is_hostile), None)
         if hostile is not None:
             return Action(name=ActionType.ATTACK, params={"target_id": hostile.id})
@@ -201,14 +205,29 @@ class RuleBrain(Brain):
         return self._move_away_from(nearest_hostile, awareness)
 
     @staticmethod
-    def _try_flee(ctx: _CombatContext) -> Action | None:
+    def _flee_allowed(awareness: CombatAwareness) -> bool:
+        """The shared flee rule (``rules.flee``): never choose a flee the server would reject."""
+        if awareness.flee is not None:
+            return awareness.flee.allowed
+        return not any(e.is_hostile and enemy_blocks_flee(e.distance_ft) for e in awareness.nearby)
+
+    def _try_flee(self, ctx: _CombatContext) -> Action | None:
         budget = ctx.awareness.turn_budget
-        if (budget.actions if budget else 0) <= 0:
+        if ctx.hp_ratio >= ctx.flee_threshold:
             return None
-        nearest_dist = min(e.distance_ft for e in ctx.awareness.nearby)
-        if ctx.hp_ratio < ctx.flee_threshold and nearest_dist > ctx.primary_reach:
+        if self._flee_allowed(ctx.awareness):
+            if (budget.actions if budget else 0) <= 0:
+                return None
             return Action(name=ActionType.FLEE)
-        return None
+        # Pinned by enemies within flee range but none in reach: back off first
+        # (no opportunity attack), so a later turn can flee.
+        hostiles = [e for e in ctx.awareness.nearby if e.is_hostile]
+        if not hostiles or (budget.movement_remaining if budget else 0) < 5:
+            return None
+        nearest = min(hostiles, key=lambda e: e.distance_ft)
+        if nearest.distance_ft <= ctx.primary_reach or not enemy_blocks_flee(nearest.distance_ft):
+            return None
+        return self._move_away_from(nearest, ctx.awareness)
 
     @staticmethod
     def _try_disengage(ctx: _CombatContext) -> Action | None:
@@ -219,12 +238,11 @@ class RuleBrain(Brain):
             return Action(name=ActionType.DISENGAGE)
         return None
 
-    @staticmethod
-    def _try_flee_fallback(ctx: _CombatContext) -> Action | None:
+    def _try_flee_fallback(self, ctx: _CombatContext) -> Action | None:
         budget = ctx.awareness.turn_budget
         if (budget.actions if budget else 0) <= 0:
             return None
-        if ctx.hp_ratio < ctx.flee_threshold:
+        if ctx.hp_ratio < ctx.flee_threshold and self._flee_allowed(ctx.awareness):
             return Action(name=ActionType.FLEE)
         return None
 
