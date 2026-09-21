@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 from dnd_simulator.core.action import Action, ActionType
+from dnd_simulator.core.awareness import BlockedAction
 from dnd_simulator.rules.validation import validate_action
 
 if TYPE_CHECKING:
@@ -91,6 +92,19 @@ class EquipmentActionProvider:
 
     def get_action_types(self, creature: Creature, ctx: ActionContext) -> list[ActionType]:
         return [a for a in _equipment_candidates(creature) if validate_action(creature, Action(name=a), ctx) is None]
+
+
+def blocked_actions_view(creature: Creature, ctx: ActionContext) -> list[BlockedAction]:
+    """``CombatAwareness.blocked_actions`` for a creature — the one builder for every snapshot.
+
+    Both the Round's turn snapshot and the transport's action/round-result snapshot attach
+    this, so every message carrying combat awareness has the same authoritative blocks.
+    Messages are localised in the caller's language context.
+    """
+    return [
+        BlockedAction(name=action_type.value, reason_key=error.code, reason=error.message)
+        for action_type, error in blocked_equipment_actions(creature, ctx)
+    ]
 
 
 def blocked_equipment_actions(creature: Creature, ctx: ActionContext) -> list[tuple[ActionType, ValidationError]]:

@@ -170,3 +170,82 @@ describe("InventoryPanel — out of combat", () => {
     expect((screen.getByTestId("unequip-ring") as HTMLButtonElement).disabled).toBe(false)
   })
 })
+
+describe("InventoryPanel — real turn → action_result flow through the store", () => {
+  // Shapes mirror the server payloads: the turn snapshot and every action-result snapshot
+  // carry the same authoritative `blocked_actions` (backend test_blocked_actions_snapshots).
+  const statusPlayer = {
+    ...player,
+    race: "human",
+    char_class: "fighter",
+    level: 1,
+    experience: 0,
+    level_up_available: false,
+    xp_to_next_level: 300,
+    alignment: "N",
+    hp: 20,
+    max_hp: 20,
+    ac: 15,
+    gold: 0,
+    location_id: "arena",
+    ability_scores: { str: 15, dex: 12, con: 14, int: 10, wis: 10, cha: 8 },
+  }
+  const location = { current_location: "Arena", current_location_id: "arena", description: "", region_id: "r", paths: [] }
+  const combatAwareness = (blocked: BlockedAction[], available: ActionInfo[]): CombatAwareness => ({
+    self_hp: 20,
+    self_max_hp: 20,
+    self_ac: 15,
+    self_speed: 30,
+    self_weapon: "Fists",
+    self_weapon_damage: "1",
+    nearby: [],
+    round_number: 1,
+    available_actions: available,
+    blocked_actions: blocked,
+  })
+
+  function turn() {
+    useGameStore.getState().onTurn({
+      type: "turn",
+      mode: "combat",
+      awareness: combatAwareness([wrongMode("equip_armor")], [equipWeapon, equipShield]),
+      events: [],
+      budget: fullBudget,
+      player: statusPlayer,
+      location,
+    } as never)
+  }
+
+  function actionResult(actor: string, action: string) {
+    // Action-result snapshots are built outside the turn loop and list no available actions.
+    useGameStore.getState().onActionResult({
+      type: "action_result",
+      actor,
+      action,
+      mode: "combat",
+      awareness: combatAwareness([wrongMode("equip_armor")], []),
+      events: [],
+      player: statusPlayer,
+      location,
+    } as never)
+  }
+
+  it("keeps armor equip disabled with its reason after the player's end_turn result", () => {
+    turn()
+    actionResult("p1", "end_turn")
+    render(<InventoryPanel />)
+
+    expect(equipButton("chain_0").disabled).toBe(true)
+    expect(reasonFor("chain_0")?.textContent).toBe("Can't be changed in combat")
+  })
+
+  it("keeps armor equip disabled with its reason after an NPC action result", async () => {
+    await i18n.changeLanguage("ru")
+    turn()
+    actionResult("goblin", "attack")
+    render(<InventoryPanel />)
+
+    expect(equipButton("chain_0").disabled).toBe(true)
+    expect(reasonFor("chain_0")?.textContent).toBe("В бою это не сменить")
+  })
+})

@@ -18,7 +18,6 @@ import structlog
 from dnd_simulator.core.action import Action, ActionType
 from dnd_simulator.core.action_defs import CombatMode, get_action_def
 from dnd_simulator.core.awareness import (
-    BlockedAction,
     CombatAwareness,
     PeacefulAwareness,
     PerceivedEvent,
@@ -32,7 +31,7 @@ from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, Trigge
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
 from dnd_simulator.i18n import _
-from dnd_simulator.rules.action_provider import blocked_equipment_actions
+from dnd_simulator.rules.action_provider import blocked_actions_view
 from dnd_simulator.rules.actions import (
     ends_peaceful_turn,
     get_num_actions,
@@ -172,6 +171,10 @@ class Round:
             location_graph=self._world.location_graph,
         )
 
+    def action_context_for(self, creature: Creature) -> ActionContext:
+        """The context an out-of-turn snapshot validates against: the creature's persisted budget."""
+        return self._build_action_context(creature, turn_budget=creature.turn_budget)
+
     def get_perceived_events(self, creature: Creature) -> list[PerceivedEvent]:
         """Return perceived events for a creature (delegates to CreatureHost)."""
         return self._host.get_perceived_events(creature)
@@ -277,10 +280,7 @@ class Round:
         )
         if isinstance(awareness, CombatAwareness):
             with self._action_scope():
-                blocked = [
-                    BlockedAction(name=action_type.value, reason_key=error.code, reason=error.message)
-                    for action_type, error in blocked_equipment_actions(creature, ctx)
-                ]
+                blocked = blocked_actions_view(creature, ctx)
             awareness = replace(
                 awareness,
                 flee=flee_status(creature, ctx.combat_state, self._host.get_entity, self._world.location_graph),
