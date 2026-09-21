@@ -24,6 +24,7 @@ from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.container import Container
 from dnd_simulator.core.events import (
     EntityDiedPayload,
+    EntityFleePayload,
     RoundStartPayload,
 )
 from dnd_simulator.core.inner_self import DigestBoundary, InnerSelf
@@ -33,6 +34,7 @@ from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.resource import RestType
 from dnd_simulator.core.turn_budget import TurnBudget
+from dnd_simulator.i18n import _
 from dnd_simulator.layers.common.rng_state import dump_rng_state, load_rng_state
 from dnd_simulator.layers.entities.activation_manager import ActivationManager
 from dnd_simulator.layers.entities.awareness_builder import AwarenessBuilder, active_merchants_at
@@ -44,6 +46,7 @@ from dnd_simulator.layers.entities.inner_self_digest import dormify as transitio
 from dnd_simulator.layers.entities.models import Npc
 from dnd_simulator.layers.entities.query_handler import QueryHandler
 from dnd_simulator.layers.entities.save_models import CreatureFields, EntitiesState
+from dnd_simulator.layers.entities.scene_exit import exit_scene
 from dnd_simulator.layers.entities.trigger_index import TriggerIndex, TriggerMatch
 
 if TYPE_CHECKING:
@@ -291,7 +294,7 @@ class EntitiesLayer(Layer):
             if event.event_type == EventType.ENTITY_ATTACK_REQUESTED:
                 result = self._combat.resolve_attack(event, query_fn=query_fn)
             else:
-                result = self._combat.resolve_flee(event)
+                result = self._resolve_flee(event)
             if had_combat and location_id and self._combat.get_combat(location_id) is None:
                 self._on_combat_ended(location_id)
             return self._trigger_runtime.apply_cascades(result)
@@ -317,6 +320,17 @@ class EntitiesLayer(Layer):
 
         return ActionResult()
 
+    def _resolve_flee(self, event: Event) -> ActionResult:
+        """Log the flee where the witnesses are, then take the fleer off the scene."""
+        payload = event.payload
+        assert isinstance(payload, EntityFleePayload)
+        creature = self._entities.get(payload.entity_id)
+        if not isinstance(creature, Creature):
+            return ActionResult(success=False, error=_("Creature '{id}' not found.").format(id=payload.entity_id))
+        self._event_log.record(event)
+        exit_scene(creature, payload, self._combat, self._activation.withdraw_anonymous, self.dormify)
+        return ActionResult()
+
     # -- Perception log (delegated to QueryHandler) --
 
     def get_perceived_log(self, observer: Character) -> list[str]:
@@ -337,6 +351,7 @@ class EntitiesLayer(Layer):
             entity = self._entities.get(entity_id)
             if isinstance(entity, Creature):
                 self._digest_inner_self(entity, DigestBoundary.COMBAT_ENDED)
+        self._activation.release_scene(location_id)
 
     # -- Query (delegated to QueryHandler) --
 

@@ -44,6 +44,46 @@ def is_alive(mgr: ActivationManager, creature_id: str | None) -> bool:
     return isinstance(ent, Creature) and ent.is_alive
 
 
+def survived(mgr: ActivationManager, creature_id: str | None) -> bool:
+    """True if a roster member is alive — still on the scene, or fled back to its squad/lair."""
+    return is_alive(mgr, creature_id) or (creature_id is not None and creature_id in mgr._withdrawn_survivors)
+
+
+def withdraw_survivor(mgr: ActivationManager, creature: Creature) -> None:
+    """Remove an anonymous fleer from the world.
+
+    A materialized squad/lair member returns to its roster alive: the roster keeps
+    its id and dematerialization counts it as a survivor. A random-encounter spawn
+    has no roster and simply leaves.
+    """
+    tracked = any(creature.id in ids for ids, _strength, _count in mgr._materialized_squads.values()) or any(
+        creature.id in ids for ids, _core, _minions in mgr._materialized_lairs.values()
+    )
+    if tracked and creature.is_alive:
+        mgr._withdrawn_survivors.add(creature.id)
+    mgr._entities.pop(creature.id, None)
+
+
+def dematerialize_unobserved_encounters(mgr: ActivationManager, location_id: str) -> None:
+    """Remove the random-encounter spawns at a location nobody holds any more.
+
+    Only living, roster-less template spawns outside any combat go: squads and lairs
+    have their own dematerialization (with strength accounting), named creatures stay.
+    """
+    for entity in list(mgr._entities.values()):
+        if (
+            isinstance(entity, Creature)
+            and entity.temporary
+            and entity.is_alive
+            and entity.location_id == location_id
+            and entity.squad_id is None
+            and entity.lair_origin is None
+            and mgr._combat.get_active_combat_for(entity.id) is None
+        ):
+            mgr._entities.pop(entity.id, None)
+            logger.info("encounter_dematerialize", entity_id=entity.id, location_id=location_id)
+
+
 # -- Squad materialization --
 
 
@@ -144,12 +184,11 @@ def dematerialize_squad(
     squad_name = squad_id
     for cid in creature_ids:
         entity = mgr._entities.get(cid)
-        if isinstance(entity, Creature):
-            if location_id is None:
-                location_id = entity.location_id
-                squad_name = entity.name  # creatures share the template name
-            if entity.is_alive:
-                alive_count += 1
+        if isinstance(entity, Creature) and location_id is None:
+            location_id = entity.location_id
+            squad_name = entity.name  # creatures share the template name
+        if survived(mgr, cid):
+            alive_count += 1
 
     # Proportional strength update
     new_strength = round(original_strength * alive_count / spawn_count) if spawn_count > 0 else original_strength
@@ -157,6 +196,7 @@ def dematerialize_squad(
     # Remove creatures
     for cid in creature_ids:
         mgr._entities.pop(cid, None)
+        mgr._withdrawn_survivors.discard(cid)
 
     del mgr._materialized_squads[squad_id]
     logger.info(
@@ -270,7 +310,7 @@ def treasury_core_alive(mgr: ActivationManager, lair_id: str, info: LairInfo) ->
     save/load). A coreless lair has nothing to gate behind → False (always open).
     """
     if lair_id in mgr._materialized_lairs:
-        return is_alive(mgr, mgr._materialized_lairs[lair_id][1])
+        return survived(mgr, mgr._materialized_lairs[lair_id][1])
     if not info.has_core:
         return False
     return info.core_alive
@@ -317,12 +357,13 @@ def dematerialize_lair(mgr: ActivationManager, lair_id: str, now: int, emit_fn: 
     """Remove a lair's creatures and emit its surviving population so ecology can sync."""
     creature_ids, core_creature_id, minion_templates = mgr._materialized_lairs[lair_id]
 
-    core_alive = bool(core_creature_id) and is_alive(mgr, core_creature_id)
+    core_alive = bool(core_creature_id) and survived(mgr, core_creature_id)
     minion_ids = [cid for cid in creature_ids if cid != core_creature_id]
-    alive_members = [tid for cid, tid in zip(minion_ids, minion_templates, strict=True) if is_alive(mgr, cid)]
+    alive_members = [tid for cid, tid in zip(minion_ids, minion_templates, strict=True) if survived(mgr, cid)]
 
     for cid in creature_ids:
         mgr._entities.pop(cid, None)
+        mgr._withdrawn_survivors.discard(cid)
     del mgr._materialized_lairs[lair_id]
     logger.info("lair_dematerialize", lair_id=lair_id, alive_minions=len(alive_members), core_alive=core_alive)
 

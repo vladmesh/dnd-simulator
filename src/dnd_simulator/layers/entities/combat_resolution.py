@@ -1,4 +1,4 @@
-"""Combat action resolution — the attack/move/dodge/flee/death half of the entities layer.
+"""Combat action resolution — the attack/move/dodge/death half of the entities layer.
 
 Split out of ``CombatManager``, which keeps the combat-state lifecycle (start/end/remove,
 sides, serialization). These functions take the manager as their state owner and mutate the
@@ -65,21 +65,6 @@ def resolve_dodge(mgr: CombatManager, event: Event) -> ActionResult:
     if isinstance(entity, Creature):
         entity.is_dodging = True
         entity.conditions[Condition.DODGING] = 1
-    location_id = mgr._event_location(event)
-    if location_id:
-        mgr._record_event(event)
-    return ActionResult()
-
-
-def resolve_flee(mgr: CombatManager, event: Event) -> ActionResult:
-    """Resolve a flee attempt: mark the creature as out of combat."""
-    payload = event.payload
-    assert isinstance(payload, ActionFlavorPayload)
-    entity_id = payload.entity_id
-    entity = mgr._entities.get(entity_id)
-    if isinstance(entity, Creature):
-        entity.in_combat = False
-        mgr._remove_from_combat(entity.location_id, entity_id)
     location_id = mgr._event_location(event)
     if location_id:
         mgr._record_event(event)

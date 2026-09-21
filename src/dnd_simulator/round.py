@@ -37,6 +37,7 @@ from dnd_simulator.rules.actions import (
     get_num_bonus_actions,
 )
 from dnd_simulator.rules.conditions import is_incapacitated, tick_conditions
+from dnd_simulator.rules.flee import flee_status
 from dnd_simulator.rules.modifiers import effective_speed
 from dnd_simulator.rules.movement import resolve_abstract_move
 from dnd_simulator.rules.validation import ActionContext
@@ -145,6 +146,7 @@ class Round:
             combat_state=combat_state,
             get_entity=self._host.get_entity,
             rng=self._rng,
+            location_graph=self._world.location_graph,
         )
 
     def get_perceived_events(self, creature: Creature) -> list[PerceivedEvent]:
@@ -248,6 +250,11 @@ class Round:
             equipped=self._host.build_equipped(creature),
             reachable=self._host.compute_reachable(creature, ctx.combat_state, creature.turn_budget),
         )
+        if isinstance(awareness, CombatAwareness):
+            awareness = replace(
+                awareness,
+                flee=flee_status(creature, ctx.combat_state, self._host.get_entity, self._world.location_graph),
+            )
 
         if isinstance(awareness, CombatAwareness):
             logger.debug(
@@ -288,7 +295,8 @@ class Round:
         consecutive_failures = 0
 
         while True:
-            if not creature.is_alive:
+            # An anonymous fleer leaves the world entirely — nothing left to act with.
+            if not creature.is_alive or self._host.get_entity(creature.id) is not creature:
                 break
 
             awareness = self._build_combat_awareness(creature, ctx, time, query_fn)

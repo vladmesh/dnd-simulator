@@ -203,6 +203,22 @@ class CombatManager:
         """Return and clear the original roster for a just-ended combat."""
         return self._last_ended_participants.pop(location_id, ())
 
+    def remove_from_combat(self, location_id: str, entity_id: str) -> None:
+        """Take an entity out of the combat at a location (see ``_remove_from_combat``)."""
+        self._remove_from_combat(location_id, entity_id)
+
+    def scene_outsiders(self, location_id: str) -> list[str]:
+        """Active, living creatures at a combat's location that are not part of that combat.
+
+        The scene invariant says this is always empty — a flee takes the fleer off the
+        scene (``scene_exit.exit_scene``) instead of leaving it standing there.
+        """
+        combat = self._combats.get(location_id)
+        if combat is None:
+            return []
+        members = set(combat.turn_order)
+        return [c.id for c in self._active_creatures_at_location(location_id) if c.id not in members]
+
     def _remove_from_combat(self, location_id: str, entity_id: str) -> None:
         """Remove an entity from combat turn order, map, and sides. End combat if no hostility remains."""
         combat = self._combats.get(location_id)
@@ -242,10 +258,6 @@ class CombatManager:
     def resolve_dodge(self, event: Event) -> ActionResult:
         """Resolve a dodge action: set is_dodging until next turn."""
         return combat_resolution.resolve_dodge(self, event)
-
-    def resolve_flee(self, event: Event) -> ActionResult:
-        """Resolve a flee attempt: mark the creature as out of combat."""
-        return combat_resolution.resolve_flee(self, event)
 
     def resolve_move(self, event: Event) -> ActionResult:
         """Resolve an atomic move: single step in a compass direction."""

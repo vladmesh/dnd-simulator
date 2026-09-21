@@ -14,6 +14,7 @@ from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.i18n import _
 from dnd_simulator.rules.actions import collect_cost_overrides
+from dnd_simulator.rules.flee import flee_status
 from dnd_simulator.rules.leveling import xp_to_next_level
 from dnd_simulator.rules.modifiers import effective_ac
 from dnd_simulator.service.dto import JourneyView, PlayerStatusData, ResourcePoolView
@@ -230,6 +231,11 @@ def build_round_state(
 ) -> dict[str, Any]:
     perceived = game_round.get_perceived_events(player)
     awareness = creature_host.build_awareness(player, world.time, world.make_query_fn("entities"))
+    if isinstance(awareness, CombatAwareness):
+        combat = creature_host.get_active_combat_for(player.id)
+        awareness = dataclasses.replace(
+            awareness, flee=flee_status(player, combat, creature_host.get_entity, world.location_graph)
+        )
     return {
         "type": msg_type,
         "mode": "combat" if isinstance(awareness, CombatAwareness) else "peaceful",

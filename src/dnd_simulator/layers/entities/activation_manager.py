@@ -25,7 +25,12 @@ from dnd_simulator.layers.entities.intent_completion import (
     complete_timed_intent,
     interrupt_intent,
 )
-from dnd_simulator.layers.entities.materialization import update_lair_materialization, update_squad_materialization
+from dnd_simulator.layers.entities.materialization import (
+    dematerialize_unobserved_encounters,
+    update_lair_materialization,
+    update_squad_materialization,
+    withdraw_survivor,
+)
 
 if TYPE_CHECKING:
     from dnd_simulator.core.location import LocationGraph
@@ -73,6 +78,26 @@ class ActivationManager:
         self._dormify = dormify
         self._record_event = record_event
         self._spawn_counter = 0
+        # Squad/lair members that fled alive: removed from the world, still counted by their roster.
+        self._withdrawn_survivors: set[str] = set()
+
+    def withdraw_anonymous(self, creature: Creature) -> None:
+        """Take an anonymous creature off the world; a squad/lair member stays in its roster alive."""
+        withdraw_survivor(self, creature)
+
+    def release_scene(self, location_id: str) -> None:
+        """A fight ended at a location no anchor holds: its random encounter goes back.
+
+        Squads and lairs dematerialize on the next activation pass with their strength
+        accounting; named creatures stay as they are.
+        """
+        if any(
+            isinstance(e, Creature) and e.is_alive and e.is_anchor and e.current_intent is None
+            for e in self._entities.values()
+            if e.location_id == location_id
+        ):
+            return
+        dematerialize_unobserved_encounters(self, location_id)
 
     def update_activation(
         self,

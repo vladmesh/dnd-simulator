@@ -18,7 +18,12 @@ from dnd_simulator.core.character import (
 )
 from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.conditions import Condition
-from dnd_simulator.core.events import ActionFlavorPayload, AttackRequestedPayload, EntitySecondWindPayload
+from dnd_simulator.core.events import (
+    ActionFlavorPayload,
+    AttackRequestedPayload,
+    EntityFleePayload,
+    EntitySecondWindPayload,
+)
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -32,6 +37,35 @@ from dnd_simulator.rules.handlers import handle_attack, handle_dodge, handle_fle
 from dnd_simulator.rules.validation import ActionContext
 
 _STUB_WORLD = cast(World, MagicMock(spec=World))
+
+
+def _flee_payload(entity_id: str) -> EntityFleePayload:
+    """A flee is a one-edge journey: it always names where the fleer went."""
+    return EntityFleePayload(
+        entity_id=entity_id,
+        destination_id="gate",
+        departed_at_seconds=0,
+        arrival_at_seconds=60,
+        destination_name="Gate",
+    )
+
+
+def _flee_world() -> World:
+    """Just enough world for handle_flee: a neighbour to run to and the clock."""
+    from types import SimpleNamespace
+
+    from dnd_simulator.core.location import Location, LocationEdge, LocationGraph
+
+    return cast(
+        World,
+        SimpleNamespace(
+            location_graph=LocationGraph(
+                [Location("r1", "Hall", "r", edges=(LocationEdge("gate", 1000),)), Location("gate", "Gate", "r")]
+            ),
+            time=GameDateTime(hour=12),
+            creature_host=SimpleNamespace(get_active_creatures=lambda: []),
+        ),
+    )
 
 
 def _noop_query_fn(layer: str, query: Query) -> Answer:
@@ -281,7 +315,7 @@ class TestPerceiveDodgeFlee:
         event = Event(
             event_type=EventType.ENTITY_FLEE,
             source_layer="entities",
-            data=ActionFlavorPayload(**{"entity_id": "p1"}),
+            data=_flee_payload("p1"),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer))
         assert "flee" in result
@@ -293,7 +327,7 @@ class TestPerceiveDodgeFlee:
         event = Event(
             event_type=EventType.ENTITY_FLEE,
             source_layer="entities",
-            data=ActionFlavorPayload(**{"entity_id": "n1"}),
+            data=_flee_payload("n1"),
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, npc))
         assert "flee" in result
@@ -357,7 +391,7 @@ class TestCombatModeSwitch:
         event = Event(
             event_type=EventType.ENTITY_FLEE,
             source_layer="entities",
-            data=ActionFlavorPayload(**{"entity_id": "n1"}),
+            data=_flee_payload("n1"),
         )
         layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         assert npc.in_combat is False
@@ -369,7 +403,7 @@ class TestCombatModeSwitch:
         event = Event(
             event_type=EventType.ENTITY_FLEE,
             source_layer="entities",
-            data=ActionFlavorPayload(**{"entity_id": "n1"}),
+            data=_flee_payload("n1"),
         )
         layer.handle_event(event, _noop_query_fn, _noop_emit_fn)
         log = layer.get_perceived_log(observer)
@@ -471,7 +505,7 @@ class TestNpcCombatTurn:
         events = layer.get_perceived_events(npc)
         action = npc.brain.choose_action(npc, awareness, events)
         ctx = ActionContext(is_combat=True, current_turn_entity_id=npc.id)
-        handle_flee(npc, action, capture_emit, ctx, _STUB_WORLD)
+        handle_flee(npc, action, capture_emit, ctx, _flee_world())
         assert len(emit_calls) == 1
         assert emit_calls[0].event_type == EventType.ENTITY_FLEE
 

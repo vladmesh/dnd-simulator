@@ -18,6 +18,7 @@ from dnd_simulator.rules.actions import action_cost
 if TYPE_CHECKING:
     from dnd_simulator.core.character import Creature, Entity
     from dnd_simulator.core.combat import CombatState, Position
+    from dnd_simulator.core.location import LocationGraph
     from dnd_simulator.core.turn_budget import TurnBudget
 
 
@@ -49,6 +50,7 @@ class ActionContext:
     get_entity: EntityLookup | None = field(default=None, repr=False)  # for target validation
     on_leave_reach: OnLeaveReachFn | None = field(default=None, repr=False)  # OA callback
     rng: random.Random | None = field(default=None, repr=False)  # seeded rng for reproducible rolls
+    location_graph: LocationGraph | None = field(default=None, repr=False)  # flee exits; None = unknown
 
 
 @dataclass(frozen=True)
@@ -76,8 +78,17 @@ def check_actor_alive(actor: Creature, action: Action, ctx: ActionContext) -> Va
 
 
 def check_actor_active(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
-    """Dormant creatures cannot act."""
+    """Dormant creatures cannot act.
+
+    One exception: a creature already on the road (a flee that just left the
+    scene is a journey) may re-plan that journey with ``travel`` for the rest of
+    its turn. It can do nothing else there — it is no longer on the scene.
+    """
     if not actor.active:
+        from dnd_simulator.core.intent import TravelIntent
+
+        if action.name is ActionType.TRAVEL and isinstance(actor.current_intent, TravelIntent):
+            return None
         return ValidationError("DORMANT_ACTOR", _("Dormant creatures cannot act"))
     return None
 
@@ -119,6 +130,22 @@ def check_action_mode(actor: Creature, action: Action, ctx: ActionContext) -> Va
             "WRONG_MODE",
             _("'{action}' is not available outside combat").format(action=action.name),
         )
+    return None
+
+
+def check_flee_allowed(actor: Creature, action: Action, ctx: ActionContext) -> ValidationError | None:
+    """Flee is legal only per ``rules.flee.flee_blocker`` — the one rule for every brain."""
+    if action.name is not ActionType.FLEE or ctx.combat_state is None:
+        return None
+    from dnd_simulator.rules.flee import flee_block_message, flee_blocker
+
+    exits: list[str] | None = None
+    graph = ctx.location_graph
+    if graph is not None:
+        exits = [edge.target_id for edge in graph.neighbors(actor.location_id)] if graph.has(actor.location_id) else []
+    block = flee_blocker(actor, ctx.combat_state, ctx.get_entity, exits)
+    if block is not None:
+        return ValidationError("FLEE_BLOCKED", flee_block_message(block))
     return None
 
 
@@ -391,6 +418,7 @@ _CHECKS = [
     check_actor_active,
     check_required_params,
     check_action_mode,
+    check_flee_allowed,
     check_cost_mode,
     check_budget,
     check_movement_available,
