@@ -342,6 +342,7 @@ class BattleMapSave(SaveModel):
     width: int
     height: int
     positions: dict[str, PositionSave]
+    corpses: dict[str, PositionSave] = Field(default_factory=dict)
     walls: list[WallSave]
 
 

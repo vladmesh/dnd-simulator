@@ -71,6 +71,10 @@ class BattleMap:
     height: int  # feet
     positions: dict[str, Position] = field(default_factory=dict)
     walls: list[Wall] = field(default_factory=list)
+    # Cells of creatures that died in this fight. Kept apart from ``positions`` so a
+    # corpse neither occupies a cell nor counts as a combatant, but can still be looted
+    # from an adjacent cell.
+    corpses: dict[str, Position] = field(default_factory=dict)
     _blocked_edges: set[frozenset[Position]] | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
@@ -92,6 +96,16 @@ class BattleMap:
     def get_position(self, entity_id: str) -> Position | None:
         """Get an entity's position, or None if not on the map."""
         return self.positions.get(entity_id)
+
+    def leave_corpse(self, entity_id: str) -> None:
+        """Take a dead entity off the live map, keeping its last cell as a corpse cell."""
+        pos = self.positions.pop(entity_id, None)
+        if pos is not None:
+            self.corpses[entity_id] = pos
+
+    def loot_position(self, entity_id: str) -> Position | None:
+        """Cell a lootable holder occupies on this map: its corpse cell or live position, else None."""
+        return self.corpses.get(entity_id) or self.positions.get(entity_id)
 
     def is_step_blocked(self, from_pos: Position, to_pos: Position) -> bool:
         """Check if a single 5-ft step between adjacent cells is blocked by a wall.

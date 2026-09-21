@@ -255,6 +255,26 @@ export interface FleeStatus {
   destinations: FleeDestination[]
 }
 
+/** Why a lootable holder is out of reach in combat (backend `LootBlock`). */
+export type LootReasonKey = "too_far" | "not_on_map"
+
+/**
+ * A corpse or open container at the fight's location (backend `CombatLootable`).
+ * `in_reach` mirrors the server's `take` validation (adjacent cell, diagonals count);
+ * `reason_key`/`reason` are null when in reach, `distance_ft` is null off the grid.
+ */
+export interface CombatLootable {
+  id: string
+  name: string
+  description: string
+  in_reach: boolean
+  distance_ft: number | null
+  reason_key: LootReasonKey | (string & {}) | null
+  reason: string | null
+  loot_items: ItemInfo[]
+  loot_gold: number
+}
+
 export interface CombatAwareness {
   self_hp: number
   self_max_hp: number
@@ -279,6 +299,7 @@ export interface CombatAwareness {
   is_disengaging?: boolean
   self_resource_pools?: ResourcePoolInfo[]
   flee?: FleeStatus | null
+  lootables?: CombatLootable[]
 }
 
 export type Awareness = PeacefulAwareness | CombatAwareness

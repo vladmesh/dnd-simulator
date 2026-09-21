@@ -231,6 +231,26 @@ class FleeStatus:
 
 
 @dataclass(frozen=True)
+class CombatLootable:
+    """A lootable holder (corpse/open container) at the combat's location, with its loot reach.
+
+    ``in_reach`` mirrors the `take` validation (`rules/loot.loot_reach`); when it is False,
+    ``reason_key`` (``LootBlock`` value) and the localized ``reason`` say why.
+    ``distance_ft`` is None when the holder has no cell on the battle map.
+    """
+
+    id: str
+    name: str
+    description: str
+    in_reach: bool
+    distance_ft: int | None = None
+    reason_key: str | None = None
+    reason: str | None = None
+    loot_items: list[ItemInfo] = field(default_factory=list)
+    loot_gold: int = 0
+
+
+@dataclass(frozen=True)
 class CombatAwareness:
     """What a creature knows in combat — stats, enemies, terrain."""
 
@@ -258,6 +278,7 @@ class CombatAwareness:
     is_disengaging: bool = False
     self_resource_pools: tuple[ResourcePoolInfo, ...] = ()
     flee: FleeStatus | None = None  # filled per turn by the Round (needs the location graph)
+    lootables: list[CombatLootable] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

@@ -160,7 +160,7 @@ def _handle_unequip_slot(cfg: SlotConfig, actor: Creature, action: Action, emit_
 
 
 def make_equip_handler(cfg: SlotConfig) -> EquipmentHandler:
-    """Build the equip handler for a slot. Free action (D&D 5e object interaction)."""
+    """Build the equip handler for a slot. The cost and combat mode come from the slot's ActionDef."""
 
     def handler(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
         return _handle_equip_slot(cfg, actor, action, emit_fn)
@@ -169,7 +169,7 @@ def make_equip_handler(cfg: SlotConfig) -> EquipmentHandler:
 
 
 def make_unequip_handler(cfg: SlotConfig) -> EquipmentHandler:
-    """Build the unequip handler for a slot. Free action."""
+    """Build the unequip handler for a slot. The cost and combat mode come from the slot's ActionDef."""
 
     def handler(actor: Creature, action: Action, emit_fn: EmitFn, ctx: ActionContext, world: World) -> ActionResult:
         return _handle_unequip_slot(cfg, actor, action, emit_fn)

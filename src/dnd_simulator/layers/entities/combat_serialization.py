@@ -11,6 +11,7 @@ def serialize_combats(combats: dict[str, CombatState]) -> dict[str, object]:
     for loc_id, combat in combats.items():
         bm = combat.battle_map
         positions = {eid: {"x": pos.x, "y": pos.y} for eid, pos in bm.positions.items()}
+        corpses = {eid: {"x": pos.x, "y": pos.y} for eid, pos in bm.corpses.items()}
         walls = [{"x1": w.x1, "y1": w.y1, "x2": w.x2, "y2": w.y2} for w in bm._inner_walls]
         result[loc_id] = {
             "location_id": combat.location_id,
@@ -24,6 +25,7 @@ def serialize_combats(combats: dict[str, CombatState]) -> dict[str, object]:
                 "width": bm.width,
                 "height": bm.height,
                 "positions": positions,
+                "corpses": corpses,
                 "walls": walls,
             },
         }
@@ -48,6 +50,11 @@ def deserialize_combats(data: dict[str, object]) -> dict[str, CombatState]:
         for eid, pos_data in positions_raw.items():
             assert isinstance(pos_data, dict)
             bm.set_position(str(eid), Position(x=int(pos_data["x"]), y=int(pos_data["y"])))
+        corpses_raw = bm_data.get("corpses", {})
+        assert isinstance(corpses_raw, dict)
+        for eid, pos_data in corpses_raw.items():
+            assert isinstance(pos_data, dict)
+            bm.corpses[str(eid)] = Position(x=int(pos_data["x"]), y=int(pos_data["y"]))
 
         combats[str(loc_id)] = CombatState(
             location_id=str(cdata["location_id"]),

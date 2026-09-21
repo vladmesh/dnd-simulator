@@ -1,0 +1,46 @@
+# The weakling starts next to the player (placed at [10, 10] by the test) and dies to the
+# first hit; the sentinel cannot move (speed 0) and keeps the fight going far away.
+loot_weakling:
+  name: Weakling Bandit
+  start_location: loot_floor
+  role: gladiator
+  race: human
+  class: commoner
+  faction: enemy_faction
+  hp: 1
+  ac: 1
+  speed: 30
+  combat_position: [15, 10]
+  gold: 12
+  ability_scores:
+    str: 8
+    dex: 8
+    con: 8
+    int: 8
+    wis: 8
+    cha: 8
+  personality: 'Attack the nearest enemy.'
+  items:
+  - name: Healing Potion
+    type: potion
+    heal_dice: 2d4+2
+
+loot_sentinel:
+  name: Rooted Sentinel
+  start_location: loot_floor
+  role: gladiator
+  race: human
+  class: fighter
+  faction: enemy_faction
+  hp: 100
+  ac: 10
+  speed: 0
+  combat_position: [50, 50]
+  ability_scores:
+    str: 10
+    dex: 10
+    con: 14
+    int: 8
+    wis: 10
+    cha: 8
+  personality: 'Attack the nearest enemy.'
