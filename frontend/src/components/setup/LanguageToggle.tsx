@@ -1,5 +1,4 @@
 import { useTranslation } from "react-i18next"
-import { api } from "@/transport/apiClient"
 import { Button } from "@/components/ui/button"
 import { Languages } from "lucide-react"
 
@@ -8,16 +7,12 @@ const LANGS = [
   { code: "ru", label: "RU" },
 ] as const
 
-type Props = {
-  sessionId?: string
-}
-
-export function LanguageToggle({ sessionId }: Props) {
+/** Switches the UI language; an open game session follows it (see GameScreen). */
+export function LanguageToggle() {
   const { i18n } = useTranslation()
 
   async function changeLanguage(lang: "en" | "ru") {
     await i18n.changeLanguage(lang)
-    if (sessionId) await api.master.setLang(sessionId, { lang })
   }
 
   return (

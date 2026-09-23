@@ -196,6 +196,7 @@ class AwarenessBuilder:
 
         return PeacefulAwareness(
             hour=time.hour,
+            minute=time.minute,
             day=time.day,
             month=time.month,
             year=time.year,

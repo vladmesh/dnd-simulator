@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useParams, useNavigate } from "react-router"
+import { useTranslation } from "react-i18next"
+import { api } from "@/transport/apiClient"
 import { useGameStore } from "@/store/gameStore"
 import type { CombatEntity } from "@/types/game"
 import { Header } from "./Header"
@@ -47,6 +49,16 @@ export function GameScreen() {
       useGameStore.getState().disconnect()
     }
   }, [sessionId])
+
+  // The UI language is the player's choice (kept per browser): push it to the session on entry
+  // and on every toggle, so server-side strings match even when rejoining an existing session.
+  const { i18n } = useTranslation()
+  useEffect(() => {
+    if (!sessionId) return
+    api.master.setLang(sessionId, { lang: i18n.language }).catch(() => {
+      // A gone session is handled by the WS error redirect below.
+    })
+  }, [sessionId, i18n.language])
 
   // Redirect to home if WS connection permanently failed (e.g. session not found)
   useEffect(() => {

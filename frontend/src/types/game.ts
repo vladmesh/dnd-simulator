@@ -212,6 +212,7 @@ export interface MerchantInfo {
 
 export interface PeacefulAwareness {
   hour: number
+  minute?: number
   day: number
   month: number
   year: number

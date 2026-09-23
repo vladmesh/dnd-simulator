@@ -21,7 +21,7 @@ from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc, NpcActivity, ScheduleEntry
 from dnd_simulator.rules.reputation import make_relation_fn
 
-_TIME = GameDateTime(year=1490, month=6, day=15, hour=14)
+_TIME = GameDateTime(year=1490, month=6, day=15, hour=14, minute=24)
 
 
 def _check_hostility(layer: EntitiesLayer, observer: Entity, other: Entity, query_fn) -> bool:
@@ -123,6 +123,7 @@ class TestPeacefulAwarenessLocationContext:
 
         assert isinstance(awareness, PeacefulAwareness)
         assert awareness.hour == 14
+        assert awareness.minute == 24
         assert awareness.day == 15
         assert awareness.month == 6
         assert awareness.year == 1490

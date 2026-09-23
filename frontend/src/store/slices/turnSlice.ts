@@ -21,6 +21,7 @@ import type { GameStore } from "../gameStore"
 
 export interface GameTime {
   hour: number
+  minute: number
   day: number
   month: number
   year: number
@@ -51,7 +52,7 @@ export interface TurnSlice {
 export function extractGameTime(awareness: Awareness): GameTime | null {
   const a = awareness as PeacefulAwareness
   if ("hour" in a) {
-    return { hour: a.hour, day: a.day, month: a.month, year: a.year }
+    return { hour: a.hour, minute: a.minute ?? 0, day: a.day, month: a.month, year: a.year }
   }
   return null
 }
