@@ -126,8 +126,10 @@ def resolve_monster_template(
     return _to_monster_template(template_id, model, lang)
 
 
-def _parse_encounter_entries(key: str, entries: Any, known_templates: set[str]) -> list[EncounterEntry]:
-    """Validate and convert one table's entries; fail fast on unknown template refs."""
+def _parse_encounter_entries(key: str, entries: object, known_templates: set[str]) -> list[EncounterEntry]:
+    """Validate and convert one table's raw YAML entries; fail fast on a non-list table or unknown template refs."""
+    if not isinstance(entries, list):
+        raise RuntimeError(f"Encounter table at '{key}' must be a list, got {type(entries).__name__}")
     parsed: list[EncounterEntry] = []
     for entry in entries:
         model = EncounterEntryContent.model_validate(entry)

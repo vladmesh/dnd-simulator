@@ -8,7 +8,11 @@ from typing import Any
 
 import structlog
 from openai import OpenAI
-from openai.types.chat import ChatCompletionMessageFunctionToolCall
+from openai.types.chat import (
+    ChatCompletionFunctionToolParam,
+    ChatCompletionMessageFunctionToolCall,
+    ChatCompletionMessageParam,
+)
 
 logger = structlog.get_logger(domain="llm")
 
@@ -59,7 +63,7 @@ class LlmClient:
 
     def generate(
         self,
-        messages: list[dict[str, object]],
+        messages: list[ChatCompletionMessageParam],
         max_tokens: int = 300,
         temperature: float = 0.3,
         timeout: float | None = None,
@@ -75,7 +79,7 @@ class LlmClient:
                 client = client.with_options(max_retries=max_retries)
             response = client.chat.completions.create(
                 model=self._model,
-                messages=messages,  # type: ignore[arg-type]
+                messages=messages,
                 max_tokens=max_tokens,
                 temperature=temperature,
             )
@@ -94,24 +98,21 @@ class LlmClient:
 
     def generate_with_tools(
         self,
-        messages: list[dict[str, object]],
-        tools: list[dict[str, object]],
+        messages: list[ChatCompletionMessageParam],
+        tools: list[ChatCompletionFunctionToolParam],
         max_tokens: int = 700,
         temperature: float = 0.8,
     ) -> LlmResponse:
         """Generate a completion that may include a tool call."""
-        tool_names = []
-        for t in tools:
-            func = t.get("function")
-            tool_names.append(func["name"] if isinstance(func, dict) else "?")
+        tool_names = [t["function"]["name"] for t in tools]
         logger.info("llm_request", tools=tool_names)
 
         t0 = time.monotonic()
         try:
             response = self._client.chat.completions.create(
                 model=self._model,
-                messages=messages,  # type: ignore[arg-type]
-                tools=tools,  # type: ignore[arg-type]
+                messages=messages,
+                tools=tools,
                 max_tokens=max_tokens,
                 temperature=temperature,
             )

@@ -377,6 +377,8 @@ class EntitiesLayer(Layer):
 
     def load_state(self, state: dict[str, object]) -> None:
         """Restore mutable entity state from saved data."""
+        # content_loader imports are function-local on purpose: content_loader.creatures imports
+        # layers.entities.models, which initialises this package, so a module-level import is a cycle.
         from dnd_simulator.content_loader import parse_player
         from dnd_simulator.content_loader.items import EQUIPMENT_FIELDS, deserialize_item
 

@@ -16,7 +16,10 @@ class SettlementType(Enum):
 
 @dataclass
 class Settlement:
-    """A settlement within a region."""
+    """A settlement within a region.
+
+    Mutable on purpose: the settlements tick updates ``prosperity`` and ``population`` in place.
+    """
 
     id: str
     name: str

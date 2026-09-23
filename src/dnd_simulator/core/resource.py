@@ -19,6 +19,8 @@ class ResourcePool:
 
     Examples: Second Wind (1/short rest), Action Surge (1/short rest),
     spell slots (N/long rest), Hit Dice (level/long rest).
+    Mutable on purpose: ``current_uses`` is runtime state spent and restored in place
+    by ``rules/resources.py``.
     """
 
     id: str  # "second_wind", "action_surge", "spell_slot_1"

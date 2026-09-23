@@ -190,7 +190,9 @@ Kill reputation drop (`rules/reputation.py`): omniscient, delta scaled by victim
 
 - Python 3.12+, strict mypy, ruff with 120-char line length
 - All user-visible strings use `gettext` via `from dnd_simulator.i18n import _`; English base, Russian `.po` translation
-- Frozen dataclasses for models; `object` (not `Any`) in state dicts for mypy strict
+- Frozen dataclasses for models; `object` (not `Any`) in state dicts for mypy strict. Deliberate exceptions are
+  runtime state mutated in place and say so in their docstring: `TurnBudget`, `ResourcePool`, and the layer models
+  `Region`, `Settlement`, `Nation`, `Leader` updated by their layer ticks
 - Each layer has: `layer.py` (Layer impl), `models.py` (data); pure math lives in `rules/`
 - Tests mirror source structure: `test_{layer}_layer.py`, `test_{layer}_formulas.py`
 

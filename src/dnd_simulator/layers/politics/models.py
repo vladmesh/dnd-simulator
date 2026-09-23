@@ -28,7 +28,10 @@ class DiplomaticStatus(Enum):
 
 @dataclass
 class Leader:
-    """A nation's ruler."""
+    """A nation's ruler.
+
+    Mutable on purpose: the politics tick ages the leader in place.
+    """
 
     name: str
     age: int
@@ -37,7 +40,10 @@ class Leader:
 
 @dataclass
 class Nation:
-    """A political entity controlling regions."""
+    """A political entity controlling regions.
+
+    Mutable on purpose: the politics tick drifts stability, wealth and military and replaces the leader in place.
+    """
 
     id: str
     name: str
