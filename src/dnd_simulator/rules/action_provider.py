@@ -80,7 +80,7 @@ def _equipment_candidates(creature: Creature) -> list[ActionType]:
 
     result: list[ActionType] = []
     for cfg in SLOT_CONFIGS.values():
-        if any(i.item_type == cfg.item_type for i in creature.inventory):
+        if any(cfg.fits(i) for i in creature.inventory):
             result.append(cfg.equip_action)
         if getattr(creature, cfg.creature_field) is not None:
             result.append(cfg.unequip_action)

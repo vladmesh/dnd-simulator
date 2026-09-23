@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from dnd_simulator.core.action import Action, ActionRejectedError, ActionType
+from dnd_simulator.core.action_defs import get_action_def
 from dnd_simulator.core.character import Ability, Attack, Creature, DamageComponent, DamageType
 from dnd_simulator.core.combat import BattleMap, CombatState, Position
 from dnd_simulator.core.conditions import Condition
@@ -16,6 +17,7 @@ from dnd_simulator.core.models import ActionResult, EmitFn, Event, EventType
 from dnd_simulator.core.modifiers import Modifier, ModifierOp, StatType
 from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import World
+from dnd_simulator.i18n import _, language_context
 from dnd_simulator.rules.handlers import (
     handle_attack,
     handle_bless,
@@ -624,6 +626,17 @@ class TestBudgetValidation:
         error = validate_action(actor, Action(name=ActionType.ATTACK, params={"target_id": "x"}), ctx)
         assert error is not None
         assert error.code == "INSUFFICIENT_BUDGET"
+
+    def test_budget_error_names_the_action_not_its_id(self) -> None:
+        """The player-facing message carries the localised action description, never the raw id."""
+        budget = TurnBudget(actions=0, bonus_actions=0, movement_remaining=0)
+        ctx = ActionContext(is_combat=True, current_turn_entity_id="test", turn_budget=budget)
+        with language_context("ru"):
+            error = validate_action(_creature(), Action(name=ActionType.ATTACK, params={"target_id": "x"}), ctx)
+            expected = _(get_action_def(ActionType.ATTACK).description)
+        assert error is not None
+        assert expected in error.message
+        assert error.message == f"На это не хватает ресурсов хода: {expected}"
 
     def test_no_budget_skips_check(self) -> None:
         """Peaceful turns have no budget — budget check is skipped."""

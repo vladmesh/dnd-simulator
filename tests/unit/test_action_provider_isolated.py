@@ -6,6 +6,7 @@ from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.character import Character, CharClass, Creature
 from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.items import (
+    AccessoryDef,
     ArmorCategory,
     ArmorDef,
     EquipmentSlot,
@@ -23,6 +24,7 @@ from dnd_simulator.rules.action_provider import (
     EquipmentActionProvider,
     InventoryActionProvider,
     WeaponActionProvider,
+    blocked_equipment_actions,
 )
 from dnd_simulator.rules.validation import ActionContext
 from dnd_simulator.service.contextual_providers import MerchantActionProvider
@@ -160,6 +162,33 @@ class TestEquipmentActionProvider:
         provider = EquipmentActionProvider()
         actions = provider.get_action_types(creature, ctx)
         assert ActionType.UNEQUIP_SHIELD in actions
+
+    def test_ring_in_inventory_offers_only_the_ring_slot(self) -> None:
+        ring = Item(
+            id="ring_of_protection_0",
+            name="Ring of Protection",
+            item_type=ItemType.ACCESSORY,
+            accessory_def=AccessoryDef(accessory_id="ring_of_protection", slot=EquipmentSlot.RING),
+        )
+        creature = Character(id="c1", name="Fighter", location_id="arena", inventory=[ring])
+        actions = EquipmentActionProvider().get_action_types(creature, ActionContext(is_combat=False))
+        assert ActionType.EQUIP_RING in actions
+        assert ActionType.EQUIP_HEAD not in actions
+        assert ActionType.EQUIP_FEET not in actions
+
+    def test_ring_in_combat_blocks_only_the_ring_slot(self) -> None:
+        ring = Item(
+            id="ring_of_protection_0",
+            name="Ring of Protection",
+            item_type=ItemType.ACCESSORY,
+            accessory_def=AccessoryDef(accessory_id="ring_of_protection", slot=EquipmentSlot.RING),
+        )
+        creature = Character(id="c1", name="Fighter", location_id="arena", inventory=[ring])
+        ctx = ActionContext(
+            is_combat=True, combat_state=CombatState(location_id="arena", turn_order=["c1"]), turn_budget=TurnBudget()
+        )
+        blocked = [action_type for action_type, _error in blocked_equipment_actions(creature, ctx)]
+        assert blocked == [ActionType.EQUIP_RING]
 
 
 class TestClassFeatureActionProvider:

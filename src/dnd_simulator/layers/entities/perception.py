@@ -34,7 +34,7 @@ from dnd_simulator.core.events import (
     XpGainedPayload,
 )
 from dnd_simulator.core.models import Event, EventType
-from dnd_simulator.i18n import _
+from dnd_simulator.i18n import N_, _
 from dnd_simulator.layers.entities.perception_world import DISPATCH as WORLD_DISPATCH
 
 GetEntityFn = Callable[[str], Entity | None]
@@ -49,8 +49,6 @@ _TRANSLATABLE_STRINGS = [
     _("slashing"), _("piercing"), _("bludgeoning"),
     _("fire"), _("cold"), _("lightning"), _("thunder"), _("acid"), _("poison"),
     _("radiant"), _("necrotic"), _("force"), _("psychic"),
-    # Damage source labels (from combat_manager._build_damage_components)
-    _("weapon"), _("ability"), _("sneak_attack"), _("dueling"),
     # Roll labels
     _("AC"),
     # Common item/weapon names (from YAML catalogs)
@@ -116,20 +114,51 @@ def _format_roll(atk_roll: AttackRollPayload, ac: int) -> str:
     return " [" + "".join(parts) + "]"
 
 
+# Player-facing labels for damage component sources (ability keys, class features, magic).
+_DAMAGE_SOURCE_LABELS: dict[str, str] = {
+    "str": N_("STR"),
+    "dex": N_("DEX"),
+    "con": N_("CON"),
+    "int": N_("INT"),
+    "wis": N_("WIS"),
+    "cha": N_("CHA"),
+    "ability": N_("ability"),
+    "weapon": N_("weapon"),
+    "weapon_magic": N_("magic weapon"),
+    "sneak_attack": N_("Sneak Attack"),
+    "dueling": N_("Dueling"),
+    "divine_smite": N_("Divine Smite"),
+}
+
+
+def _damage_source_label(source: str) -> str:
+    """Localised label of a damage source; a crit twin (``<source>_crit``) reads as its base source."""
+    base = source.removesuffix("_crit")
+    return _(_DAMAGE_SOURCE_LABELS.get(base, base))
+
+
 def _format_damage(damage: int, damage_components: tuple[DamageComponentPayload, ...], critical: bool) -> str:
     """Build damage string from structured components.
 
-    Format: , 10 damage (1d8 slashing + 1d6 sneak_attack + 2 dueling)
+    Format: , 10 damage (1d8 slashing + 1d6 Sneak Attack + 2 Dueling)
     """
-    detail_parts: list[str] = []
+    detail = ""
     for component in damage_components:
-        if component.dice and component.source != "weapon":
-            detail_parts.append(f"{component.dice} {_(component.source)}")
+        sign = "+"
+        if component.dice and component.source.removesuffix("_crit") != "weapon":
+            part = f"{component.dice} {_damage_source_label(component.source)}"
         elif component.dice:
-            detail_parts.append(f"{component.dice} {_(component.type)}")
+            part = f"{component.dice} {_(component.type)}"
         elif component.amount:
-            detail_parts.append(f"+{component.amount} {_(component.source)}")
-    detail = " (" + " + ".join(detail_parts) + ")" if detail_parts else ""
+            sign = "-" if component.amount < 0 else "+"
+            part = f"{abs(component.amount)} {_damage_source_label(component.source)}"
+        else:
+            continue
+        if detail:
+            detail += f" {sign} {part}"
+        else:
+            detail = part if sign == "+" else f"-{part}"
+    detail = f" ({detail})" if detail else ""
 
     if critical:
         return _(", CRIT! {damage} damage{detail}").format(damage=damage, detail=detail)

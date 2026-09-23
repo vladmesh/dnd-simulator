@@ -30,6 +30,7 @@
   "flee_travel_hours": "{{hours}} h {{minutes}} min",
   "flee_reason_enemies_too_close": "Enemies are too close to flee",
   "flee_reason_no_exit": "There is nowhere to flee from here",
+  "flee_reason_no_action": "No Action left to flee",
   "flee_unavailable": "Fleeing is not possible right now",
   "move": "Move",
   "move_toward": "Toward {{target}}",

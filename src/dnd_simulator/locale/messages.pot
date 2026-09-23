@@ -291,12 +291,44 @@ msgstr ""
 msgid "ability"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:52
-msgid "dueling"
+#: src/dnd_simulator/layers/entities/perception.py
+msgid "STR"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:52
-msgid "sneak_attack"
+#: src/dnd_simulator/layers/entities/perception.py
+msgid "DEX"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py
+msgid "CON"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py
+msgid "INT"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py
+msgid "WIS"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py
+msgid "CHA"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py
+msgid "magic weapon"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py
+msgid "Sneak Attack"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py
+msgid "Dueling"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py
+msgid "Divine Smite"
 msgstr ""
 
 #: src/dnd_simulator/layers/entities/perception.py:52
@@ -1193,11 +1225,11 @@ msgid "This is not available outside combat: {action}"
 msgstr ""
 
 #: src/dnd_simulator/rules/validation.py:139
-msgid "No cost override '{mode}' available for '{action}'"
+msgid "No cost override '{mode}' available: {action}"
 msgstr ""
 
 #: src/dnd_simulator/rules/validation.py:151
-msgid "Insufficient budget for '{action}'"
+msgid "Not enough budget left this turn: {action}"
 msgstr ""
 
 #: src/dnd_simulator/rules/validation.py:193

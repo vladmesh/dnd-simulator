@@ -600,15 +600,39 @@ msgstr "оружие"
 msgid "ability"
 msgstr "модификатор"
 
-msgid "sneak_attack"
+msgid "STR"
+msgstr "СИЛ"
+
+msgid "DEX"
+msgstr "ЛОВ"
+
+msgid "CON"
+msgstr "ТЕЛ"
+
+msgid "INT"
+msgstr "ИНТ"
+
+msgid "WIS"
+msgstr "МДР"
+
+msgid "CHA"
+msgstr "ХАР"
+
+msgid "magic weapon"
+msgstr "магия оружия"
+
+msgid "Sneak Attack"
 msgstr "скрытая атака"
 
-msgid "dueling"
+msgid "Dueling"
 msgstr "дуэлянт"
+
+msgid "Divine Smite"
+msgstr "божественная кара"
 
 #: Roll labels
 msgid "AC"
-msgstr "КЗ"
+msgstr "КД"
 
 #: Common item/weapon names
 msgid "Health Potion"
@@ -734,8 +758,11 @@ msgstr "Это недоступно в бою: {action}"
 msgid "This is not available outside combat: {action}"
 msgstr "Это недоступно вне боя: {action}"
 
-msgid "Insufficient budget for '{action}'"
-msgstr "Недостаточно ресурсов для '{action}'"
+msgid "Not enough budget left this turn: {action}"
+msgstr "На это не хватает ресурсов хода: {action}"
+
+msgid "No cost override '{mode}' available: {action}"
+msgstr "Этот способ оплаты ('{mode}') недоступен: {action}"
 
 msgid "Item '{id}' not in inventory."
 msgstr "Предмет '{id}' не в инвентаре."
@@ -1240,7 +1267,7 @@ msgid "Remove your equipped armor."
 msgstr "Снять надетую броню."
 
 msgid "Equip a shield from your inventory. +2 AC."
-msgstr "Взять щит из инвентаря. +2 к КЗ."
+msgstr "Взять щит из инвентаря. +2 к КД."
 
 msgid "Remove your equipped shield."
 msgstr "Убрать щит."

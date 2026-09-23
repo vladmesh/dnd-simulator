@@ -108,7 +108,7 @@ class TestLootInCombat:
             # A second take in the same turn has no Action left to spend.
             ws_send_action(sock, "take", target_id=WEAKLING)
             result = _next(sock, "action_result")
-            assert result["error"] == "Insufficient budget for 'take'"
+            assert result["error"].startswith("Not enough budget left this turn: Take all items")
         finally:
             sock.close()
             requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
