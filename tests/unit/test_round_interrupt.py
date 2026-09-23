@@ -246,16 +246,25 @@ class TestDisconnectDuringPlayerTurn:
         assert combat.resume_turn_started is True
         assert listener.sends_after_close == []
 
-        reconnected = _Listener(on_turn=lambda _msg: session.submit_player_action(END_TURN))
+        # Read the budget inside on_turn: once END_TURN is submitted the round thread races on
+        # into the next round, whose fresh budget would otherwise be what the test thread sees.
+        movement_at_turn: list[int | None] = []
+        decisions_at_turn: list[list[str]] = []
+
+        def on_turn(_msg: dict[str, Any]) -> None:
+            movement_at_turn.append(player.turn_budget.movement_remaining if player.turn_budget else None)
+            decisions_at_turn.append(list(recorder.decisions))
+            session.submit_player_action(END_TURN)
+
+        reconnected = _Listener(on_turn=on_turn)
         session.add_listener(reconnected)
         session.start_round(player)
         try:
             assert reconnected.turns.acquire(timeout=5)
             # The same turn continues with the movement already spent — no fresh budget.
-            assert player.turn_budget is not None
-            assert player.turn_budget.movement_remaining == 5
+            assert movement_at_turn[0] == 5
             assert reconnected.turns.acquire(timeout=5)  # next round's player turn
-            assert recorder.decisions == [before.id, after.id, before.id]
+            assert decisions_at_turn[1] == [before.id, after.id, before.id]
         finally:
             session.remove_listener(reconnected)
 
