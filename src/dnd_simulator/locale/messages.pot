@@ -1193,11 +1193,11 @@ msgid "This is not available outside combat: {action}"
 msgstr ""
 
 #: src/dnd_simulator/rules/validation.py:139
-msgid "No cost override '{mode}' available for '{action}'"
+msgid "No cost override '{mode}' available: {action}"
 msgstr ""
 
 #: src/dnd_simulator/rules/validation.py:151
-msgid "Insufficient budget for '{action}'"
+msgid "Not enough budget left this turn: {action}"
 msgstr ""
 
 #: src/dnd_simulator/rules/validation.py:193

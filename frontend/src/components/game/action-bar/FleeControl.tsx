@@ -32,6 +32,21 @@ function fleeBlockedReason(t: FleeControlProps["t"], flee: FleeStatus): string {
 }
 
 /**
+ * Why an allowed flee still cannot be taken: the server drops `flee` from `available_actions`
+ * when the turn budget has no Action left, so name that before the generic fallback.
+ */
+function allowedButUnavailableReason(
+  t: FleeControlProps["t"],
+  action: ActionInfo | undefined,
+  flee: FleeStatus,
+  budget: TurnBudget | undefined,
+): string | null {
+  if (action != null && flee.destinations.length > 0) return null
+  if (action == null && budget != null && budget.actions <= 0) return t("game:flee_reason_no_action")
+  return t("game:flee_unavailable")
+}
+
+/**
  * Flee control driven by `awareness.flee`: always shown in combat, visibly disabled with
  * the reason while blocked; when allowed it opens a destination picker with nothing
  * preselected and sends `flee` only once the player picks a neighbour.
@@ -43,9 +58,7 @@ export function FleeControl({ flee, action, disabled, budget, openDropdown, setO
   if (costType) dataAttrs["data-cost-type"] = costType
   if (depleted) dataAttrs["data-depleted"] = ""
 
-  const blockedReason = flee.allowed
-    ? action == null || flee.destinations.length === 0 ? t("game:flee_unavailable") : null
-    : fleeBlockedReason(t, flee)
+  const blockedReason = flee.allowed ? allowedButUnavailableReason(t, action, flee, budget) : fleeBlockedReason(t, flee)
   const isOpen = blockedReason == null && openDropdown === DROPDOWN_KEY
 
   return (

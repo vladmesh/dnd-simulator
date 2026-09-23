@@ -39,6 +39,12 @@ class SlotConfig:
     equip_action: ActionType
     unequip_action: ActionType
 
+    def fits(self, item: Item) -> bool:
+        """Whether *item* can go into this slot: matching type, and for accessories the accessory's own slot."""
+        if item.item_type != self.item_type:
+            return False
+        return item.accessory_def is None or item.accessory_def.slot == self.slot
+
 
 SLOT_CONFIGS: dict[EquipmentSlot, SlotConfig] = {
     EquipmentSlot.WEAPON: SlotConfig(

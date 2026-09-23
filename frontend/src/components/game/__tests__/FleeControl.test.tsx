@@ -112,6 +112,26 @@ describe("Flee control — blocked", () => {
     expect(screen.getByTestId("flee-reason")).toHaveTextContent("You are held fast")
   })
 
+  it("names the missing Action when flee is allowed but the turn has no Action left", async () => {
+    // The server drops `flee` from available_actions when the budget cannot pay for it.
+    setCombat(allowed, [dodge, endTurn])
+    useGameStore.setState({ budget: { ...budget, actions: 0 } })
+    const { unmount } = render(<ActionBar />)
+    expect(fleeButton()).toBeDisabled()
+    expect(screen.getByTestId("flee-reason")).toHaveTextContent("No Action left to flee")
+    unmount()
+
+    await i18n.changeLanguage("ru")
+    render(<ActionBar />)
+    expect(screen.getByTestId("flee-reason")).toHaveTextContent("Не осталось действия, чтобы сбежать")
+  })
+
+  it("keeps the generic text when flee is allowed, the Action is there, but the action is not listed", () => {
+    setCombat(allowed, [dodge, endTurn])
+    render(<ActionBar />)
+    expect(screen.getByTestId("flee-reason")).toHaveTextContent("Fleeing is not possible right now")
+  })
+
   it("does not open a picker or send anything when clicked", () => {
     setCombat(blocked("enemies_too_close"), [dodge, endTurn])
     render(<ActionBar />)

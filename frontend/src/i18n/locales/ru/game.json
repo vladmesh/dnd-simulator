@@ -30,6 +30,7 @@
   "flee_travel_hours": "{{hours}} ч {{minutes}} мин",
   "flee_reason_enemies_too_close": "Враги слишком близко, сбежать не выйдет",
   "flee_reason_no_exit": "Отсюда некуда бежать",
+  "flee_reason_no_action": "Не осталось действия, чтобы сбежать",
   "flee_unavailable": "Сбежать сейчас нельзя",
   "move": "Движение",
   "move_toward": "К {{target}}",

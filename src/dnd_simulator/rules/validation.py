@@ -155,7 +155,9 @@ def check_cost_mode(actor: Creature, action: Action, ctx: ActionContext) -> Vali
 
     return ValidationError(
         "INVALID_COST_MODE",
-        _("No cost override '{mode}' available for '{action}'").format(mode=cost_mode, action=action.name),
+        _("No cost override '{mode}' available: {action}").format(
+            mode=cost_mode, action=_(get_action_def(action.name).description)
+        ),
     )
 
 
@@ -167,7 +169,7 @@ def check_budget(actor: Creature, action: Action, ctx: ActionContext) -> Validat
     if not ctx.turn_budget.can_afford(cost):
         return ValidationError(
             "INSUFFICIENT_BUDGET",
-            _("Insufficient budget for '{action}'").format(action=action.name),
+            _("Not enough budget left this turn: {action}").format(action=_(get_action_def(action.name).description)),
         )
     return None
 
