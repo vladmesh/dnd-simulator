@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import threading
 from pathlib import Path
 from typing import Any
@@ -107,6 +108,8 @@ def test_empty_session_evict_after_delete_is_noop(tmp_path: Path) -> None:
     service.autosave_session(session.session_id)  # autosave exists on disk — resurrect bait
     service.delete_session(session.session_id)
 
+    # session_empty_evict_skipped is an info record: capture it whatever level the suite runs at.
+    structlog.configure(wrapper_class=structlog.make_filtering_bound_logger(logging.DEBUG))
     with structlog.testing.capture_logs() as logs:
         service._on_session_empty(session)
 
