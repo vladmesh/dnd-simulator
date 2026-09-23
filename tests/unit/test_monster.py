@@ -207,6 +207,13 @@ class TestParseEncounters:
         with pytest.raises(RuntimeError, match="dragon"):
             parse_encounters(data, known_templates={"goblin"})
 
+    def test_parse_encounter_non_list_table_raises(self) -> None:
+        from dnd_simulator.content_loader import parse_encounters
+
+        data = {"forest": {"template": "goblin", "chance": 0.5, "count": [1, 1]}}
+        with pytest.raises(RuntimeError, match="'forest' must be a list"):
+            parse_encounters(data, known_templates={"goblin"})
+
     def test_parse_encounter_time_of_day(self) -> None:
         from dnd_simulator.content_loader import parse_encounters
         from dnd_simulator.core.models import TimeOfDay

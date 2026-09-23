@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 import structlog
+from openai.types.chat import ChatCompletionFunctionToolParam, ChatCompletionMessageParam
 
 from dnd_simulator.core.action import SKIP, Action, ActionType
 from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, PerceivedEvent
@@ -112,7 +113,7 @@ class LlmBrain(Brain):
                 events=events_text
             )
 
-        messages: list[dict[str, object]] = [
+        messages: list[ChatCompletionMessageParam] = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": turn_prompt},
         ]
@@ -153,7 +154,7 @@ class LlmBrain(Brain):
         trigger_desc = _("A creature is {trigger_type}. You can react or skip.").format(
             trigger_type=trigger.trigger_type.value.replace("_", " "),
         )
-        messages: list[dict[str, object]] = [
+        messages: list[ChatCompletionMessageParam] = [
             {"role": "system", "content": _("You are an NPC deciding whether to use your reaction.")},
             {"role": "user", "content": trigger_desc},
         ]
@@ -217,16 +218,9 @@ def _retry_hint(reason: str) -> str:
     return _("Previous tool call was rejected: {reason}. Choose one of the offered tools.").format(reason=reason)
 
 
-def _offered_action_types(tools: list[dict[str, object]]) -> set[ActionType]:
+def _offered_action_types(tools: list[ChatCompletionFunctionToolParam]) -> set[ActionType]:
     """Read the action names from the exact tool schemas offered for a turn."""
-    offered: set[ActionType] = set()
-    for tool in tools:
-        function = tool.get("function")
-        if isinstance(function, dict):
-            name = function.get("name")
-            if isinstance(name, str):
-                offered.add(ActionType(name))
-    return offered
+    return {ActionType(tool["function"]["name"]) for tool in tools}
 
 
 def _recent_event_text(event: PerceivedEvent, self_id: str) -> str:

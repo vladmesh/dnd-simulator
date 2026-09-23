@@ -21,6 +21,8 @@ class TurnBudget:
 
     All fields are ints (not bools) — some features grant extra uses.
     Round creates this at the start of each turn from creature stats + rules.
+    Mutable on purpose: it is the running tally of one turn, spent in place by the
+    dispatcher and handlers, and it persists between turns for reaction spending.
     """
 
     actions: int = 1

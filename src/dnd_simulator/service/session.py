@@ -7,6 +7,7 @@ import random
 import threading
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
+from functools import partial
 from typing import TYPE_CHECKING, Any, Protocol
 
 import structlog
@@ -335,89 +336,91 @@ class GameSession:
 
             brain = PlayerBrain()
             self._player_brain = brain
-
             creature_host = self.world.creature_host
-
-            # Wire on_turn: fires when Round calls brain.choose_action for the player
-            # Uses awareness from Round, which includes merchants and other live context.
-            def on_turn(
-                creature: Creature,
-                awareness: PeacefulAwareness | CombatAwareness,
-                events: list[PerceivedEvent],
-            ) -> None:
-                with language_context(self.lang):
-                    msg = build_turn_state(player, awareness, events, self.world)
-                self._last_turn_msg = msg
-                self._fire("on_turn", msg)
-
-            brain.set_on_turn(on_turn)
-
-            # Wire on_reaction: fires when Round calls brain.choose_reaction for the player
-            def on_reaction(
-                creature: Creature,
-                trigger: ReactionTrigger,
-                options: list[ReactionOption],
-            ) -> None:
-                msg = reaction_to_dict(trigger, options)
-                self._fire("on_reaction", msg)
-
-            brain.set_on_reaction(on_reaction)
+            # The player's turn awareness comes from Round, which includes merchants and other live context.
+            brain.set_on_turn(partial(self._emit_player_turn, player))
+            brain.set_on_reaction(self._emit_player_reaction)
             player.brain = brain
 
-            dispatcher = create_dispatcher(self.world)
             game_round = Round(
                 self.world,
                 creature_host,
-                dispatcher=dispatcher,
+                dispatcher=create_dispatcher(self.world),
                 rng=self.dice_rng,
                 mutation_scope=self.mutate_world,
                 action_scope=lambda: language_context(self.lang),
             )
-
-            # Wire on_action: fires after each action by any creature
-            def on_action(creature: Creature, action: Action, budget: TurnBudget | None, error: str) -> None:
-                self._last_turn_msg = None  # turn is being processed
-                with language_context(self.lang):
-                    msg = build_action_result(
-                        player, game_round, creature_host, self.world, creature, action, budget, error
-                    )
-                self._fire("on_action_result", msg)
-
-            game_round.set_on_action(on_action)
-
-            # Wire on_round_end: fires after each complete round
-            def on_round_end(result: object) -> None:
-                with language_context(self.lang):
-                    msg = build_round_state("round_result", player, game_round, creature_host, self.world)
-                self._fire("on_round_result", msg)
-
-            game_round.set_on_round_end(on_round_end)
-
+            game_round.set_on_action(partial(self._emit_action_result, player, game_round, creature_host))
+            game_round.set_on_round_end(partial(self._emit_round_result, player, game_round, creature_host))
             self._round = game_round
-
-            def run_round_loop() -> None:
-                try:
-                    game_round.run_loop()
-                except Exception:
-                    import traceback
-
-                    logger.error("round_loop_error", traceback=traceback.format_exc())
-                # Only signal game_over when the loop ended on its own (e.g. player death).
-                # stop_round() sets the stop flag for administrative stops (last listener
-                # disconnected); a transient disconnect+reconnect must not flash GAME OVER on
-                # the reconnected client.
-                if not game_round.is_stopped:
-                    self._fire("on_game_over")
 
             # Copy contextvars (session_id etc.) into the round thread
             ctx = contextvars.copy_context()
             thread = threading.Thread(
-                target=ctx.run, args=(run_round_loop,), daemon=True, name=f"round-{self.session_id}"
+                target=ctx.run, args=(self._run_round_loop, game_round), daemon=True, name=f"round-{self.session_id}"
             )
             self._round_thread = thread
             thread.start()
 
             return game_round
+
+    def _emit_player_turn(
+        self,
+        player: PlayerCharacter,
+        creature: Creature,
+        awareness: PeacefulAwareness | CombatAwareness,
+        events: list[PerceivedEvent],
+    ) -> None:
+        """PlayerBrain on_turn: the Round asks the player for an action."""
+        with language_context(self.lang):
+            msg = build_turn_state(player, awareness, events, self.world)
+        self._last_turn_msg = msg
+        self._fire("on_turn", msg)
+
+    def _emit_player_reaction(
+        self, creature: Creature, trigger: ReactionTrigger, options: list[ReactionOption]
+    ) -> None:
+        """PlayerBrain on_reaction: the Round offers the player a reaction."""
+        self._fire("on_reaction", reaction_to_dict(trigger, options))
+
+    def _emit_action_result(
+        self,
+        player: PlayerCharacter,
+        game_round: Round,
+        creature_host: CreatureHost,
+        creature: Creature,
+        action: Action,
+        budget: TurnBudget | None,
+        error: str,
+    ) -> None:
+        """Round on_action: fires after each action by any creature."""
+        self._last_turn_msg = None  # turn is being processed
+        with language_context(self.lang):
+            msg = build_action_result(player, game_round, creature_host, self.world, creature, action, budget, error)
+        self._fire("on_action_result", msg)
+
+    def _emit_round_result(
+        self, player: PlayerCharacter, game_round: Round, creature_host: CreatureHost, result: object
+    ) -> None:
+        """Round on_round_end: fires after each complete round (and each fast-forward)."""
+        with language_context(self.lang):
+            msg = build_round_state("round_result", player, game_round, creature_host, self.world)
+        self._fire("on_round_result", msg)
+
+    def _run_round_loop(self, game_round: Round) -> None:
+        """Round thread body."""
+        try:
+            game_round.run_loop()
+        except Exception:
+            import traceback
+
+            logger.error("round_loop_error", traceback=traceback.format_exc())
+        # Only signal game_over when the loop ended on its own (e.g. player death).
+        # stop_round() sets the stop flag for administrative stops (last listener
+        # disconnected); a transient disconnect+reconnect must not flash GAME OVER on
+        # the reconnected client.
+        if not game_round.is_stopped:
+            self._fire("on_game_over")
 
     def stop_round(self, *, discard_events: bool = False) -> None:
         """Stop the round while excluding concurrent start/load transitions."""

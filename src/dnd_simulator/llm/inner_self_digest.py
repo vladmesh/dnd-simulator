@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import structlog
+from openai.types.chat import ChatCompletionMessageParam
 
 from dnd_simulator.core.inner_self import (
     RELATIONSHIP_INTENSITY_MAX,
@@ -90,7 +91,7 @@ def build_messages(
     proposal: InnerSelf,
     self_id: str,
     allowed_target_ids: set[str] | None = None,
-) -> list[dict[str, object]]:
+) -> list[ChatCompletionMessageParam]:
     """Build the English prompt, with raw events before the non-authoritative proposal."""
     allowed = allowed_target_ids if allowed_target_ids is not None else _allowed_target_ids(core_before, events)
     core_data = core_before.to_dict()

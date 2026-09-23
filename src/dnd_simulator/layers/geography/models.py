@@ -34,7 +34,10 @@ class Connection:
 
 @dataclass
 class Region:
-    """A geographic area in the world."""
+    """A geographic area in the world.
+
+    Mutable on purpose: the geography tick rewrites ``weather`` and ``temperature`` in place.
+    """
 
     id: str
     name: str
