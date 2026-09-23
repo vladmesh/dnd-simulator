@@ -1,8 +1,8 @@
-import { render, screen, fireEvent } from "@testing-library/react"
+import { act, render, screen, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { MemoryRouter, Route, Routes } from "react-router"
-import "@/i18n"
+import i18n from "@/i18n"
 import { useGameStore } from "@/store/gameStore"
 import { GameScreen } from "../GameScreen"
 import type { PeacefulAwareness, CombatAwareness, PlayerStatus, PerceivedEvent } from "@/types/game"
@@ -20,6 +20,13 @@ vi.mock("../TradePanel", () => ({ TradePanel: () => <div data-testid="trade-pane
 vi.mock("../LootPanel", () => ({ LootPanel: () => <div data-testid="loot-panel">LootPanel</div> }))
 vi.mock("../ActionBar", () => ({ ActionBar: () => <div data-testid="action-bar">ActionBar</div> }))
 vi.mock("../Header", () => ({ Header: () => <div data-testid="header">Header</div> }))
+
+const setLang = vi.fn<(sessionId: string, data: { lang: string }) => Promise<{ message: string }>>(() =>
+  Promise.resolve({ message: "ok" }),
+)
+vi.mock("@/transport/apiClient", () => ({
+  api: { master: { setLang: (sessionId: string, data: { lang: string }) => setLang(sessionId, data) } },
+}))
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -206,5 +213,20 @@ describe("GameScreen — log expand overlay", () => {
 
     fireEvent.keyDown(document, { key: "Escape" })
     expect(screen.queryByTestId("log-overlay")).not.toBeInTheDocument()
+  })
+})
+
+describe("GameScreen — session language", () => {
+  it("pushes the UI language to the session on entry and on every change", async () => {
+    await i18n.changeLanguage("en")
+    setLang.mockClear()
+    renderGameScreen()
+    expect(setLang).toHaveBeenCalledWith("test-session", { lang: "en" })
+
+    await act(async () => {
+      await i18n.changeLanguage("ru")
+    })
+    expect(setLang).toHaveBeenLastCalledWith("test-session", { lang: "ru" })
+    await i18n.changeLanguage("en")
   })
 })

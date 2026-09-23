@@ -202,6 +202,7 @@ class PeacefulAwareness:
     settlements: list[dict[str, object]] | None
     territory_owner: str | None
     nation_info: dict[str, object] | None
+    minute: int = 0
     nearby: list[NearbyEntity] = field(default_factory=list)
     turn_budget: TurnBudget | None = None
     available_actions: list[ActionType] = field(default_factory=list)

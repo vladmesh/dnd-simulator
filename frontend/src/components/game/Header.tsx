@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "react-router"
+import { useNavigate } from "react-router"
 import { useTranslation } from "react-i18next"
 import { useGameStore } from "@/store/gameStore"
 import { LogOut } from "lucide-react"
@@ -14,12 +14,11 @@ function hpColor(hp: number, max: number): string {
 
 function formatTime(t: GameTime): string {
   const pad = (n: number) => String(n).padStart(2, "0")
-  return `Y${t.year} M${t.month} D${t.day} ${pad(t.hour)}:00`
+  return `Y${t.year} M${t.month} D${t.day} ${pad(t.hour)}:${pad(t.minute)}`
 }
 
 export function Header() {
   const navigate = useNavigate()
-  const { sessionId } = useParams<{ sessionId: string }>()
   const { t } = useTranslation(["game", "common"])
   const player = useGameStore((s) => s.player)
   const gameTime = useGameStore((s) => s.gameTime)
@@ -60,7 +59,7 @@ export function Header() {
 
       {/* WS status + exit */}
       <div className="ml-auto flex items-center gap-2">
-        <LanguageToggle sessionId={sessionId} />
+        <LanguageToggle />
         <span
           className={`inline-block size-2 rounded-full ${
             wsStatus === "connected" ? "bg-green-500" : wsStatus === "connecting" ? "bg-yellow-500" : "bg-red-500"

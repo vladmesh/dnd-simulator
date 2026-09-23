@@ -38,6 +38,7 @@ const player: PlayerStatus = {
 
 const peaceful = {
   hour: 9,
+  minute: 24,
   day: 2,
   month: 3,
   year: 1,
@@ -53,7 +54,12 @@ beforeEach(() => {
 
 describe("extractGameTime", () => {
   it("returns time fields from peaceful awareness", () => {
-    expect(extractGameTime(peaceful)).toEqual({ hour: 9, day: 2, month: 3, year: 1 })
+    expect(extractGameTime(peaceful)).toEqual({ hour: 9, minute: 24, day: 2, month: 3, year: 1 })
+  })
+  it("defaults minute to 0 when the payload has none", () => {
+    const noMinute = { ...(peaceful as unknown as Record<string, unknown>) }
+    delete noMinute.minute
+    expect(extractGameTime(noMinute as unknown as Awareness)).toEqual({ hour: 9, minute: 0, day: 2, month: 3, year: 1 })
   })
   it("returns null for combat awareness (no hour)", () => {
     expect(extractGameTime(combat)).toBeNull()
@@ -72,13 +78,13 @@ describe("turn handlers", () => {
     }
     useGameStore.getState().onTurn(msg)
     const s = useGameStore.getState()
-    expect(s.gameTime).toEqual({ hour: 9, day: 2, month: 3, year: 1 })
+    expect(s.gameTime).toEqual({ hour: 9, minute: 24, day: 2, month: 3, year: 1 })
     expect(s.budget).toEqual(budget)
     expect(s.isMyTurn).toBe(true)
   })
 
   it("onRoundResult in combat leaves gameTime untouched", () => {
-    useGameStore.setState({ gameTime: { hour: 5, day: 1, month: 1, year: 1 } })
+    useGameStore.setState({ gameTime: { hour: 5, minute: 0, day: 1, month: 1, year: 1 } })
     const msg: RoundResultMessage = {
       type: "round_result",
       mode: "combat",
@@ -89,7 +95,7 @@ describe("turn handlers", () => {
     }
     useGameStore.getState().onRoundResult(msg)
     const s = useGameStore.getState()
-    expect(s.gameTime).toEqual({ hour: 5, day: 1, month: 1, year: 1 })
+    expect(s.gameTime).toEqual({ hour: 5, minute: 0, day: 1, month: 1, year: 1 })
     expect(s.isMyTurn).toBe(false)
   })
 })
@@ -154,7 +160,7 @@ describe("post-flee handling", () => {
 describe("connect resets turn state", () => {
   it("clears turn fields to defaults on connect", () => {
     useGameStore.setState({
-      gameTime: { hour: 5, day: 1, month: 1, year: 1 },
+      gameTime: { hour: 5, minute: 0, day: 1, month: 1, year: 1 },
       isMyTurn: true,
       lastError: "old",
       gameOver: true,
