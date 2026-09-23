@@ -462,4 +462,4 @@ class TestPerceptionUnchanged:
         result = _format_damage(17, components, critical=False)
         assert "17 damage" in result
         assert "1d8" in result
-        assert "sneak_attack" in result
+        assert "Sneak Attack" in result

@@ -600,11 +600,35 @@ msgstr "оружие"
 msgid "ability"
 msgstr "модификатор"
 
-msgid "sneak_attack"
+msgid "STR"
+msgstr "СИЛ"
+
+msgid "DEX"
+msgstr "ЛОВ"
+
+msgid "CON"
+msgstr "ТЕЛ"
+
+msgid "INT"
+msgstr "ИНТ"
+
+msgid "WIS"
+msgstr "МДР"
+
+msgid "CHA"
+msgstr "ХАР"
+
+msgid "magic weapon"
+msgstr "магия оружия"
+
+msgid "Sneak Attack"
 msgstr "скрытая атака"
 
-msgid "dueling"
+msgid "Dueling"
 msgstr "дуэлянт"
+
+msgid "Divine Smite"
+msgstr "божественная кара"
 
 #: Roll labels
 msgid "AC"

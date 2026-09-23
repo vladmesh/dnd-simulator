@@ -397,7 +397,7 @@ class TestCombatLogI18n:
         )
         result = perceive_event(event, observer, _get_entity_fn(observer, target))
         # sneak_attack source label must be translated
-        assert "[T]sneak_attack" in result
+        assert "[T]Sneak Attack" in result
         # ability source label must be translated
         assert "[T]ability" in result
 

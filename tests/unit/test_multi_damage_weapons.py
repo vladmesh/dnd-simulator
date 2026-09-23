@@ -239,6 +239,39 @@ class TestMultiDamageWithExtraDamage:
 
 
 class TestMultiDamagePerception:
+    def test_format_damage_names_ability_in_russian_without_double_plus(self) -> None:
+        """The log line from the sprint:1451 acceptance: «1d8 рубящий + +2 str» becomes «1d8 рубящий + 2 СИЛ»."""
+        from dnd_simulator.i18n import language_context
+        from dnd_simulator.layers.entities.perception import _format_damage
+
+        components = (
+            DamageComponentPayload("weapon", "1d8", (), 4, "slashing"),
+            DamageComponentPayload("str", "", (), 2, "slashing"),
+        )
+        with language_context("ru"):
+            result = _format_damage(6, components, critical=False)
+        assert "(1d8 рубящий + 2 СИЛ)" in result
+
+    def test_format_damage_negative_modifier_is_subtracted(self) -> None:
+        from dnd_simulator.layers.entities.perception import _format_damage
+
+        components = (
+            DamageComponentPayload("weapon", "1d4", (), 3, "piercing"),
+            DamageComponentPayload("dex", "", (), -1, "piercing"),
+        )
+        assert "(1d4 piercing - 1 DEX)" in _format_damage(2, components, critical=False)
+
+    def test_format_damage_crit_weapon_dice_show_damage_type(self) -> None:
+        from dnd_simulator.layers.entities.perception import _format_damage
+
+        components = (
+            DamageComponentPayload("weapon", "1d8", (), 5, "slashing"),
+            DamageComponentPayload("weapon_crit", "1d8", (), 3, "slashing"),
+            DamageComponentPayload("sneak_attack_crit", "1d6", (), 2, "slashing"),
+        )
+        result = _format_damage(10, components, critical=True)
+        assert "(1d8 slashing + 1d8 slashing + 1d6 Sneak Attack)" in result
+
     def test_format_damage_shows_both_types(self) -> None:
         """_format_damage with 2 weapon damage components shows both types in text."""
         from dnd_simulator.layers.entities.perception import _format_damage
@@ -267,7 +300,7 @@ class TestMultiDamagePerception:
         assert "14 damage" in result
         assert "1d8" in result
         assert "1d6" in result
-        assert "+4" in result
+        assert "1d6 fire + 4 ability" in result
 
     def test_format_damage_multi_plus_smite(self) -> None:
         """Multi-damage weapon + smite shows all three sources."""
@@ -282,7 +315,7 @@ class TestMultiDamagePerception:
         assert "18 damage" in result
         assert "1d8 slashing" in result
         assert "1d6 fire" in result
-        assert "2d8 divine_smite" in result
+        assert "2d8 Divine Smite" in result
 
 
 # ---------------------------------------------------------------------------
