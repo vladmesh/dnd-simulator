@@ -41,6 +41,25 @@
   `/tmp/e2e-reports/`, итог — в worker report карточки), `/audit` (отчёт для PO, файлов в репозитории
   не пишет), `/update-docs`. Скиллы `go` и `audit-triage` сняты вместе со спринтовой машинерией.
 
+## Указатели к ROADMAP и VISION
+
+Ссылки на доску и knowledge убраны из ROADMAP.md и VISION.md, чтобы эти файлы читались людьми.
+Для планирования они здесь (пути — относительно `state/knowledge/projects/dnd-simulator/`):
+
+- История спринтов (Phase 1 … Sprint 024, sprint:1439, sprint:1440) — таблица Sprint History в
+  `README.md`, документы `sprints/NNN-*.md`, снимок прежнего раздела Done — `archive/roadmap-2026-09-21.md`.
+- Level 2–3 (ресурсы, заклинания, пропсы), граница кода и контента — `brainstorms/ecs-and-content.md`;
+  issue «Заклинания как контент».
+- Simulation Core: единая схема сейва — Sprint 021, якорь + намерения — Sprint 022, парные триггеры —
+  Sprint 023, внутреннее я NPC — sprint:1440 (issue:31d690479658e3a80c1d). Дальше — issue «Лестница
+  детализации поселений и инструменты ГМ», «Квесты как типизированные цели поверх inner-self».
+  Дизайн — `brainstorms/simulation-core.md` (модель времени, активности, внутреннего я, лестница детализации).
+- Боевой статус как единый источник истины — sprint:1439 (issue:0eaae2e74620d18ca1b0); редизайн побега —
+  issue:163d78f9e6ed548c25af.
+- World Builder: базовый wizard — Sprint 006; план — `archive/plan-world-builder.md` (карта файлов устарела).
+- Мультиплеер: темп и таймер хода — `brainstorms/simulation-core.md`; предпосылка — issue про контур
+  доступа (identity / ownership / roles).
+
 ## Что не покрыто контуром автоматически
 
 - `make test-integration` идёт через docker compose, браузерный E2E — против хостовых `uvicorn`/`vite`.

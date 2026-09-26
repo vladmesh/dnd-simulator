@@ -49,14 +49,22 @@ Every logger is tagged with a `domain` for routing and filtering:
 | `llm`             | `llm/client.py`               | API requests, tool calls, responses, errors        |
 | `llm.brain`       | `llm/brain.py`                | NPC turn start, mode (peaceful/combat)             |
 | `llm.context`     | `llm/client.py`               | Full prompt + response (debug, file dispatch only) |
-| `entity`          | `layers/entities/inner_self_digest.py` | Rejected LLM inner-self digests and rules fallback |
-| `brain`           | `core/brain.py`               | RuleBrain decisions (target selection, actions)     |
-| `action`          | `rules/action_handlers.py`    | Action execution (attack, move, say, equip, etc.)  |
-| `combat`          | `layers/entities/combat_manager.py` | Combat start/end, attack resolution, movement |
+| `llm.inner_self_digest` | `llm/inner_self_digest.py` | LLM inner-self digest calls                   |
+| `brain`           | `service/brain_factory.py`    | Brain construction, LLM-not-configured fallback    |
+| `action`          | `service/action_dispatcher.py`, `rules/handlers/*.py` | Action execution (attack, move, say, equip, loot, trade, etc.) |
+| `combat`          | `layers/entities/combat_manager.py`, `combat_resolution.py`, `rules/handlers/attack_resolution.py` | Combat start/end, attack resolution |
 | `round`           | `round.py`                    | Round lifecycle, turn budget, awareness             |
-| `entity`          | `layers/entities/layer.py`    | Activation, queries, NPC memory updates             |
+| `entity`          | `layers/entities/*.py`, `core/character.py` | Activation, encounters, materialization, scene exit, inner-self digest fallback |
+| `intent`          | `layers/entities/intent_completion.py` | Intent completion / interruption          |
+| `ecology`         | `layers/ecology/*.py`         | Lairs, squads, abstract squad combat                |
+| `rest`            | `rules/handlers/rest.py`      | Short / long rests                                  |
+| `save`            | `storage/save_schema.py`, `service/commands_save.py` | Save, load, schema migration   |
+| `service`         | `service/game_service.py`     | Session creation, world seed                        |
+| `service.player`  | `service/commands_player.py`  | Player creation, level-up                           |
 | `session`         | `service/session.py`          | Session lifecycle, listeners, round thread          |
 | `transport`       | `adapters/api/routes_ws.py`   | WebSocket connect/disconnect                        |
+| `transport.api`   | `adapters/api/app.py`         | Autosave failures                                   |
+| `transport.frontend` | `adapters/api/app.py`      | Errors reported by the browser (`POST /api/frontend-error`) |
 | `world`           | `core/world.py`               | Time advancement                                    |
 
 ## Context Propagation
