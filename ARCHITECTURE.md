@@ -59,7 +59,7 @@ src/dnd_simulator/
 │                    routes_content.py (CRUD + schemas),
 │                    routes_ws.py (WebSocket loop),
 │                    app.py / deps.py / schemas.py
-│                    also serves React SPA build
+│                    (the SPA is served by the Vite dev server, not by FastAPI)
 ├── content_loader/ — loads content from YAML directory format; locations must be explicit
 │   ├── schemas.py    — Pydantic content models (RegionContent, NpcContent, etc.) — source of truth for validation
 │   ├── schema_gen.py — JSON Schema generation from Pydantic models, enum injection, layer-refs resolution
@@ -98,7 +98,8 @@ content/           — authored game data (YAML)
 │   └── entities/{slug}/   — metadata.yaml + npcs.yaml
 └── worlds/        — assembled worlds (manifest.yaml + optional custom layer dirs)
     ├── sword_vale/         — multi-region world (all layers from library)
-    └── test_vale/          — minimal test world (all custom layers)
+    ├── test_vale/          — minimal test world (all custom layers)
+    └── level_up_test/      — small arena world used for level-up regression tests
 
 frontend/          — React + TypeScript SPA (Vite + shadcn/ui + Zustand)
 ├── src/components/         — LandingPage (Player/DM split), ErrorBoundary
@@ -199,7 +200,7 @@ Both brains read the core: `RuleBrain` checks relations and mood directly (targe
 
 **Digest** compresses experience into the core at boundaries (`DigestBoundary`: scene end, intent end, buffer overflow). The rules twin `rules/inner_self_digest.py` always runs and is the only mechanism in Classic mode; for an LLM brain its result is an explicitly non-authoritative proposal passed to `llm/inner_self_digest.py`, which writes a full validated core and journal, falling back to the rules proposal on failure. Inner selves can be pre-loaded from YAML content files, and the master reads the whole thing but may only replace relations, mood and goals.
 
-The older tag-based `NpcMemory` / `NpcTag` model and `llm/summarizer.py` no longer exist — they were replaced by `InnerSelf` in sprint:1440.
+The older tag-based `NpcMemory` / `NpcTag` model and `llm/summarizer.py` no longer exist — they were replaced by `InnerSelf`.
 
 `Character.perceive(target: Entity) -> str` — observer extracts visible traits from target (name if same settlement, otherwise race + appearance). Health and conditions are surfaced through the inspect action, not baked into the perceived name (keeps event logs readable). LLM never receives raw character data, only what the observer can perceive.
 
@@ -288,7 +289,7 @@ Centralized derived stat computation replacing ad-hoc logic scattered across com
 
 ## Save Schema & Reproducibility
 
-**Save format** (Sprint 021): one versioned Pydantic envelope — `SaveGame(schema_version=1, meta, world)` in `storage/save_schema.py`. `WorldSave` carries the world seed, dice RNG state, time, last tick times, and typed layer states: each layer owns a state model (`layers/*/state.py`, `layers/entities/save_models.py`) that is the authoritative format (`extra="forbid"`), while the `Layer` ABC keeps its dict-facing `get_state()/load_state()` signatures (core stays pydantic-free). Entity payloads are a discriminated union on `entity_type` (`PlayerSave`/`NpcSave`/`CreatureSave`/`ContainerSave`) built directly from live objects in `entity_serialization.py`; combat state persists turn order, round, battle map, and sides. `save_game()` and `autosave_session()` build the same envelope; `load_game()` validates it and rejects legacy saves without `schema_version`.
+**Save format** (Sprint 021): one versioned Pydantic envelope — `SaveGame(schema_version=2, meta, world)` in `storage/save_schema.py`; v1 saves are migrated on load by `migrate_v1_save`. `WorldSave` carries the world seed, dice RNG state, time, last tick times, and typed layer states: each layer owns a state model (`layers/*/state.py`, `layers/entities/save_models.py`) that is the authoritative format (`extra="forbid"`), while the `Layer` ABC keeps its dict-facing `get_state()/load_state()` signatures (core stays pydantic-free). Entity payloads are a discriminated union on `entity_type` (`PlayerSave`/`NpcSave`/`CreatureSave`/`ContainerSave`) built directly from live objects in `entity_serialization.py`; combat state persists turn order, round, battle map, and sides. `save_game()` and `autosave_session()` build the same envelope; `load_game()` validates it and rejects legacy saves without `schema_version`.
 
 **Reproducibility**: `DND_WORLD_SEED` (env; random + logged when absent) seeds the world in `game_service`; per-layer seeds are derived deterministically and passed to layer-owned `random.Random` streams. Each `GameSession` owns its dice RNG (`DND_DICE_SEED` supplies the initial seed), so concurrent sessions cannot shift one another's rolls. All RNG states are serialized into the save, so a loaded game continues the same random sequences. Same seed plus the same content produces identical world evolution.
 
