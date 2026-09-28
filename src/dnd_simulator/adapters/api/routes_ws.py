@@ -6,11 +6,13 @@ Protocol (action → awareness cycle):
          "budget": {...}, "player": {...}, "location": {...}}
         {"type": "action_result", "action": "...", "events": [...], "budget": {...}, "player": {...}}
         {"type": "round_result", "events": [...], "player": {...}}
+        {"type": "reaction_prompt", "trigger": {...}, "options": [...]}
         {"type": "error", "message": "..."}
         {"type": "game_over"}
 
     Client → Server:
         {"type": "action", "name": "attack", "params": {"target_id": "..."}}
+        {"type": "reaction", "name": "opportunity_attack|skip", "params": {...}}  (one answer per prompt)
 """
 
 from __future__ import annotations
@@ -26,7 +28,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketDisconnect as _StarletteDisconnect
 
 from dnd_simulator.adapters.api.deps import get_service
-from dnd_simulator.i18n import SUPPORTED_LANGUAGES, _
+from dnd_simulator.i18n import SUPPORTED_LANGUAGES, _, language_context
 from dnd_simulator.service.action_parsing import ActionParseError, parse_action
 from dnd_simulator.service.session import GameSession
 
@@ -218,6 +220,11 @@ async def websocket_game(
     last_turn = session.get_last_turn_msg()
     if last_turn is not None:
         await ws.send_json(last_turn)
+    # Likewise a reaction prompt the round is blocked on: the connection it was sent to may be
+    # gone while the round keeps running (a reconnect that beats the old close, a second tab).
+    pending_reaction = session.get_pending_reaction_msg()
+    if pending_reaction is not None:
+        await ws.send_json(pending_reaction)
 
     session.add_listener(listener)
 
@@ -263,7 +270,10 @@ async def websocket_game(
                 except ActionParseError as err:
                     await ws.send_json({"type": "error", "message": _("Unknown reaction: {}").format(err.name)})
                     continue
-                session.submit_player_reaction(action)
+                if not session.submit_player_reaction(action):
+                    with language_context(session.lang):
+                        message = _("No reaction prompt is pending")
+                    await ws.send_json({"type": "error", "message": message})
             else:
                 await ws.send_json({"type": "error", "message": _("Unknown message type: {}").format(msg_type)})
 

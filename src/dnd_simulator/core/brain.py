@@ -8,6 +8,7 @@ Concrete AI implementations live near their dependencies:
 from __future__ import annotations
 
 import queue
+import threading
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from enum import StrEnum
@@ -83,6 +84,11 @@ class PlayerBrain(Brain):
         self._reaction_queue: queue.Queue[Action] = queue.Queue()
         self._on_turn: OnTurnCallback | None = None
         self._on_reaction: OnReactionCallback | None = None
+        # A reaction answer is accepted only while a prompt is pending, so a stray or
+        # duplicate answer can never be consumed by a later prompt the player has not seen.
+        self._reaction_lock = threading.Lock()
+        self._reaction_pending = False
+        self._closed = False
 
     def set_on_turn(self, callback: OnTurnCallback) -> None:
         """Transport sets this to receive awareness when it's the player's turn."""
@@ -110,6 +116,10 @@ class PlayerBrain(Brain):
     ) -> Action:
         if self._on_reaction is None:
             raise RuntimeError("PlayerBrain.choose_reaction called without on_reaction wired")
+        with self._reaction_lock:
+            if self._closed:
+                return SKIP
+            self._reaction_pending = True
         self._on_reaction(creature, trigger, options)
         return self._reaction_queue.get()
 
@@ -117,6 +127,21 @@ class PlayerBrain(Brain):
         """Called by transport to provide the player's chosen action."""
         self._action_queue.put(action)
 
-    def submit_reaction(self, action: Action) -> None:
-        """Called by transport to provide the player's chosen reaction."""
-        self._reaction_queue.put(action)
+    def submit_reaction(self, action: Action) -> bool:
+        """Called by transport to answer the pending reaction prompt.
+
+        Exactly one answer is accepted per prompt. Returns False (and drops the answer)
+        when no prompt is pending: a stray or second answer is not queued for a later prompt.
+        """
+        with self._reaction_lock:
+            if not self._reaction_pending:
+                return False
+            self._reaction_pending = False
+            self._reaction_queue.put(action)
+        return True
+
+    def close(self) -> None:
+        """Round is stopping: skip a pending reaction prompt and decline every later one."""
+        with self._reaction_lock:
+            self._closed = True
+        self.submit_reaction(SKIP)

@@ -82,12 +82,75 @@ class TestPlayerBrainReaction:
         with pytest.raises(RuntimeError):
             brain.choose_reaction(creature, trigger, options)
 
-    def test_submit_reaction_puts_on_queue(self) -> None:
-        """submit_reaction puts action on _reaction_queue."""
+    def test_submit_reaction_without_pending_prompt_is_refused(self) -> None:
+        """A stray answer (no prompt pending) is dropped, never queued for a later prompt."""
         brain = PlayerBrain()
-        action = Action(name=ActionType.SKIP)
-        brain.submit_reaction(action)
-        assert brain._reaction_queue.get_nowait() == action
+        assert brain.submit_reaction(Action(name=ActionType.OPPORTUNITY_ATTACK)) is False
+        assert brain._reaction_queue.empty()
+
+    def test_stray_answer_does_not_answer_the_next_prompt(self) -> None:
+        """Regression: a reaction sent before the prompt used to auto-answer it."""
+        brain = PlayerBrain()
+        prompted = threading.Event()
+        brain.set_on_reaction(lambda creature, trigger, options: prompted.set())
+        brain.submit_reaction(Action(name=ActionType.OPPORTUNITY_ATTACK, params={"target_id": "goblin_1"}))
+
+        result: list[Action] = []
+        thread = threading.Thread(
+            target=lambda: result.append(brain.choose_reaction(_make_creature(), _make_trigger(), _make_options())),
+            daemon=True,
+        )
+        thread.start()
+        assert prompted.wait(timeout=1.0)
+        thread.join(timeout=0.2)
+        assert thread.is_alive(), "the prompt must wait for an answer given after it"
+
+        assert brain.submit_reaction(Action(name=ActionType.SKIP)) is True
+        thread.join(timeout=1.0)
+        assert result == [Action(name=ActionType.SKIP)]
+
+    def test_only_one_answer_per_prompt(self) -> None:
+        """A duplicate answer (double click) is refused, so it cannot answer the next prompt."""
+        brain = PlayerBrain()
+        prompted = threading.Event()
+        brain.set_on_reaction(lambda creature, trigger, options: prompted.set())
+        thread = threading.Thread(
+            target=brain.choose_reaction, args=(_make_creature(), _make_trigger(), _make_options()), daemon=True
+        )
+        thread.start()
+        assert prompted.wait(timeout=1.0)
+
+        assert brain.submit_reaction(Action(name=ActionType.SKIP)) is True
+        assert brain.submit_reaction(Action(name=ActionType.SKIP)) is False
+        thread.join(timeout=1.0)
+        assert not thread.is_alive()
+        assert brain._reaction_queue.empty()
+
+    def test_close_skips_pending_prompt(self) -> None:
+        brain = PlayerBrain()
+        prompted = threading.Event()
+        brain.set_on_reaction(lambda creature, trigger, options: prompted.set())
+        result: list[Action] = []
+        thread = threading.Thread(
+            target=lambda: result.append(brain.choose_reaction(_make_creature(), _make_trigger(), _make_options())),
+            daemon=True,
+        )
+        thread.start()
+        assert prompted.wait(timeout=1.0)
+
+        brain.close()
+        thread.join(timeout=1.0)
+        assert result == [Action(name=ActionType.SKIP)]
+
+    def test_close_declines_later_prompts_without_blocking(self) -> None:
+        """A stop that lands before the prompt must not leave the round thread blocked."""
+        brain = PlayerBrain()
+        calls: list[object] = []
+        brain.set_on_reaction(lambda creature, trigger, options: calls.append(trigger))
+        brain.close()
+
+        assert brain.choose_reaction(_make_creature(), _make_trigger(), _make_options()) == Action(name=ActionType.SKIP)
+        assert calls == []
 
 
 class TestSessionReactionWiring:

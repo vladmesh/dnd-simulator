@@ -114,6 +114,8 @@ class GameSession:
     _spectators: list[SessionEventListener] = field(default_factory=list, init=False, repr=False)
     _last_turn_msg: dict[str, Any] | None = field(default=None, init=False, repr=False)
     _last_turn_lang: str = field(default="", init=False, repr=False)
+    # The reaction prompt the round is blocked on, replayed to a client that connects meanwhile.
+    _pending_reaction_msg: dict[str, Any] | None = field(default=None, init=False, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
     _round_transition_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
     _world_state_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
@@ -241,6 +243,10 @@ class GameSession:
             running = self._round_thread is not None and self._round_thread.is_alive()
         return msg if running else None
 
+    def get_pending_reaction_msg(self) -> dict[str, Any] | None:
+        """Return the unanswered reaction prompt the round is waiting on, for replay by the caller."""
+        return self._pending_reaction_msg
+
     def remove_listener(self, listener: SessionEventListener) -> None:
         self._bind_session_context()
         player_empty = False
@@ -348,6 +354,7 @@ class GameSession:
 
             brain = PlayerBrain()
             self._player_brain = brain
+            self._pending_reaction_msg = None  # a prompt of the previous round's brain is void
             creature_host = self.world.creature_host
             # The player's turn awareness comes from Round, which includes merchants and other live context.
             brain.set_on_turn(partial(self._emit_player_turn, player))
@@ -395,7 +402,9 @@ class GameSession:
         self, creature: Creature, trigger: ReactionTrigger, options: list[ReactionOption]
     ) -> None:
         """PlayerBrain on_reaction: the Round offers the player a reaction."""
-        self._fire("on_reaction", reaction_to_dict(trigger, options))
+        msg = reaction_to_dict(trigger, options)
+        self._pending_reaction_msg = msg
+        self._fire("on_reaction", msg)
 
     def _emit_action_result(
         self,
@@ -457,7 +466,8 @@ class GameSession:
             game_round.stop()
         if brain is not None:
             brain.submit_action(Action(name=ActionType.END_TURN))  # unblock queue
-            brain.submit_reaction(Action(name=ActionType.SKIP))
+            brain.close()  # unblock a pending reaction prompt and skip any later one
+        self._pending_reaction_msg = None
         if thread is not None:
             thread.join(timeout=self._round_stop_timeout_seconds)
             if thread.is_alive():
@@ -483,6 +493,7 @@ class GameSession:
     def clear_cached_turn(self) -> None:
         """Discard transport state tied to the world that was just replaced."""
         self._last_turn_msg = None
+        self._pending_reaction_msg = None
 
     def replace_world_state(self, loader: Callable[[], None]) -> None:
         """Pause the round and atomically replace state before another start can win."""
@@ -510,12 +521,18 @@ class GameSession:
 
         brain.submit_action(action)
 
-    def submit_player_reaction(self, action: Action) -> None:
-        """Submit a player reaction to the brain queue.
+    def submit_player_reaction(self, action: Action) -> bool:
+        """Answer the pending reaction prompt.
 
+        Returns False when no prompt is pending (the answer is dropped).
         Raises RuntimeError if round is not running.
         """
         brain = self._player_brain
         if brain is None:
             raise RuntimeError("Round not running — cannot submit reaction")
-        brain.submit_reaction(action)
+        answered = self._pending_reaction_msg
+        if not brain.submit_reaction(action):
+            return False
+        if self._pending_reaction_msg is answered:  # not a newer prompt emitted since
+            self._pending_reaction_msg = None
+        return True

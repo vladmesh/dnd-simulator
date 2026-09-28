@@ -477,6 +477,59 @@ class TestSubmitWithoutRound:
 
 
 # ---------------------------------------------------------------------------
+# Pending reaction prompt (replayed to a client that connects while it waits)
+# ---------------------------------------------------------------------------
+
+
+def _prompting_session() -> tuple[GameSession, PlayerBrain, threading.Thread]:
+    """A session whose player brain is blocked on a reaction prompt fired through the session."""
+    from dnd_simulator.core.character import Character
+    from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, TriggerType
+
+    session = _session()
+    brain = PlayerBrain()
+    brain.set_on_reaction(session._emit_player_reaction)
+    session._player_brain = brain
+    trigger = ReactionTrigger(TriggerType.LEAVING_REACH, "goblin", {"mover_id": "goblin"})
+    options = [ReactionOption(ActionType.OPPORTUNITY_ATTACK, "Attack", {"target_id": "goblin"})]
+    thread = threading.Thread(
+        target=brain.choose_reaction, args=(Character(id="p", name="P", location_id="l"), trigger, options), daemon=True
+    )
+    thread.start()
+    deadline = time.monotonic() + 1.0
+    while session.get_pending_reaction_msg() is None:
+        assert time.monotonic() < deadline, "prompt never fired"
+        time.sleep(0.01)
+    return session, brain, thread
+
+
+class TestPendingReactionPrompt:
+    def test_prompt_is_cached_until_answered(self) -> None:
+        session, _, thread = _prompting_session()
+        pending = session.get_pending_reaction_msg()
+        assert pending is not None
+        assert pending["type"] == "reaction_prompt"
+        assert pending["trigger"]["source_creature_id"] == "goblin"
+
+        assert session.submit_player_reaction(Action(name=ActionType.SKIP)) is True
+        thread.join(timeout=1.0)
+        assert session.get_pending_reaction_msg() is None
+
+    def test_stray_answer_is_refused_and_keeps_no_prompt(self) -> None:
+        session = _session()
+        session._player_brain = PlayerBrain()
+        assert session.submit_player_reaction(Action(name=ActionType.SKIP)) is False
+        assert session.get_pending_reaction_msg() is None
+
+    def test_stop_skips_and_clears_the_pending_prompt(self) -> None:
+        session, _, thread = _prompting_session()
+        session.stop_round()
+        thread.join(timeout=1.0)
+        assert not thread.is_alive()
+        assert session.get_pending_reaction_msg() is None
+
+
+# ---------------------------------------------------------------------------
 # resolve_abstract_move
 # ---------------------------------------------------------------------------
 
