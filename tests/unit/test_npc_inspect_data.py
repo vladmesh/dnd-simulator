@@ -12,12 +12,14 @@ from dnd_simulator.core.character import (
     AbilityScores,
     Attack,
     Character,
+    Creature,
     DamageComponent,
     DamageType,
     NpcRole,
     Race,
 )
 from dnd_simulator.core.models import Answer, Query
+from dnd_simulator.i18n import _
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
 
@@ -123,12 +125,14 @@ class TestNearbyEntityStructuredFields:
     """build_nearby_entities() returns NearbyEntity with structured fields from Npc data."""
 
     def test_nearby_npc_has_structured_fields(self) -> None:
-        player = Character(
+        # A neighbour from the same settlement knows Marta by name.
+        player = Npc(
             id="p1",
             name="Hero",
             location_id="tavern",
             ability_scores=_scores(STR=16),
             attacks=(_SWORD,),
+            settlement_id="silverport",
         )
         npc = Npc(
             id="marta",
@@ -201,3 +205,63 @@ class TestNearbyEntityStructuredFields:
         assert n.role == ""
         assert n.npc_description == ""
         assert n.is_merchant is False
+
+
+class TestNearbyStrangerAnonymity:
+    """The nearby payload uses the same known-vs-stranger rule as the event log (perceive())."""
+
+    def _stranger(self) -> Npc:
+        return Npc(
+            id="marta",
+            name="Marta",
+            location_id="tavern",
+            race=Race.HUMAN,
+            role=NpcRole.TAVERN_KEEPER,
+            description="A cheerful woman with rosy cheeks.",
+            settlement_id="silverport",
+        )
+
+    def test_stranger_is_described_by_race_without_name(self) -> None:
+        player = Character(id="p1", name="Hero", location_id="tavern")
+        stranger = self._stranger()
+
+        layer = EntitiesLayer([player, stranger])
+        n = layer.build_nearby_entities(player, hour=14, query_fn=_null_query)[0]
+
+        assert n.name == ""
+        assert n.description == player.perceive(stranger)
+        assert n.description.startswith(_("human"))
+        assert "Marta" not in n.description
+        assert "Marta" not in n.npc_description
+
+    def test_known_npc_is_shown_by_name(self) -> None:
+        neighbour = Npc(id="p1", name="Hero", location_id="tavern", settlement_id="silverport")
+        marta = self._stranger()
+
+        layer = EntitiesLayer([neighbour, marta])
+        n = layer.build_nearby_entities(neighbour, hour=14, query_fn=_null_query)[0]
+
+        assert n.name == "Marta"
+        assert n.description == "Marta"
+
+    def test_stranger_corpse_in_combat_loot_hides_name(self) -> None:
+        player = Character(id="p1", name="Hero", location_id="tavern")
+        corpse = self._stranger()
+        corpse.current_hp = 0
+
+        layer = EntitiesLayer([player, corpse])
+        lootables = layer._awareness._build_combat_lootables(player, None)
+
+        assert [(lt.id, lt.name) for lt in lootables] == [("marta", "")]
+        assert "Marta" not in lootables[0].description
+
+    def test_known_name_rule(self) -> None:
+        player = Character(id="p1", name="Hero", location_id="tavern")
+        neighbour = Npc(id="n1", name="Bors", location_id="tavern", settlement_id="silverport")
+        wolf = Creature(id="w", name="Wolf", location_id="tavern", max_hp=11, current_hp=11)
+        marta = self._stranger()
+
+        assert player.known_name(marta) == ""
+        assert neighbour.known_name(marta) == "Marta"
+        # Non-character creatures are named by what they are.
+        assert player.known_name(wolf) == "Wolf"

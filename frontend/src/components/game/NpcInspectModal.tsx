@@ -22,6 +22,8 @@ interface NpcInspectModalProps {
   open: boolean
   onClose: () => void
   isCombat: boolean
+  /** Unique player-facing label from the list that opened the modal (never the internal id). */
+  targetLabel?: string
 }
 
 function isNearbyEntity(e: NearbyEntity | CombatEntity): e is NearbyEntity {
@@ -33,7 +35,7 @@ function sendAction(name: string, params?: Record<string, unknown>) {
   useGameStore.getState().setWaitingForAction(true)
 }
 
-export function NpcInspectModal({ entity, open, onClose, isCombat }: NpcInspectModalProps) {
+export function NpcInspectModal({ entity, open, onClose, isCombat, targetLabel }: NpcInspectModalProps) {
   const { t } = useTranslation(["game", "common"])
   const awareness = useGameStore((s) => s.awareness)
   const isMyTurn = useGameStore((s) => s.isMyTurn)
@@ -52,7 +54,9 @@ export function NpcInspectModal({ entity, open, onClose, isCombat }: NpcInspectM
     merchant = awareness.merchants?.find((m) => m.id === entity.id)
   }
 
-  const displayName = nearby?.name || entity.description || entity.id
+  // The server blanks a stranger's name, so this is the known name or the perceived race.
+  const displayName = nearby?.name || entity.description || t("game:unknown_creature")
+  const targetName = targetLabel || displayName
   const raceKey = nearby?.race ? `game:race_${nearby.race.toLowerCase()}` : ""
   const roleKey = nearby?.role ? `game:role_${nearby.role.toLowerCase()}` : ""
 
@@ -162,7 +166,7 @@ export function NpcInspectModal({ entity, open, onClose, isCombat }: NpcInspectM
               <Button
                 size="xs"
                 variant="destructive"
-                aria-label={t("game:attack_target", { target: entity.id })}
+                aria-label={t("game:attack_target", { target: targetName })}
                 onClick={handleAttack}
               >
                 <Sword className="mr-1 size-3" /> {t("game:attack")}
@@ -192,7 +196,7 @@ export function NpcInspectModal({ entity, open, onClose, isCombat }: NpcInspectM
           {showSmite && (
             <SmiteChoice
               slots={spellSlots}
-              targetName={entity.id}
+              targetName={targetName}
               onChoice={(slotLevel) => {
                 sendAction("attack", buildAttackParams(entity.id, slotLevel))
                 setShowSmite(false)

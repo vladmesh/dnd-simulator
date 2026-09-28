@@ -360,13 +360,25 @@ class Character(Creature):
         Health status and conditions are surfaced through the inspect action,
         not baked into the name — keeps event logs readable.
         """
+        known = self.known_name(target)
+        if known:
+            return known
         if isinstance(target, Character):
-            if self._knows_by_name(target):
-                return target.name
             parts: list[str] = [_(target.race.value.replace("_", " "))]
             if target.appearance:
                 parts.append(target.appearance)
             return ", ".join(parts)
+        return target.name
+
+    def known_name(self, target: Entity) -> str:
+        """The name this character may show for target, or ``""`` for a stranger.
+
+        Single source of the known-vs-stranger rule behind :meth:`perceive`: a
+        stranger ``Character`` has no player-visible name, while non-character
+        entities (monsters, containers) are named by what they are.
+        """
+        if isinstance(target, Character) and not self._knows_by_name(target):
+            return ""
         return target.name
 
     def _knows_by_name(self, target: Character) -> bool:

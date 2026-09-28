@@ -338,7 +338,7 @@ class AwarenessBuilder:
             result.append(
                 CombatLootable(
                     id=e.id,
-                    name=e.name,
+                    name=creature.known_name(e) if isinstance(creature, Character) else e.name,
                     description=desc,
                     in_reach=reason_key is None,
                     distance_ft=distance_ft,
@@ -390,8 +390,9 @@ class AwarenessBuilder:
             if lootable and isinstance(e, InventoryHolder):
                 loot_items = [item_info(i) for i in e.inventory]
                 loot_gold = e.gold
-            # Structured fields for inspect card — all populated from AwarenessBuilder
-            name = e.name
+            # Structured fields for inspect card — all populated from AwarenessBuilder.
+            # A stranger's name stays hidden: same known-vs-stranger rule as perceive().
+            name = creature.known_name(e) if isinstance(creature, Character) else e.name
             race = ""
             role = ""
             faction_id = e.faction_id

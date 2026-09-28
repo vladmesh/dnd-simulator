@@ -10,6 +10,8 @@
   "talk": "Говорить",
   "inspect": "Осмотреть",
   "inspect_target": "Осмотреть {{target}}",
+  "unknown_creature": "некто",
+  "target_ordinal": "{{target}} №{{n}}",
   "location": "Локация",
   "paths": "Пути:",
   "journey_to": "Путь к {{destination}}",

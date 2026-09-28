@@ -9,6 +9,7 @@ import { NpcInspectModal } from "./NpcInspectModal"
 import { SmiteChoice } from "./SmiteChoice"
 import { buildAttackParams } from "./attackParams"
 import { getSpellSlots } from "./spellSlots"
+import { perceivedLabels } from "./targetLabels"
 
 export function Perception() {
   const { t } = useTranslation(["game", "common"])
@@ -23,6 +24,8 @@ export function Perception() {
   if (!awareness) return null
 
   const nearby = awareness.nearby
+  // Display labels never contain the internal id; it is only the action handle (target_id).
+  const labels = perceivedLabels(nearby, t)
   const isCombat = mode === "combat" && "self_hp" in awareness
   const spellSlots = isCombat && "self_resource_pools" in awareness
     ? getSpellSlots(awareness.self_resource_pools ?? [])
@@ -50,7 +53,7 @@ export function Perception() {
         <p className="text-xs text-muted-foreground">{t("common:nobody_around")}</p>
       )}
       {nearby.map((entity) => {
-        const targetName = entity.description || entity.id
+        const targetName = labels.get(entity.id) ?? t("game:unknown_creature")
         const isLootable = "lootable" in entity && entity.lootable
         return (
         <div key={entity.id} className="rounded border border-border p-2 text-xs">
@@ -60,9 +63,6 @@ export function Perception() {
               {entity.is_wounded && <span className="ml-1 text-red-400">{t("game:wounded")}</span>}
             </div>
           </div>
-          {entity.description && entity.description !== entity.id && (
-            <p className="mt-0.5 text-muted-foreground">{entity.id}</p>
-          )}
           {isMyTurn && (
             <div className="mt-1 space-y-1">
               <div className="flex gap-1">
@@ -70,7 +70,7 @@ export function Perception() {
                   <Button
                     size="xs"
                     variant="destructive"
-                    aria-label={t("game:attack_target", { target: entity.id })}
+                    aria-label={t("game:attack_target", { target: targetName })}
                     onClick={() => {
                       if (spellSlots.length > 0) {
                         setSmiteTarget(smiteTarget === entity.id ? null : entity.id)
@@ -86,7 +86,7 @@ export function Perception() {
                   <Button
                     size="xs"
                     variant="secondary"
-                    aria-label={t("game:talk_to", { target: entity.id })}
+                    aria-label={t("game:talk_to", { target: targetName })}
                     onClick={() => setTalkTarget(talkTarget === entity.id ? null : entity.id)}
                   >
                     <MessageCircle className="mr-1 size-3" /> {t("game:talk")}
@@ -95,7 +95,7 @@ export function Perception() {
                 <Button
                   size="xs"
                   variant="ghost"
-                  aria-label={t("game:inspect_target", { target: entity.id })}
+                  aria-label={t("game:inspect_target", { target: targetName })}
                   onClick={() => setInspectEntity(entity)}
                 >
                   <Eye className="size-3" />
@@ -104,7 +104,7 @@ export function Perception() {
               {smiteTarget === entity.id && (
                 <SmiteChoice
                   slots={spellSlots}
-                  targetName={entity.id}
+                  targetName={targetName}
                   onChoice={(slotLevel) => {
                     sendAction("attack", buildAttackParams(entity.id, slotLevel))
                     setSmiteTarget(null)
@@ -138,6 +138,7 @@ export function Perception() {
 
       <NpcInspectModal
         entity={inspectEntity}
+        targetLabel={inspectEntity ? labels.get(inspectEntity.id) : undefined}
         open={inspectEntity !== null}
         onClose={() => setInspectEntity(null)}
         isCombat={isCombat}

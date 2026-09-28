@@ -100,10 +100,11 @@ class TestKillReputationDrop:
                 turn = _get_turn(sock)
                 assert turn["mode"] == "peaceful", f"Expected peaceful mode, got {turn['mode']}"
 
-                # Find the neutral NPC
+                # Find the neutral NPC by its action handle — a stranger's name is not exposed
                 nearby = turn["awareness"]["nearby"]
-                npc = next((e for e in nearby if e["name"] == "Weak Neutral"), None)
-                assert npc is not None, f"Expected Weak Neutral NPC, got: {[e['name'] for e in nearby]}"
+                npc = next((e for e in nearby if e["id"] == "weak_neutral"), None)
+                assert npc is not None, f"Expected Weak Neutral NPC, got: {[e['id'] for e in nearby]}"
+                assert npc["name"] == "", "a stranger's name must not reach the player"
                 npc_id = npc["id"]
 
                 # Attack the neutral NPC — triggers auto-hostility combat
