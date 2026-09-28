@@ -1,0 +1,4 @@
+ws_floor:
+  name: WS Test Floor
+  region: ws_arena
+  description: A training floor for WebSocket protocol tests.

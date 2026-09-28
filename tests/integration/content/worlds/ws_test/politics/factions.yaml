@@ -1,0 +1,17 @@
+hero_faction:
+  name: Heroes
+  relations:
+    enemy_faction: hostile
+    prey_faction: neutral
+
+enemy_faction:
+  name: Raiders
+  relations:
+    hero_faction: hostile
+    prey_faction: hostile
+
+prey_faction:
+  name: Prey
+  relations:
+    hero_faction: neutral
+    enemy_faction: hostile

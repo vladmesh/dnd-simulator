@@ -1,0 +1,53 @@
+# The player starts at [20, 30], adjacent to the runner. The prey is a third faction: hostile
+# to the runner, neutral to the player, and immobile. Tests wound it via the GM API, and
+# RuleBrain's target scoring prefers a wounded enemy (+50) over an adjacent one (+30 + distance),
+# so the runner deterministically walks out of the player's reach (the player gets a
+# LEAVING_REACH reaction prompt) and attacks the prey in the same turn (move_to + attack).
+ws_runner:
+  name: Raider
+  start_location: ws_floor
+  role: gladiator
+  race: human
+  class: fighter
+  faction: enemy_faction
+  hp: 100
+  ac: 10
+  speed: 30
+  combat_position: [15, 30]
+  ability_scores:
+    str: 10
+    dex: 10
+    con: 14
+    int: 8
+    wis: 10
+    cha: 8
+  personality: 'Hunt the weakest enemy.'
+  items:
+  - name: Club
+    type: weapon
+    weapon_id: club
+    category: simple
+    attack_name: club swing
+    damage:
+    - dice: 1d4
+      type: bludgeoning
+    ability: str
+
+ws_prey:
+  name: Wounded Deer
+  start_location: ws_floor
+  role: commoner
+  race: human
+  faction: prey_faction
+  hp: 100
+  ac: 10
+  speed: 0
+  combat_position: [40, 30]
+  ability_scores:
+    str: 8
+    dex: 10
+    con: 10
+    int: 2
+    wis: 10
+    cha: 4
+  personality: 'Stay still.'
