@@ -21,7 +21,11 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class NearbyEntity:
-    """An entity visible to the observer (peaceful context)."""
+    """An entity visible to the observer (peaceful context).
+
+    ``description`` is the observer's ``perceive()`` of the entity; ``name`` is empty
+    for a stranger (see ``Character.known_name``), so neither leaks an unknown name.
+    """
 
     id: str
     description: str

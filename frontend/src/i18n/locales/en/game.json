@@ -10,6 +10,8 @@
   "talk": "Talk",
   "inspect": "Inspect",
   "inspect_target": "Inspect {{target}}",
+  "unknown_creature": "someone",
+  "target_ordinal": "{{target}} #{{n}}",
   "location": "Location",
   "paths": "Paths:",
   "journey_to": "Traveling to {{destination}}",

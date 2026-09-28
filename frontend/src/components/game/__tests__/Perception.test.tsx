@@ -98,7 +98,7 @@ describe("Perception — corpse/lootable entities hide Attack/Talk", () => {
 
 describe("Perception — target-aware attack accessibility", () => {
   // Two same-race NPCs: their perceived descriptions collide ("человек"/"Goblin"), so the
-  // accessible name must key on the unique entity id — matching the action-bar contract.
+  // accessible name gets an ordinal suffix — never the internal entity id.
   const twoTargets: NearbyEntity[] = [
     { id: "goblin_1", description: "Goblin", lootable: false },
     { id: "goblin_2", description: "Goblin", lootable: false },
@@ -108,8 +108,8 @@ describe("Perception — target-aware attack accessibility", () => {
     useGameStore.setState({ awareness: makeAwareness(twoTargets) })
     render(<Perception />)
 
-    const attackOne = screen.getByRole("button", { name: "Attack goblin_1" })
-    const attackTwo = screen.getByRole("button", { name: "Attack goblin_2" })
+    const attackOne = screen.getByRole("button", { name: "Attack Goblin #1" })
+    const attackTwo = screen.getByRole("button", { name: "Attack Goblin #2" })
     expect(attackOne).not.toBe(attackTwo)
 
     await userEvent.click(attackTwo)
@@ -124,11 +124,11 @@ describe("Perception — target-aware attack accessibility", () => {
     useGameStore.setState({ awareness: makeAwareness(twoTargets) })
     render(<Perception />)
 
-    await userEvent.click(screen.getByRole("button", { name: "Inspect goblin_1" }))
+    await userEvent.click(screen.getByRole("button", { name: "Inspect Goblin #1" }))
 
     // Radix hides the background list from the a11y tree, so the modal's control is
-    // the only "Attack goblin_1" button reachable by role + name.
-    const modalAttack = screen.getByRole("button", { name: "Attack goblin_1" })
+    // the only "Attack Goblin #1" button reachable by role + name.
+    const modalAttack = screen.getByRole("button", { name: "Attack Goblin #1" })
     expect(modalAttack).toBeInTheDocument()
     await userEvent.click(modalAttack)
     expect(sendMock).toHaveBeenCalledWith({
@@ -145,13 +145,13 @@ describe("Perception — target-aware attack accessibility", () => {
     useGameStore.setState({ awareness: makeAwareness(twoTargets) })
     render(<Perception />)
 
-    expect(screen.getByRole("button", { name: "Атаковать goblin_1" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Атаковать goblin_2" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Атаковать Goblin №1" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Атаковать Goblin №2" })).toBeInTheDocument()
   })
 
   it.each([
-    ["en", "Attack goblin_1", "Attack goblin_1 + Smite (slot 1)"],
-    ["ru", "Атаковать goblin_1", "Атаковать goblin_1 + Кара (ячейка 1)"],
+    ["en", "Attack Goblin", "Attack Goblin + Smite (slot 1)"],
+    ["ru", "Атаковать Goblin", "Атаковать Goblin + Кара (ячейка 1)"],
   ])("exposes smite menu items selectable by localized accessible name (%s)", async (lang, normal, withSmite) => {
     await act(async () => {
       await i18n.changeLanguage(lang)
@@ -168,5 +168,77 @@ describe("Perception — target-aware attack accessibility", () => {
     // The plain-attack item is exactly the target label; the smite item prefixes it.
     expect(items).toContain(normal)
     expect(items.some((label) => label.startsWith(withSmite))).toBe(true)
+  })
+})
+
+describe("Perception — internal ids never reach the player", () => {
+  // Name-like internal ids: rendering any of them would leak who a stranger is.
+  const entities: NearbyEntity[] = [
+    { id: "marta", description: "human, a cheerful woman", name: "", race: "human", lootable: false },
+    { id: "goblin_chieftain_5", description: "Goblin Chieftain", lootable: false },
+    { id: "gretta", description: "", name: "", lootable: false },
+  ]
+  const ids = entities.map((e) => e.id)
+
+  function expectNoIds(container: HTMLElement) {
+    const text = container.textContent ?? ""
+    const labelled = Array.from(document.querySelectorAll("[aria-label], [title]")).map(
+      (el) => `${el.getAttribute("aria-label") ?? ""} ${el.getAttribute("title") ?? ""}`,
+    )
+    for (const id of ids) {
+      expect(text).not.toContain(id)
+      for (const label of labelled) expect(label).not.toContain(id)
+    }
+  }
+
+  it("renders perceived descriptions, not ids, in text and aria-labels", () => {
+    useGameStore.setState({ awareness: makeAwareness(entities) })
+    const { container } = render(<Perception />)
+
+    expect(screen.getByText("human, a cheerful woman")).toBeInTheDocument()
+    expect(screen.getByText("Goblin Chieftain")).toBeInTheDocument()
+    expect(screen.getByText("someone")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Attack human, a cheerful woman" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Talk to Goblin Chieftain" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Inspect someone" })).toBeInTheDocument()
+    expectNoIds(container)
+  })
+
+  it("keeps the id out of the Smite choice while still targeting by id", async () => {
+    useGameStore.setState({
+      mode: "combat",
+      awareness: makeCombatAwareness([
+        { id: "goblin_chieftain_5", description: "Goblin Chieftain", is_hostile: true },
+      ]),
+    })
+    const { container } = render(<Perception />)
+
+    await userEvent.click(screen.getByRole("button", { name: "Attack Goblin Chieftain" }))
+    const menu = screen.getByTestId("smite-choice")
+    expect(menu.getAttribute("aria-label")).toBe("Attack Goblin Chieftain")
+    expectNoIds(container)
+
+    await userEvent.click(screen.getByRole("menuitem", { name: "Attack Goblin Chieftain" }))
+    expect(sendMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "action",
+        name: "attack",
+        params: expect.objectContaining({ target_id: "goblin_chieftain_5" }),
+      }),
+    )
+  })
+
+  it("shows a stranger's race, not an id, in the inspect modal", async () => {
+    useGameStore.setState({ awareness: makeAwareness(entities.slice(0, 1)) })
+    render(<Perception />)
+
+    await userEvent.click(screen.getByRole("button", { name: "Inspect human, a cheerful woman" }))
+
+    const dialog = screen.getByRole("dialog")
+    expect(dialog.textContent).not.toContain("marta")
+    expect(screen.getByRole("heading", { name: "human, a cheerful woman" })).toBeInTheDocument()
+    for (const el of Array.from(dialog.querySelectorAll("[aria-label]"))) {
+      expect(el.getAttribute("aria-label")).not.toContain("marta")
+    }
   })
 })
