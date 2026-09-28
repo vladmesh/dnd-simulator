@@ -109,3 +109,4 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for how the pieces fit together.
 - [docs/LOGGING.md](docs/LOGGING.md): structured logging and log files
 - [docs/e2e-playbook.md](docs/e2e-playbook.md): manual/browser end-to-end regression scenarios
 - [AGENTS.md](AGENTS.md): instructions for AI coding agents working in this repository
+<!-- probe: cloud session push test -->
