@@ -92,7 +92,7 @@ def _perceive_say(event: Event, observer: Creature, get_entity: GetEntityFn) -> 
 def _format_roll(atk_roll: AttackRollPayload, ac: int) -> str:
     """Build attack roll string from structured components.
 
-    Format: [adv d20(14)+5=19 vs AC 13]
+    Format: [adv d20(14)+5=19 vs AC 13] (ru: [прев d20(14)+5=19 против КД 13])
     Components are generic — no knowledge of specific bonuses.
     """
     parts: list[str] = []
@@ -109,8 +109,7 @@ def _format_roll(atk_roll: AttackRollPayload, ac: int) -> str:
     else:
         parts.append(str(modifier_total))
     parts.append(f"={atk_roll.total}")
-    ac_label = _("AC")
-    parts.append(f" vs {ac_label} {ac}")
+    parts.append(" " + _("vs AC {ac}").format(ac=ac))
     return " [" + "".join(parts) + "]"
 
 

@@ -335,9 +335,12 @@ msgstr ""
 msgid "weapon"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:54
-#: src/dnd_simulator/layers/entities/perception.py:113
+#: src/dnd_simulator/layers/entities/perception.py:53
 msgid "AC"
+msgstr ""
+
+#: src/dnd_simulator/layers/entities/perception.py:112
+msgid "vs AC {ac}"
 msgstr ""
 
 #: src/dnd_simulator/layers/entities/perception.py:56

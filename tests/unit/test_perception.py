@@ -402,12 +402,12 @@ class TestCombatLogI18n:
         assert "[T]ability" in result
 
     def test_ac_label_translated(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """The 'AC' label in roll description must go through _()."""
+        """The 'vs AC' label in roll description must go through _()."""
         monkeypatch.setattr(perception_mod, "_", _mark_translator(perception_mod._))
         observer = Character(id="player", name="Hero", location_id="r1")
         target = Character(id="npc", name="Goblin", location_id="r1", race=Race.HUMAN)
         result = perceive_event(self._attack_event(), observer, _get_entity_fn(observer, target))
-        assert "[T]AC" in result
+        assert "[T]vs AC 13" in result
 
     def test_weapon_name_translated(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Weapon name in attack description must go through _()."""
@@ -908,3 +908,44 @@ class TestCombatLogLocalizesRussian:
         result = perceive_event(event, observer, _get_entity_fn(observer, target))
         assert "Conditions:" not in result
         assert _has_cyrillic(result)
+
+
+class TestAttackRollTextRussian:
+    def test_roll_breakdown_has_no_english_or_raw_keys_in_russian(self) -> None:
+        """The attack roll reads «против КД 13», not «vs КД 13»; ability keys never reach the text."""
+        from dnd_simulator.i18n import language_context
+
+        observer = Character(id="player", name="Hero", location_id="r1")
+        target = Character(id="npc", name="Goblin", location_id="r1")
+        payload = _attack_payload(
+            attack_roll=AttackRollPayload(
+                14, (RollComponentPayload("str", 3), RollComponentPayload("proficiency", 2)), 19, False, False
+            ),
+            damage_components=(
+                DamageComponentPayload("weapon", "1d8", (), 5, "slashing"),
+                DamageComponentPayload("str", "", (), 3, "slashing"),
+            ),
+        )
+        event = Event(event_type=EventType.ENTITY_ATTACK, source_layer="entities", data=payload)
+
+        with language_context("ru"):
+            text = perceive_event(event, observer, _get_entity_fn(observer, target))
+
+        assert "[d20(14)+5=19 против КД 13]" in text
+        assert "(1d8 рубящий + 3 СИЛ)" in text
+        for raw in (" vs ", "AC", "str", "proficiency", "+ +"):
+            assert raw not in text
+
+
+class TestRussianArmorClassTerm:
+    def test_server_catalog_calls_armor_class_kd(self) -> None:
+        """Every Russian server string names Armor Class «КД»: no raw «AC», no «КЗ»."""
+        import re
+        from pathlib import Path
+
+        import dnd_simulator
+
+        po = Path(dnd_simulator.__file__).parent / "locale" / "ru" / "LC_MESSAGES" / "dnd_simulator.po"
+        msgstrs = re.findall(r'^msgstr "(.*)"$', po.read_text(encoding="utf-8"), flags=re.MULTILINE)
+        assert msgstrs
+        assert [s for s in msgstrs if re.search(r"\bAC\b|КЗ", s)] == []

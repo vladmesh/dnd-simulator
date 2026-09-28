@@ -26,7 +26,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketDisconnect as _StarletteDisconnect
 
 from dnd_simulator.adapters.api.deps import get_service
-from dnd_simulator.i18n import _
+from dnd_simulator.i18n import SUPPORTED_LANGUAGES, _
 from dnd_simulator.service.action_parsing import ActionParseError, parse_action
 from dnd_simulator.service.session import GameSession
 
@@ -161,12 +161,16 @@ async def _run_spectator(ws: WebSocket, session: GameSession, session_id: str) -
 
 
 @router.websocket("/api/ws/{session_id}")
-async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None = None, spectate: bool = False) -> None:
+async def websocket_game(
+    ws: WebSocket, session_id: str, player_id: str | None = None, spectate: bool = False, lang: str | None = None
+) -> None:
     """WebSocket game loop for a session.
 
     Thin bridge: validates session, registers as listener, forwards actions.
     Round lifecycle is owned by GameSession. With `?spectate=true` the connection
     is a read-only observer (no player, no start_round, actions rejected).
+    A player connection's `?lang=` (a supported language) becomes the session language
+    before anything is replayed or rendered, so the first turn arrives in the player's language.
     """
     # Origin check
     allowed_raw = os.getenv("WS_ALLOWED_ORIGINS", "")
@@ -199,6 +203,9 @@ async def websocket_game(ws: WebSocket, session_id: str, player_id: str | None =
         await ws.send_json({"type": "error", "message": _("No player in session")})
         await ws.close(code=4004, reason="no_player")
         return
+
+    if lang in SUPPORTED_LANGUAGES:
+        session.lang = lang
 
     # Register WS as event listener
     listener = WsEventListener(ws, asyncio.get_running_loop())

@@ -13,6 +13,7 @@ export class WsClient {
   private sessionId: string | null = null
   private playerId: string | null = null
   private spectate = false
+  private getLang: (() => string) | null = null
   private messageHandlers = new Set<MessageHandler>()
   private statusHandlers = new Set<StatusHandler>()
   private status: WsStatus = "disconnected"
@@ -24,16 +25,22 @@ export class WsClient {
     return this.status
   }
 
-  // Player screens pass a player id. Master live feed passes a spectator option.
-  connect(sessionId: string, opts?: string | { playerId?: string; spectate?: boolean }): void {
+  // Player screens pass a player id (and the UI language, read on every (re)connect so the
+  // server renders the first turn in it). Master live feed passes a spectator option.
+  connect(
+    sessionId: string,
+    opts?: string | { playerId?: string; spectate?: boolean; getLang?: () => string },
+  ): void {
     this.intentionalClose = false
     this.sessionId = sessionId
     if (typeof opts === "string" || opts === undefined) {
       this.playerId = opts ?? null
       this.spectate = false
+      this.getLang = null
     } else {
       this.playerId = opts.playerId ?? null
       this.spectate = opts.spectate ?? false
+      this.getLang = opts.getLang ?? null
     }
     this.retryMs = INITIAL_RETRY_MS
     this.doConnect()
@@ -89,6 +96,8 @@ export class WsClient {
     const params = new URLSearchParams()
     if (this.playerId) params.set("player_id", this.playerId)
     if (this.spectate) params.set("spectate", "true")
+    const lang = this.getLang?.()
+    if (lang) params.set("lang", lang)
     const qs = params.toString()
     if (qs) url += `?${qs}`
 

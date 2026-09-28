@@ -1,7 +1,7 @@
 import { render, screen, act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import "@/i18n"
+import i18n from "@/i18n"
 import { PlayerStats } from "../PlayerStats"
 import { useGameStore } from "@/store/gameStore"
 import { api, ApiError } from "@/transport/apiClient"
@@ -261,5 +261,19 @@ describe("PlayerStats — level-up integration", () => {
     expect(await screen.findByTestId("level-up-error")).toBeInTheDocument()
     expect(screen.getByTestId("level-up-modal")).toBeInTheDocument()
     expect(useGameStore.getState().player).toEqual(initial)
+  })
+})
+
+describe("PlayerStats — Armor Class label", () => {
+  it("names Armor Class «КД» in Russian instead of a raw «AC»", async () => {
+    await i18n.changeLanguage("ru")
+    try {
+      useGameStore.setState({ player: makePlayer({ ac: 15 }) })
+      render(<PlayerStats />)
+      expect(screen.getByText(/КД 15/)).toBeInTheDocument()
+      expect(screen.queryByText(/\bAC\b/)).toBeNull()
+    } finally {
+      await i18n.changeLanguage("en")
+    }
   })
 })

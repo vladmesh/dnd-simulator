@@ -195,11 +195,16 @@ class Round:
         peaceful turn loop (or vice versa).
         """
         in_combat = self._host.get_active_combat_for(creature.id) is not None
-        with structlog.contextvars.bound_contextvars(
-            entity_id=creature.id,
-            entity_name=creature.name,
-            phase="combat" if in_combat else "peaceful",
-            location_id=creature.location_id,
+        # The whole turn (awareness, perceived events, brain prompts) renders in the session
+        # language; the round thread's own context only carries the process default.
+        with (
+            self._action_scope(),
+            structlog.contextvars.bound_contextvars(
+                entity_id=creature.id,
+                entity_name=creature.name,
+                phase="combat" if in_combat else "peaceful",
+                location_id=creature.location_id,
+            ),
         ):
             if in_combat:
                 return self.run_combat_turn(creature, time, query_fn, emit_fn, resume_started=resume_started)

@@ -10,6 +10,9 @@ from pathlib import Path
 _LOCALE_DIR = Path(__file__).parent / "locale"
 _default_lang = os.getenv("DND_LANGUAGE", "ru")
 
+# Languages with a UI and server translation; a session language comes from this set.
+SUPPORTED_LANGUAGES: frozenset[str] = frozenset({"en", "ru"})
+
 # Pre-load translations for known languages
 _translations: dict[str, gettext.GNUTranslations | gettext.NullTranslations] = {}
 

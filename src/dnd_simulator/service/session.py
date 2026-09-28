@@ -113,6 +113,7 @@ class GameSession:
     # the round and never count toward the "session empty" lifecycle decision.
     _spectators: list[SessionEventListener] = field(default_factory=list, init=False, repr=False)
     _last_turn_msg: dict[str, Any] | None = field(default=None, init=False, repr=False)
+    _last_turn_lang: str = field(default="", init=False, repr=False)
     _lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
     _round_transition_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
     _world_state_lock: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
@@ -226,8 +227,19 @@ class GameSession:
         logger.info("remove_spectator", spectator_count=count)
 
     def get_last_turn_msg(self) -> dict[str, Any] | None:
-        """Return the last turn message for replay by the caller."""
-        return self._last_turn_msg
+        """Return the last turn message for replay by the caller.
+
+        The message is pre-rendered text. One rendered in another language than the session's is
+        replayed only while its round still runs, since nothing else would re-issue that turn; a
+        stopped round's successor issues a fresh turn in the current language, so the stale one is
+        withheld rather than mixing two languages in the player's log.
+        """
+        msg = self._last_turn_msg
+        if msg is None or self._last_turn_lang == self.lang:
+            return msg
+        with self._lock:
+            running = self._round_thread is not None and self._round_thread.is_alive()
+        return msg if running else None
 
     def remove_listener(self, listener: SessionEventListener) -> None:
         self._bind_session_context()
@@ -372,9 +384,11 @@ class GameSession:
         events: list[PerceivedEvent],
     ) -> None:
         """PlayerBrain on_turn: the Round asks the player for an action."""
-        with language_context(self.lang):
+        lang = self.lang
+        with language_context(lang):
             msg = build_turn_state(player, awareness, events, self.world)
         self._last_turn_msg = msg
+        self._last_turn_lang = lang
         self._fire("on_turn", msg)
 
     def _emit_player_reaction(

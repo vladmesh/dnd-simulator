@@ -159,6 +159,8 @@
   "gwf_short": "GWF",
   "source_sneak_attack_crit": "Sneak Attack (crit)",
   "source_divine_smite_crit": "Divine Smite (crit)",
+  "source_divine_smite": "Divine Smite",
+  "source_other": "Modifier",
   "dmg_slashing": "slashing",
   "dmg_bludgeoning": "bludgeoning",
   "dmg_piercing": "piercing",

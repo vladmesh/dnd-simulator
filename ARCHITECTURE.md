@@ -152,8 +152,9 @@ REST API flow (adapters/api/):
     Player routes: character creation, perception, events, combat, map, actions
 
 WebSocket flow (React frontend):
-    Frontend wsClient → WS /api/ws/{session_id} → routes_ws.py
-    GameSession owns Round lifecycle (start/stop round thread)
+    Frontend wsClient → WS /api/ws/{session_id}?player_id=…&lang=… → routes_ws.py
+    A player connection's lang (en/ru) becomes the session language before any replay or turn
+    GameSession owns Round lifecycle (start/stop round thread); each creature turn runs in the session language
     Round thread fires callbacks → SessionEventListener → WS messages → Zustand store
     Player actions: WS message → PlayerBrain queue → Round processes → broadcast result
 ```
