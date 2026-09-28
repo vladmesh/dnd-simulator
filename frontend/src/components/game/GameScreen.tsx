@@ -50,8 +50,8 @@ export function GameScreen() {
     }
   }, [sessionId])
 
-  // The UI language is the player's choice (kept per browser): push it to the session on entry
-  // and on every toggle, so server-side strings match even when rejoining an existing session.
+  // The UI language is the player's choice (kept per browser). The WS connect already carries it
+  // (so the first turn is rendered in it); this push keeps the session in step on every toggle.
   const { i18n } = useTranslation()
   useEffect(() => {
     if (!sessionId) return

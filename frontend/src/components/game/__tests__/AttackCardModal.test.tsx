@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, it, expect, vi } from "vitest"
-import "@/i18n"
+import i18n from "@/i18n"
 import { AttackCardModal } from "../AttackCardModal"
 import type { AttackCardData } from "../AttackCardModal"
 
@@ -22,7 +22,7 @@ function makeCardData(overrides?: Partial<AttackCardData>): AttackCardData {
       d20: { sides: 20, result: 14 },
       components: [
         { source: "str", value: 3, dice: "" },
-        { source: "Proficiency", value: 2, dice: "" },
+        { source: "proficiency", value: 2, dice: "" },
       ],
       total: 19,
       advantage: false,
@@ -320,5 +320,55 @@ describe("AttackCardModal", () => {
     await user.click(closeBtn)
     expect(onOpenChange).toHaveBeenCalled()
     expect(onOpenChange.mock.calls[0][0]).toBe(false)
+  })
+})
+
+describe("AttackCardModal — Russian breakdown names every source", () => {
+  it("shows no raw source keys and no '+-' sign in the attack roll and damage", async () => {
+    await i18n.changeLanguage("ru")
+    try {
+      render(
+        <AttackCardModal
+          data={makeCardData({
+            attackRoll: {
+              natural: 14,
+              d20: { sides: 20, result: 14 },
+              components: [
+                { source: "str", value: -1, dice: "" },
+                { source: "proficiency", value: 2, dice: "" },
+                { source: "circlet_of_aim", value: 1, dice: "" },
+              ],
+              total: 16,
+              advantage: false,
+              disadvantage: false,
+            },
+            damageComponents: [
+              { source: "weapon", dice: "1d8", dice_detail: [{ sides: 8, result: 6 }], amount: 6, type: "slashing" },
+              { source: "divine_smite", dice: "2d8", dice_detail: [{ sides: 8, result: 4 }, { sides: 8, result: 5 }], amount: 9, type: "radiant" },
+              { source: "str", dice: "", dice_detail: [], amount: -1, type: "slashing" },
+            ],
+          })}
+          open
+          onOpenChange={vi.fn()}
+        />,
+      )
+      const roll = screen.getByTestId("attack-roll-section")
+      expect(within(roll).getByText("-1")).toBeInTheDocument()
+      expect(within(roll).getAllByText("СИЛ").length).toBeGreaterThan(0)
+      expect(within(roll).getByText("Мастерство")).toBeInTheDocument()
+      expect(within(roll).getByText("Модификатор")).toBeInTheDocument()
+      expect(within(roll).getByText(/против КД 15/)).toBeInTheDocument()
+
+      const damage = screen.getByTestId("damage-section")
+      expect(within(damage).getByText("Кара")).toBeInTheDocument()
+      expect(within(damage).getByText("-1 рубящий")).toBeInTheDocument()
+
+      const text = document.body.textContent ?? ""
+      for (const raw of ["str", "proficiency", "circlet_of_aim", "divine_smite", "+-", "+ +"]) {
+        expect(text).not.toContain(raw)
+      }
+    } finally {
+      await i18n.changeLanguage("en")
+    }
   })
 })

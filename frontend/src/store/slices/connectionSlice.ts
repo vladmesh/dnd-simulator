@@ -79,7 +79,7 @@ export const createConnectionSlice: StateCreator<
         playerId: playerId ?? null,
         player: null,
       })
-      wsClient.connect(sessionId, playerId)
+      wsClient.connect(sessionId, { playerId, getLang: () => i18next.language })
     },
 
     disconnect: () => {

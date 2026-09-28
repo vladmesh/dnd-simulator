@@ -28,6 +28,19 @@ export interface AttackCardData {
   damageComponents?: DamageComponentData[]
 }
 
+type TFn = (key: string, opts?: Record<string, unknown>) => string
+
+/** Localised label of a roll/damage source. A source without its own label (e.g. an item id
+ *  such as ``circlet_of_aim``) reads as a generic modifier, never as the raw key. */
+function sourceLabel(t: TFn, source: string): string {
+  return t(`game:source_${source}`, { defaultValue: "" }) || t("game:source_other")
+}
+
+/** Signed amount with a real minus: "+2", "-1". */
+function signed(n: number): string {
+  return n >= 0 ? `+${n}` : `-${Math.abs(n)}`
+}
+
 // ---------------------------------------------------------------------------
 // AttackCardModal
 // ---------------------------------------------------------------------------
@@ -107,7 +120,7 @@ function AttackRollSection({
   roll: AttackRollData
   ac: number
   critical: boolean
-  t: (key: string, opts?: Record<string, unknown>) => string
+  t: TFn
 }) {
   const hasAdvantage = roll.advantage || roll.disadvantage
 
@@ -137,13 +150,8 @@ function AttackRollSection({
         <div className="space-y-0.5 pl-1">
           {roll.components.map((comp, i) => (
             <div key={i} className="flex items-center gap-2 text-sm">
-              <span className="w-8 text-right font-bold">
-                {comp.value >= 0 ? "+" : ""}
-                {comp.value}
-              </span>
-              <span className="text-muted-foreground">
-                {t(`game:source_${comp.source}`, { defaultValue: comp.source })}
-              </span>
+              <span className="w-8 text-right font-bold">{signed(comp.value)}</span>
+              <span className="text-muted-foreground">{sourceLabel(t, comp.source)}</span>
             </div>
           ))}
         </div>
@@ -198,7 +206,7 @@ function DamageSection({
   components: DamageComponentData[]
   total?: number
   rolledTotal?: number
-  t: (key: string, opts?: Record<string, unknown>) => string
+  t: TFn
 }) {
   const hasOverkill = rolledTotal != null && total != null && rolledTotal > total
   return (
@@ -260,14 +268,14 @@ function DamageComponentRow({
   t,
 }: {
   component: DamageComponentData
-  t: (key: string, opts?: Record<string, unknown>) => string
+  t: TFn
 }) {
   const hasDice = component.dice_detail && component.dice_detail.length > 0
   const isFlat = !component.dice
   const isCritComponent = component.source.endsWith("_crit")
   const isWeaponBase = component.source === "weapon"
   const translatedType = t(`game:dmg_${component.type}`, { defaultValue: component.type })
-  const translatedSource = t(`game:source_${component.source}`, { defaultValue: component.source })
+  const translatedSource = sourceLabel(t, component.source)
 
   // GWF reroll reason: only on base weapon dice that have rerolls
   const gwfLabel = isWeaponBase ? t("game:gwf_short") : undefined
@@ -313,7 +321,7 @@ function DamageComponentRow({
 
       {isFlat && (
         <div className="text-sm font-bold">
-          +{component.amount} {translatedType}
+          {signed(component.amount)} {translatedType}
         </div>
       )}
     </div>

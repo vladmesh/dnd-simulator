@@ -51,7 +51,7 @@ export function PlayerStats() {
           </div>
           <div className="flex gap-3">
             <span className="flex items-center gap-1">
-              <Shield className="size-3" /> AC {player.ac}
+              <Shield className="size-3" /> {t("game:stat_ac")} {player.ac}
             </span>
             <span className="flex items-center gap-1">
               <Coins className="size-3" /> {player.gold}g

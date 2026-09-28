@@ -159,6 +159,8 @@
   "gwf_short": "МДО",
   "source_sneak_attack_crit": "Скрытая атака (крит)",
   "source_divine_smite_crit": "Кара (крит)",
+  "source_divine_smite": "Кара",
+  "source_other": "Модификатор",
   "dmg_slashing": "рубящий",
   "dmg_bludgeoning": "дробящий",
   "dmg_piercing": "колющий",

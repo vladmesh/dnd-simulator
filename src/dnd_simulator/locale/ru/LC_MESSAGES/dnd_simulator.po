@@ -125,7 +125,7 @@ msgid "Paths:"
 msgstr "Пути:"
 
 msgid "HP: {hp}/{max_hp} | AC: {ac} | Gold: {gold}"
-msgstr "HP: {hp}/{max_hp} | AC: {ac} | Золото: {gold}"
+msgstr "HP: {hp}/{max_hp} | КД: {ac} | Золото: {gold}"
 
 msgid "Attacks:"
 msgstr "Атаки:"
@@ -633,6 +633,9 @@ msgstr "божественная кара"
 #: Roll labels
 msgid "AC"
 msgstr "КД"
+
+msgid "vs AC {ac}"
+msgstr "против КД {ac}"
 
 #: Common item/weapon names
 msgid "Health Potion"
