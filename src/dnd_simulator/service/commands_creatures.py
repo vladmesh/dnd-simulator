@@ -277,13 +277,15 @@ class CreatureCommands(GameServiceProtocol):
     # -- Delete --
 
     def remove_creature(self, session_id: str, entity_id: str) -> None:
-        """Remove a creature from a live session."""
+        """Remove a creature from a live session, taking it out of its combat first."""
         session = self._get_session(session_id)
-        layer = self._get_entities_layer(session)
-        entity = layer.get_entity(entity_id)
-        if entity is None:
-            raise ValueError(f"Creature '{entity_id}' not found")
-        layer.remove_entity(entity_id)
+        with session.mutate_world():
+            layer = self._get_entities_layer(session)
+            entity = layer.get_entity(entity_id)
+            if entity is None:
+                raise ValueError(f"Creature '{entity_id}' not found")
+            layer.remove_from_combat(entity_id)
+            layer.remove_entity(entity_id)
 
     # -- Items --
 

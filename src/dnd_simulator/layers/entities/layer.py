@@ -214,6 +214,25 @@ class EntitiesLayer(Layer):
         """Reset per-turn combat state for a creature (e.g. sneak attack availability)."""
         self._combat.reset_turn_state(creature_id)
 
+    def remove_from_combat(self, entity_id: str) -> None:
+        """Take a creature out of the combat it belongs to, outside any combat action.
+
+        The GM path for a creature deleted or killed by hand: the same removal a kill or a flee
+        uses (turn order, map — a dead creature leaves a corpse cell — and sides), and the same
+        combat-end handling when no opposing sides remain. No-op for a creature not in combat.
+        """
+        combat = self._combat.get_active_combat_for(entity_id)
+        if combat is None:
+            return
+        entity = self._entities.get(entity_id)
+        if isinstance(entity, Creature):
+            entity.in_combat = False
+            entity.is_dodging = False
+        location_id = combat.location_id
+        self._combat.remove_from_combat(location_id, entity_id)
+        if self._combat.get_combat(location_id) is None:
+            self._on_combat_ended(location_id)
+
     def end_combat_round(self, location_id: str) -> None:
         """Called by game loop at end of each combat round."""
         had_combat = self._combat.get_combat(location_id) is not None
@@ -315,6 +334,11 @@ class EntitiesLayer(Layer):
             entity = self._entities.get(entity_id)
             if entity is not None and entity.temporary and event.source_layer == self.name:
                 self.remove_entity(entity_id)
+            self._event_log.record(event)
+            # A death from outside a combat action (GM hot control) still takes the corpse out of its fight.
+            if isinstance(entity, Creature) and not entity.is_alive:
+                self.remove_from_combat(entity_id)
+            return ActionResult()
 
         self._event_log.record(event)
 
