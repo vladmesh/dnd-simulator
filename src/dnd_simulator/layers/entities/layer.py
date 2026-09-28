@@ -317,15 +317,20 @@ class EntitiesLayer(Layer):
         if event.event_type == EventType.ENTITY_DODGE:
             return self._trigger_runtime.apply_cascades(self._combat.resolve_dodge(event))
 
-        # Attack/flee can end combat (kill/flee removes fighter, <=1 left → combat ends)
+        # Attack/flee can end combat (kill/flee removes fighter, <=1 left → combat ends).
+        # An opening attack that kills the only enemy starts and ends its combat in one call,
+        # so the end is read from the combat manager, not from whether a combat existed before.
         if event.event_type in (EventType.ENTITY_ATTACK_REQUESTED, EventType.ENTITY_FLEE):
             location_id = self._event_log.location_for(event)
-            had_combat = location_id is not None and self._combat.get_combat(location_id) is not None
             if event.event_type == EventType.ENTITY_ATTACK_REQUESTED:
                 result = self._combat.resolve_attack(event, query_fn=query_fn)
             else:
                 result = self._resolve_flee(event)
-            if had_combat and location_id and self._combat.get_combat(location_id) is None:
+            if (
+                location_id
+                and self._combat.get_combat(location_id) is None
+                and self._combat.has_unconsumed_end(location_id)
+            ):
                 self._on_combat_ended(location_id)
             return self._trigger_runtime.apply_cascades(result)
 

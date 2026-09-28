@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import random
 
+import pytest
+
 from dnd_simulator.core.character import (
     Ability,
     AbilityScores,
@@ -18,9 +20,23 @@ from dnd_simulator.core.events import AttackRequestedPayload, EntityFleePayload
 from dnd_simulator.core.location import Location, LocationGraph
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, GameDateTime, Query, QueryType
 from dnd_simulator.core.world import World
+from dnd_simulator.layers.entities import combat_manager
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.round import Round
 from dnd_simulator.rules.combat import roll_initiative
+
+
+class _FixedD20(random.Random):
+    """Seeded dice whose every d20 shows ``face``; other dice (damage, tiebreakers) stay seeded-random."""
+
+    def __init__(self, face: int, *, seed: int) -> None:
+        super().__init__(seed)
+        self.face = face
+
+    def randint(self, a: int, b: int) -> int:
+        if (a, b) == (1, 20):
+            return self.face
+        return super().randint(a, b)
 
 
 def _noop_query_fn(layer: str, query: Query) -> Answer:
@@ -154,12 +170,21 @@ class TestEntitiesLayerCombat:
         assert c2.in_combat is True
         assert c3.in_combat is True
 
-    def test_second_attack_does_not_reroll_initiative(self) -> None:
-        # High AC so attacks always miss — no deaths changing turn_order
+    def test_second_attack_does_not_reroll_initiative(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # Every attack d20 shows 2: a miss against AC 30 that no natural 20 can turn into a
+        # crit, so nobody dies and the turn order can only change by a re-roll.
+        rolls: list[list[str]] = []
+
+        def spy_roll_initiative(creatures: list[Creature], *, rng: random.Random | None = None) -> list[Creature]:
+            ordered = roll_initiative(creatures, rng=rng)
+            rolls.append([c.id for c in ordered])
+            return ordered
+
+        monkeypatch.setattr(combat_manager, "roll_initiative", spy_roll_initiative)
         c1 = Character(id="c1", name="Fighter", location_id="r1", max_hp=20, current_hp=20, ac=30, attacks=(_SWORD,))
         c2 = Character(id="c2", name="Rogue", location_id="r1", max_hp=15, current_hp=15, ac=30, attacks=(_SWORD,))
         c3 = Character(id="c3", name="Bystander", location_id="r1", max_hp=10, current_hp=10, ac=30)
-        layer = EntitiesLayer([c1, c2, c3])
+        layer = EntitiesLayer([c1, c2, c3], dice_rng=_FixedD20(2, seed=0))
 
         atk = Event(
             event_type=EventType.ENTITY_ATTACK_REQUESTED,
@@ -171,7 +196,9 @@ class TestEntitiesLayerCombat:
 
         layer.handle_event(atk, _noop_query_fn, _noop_emit_fn)
         second_order = list(layer.get_combat("r1").turn_order)
+        assert c2.current_hp == c2.max_hp  # both attacks missed
         assert first_order == second_order
+        assert rolls == [first_order]  # initiative rolled once, at combat start
 
     def test_other_region_not_affected(self) -> None:
         c_other = Character(id="c4", name="Farmer", location_id="r2", max_hp=10, current_hp=10)
@@ -308,7 +335,8 @@ class TestFleeRemovesFromCombat:
     def test_flee_last_two_ends_combat(self) -> None:
         c1 = Character(id="c1", name="Fighter", location_id="r1", max_hp=20, current_hp=20, attacks=(_SWORD,))
         c2 = Character(id="c2", name="Rogue", location_id="r1", max_hp=15, current_hp=15)
-        layer = EntitiesLayer([c1, c2])
+        # The opening attack must miss: a natural-20 crit (up to 16) would kill c2 before it flees.
+        layer = EntitiesLayer([c1, c2], dice_rng=_FixedD20(2, seed=0))
 
         # Start combat
         layer.handle_event(
@@ -333,6 +361,7 @@ class TestFleeRemovesFromCombat:
             _noop_query_fn,
             _noop_emit_fn,
         )
+        assert c2.is_alive
         assert layer.get_combat("r1") is None
         assert c1.in_combat is False
         assert c2.in_combat is False
@@ -352,9 +381,9 @@ class TestDeathRemovesFromCombat:
         )
         c2 = Character(id="c2", name="Weakling", location_id="r1", max_hp=1, current_hp=1, ac=1)
         c3 = Character(id="c3", name="Observer", location_id="r1", max_hp=10, current_hp=10)
-        layer = EntitiesLayer([c1, c2, c3])
+        layer = EntitiesLayer([c1, c2, c3], dice_rng=_FixedD20(15, seed=0))
 
-        # Attack c2 (HP=1, AC=1 → almost guaranteed kill)
+        # Attack c2 (HP=1, AC=1, d20 fixed at 15 → a hit, and any damage kills)
         layer.handle_event(
             Event(
                 event_type=EventType.ENTITY_ATTACK_REQUESTED,
@@ -365,10 +394,11 @@ class TestDeathRemovesFromCombat:
             _noop_emit_fn,
         )
 
+        assert not c2.is_alive
         combat = layer.get_combat("r1")
-        if not c2.is_alive:
-            # c2 should be removed from turn order
-            assert "c2" not in combat.turn_order if combat else True
+        assert combat is not None  # c1 and c3 still stand on opposing sides
+        assert "c2" not in combat.turn_order
+        assert set(combat.turn_order) == {"c1", "c3"}
 
     def test_all_but_one_die_ends_combat(self) -> None:
         c1 = Character(
@@ -382,7 +412,7 @@ class TestDeathRemovesFromCombat:
             ability_scores=_scores(str=30),
         )
         c2 = Character(id="c2", name="Weak", location_id="r1", max_hp=1, current_hp=1, ac=1)
-        layer = EntitiesLayer([c1, c2])
+        layer = EntitiesLayer([c1, c2], dice_rng=_FixedD20(15, seed=0))
 
         layer.handle_event(
             Event(
@@ -394,10 +424,10 @@ class TestDeathRemovesFromCombat:
             _noop_emit_fn,
         )
 
-        if not c2.is_alive:
-            # Only c1 left → combat should end
-            assert layer.get_combat("r1") is None
-            assert c1.in_combat is False
+        assert not c2.is_alive
+        # Only c1 left → combat should end
+        assert layer.get_combat("r1") is None
+        assert c1.in_combat is False
 
 
 class TestCombatInfoQuery:
