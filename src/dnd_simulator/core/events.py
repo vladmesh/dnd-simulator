@@ -293,6 +293,18 @@ class EntityFleePayload(TypedPayload):
 
 
 @dataclass(frozen=True)
+class EntityArrivedPayload(TypedPayload):
+    """A creature's journey stopped at a location: where, and how long the road took."""
+
+    entity_id: str
+    location_id: str
+    location_name: str
+    departed_at_seconds: int
+    arrived_at_seconds: int
+    fled: bool = False
+
+
+@dataclass(frozen=True)
 class EntityDashPayload(TypedPayload):
     entity_id: str
     extra_movement_ft: int
@@ -414,6 +426,7 @@ EventPayload = (
     | EntitySayPayload
     | ActionFlavorPayload
     | EntityFleePayload
+    | EntityArrivedPayload
     | EntityDashPayload
     | EntityActorPayload
     | EntityUseItemPayload
@@ -459,6 +472,7 @@ EVENT_PAYLOAD_TYPES: dict[EventType, type[object]] = {
     EventType.ENTITY_SAY: EntitySayPayload,
     EventType.ENTITY_DODGE: ActionFlavorPayload,
     EventType.ENTITY_FLEE: EntityFleePayload,
+    EventType.ENTITY_ARRIVED: EntityArrivedPayload,
     EventType.ENTITY_DASH: EntityDashPayload,
     EventType.ENTITY_DISENGAGE: EntityActorPayload,
     EventType.ENTITY_USE_ITEM: EntityUseItemPayload,

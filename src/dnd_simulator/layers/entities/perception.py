@@ -13,6 +13,7 @@ from dnd_simulator.core.events import (
     CombatEndedPayload,
     DamageComponentPayload,
     EntityActorPayload,
+    EntityArrivedPayload,
     EntityBlessPayload,
     EntityDashPayload,
     EntityDiedPayload,
@@ -34,7 +35,7 @@ from dnd_simulator.core.events import (
     XpGainedPayload,
 )
 from dnd_simulator.core.models import Event, EventType
-from dnd_simulator.i18n import N_, _
+from dnd_simulator.i18n import N_, _, ngettext
 from dnd_simulator.layers.entities.perception_world import DISPATCH as WORLD_DISPATCH
 
 GetEntityFn = Callable[[str], Entity | None]
@@ -276,6 +277,32 @@ def _perceive_flee(event: Event, observer: Creature, get_entity: GetEntityFn) ->
     return _("{entity} flees the fight toward {destination}{desc}").format(
         entity=desc, destination=destination, desc=desc_suffix
     )
+
+
+def format_travel_duration(seconds: int) -> str:
+    """Journey length in whole minutes, rounded up as the flee menu shows it; an hour or more as hours + minutes."""
+    total_minutes = max(1, -(-seconds // 60))
+    if total_minutes < 60:
+        return ngettext("{count} minute", "{count} minutes", total_minutes).format(count=total_minutes)
+    hours, minutes = divmod(total_minutes, 60)
+    hours_text = ngettext("{count} hour", "{count} hours", hours).format(count=hours)
+    if not minutes:
+        return hours_text
+    minutes_text = ngettext("{count} minute", "{count} minutes", minutes).format(count=minutes)
+    return _("{hours} {minutes}").format(hours=hours_text, minutes=minutes_text)
+
+
+def _perceive_arrived(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
+    payload = event.payload
+    assert isinstance(payload, EntityArrivedPayload)
+    destination = payload.location_name or payload.location_id
+    if payload.entity_id == observer.id:
+        duration = format_travel_duration(payload.arrived_at_seconds - payload.departed_at_seconds)
+        if payload.fled:
+            return _("You ran for {duration} to {destination}.").format(duration=duration, destination=destination)
+        return _("You walked for {duration} to {destination}.").format(duration=duration, destination=destination)
+    entity = _describe(observer, payload.entity_id, get_entity)
+    return _("{entity} arrives.").format(entity=entity)
 
 
 def _perceive_move(event: Event, observer: Creature, get_entity: GetEntityFn) -> str:
@@ -601,6 +628,7 @@ _DISPATCH: dict[EventType, _PerceiveHandler] = {
     EventType.OPPORTUNITY_ATTACK: _perceive_opportunity_attack,
     EventType.ENTITY_DODGE: _perceive_dodge,
     EventType.ENTITY_FLEE: _perceive_flee,
+    EventType.ENTITY_ARRIVED: _perceive_arrived,
     EventType.ENTITY_MOVE: _perceive_move,
     EventType.ENTITY_DASH: _perceive_dash,
     EventType.ENTITY_USE_ITEM: _perceive_use_item,

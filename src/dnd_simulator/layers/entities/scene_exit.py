@@ -60,6 +60,7 @@ def exit_scene(
         destination_id=destination,
         remaining_route=(destination,),
         next_arrival_seconds=payload.arrival_at_seconds,
+        fleeing=True,
     )
     if isinstance(creature, Npc):
         # A named NPC stays where it fled to; its schedule must not pull it back

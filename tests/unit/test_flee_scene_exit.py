@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import random
+from dataclasses import replace
 
 import pytest
 
@@ -53,6 +54,7 @@ from dnd_simulator.i18n import language_context
 from dnd_simulator.layers.ecology.layer import EcologyLayer
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
+from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.layers.geography.layer import GeographyLayer
 from dnd_simulator.layers.geography.models import Region, TerrainType
 from dnd_simulator.layers.politics.layer import PoliticsLayer
@@ -528,7 +530,9 @@ class TestPlayerFlee:
             travelled.world.make_query_fn("entities"),
             travelled.world.make_emit_fn("entities"),
         )
-        assert fled.player.current_intent == travelled.player.current_intent
+        fled_intent = fled.player.current_intent
+        assert isinstance(fled_intent, TravelIntent) and fled_intent.fleeing is True
+        assert replace(fled_intent, fleeing=False) == travelled.player.current_intent
         for scene in (fled, travelled):
             scene.round.run_loop(max_rounds=2)
         assert fled.world.time == travelled.world.time
@@ -536,6 +540,109 @@ class TestPlayerFlee:
         assert sorted(e.id for e in fled.entities._entities.values() if e.location_id == "road") == sorted(
             e.id for e in travelled.entities._entities.values() if e.location_id == "road"
         )
+
+
+# ---------------------------------------------------------------------------
+# The journey in the player's log: how long, and where it ended
+# ---------------------------------------------------------------------------
+
+
+class _LoggingBrain(_ScriptedBrain):
+    """A scripted brain that keeps every perceived-event batch with the location it was read at."""
+
+    def __init__(self, actions: list[Action] | None = None) -> None:
+        super().__init__(actions)
+        self.batches: list[tuple[str, list[PerceivedEvent]]] = []
+
+    def choose_action(
+        self, creature: Creature, awareness: PeacefulAwareness | CombatAwareness, events: list[PerceivedEvent]
+    ) -> Action:
+        self.batches.append((creature.location_id, list(events)))
+        return super().choose_action(creature, awareness, events)
+
+    def first_batch_at(self, location_id: str) -> list[PerceivedEvent]:
+        return next(events for where, events in self.batches if where == location_id)
+
+
+def _logging_scene(**kwargs: bool) -> tuple[_Scene, _LoggingBrain]:
+    scene = _Scene(**kwargs)
+    brain = _LoggingBrain()
+    scene.player.brain = brain
+    scene.player_brain = brain
+    return scene, brain
+
+
+def _travel_to(scene: _Scene, destination: str) -> None:
+    scene.entities._combat._end_combat("clearing")
+    scene.player_brain.actions = [Action(name=ActionType.TRAVEL, params={"destination_id": destination})]
+    scene.round.run_peaceful_turn(
+        scene.player, scene.world.time, scene.world.make_query_fn("entities"), scene.world.make_emit_fn("entities")
+    )
+
+
+def _ru(scene: _Scene, event: Event) -> str:
+    with language_context("ru"):
+        return perceive_event(event, scene.player, scene.entities.get_entity)
+
+
+class TestArrivalLogLine:
+    def test_flee_arrival_line_comes_first_then_the_arrival_encounter(self) -> None:
+        scene, brain = _logging_scene(with_guard=True)
+        brain.actions = [_flee_to("road")]
+        scene.combat_turn(scene.player)
+        scene.round.run_loop(max_rounds=400)
+
+        # The first thing the player reads on the road: the journey, then what stirs there.
+        seen = brain.first_batch_at("road")
+        assert [e.event_type for e in seen] == [EventType.ENTITY_ARRIVED, EventType.ENCOUNTER_SPAWNED]
+        assert seen[0].description == "You ran for 12 minutes to Forest Road."
+        assert seen[0].data["location_name"] == "Forest Road"
+        arrived = scene.entities._location_log["road"][0]
+        assert arrived.event_type is EventType.ENTITY_ARRIVED
+        assert _ru(scene, arrived) == "Ты бежал 12 минут до локации «Forest Road»."
+
+    def test_flee_minutes_match_the_flee_menu(self) -> None:
+        scene, brain = _logging_scene(with_guard=True)
+        menu = flee_status(scene.player, scene.combat, scene.entities.get_entity, scene.graph)
+        ridge = next(d for d in menu.destinations if d.id == "ridge")
+        brain.actions = [_flee_to("ridge")]
+        scene.combat_turn(scene.player)
+        scene.round.run_loop(max_rounds=800)
+
+        assert ridge.travel_seconds == 1440  # the menu shows «24 мин»
+        arrived = scene.entities._location_log["ridge"][0]
+        assert arrived.event_type is EventType.ENTITY_ARRIVED
+        assert _ru(scene, arrived) == "Ты бежал 24 минуты до локации «Ridge»."
+
+    def test_ordinary_travel_line_before_arrival_encounter(self) -> None:
+        scene, brain = _logging_scene()
+        _travel_to(scene, "road")
+        scene.round.run_loop(max_rounds=2)
+
+        seen = brain.first_batch_at("road")
+        assert [e.event_type for e in seen] == [EventType.ENTITY_ARRIVED, EventType.ENCOUNTER_SPAWNED]
+        assert seen[0].description == "You walked for 12 minutes to Forest Road."
+        assert _ru(scene, scene.entities._location_log["road"][0]) == "Ты шёл 12 минут до локации «Forest Road»."
+
+    def test_multi_leg_travel_logs_the_whole_journey_once_at_the_destination(self) -> None:
+        scene, brain = _logging_scene()
+        _travel_to(scene, "far")
+        scene.round.run_loop(max_rounds=2)
+
+        assert scene.player.location_id == "far"
+        # Passing through the road leaves no arrival line there.
+        assert not [e for e in scene.entities._location_log.get("road", []) if e.event_type is EventType.ENTITY_ARRIVED]
+        seen = brain.first_batch_at("far")
+        assert [e.event_type for e in seen] == [EventType.ENTITY_ARRIVED]
+        assert _ru(scene, scene.entities._location_log["far"][0]) == "Ты шёл 24 минуты до локации «Far Hamlet»."
+
+    def test_fleeing_survives_save_and_load(self) -> None:
+        scene = _Scene(with_guard=True)
+        scene.player_brain.actions = [_flee_to("road")]
+        scene.combat_turn(scene.player)
+        player = _reload(scene).get_entity("hero")
+        assert isinstance(player, Creature) and isinstance(player.current_intent, TravelIntent)
+        assert player.current_intent.fleeing is True
 
 
 # ---------------------------------------------------------------------------

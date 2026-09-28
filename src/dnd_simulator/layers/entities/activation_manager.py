@@ -14,9 +14,10 @@ from typing import TYPE_CHECKING
 import structlog
 
 from dnd_simulator.core.character import Creature, Entity
+from dnd_simulator.core.events import EntityArrivedPayload
 from dnd_simulator.core.inner_self import DigestBoundary
 from dnd_simulator.core.intent import IntentInterruptReason, TimedIntent, TravelIntent
-from dnd_simulator.core.models import Event
+from dnd_simulator.core.models import Event, EventType
 from dnd_simulator.core.monster import EncounterEntry
 from dnd_simulator.core.triggers import GmActivationOverride
 from dnd_simulator.layers.entities.encounters import check_encounters
@@ -136,6 +137,28 @@ class ActivationManager:
             return
         dematerialize_unobserved_encounters(self, location_id)
 
+    def _record_arrival(self, creature: Creature, leg: TravelIntent, location_graph: LocationGraph) -> None:
+        """Log where a journey stopped and how long it took, before any arrival encounter is rolled."""
+        location_id = creature.location_id
+        location_name = location_graph.get(location_id).name if location_graph.has(location_id) else location_id
+        # The log cursor indexes the log of the place the traveller left; here it starts on this
+        # place's log, so the arrival line and whatever follows it are the first things it reads.
+        creature._last_seen_log_index = len(self._location_log.get(location_id, []))
+        self._record_event(
+            Event(
+                event_type=EventType.ENTITY_ARRIVED,
+                source_layer="entities",
+                data=EntityArrivedPayload(
+                    entity_id=creature.id,
+                    location_id=location_id,
+                    location_name=location_name,
+                    departed_at_seconds=leg.started_at_seconds,
+                    arrived_at_seconds=leg.next_arrival_seconds,
+                    fled=leg.fleeing,
+                ),
+            )
+        )
+
     def update_activation(
         self,
         time: GameDateTime,
@@ -192,10 +215,14 @@ class ActivationManager:
             while isinstance(e.current_intent, TravelIntent) and now >= e.current_intent.next_arrival_seconds:
                 if location_graph is None:
                     raise RuntimeError("location graph is required to advance travel")
-                e.current_intent = advance_travel_leg(e, e.current_intent, location_graph, self._digest)
+                leg = e.current_intent
+                e.current_intent = advance_travel_leg(e, leg, location_graph, self._digest)
                 if e.current_intent is not None and e.location_id in occupied_scene_locations:
                     interrupt_intent(e, IntentInterruptReason.SCENE, self._digest)
+                    self._record_arrival(e, leg, location_graph)
                     break
+                if e.current_intent is None:
+                    self._record_arrival(e, leg, location_graph)
 
         # Collect locations held after completions and interruptions.
         anchor_locations: set[str] = set()

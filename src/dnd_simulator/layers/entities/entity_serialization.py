@@ -257,6 +257,7 @@ def _intent_save(intent: CreatureIntent | None) -> TimedIntentSave | TravelInten
             destination_id=intent.destination_id,
             remaining_route=intent.remaining_route,
             next_arrival_seconds=intent.next_arrival_seconds,
+            fleeing=intent.fleeing,
         )
     return TimedIntentSave(
         kind=IntentType.WAIT if intent.kind is IntentType.WAIT else IntentType.SLEEP,
