@@ -102,6 +102,18 @@ class TestParseClassFeatures:
         with pytest.raises(ValueError, match="fighting_style"):
             parse_class_features(CharClass.FIGHTER, {"class_features": {"some_other_key": True}})
 
+    def test_fighter_all_null_block_is_no_block(self) -> None:
+        """A saved styleless Fighter dumps ``{fighting_style: None, ...}``; that is no block, not a malformed one."""
+        features = parse_class_features(
+            CharClass.FIGHTER,
+            {"class_features": {"fighting_style": None, "sneak_attack_dice": None}},
+        )
+        assert features == []
+
+    def test_rogue_null_sneak_dice_defaults(self) -> None:
+        features = parse_class_features(CharClass.ROGUE, {"class_features": {"sneak_attack_dice": None}})
+        assert features[0].sneak_attack_dice == 1
+
     def test_commoner_no_features(self) -> None:
         features = parse_class_features(CharClass.COMMONER, {})
         assert features == []

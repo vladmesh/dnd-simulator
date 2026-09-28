@@ -83,8 +83,11 @@ def parse_class_features(char_class: CharClass, data: dict[str, Any], level: int
 
     Rogue gets RogueFeatures automatically from class; sneak_attack_dice
     can be overridden in YAML (defaults to 1 for level 1).
+
+    Null values are absent keys: a save of a styleless Fighter carries
+    ``{fighting_style: null, sneak_attack_dice: null}``, which is no block at all.
     """
-    cf_data = data.get("class_features") or {}
+    cf_data = {key: value for key, value in (data.get("class_features") or {}).items() if value is not None}
     features: list[ClassFeatures] = []
 
     if char_class == CharClass.FIGHTER:

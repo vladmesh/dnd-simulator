@@ -1326,3 +1326,6 @@ msgstr "Клетка ({}, {}) вне поля боя {}x{} футов"
 
 msgid "Cell ({}, {}) is already occupied"
 msgstr "Клетка ({}, {}) уже занята"
+
+msgid "No reaction prompt is pending"
+msgstr "Нет ожидающего запроса реакции"
