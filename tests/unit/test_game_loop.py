@@ -7,12 +7,14 @@ from dnd_simulator.core.awareness import CombatAwareness, PeacefulAwareness, Per
 from dnd_simulator.core.brain import Brain, PlayerBrain
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.combat import CombatState
+from dnd_simulator.core.events import EntityArrivedPayload
 from dnd_simulator.core.intent import IntentType, TimedIntent, TravelIntent
 from dnd_simulator.core.location import Location, LocationEdge, LocationGraph
-from dnd_simulator.core.models import GameDateTime, TimeDelta
+from dnd_simulator.core.models import EventType, GameDateTime, TimeDelta
 from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.world import World
 from dnd_simulator.layers.entities.layer import EntitiesLayer
+from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.layers.geography.layer import GeographyLayer
 from dnd_simulator.layers.geography.models import Region, TerrainType
 from dnd_simulator.layers.politics.layer import PoliticsLayer
@@ -501,6 +503,24 @@ class TestTravelAndFastForward:
         assert traveler.location_id == "goal"
         assert traveler.current_intent is None
         assert traveler.active is True
+
+    def test_journey_stopped_at_an_occupied_scene_logs_where_it_ended(self) -> None:
+        now = GameDateTime(year=1, month=1, day=1, hour=10).to_total_seconds()
+        traveler = Creature(id="traveler", name="Traveler", location_id="start", is_anchor=True)
+        traveler.current_intent = TravelIntent(now, "goal", ("road", "goal"), now + 720)
+        holder = Creature(id="holder", name="Holder", location_id="road", is_anchor=True)
+        world = _travel_world([traveler, holder])
+        layer = next(la for la in world.layers if isinstance(la, EntitiesLayer))
+
+        world.advance_time(TimeDelta(seconds=720))
+        layer.update_activation(world.time, location_graph=world.location_graph)
+
+        assert traveler.location_id == "road" and traveler.current_intent is None
+        arrivals = [e for e in layer._location_log["road"] if e.event_type is EventType.ENTITY_ARRIVED]
+        assert [e.payload for e in arrivals] == [
+            EntityArrivedPayload("traveler", "road", "Road", now, now + 720, fled=False)
+        ]
+        assert perceive_event(arrivals[0], traveler, layer.get_entity) == "You walked for 12 minutes to Road."
 
     def test_two_travelers_share_intermediate_node_and_resume_after_save(self) -> None:
         now = GameDateTime(year=1, month=1, day=1, hour=10).to_total_seconds()

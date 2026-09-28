@@ -517,6 +517,7 @@ class EntitiesLayer(Layer):
                                 destination_id=str(intent_raw["destination_id"]),
                                 remaining_route=tuple(str(node) for node in route_raw),
                                 next_arrival_seconds=int(intent_raw["next_arrival_seconds"]),
+                                fleeing=bool(intent_raw.get("fleeing", False)),
                             )
                         else:
                             rest_type_raw = intent_raw.get("rest_type")

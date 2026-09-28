@@ -6,6 +6,7 @@ export type EventType =
   | "entity_attack"
   | "entity_dodge"
   | "entity_flee"
+  | "entity_arrived"
   | "entity_move"
   | "entity_dash"
   | "entity_disengage"

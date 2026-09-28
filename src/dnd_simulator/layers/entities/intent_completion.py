@@ -75,4 +75,5 @@ def advance_travel_leg(
         destination_id=intent.destination_id,
         remaining_route=remaining,
         next_arrival_seconds=intent.next_arrival_seconds + location_graph.travel_seconds(arrived_at, remaining[0]),
+        fleeing=intent.fleeing,
     )

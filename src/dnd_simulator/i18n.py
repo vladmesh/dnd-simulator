@@ -38,6 +38,12 @@ def _(message: str) -> str:
     return _get_translation(lang).gettext(message)
 
 
+def ngettext(singular: str, plural: str, n: int) -> str:
+    """Translate a count-dependent string with the current language's plural rule."""
+    lang = current_lang.get()
+    return _get_translation(lang).ngettext(singular, plural, n)
+
+
 def N_(message: str) -> str:  # noqa: N802 — standard gettext convention
     """Mark a string for .po extraction without translating.
 
