@@ -8,6 +8,7 @@ from dnd_simulator.core.character import (
     Ability,
     AbilityScores,
     Attack,
+    CharClass,
     Creature,
     DamageComponent,
     DamageType,
@@ -16,6 +17,7 @@ from dnd_simulator.core.character import (
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.inner_self import InnerSelf, Mood, Relationship, RelationshipType
 from dnd_simulator.core.items import Item, ItemType
+from dnd_simulator.core.player import PlayerCharacter
 from dnd_simulator.core.resource import ResourcePool, RestType
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc
@@ -175,3 +177,52 @@ class TestSpawnedEntityWithConditionsAndInventory:
         assert len(restored.resource_pools) == 1
         assert restored.resource_pools[0].id == "second_wind"
         assert restored.resource_pools[0].current_uses == 0
+
+
+class TestStylelessFighterRoundTrip:
+    """A Fighter without a Fighting Style (every API-created L1 fighter) saves as
+    ``class_features: {fighting_style: null, ...}``; recreating it from that save must not
+    mistake the all-null block for a malformed content block. The WS eviction path
+    (last player disconnects → autosave → reconnect restores) hit this.
+    """
+
+    def test_styleless_fighter_player_recreated_on_load(self) -> None:
+        player = PlayerCharacter(
+            id="player_1",
+            name="Hero",
+            location_id="tavern",
+            char_class=CharClass.FIGHTER,
+            max_hp=12,
+            current_hp=7,
+        )
+        assert player.class_features == []
+
+        state = EntitiesLayer(entities=[_template_npc(), player]).get_state()
+        fresh_layer = EntitiesLayer(entities=[_template_npc()])
+        fresh_layer.load_state(state)
+
+        restored = fresh_layer.get_entity("player_1")
+        assert isinstance(restored, PlayerCharacter)
+        assert restored.char_class is CharClass.FIGHTER
+        assert restored.class_features == []
+        assert restored.current_hp == 7
+
+    def test_styleless_fighter_npc_recreated_on_load(self) -> None:
+        spawned = Npc(
+            id="raider",
+            name="Raider",
+            location_id="gate",
+            role=NpcRole.GUARD,
+            char_class=CharClass.FIGHTER,
+            max_hp=20,
+            current_hp=20,
+        )
+
+        state = EntitiesLayer(entities=[_template_npc(), spawned]).get_state()
+        fresh_layer = EntitiesLayer(entities=[_template_npc()])
+        fresh_layer.load_state(state)
+
+        restored = fresh_layer.get_entity("raider")
+        assert isinstance(restored, Npc)
+        assert restored.char_class is CharClass.FIGHTER
+        assert restored.class_features == []
