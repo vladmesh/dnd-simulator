@@ -1317,3 +1317,9 @@ msgstr "Дневник:"
 
 msgid "Recent thoughts:"
 msgstr "Недавние мысли:"
+
+msgid "Cell ({}, {}) is outside the {}x{} ft battle map"
+msgstr "Клетка ({}, {}) вне поля боя {}x{} футов"
+
+msgid "Cell ({}, {}) is already occupied"
+msgstr "Клетка ({}, {}) уже занята"

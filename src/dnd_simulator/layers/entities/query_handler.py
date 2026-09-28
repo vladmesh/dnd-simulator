@@ -252,6 +252,7 @@ class QueryHandler:
                     "max_hp": entity.max_hp,
                     "ac": effective_ac(entity),
                     "conditions": sorted(c.value for c in entity.conditions),
+                    "gold": entity.gold,
                     "inventory": [
                         {"id": item.id, "name": item.name, "item_type": item.item_type.value}
                         for item in entity.inventory
@@ -283,7 +284,6 @@ class QueryHandler:
                     "race": entity.race.value,
                     "char_class": entity.char_class.value,
                     "level": entity.level,
-                    "gold": entity.gold,
                 }
             )
         if isinstance(entity, PlayerCharacter):

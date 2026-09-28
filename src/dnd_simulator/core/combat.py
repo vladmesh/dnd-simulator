@@ -81,9 +81,17 @@ class BattleMap:
         """Cache inner walls for serialization; bounds enforced by find_path / _step_toward."""
         self._inner_walls: list[Wall] = list(self.walls)
 
+    def in_bounds(self, pos: Position) -> bool:
+        """Whether a position lies on this map (edges included, as for movement)."""
+        return 0 <= pos.x <= self.width and 0 <= pos.y <= self.height
+
+    def is_occupied(self, pos: Position) -> bool:
+        """Whether a living combatant stands on this cell (a corpse cell is not occupied)."""
+        return pos in self.positions.values()
+
     def set_position(self, entity_id: str, pos: Position) -> None:
         """Place or move an entity on the map."""
-        if pos.x < 0 or pos.x > self.width or pos.y < 0 or pos.y > self.height:
+        if not self.in_bounds(pos):
             raise ValueError(
                 f"Position ({pos.x}, {pos.y}) out of bounds for {entity_id} on {self.width}x{self.height} map"
             )

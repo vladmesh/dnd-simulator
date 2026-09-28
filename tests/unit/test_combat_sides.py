@@ -5,7 +5,7 @@ from __future__ import annotations
 from dnd_simulator.core.character import Creature
 from dnd_simulator.core.combat import CombatState
 from dnd_simulator.core.models import FactionRelation
-from dnd_simulator.rules.combat_sides import are_allies, build_combat_sides
+from dnd_simulator.rules.combat_sides import are_allies, build_combat_sides, join_side
 from dnd_simulator.rules.reputation import effective_relation
 
 
@@ -255,3 +255,43 @@ class TestAreAllies:
             entity_to_side={"a": 0},
         )
         assert are_allies(combat, "a", "a") is True
+
+
+class TestJoinSide:
+    """A creature joining a running combat goes through the same rule as at combat start."""
+
+    def _running(self) -> tuple[dict[int, set[str]], dict[str, int], dict[str, Creature]]:
+        creatures = [_make_creature("g0", "goblins"), _make_creature("h0", "guards")]
+        relation = _creature_relation_fn(("goblins", "guards", FactionRelation.HOSTILE))
+        sides, entity_to_side = build_combat_sides(creatures, relation)
+        return sides, entity_to_side, {c.id: c for c in creatures}
+
+    def test_joins_friendly_side(self) -> None:
+        sides, entity_to_side, members = self._running()
+        relation = _creature_relation_fn(("goblins", "guards", FactionRelation.HOSTILE))
+
+        side = join_side(_make_creature("g1", "goblins"), sides, entity_to_side, members, relation)
+
+        assert side == entity_to_side["g0"]
+        assert sides[side] == {"g0", "g1"}
+
+    def test_hostile_to_everyone_gets_new_side(self) -> None:
+        sides, entity_to_side, members = self._running()
+        relation = _creature_relation_fn(
+            ("goblins", "guards", FactionRelation.HOSTILE),
+            ("orcs", "goblins", FactionRelation.HOSTILE),
+            ("orcs", "guards", FactionRelation.HOSTILE),
+        )
+
+        side = join_side(_make_creature("o0", "orcs"), sides, entity_to_side, members, relation)
+
+        assert side not in (entity_to_side["g0"], entity_to_side["h0"])
+        assert sides[side] == {"o0"}
+
+    def test_factionless_gets_own_side(self) -> None:
+        sides, entity_to_side, members = self._running()
+
+        side = join_side(_make_creature("x"), sides, entity_to_side, members, _creature_relation_fn())
+
+        assert sides[side] == {"x"}
+        assert len(sides) == 3

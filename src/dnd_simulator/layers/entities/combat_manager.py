@@ -14,11 +14,12 @@ from dnd_simulator.core.inner_self import DigestBoundary
 from dnd_simulator.core.intent import IntentInterruptReason
 from dnd_simulator.core.models import ActionResult, Event, EventType, FactionRelation, QueryFn
 from dnd_simulator.core.turn_budget import TurnBudget
+from dnd_simulator.i18n import _
 from dnd_simulator.layers.entities import combat_resolution
 from dnd_simulator.layers.entities.combat_serialization import deserialize_combats, serialize_combats
 from dnd_simulator.layers.entities.intent_completion import interrupt_intent
 from dnd_simulator.rules.combat import roll_initiative
-from dnd_simulator.rules.combat_sides import build_combat_sides
+from dnd_simulator.rules.combat_sides import build_combat_sides, join_side
 from dnd_simulator.rules.reputation import (
     effective_relation,
     make_relation_fn,
@@ -154,6 +155,51 @@ class CombatManager:
             )
         )
         return combat
+
+    def join_combat(self, location_id: str, creature: Creature, query_fn: QueryFn | None = None) -> None:
+        """Add a creature to the running combat at a location (a GM spawn into the fight).
+
+        The creature takes its ``combat_position`` cell, which must be on the map and free
+        (``ValueError`` otherwise, raised before anything changes), or a random free cell.
+        It joins at the end of the initiative order, so it first acts next round, and on the
+        first side it is mutually FRIENDLY with (a new side otherwise), as at combat start.
+        """
+        combat = self._combats[location_id]
+        battle_map = combat.battle_map
+        if creature.combat_position is not None:
+            pos = Position(creature.combat_position[0], creature.combat_position[1])
+            if not battle_map.in_bounds(pos):
+                raise ValueError(
+                    _("Cell ({}, {}) is outside the {}x{} ft battle map").format(
+                        pos.x, pos.y, battle_map.width, battle_map.height
+                    )
+                )
+            if battle_map.is_occupied(pos):
+                raise ValueError(_("Cell ({}, {}) is already occupied").format(pos.x, pos.y))
+            battle_map.set_position(creature.id, pos)
+        else:
+            battle_map.place_randomly([creature.id], rng=self._rng)
+        combat.turn_order.append(creature.id)
+        if combat.sides and query_fn is not None:
+            get_faction_relation = make_relation_fn(query_fn)
+
+            def get_creature_relation(a: Creature, b: Creature) -> FactionRelation:
+                return effective_relation(a, b, get_faction_relation)
+
+            members = {
+                e.id: e for e in self._entities.values() if isinstance(e, Creature) and e.id in combat.entity_to_side
+            }
+            join_side(creature, combat.sides, combat.entity_to_side, members, get_creature_relation)
+        self._combat_participants[location_id] = (*self._combat_participants.get(location_id, ()), creature.id)
+        interrupt_intent(creature, IntentInterruptReason.COMBAT, self._digest)
+        creature.in_combat = True
+        if creature.turn_budget is None:  # reaction-only budget until its first turn
+            creature.turn_budget = TurnBudget(
+                actions=0, bonus_actions=0, movement_remaining=0, reaction=INITIAL_REACTION_BUDGET
+            )
+        logger.info(
+            "combat_join", location_id=location_id, entity_id=creature.id, position=battle_map.positions[creature.id]
+        )
 
     def reset_turn_state(self, creature_id: str) -> None:
         """Reset per-turn combat state for a creature (sneak attack used, etc.)."""

@@ -33,8 +33,12 @@ class CreatureCommands(GameServiceProtocol):
         )
 
     def get_creature_info(self, session_id: str, entity_id: str) -> dict[str, object]:
-        """Get single entity detail."""
+        """Get a single creature's detail; a container or unknown id is not a creature (``ValueError``)."""
+        from dnd_simulator.core.character import Creature
+
         session = self._get_session(session_id)
+        if not isinstance(self._get_entities_layer(session).get_entity(entity_id), Creature):
+            raise ValueError(f"Creature '{entity_id}' not found")
         return query_entity_info(session.world.query_layer, entity_id)
 
     def get_creature_inner_self(self, session_id: str, entity_id: str) -> dict[str, object]:
@@ -179,6 +183,10 @@ class CreatureCommands(GameServiceProtocol):
         entity_type in data determines what gets created:
         - "npc" → Npc (with role, personality, schedule, inner self)
         - "monster" → Creature (bare creature with attacks)
+
+        A creature spawned where a combat is running joins that fight, on its
+        ``combat_position`` cell when given (``ValueError`` if that cell is off the map
+        or taken, and then nothing is spawned).
         """
         session = self._get_session(session_id)
         known_locations = set(session.world.location_graph.all_ids())
@@ -195,7 +203,13 @@ class CreatureCommands(GameServiceProtocol):
             entity.brain = self._brain_factory.create(BrainType(data.get("ai", BrainType.RULE_BASED.value)))
             if not isinstance(entity, PlayerCharacter) and not entity.temporary:
                 entity.inner_self = entity.inner_self or InnerSelf()
-        self._get_entities_layer(session).add_entity(entity)
+        with session.mutate_world():
+            layer = self._get_entities_layer(session)
+            if layer.get_entity(entity.id) is not None:
+                raise ValueError(f"Entity '{entity.id}' already exists")
+            if isinstance(entity, Creature):
+                layer.join_combat(entity, session.world.make_query_fn("entities"))
+            layer.add_entity(entity)
         return entity
 
     # -- Patch --
@@ -258,10 +272,11 @@ class CreatureCommands(GameServiceProtocol):
                 entity.resource_pools = [p for p in entity.resource_pools if p.id != pool.id]
                 entity.resource_pools.append(pool)
 
+        if "gold" in updates:
+            entity.gold = int(updates["gold"])
+
         # Character-level fields
         if isinstance(entity, Character):
-            if "gold" in updates:
-                entity.gold = int(updates["gold"])
             if "level" in updates:
                 entity.level = int(updates["level"])
             if "experience" in updates:
@@ -391,11 +406,13 @@ def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) 
 
     # Monster / generic creature
     from dnd_simulator.content_loader import parse_ability_scores, parse_attacks
+    from dnd_simulator.content_loader.schemas import _validate_combat_position
     from dnd_simulator.core.character import Creature
 
     max_hp = int(data["hp"])
     attacks = parse_attacks(data.get("attacks") or [])
     location_id = str(data["start_location"])
+    position = _validate_combat_position(data.get("combat_position"))
 
     return Creature(
         id=str(data["id"]),
@@ -407,4 +424,5 @@ def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) 
         speed=int(data["speed"]),
         attacks=attacks,
         ability_scores=parse_ability_scores(data),
+        combat_position=(position[0], position[1]) if position else None,
     )
