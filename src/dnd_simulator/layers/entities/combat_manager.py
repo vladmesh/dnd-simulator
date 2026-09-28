@@ -246,6 +246,10 @@ class CombatManager:
             )
         )
 
+    def has_unconsumed_end(self, location_id: str) -> bool:
+        """True when a combat at the location ended and its roster was not consumed yet."""
+        return location_id in self._last_ended_participants
+
     def consume_last_ended_participants(self, location_id: str) -> tuple[str, ...]:
         """Return and clear the original roster for a just-ended combat."""
         return self._last_ended_participants.pop(location_id, ())

@@ -178,6 +178,7 @@ class TravelIntentSave(SaveModel):
     destination_id: str
     remaining_route: tuple[str, ...] = Field(min_length=1)
     next_arrival_seconds: int
+    fleeing: bool = False
 
     @model_validator(mode="after")
     def validate_route(self) -> TravelIntentSave:

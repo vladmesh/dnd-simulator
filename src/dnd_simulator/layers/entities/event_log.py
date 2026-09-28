@@ -19,6 +19,7 @@ _LOGGED_EVENTS = frozenset(
         EventType.ENTITY_DIED,
         EventType.ENTITY_DODGE,
         EventType.ENTITY_FLEE,
+        EventType.ENTITY_ARRIVED,
         EventType.ENTITY_MOVE,
         EventType.ENTITY_DASH,
         EventType.ENTITY_DISENGAGE,

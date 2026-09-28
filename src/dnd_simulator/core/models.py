@@ -116,6 +116,7 @@ class EventType(Enum):
     ENTITY_ATTACK = "entity_attack"
     ENTITY_DODGE = "entity_dodge"
     ENTITY_FLEE = "entity_flee"
+    ENTITY_ARRIVED = "entity_arrived"
     ENTITY_MOVE = "entity_move"
     ENTITY_DASH = "entity_dash"
     ENTITY_DISENGAGE = "entity_disengage"

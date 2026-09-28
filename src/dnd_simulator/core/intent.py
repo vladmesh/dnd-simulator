@@ -52,6 +52,7 @@ class TravelIntent:
     remaining_route: tuple[str, ...]
     next_arrival_seconds: int
     kind: IntentType = IntentType.TRAVEL
+    fleeing: bool = False  # the journey is a flight from a fight; only the arrival log line reads it
 
     def __post_init__(self) -> None:
         if self.kind is not IntentType.TRAVEL:

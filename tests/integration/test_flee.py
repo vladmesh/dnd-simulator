@@ -121,8 +121,10 @@ class TestPlayerFlee:
 
             # (4) Flee ends the player's turn: no further prompt until the journey is over.
             # Travel time passes, the player arrives and the regional table is rolled.
+            log: list[dict[str, Any]] = list(result.get("events", []))
             for _ in range(2000):
                 msg = ws_recv(sock)
+                log.extend(msg.get("events", []))
                 if msg["type"] == "turn":
                     assert msg["location"].get("current_location_id") == "wild_trail", "prompted before arrival"
                     break
@@ -136,8 +138,22 @@ class TestPlayerFlee:
                 if any(c["name"] == "Goblin" for c in at_trail):
                     break
                 ws_send_action(sock, "end_turn")
-                _next(sock, "turn", max_msgs=200)
+                for _ in range(200):
+                    msg = ws_recv(sock)
+                    log.extend(msg.get("events", []))
+                    if msg["type"] == "turn":
+                        break
             assert any(c["name"] == "Goblin" for c in at_trail)
+
+            # (5) The log tells how long the flight took and where it ended, before what met the player there.
+            types = [event["event_type"] for event in log]
+            assert types.count("entity_arrived") == 1
+            arrived = log[types.index("entity_arrived")]
+            minutes = -(-destinations["wild_trail"]["travel_seconds"] // 60)
+            unit = "minute" if minutes == 1 else "minutes"
+            assert arrived["description"] == f"You ran for {minutes} {unit} to Wild Trail."
+            assert "encounter_spawned" in types
+            assert types.index("entity_arrived") < types.index("encounter_spawned")
             assert not any(c["id"] in ("brute_a", "brute_b") for c in at_trail)  # nobody followed
             assert not any(c["id"] == pid for c in _creatures_at(api_url, sid, START))
         finally:
