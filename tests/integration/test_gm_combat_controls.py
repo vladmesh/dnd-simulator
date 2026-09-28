@@ -1,4 +1,8 @@
-"""Integration tests: GM delete / kill of a creature in an active combat (issue ae4bde95c6d2043858d0).
+"""Integration tests: GM hot controls on creatures (issue ae4bde95c6d2043858d0).
+
+Delete / kill of a creature in an active combat, spawn into a running fight on a given
+``combat_position``, ``gold`` patches on a monster, and ``GET /creatures/{id}`` for a container.
+
 
 Runs against the live backend in docker compose (DND_DICE_SEED=42) with ``encounter_world``:
 ``border_post`` has no encounter table. The player starts there at (0, 0) and two slow
@@ -107,6 +111,113 @@ class TestGmControlsInCombat:
             creatures = {c["id"]: c for c in requests.get(f"{api_url}/sessions/{sid}/creatures", timeout=5).json()}
             assert "brute_b" not in creatures
             assert creatures["brute_a"]["hp"] == 0  # the corpse stays in the world
+        finally:
+            sock.close()
+            requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+
+
+def _free_cell(awareness: dict[str, Any]) -> list[int]:
+    taken = {tuple(cell) for cell in awareness["occupied_cells"]}
+    taken.add((awareness["self_x"], awareness["self_y"]))
+    width = awareness["battle_map_width"]
+    return next([x, y] for x in range(5, width, 5) for y in range(5, width, 5) if (x, y) not in taken)
+
+
+def _spawn(api_url: str, sid: str, creature_id: str, **extra: Any) -> requests.Response:
+    body = {
+        "id": creature_id,
+        "name": "Brute",
+        "entity_type": "monster",
+        "start_location": START,
+        "hp": 40,
+        "ac": 12,
+        "speed": 10,
+        **extra,
+    }
+    return requests.post(f"{api_url}/sessions/{sid}/creatures", json=body, timeout=10)
+
+
+class TestGmSpawnIntoCombat:
+    def test_spawn_with_combat_position_joins_the_fight_on_that_cell(
+        self, backend_url: str, api_url: str, player_api_url: str
+    ) -> None:
+        sid, pid = _create_session(api_url, player_api_url)
+        sock = ws_connect(backend_url.replace("http://", "ws://") + "/api/ws", sid, pid)
+        sock.settimeout(30)
+        try:
+            turn = _enter_combat(sock)
+            awareness = turn["awareness"]
+            cell = _free_cell(awareness)
+
+            # A taken cell is rejected and spawns nothing.
+            taken = awareness["occupied_cells"][0]
+            resp = _spawn(api_url, sid, "brute_x", combat_position=taken)
+            assert resp.status_code == 400
+            assert "occupied" in resp.json()["detail"]
+            assert requests.get(f"{api_url}/sessions/{sid}/creatures/brute_x", timeout=5).status_code == 404
+
+            # Off the map is rejected too.
+            resp = _spawn(api_url, sid, "brute_x", combat_position=[1000, 0])
+            assert resp.status_code == 400
+            assert "outside" in resp.json()["detail"]
+
+            # A free cell: the brute joins the fight standing on it.
+            resp = _spawn(api_url, sid, "brute_c", combat_position=cell)
+            assert resp.status_code == 200
+            ws_send_action(sock, "end_turn")
+            turn = _next_turn(sock, max_msgs=200)
+            assert turn["mode"] == "combat"
+            nearby = {e["id"] for e in turn["awareness"]["nearby"]}
+            assert "brute_c" in nearby
+            assert "brute_x" not in nearby
+            assert cell in turn["awareness"]["occupied_cells"]
+        finally:
+            sock.close()
+            requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+
+
+class TestGmPatchGold:
+    def test_patch_gold_on_monster_is_applied(self, api_url: str, player_api_url: str) -> None:
+        sid, _ = _create_session(api_url, player_api_url)
+        try:
+            resp = requests.patch(f"{api_url}/sessions/{sid}/creatures/brute_a", json={"gold": 25}, timeout=5)
+            assert resp.status_code == 200
+            creature = requests.get(f"{api_url}/sessions/{sid}/creatures/brute_a", timeout=5).json()
+            assert creature["gold"] == 25
+        finally:
+            requests.delete(f"{api_url}/sessions/{sid}", timeout=5)
+
+
+class TestGmGetContainer:
+    def test_get_container_is_not_found(self, backend_url: str, api_url: str, player_api_url: str) -> None:
+        """lair_world spawns the goblin warren treasury (a Container) when the player enters the cave."""
+        resp = requests.post(f"{api_url}/sessions", json={"world_name": "lair_world", "lang": "en"}, timeout=10)
+        resp.raise_for_status()
+        sid = resp.json()["session_id"]
+        resp = requests.post(
+            f"{player_api_url}/sessions/{sid}/character",
+            json={
+                "name": "Lair Tester",
+                "race": "human",
+                "char_class": "fighter",
+                "alignment": "true_neutral",
+                "start_location": "cave",
+                "ability_scores": {"str": 15, "dex": 14, "con": 14, "int": 10, "wis": 10, "cha": 8},
+                "fighting_style": "defense",
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        pid = resp.json()["player_id"]
+        sock = ws_connect(backend_url.replace("http://", "ws://") + "/api/ws", sid, pid)
+        sock.settimeout(30)
+        try:
+            turn = _next_turn(sock)
+            assert "goblin_warren_treasury" in {e["id"] for e in turn["awareness"]["nearby"]}
+
+            resp = requests.get(f"{api_url}/sessions/{sid}/creatures/goblin_warren_treasury", timeout=5)
+            assert resp.status_code == 404
+            assert "goblin_warren_treasury" in resp.json()["detail"]
         finally:
             sock.close()
             requests.delete(f"{api_url}/sessions/{sid}", timeout=5)

@@ -44,6 +44,8 @@ class SpawnCreatureRequest(BaseModel):
     speed: int = Field(ge=0)
     attacks: list[dict[str, object]] | None = None
     ability_scores: dict[str, int] | None = None
+    # Battle-map cell [x, y] in feet; taken at once when a combat is running at start_location
+    combat_position: list[int] | None = None
     # NPC-specific (ignored for monsters)
     role: str | None = None
     personality: str | None = None
@@ -59,8 +61,8 @@ class PatchCreatureRequest(BaseModel):
     ac: int | None = Field(default=None, ge=0, le=30)
     location_id: str | None = None
     conditions: list[str] | None = None  # D&D 5e condition names
-    # Character-level
     gold: int | None = Field(default=None, ge=0)
+    # Character-level
     level: int | None = Field(default=None, ge=1, le=20)
     experience: int | None = Field(default=None, ge=0)
     # Creature-level XP award on kill (0 for most non-monster creatures)

@@ -214,6 +214,17 @@ class EntitiesLayer(Layer):
         """Reset per-turn combat state for a creature (e.g. sneak attack availability)."""
         self._combat.reset_turn_state(creature_id)
 
+    def join_combat(self, creature: Creature, query_fn: QueryFn | None = None) -> bool:
+        """Put a creature into the combat running at its location; False when there is none.
+
+        The GM path for a creature spawned into a fight (see ``CombatManager.join_combat``):
+        a ``ValueError`` for an unusable ``combat_position`` leaves everything unchanged.
+        """
+        if self._combat.get_combat(creature.location_id) is None:
+            return False
+        self._combat.join_combat(creature.location_id, creature, query_fn)
+        return True
+
     def remove_from_combat(self, entity_id: str) -> None:
         """Take a creature out of the combat it belongs to, outside any combat action.
 

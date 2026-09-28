@@ -52,42 +52,44 @@ def build_combat_sides(
     creature_by_id: dict[str, Creature] = {c.id: c for c in creatures}
     sides: dict[int, set[str]] = {}
     entity_to_side: dict[str, int] = {}
-    next_side = 0
-
     for creature in creatures:
-        if not creature.faction_id:
-            sides[next_side] = {creature.id}
-            entity_to_side[creature.id] = next_side
-            next_side += 1
-            continue
+        join_side(creature, sides, entity_to_side, creature_by_id, get_relation, opponent_of.get(creature.id, set()))
+    return sides, entity_to_side
 
-        target_side: int | None = None
-        my_opponents = opponent_of.get(creature.id, set())
+
+def join_side(
+    creature: Creature,
+    sides: dict[int, set[str]],
+    entity_to_side: dict[str, int],
+    creature_by_id: dict[str, Creature],
+    get_relation: CreatureRelationFn,
+    opponents: set[str] | frozenset[str] = frozenset(),
+) -> int:
+    """Put one creature on the first side it is mutually FRIENDLY with, else on a new side.
+
+    Mutates ``sides`` / ``entity_to_side`` in place and returns the side index. A factionless
+    creature always gets a side of its own; a side holding one of ``opponents`` is skipped.
+    ``creature_by_id`` must resolve every current side member. Used for each creature when
+    a combat starts and for a creature joining a running combat.
+    """
+    target_side: int | None = None
+    if creature.faction_id:
         for side_idx, members in sides.items():
-            # Skip sides that contain a forced opponent
-            if my_opponents & members:
+            if opponents & members:
                 continue
-            all_friendly = True
-            for member_id in members:
-                member = creature_by_id[member_id]
-                rel_forward = get_relation(creature, member)
-                rel_backward = get_relation(member, creature)
-                if rel_forward != FactionRelation.FRIENDLY or rel_backward != FactionRelation.FRIENDLY:
-                    all_friendly = False
-                    break
-            if all_friendly:
+            if all(
+                get_relation(creature, creature_by_id[member_id]) == FactionRelation.FRIENDLY
+                and get_relation(creature_by_id[member_id], creature) == FactionRelation.FRIENDLY
+                for member_id in members
+            ):
                 target_side = side_idx
                 break
-
-        if target_side is None:
-            target_side = next_side
-            sides[target_side] = set()
-            next_side += 1
-
-        sides[target_side].add(creature.id)
-        entity_to_side[creature.id] = target_side
-
-    return sides, entity_to_side
+    if target_side is None:
+        target_side = max(sides, default=-1) + 1
+        sides[target_side] = set()
+    sides[target_side].add(creature.id)
+    entity_to_side[creature.id] = target_side
+    return target_side
 
 
 def are_allies(combat: CombatState, a: str, b: str) -> bool:
