@@ -204,7 +204,7 @@ Kill reputation drop (`rules/reputation.py`): omniscient, delta scaled by victim
 - `DND_WORLD_SEED` env var seeds world simulation layers; when absent, `GameService` logs the generated seed.
 - `DND_AUTOSAVE_SECONDS` env var controls periodic autosave interval (default: `120`; must be greater than `0`).
 - `DND_ROUND_STOP_TIMEOUT_SECONDS` bounds round-thread shutdown before load/eviction aborts safely (default: `5`).
-- Save files: `saves/` directory (JSON)
+- Save files: `saves/` directory (JSON); `DND_SAVES_DIR` env var overrides it
 - Backend API: `make serve` → http://localhost:8001/docs (Swagger UI)
 - Frontend: `make frontend` → http://localhost:5173 (entry point, proxies /api to :8001)
 - GM inner-self API: `GET /api/master/sessions/{session_id}/creatures/{entity_id}/inner-self` returns the complete
