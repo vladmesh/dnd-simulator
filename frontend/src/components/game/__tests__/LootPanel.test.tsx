@@ -60,6 +60,22 @@ function setCombat(lootables: CombatLootable[], budget: TurnBudget = fullBudget,
   useGameStore.setState({ isMyTurn, waitingForAction: false, mode: "combat", awareness, budget })
 }
 
+const container: CombatLootable = {
+  id: "chest_1",
+  name: "Chest",
+  description: "an open chest",
+  in_reach: false,
+  distance_ft: null,
+  reason_key: "not_on_map",
+  reason: "server reason",
+  loot_items: [],
+  loot_gold: 30,
+}
+
+function expandUnreachable() {
+  fireEvent.click(screen.getByTestId("loot-unreachable-toggle"))
+}
+
 function takeButton(holderId: string) {
   return within(screen.getByTestId(`loot-${holderId}`)).getByRole("button")
 }
@@ -92,6 +108,7 @@ describe("LootPanel — combat", () => {
   it("shows a distant corpse disabled with the reach reason", () => {
     setCombat([adjacent, distant])
     render(<LootPanel />)
+    expandUnreachable()
 
     const button = takeButton("orc_corpse")
     expect(button).toBeDisabled()
@@ -107,6 +124,7 @@ describe("LootPanel — combat", () => {
     await i18n.changeLanguage("ru")
     setCombat([distant])
     render(<LootPanel />)
+    expandUnreachable()
 
     expect(screen.getByTestId("loot-reason")).toHaveTextContent("Слишком далеко (20 фт) — подойдите вплотную")
   })
@@ -114,6 +132,7 @@ describe("LootPanel — combat", () => {
   it("falls back to the server reason for an unknown reason key", () => {
     setCombat([{ ...distant, reason_key: "something_new" }])
     render(<LootPanel />)
+    expandUnreachable()
 
     expect(screen.getByTestId("loot-reason")).toHaveTextContent("server reason")
   })
@@ -131,6 +150,50 @@ describe("LootPanel — combat", () => {
     render(<LootPanel />)
 
     expect(takeButton("goblin_corpse")).toBeDisabled()
+  })
+
+  it("collapses out-of-reach holders into a counted group", () => {
+    setCombat([adjacent, distant, container])
+    render(<LootPanel />)
+
+    expect(screen.getByTestId("loot-goblin_corpse")).toBeInTheDocument()
+    expect(screen.queryByTestId("loot-orc_corpse")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("loot-chest_1")).not.toBeInTheDocument()
+    const toggle = screen.getByTestId("loot-unreachable-toggle")
+    expect(toggle).toHaveTextContent("Unavailable in combat (2)")
+    expect(toggle).toHaveAttribute("aria-expanded", "false")
+  })
+
+  it("expanding the group shows each unreachable holder with its reason", () => {
+    setCombat([adjacent, distant, container])
+    render(<LootPanel />)
+    expandUnreachable()
+
+    expect(within(screen.getByTestId("loot-orc_corpse")).getByTestId("loot-reason")).toHaveTextContent(
+      "Too far (20 ft) — move next to it",
+    )
+    expect(within(screen.getByTestId("loot-chest_1")).getByTestId("loot-reason")).toHaveTextContent(
+      "Out of reach in combat",
+    )
+    expect(takeButton("chest_1")).toBeDisabled()
+
+    expandUnreachable()
+    expect(screen.queryByTestId("loot-chest_1")).not.toBeInTheDocument()
+  })
+
+  it("counts the unreachable group in Russian", async () => {
+    await i18n.changeLanguage("ru")
+    setCombat([distant, container])
+    render(<LootPanel />)
+
+    expect(screen.getByTestId("loot-unreachable")).toHaveTextContent("Недоступно в бою (2)")
+  })
+
+  it("has no unreachable group when every holder is in reach", () => {
+    setCombat([adjacent])
+    render(<LootPanel />)
+
+    expect(screen.queryByTestId("loot-unreachable")).not.toBeInTheDocument()
   })
 
   it("renders nothing when no holder is at the fight", () => {
@@ -160,6 +223,8 @@ describe("LootPanel — peaceful (unchanged)", () => {
 
     expect(screen.queryByText("Bob")).not.toBeInTheDocument()
     expect(screen.queryByTestId("loot-reason")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("loot-unreachable")).not.toBeInTheDocument()
+    expect(screen.getByTestId("loot-chest_1")).toBeInTheDocument()
     fireEvent.click(takeButton("chest_1"))
     expect(wsClient.send).toHaveBeenCalledWith({ type: "action", name: "take", params: { target_id: "chest_1" } })
   })
