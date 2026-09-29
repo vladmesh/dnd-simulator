@@ -37,6 +37,11 @@ _SESSION_ID_RE = re.compile(r"/api/(?:master|player)/sessions/([^/]+)")
 logger = structlog.get_logger(domain="transport.api")
 
 
+def _saves_dir_from_env() -> Path:
+    raw = os.getenv("DND_SAVES_DIR")
+    return Path(raw) if raw else DEFAULT_SAVES_DIR
+
+
 def _autosave_interval_from_env() -> float:
     raw = os.getenv("DND_AUTOSAVE_SECONDS")
     if raw is None:
@@ -85,7 +90,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     log_dir_raw = os.getenv("LOG_DIR")
     configure_logging(log_level=log_level, log_dir=Path(log_dir_raw) if log_dir_raw else None)
 
-    store = JsonFileStore(DEFAULT_SAVES_DIR)
+    store = JsonFileStore(_saves_dir_from_env())
 
     llm: LlmClient | None = None
     api_key = os.getenv("OPENROUTER_API_KEY")
