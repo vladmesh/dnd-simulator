@@ -19,23 +19,33 @@ export interface CreatePlayerRequest {
   combat_position?: number[] | null
 }
 
+/** Mirrors `EntityKind` (core/models.py). */
+export type EntityKind = "player" | "npc" | "creature" | "container" | "monster"
+
+/** Mirrors `BrainType` (core/brain.py). */
+export type BrainType = "rule_based" | "llm"
+
+/** Mirrors `SpawnCreatureRequest` (adapters/api/schemas.py). */
 export interface SpawnCreatureRequest {
   id: string
   name: string
-  entity_type?: string
-  region_id?: string
-  start_location?: string
-  hp?: number
-  ac?: number
-  speed?: number
+  entity_type: EntityKind
+  start_location: string
+  hp: number
+  ac: number
+  speed: number
   attacks?: Array<Record<string, unknown>> | null
   ability_scores?: Record<string, number> | null
-  role?: string
-  personality?: string
-  settlement_id?: string
-  ai?: string
+  /** Battle-map cell [x, y] in feet. */
+  combat_position?: number[] | null
+  role?: string | null
+  personality?: string | null
+  settlement_id?: string | null
+  ai?: BrainType
+  xp_value?: number | null
 }
 
+/** Mirrors `PatchCreatureRequest` (adapters/api/schemas.py). */
 export interface PatchCreatureRequest {
   current_hp?: number | null
   max_hp?: number | null
@@ -43,6 +53,10 @@ export interface PatchCreatureRequest {
   location_id?: string | null
   conditions?: string[] | null
   gold?: number | null
+  level?: number | null
+  experience?: number | null
+  xp_value?: number | null
+  resource_pools?: Array<Record<string, unknown>> | null
   personality?: string | null
 }
 
