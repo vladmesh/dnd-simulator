@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useId } from "react"
 import { useTranslation } from "react-i18next"
 import { useGameStore } from "@/store/gameStore"
 import { wsClient } from "@/transport/wsClient"
@@ -16,6 +16,8 @@ import { Sword, MessageCircle, ShoppingBag, Send } from "lucide-react"
 import { SmiteChoice } from "./SmiteChoice"
 import { buildAttackParams } from "./attackParams"
 import { getSpellSlots } from "./spellSlots"
+import { checkSpeech } from "./speechLimit"
+import { SpeechLengthError } from "./SpeechLengthError"
 
 interface NpcInspectModalProps {
   entity: NearbyEntity | CombatEntity | null
@@ -42,6 +44,8 @@ export function NpcInspectModal({ entity, open, onClose, isCombat, targetLabel }
   const [showTrade, setShowTrade] = useState(false)
   const [talkText, setTalkText] = useState("")
   const [showSmite, setShowSmite] = useState(false)
+  const talkErrorId = useId()
+  const speech = checkSpeech(talkText)
 
   if (!entity) return null
 
@@ -74,8 +78,8 @@ export function NpcInspectModal({ entity, open, onClose, isCombat, targetLabel }
   }
 
   const handleTalk = () => {
-    if (talkText.trim()) {
-      sendAction("say", { target_id: entity.id, text: talkText.trim() })
+    if (speech.canSend) {
+      sendAction("say", { target_id: entity.id, text: speech.payload })
       setTalkText("")
       onClose()
     }
@@ -208,21 +212,26 @@ export function NpcInspectModal({ entity, open, onClose, isCombat, targetLabel }
 
           {/* Talk input */}
           {isMyTurn && talkText !== "" && (
-            <div className="flex gap-1">
-              <input
-                className="h-6 flex-1 rounded border border-border bg-transparent px-1.5 text-xs placeholder:text-muted-foreground"
-                placeholder={t("game:say_placeholder")}
-                value={talkText.trim() === "" ? "" : talkText}
-                autoFocus
-                onChange={(e) => setTalkText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleTalk()
-                  if (e.key === "Escape") setTalkText("")
-                }}
-              />
-              <Button size="xs" variant="secondary" disabled={!talkText.trim()} onClick={handleTalk}>
-                <Send className="size-3" />
-              </Button>
+            <div className="space-y-0.5">
+              <div className="flex gap-1">
+                <input
+                  className="h-6 flex-1 rounded border border-border bg-transparent px-1.5 text-xs placeholder:text-muted-foreground"
+                  placeholder={t("game:say_placeholder")}
+                  aria-invalid={speech.tooLong || undefined}
+                  aria-describedby={speech.tooLong ? talkErrorId : undefined}
+                  value={talkText.trim() === "" ? "" : talkText}
+                  autoFocus
+                  onChange={(e) => setTalkText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleTalk()
+                    if (e.key === "Escape") setTalkText("")
+                  }}
+                />
+                <Button size="xs" variant="secondary" disabled={!speech.canSend} onClick={handleTalk}>
+                  <Send className="size-3" />
+                </Button>
+              </div>
+              <SpeechLengthError id={talkErrorId} speech={speech} />
             </div>
           )}
         </div>

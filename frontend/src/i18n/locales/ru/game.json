@@ -64,6 +64,7 @@
   "speed_display": "Скорость: {{n}}фт",
   "weapon_display": "Оружие: {{name}} ({{damage}})",
   "say_placeholder": "Сказать что-то...",
+  "speech_too_long": "Слишком длинно: {{length}} из {{max}} символов. Сократите, чтобы отправить.",
   "talk_to": "Говорить с {{target}}",
   "race_human": "Человек",
   "race_elf": "Эльф",
