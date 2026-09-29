@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test test-unit test-integration check check-backend check-frontend setup-hooks messages compile-messages serve stop frontend up clean test-frontend lint-frontend typecheck-frontend live-inner-self
+.PHONY: install lint format typecheck test test-unit test-integration check check-backend check-frontend setup-hooks messages compile-messages serve stop frontend up clean test-frontend lint-frontend typecheck-frontend live-inner-self test-frontend-container
 
 install:
 	uv sync
@@ -25,6 +25,12 @@ live-inner-self:
 
 test-integration:
 	UID=$$(id -u) GID=$$(id -g) docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from integration-tests
+
+# Production frontend image (nginx) + backend, smoke-tested through the nginx proxy.
+# Separate from test-integration so the integration job never builds the frontend image.
+test-frontend-container:
+	UID=$$(id -u) GID=$$(id -g) docker compose -f docker-compose.test.yml --profile frontend up --build --abort-on-container-exit --exit-code-from frontend-smoke backend frontend frontend-smoke; \
+	status=$$?; UID=$$(id -u) GID=$$(id -g) docker compose -f docker-compose.test.yml --profile frontend down; exit $$status
 
 test-frontend:
 	cd frontend && npx vitest run

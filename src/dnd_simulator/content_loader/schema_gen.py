@@ -7,8 +7,6 @@ Wraps Pydantic's model_json_schema() with enrichments:
 
 from __future__ import annotations
 
-from typing import Any
-
 from dnd_simulator.content_loader.crud import EntityType, get_registry_entry
 
 # ---------------------------------------------------------------------------
@@ -60,20 +58,21 @@ _LABELS: dict[EntityType, str] = {
 # ---------------------------------------------------------------------------
 
 
-def get_entity_schema(entity_type: EntityType) -> dict[str, Any]:
+def get_entity_schema(entity_type: EntityType) -> dict[str, object]:
     """Return enriched JSON Schema for an entity type.
 
     Adds x-ref-type to properties that reference other entities.
     """
     entry = get_registry_entry(entity_type)
-    schema: dict[str, Any] = entry.schema.model_json_schema(by_alias=True)
+    schema: dict[str, object] = entry.schema.model_json_schema(by_alias=True)
 
     # Inject x-ref-type annotations into properties
     refs = _REF_ANNOTATIONS.get(entity_type, {})
-    properties: dict[str, Any] = schema.get("properties", {})
+    properties = schema.get("properties", {})
     for field_name, ref_type in refs.items():
-        if field_name in properties:
-            properties[field_name]["x-ref-type"] = ref_type
+        prop = properties.get(field_name) if isinstance(properties, dict) else None
+        if isinstance(prop, dict):
+            prop["x-ref-type"] = ref_type
 
     return schema
 
