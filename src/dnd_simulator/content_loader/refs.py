@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
 
 from dnd_simulator.content_loader.crud import EntityType, list_entities
 from dnd_simulator.content_loader.manifest import resolve_manifest
@@ -59,7 +58,7 @@ def get_ref_entries(
     return [{"id": eid, "name": _resolve_name(model, lang)} for eid, model in entities.items()]
 
 
-def _resolve_name(model: Any, lang: str) -> str:
+def _resolve_name(model: object, lang: str) -> str:
     """Extract the localized name from a model."""
     name = getattr(model, "name", None)
     if name is None:

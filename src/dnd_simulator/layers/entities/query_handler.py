@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, NotRequired, TypedDict
 
+from dnd_simulator.core.brain import BrainType
 from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.models import Answer, EntityKind, Query, QueryType
 from dnd_simulator.layers.entities.event_log import mark_log_read, unread_events
@@ -13,11 +14,113 @@ from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.rules.modifiers import effective_ac
 
 if TYPE_CHECKING:
+    from dnd_simulator.core.combat import Position
     from dnd_simulator.core.items import Item
     from dnd_simulator.core.models import Event
     from dnd_simulator.layers.entities.combat_manager import CombatManager
 
 _QueryHandler = Callable[["QueryHandler", dict[str, object]], Answer]
+
+
+class EntitySummary(TypedDict):
+    """Listing entry answered by ``ENTITIES_AT_LOCATION``; NPC keys only for NPCs."""
+
+    id: str
+    name: str
+    is_wounded: NotRequired[bool]
+    role: NotRequired[str]
+    activity: NotRequired[str]
+    activity_flavor: NotRequired[str]
+    location_label: NotRequired[str]
+
+
+class EquippedWeaponInfo(TypedDict):
+    """Equipped weapon inside an ``EntityDetail``."""
+
+    weapon_id: str
+    attack_name: str
+    damage: str
+
+
+class InventoryEntryInfo(TypedDict):
+    """Inventory item inside an ``EntityDetail``."""
+
+    id: str
+    name: str
+    item_type: str
+
+
+class ResourcePoolInfo(TypedDict):
+    """Resource pool inside an ``EntityDetail``."""
+
+    id: str
+    max_uses: int
+    current_uses: int
+    reset_on: str
+
+
+class ActivationTriggerInfo(TypedDict):
+    """Activation trigger state inside an ``EntityDetail``."""
+
+    id: str
+    armed: bool
+    active: bool
+
+
+class EntityDetail(TypedDict):
+    """Answer of ``ENTITY_INFO`` / ``ALL_ENTITIES`` / ``ALL_CREATURES``.
+
+    Creature, Character and NPC keys are present only for entities of that kind;
+    ``entity_type`` is absent for non-creature entities (containers).
+    """
+
+    id: str
+    name: str
+    location_id: str
+    active: bool
+    hp: NotRequired[int]
+    max_hp: NotRequired[int]
+    ac: NotRequired[int]
+    conditions: NotRequired[list[str]]
+    gold: NotRequired[int]
+    inventory: NotRequired[list[InventoryEntryInfo]]
+    equipped_weapon: NotRequired[EquippedWeaponInfo | None]
+    resource_pools: NotRequired[list[ResourcePoolInfo]]
+    gm_activation_override: NotRequired[str]
+    activation_triggers: NotRequired[list[ActivationTriggerInfo]]
+    race: NotRequired[str]
+    char_class: NotRequired[str]
+    level: NotRequired[int]
+    entity_type: NotRequired[str]
+    role: NotRequired[str]
+    personality: NotRequired[str]
+    settlement_id: NotRequired[str]
+    ai_type: NotRequired[BrainType]
+    inner_self: NotRequired[dict[str, object] | None]
+
+
+class NpcDetail(TypedDict):
+    """Answer of ``NPC_INFO`` / ``ALL_NPCS``."""
+
+    id: str
+    name: str
+    location_id: str
+    role: str
+    personality: str
+    hp: int
+    max_hp: int
+    ac: int
+    ai_type: BrainType
+    active: bool
+
+
+class CombatInfo(TypedDict):
+    """Answer of ``COMBAT_INFO`` for a location with an active fight."""
+
+    round_number: int
+    turn_order: list[str]
+    positions: dict[str, Position]
+    wall_descriptions: list[str]
 
 
 class QueryHandler:
@@ -138,14 +241,13 @@ class QueryHandler:
         location_id = str(params["location_id"])
         combat = self._combat.get_combat(location_id)
         if combat:
-            return Answer(
-                value={
-                    "round_number": combat.round_number,
-                    "turn_order": combat.turn_order,
-                    "positions": dict(combat.battle_map.positions),
-                    "wall_descriptions": combat.battle_map.describe_walls(),
-                }
-            )
+            info: CombatInfo = {
+                "round_number": combat.round_number,
+                "turn_order": combat.turn_order,
+                "positions": dict(combat.battle_map.positions),
+                "wall_descriptions": combat.battle_map.describe_walls(),
+            }
+            return Answer(value=info)
         return Answer(value=None)
 
     def _query_perceive_entity(self, params: dict[str, object]) -> Answer:
@@ -205,9 +307,9 @@ class QueryHandler:
 
     # -- Detail builders --
 
-    def _entity_summary(self, entity: Entity, hour: int = 12) -> dict[str, object]:
+    def _entity_summary(self, entity: Entity, hour: int = 12) -> EntitySummary:
         """Short summary for listings."""
-        base: dict[str, object] = {
+        base: EntitySummary = {
             "id": entity.id,
             "name": entity.name,
         }
@@ -222,7 +324,7 @@ class QueryHandler:
         return base
 
     @staticmethod
-    def _serialize_equipped_weapon(weapon: Item | None) -> dict[str, object] | None:
+    def _serialize_equipped_weapon(weapon: Item | None) -> EquippedWeaponInfo | None:
         if weapon is None or weapon.weapon_def is None:
             return None
         wd = weapon.weapon_def
@@ -233,11 +335,11 @@ class QueryHandler:
             "damage": damage_str,
         }
 
-    def _entity_detail(self, entity: Entity) -> dict[str, object]:
+    def _entity_detail(self, entity: Entity) -> EntityDetail:
         """Full detail for a single entity."""
         from dnd_simulator.core.player import PlayerCharacter
 
-        base: dict[str, object] = {
+        base: EntityDetail = {
             "id": entity.id,
             "name": entity.name,
             "location_id": entity.location_id,
@@ -301,7 +403,7 @@ class QueryHandler:
             base["entity_type"] = EntityKind.MONSTER.value
         return base
 
-    def _npc_detail(self, npc: Npc) -> dict[str, object]:
+    def _npc_detail(self, npc: Npc) -> NpcDetail:
         """Full NPC detail including creature stats."""
         return {
             "id": npc.id,

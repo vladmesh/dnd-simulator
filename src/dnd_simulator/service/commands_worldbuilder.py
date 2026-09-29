@@ -252,24 +252,26 @@ class WorldBuilderCommands(GameServiceProtocol):
     def get_world_manifest(self, world_id: str, lang: str = "en") -> dict[str, object]:
         """Read manifest.yaml and return structured layer info for the world inspector."""
         from dnd_simulator.content_loader.manifest import LayerSource
-        from dnd_simulator.content_loader.utils import _read_yaml, resolve_text
+        from dnd_simulator.content_loader.utils import _read_yaml, as_mapping, resolve_text
 
         self._validate_world_id(world_id)
         world_path = self._content_dir / "worlds" / world_id
         if not world_path.exists():
             raise FileNotFoundError(f"World '{world_id}' not found")
 
-        manifest = _read_yaml(world_path / "manifest.yaml")
+        manifest_path = world_path / "manifest.yaml"
+        manifest = _read_yaml(manifest_path)
         name = resolve_text(manifest["name"], lang)
-        layers_data = manifest["layers"]
+        layers_data = as_mapping(manifest["layers"], f"{manifest_path}: layers")
         layers: list[dict[str, str | None]] = []
         for layer_type in LayerType:
             lt = layer_type.value
-            layer_config = layers_data.get(lt)
-            if layer_config is None:
+            raw_config = layers_data.get(lt)
+            if raw_config is None:
                 layers.append({"layer_type": lt, "source": None, "template": None, "version": None})
             else:
-                source = LayerSource(layer_config["source"])
+                layer_config = as_mapping(raw_config, f"{manifest_path}: layers.{lt}")
+                source = LayerSource(str(layer_config["source"]))
                 layers.append(
                     {
                         "layer_type": lt,
@@ -298,16 +300,18 @@ class WorldBuilderCommands(GameServiceProtocol):
 
     def _resolve_layer_path(self, world_id: str, layer_type: LayerType) -> tuple[Path, LayerSource]:
         """Resolve the directory for a layer and return (path, source)."""
-        from dnd_simulator.content_loader.utils import _read_yaml
+        from dnd_simulator.content_loader.utils import _read_yaml, as_mapping
 
         self._validate_world_id(world_id)
         world_path = self._content_dir / "worlds" / world_id
         if not world_path.is_dir():
             raise FileNotFoundError(f"World '{world_id}' not found")
 
-        manifest = _read_yaml(world_path / "manifest.yaml")
-        layer_config = manifest["layers"][layer_type.value]
-        source = LayerSource(layer_config["source"])
+        manifest_path = world_path / "manifest.yaml"
+        manifest = _read_yaml(manifest_path)
+        layers = as_mapping(manifest["layers"], f"{manifest_path}: layers")
+        layer_config = as_mapping(layers[layer_type.value], f"{manifest_path}: layers.{layer_type.value}")
+        source = LayerSource(str(layer_config["source"]))
 
         layer_paths = resolve_manifest(world_path, self._content_dir)
         return layer_paths[layer_type.value], source
