@@ -241,13 +241,13 @@ function FullLog({
   const entryCount = displayEntries.length
   const { stickyRef, handleScroll } = useStickyScroll(parentRef, 16)
 
-  // Auto-scroll to bottom only when sticky
+  // Auto-scroll to bottom only when sticky. `virtualizer` (useVirtualizer keeps one
+  // instance per mount) and `stickyRef` are stable, so this re-runs only on new entries.
   useEffect(() => {
     if (entryCount > 0 && stickyRef.current) {
       virtualizer.scrollToIndex(entryCount - 1, { align: "end" })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entryCount])
+  }, [entryCount, virtualizer, stickyRef])
 
   return (
     <div ref={parentRef} onScroll={handleScroll} className="h-full overflow-y-auto font-mono text-xs">
