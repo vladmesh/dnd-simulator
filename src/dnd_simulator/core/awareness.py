@@ -180,6 +180,8 @@ class CombatEntity:
     x: int = 0
     y: int = 0
     conditions: frozenset[Condition] = field(default_factory=frozenset)
+    reach_ft: int = 5  # reach of its primary attack
+    can_react: bool = False  # has its reaction and is not incapacitated: leaving its reach provokes
 
 
 @dataclass(frozen=True)

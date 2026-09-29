@@ -9,7 +9,7 @@ from dnd_simulator.core.character import Ability, Attack, Creature, DamageCompon
 from dnd_simulator.core.combat import BattleMap, Position
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.turn_budget import TurnBudget
-from dnd_simulator.rules.reactions import find_oa_triggers
+from dnd_simulator.rules.reactions import find_oa_triggers, leaves_reach
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -144,3 +144,14 @@ class TestFindOaTriggers:
         bm.set_position("guard", Position(10, 15))
         path = [Position(10, 10), Position(10, 5)]
         assert find_oa_triggers(path, mover, [spent, mover], bm) == []
+
+
+class TestLeavesReach:
+    def test_leaving_provokes(self) -> None:
+        assert leaves_reach(Position(0, 0), 5, Position(5, 0), Position(10, 0))
+
+    def test_entering_does_not(self) -> None:
+        assert not leaves_reach(Position(0, 0), 5, Position(10, 0), Position(5, 0))
+
+    def test_moving_within_reach_does_not(self) -> None:
+        assert not leaves_reach(Position(0, 0), 10, Position(5, 0), Position(10, 0))
