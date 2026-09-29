@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 
 from dnd_simulator.content_loader.manifest import LayerSource, LayerType
-from dnd_simulator.content_loader.utils import _read_yaml
+from dnd_simulator.content_loader.utils import _read_yaml, as_mapping
 
 LAYER_ORDER: list[LayerType] = [
     LayerType.GEOGRAPHY,
@@ -120,9 +120,10 @@ def fork_layer(content_dir: Path, world_id: str, layer_type: LayerType) -> Path:
 
     manifest_path = world_path / "manifest.yaml"
     manifest = _read_yaml(manifest_path)
+    layers = as_mapping(manifest["layers"], f"{manifest_path}: layers")
 
-    layer_config = manifest["layers"][layer_type.value]
-    if LayerSource(layer_config["source"]) == LayerSource.CUSTOM:
+    layer_config = as_mapping(layers[layer_type.value], f"{manifest_path}: layers.{layer_type.value}")
+    if LayerSource(str(layer_config["source"])) == LayerSource.CUSTOM:
         raise ValueError(f"Layer '{layer_type.value}' is already custom in world '{world_id}'")
 
     # Resolve source template path
@@ -134,7 +135,8 @@ def fork_layer(content_dir: Path, world_id: str, layer_type: LayerType) -> Path:
     shutil.copytree(source_dir, dest_dir)
 
     # Update manifest
-    manifest["layers"][layer_type.value] = {"source": LayerSource.CUSTOM.value}
+    layers[layer_type.value] = {"source": LayerSource.CUSTOM.value}
+    manifest["layers"] = layers
 
     with manifest_path.open("w") as f:
         yaml.dump(manifest, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
@@ -166,7 +168,7 @@ def fork_world(
         raise FileExistsError(f"World '{new_world_id}' already exists at {new_path}")
 
     source_manifest = _read_yaml(source_path / "manifest.yaml")
-    source_layers: dict[str, object] = dict(source_manifest["layers"])
+    source_layers = as_mapping(source_manifest["layers"], f"{source_path / 'manifest.yaml'}: layers")
 
     # Truncate if requested
     if from_layer is not None:
@@ -233,8 +235,9 @@ def scaffold_layer(content_dir: Path, world_id: str, layer_type: LayerType) -> P
 
     manifest_path = world_path / "manifest.yaml"
     manifest = _read_yaml(manifest_path)
+    layers = as_mapping(manifest["layers"], f"{manifest_path}: layers")
 
-    if layer_type.value in manifest["layers"]:
+    if layer_type.value in layers:
         raise ValueError(f"Layer '{layer_type.value}' is already defined in world '{world_id}'")
 
     # Create layer directory with scaffold files
@@ -245,7 +248,8 @@ def scaffold_layer(content_dir: Path, world_id: str, layer_type: LayerType) -> P
         (layer_dir / filename).write_text(content, encoding="utf-8")
 
     # Update manifest
-    manifest["layers"][layer_type.value] = {"source": LayerSource.CUSTOM.value}
+    layers[layer_type.value] = {"source": LayerSource.CUSTOM.value}
+    manifest["layers"] = layers
 
     with manifest_path.open("w") as f:
         yaml.dump(manifest, f, default_flow_style=False, allow_unicode=True, sort_keys=False)

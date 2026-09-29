@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from dnd_simulator.content_loader.manifest import LayerType
-from dnd_simulator.content_loader.utils import _read_yaml
+from dnd_simulator.content_loader.utils import _read_yaml, as_list
 
 
 @dataclass(frozen=True)
@@ -35,8 +35,10 @@ def _read_template_info(template_dir: Path, slug: str) -> TemplateInfo:
         layer_type=LayerType(str(data["layer_type"])),
         version=str(data["version"]),
         description=str(data.get("description", "")),
-        tags=list(data.get("tags", [])),
-        requires_geography=list(data.get("requires_geography", [])),
+        tags=[str(tag) for tag in as_list(data.get("tags", []), f"{metadata_path}: tags")],
+        requires_geography=[
+            str(slug) for slug in as_list(data.get("requires_geography", []), f"{metadata_path}: requires_geography")
+        ],
     )
 
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import StrEnum
 from pathlib import Path
 
-from dnd_simulator.content_loader.utils import _read_yaml, resolve_text
+from dnd_simulator.content_loader.utils import _read_yaml, as_mapping, resolve_text
 
 
 class LayerType(StrEnum):
@@ -36,11 +36,12 @@ def resolve_manifest(world_path: Path, content_dir: Path) -> dict[str, Path]:
         raise RuntimeError(f"No manifest.yaml found in {world_path}")
 
     manifest = _read_yaml(manifest_path)
-    layers_data = manifest["layers"]
+    layers_data = as_mapping(manifest["layers"], f"{manifest_path}: layers")
 
     result: dict[str, Path] = {}
-    for lt, layer_config in layers_data.items():
-        source = LayerSource(layer_config["source"])
+    for lt, raw_config in layers_data.items():
+        layer_config = as_mapping(raw_config, f"{manifest_path}: layers.{lt}")
+        source = LayerSource(str(layer_config["source"]))
 
         if source == LayerSource.LIBRARY:
             template = str(layer_config["template"])

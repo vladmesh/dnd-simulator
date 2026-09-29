@@ -12,7 +12,7 @@ use ``alias`` + ``populate_by_name=True``.
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator, model_validator
 
@@ -207,7 +207,7 @@ class ItemContent(BaseModel):
     accessory_id: str | None = None
     slot: str | None = None
     # YAML uses "modifiers"; save data emits "grant_modifiers" — both accepted via alias
-    modifiers: list[dict[str, Any]] | None = Field(None, alias="grant_modifiers")
+    modifiers: list[dict[str, object]] | None = Field(None, alias="grant_modifiers")
     # Potion fields
     heal_dice: str | None = None
 
@@ -510,7 +510,7 @@ class NpcContent(BaseModel):
     attacks: list[AttackContent] = []
     items: list[ItemContent] = []
     ability_scores: CoercedAbilityScores = AbilityScoresContent()
-    class_features: dict[str, Any] = {}
+    class_features: dict[str, object] = {}
     combat_position: list[int] | None = None
     reputation: dict[str, int] = {}
     inner_self: InnerSelfContent | None = None
@@ -557,7 +557,7 @@ class PlayerContent(BaseModel):
     attacks: list[AttackContent] = []
     items: list[ItemContent] = []
     ability_scores: CoercedAbilityScores = AbilityScoresContent()
-    class_features: dict[str, Any] = {}
+    class_features: dict[str, object] = {}
     combat_position: list[int] | None = None
     reputation: dict[str, int] = {}
     experience: int = 0
