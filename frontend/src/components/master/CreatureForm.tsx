@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { api, ApiError } from "@/transport/apiClient"
-import type { CreatureResponse } from "@/types/api"
+import type { BrainType, CreatureResponse, EntityKind } from "@/types/api"
 import {
   Dialog,
   DialogContent,
@@ -34,6 +34,14 @@ const NPC_ROLES = [
   "gladiator",
 ] as const
 
+const SPAWN_KINDS: readonly EntityKind[] = ["npc", "monster"]
+const BRAIN_TYPES: readonly BrainType[] = ["rule_based", "llm"]
+
+const toSpawnKind = (value: string | undefined): EntityKind =>
+  SPAWN_KINDS.find((kind) => kind === value) ?? "npc"
+const toBrainType = (value: string | undefined): BrainType =>
+  BRAIN_TYPES.find((brain) => brain === value) ?? "rule_based"
+
 export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
   const { t } = useTranslation(["master", "common", "game"])
   const isEdit = creature !== null
@@ -47,7 +55,7 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
   const [form, setForm] = useState({
     id: creature?.id ?? "",
     name: creature?.name ?? "",
-    entity_type: creature?.entity_type ?? "npc",
+    entity_type: toSpawnKind(creature?.entity_type),
     current_hp: creature?.hp ?? 10,
     max_hp: creature?.max_hp ?? 10,
     ac: creature?.ac ?? 10,
@@ -56,7 +64,7 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
     role: creature?.role ?? "commoner",
     personality: creature?.personality ?? "",
     settlement_id: creature?.settlement_id ?? "",
-    ai: creature?.ai_type ?? "rule_based",
+    ai: toBrainType(creature?.ai_type),
     gold: creature?.gold ?? 0,
     conditions: creature?.conditions ?? [],
   })
@@ -135,7 +143,7 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
                 <select
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                   value={form.entity_type}
-                  onChange={(e) => set("entity_type", e.target.value)}
+                  onChange={(e) => set("entity_type", toSpawnKind(e.target.value))}
                 >
                   <option value="npc">{t("master:filter_npc")}</option>
                   <option value="monster">{t("master:filter_monster")}</option>
@@ -182,7 +190,7 @@ export function CreatureForm({ sessionId, creature, onClose, onSaved }: Props) {
               <select
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                 value={form.ai}
-                onChange={(e) => set("ai", e.target.value)}
+                onChange={(e) => set("ai", toBrainType(e.target.value))}
               >
                 <option value="rule_based">{t("master:brain_rule")}</option>
                 <option value="llm">{t("master:brain_llm")}</option>
