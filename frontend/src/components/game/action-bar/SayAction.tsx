@@ -1,6 +1,8 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useId } from "react"
 import { Button } from "@/components/ui/button"
 import { getActionLabel, getCostTypeClass } from "./utils"
+import { checkSpeech } from "../speechLimit"
+import { SpeechLengthError } from "../SpeechLengthError"
 
 interface SayActionProps {
   description: string
@@ -13,10 +15,12 @@ export function SayAction({ description, disabled, sendAction, t }: SayActionPro
   const [sayOpen, setSayOpen] = useState(false)
   const [sayText, setSayText] = useState("")
   const sayInputRef = useRef<HTMLInputElement>(null)
+  const errorId = useId()
+  const speech = checkSpeech(sayText)
 
   const submit = () => {
-    if (sayText.trim()) {
-      sendAction("say", { text: sayText.trim() })
+    if (speech.canSend) {
+      sendAction("say", { text: speech.payload })
       setSayText("")
       setSayOpen(false)
     }
@@ -30,6 +34,8 @@ export function SayAction({ description, disabled, sendAction, t }: SayActionPro
           type="text"
           className="h-8 rounded border border-border bg-background px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
           placeholder={t("game:say_placeholder")}
+          aria-invalid={speech.tooLong || undefined}
+          aria-describedby={speech.tooLong ? errorId : undefined}
           value={sayText}
           onChange={(e) => setSayText(e.target.value)}
           onKeyDown={(e) => {
@@ -45,11 +51,12 @@ export function SayAction({ description, disabled, sendAction, t }: SayActionPro
         <Button
           size="sm"
           variant="secondary"
-          disabled={disabled || !sayText.trim()}
+          disabled={disabled || !speech.canSend}
           onClick={submit}
         >
           ↵
         </Button>
+        <SpeechLengthError id={errorId} speech={speech} />
       </div>
     )
   }

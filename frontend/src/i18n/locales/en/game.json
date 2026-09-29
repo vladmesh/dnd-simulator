@@ -64,6 +64,7 @@
   "speed_display": "Speed: {{n}}ft",
   "weapon_display": "Weapon: {{name}} ({{damage}})",
   "say_placeholder": "Say something...",
+  "speech_too_long": "Too long: {{length}} of {{max}} characters. Shorten it to send.",
   "talk_to": "Talk to {{target}}",
   "race_human": "Human",
   "race_elf": "Elf",
