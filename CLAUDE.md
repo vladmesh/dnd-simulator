@@ -12,6 +12,7 @@ make check-frontend   # lint-frontend + typecheck-frontend + test-frontend (fron
 make test         # uv run pytest (all tests)
 make test-unit    # uv run pytest tests/unit/ (fast, no I/O)
 make test-integration  # docker compose — backend + integration tests
+make test-frontend-container  # docker compose — production frontend image (nginx) + backend, proxy smoke tests
 make lint         # ruff check + format check
 make format       # auto-fix formatting and lint issues
 make typecheck    # uv run mypy src/
@@ -38,6 +39,7 @@ Never run `make test`, `make test-unit`, `make test-integration`, or `make check
 
 ```bash
 make test-integration 2>&1 | tee /tmp/integration.log
+make test-frontend-container 2>&1 | tee /tmp/frontend-container.log
 make check 2>&1 | tee /tmp/check.log
 ```
 

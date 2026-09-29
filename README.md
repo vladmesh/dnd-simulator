@@ -23,7 +23,7 @@ Work in progress: expect rough edges. See [docs/VISION.md](docs/VISION.md) for w
 
 - Python 3.12+ and [uv](https://docs.astral.sh/uv/)
 - Node.js 20.19+ or 22.12+ (required by Vite 8) for the web UI
-- Docker with Compose, only for the integration tests
+- Docker with Compose, only for the integration tests and the containerized frontend
 - `lsof`: `make serve` and `make clean` use it to free ports
 
 ## Quick start
@@ -71,6 +71,7 @@ make check-backend      # ruff + mypy (strict) + pytest
 make check-frontend     # eslint + tsc -b + vitest
 make test               # pytest (unit tests)
 make test-integration   # backend + integration tests in Docker Compose
+make test-frontend-container  # production frontend image + backend, smoke tests through the nginx proxy
 make format             # auto-format and auto-fix Python code
 make setup-hooks        # install pre-commit (format) and pre-push (scope-filtered check) git hooks
 make messages           # extract translatable strings to .pot
@@ -79,6 +80,17 @@ make clean              # stop dev servers, wipe saves/ and logs/
 ```
 
 Frontend type checking uses `tsc -b` so that the referenced projects (app, tests, Vite config) are all checked. `tsc --noEmit` against the root `frontend/tsconfig.json` checks nothing. `cd frontend && npm run build` runs the same type check before bundling.
+
+### Containerized stack
+
+`docker-compose.test.yml` runs the backend (`Dockerfile`) and, behind the `frontend` profile, the production web UI (`frontend/Dockerfile`: a Node build stage, then nginx). nginx serves the built SPA, falls back to `index.html` for client-side routes, and proxies `/api` (including the game WebSocket) and `/health` to `$BACKEND_URL` (default `http://backend:8001`), the same routes the Vite dev server proxies. `make test-integration` does not build or start the frontend. `make test-frontend-container` builds both images and runs `tests/frontend_proxy/` against the nginx container: index, hashed assets, SPA fallback, `/health`, REST and a player WebSocket session, all through the proxy. To use the stack in a browser:
+
+```bash
+docker compose -f docker-compose.test.yml --profile frontend up --build backend frontend
+# web UI on http://localhost:8080 (FRONTEND_PORT overrides the port)
+```
+
+This stack uses the integration test content (`tests/integration/content`) and `DND_DICE_SEED=42`.
 
 CI (GitHub Actions) runs the backend checks, the frontend checks and the integration tests. It skips the halves a change doesn't touch.
 
