@@ -119,7 +119,7 @@ class AwarenessBuilder:
         ]
         return [
             EquippedInfo(
-                slot=slot, item_id=item.id, name=item.name, description=describe_item(item), props=item_props(item)
+                slot=slot, item_id=item.id, name=_(item.name), description=describe_item(item), props=item_props(item)
             )
             for slot, item in slots
             if item is not None
@@ -269,7 +269,7 @@ class AwarenessBuilder:
         from dnd_simulator.rules.weapons import get_weapon_attack
 
         weapon_attack = get_weapon_attack(creature)
-        weapon_name = weapon_attack.name
+        weapon_name = _(weapon_attack.name)
         weapon_damage = format_weapon_damage(weapon_attack)
 
         wall_descriptions: list[str] = []

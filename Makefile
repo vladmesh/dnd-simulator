@@ -52,6 +52,7 @@ serve: stop
 
 messages:
 	find src/dnd_simulator -name '*.py' | xargs pygettext3 --keyword=_ --output=src/dnd_simulator/locale/messages.pot
+	uv run python -m dnd_simulator.content_loader.catalog_messages src/dnd_simulator/locale/messages.pot content
 
 compile-messages:
 	uv run pybabel compile -d src/dnd_simulator/locale -D dnd_simulator
