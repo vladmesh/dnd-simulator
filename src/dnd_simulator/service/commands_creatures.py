@@ -425,4 +425,5 @@ def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) 
         attacks=attacks,
         ability_scores=parse_ability_scores(data),
         combat_position=(position[0], position[1]) if position else None,
+        xp_value=int(data.get("xp_value", 0)),
     )

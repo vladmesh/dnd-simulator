@@ -11,7 +11,7 @@ from pathlib import Path
 
 import structlog
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import ValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -22,6 +22,7 @@ from dnd_simulator.adapters.api.routes_player import router as player_router
 from dnd_simulator.adapters.api.routes_session import router as session_router
 from dnd_simulator.adapters.api.routes_world import router as world_router
 from dnd_simulator.adapters.api.routes_ws import router as ws_router
+from dnd_simulator.adapters.api.schemas import FrontendErrorReport
 from dnd_simulator.i18n import set_language
 from dnd_simulator.llm.client import LlmClient
 from dnd_simulator.logging_config import configure_logging
@@ -171,8 +172,41 @@ def health() -> dict[str, str]:
 _fe_log = structlog.get_logger(domain="transport.frontend")
 
 
-@app.post("/api/frontend-error")
+# Whole request body cap, checked while streaming so an oversized report is never buffered in full.
+MAX_FRONTEND_ERROR_BYTES = 128 * 1024
+# Per-field cap on what reaches the log; the schema bounds are looser so real reports are not rejected.
+FRONTEND_ERROR_LOG_CHARS = 4000
+
+
+def _truncate_for_log(text: str | None) -> str:
+    if not text:
+        return ""
+    if len(text) <= FRONTEND_ERROR_LOG_CHARS:
+        return text
+    return text[:FRONTEND_ERROR_LOG_CHARS] + f"... [truncated {len(text) - FRONTEND_ERROR_LOG_CHARS} chars]"
+
+
+@app.post(
+    "/api/frontend-error",
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {"application/json": {"schema": FrontendErrorReport.model_json_schema()}},
+        }
+    },
+)
 async def frontend_error(request: Request) -> dict[str, str]:
-    body = await request.json()
-    _fe_log.error("frontend_error", message=body.get("message", "?"), stack=body.get("stack", ""))
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > MAX_FRONTEND_ERROR_BYTES:
+            raise HTTPException(status_code=413, detail=f"Report exceeds {MAX_FRONTEND_ERROR_BYTES} bytes")
+    report = FrontendErrorReport.model_validate_json(bytes(body))  # ValidationError -> 422 (app handler)
+    _fe_log.error(
+        "frontend_error",
+        message=_truncate_for_log(report.message),
+        stack=_truncate_for_log(report.stack),
+        component=_truncate_for_log(report.component),
+        url=_truncate_for_log(report.url),
+    )
     return {"status": "logged"}
