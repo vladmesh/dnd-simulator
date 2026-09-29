@@ -124,7 +124,13 @@ class GameService(
 
     def start_game(self, world_name: str = "sword_vale", lang: str = "en") -> GameSession:
         """Create a new game session with a world loaded from content/worlds/<world_name>/."""
-        session_id = uuid.uuid4().hex[:8]
+        session = self._build_session(uuid.uuid4().hex[:8], world_name, lang)
+        with self._sessions_lock:
+            self._sessions[session.session_id] = session
+        return session
+
+    def _build_session(self, session_id: str, world_name: str, lang: str) -> GameSession:
+        """Build an unregistered session from the world template, logging under *session_id* from the start."""
         structlog.contextvars.bind_contextvars(session_id=session_id)
 
         self._validate_world_id(world_name)
@@ -237,8 +243,6 @@ class GameService(
             dice_rng=dice_rng,
         )
         session._on_empty = self._on_session_empty
-        with self._sessions_lock:
-            self._sessions[session_id] = session
         return session
 
     def list_sessions(self) -> list[dict[str, str]]:
@@ -364,16 +368,11 @@ class GameService(
         if not world_name:
             return
 
-        # Recreate session from the same world template, then load saved state
+        # Recreate session from the same world template under the original id, then load saved state
         try:
-            session = self.start_game(world_name, lang=lang)
+            session = self._build_session(session_id, world_name, lang)
         except Exception:
             return
-
-        # Reassign to the original session_id
-        with self._sessions_lock:
-            del self._sessions[session.session_id]
-        session.session_id = session_id
 
         with session.mutate_world():
             load_rng_state(session.dice_rng, save.world.dice_rng_state)

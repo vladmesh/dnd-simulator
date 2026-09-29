@@ -193,8 +193,13 @@ def run_scenario(
         f"HTTP/WebSocket receive {CLIENT_WAIT_TIMEOUT_SECONDS:.0f}s; "
         f"scenario deadline {deadline_seconds:.0f}s."
     )
-    session = transport.request("post", "/api/master/sessions", {"world_name": "sword_vale", "lang": "en"})
-    session_id = str(session["session_id"])
+    try:
+        session = transport.request("post", "/api/master/sessions", {"world_name": "sword_vale", "lang": "en"})
+        session_id = str(session["session_id"])
+    except Exception as error:
+        message = f"cannot create a session: {str(error) or type(error).__name__}"
+        output(f"ERROR: {message}")
+        return ScenarioResult(session_id="", warnings=[message])
     result = ScenarioResult(session_id=session_id)
     deadline = time.monotonic() + deadline_seconds
     try:

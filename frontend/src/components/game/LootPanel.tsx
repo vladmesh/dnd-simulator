@@ -85,6 +85,7 @@ export function LootPanel() {
   const isMyTurn = useGameStore((s) => s.isMyTurn)
   const budget = useGameStore((s) => s.budget)
   const [expanded, setExpanded] = useState(true)
+  const [unreachableExpanded, setUnreachableExpanded] = useState(false)
 
   // Peaceful: lootable holders from `nearby`. Combat: `lootables`, each with its loot reach —
   // taking costs the Action and needs the holder in an adjacent cell.
@@ -93,6 +94,9 @@ export function LootPanel() {
   const nearby = (!isCombat && awareness && "nearby" in awareness ? awareness.nearby : undefined) ?? []
   const peacefulLootables = nearby.filter((n) => "lootable" in n && n.lootable) as NearbyEntity[]
   if ((isCombat ? combatLootables.length : peacefulLootables.length) === 0) return null
+  // Out-of-reach holders (off the grid or not adjacent) stay collapsed so they do not crowd the takeable ones.
+  const reachable = combatLootables.filter((h) => h.in_reach)
+  const unreachable = combatLootables.filter((h) => !h.in_reach)
   const hasAction = (budget?.actions ?? 0) > 0
 
   return (
@@ -109,7 +113,7 @@ export function LootPanel() {
       {expanded && (
         <div className="space-y-3">
           {isCombat
-            ? combatLootables.map((holder) => (
+            ? reachable.map((holder) => (
                 <LootView
                   key={holder.id}
                   holder={holder}
@@ -117,6 +121,27 @@ export function LootPanel() {
                 />
               ))
             : peacefulLootables.map((holder) => <LootView key={holder.id} holder={holder} />)}
+          {isCombat && unreachable.length > 0 && (
+            <div className="space-y-2" data-testid="loot-unreachable">
+              <button
+                className="flex w-full items-center gap-1 text-[10px] text-muted-foreground"
+                data-testid="loot-unreachable-toggle"
+                aria-expanded={unreachableExpanded}
+                onClick={() => setUnreachableExpanded(!unreachableExpanded)}
+              >
+                {unreachableExpanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
+                {t("game:loot_unreachable_group", { count: unreachable.length })}
+              </button>
+              {unreachableExpanded &&
+                unreachable.map((holder) => (
+                  <LootView
+                    key={holder.id}
+                    holder={holder}
+                    blockedReason={combatBlockedReason(t, holder, isMyTurn, hasAction)}
+                  />
+                ))}
+            </div>
+          )}
         </div>
       )}
     </div>
