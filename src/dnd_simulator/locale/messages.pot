@@ -100,49 +100,62 @@ msgstr ""
 msgid "Layer '{}' forked to custom in world '{}'"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:45
+#: src/dnd_simulator/adapters/api/routes_ws.py:47
+#, python-brace-format
+msgid "Message too large (limit {} bytes)"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_ws.py:51
 msgid "Invalid JSON"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:47
+#: src/dnd_simulator/adapters/api/routes_ws.py:53
 msgid "JSON message must be an object"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:138
-#: src/dnd_simulator/adapters/api/routes_ws.py:249
+#: src/dnd_simulator/adapters/api/routes_ws.py:67
+msgid "Action params must be a JSON object"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_ws.py:68
+msgid "Action params are too large"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_ws.py:158
+#: src/dnd_simulator/adapters/api/routes_ws.py:270
 msgid "Rate limited, slow down"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:150
+#: src/dnd_simulator/adapters/api/routes_ws.py:171
 msgid "Spectators cannot submit actions"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:152
-#: src/dnd_simulator/adapters/api/routes_ws.py:278
+#: src/dnd_simulator/adapters/api/routes_ws.py:173
+#: src/dnd_simulator/adapters/api/routes_ws.py:304
 #, python-brace-format
 msgid "Unknown message type: {}"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:194
+#: src/dnd_simulator/adapters/api/routes_ws.py:215
 #, python-brace-format
 msgid "Session '{}' not found"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:205
+#: src/dnd_simulator/adapters/api/routes_ws.py:226
 msgid "No player in session"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:264
+#: src/dnd_simulator/adapters/api/routes_ws.py:289
 #, python-brace-format
 msgid "Unknown action: {}"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:271
+#: src/dnd_simulator/adapters/api/routes_ws.py:299
 #, python-brace-format
 msgid "Unknown reaction: {}"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:275
+#: src/dnd_simulator/adapters/api/routes_ws.py:302
 msgid "No reaction prompt is pending"
 msgstr ""
 

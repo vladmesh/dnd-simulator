@@ -123,6 +123,7 @@
   "loot_reason_not_on_map": "Out of reach in combat",
   "loot_no_action": "No Action left this turn",
   "loot_not_your_turn": "Wait for your turn",
+  "loot_unreachable_group": "Unavailable in combat ({{count}})",
   "event_log": "Event Log",
   "faction": "Faction",
   "role_commoner": "Commoner",

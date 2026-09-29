@@ -1561,3 +1561,13 @@ msgstr "Уже в пункте назначения"
 
 msgid "Cannot rest while in combat"
 msgstr "Нельзя отдыхать во время боя"
+
+# API boundary bounds (WS message size, action params)
+msgid "Message too large (limit {} bytes)"
+msgstr "Сообщение слишком большое (предел {} байт)"
+
+msgid "Action params must be a JSON object"
+msgstr "Параметры действия должны быть JSON-объектом"
+
+msgid "Action params are too large"
+msgstr "Параметры действия слишком большие"

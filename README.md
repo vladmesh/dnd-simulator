@@ -50,6 +50,7 @@ The server reads environment variables. A `.env` file in the working directory i
 | `LLM_MODEL` | — | OpenRouter model id. Required when `OPENROUTER_API_KEY` is set. |
 | `DND_LANGUAGE` | `ru` | Default game language (`ru` or `en`). |
 | `DND_CONTENT_DIR` | `content/` | Directory with worlds, library templates and catalogs. |
+| `DND_SAVES_DIR` | `saves/` | Directory for session autosaves and named saves (JSON). |
 | `DND_WORLD_SEED` | random (logged) | Seed for the world simulation layers. |
 | `DND_DICE_SEED` | random | Initial seed for each session's dice. |
 | `DND_AUTOSAVE_SECONDS` | `120` | Periodic autosave interval. Must be greater than 0. |

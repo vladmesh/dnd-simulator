@@ -218,7 +218,18 @@ class TestWebSocketErrorLanguage:
 
         with client.websocket_connect(f"/api/ws/{sid}") as ws:
             assert ws.receive_json()["type"] == "turn"
-            for raw in ("[]", "{not json", json.dumps({"type": "query"}), json.dumps({"type": "reaction"})):
+            too_large = json.dumps({"type": "say", "text": "x" * 70_000})
+            params_list = json.dumps({"type": "action", "name": "say", "params": []})
+            params_big = json.dumps({"type": "action", "name": "say", "params": {"text": "x" * 20_000}})
+            for raw in (
+                "[]",
+                "{not json",
+                json.dumps({"type": "query"}),
+                json.dumps({"type": "reaction"}),
+                too_large,
+                params_list,
+                params_big,
+            ):
                 ws.send_text(raw)
                 error = ws.receive_json()
                 assert error["type"] == "error"
