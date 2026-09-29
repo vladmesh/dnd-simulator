@@ -7,6 +7,7 @@ Uses DMG optional diagonal rule: first diagonal = 5 ft, second = 10 ft, alternat
 from __future__ import annotations
 
 import heapq
+from collections.abc import Callable
 from itertools import count, pairwise
 
 from dnd_simulator.core.action import Action, ActionType
@@ -138,12 +139,17 @@ def move_direction(origin: Position, direction: str, speed: int, battle_map: Bat
 
 
 def compute_reachable(
-    start: Position, budget: int, battle_map: BattleMap, mover_id: str
+    start: Position,
+    budget: int,
+    battle_map: BattleMap,
+    mover_id: str,
+    step_allowed: Callable[[Position, Position], bool] | None = None,
 ) -> dict[Position, list[Position]]:
     """Compute all cells reachable within a movement budget using Dijkstra.
 
     Uses D&D 5e diagonal cost: first diagonal = 5 ft, second = 10 ft, alternating.
-    Respects walls and occupied cells.
+    Respects walls and occupied cells. ``step_allowed(from, to)``, when given, excludes further
+    steps (e.g. ones that would provoke an opportunity attack).
 
     Returns {position: path_from_start} for every reachable position (including start).
     """
@@ -174,6 +180,8 @@ def compute_reachable(
             if battle_map.is_step_blocked(cur, neighbor):
                 continue
             if neighbor in occupied:
+                continue
+            if step_allowed is not None and not step_allowed(cur, neighbor):
                 continue
 
             is_diag = dx != 0 and dy != 0

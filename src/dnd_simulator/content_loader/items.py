@@ -5,9 +5,10 @@ Each parse function: raw YAML dict → Pydantic model_validate → convert to ru
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Mapping, Sequence
 
 from dnd_simulator.content_loader.schemas import ItemContent
+from dnd_simulator.content_loader.utils import as_int
 from dnd_simulator.core.action import ActionType
 from dnd_simulator.core.character import (
     Ability,
@@ -92,7 +93,7 @@ def _to_accessory_def(model: ItemContent) -> AccessoryDef:
         Modifier(
             stat=StatType(m["stat"]),
             op=ModifierOp(m["op"]),
-            value=int(m.get("value", 0)),
+            value=as_int(m.get("value", 0), "modifiers.value"),
             source=str(m.get("source", "")),
         )
         for m in mods_raw
@@ -162,9 +163,9 @@ def _to_item(model: ItemContent, index: int) -> Item:
 
 
 def resolve_item_ref(
-    idata: dict[str, Any],
+    idata: Mapping[str, object],
     catalog: dict[str, ItemContent],
-) -> dict[str, Any]:
+) -> Mapping[str, object]:
     """Resolve an item dict that may contain a ``ref`` key against *catalog*.
 
     If ``ref`` is present, load the catalog entry and merge any override fields
@@ -177,7 +178,7 @@ def resolve_item_ref(
     if ref_id is None:
         return idata
 
-    if ref_id not in catalog:
+    if not isinstance(ref_id, str) or ref_id not in catalog:
         raise RuntimeError(f"Item references unknown catalog entry '{ref_id}'")
 
     base_dict = catalog[ref_id].model_dump(exclude_none=True)
@@ -187,7 +188,7 @@ def resolve_item_ref(
 
 
 def parse_items(
-    items_data: list[dict[str, Any]],
+    items_data: Sequence[Mapping[str, object]],
     *,
     item_catalog: dict[str, ItemContent] | None = None,
 ) -> list[Item]:
@@ -237,9 +238,9 @@ EQUIPMENT_FIELDS = (
 )
 
 
-def serialize_item(item: Item) -> dict[str, Any]:
+def serialize_item(item: Item) -> dict[str, object]:
     """Serialize an Item to a flat dict compatible with ``deserialize_item`` / ``parse_items``."""
-    d: dict[str, Any] = {"id": item.id, "name": item.name, "type": item.item_type.value, **item.params}
+    d: dict[str, object] = {"id": item.id, "name": item.name, "type": item.item_type.value, **item.params}
     if item.weapon_def:
         w = item.weapon_def
         d["weapon_id"] = w.weapon_id
@@ -280,7 +281,7 @@ def serialize_item(item: Item) -> dict[str, Any]:
     return d
 
 
-def deserialize_item(data: dict[str, Any]) -> Item:
+def deserialize_item(data: Mapping[str, object]) -> Item:
     """Deserialize an item dict (from ``_serialize_item``) back to a runtime Item with typed defs.
 
     Unlike bare ``Item()`` construction, this rebuilds WeaponDef / ArmorDef / ShieldDef / AccessoryDef

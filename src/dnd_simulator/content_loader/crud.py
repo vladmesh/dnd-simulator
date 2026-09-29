@@ -13,7 +13,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any
 
 from pydantic import BaseModel
 
@@ -28,7 +27,7 @@ from dnd_simulator.content_loader.schemas import (
     SettlementContent,
     SquadContent,
 )
-from dnd_simulator.content_loader.utils import _read_yaml, _write_yaml
+from dnd_simulator.content_loader.utils import _read_yaml, _write_yaml, as_mapping
 
 # ---------------------------------------------------------------------------
 # EntityType enum
@@ -135,18 +134,19 @@ def _yaml_path(entry: RegistryEntry, layer_dir: Path) -> Path:
     return layer_dir / f"{entry.section}.yaml"
 
 
-def _read_entities_dict(entry: RegistryEntry, layer_dir: Path) -> dict[str, Any]:
+def _read_entities_dict(entry: RegistryEntry, layer_dir: Path) -> dict[str, object]:
     """Read the raw dict of entities from the YAML file, handling subsections."""
-    raw = _read_yaml(_yaml_path(entry, layer_dir))
+    path = _yaml_path(entry, layer_dir)
+    raw = _read_yaml(path)
     if entry.subsection:
-        return raw.get(entry.subsection, {}) or {}
+        return as_mapping(raw.get(entry.subsection, {}) or {}, f"{path}: {entry.subsection}")
     return raw
 
 
 def _write_entities_dict(
     entry: RegistryEntry,
     layer_dir: Path,
-    entities: dict[str, Any],
+    entities: dict[str, object],
 ) -> None:
     """Write the entities dict back to the YAML file, preserving subsections."""
     path = _yaml_path(entry, layer_dir)

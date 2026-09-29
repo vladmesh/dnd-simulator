@@ -13,6 +13,14 @@ from dnd_simulator.rules.movement import grid_distance
 from dnd_simulator.rules.weapons import get_weapon_attack
 
 
+def leaves_reach(reactor_pos: Position, reach: int, current: Position, next_pos: Position) -> bool:
+    """The opportunity-attack trigger for one step: the mover was within *reach* and is now outside it.
+
+    Entering a reach never triggers, nor does moving between two cells that are both within it.
+    """
+    return grid_distance(reactor_pos, current) <= reach < grid_distance(reactor_pos, next_pos)
+
+
 def find_oa_triggers(
     path: list[Position],
     mover: Creature,
@@ -64,10 +72,7 @@ def find_oa_triggers(
 
         step_reactors: list[Creature] = []
         for creature, creature_pos, reach in potential_reactors:
-            dist_current = grid_distance(creature_pos, current_pos)
-            dist_next = grid_distance(creature_pos, next_pos)
-            # Trigger: was in reach, now leaving reach
-            if dist_current <= reach and dist_next > reach:
+            if leaves_reach(creature_pos, reach, current_pos, next_pos):
                 step_reactors.append(creature)
 
         if step_reactors:

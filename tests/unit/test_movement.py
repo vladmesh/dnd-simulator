@@ -103,6 +103,20 @@ class TestMoveDirection:
 class TestComputeReachable:
     """compute_reachable: Dijkstra BFS with D&D 5e diagonal costs."""
 
+    def test_step_allowed_excludes_steps_and_reroutes(self) -> None:
+        """A rejected step is never walked: cells behind it are reached another way, or not at all."""
+        bm = BattleMap(width=20, height=0)
+        # A 1-row map: forbidding the step 10→15 cuts everything east of x=10 off.
+        reachable = compute_reachable(Position(0, 0), 60, bm, "mover", step_allowed=lambda a, b: (a.x, b.x) != (10, 15))
+        assert set(reachable) == {Position(0, 0), Position(5, 0), Position(10, 0)}
+
+        open_bm = BattleMap(width=60, height=60)
+        rerouted = compute_reachable(
+            Position(0, 0), 60, open_bm, "mover", step_allowed=lambda a, b: b != Position(5, 0)
+        )
+        assert Position(5, 0) not in rerouted
+        assert Position(5, 0) not in rerouted[Position(10, 0)]
+
     def test_open_field_cardinal_at_budget(self) -> None:
         """Cells exactly 30ft away in cardinal direction are reachable."""
         bm = BattleMap(width=60, height=60)
