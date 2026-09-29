@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2026-09-29 08:34+0000\n"
+"POT-Creation-Date: 2026-09-29 09:12+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -95,45 +95,57 @@ msgstr ""
 msgid "Layer '{}' forked to custom in world '{}'"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:45
+#: src/dnd_simulator/adapters/api/routes_ws.py:47
+msgid "Message too large (limit {} bytes)"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_ws.py:51
 msgid "Invalid JSON"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:47
+#: src/dnd_simulator/adapters/api/routes_ws.py:53
 msgid "JSON message must be an object"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:138
-#: src/dnd_simulator/adapters/api/routes_ws.py:249
-msgid "Rate limited, slow down"
+#: src/dnd_simulator/adapters/api/routes_ws.py:59
+msgid "Action params must be a JSON object"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_ws.py:60
+msgid "Action params are too large"
 msgstr ""
 
 #: src/dnd_simulator/adapters/api/routes_ws.py:150
+#: src/dnd_simulator/adapters/api/routes_ws.py:261
+msgid "Rate limited, slow down"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_ws.py:162
 msgid "Spectators cannot submit actions"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:152
-#: src/dnd_simulator/adapters/api/routes_ws.py:278
+#: src/dnd_simulator/adapters/api/routes_ws.py:164
+#: src/dnd_simulator/adapters/api/routes_ws.py:296
 msgid "Unknown message type: {}"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:194
+#: src/dnd_simulator/adapters/api/routes_ws.py:206
 msgid "Session '{}' not found"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:205
+#: src/dnd_simulator/adapters/api/routes_ws.py:217
 msgid "No player in session"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:264
+#: src/dnd_simulator/adapters/api/routes_ws.py:279
 msgid "Unknown action: {}"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:271
+#: src/dnd_simulator/adapters/api/routes_ws.py:289
 msgid "Unknown reaction: {}"
 msgstr ""
 
-#: src/dnd_simulator/adapters/api/routes_ws.py:275
+#: src/dnd_simulator/adapters/api/routes_ws.py:293
 msgid "No reaction prompt is pending"
 msgstr ""
 
@@ -158,7 +170,7 @@ msgid "Cell ({}, {}) is already occupied"
 msgstr ""
 
 #: src/dnd_simulator/layers/entities/combat_resolution.py:81
-#: src/dnd_simulator/layers/entities/layer.py:369
+#: src/dnd_simulator/layers/entities/layer.py:370
 msgid "Creature '{id}' not found."
 msgstr ""
 

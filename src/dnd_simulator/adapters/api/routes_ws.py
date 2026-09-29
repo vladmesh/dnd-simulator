@@ -29,16 +29,22 @@ from starlette.websockets import WebSocketDisconnect as _StarletteDisconnect
 
 from dnd_simulator.adapters.api.deps import get_service
 from dnd_simulator.i18n import SUPPORTED_LANGUAGES, _, language_context
-from dnd_simulator.service.action_parsing import ActionParseError, parse_action
+from dnd_simulator.service.action_parsing import ActionParamsError, ActionParseError, parse_action
 from dnd_simulator.service.session import GameSession
 
 logger = structlog.get_logger(domain="transport")
 
 router = APIRouter(tags=["websocket"])
 
+# Largest accepted client message, in UTF-8 bytes. Legitimate messages are an action or reaction
+# envelope with a few short params (the longest is `say` text), far below this bound.
+MAX_WS_MESSAGE_BYTES = 64 * 1024
+
 
 def _parse_json_object_envelope(raw: str) -> tuple[dict[str, Any] | None, str | None]:
     """Parse one recoverable client message into a JSON object envelope."""
+    if len(raw) > MAX_WS_MESSAGE_BYTES or len(raw.encode("utf-8")) > MAX_WS_MESSAGE_BYTES:
+        return None, _("Message too large (limit {} bytes)").format(MAX_WS_MESSAGE_BYTES)
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError:
@@ -46,6 +52,12 @@ def _parse_json_object_envelope(raw: str) -> tuple[dict[str, Any] | None, str | 
     if not isinstance(parsed, dict):
         return None, _("JSON message must be an object")
     return cast(dict[str, Any], parsed), None
+
+
+def _params_error_message(err: ActionParamsError) -> str:
+    if err.reason == "not_object":
+        return _("Action params must be a JSON object")
+    return _("Action params are too large")
 
 
 # ---------------------------------------------------------------------------
@@ -260,6 +272,9 @@ async def websocket_game(
             if msg_type == "action":
                 try:
                     action = parse_action(msg, default_name="idle")
+                except ActionParamsError as err:
+                    await ws.send_json({"type": "error", "message": _params_error_message(err)})
+                    continue
                 except ActionParseError as err:
                     await ws.send_json({"type": "error", "message": _("Unknown action: {}").format(err.name)})
                     continue
@@ -267,6 +282,9 @@ async def websocket_game(
             elif msg_type == "reaction":
                 try:
                     action = parse_action(msg, default_name="skip")
+                except ActionParamsError as err:
+                    await ws.send_json({"type": "error", "message": _params_error_message(err)})
+                    continue
                 except ActionParseError as err:
                     await ws.send_json({"type": "error", "message": _("Unknown reaction: {}").format(err.name)})
                     continue

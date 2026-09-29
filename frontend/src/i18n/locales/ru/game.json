@@ -123,6 +123,7 @@
   "loot_reason_not_on_map": "В бою не дотянуться",
   "loot_no_action": "Действие на этот ход уже потрачено",
   "loot_not_your_turn": "Дождитесь своего хода",
+  "loot_unreachable_group": "Недоступно в бою ({{count}})",
   "event_log": "Журнал событий",
   "faction": "Фракция",
   "role_commoner": "Обыватель",

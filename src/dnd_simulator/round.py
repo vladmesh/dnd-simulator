@@ -603,15 +603,19 @@ class Round:
             "round_start", game_time=str(time), active_creatures=active_count, combat_locations=len(combat_locations)
         )
 
-        # Combat rounds: iterate by initiative order per location
+        # Combat rounds: iterate by initiative order per location. A combat that already
+        # closed its round in this game round (a stop interrupted a later combat, so no
+        # time advanced) is not run again.
+        round_at = time.to_total_seconds()
         for location_id in list(self._host.get_combat_locations()):
             combat = self._host.get_combat(location_id)
-            if not combat:
+            if not combat or combat.completed_round_at == round_at:
                 continue
             if self._run_combat_turns(combat, time, query_fn, emit_fn):
                 return self._interrupted_result()
             # End of round — check for combat exit
             with self._mutation_scope():
+                combat.completed_round_at = round_at
                 self._host.end_combat_round(location_id)
 
         # Peaceful turns: creatures not in an active combat (authoritative membership query).

@@ -5,6 +5,7 @@ services:
     environment:
       DND_DICE_SEED: "42"
       DND_CONTENT_DIR: /app/test-content
+      DND_SAVES_DIR: /app/saves
       UV_CACHE_DIR: /tmp/uv-cache
     volumes:
       - ./tests/integration/content:/app/test-content

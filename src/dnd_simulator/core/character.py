@@ -203,7 +203,13 @@ class Entity:
     active: bool = True
     temporary: bool = False
     faction_id: str = ""
+    # Log cursor: the first unread index into the log of `_log_cursor_location`, which starts where
+    # the entity starts. Kept valid across location changes by `layers/entities/event_log.py`.
     _last_seen_log_index: int = field(default=0, repr=False)
+    _log_cursor_location: str = field(default="", init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        self._log_cursor_location = self.location_id
 
 
 @dataclass
