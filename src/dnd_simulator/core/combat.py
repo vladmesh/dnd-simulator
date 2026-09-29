@@ -328,6 +328,11 @@ class CombatState:
     # budget granted). A resumed started turn continues with its persisted budget
     # instead of starting over, so nothing in it runs twice.
     resume_turn_started: bool = False
+    # Game time (total seconds) of the game round in which this combat last finished
+    # its turns and closed its round. A stop later in that same game round (e.g. in
+    # another location's combat) advances no time, so the resumed game round must
+    # skip this combat instead of running it a second time.
+    completed_round_at: int | None = None
     battle_map: BattleMap = field(default_factory=lambda: BattleMap(width=60, height=60))
     sides: dict[int, set[str]] = field(default_factory=dict)  # side index → entity IDs
     entity_to_side: dict[str, int] = field(default_factory=dict)  # entity ID → side index
