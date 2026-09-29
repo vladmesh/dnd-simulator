@@ -5,6 +5,7 @@ services:
     environment:
       DND_DICE_SEED: "42"
       DND_CONTENT_DIR: /app/test-content
+      DND_SAVES_DIR: /app/saves
       UV_CACHE_DIR: /tmp/uv-cache
     volumes:
       - ./tests/integration/content:/app/test-content
@@ -27,3 +28,37 @@ services:
     volumes:
       - ./saves:/app/saves
     entrypoint: ["uv", "run", "pytest", "tests/integration/", "-v"]
+
+  # Production build of the web UI (nginx) proxying /api, the WebSocket and /health to
+  # backend. Behind the "frontend" profile so `make test-integration` never builds it;
+  # `make test-frontend-container` starts it together with frontend-smoke.
+  frontend:
+    profiles: ["frontend"]
+    build: ./frontend
+    environment:
+      BACKEND_URL: http://backend:8001
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  frontend-smoke:
+    profiles: ["frontend"]
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on:
+      frontend:
+        condition: service_healthy
+    environment:
+      FRONTEND_URL: http://frontend
+      BACKEND_URL: http://backend:8001
+    volumes:
+      - ./tests/frontend_proxy:/app/tests/frontend_proxy:ro
+    entrypoint: ["uv", "run", "pytest", "tests/frontend_proxy/", "-v", "-p", "no:cacheprovider"]

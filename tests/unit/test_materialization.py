@@ -2,10 +2,21 @@
 
 from __future__ import annotations
 
-from dnd_simulator.core.character import AbilityScores, Attack, Creature
-from dnd_simulator.core.models import ActionResult, Answer, GameDateTime, Query, QueryType
+from dnd_simulator.core.character import (
+    Ability,
+    AbilityScores,
+    Attack,
+    CharClass,
+    Creature,
+    DamageComponent,
+    DamageType,
+    Entity,
+    Race,
+)
+from dnd_simulator.core.models import ActionResult, Answer, EmitFn, Event, GameDateTime, Query, QueryFn, QueryType
 from dnd_simulator.core.monster import MonsterTemplate
 from dnd_simulator.core.player import PlayerCharacter
+from dnd_simulator.core.queries import SquadInfo
 from dnd_simulator.core.squad import Squad, SquadBehavior, SquadType
 from dnd_simulator.layers.ecology.layer import EcologyLayer
 from dnd_simulator.layers.entities.layer import EntitiesLayer
@@ -16,7 +27,14 @@ def _ability() -> AbilityScores:
 
 
 def _attack() -> tuple[Attack, ...]:
-    return (Attack(name="bite", damage="1d4", ability="strength", reach=5),)
+    return (
+        Attack(
+            name="bite",
+            damage=(DamageComponent(dice="1d4", type=DamageType.PIERCING),),
+            ability=Ability.STR,
+            reach=5,
+        ),
+    )
 
 
 def _template(tid: str = "wolf", cr: float = 0.25, faction: str = "wildlife") -> MonsterTemplate:
@@ -68,16 +86,16 @@ def _player(location: str = "forest") -> PlayerCharacter:
         current_hp=20,
         ac=15,
         speed=30,
-        race="human",
-        char_class="fighter",
+        race=Race.HUMAN,
+        char_class=CharClass.FIGHTER,
     )
 
 
 def _make_ecology_and_entities(
     squads: list[Squad],
     templates: dict[str, MonsterTemplate] | None = None,
-    entities: list | None = None,
-) -> tuple[EcologyLayer, EntitiesLayer, object, object]:
+    entities: list[Entity] | None = None,
+) -> tuple[EcologyLayer, EntitiesLayer, QueryFn, EmitFn]:
     """Set up ecology + entities layers with query/emit fns wired together."""
     ecology = EcologyLayer(squads=squads)
     entities_layer = EntitiesLayer(
@@ -90,12 +108,9 @@ def _make_ecology_and_entities(
     def query_fn(layer_name: str, query: Query) -> Answer:
         return layers[layer_name].query(query)
 
-    def emit_fn(event: object) -> ActionResult:
+    def emit_fn(event: Event) -> ActionResult:
         # Route events to ecology layer for strength updates
-        from dnd_simulator.core.models import Event
-
-        assert isinstance(event, Event)
-        ecology.handle_event(event, query_fn, emit_fn)  # type: ignore[arg-type]
+        ecology.handle_event(event, query_fn, emit_fn)
         return ActionResult()
 
     return ecology, entities_layer, query_fn, emit_fn
@@ -187,6 +202,7 @@ class TestDematerialization:
 
         # Squad strength updated: 2/3 survived → strength = round(6 * 2/3) = 4
         info = ecology.query(Query(QueryType.SQUAD_INFO, params={"squad_id": "wolves"}))
+        assert isinstance(info.value, SquadInfo)
         assert info.value.strength == 4
 
     def test_combat_prevents_dematerialization(self) -> None:

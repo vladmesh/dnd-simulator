@@ -1355,3 +1355,12 @@ msgstr "Клетка ({}, {}) уже занята"
 
 msgid "No reaction prompt is pending"
 msgstr "Нет ожидающего запроса реакции"
+
+msgid "Message too large (limit {} bytes)"
+msgstr "Сообщение слишком большое (предел {} байт)"
+
+msgid "Action params must be a JSON object"
+msgstr "Параметры действия должны быть JSON-объектом"
+
+msgid "Action params are too large"
+msgstr "Параметры действия слишком большие"

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 
 from dnd_simulator.core.awareness import PerceivedEvent
 from dnd_simulator.core.character import Character, Creature, Entity
@@ -81,12 +81,36 @@ class EventLog:
         if isinstance(payload, SquadMovePayload):
             for location_id in (payload.from_location_id, payload.to_location_id):
                 if location_id:
-                    self._location_log.setdefault(location_id, []).append(event)
+                    self.append(location_id, event)
                     self._buffer_perceived_event(event, location_id)
             return
         if event_location := self.location_for(event):
-            self._location_log.setdefault(event_location, []).append(event)
+            self.append(event_location, event)
             self._buffer_perceived_event(event, event_location)
+
+    def append(self, location_id: str, event: Event) -> None:
+        """Append one event to a location's log; the entities layer writes its log only through here."""
+        log = self._location_log.setdefault(location_id, [])
+        self._rebind_log_cursors(location_id, len(log))
+        log.append(event)
+
+    def _rebind_log_cursors(self, location_id: str, log_length: int) -> None:
+        """Re-anchor the log cursor of every creature that changed location since the log last saw it.
+
+        A location change (travel, flee, GM move, schedule) can happen anywhere; its only effect on
+        perception is here, before the first event after it lands. Everything already logged where
+        the creature now stands predates its arrival, so the cursor starts at the current log end.
+        """
+        for entity in self._entities.values():
+            bound = entity._log_cursor_location
+            if entity.location_id == location_id:
+                if bound != location_id:
+                    entity._last_seen_log_index = log_length
+                    entity._log_cursor_location = location_id
+            elif bound == location_id:
+                here = entity.location_id
+                entity._last_seen_log_index = len(self._location_log.get(here, []))
+                entity._log_cursor_location = here
 
     def _buffer_perceived_event(self, event: Event, location_id: str) -> None:
         """Fan one logged event into active core-bearer buffers at its location."""
@@ -126,9 +150,8 @@ class EventLog:
     def perceived_events(self, creature: Creature, get_entity: Callable[[str], Entity | None]) -> list[PerceivedEvent]:
         if not isinstance(creature, Character):
             return []
-        events = self._location_log.get(creature.location_id, [])
-        new_events = events[creature._last_seen_log_index :]
-        creature._last_seen_log_index = len(events)
+        new_events = unread_events(creature, self._location_log)
+        mark_log_read(creature, self._location_log)
         result: list[PerceivedEvent] = []
         for event in new_events:
             if event.observer_ids is not None and creature.id not in event.observer_ids:
@@ -147,6 +170,22 @@ class EventLog:
                 )
             )
         return result
+
+
+def unread_events(entity: Entity, location_log: Mapping[str, list[Event]]) -> list[Event]:
+    """Events logged where the entity stands that it has not read yet."""
+    here = entity.location_id
+    events = location_log.get(here, [])
+    if entity._log_cursor_location != here:
+        # Moved and nothing was logged here since: everything here predates the arrival.
+        return []
+    return events[entity._last_seen_log_index :]
+
+
+def mark_log_read(entity: Entity, location_log: Mapping[str, list[Event]]) -> None:
+    """Move the entity's log cursor to the end of its current location's log."""
+    entity._last_seen_log_index = len(location_log.get(entity.location_id, []))
+    entity._log_cursor_location = entity.location_id
 
 
 def _event_actor_target_ids(event: Event) -> tuple[str | None, str | None]:
