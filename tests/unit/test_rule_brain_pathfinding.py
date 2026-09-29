@@ -9,6 +9,7 @@ no failed action at all.
 from __future__ import annotations
 
 from collections.abc import MutableMapping
+from itertools import pairwise
 from typing import Any
 
 import structlog
@@ -237,3 +238,113 @@ class TestNoMapKnowledge:
         )
         action = RuleBrain().choose_action(goblin, awareness, [])
         assert action.name not in (ActionType.MOVE, ActionType.MOVE_TO, ActionType.DASH)
+
+
+def _ready_to_react(creature: Creature) -> Creature:
+    """Give a bystander the reaction it would have mid-round, so leaving its reach provokes."""
+    creature.turn_budget = TurnBudget(actions=1, bonus_actions=1, movement_remaining=30, reaction=1)
+    creature.brain = RuleBrain()
+    return creature
+
+
+def _leaves_reach_of(path_cells: list[Position], reactor: Position, reach: int = 5) -> bool:
+    return any(grid_distance(reactor, cur) <= reach < grid_distance(reactor, nxt) for cur, nxt in pairwise(path_cells))
+
+
+class TestAvoidsOpportunityAttacks:
+    """Issue combat-pathfinding-avoidance: an approach must not walk out of a bystander's reach needlessly."""
+
+    def test_takes_a_safe_detour_past_a_bystander(self) -> None:
+        goblin = _creature("goblin", brain=RuleBrain())
+        hero = _creature("hero")
+        guard = _ready_to_react(_creature("guard"))
+        world, entities = _make_world([goblin, hero, guard])
+        # The straight line to the hero (y=10) passes through the guard's reach and out of it again at x=35;
+        # a walk along y=5 stays clear of it and costs no more.
+        hero.current_hp = 10  # wounded: the goblin's scoring targets the hero, not the nearer guard
+        combat = _start_combat(entities, {"goblin": ((10, 10), 0), "hero": ((40, 10), 1), "guard": ((25, 15), 1)})
+
+        actions, errors, logs = _run_turn(world, entities, goblin)
+
+        _assert_no_failures(errors, logs)
+        assert guard.turn_budget is not None
+        assert guard.turn_budget.reaction == 1  # no opportunity attack was taken
+        moves = [a for a in actions if a.name == ActionType.MOVE_TO]
+        assert moves
+        cells = [Position(10, 10), *(Position(int(str(a.params["x"])), int(str(a.params["y"]))) for a in moves)]
+        assert not _leaves_reach_of(cells, Position(25, 15))
+        assert actions[-1].name == ActionType.ATTACK
+        assert actions[-1].params["target_id"] == "hero"
+        goblin_pos = combat.battle_map.get_position("goblin")
+        assert goblin_pos is not None
+        assert grid_distance(goblin_pos, Position(40, 10)) <= 5
+
+    def test_engaged_mover_has_no_safe_path_and_keeps_the_old_route(self) -> None:
+        """Every step away from an adjacent guard provokes: the route is the one taken without the threat."""
+
+        def final_cell(guard_can_react: bool) -> tuple[Position | None, int]:
+            goblin = _creature("goblin", brain=RuleBrain())
+            hero = _creature("hero")
+            guard = _creature("guard")
+            if guard_can_react:
+                _ready_to_react(guard)
+            world, entities = _make_world([goblin, hero, guard])
+            hero.current_hp = 10
+            combat = _start_combat(entities, {"goblin": ((10, 10), 0), "hero": ((40, 10), 1), "guard": ((10, 15), 1)})
+            actions, errors, logs = _run_turn(world, entities, goblin)
+            _assert_no_failures(errors, logs)
+            assert actions[0].name == ActionType.MOVE_TO
+            reaction = guard.turn_budget.reaction if guard.turn_budget is not None else 1
+            return combat.battle_map.get_position("goblin"), reaction
+
+        threatened_cell, reaction_left = final_cell(guard_can_react=True)
+        unthreatened_cell, _ = final_cell(guard_can_react=False)
+        assert threatened_cell == unthreatened_cell
+        assert threatened_cell is not None
+        assert grid_distance(threatened_cell, Position(40, 10)) <= 5
+        assert reaction_left == 0  # the unavoidable opportunity attack was taken
+
+    def test_long_detour_is_not_taken(self) -> None:
+        """A wall leaves only a long way round the guard: take the direct route and the opportunity attack."""
+        goblin = _creature("goblin", brain=RuleBrain())
+        hero = _creature("hero")
+        guard = _ready_to_react(_creature("guard"))
+        world, entities = _make_world([goblin, hero, guard])
+        hero.current_hp = 10
+        # Walls seal the cells south of y=10 east of x=20, so the only way round the guard is north of it:
+        # 40 ft against the direct 25 ft, more than the detour the goblin accepts.
+        combat = _start_combat(
+            entities,
+            {"goblin": ((10, 10), 0), "hero": ((40, 10), 1), "guard": ((25, 15), 1)},
+            walls=[Wall(x1=20, y1=0, x2=20, y2=10), Wall(x1=20, y1=10, x2=65, y2=10)],
+        )
+
+        _actions, errors, logs = _run_turn(world, entities, goblin)
+
+        _assert_no_failures(errors, logs)
+        assert guard.turn_budget is not None
+        assert guard.turn_budget.reaction == 0
+        goblin_pos = combat.battle_map.get_position("goblin")
+        assert goblin_pos is not None
+        assert grid_distance(goblin_pos, Position(40, 10)) <= 5
+
+    def test_long_reach_target_is_still_approached(self) -> None:
+        """Entering a reach never provokes: the target's own long reach does not stop the approach."""
+        goblin = _creature("goblin", brain=RuleBrain())
+        pike = Attack(
+            name="pike", ability=Ability.STR, damage=(DamageComponent("1d10", DamageType.PIERCING),), reach=10
+        )
+        hero = _ready_to_react(_creature("hero"))
+        hero.attacks = (pike,)
+        world, entities = _make_world([goblin, hero])
+        combat = _start_combat(entities, {"goblin": ((10, 10), 0), "hero": ((35, 10), 1)})
+
+        actions, errors, logs = _run_turn(world, entities, goblin)
+
+        _assert_no_failures(errors, logs)
+        assert [a.name for a in actions] == [ActionType.MOVE_TO, ActionType.ATTACK]
+        assert hero.turn_budget is not None
+        assert hero.turn_budget.reaction == 1
+        goblin_pos = combat.battle_map.get_position("goblin")
+        assert goblin_pos is not None
+        assert grid_distance(goblin_pos, Position(35, 10)) <= 5

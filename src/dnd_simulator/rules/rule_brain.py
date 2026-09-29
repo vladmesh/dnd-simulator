@@ -7,6 +7,7 @@ The Brain ABC stays in core/brain.py as the shared interface.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import pairwise
 from typing import TYPE_CHECKING
 
 from dnd_simulator.core.action import END_TURN, Action, ActionType
@@ -18,6 +19,7 @@ from dnd_simulator.core.reactions import ReactionOption, ReactionTrigger, Trigge
 from dnd_simulator.rules.actions import collect_cost_overrides
 from dnd_simulator.rules.flee import enemy_blocks_flee
 from dnd_simulator.rules.movement import compute_reachable, grid_distance, path_cost, unbounded_budget
+from dnd_simulator.rules.reactions import leaves_reach
 from dnd_simulator.rules.resources import get_available_spell_slots
 from dnd_simulator.rules.weapons import get_weapon_attack
 
@@ -31,6 +33,8 @@ DODGE_HP_THRESHOLD = 0.25
 POTION_HP_THRESHOLD = 0.50
 SCARED_FLEE_HP_THRESHOLD = 0.25
 SCARED_DODGE_HP_THRESHOLD = 0.35
+# Extra feet an approach may walk to avoid leaving an enemy's reach (two cells).
+MAX_SAFE_DETOUR_FT = 10
 
 # Map id of the deciding creature on the brain's reconstructed battle-map view.
 _SELF_ID = "__self__"
@@ -48,14 +52,16 @@ class _CombatContext:
     flee_threshold: float
     dodge_threshold: float
     target: CombatEntity | None
+    threats: tuple[tuple[Position, int], ...]  # (cell, reach) of every enemy that can take an opportunity attack
 
 
 @dataclass(frozen=True)
 class _Approach:
-    """The cheapest walk to a free cell from which ``target`` is within primary reach."""
+    """The chosen walk to a free cell from which ``target`` is within primary reach."""
 
     target: CombatEntity
     path: list[Position]  # start inclusive; a single cell means the target is already in reach
+    safe: bool = False  # the path leaves no enemy's reach, so the walk must not either
 
 
 class RuleBrain(Brain):
@@ -148,6 +154,8 @@ class RuleBrain(Brain):
         return END_TURN
 
     def _build_context(self, creature: Creature, awareness: CombatAwareness) -> _CombatContext:
+        from dnd_simulator.core.combat import Position
+
         hp = awareness.self_hp
         max_hp = awareness.self_max_hp
         hp_ratio = hp / max_hp if max_hp > 0 else 0.0
@@ -157,6 +165,7 @@ class RuleBrain(Brain):
         hated_ids = list(inner_self.relation_targets(RelationshipType.HATES)) if inner_self else []
         feared_ids = list(inner_self.relation_targets(RelationshipType.FEARS)) if inner_self else []
         target = self._pick_target(awareness.nearby, primary_reach, hated_ids, feared_ids)
+        threats = tuple((Position(e.x, e.y), e.reach_ft) for e in awareness.nearby if e.is_hostile and e.can_react)
 
         return _CombatContext(
             creature=creature,
@@ -167,6 +176,7 @@ class RuleBrain(Brain):
             flee_threshold=SCARED_FLEE_HP_THRESHOLD if is_scared else FLEE_HP_THRESHOLD,
             dodge_threshold=SCARED_DODGE_HP_THRESHOLD if is_scared else DODGE_HP_THRESHOLD,
             target=target,
+            threats=threats,
         )
 
     @staticmethod
@@ -306,7 +316,15 @@ class RuleBrain(Brain):
         assert view is not None  # an approach was planned on it
         movement_left = budget.movement_remaining if budget else 0
         affordable = compute_reachable(approach.path[0], movement_left, view, _SELF_ID)
-        goal = next((cell for cell in reversed(approach.path[1:]) if cell in affordable), None)
+        # MOVE_TO walks its own cheapest route to the goal: a safe approach only picks goals whose route stays safe.
+        goal = next(
+            (
+                cell
+                for cell in reversed(approach.path[1:])
+                if cell in affordable and (not approach.safe or not self._provokes(affordable[cell], ctx.threats))
+            ),
+            None,
+        )
         if goal is None:
             return None
         return Action(name=ActionType.MOVE_TO, params={"x": goal.x, "y": goal.y})
@@ -353,7 +371,11 @@ class RuleBrain(Brain):
         )
 
     def _plan_approach(self, ctx: _CombatContext) -> _Approach | None:
-        """Cheapest path to an attack cell of the chosen target, else of the nearest other reachable enemy."""
+        """Path to an attack cell of the chosen target, else of the nearest other reachable enemy.
+
+        The cheapest path, unless a path that leaves no enemy's reach (no opportunity attack) costs at most
+        ``MAX_SAFE_DETOUR_FT`` more and, when the cheapest one ends this turn in reach, does too.
+        """
         from dnd_simulator.core.combat import Position
 
         view = self._map_view(ctx.awareness)
@@ -361,26 +383,57 @@ class RuleBrain(Brain):
             return None
         start = Position(ctx.awareness.self_x, ctx.awareness.self_y)
         paths = compute_reachable(start, unbounded_budget(view), view, _SELF_ID)
+        safe_paths = (
+            compute_reachable(
+                start,
+                unbounded_budget(view),
+                view,
+                _SELF_ID,
+                step_allowed=lambda cur, nxt: not self._provokes([cur, nxt], ctx.threats),
+            )
+            if ctx.threats
+            else paths
+        )
+        budget = ctx.awareness.turn_budget
+        movement_left = budget.movement_remaining if budget else 0
         others = sorted(
             (e for e in ctx.awareness.nearby if e.is_hostile and e.id != ctx.target.id), key=lambda e: e.distance_ft
         )
         for target in [ctx.target, *others]:
-            target_pos = Position(target.x, target.y)
-            reach = ctx.primary_reach
-            attack_paths = [path for cell, path in paths.items() if grid_distance(cell, target_pos) <= reach]
-            if attack_paths:
-                # Equal cost: prefer the cell squarest to the target, then a fixed order for determinism.
-                best = min(
-                    attack_paths,
-                    key=lambda path: (
-                        path_cost(path),
-                        (path[-1].x - target_pos.x) ** 2 + (path[-1].y - target_pos.y) ** 2,
-                        path[-1].x,
-                        path[-1].y,
-                    ),
-                )
-                return _Approach(target=target, path=best)
+            best = self._cheapest_attack_path(paths, Position(target.x, target.y), ctx.primary_reach)
+            if best is None:
+                continue
+            safe = self._cheapest_attack_path(safe_paths, Position(target.x, target.y), ctx.primary_reach)
+            if safe is not None:
+                cost, safe_cost = path_cost(best), path_cost(safe)
+                in_reach_this_turn = cost <= movement_left
+                if safe_cost - cost <= MAX_SAFE_DETOUR_FT and (not in_reach_this_turn or safe_cost <= movement_left):
+                    return _Approach(target=target, path=safe, safe=True)
+            return _Approach(target=target, path=best)
         return None
+
+    @staticmethod
+    def _cheapest_attack_path(
+        paths: dict[Position, list[Position]], target_pos: Position, reach: int
+    ) -> list[Position] | None:
+        attack_paths = [path for cell, path in paths.items() if grid_distance(cell, target_pos) <= reach]
+        if not attack_paths:
+            return None
+        # Equal cost: prefer the cell squarest to the target, then a fixed order for determinism.
+        return min(
+            attack_paths,
+            key=lambda path: (
+                path_cost(path),
+                (path[-1].x - target_pos.x) ** 2 + (path[-1].y - target_pos.y) ** 2,
+                path[-1].x,
+                path[-1].y,
+            ),
+        )
+
+    @staticmethod
+    def _provokes(path: list[Position], threats: tuple[tuple[Position, int], ...]) -> bool:
+        """Whether walking *path* leaves any threat's reach (the opportunity-attack trigger)."""
+        return any(leaves_reach(pos, reach, cur, nxt) for cur, nxt in pairwise(path) for pos, reach in threats)
 
     def _move_away_from(self, threats: list[CombatEntity], awareness: CombatAwareness) -> Action | None:
         """Move to the affordable free cell farthest from the nearest threat; None when no cell gains distance."""

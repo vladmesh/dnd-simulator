@@ -212,7 +212,9 @@ class AwarenessBuilder:
     def build_combat_awareness(self, creature: Creature, query_fn: QueryFn | None = None) -> CombatAwareness:
         """Build combat awareness using internal data + optional faction queries."""
         from dnd_simulator.core.combat import Position
+        from dnd_simulator.rules.conditions import is_incapacitated
         from dnd_simulator.rules.movement import direction_label, grid_distance
+        from dnd_simulator.rules.weapons import get_weapon_attack
 
         combat = self._combat.get_combat(creature.location_id)
         round_number = combat.round_number if combat else 1
@@ -262,11 +264,15 @@ class AwarenessBuilder:
                     x=other_pos.x if other_pos else 0,
                     y=other_pos.y if other_pos else 0,
                     conditions=e_conditions,
+                    reach_ft=get_weapon_attack(e).reach if isinstance(e, Creature) else 0,
+                    can_react=isinstance(e, Creature)
+                    and e.turn_budget is not None
+                    and e.turn_budget.reaction > 0
+                    and not is_incapacitated(e.conditions),
                 )
             )
 
         from dnd_simulator.rules.modifiers import effective_ac, effective_speed
-        from dnd_simulator.rules.weapons import get_weapon_attack
 
         weapon_attack = get_weapon_attack(creature)
         weapon_name = weapon_attack.name
