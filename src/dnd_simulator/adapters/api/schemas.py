@@ -51,6 +51,8 @@ class SpawnCreatureRequest(BaseModel):
     personality: str | None = None
     settlement_id: str | None = None
     ai: BrainType = BrainType.RULE_BASED
+    # XP awarded to a Character that kills this creature (same bound as PatchCreatureRequest.xp_value)
+    xp_value: int | None = Field(default=None, ge=0)
 
 
 class PatchCreatureRequest(BaseModel):
@@ -73,31 +75,36 @@ class PatchCreatureRequest(BaseModel):
     personality: str | None = None
 
 
+# Bounds for GM-authored items. Ranges cover the SRD catalog with headroom for homebrew magic items.
+_ITEM_TEXT = 200
+_ItemText = Annotated[str, Field(max_length=_ITEM_TEXT)]
+
+
 class GiveItemRequest(BaseModel):
-    name: str | None = None
-    type: str | None = None  # "potion", "weapon", "armor", "shield"
-    ref: str | None = None  # catalog reference (e.g. "flaming_longsword")
-    price: int | None = None
+    name: str | None = Field(default=None, max_length=_ITEM_TEXT)
+    type: str | None = Field(default=None, max_length=32)  # "potion", "weapon", "armor", "shield"
+    ref: str | None = Field(default=None, max_length=_ITEM_TEXT)  # catalog reference (e.g. "flaming_longsword")
+    price: int | None = Field(default=None, ge=0, le=1_000_000)  # gold pieces
     # Potion fields
-    heal_dice: str | None = None
+    heal_dice: str | None = Field(default=None, max_length=32)
     # Weapon fields
-    weapon_id: str | None = None
-    category: str | None = None
-    attack_name: str | None = None
-    damage: list[dict[str, str]] | None = None
-    ability: str | None = None
-    reach: int | None = None
+    weapon_id: str | None = Field(default=None, max_length=_ITEM_TEXT)
+    category: str | None = Field(default=None, max_length=32)
+    attack_name: str | None = Field(default=None, max_length=_ITEM_TEXT)
+    damage: list[dict[_ItemText, _ItemText]] | None = Field(default=None, max_length=8)
+    ability: str | None = Field(default=None, max_length=32)
+    reach: int | None = Field(default=None, ge=5, le=30)  # feet; SRD melee is 5, reach weapons 10
     is_magic: bool | None = None
     is_finesse: bool | None = None
-    grant_actions: list[str] | None = None
+    grant_actions: list[_ItemText] | None = Field(default=None, max_length=16)
     # Armor fields
-    armor_id: str | None = None
-    base_ac: int | None = None
-    max_dex_bonus: int | None = None
-    strength_req: int | None = None
+    armor_id: str | None = Field(default=None, max_length=_ITEM_TEXT)
+    base_ac: int | None = Field(default=None, ge=10, le=30)  # SRD armor: 11 (padded) .. 18 (plate)
+    max_dex_bonus: int | None = Field(default=None, ge=0, le=10)  # omitted = no cap (light armor)
+    strength_req: int | None = Field(default=None, ge=0, le=30)  # ability score
     # Shield fields
-    shield_id: str | None = None
-    ac_bonus: int | None = None
+    shield_id: str | None = Field(default=None, max_length=_ITEM_TEXT)
+    ac_bonus: int | None = Field(default=None, ge=0, le=10)  # SRD shield +2, magic up to +3 more
 
 
 class SetBrainRequest(BaseModel):
@@ -408,8 +415,22 @@ class LayerFileResponse(BaseModel):
     content: str
 
 
+# The largest shipped layer file (library geography locations.yaml) is ~18 KiB; 1 MiB leaves ample room
+# for hand-grown worlds while bounding what one request can write to disk.
+MAX_LAYER_FILE_CHARS = 1024 * 1024
+
+
 class UpdateLayerFileRequest(BaseModel):
-    content: str
+    content: str = Field(max_length=MAX_LAYER_FILE_CHARS)
+
+
+class FrontendErrorReport(BaseModel):
+    """A browser-side error the SPA reports for server-side debugging (main.tsx, ErrorBoundary)."""
+
+    message: str = Field(default="?", max_length=8 * 1024)
+    stack: str | None = Field(default=None, max_length=64 * 1024)
+    component: str | None = Field(default=None, max_length=64 * 1024)  # React component stack
+    url: str | None = Field(default=None, max_length=2048)
 
 
 class MessageResponse(BaseModel):
