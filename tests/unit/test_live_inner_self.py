@@ -43,6 +43,7 @@ def test_classify_report_accepts_fenced_digest_with_thought_and_core_change() ->
         "Journal changed after observed events",
         "Digest response shape available",
         "Tool-call retries observed",
+        "Rules fallback digests: 0",
     }
 
 
@@ -57,7 +58,7 @@ def test_classify_report_marks_fallback_and_missing_evidence_as_warnings() -> No
     outcome = {check["name"]: check["status"] for check in checks}
 
     assert outcome["LLM digest accepted"] == "WARN"
-    assert outcome["Rules fallback used"] == "INFO"
+    assert outcome["Rules fallback digests: 1"] == "INFO"
     assert outcome["Thought recorded"] == "INFO"
     assert outcome["Core changed after observed events"] == "INFO"
     assert outcome["Journal changed after observed events"] == "INFO"
@@ -110,3 +111,47 @@ def test_missing_model_configuration_skips_without_network(
 
     assert error.value.code == 2
     assert "SKIPPED / NOT RUNNABLE" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("metrics", "expected"),
+    [
+        ({"available": True, "fallback_digests": 0}, ("Rules fallback digests: 0", "PASS")),
+        ({"available": True, "fallback_digests": 2}, ("Rules fallback digests: 2", "INFO")),
+        ({"available": False}, ("Rules fallback digests: unknown (session log unavailable)", "INFO")),
+    ],
+)
+def test_rules_fallback_check_reflects_the_measured_count(
+    metrics: dict[str, object], expected: tuple[str, str]
+) -> None:
+    checks = classify_report(_snapshot(), _snapshot(), _snapshot(), metrics, completed=True)
+
+    fallback = [(check["name"], check["status"]) for check in checks if check["name"].startswith("Rules fallback")]
+    assert fallback == [expected]
+
+
+def test_session_creation_failure_prints_one_line_error_and_exits_non_zero(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from scripts import live_inner_self
+
+    class _Healthy:
+        def raise_for_status(self) -> None:
+            return None
+
+    def refuse(self: object, method: str, path: str, body: object | None = None) -> dict[str, object]:
+        raise RuntimeError(f"{method} {path}: HTTP 500: {{'detail': 'boom'}}")
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setenv("LLM_MODEL", "test-model")
+    monkeypatch.setattr(live_inner_self.requests, "get", lambda *args, **kwargs: _Healthy())
+    monkeypatch.setattr(live_inner_self.HttpTransport, "request", refuse)
+
+    with pytest.raises(SystemExit) as error:
+        live_inner_self.main()
+
+    assert error.value.code == 1
+    out = capsys.readouterr().out
+    errors = [line for line in out.splitlines() if line.startswith("ERROR:")]
+    assert errors == ["ERROR: cannot create a session: post /api/master/sessions: HTTP 500: {'detail': 'boom'}"]
+    assert "Traceback" not in out

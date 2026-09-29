@@ -66,7 +66,9 @@ def _make_client(tmp_path: Path) -> tuple[TestClient, GameService, str, Npc]:
         ),
     )
     session = service._get_session(session_id)
-    service._get_entities_layer(session).add_entity(npc)
+    layer = service._get_entities_layer(session)
+    layer.add_entity(npc)
+    layer.add_entity(Creature(id="rival", name="Rival", location_id="silverport_city"))
     return client, service, session_id, npc
 
 
@@ -228,3 +230,31 @@ def test_inner_self_core_edit_survives_save_and_load(tmp_path: Path) -> None:
     restored = client.get(_inner_self_url(session_id)).json()
     assert restored["mood"] == "angry"
     assert restored["relations"] == [{"target_id": "rival", "type": "hates", "intensity": 80}]
+
+
+def test_replace_inner_self_core_rejects_unknown_relationship_target(tmp_path: Path) -> None:
+    client, _, session_id, _ = _make_client(tmp_path)
+    original = client.get(_inner_self_url(session_id)).json()
+    payload = _core_payload()
+    payload["relations"] = [{"target_id": "ghost", "type": "hates", "intensity": 80}]
+
+    response = client.put(f"{_inner_self_url(session_id)}/core", json=payload)
+
+    assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
+    assert response.json() == {"detail": "unknown relationship target 'ghost'"}
+    assert client.get(_inner_self_url(session_id)).json() == original
+
+
+def test_replace_inner_self_core_keeps_a_held_relationship_to_a_removed_creature(tmp_path: Path) -> None:
+    """A full replace may resend a relation the core already holds even if its target has left."""
+    client, _, session_id, _ = _make_client(tmp_path)
+    payload = _core_payload()
+    payload["relations"] = [
+        {"target_id": "friend", "type": "trusts", "intensity": 40},
+        {"target_id": "rival", "type": "hates", "intensity": 80},
+    ]
+
+    response = client.put(f"{_inner_self_url(session_id)}/core", json=payload)
+
+    assert response.status_code == HTTPStatus.OK
+    assert response.json()["relations"] == payload["relations"]

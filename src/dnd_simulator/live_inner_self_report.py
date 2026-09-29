@@ -57,6 +57,13 @@ def _core(snapshot: dict[str, object]) -> dict[str, object]:
     return {key: snapshot.get(key) for key in keys}
 
 
+def _fallback_check(metrics: dict[str, object], fallback: int) -> Check:
+    """Report the measured rules-fallback count; zero is a pass only when the session log was read."""
+    if metrics.get("available") is False:
+        return {"name": "Rules fallback digests: unknown (session log unavailable)", "status": "INFO"}
+    return {"name": f"Rules fallback digests: {fallback}", "status": "INFO" if fallback else "PASS"}
+
+
 def classify_report(
     before: dict[str, object],
     after_combat: dict[str, object],
@@ -77,7 +84,7 @@ def classify_report(
     return [
         {"name": "Scenario completed", "status": "PASS" if completed else "WARN"},
         {"name": "LLM digest accepted", "status": "PASS" if accepted else "WARN"},
-        {"name": "Rules fallback used", "status": "INFO"},
+        _fallback_check(metrics, fallback),
         {"name": "Digest reached an observed boundary", "status": "PASS" if accepted or fallback else "WARN"},
         {
             "name": "Thought recorded",
