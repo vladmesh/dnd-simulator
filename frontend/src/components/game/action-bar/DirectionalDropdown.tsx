@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button"
 import { ChevronDown } from "lucide-react"
 import { getActionLabel } from "./utils"
+import { perceivedLabels } from "../targetLabels"
 
 interface DirectionalDropdownProps {
   name: string
   description: string
-  enemies: { id: string }[]
+  enemies: { id: string; description?: string; name?: string }[]
   disabled: boolean
   openDropdown: string | null
   setOpenDropdown: (v: string | null) => void
@@ -22,6 +23,7 @@ export function DirectionalDropdown({ name, description, enemies, disabled, open
   const dataAttrs: Record<string, string> = {}
   if (costType) dataAttrs["data-cost-type"] = costType
   if (depleted) dataAttrs["data-depleted"] = ""
+  const labels = perceivedLabels(enemies, t)
 
   return (
     <div className="relative">
@@ -39,22 +41,25 @@ export function DirectionalDropdown({ name, description, enemies, disabled, open
       </Button>
       {openDropdown === name && (
         <div className="absolute bottom-full left-0 z-10 mb-1 min-w-[180px] rounded border border-border bg-popover p-1 shadow-md">
-          {enemies.map((e) => (
-            <div key={e.id} className="flex gap-1">
-              <button
-                className="flex-1 rounded px-2 py-1 text-left text-xs hover:bg-accent"
-                onClick={() => sendAction(name, { toward: e.id })}
-              >
-                {t(towardKey, { target: e.id })}
-              </button>
-              <button
-                className="flex-1 rounded px-2 py-1 text-left text-xs hover:bg-accent"
-                onClick={() => sendAction(name, { away_from: e.id })}
-              >
-                {t(awayKey, { target: e.id })}
-              </button>
-            </div>
-          ))}
+          {enemies.map((e) => {
+            const target = labels.get(e.id) ?? t("game:unknown_creature")
+            return (
+              <div key={e.id} className="flex gap-1">
+                <button
+                  className="flex-1 rounded px-2 py-1 text-left text-xs hover:bg-accent"
+                  onClick={() => sendAction(name, { toward: e.id })}
+                >
+                  {t(towardKey, { target })}
+                </button>
+                <button
+                  className="flex-1 rounded px-2 py-1 text-left text-xs hover:bg-accent"
+                  onClick={() => sendAction(name, { away_from: e.id })}
+                >
+                  {t(awayKey, { target })}
+                </button>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

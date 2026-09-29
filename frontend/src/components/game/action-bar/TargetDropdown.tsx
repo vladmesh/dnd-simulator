@@ -7,11 +7,12 @@ import { getSpellSlots } from "../spellSlots"
 import { SmiteChoice } from "../SmiteChoice"
 import { buildAttackParams } from "../attackParams"
 import { LayOnHandsAmountPicker } from "./LayOnHandsAmountPicker"
+import { perceivedLabels } from "../targetLabels"
 
 interface TargetDropdownProps {
   name: string
   description: string
-  nearby: { id: string; distance_ft?: number; is_hostile?: boolean }[]
+  nearby: { id: string; description?: string; name?: string; distance_ft?: number; is_hostile?: boolean }[]
   scope: string
   selfId?: string
   disabled: boolean
@@ -48,15 +49,17 @@ function buildTargets(
     })
   }
 
+  // Same display rule as the Nearby panel: the id is only the action handle, never a label.
+  const names = perceivedLabels(nearby, t)
   for (const e of nearby) {
     if (scope === "hostile" && !e.is_hostile) continue
     if (scope === "ally" && e.is_hostile) continue
 
-    let label = e.id
+    let label = names.get(e.id) ?? t("game:unknown_creature")
     if (actionName === "attack") {
-      label = t("game:attack_target", { target: e.id })
+      label = t("game:attack_target", { target: label })
     } else if (actionName === "talk") {
-      label = t("game:talk_to", { target: e.id })
+      label = t("game:talk_to", { target: label })
     }
 
     targets.push({
@@ -77,6 +80,8 @@ export function TargetDropdown({ name, description, nearby, scope, selfId, disab
   if (depleted) dataAttrs["data-depleted"] = ""
 
   const targets = buildTargets(name, nearby, scope, selfId, t)
+  const targetName = (id: string) =>
+    id === selfId ? t("game:target_self") : perceivedLabels(nearby, t).get(id) ?? t("game:unknown_creature")
 
   // Check if this is an attack action with available spell slots
   const isAttack = name === "attack"
@@ -160,7 +165,7 @@ export function TargetDropdown({ name, description, nearby, scope, selfId, disab
         <div className="absolute bottom-full left-0 z-10 mb-1 min-w-[200px]">
           <SmiteChoice
             slots={slots}
-            targetName={smiteTargetId}
+            targetName={targetName(smiteTargetId)}
             onChoice={handleSmiteChoice}
             onCancel={() => {
               setSmiteTargetId(null)

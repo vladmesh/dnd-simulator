@@ -246,8 +246,8 @@ describe("ActionBar — cost-type styling", () => {
     expect(duplicates).toEqual([])
 
     // The smite panel items must include the target name.
-    expect(screen.getByRole("menuitem", { name: /Attack practice_thug$/ })).toBeTruthy()
-    expect(screen.getByRole("menuitem", { name: /Attack practice_thug \+ Smite \(slot 1\)/ })).toBeTruthy()
+    expect(screen.getByRole("menuitem", { name: /Attack Thug$/ })).toBeTruthy()
+    expect(screen.getByRole("menuitem", { name: /Attack Thug \+ Smite \(slot 1\)/ })).toBeTruthy()
   })
 
   it("attack with multiple enemies shows target dropdown", () => {
