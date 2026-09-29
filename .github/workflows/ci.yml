@@ -119,3 +119,33 @@ jobs:
       - name: Skipped (out of scope)
         if: needs.detect-changes.outputs.scope != 'backend' && needs.detect-changes.outputs.scope != 'mixed'
         run: echo "Backend scope not touched (scope=${{ needs.detect-changes.outputs.scope }}) — skipping integration tests."
+
+  # Production frontend image (nginx) + backend, smoke-tested through the nginx proxy
+  # (SPA, REST, WebSocket, /health). Runs for every scope except docs-only: the classifier
+  # puts Dockerfiles, compose files, nginx config, scripts/, Makefile and this workflow
+  # under "mixed", so container changes are never filtered out.
+  frontend-container:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    timeout-minutes: 30
+    env:
+      # One compose project per run, attempt and job: containers, network and the images
+      # compose builds (<project>-<service>) belong to this job only, and cleanup touches
+      # nothing else on the runner.
+      COMPOSE_PROJECT_NAME: dnd-fe-smoke-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}
+      # The smoke reaches nginx over the project network; publish on an ephemeral host port.
+      FRONTEND_PORT: "0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run frontend container smoke
+        if: needs.detect-changes.outputs.scope != 'docs'
+        run: make test-frontend-container
+
+      - name: Clean up compose project
+        if: always() && needs.detect-changes.outputs.scope != 'docs'
+        run: docker compose -f docker-compose.test.yml --profile frontend down --volumes --remove-orphans --rmi local
+
+      - name: Skipped (out of scope)
+        if: needs.detect-changes.outputs.scope == 'docs'
+        run: echo "Docs-only change (scope=${{ needs.detect-changes.outputs.scope }}) — skipping frontend container smoke."
