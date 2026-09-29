@@ -141,9 +141,8 @@ class ActivationManager:
         """Log where a journey stopped and how long it took, before any arrival encounter is rolled."""
         location_id = creature.location_id
         location_name = location_graph.get(location_id).name if location_graph.has(location_id) else location_id
-        # The log cursor indexes the log of the place the traveller left; here it starts on this
-        # place's log, so the arrival line and whatever follows it are the first things it reads.
-        creature._last_seen_log_index = len(self._location_log.get(location_id, []))
+        # Recording the arrival re-anchors the traveller's log cursor on this place's log
+        # (`EventLog.append`), so the arrival line and whatever follows it are the first things it reads.
         self._record_event(
             Event(
                 event_type=EventType.ENTITY_ARRIVED,

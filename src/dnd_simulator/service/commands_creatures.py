@@ -106,6 +106,15 @@ class CreatureCommands(GameServiceProtocol):
             ]
             if len(relations) != len(raw_relations):
                 raise ValueError("relationship must be an object")
+            # Like the LLM digest, a relation may only name a known target: a creature in
+            # this world, or a target the current core already holds (it may since have left).
+            known_targets = {relation.target_id for relation in previous.relations}
+            layer = self._get_entities_layer(session)
+            for relation in relations:
+                if relation.target_id not in known_targets and not isinstance(
+                    layer.get_entity(relation.target_id), Creature
+                ):
+                    raise ValueError(f"unknown relationship target '{relation.target_id}'")
             goals: list[TypedGoal | FreeformGoal] = []
             for item in raw_goals:
                 if not isinstance(item, dict):
@@ -425,4 +434,5 @@ def _parse_spawn(data: dict[str, Any], known_locations: set[str] | None = None) 
         attacks=attacks,
         ability_scores=parse_ability_scores(data),
         combat_position=(position[0], position[1]) if position else None,
+        xp_value=int(data.get("xp_value", 0)),
     )

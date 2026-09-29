@@ -95,6 +95,18 @@ msgstr ""
 msgid "Layer '{}' forked to custom in world '{}'"
 msgstr ""
 
+#: src/dnd_simulator/adapters/api/routes_ws.py:47
+msgid "Message too large (limit {} bytes)"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_ws.py:59
+msgid "Action params must be a JSON object"
+msgstr ""
+
+#: src/dnd_simulator/adapters/api/routes_ws.py:60
+msgid "Action params are too large"
+msgstr ""
+
 #: src/dnd_simulator/adapters/api/routes_ws.py:43
 msgid "Invalid JSON"
 msgstr ""

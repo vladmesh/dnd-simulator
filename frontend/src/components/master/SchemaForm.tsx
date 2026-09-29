@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo } from "react"
+import { useEffect, useEffectEvent, useCallback, useMemo } from "react"
 import { useForm, useFieldArray, Controller } from "react-hook-form"
 import type { UseFormRegister, Control, FieldValues, Path } from "react-hook-form"
 import { Input } from "@/components/ui/input"
@@ -57,10 +57,12 @@ export function SchemaForm({
     defaultValues: formDefaults as FieldValues,
   })
 
+  // Reset only when the caller hands in new initialValues; the effect event reads the
+  // defaults of the latest render without making schema/lang changes wipe the user's edits.
+  const resetToDefaults = useEffectEvent(() => reset(formDefaults as FieldValues))
   useEffect(() => {
-    reset(formDefaults as FieldValues)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialValues, reset])
+    resetToDefaults()
+  }, [initialValues])
 
   const onFormSubmit = useCallback(
     (data: FieldValues) => {

@@ -369,6 +369,58 @@ describe("SchemaForm", () => {
       expect(screen.getByLabelText("HP")).toHaveValue(25)
       expect(screen.getByLabelText("Name")).toHaveValue("Goblin")
     })
+
+    it("keeps the user's edits across re-renders with the same initialValues", async () => {
+      const user = userEvent.setup()
+      const schema = makeSchema({ name: { type: "string", title: "Name" } })
+      const initialValues = { name: "Goblin" }
+      const { rerender } = render(
+        <SchemaForm schema={schema} onSubmit={vi.fn()} initialValues={initialValues} />,
+      )
+      await user.clear(screen.getByLabelText("Name"))
+      await user.type(screen.getByLabelText("Name"), "Orc")
+
+      // New callback and a new-but-equal schema: neither may reset the form.
+      rerender(
+        <SchemaForm schema={{ ...schema }} onSubmit={vi.fn()} initialValues={initialValues} />,
+      )
+      expect(screen.getByLabelText("Name")).toHaveValue("Orc")
+    })
+
+    it("does not reset on a lang change alone", async () => {
+      const user = userEvent.setup()
+      const schema = makeSchema({
+        title: { type: "object", title: "Title", additionalProperties: { type: "string" } },
+      })
+      const initialValues = { title: { en: "Cave", ru: "Пещера" } }
+      const { rerender } = render(
+        <SchemaForm schema={schema} onSubmit={vi.fn()} initialValues={initialValues} lang="en" />,
+      )
+      expect(screen.getByLabelText("Title")).toHaveValue("Cave")
+      await user.type(screen.getByLabelText("Title"), "!")
+
+      rerender(
+        <SchemaForm schema={schema} onSubmit={vi.fn()} initialValues={initialValues} lang="ru" />,
+      )
+      expect(screen.getByLabelText("Title")).toHaveValue("Cave!")
+    })
+
+    it("resets to the new values when initialValues changes", async () => {
+      const user = userEvent.setup()
+      const schema = makeSchema({
+        hp: { type: "integer", title: "HP", default: 10 },
+        name: { type: "string", title: "Name" },
+      })
+      const { rerender } = render(
+        <SchemaForm schema={schema} onSubmit={vi.fn()} initialValues={{ name: "Goblin" }} />,
+      )
+      await user.type(screen.getByLabelText("Name"), " chief")
+
+      rerender(<SchemaForm schema={schema} onSubmit={vi.fn()} initialValues={{ name: "Orc" }} />)
+      expect(screen.getByLabelText("Name")).toHaveValue("Orc")
+      // Schema defaults are merged under the new values on reset.
+      expect(screen.getByLabelText("HP")).toHaveValue(10)
+    })
   })
 
   describe("form submission", () => {
