@@ -16,6 +16,7 @@ from dnd_simulator.core.combat import BattleMap, CombatState, Position, Wall
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.models import Answer, FactionRelation, GameDateTime, Query, QueryType
 from dnd_simulator.core.queries import NationInfo, RegionInfo, SettlementInfo, WeatherInfo
+from dnd_simulator.core.turn_budget import TurnBudget
 from dnd_simulator.core.world import LayerError
 from dnd_simulator.layers.entities.layer import EntitiesLayer
 from dnd_simulator.layers.entities.models import Npc, NpcActivity, ScheduleEntry
@@ -1067,3 +1068,46 @@ class TestFactionHostilityEdgeCases:
 
         result = _check_hostility(layer, observer, other, query_fn)
         assert result is False
+
+
+class TestCombatAwarenessThreat:
+    """Nearby combatants carry what the opportunity-attack rule needs: reach and a ready reaction."""
+
+    def _awareness(self, enemy: Character) -> CombatAwareness:
+        player = Character(id="p1", name="Hero", location_id="arena", in_combat=True, attacks=(_SWORD,))
+        layer = EntitiesLayer([player, enemy])
+        battle_map = BattleMap(width=60, height=60)
+        battle_map.set_position("p1", Position(10, 10))
+        battle_map.set_position(enemy.id, Position(20, 10))
+        layer._combat._combats["arena"] = CombatState(
+            location_id="arena", turn_order=["p1", enemy.id], battle_map=battle_map
+        )
+        return layer.build_combat_awareness(player)
+
+    def test_reach_and_ready_reaction(self) -> None:
+        pike = Attack(
+            name="pike", ability=Ability.STR, damage=(DamageComponent("1d10", DamageType.PIERCING),), reach=10
+        )
+        enemy = Character(id="e1", name="Pikeman", location_id="arena", in_combat=True, attacks=(pike,))
+        enemy.turn_budget = TurnBudget(reaction=1)
+
+        entry = self._awareness(enemy).nearby[0]
+
+        assert entry.reach_ft == 10
+        assert entry.can_react is True
+
+    def test_spent_reaction_cannot_react(self) -> None:
+        enemy = Character(id="e1", name="Orc", location_id="arena", in_combat=True, attacks=(_SWORD,))
+        enemy.turn_budget = TurnBudget(reaction=0)
+
+        entry = self._awareness(enemy).nearby[0]
+
+        assert entry.reach_ft == 5
+        assert entry.can_react is False
+
+    def test_incapacitated_cannot_react(self) -> None:
+        enemy = Character(id="e1", name="Orc", location_id="arena", in_combat=True, attacks=(_SWORD,))
+        enemy.turn_budget = TurnBudget(reaction=1)
+        enemy.conditions[Condition.STUNNED] = 1
+
+        assert self._awareness(enemy).nearby[0].can_react is False

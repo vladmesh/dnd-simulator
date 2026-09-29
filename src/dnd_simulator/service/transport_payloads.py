@@ -139,7 +139,7 @@ def build_inventory_payload(player: PlayerCharacter) -> list[dict[str, object]]:
     for item in player.inventory:
         entry: dict[str, object] = {
             "id": item.id,
-            "name": item.name,
+            "name": _(item.name),
             "type": item.item_type.value,
             "description": describe_item(item),
             "price": item.price,

@@ -1,3 +1,5 @@
+# Build context of the backend images (Dockerfile, Dockerfile.test). The frontend image
+# builds from frontend/ with its own frontend/.dockerignore.
 __pycache__
 *.pyc
 .venv

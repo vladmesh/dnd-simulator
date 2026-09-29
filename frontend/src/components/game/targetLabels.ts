@@ -1,5 +1,3 @@
-import type { TFunction } from "i18next"
-
 interface Perceived {
   id: string
   description?: string
@@ -14,7 +12,10 @@ interface Perceived {
  * known name, else a neutral fallback. Entities that would share a label (two goblins) get an
  * ordinal suffix in list order so every control stays uniquely addressable.
  */
-export function perceivedLabels(entities: Perceived[], t: TFunction): Map<string, string> {
+export function perceivedLabels(
+  entities: Perceived[],
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): Map<string, string> {
   const base = entities.map((e) => e.description || e.name || t("game:unknown_creature"))
   const total = new Map<string, number>()
   for (const label of base) total.set(label, (total.get(label) ?? 0) + 1)

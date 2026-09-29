@@ -1,4 +1,4 @@
-.PHONY: install lint format typecheck test test-unit test-integration check check-backend check-frontend setup-hooks messages compile-messages serve stop frontend up clean test-frontend lint-frontend typecheck-frontend live-inner-self
+.PHONY: install lint format typecheck test test-unit test-integration check check-backend check-frontend setup-hooks messages compile-messages serve stop frontend up clean test-frontend lint-frontend typecheck-frontend live-inner-self test-frontend-container
 
 install:
 	uv sync
@@ -25,6 +25,12 @@ live-inner-self:
 
 test-integration:
 	UID=$$(id -u) GID=$$(id -g) docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from integration-tests
+
+# Production frontend image (nginx) + backend, smoke-tested through the nginx proxy.
+# Separate from test-integration so the integration job never builds the frontend image.
+test-frontend-container:
+	UID=$$(id -u) GID=$$(id -g) docker compose -f docker-compose.test.yml --profile frontend up --build --abort-on-container-exit --exit-code-from frontend-smoke backend frontend frontend-smoke; \
+	status=$$?; UID=$$(id -u) GID=$$(id -g) docker compose -f docker-compose.test.yml --profile frontend down; exit $$status
 
 test-frontend:
 	cd frontend && npx vitest run
@@ -53,6 +59,7 @@ serve: stop
 messages:
 	uv run pybabel extract -F babel.cfg --no-wrap --project=dnd_simulator --omit-header \
 		-o src/dnd_simulator/locale/messages.pot src/dnd_simulator
+	uv run python -m dnd_simulator.content_loader.catalog_messages src/dnd_simulator/locale/messages.pot content
 
 compile-messages:
 	uv run pybabel compile -d src/dnd_simulator/locale -D dnd_simulator

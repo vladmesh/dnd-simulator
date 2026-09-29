@@ -6,7 +6,6 @@ Each load_* function: reads YAML → validates via Pydantic content model → co
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from dnd_simulator.content_loader.schemas import (
     BattleMapContent,
@@ -15,7 +14,7 @@ from dnd_simulator.content_loader.schemas import (
     RegionContent,
     SettlementContent,
 )
-from dnd_simulator.content_loader.utils import _load_section, _read_yaml, resolve_text
+from dnd_simulator.content_loader.utils import _load_section, _read_yaml, as_mapping, resolve_text
 from dnd_simulator.core.combat import BattleMap, Wall
 from dnd_simulator.core.location import Location, LocationEdge
 from dnd_simulator.layers.geography.models import Connection, Region
@@ -107,7 +106,7 @@ def load_locations(path: Path, regions: list[Region], lang: str = "en") -> list[
     Every world must define at least one location explicitly.
     """
     loc_path = path / "locations.yaml"
-    locations_data: dict[str, Any] = _read_yaml(loc_path) if loc_path.exists() else {}
+    locations_data = _read_yaml(loc_path) if loc_path.exists() else {}
 
     if not locations_data:
         return []
@@ -115,7 +114,7 @@ def load_locations(path: Path, regions: list[Region], lang: str = "en") -> list[
     return _parse_locations(locations_data, lang)
 
 
-def _parse_locations(data: dict[str, Any], lang: str = "en") -> list[Location]:
+def _parse_locations(data: dict[str, object], lang: str = "en") -> list[Location]:
     """Parse locations from YAML data."""
     locations: list[Location] = []
     for loc_id, ldata in data.items():
@@ -162,7 +161,7 @@ def load_battle_maps(path: Path) -> dict[str, BattleMap]:
 
     result: dict[str, BattleMap] = {}
     for region_id, rdata in regions_data.items():
-        bm_raw = rdata.get("battle_map")
+        bm_raw = as_mapping(rdata, f"{path / 'regions.yaml'}: {region_id}").get("battle_map")
         if not bm_raw:
             continue
         bm = BattleMapContent.model_validate(bm_raw)
@@ -185,7 +184,7 @@ def load_location_battle_maps(path: Path) -> dict[str, BattleMap]:
 
     result: dict[str, BattleMap] = {}
     for loc_id, ldata in data.items():
-        bm_raw = ldata.get("battle_map")
+        bm_raw = as_mapping(ldata, f"{loc_path}: {loc_id}").get("battle_map")
         if not bm_raw:
             continue
         bm = BattleMapContent.model_validate(bm_raw)

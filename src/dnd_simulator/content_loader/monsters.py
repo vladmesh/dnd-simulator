@@ -5,8 +5,8 @@ Each parse function: raw YAML dict → Pydantic model_validate → convert to ru
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
 
 from dnd_simulator.content_loader.creatures import _to_attacks
 from dnd_simulator.content_loader.items import parse_items
@@ -17,7 +17,7 @@ from dnd_simulator.content_loader.schemas import (
     MonsterTemplateContent,
     SquadContent,
 )
-from dnd_simulator.content_loader.utils import _read_yaml, resolve_text
+from dnd_simulator.content_loader.utils import _read_yaml, as_mapping, resolve_text
 from dnd_simulator.core.items import Item
 from dnd_simulator.core.lair import Lair
 from dnd_simulator.core.monster import EncounterEntry, MonsterTemplate
@@ -91,7 +91,7 @@ def _to_squad(squad_id: str, model: SquadContent, lang: str) -> Squad:
 # ---------------------------------------------------------------------------
 
 
-def parse_monster_template(template_id: str, data: dict[str, Any], lang: str = "en") -> MonsterTemplate:
+def parse_monster_template(template_id: str, data: Mapping[str, object], lang: str = "en") -> MonsterTemplate:
     """Parse a single monster template from YAML data."""
     model = MonsterTemplateContent.model_validate(data)
     return _to_monster_template(template_id, model, lang)
@@ -99,7 +99,7 @@ def parse_monster_template(template_id: str, data: dict[str, Any], lang: str = "
 
 def resolve_monster_template(
     template_id: str,
-    data: dict[str, Any],
+    data: Mapping[str, object],
     catalog: dict[str, MonsterTemplateContent],
     lang: str = "en",
 ) -> MonsterTemplate:
@@ -114,7 +114,7 @@ def resolve_monster_template(
         # Inline template — parse as before
         return parse_monster_template(template_id, data, lang)
 
-    if base_id not in catalog:
+    if not isinstance(base_id, str) or base_id not in catalog:
         raise RuntimeError(f"Monster template '{template_id}' references unknown catalog entry '{base_id}'")
 
     # Start from catalog entry, apply overrides
@@ -139,7 +139,7 @@ def _parse_encounter_entries(key: str, entries: object, known_templates: set[str
     return parsed
 
 
-def parse_encounters(data: dict[str, Any], known_templates: set[str]) -> dict[str, list[EncounterEntry]]:
+def parse_encounters(data: Mapping[str, object], known_templates: set[str]) -> dict[str, list[EncounterEntry]]:
     """Parse encounter tables from YAML data.
 
     Each key is a location_id mapping to a list of encounter entries.
@@ -148,7 +148,7 @@ def parse_encounters(data: dict[str, Any], known_templates: set[str]) -> dict[st
 
 
 def parse_region_encounters(
-    data: dict[str, Any], known_templates: set[str], known_regions: set[str] | None = None
+    data: Mapping[str, object], known_templates: set[str], known_regions: set[str] | None = None
 ) -> dict[str, list[EncounterEntry]]:
     """Parse region-level encounter tables from YAML data.
 
@@ -184,18 +184,30 @@ def load_monsters(
     if not monsters_data:
         return {}, {}, {}
 
-    templates_data = monsters_data.get("templates", {})
+    monsters_path = path / "monsters.yaml"
+    templates_data = as_mapping(monsters_data.get("templates", {}), f"{monsters_path}: templates")
     templates: dict[str, MonsterTemplate] = {}
     effective_catalog = catalog or {}
     for tid, tdata in templates_data.items():
-        templates[str(tid)] = resolve_monster_template(str(tid), tdata, effective_catalog, lang)
+        template_data = as_mapping(tdata, f"{monsters_path}: templates.{tid}")
+        templates[tid] = resolve_monster_template(tid, template_data, effective_catalog, lang)
 
     known_templates = set(templates.keys())
     encounters_data = monsters_data.get("encounters", {})
-    encounters = parse_encounters(encounters_data, known_templates) if encounters_data else {}
+    encounters = (
+        parse_encounters(as_mapping(encounters_data, f"{monsters_path}: encounters"), known_templates)
+        if encounters_data
+        else {}
+    )
 
     region_data = monsters_data.get("region_encounters", {})
-    region_encounters = parse_region_encounters(region_data, known_templates, known_regions) if region_data else {}
+    region_encounters = (
+        parse_region_encounters(
+            as_mapping(region_data, f"{monsters_path}: region_encounters"), known_templates, known_regions
+        )
+        if region_data
+        else {}
+    )
 
     return templates, encounters, region_encounters
 
@@ -233,7 +245,7 @@ def _to_lair(
 
 
 def parse_lairs(
-    data: dict[str, Any],
+    data: Mapping[str, object],
     known_templates: set[str],
     lang: str = "en",
     item_catalog: dict[str, ItemContent] | None = None,
@@ -270,7 +282,7 @@ def load_lairs(
     return parse_lairs(lairs_data, known_templates, lang, item_catalog=item_catalog)
 
 
-def parse_squad(squad_id: str, data: dict[str, Any], lang: str = "en") -> Squad:
+def parse_squad(squad_id: str, data: Mapping[str, object], lang: str = "en") -> Squad:
     """Parse a single squad from YAML data."""
     model = SquadContent.model_validate(data)
     return _to_squad(squad_id, model, lang)
@@ -288,5 +300,5 @@ def load_squads(path: Path, lang: str = "en") -> dict[str, Squad]:
 
     squads: dict[str, Squad] = {}
     for sid, sdata in squads_data.items():
-        squads[str(sid)] = parse_squad(str(sid), sdata, lang)
+        squads[sid] = parse_squad(sid, as_mapping(sdata, f"{path / 'squads.yaml'}: {sid}"), lang)
     return squads

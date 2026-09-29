@@ -1,8 +1,10 @@
 """The gettext catalogs must stay in sync with the code.
 
 Extracts every ``_()`` / ``ngettext()`` / ``N_()`` msgid from ``src/dnd_simulator`` with the same babel mapping
-``make messages`` uses, then checks that the committed ``messages.pot`` lists exactly those msgids, that the ru
-``.po`` translates each of them, and that the committed ``.mo`` is the compilation of the ``.po``.
+``make messages`` uses, then checks that the committed ``messages.pot`` lists exactly those msgids plus the YAML
+catalog names ``make messages`` appends (``content_loader.catalog_messages``), that the ru ``.po`` translates each
+code msgid (``test_catalog_translations.py`` covers the catalog names), and that the committed ``.mo`` is the
+compilation of the ``.po``.
 
 Fix a failure with ``make messages`` (template), a ru translation in the ``.po``, then ``make compile-messages``.
 """
@@ -19,12 +21,15 @@ from babel.messages.frontend import parse_mapping_cfg
 from babel.messages.mofile import write_mo
 from babel.messages.pofile import read_po
 
+from dnd_simulator.content_loader.catalog_messages import catalog_msgids
+
 _ROOT = Path(__file__).resolve().parents[2]
 _SRC = _ROOT / "src" / "dnd_simulator"
 _LOCALE = _SRC / "locale"
 _POT = _LOCALE / "messages.pot"
 _RU_PO = _LOCALE / "ru" / "LC_MESSAGES" / "dnd_simulator.po"
 _RU_MO = _LOCALE / "ru" / "LC_MESSAGES" / "dnd_simulator.mo"
+_CONTENT = _ROOT / "content"
 
 MsgId = str | tuple[str, ...]
 
@@ -52,11 +57,11 @@ def _catalog_msgids(catalog: Catalog) -> set[MsgId]:
     return {message.id if isinstance(message.id, str) else tuple(message.id) for message in catalog if message.id}
 
 
-def test_pot_lists_exactly_the_code_msgids() -> None:
-    code = set(_code_msgids())
+def test_pot_lists_exactly_the_code_and_catalog_msgids() -> None:
+    expected: set[MsgId] = set(_code_msgids()) | set(catalog_msgids(_CONTENT))
     pot = _catalog_msgids(_read_catalog(_POT))
-    missing = sorted(map(str, code - pot))
-    stale = sorted(map(str, pot - code))
+    missing = sorted(map(str, expected - pot))
+    stale = sorted(map(str, pot - expected))
     assert not missing and not stale, f"messages.pot is out of date, run `make messages`: {missing=} {stale=}"
 
 

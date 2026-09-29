@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from dnd_simulator.core.conditions import Condition
 from dnd_simulator.core.items import EquipmentSlot
 from dnd_simulator.core.models import EventType
+from dnd_simulator.i18n import _
 
 if TYPE_CHECKING:
     from dnd_simulator.core.action import ActionType
@@ -147,10 +148,10 @@ def item_props(item: Item) -> dict[str, object] | None:
 
 
 def item_info(item: Item) -> ItemInfo:
-    """Build the standard ItemInfo view of an inventory item."""
+    """Build the standard ItemInfo view of an inventory item; ``name`` is the localized display name."""
     return ItemInfo(
         id=item.id,
-        name=item.name,
+        name=_(item.name),
         description=describe_item(item),
         item_type=str(item.item_type),
         price=item.price,
@@ -180,6 +181,8 @@ class CombatEntity:
     x: int = 0
     y: int = 0
     conditions: frozenset[Condition] = field(default_factory=frozenset)
+    reach_ft: int = 5  # reach of its primary attack
+    can_react: bool = False  # has its reaction and is not incapacitated: leaving its reach provokes
 
 
 @dataclass(frozen=True)

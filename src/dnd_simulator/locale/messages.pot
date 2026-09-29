@@ -455,7 +455,7 @@ msgid "Cell ({}, {}) is already occupied"
 msgstr ""
 
 #: src/dnd_simulator/layers/entities/combat_resolution.py:81
-#: src/dnd_simulator/layers/entities/layer.py:369
+#: src/dnd_simulator/layers/entities/layer.py:370
 #, python-brace-format
 msgid "Creature '{id}' not found."
 msgstr ""
@@ -548,577 +548,525 @@ msgstr ""
 msgid "What do you want?"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:50
+#: src/dnd_simulator/layers/entities/perception.py:51
 msgid "slashing"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:50
+#: src/dnd_simulator/layers/entities/perception.py:51
 msgid "piercing"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:50
+#: src/dnd_simulator/layers/entities/perception.py:51
 msgid "bludgeoning"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:51
+#: src/dnd_simulator/layers/entities/perception.py:52
 msgid "fire"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:51
+#: src/dnd_simulator/layers/entities/perception.py:52
 msgid "cold"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:51
+#: src/dnd_simulator/layers/entities/perception.py:52
 msgid "lightning"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:51
+#: src/dnd_simulator/layers/entities/perception.py:52
 msgid "thunder"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:51
+#: src/dnd_simulator/layers/entities/perception.py:52
 msgid "acid"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:51
+#: src/dnd_simulator/layers/entities/perception.py:52
 msgid "poison"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:52
+#: src/dnd_simulator/layers/entities/perception.py:53
 msgid "radiant"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:52
+#: src/dnd_simulator/layers/entities/perception.py:53
 msgid "necrotic"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:52
+#: src/dnd_simulator/layers/entities/perception.py:53
 msgid "force"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:52
+#: src/dnd_simulator/layers/entities/perception.py:53
 msgid "psychic"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:54
+#: src/dnd_simulator/layers/entities/perception.py:55
 msgid "AC"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:56
-msgid "Health Potion"
-msgstr ""
-
 #: src/dnd_simulator/layers/entities/perception.py:57
-msgid "Dagger"
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:57
-msgid "Longsword"
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:57
-msgid "Shortsword"
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:57
-msgid "Greataxe"
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:57
-msgid "Handaxe"
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:58
-msgid "Shortbow"
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:58
-msgid "Longbow"
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:58
-msgid "Light Crossbow"
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:59
-msgid "Mace"
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:59
-msgid "Quarterstaff"
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:59
-msgid "Javelin"
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:59
-msgid "Spear"
-msgstr ""
-
-#: src/dnd_simulator/layers/entities/perception.py:61
 msgid "an item"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:61
+#: src/dnd_simulator/layers/entities/perception.py:57
 msgid "a weapon"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:70
+#: src/dnd_simulator/layers/entities/perception.py:66
 #: src/dnd_simulator/layers/entities/perception_common.py:16
 #: src/dnd_simulator/llm/brain.py:229
 msgid "someone"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:72
+#: src/dnd_simulator/layers/entities/perception.py:68
 #: src/dnd_simulator/layers/entities/perception_common.py:18
 msgid "you"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:89
+#: src/dnd_simulator/layers/entities/perception.py:85
 #, python-brace-format
 msgid "You say: \"{text}\""
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:90
+#: src/dnd_simulator/layers/entities/perception.py:86
 #, python-brace-format
 msgid "{speaker} says: \"{text}\""
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:101
+#: src/dnd_simulator/layers/entities/perception.py:97
 msgid "adv "
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:103
+#: src/dnd_simulator/layers/entities/perception.py:99
 msgid "disadv "
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:113
+#: src/dnd_simulator/layers/entities/perception.py:109
 #, python-brace-format
 msgid "vs AC {ac}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:119
+#: src/dnd_simulator/layers/entities/perception.py:115
 msgid "STR"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:120
+#: src/dnd_simulator/layers/entities/perception.py:116
 msgid "DEX"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:121
+#: src/dnd_simulator/layers/entities/perception.py:117
 msgid "CON"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:122
+#: src/dnd_simulator/layers/entities/perception.py:118
 msgid "INT"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:123
+#: src/dnd_simulator/layers/entities/perception.py:119
 msgid "WIS"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:124
+#: src/dnd_simulator/layers/entities/perception.py:120
 msgid "CHA"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:125
+#: src/dnd_simulator/layers/entities/perception.py:121
 msgid "ability"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:126
+#: src/dnd_simulator/layers/entities/perception.py:122
 msgid "weapon"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:127
+#: src/dnd_simulator/layers/entities/perception.py:123
 msgid "magic weapon"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:128
+#: src/dnd_simulator/layers/entities/perception.py:124
 msgid "Sneak Attack"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:129
+#: src/dnd_simulator/layers/entities/perception.py:125
 msgid "Dueling"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:130
+#: src/dnd_simulator/layers/entities/perception.py:126
 msgid "Divine Smite"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:164
+#: src/dnd_simulator/layers/entities/perception.py:160
 #, python-brace-format
 msgid ", CRIT! {damage} damage{detail}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:165
+#: src/dnd_simulator/layers/entities/perception.py:161
 #, python-brace-format
 msgid ", {damage} damage{detail}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:182
+#: src/dnd_simulator/layers/entities/perception.py:178
 msgid " (opportunity attack)"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:186
+#: src/dnd_simulator/layers/entities/perception.py:182
 msgid ", miss"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:193
+#: src/dnd_simulator/layers/entities/perception.py:189
 #, python-brace-format
 msgid "You attack {target}{weapon}{oa}{roll}{outcome}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:197
+#: src/dnd_simulator/layers/entities/perception.py:193
 #, python-brace-format
 msgid "{attacker} attacks you{weapon}{oa}{roll}{outcome}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:200
+#: src/dnd_simulator/layers/entities/perception.py:196
 #, python-brace-format
 msgid "{attacker} attacks {target}{weapon}{oa}{roll}{outcome}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:208
+#: src/dnd_simulator/layers/entities/perception.py:204
 msgid "Combat ended."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:216
+#: src/dnd_simulator/layers/entities/perception.py:212
 msgid "You disengage"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:218
+#: src/dnd_simulator/layers/entities/perception.py:214
 #, python-brace-format
 msgid "{entity} disengages"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:234
+#: src/dnd_simulator/layers/entities/perception.py:230
 #, python-brace-format
 msgid "You seize the opening against {target}!"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:236
+#: src/dnd_simulator/layers/entities/perception.py:232
 #, python-brace-format
 msgid "{attacker} seizes the opening against you!"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:237
+#: src/dnd_simulator/layers/entities/perception.py:233
 #, python-brace-format
 msgid "{attacker} seizes the opening against {target}!"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:245
+#: src/dnd_simulator/layers/entities/perception.py:241
 msgid "You die"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:247
+#: src/dnd_simulator/layers/entities/perception.py:243
 #, python-brace-format
 msgid "{entity} dies"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:258
+#: src/dnd_simulator/layers/entities/perception.py:254
 #, python-brace-format
 msgid "You take a defensive stance{desc}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:260
+#: src/dnd_simulator/layers/entities/perception.py:256
 #, python-brace-format
 msgid "{entity} takes a defensive stance{desc}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:272
+#: src/dnd_simulator/layers/entities/perception.py:268
 #, python-brace-format
 msgid "You flee the fight toward {destination}{desc}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:277
+#: src/dnd_simulator/layers/entities/perception.py:273
 #, python-brace-format
 msgid "{entity} flees the fight toward {destination}{desc}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:286
-#: src/dnd_simulator/layers/entities/perception.py:291
+#: src/dnd_simulator/layers/entities/perception.py:282
+#: src/dnd_simulator/layers/entities/perception.py:287
 #, python-brace-format
 msgid "{count} minute"
 msgid_plural "{count} minutes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/dnd_simulator/layers/entities/perception.py:288
+#: src/dnd_simulator/layers/entities/perception.py:284
 #, python-brace-format
 msgid "{count} hour"
 msgid_plural "{count} hours"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/dnd_simulator/layers/entities/perception.py:292
+#: src/dnd_simulator/layers/entities/perception.py:288
 #, python-brace-format
 msgid "{hours} {minutes}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:302
+#: src/dnd_simulator/layers/entities/perception.py:298
 #, python-brace-format
 msgid "You ran for {duration} to {destination}."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:303
+#: src/dnd_simulator/layers/entities/perception.py:299
 #, python-brace-format
 msgid "You walked for {duration} to {destination}."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:305
+#: src/dnd_simulator/layers/entities/perception.py:301
 #, python-brace-format
 msgid "{entity} arrives."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:330
+#: src/dnd_simulator/layers/entities/perception.py:326
 #, python-brace-format
 msgid "You move {direction} ({distance} ft){desc}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:334
+#: src/dnd_simulator/layers/entities/perception.py:330
 #, python-brace-format
 msgid "{entity} moves {direction} ({distance} ft){desc}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:345
+#: src/dnd_simulator/layers/entities/perception.py:341
 #, python-brace-format
 msgid "You dash (+{ft} ft movement)"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:347
+#: src/dnd_simulator/layers/entities/perception.py:343
 #, python-brace-format
 msgid "{entity} dashes (+{ft} ft movement)"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:359
+#: src/dnd_simulator/layers/entities/perception.py:355
 #, python-brace-format
 msgid "You use {item}, but you are already at full health"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:361
+#: src/dnd_simulator/layers/entities/perception.py:357
 #, python-brace-format
 msgid "{entity} uses {item}, but is already at full health"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:363
+#: src/dnd_simulator/layers/entities/perception.py:359
 #, python-brace-format
 msgid "You use {item} (healed {hp} HP)"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:365
+#: src/dnd_simulator/layers/entities/perception.py:361
 #, python-brace-format
 msgid "{entity} uses {item} (healed {hp} HP)"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:376
+#: src/dnd_simulator/layers/entities/perception.py:372
 #, python-brace-format
 msgid "You look around but see no one matching '{id}'."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:378
+#: src/dnd_simulator/layers/entities/perception.py:374
 #, python-brace-format
 msgid "You inspect {desc}."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:381
+#: src/dnd_simulator/layers/entities/perception.py:377
 msgid "They look badly wounded."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:383
+#: src/dnd_simulator/layers/entities/perception.py:379
 msgid "They have minor injuries."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:385
+#: src/dnd_simulator/layers/entities/perception.py:381
 msgid "They look healthy."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:388
+#: src/dnd_simulator/layers/entities/perception.py:384
 #, python-brace-format
 msgid "Conditions: {list}."
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:400
+#: src/dnd_simulator/layers/entities/perception.py:396
 #, python-brace-format
 msgid "You can't act ({conditions}) — turn skipped"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:402
+#: src/dnd_simulator/layers/entities/perception.py:398
 #, python-brace-format
 msgid "{entity} can't act ({conditions}) — turn skipped"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:411
+#: src/dnd_simulator/layers/entities/perception.py:407
 #, python-brace-format
 msgid "You invoke a blessing (+d4 to attack rolls for {n} rounds)"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:413
+#: src/dnd_simulator/layers/entities/perception.py:409
 #, python-brace-format
 msgid "{entity} invokes a blessing (+d4 to attack rolls for {n} rounds)"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:424
+#: src/dnd_simulator/layers/entities/perception.py:420
 msgid "You catch your breath, but you are already at full health"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:426
+#: src/dnd_simulator/layers/entities/perception.py:422
 #, python-brace-format
 msgid "{entity} catches their breath, already at full health"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:428
+#: src/dnd_simulator/layers/entities/perception.py:424
 #, python-brace-format
 msgid "You catch your breath, regaining {hp} HP"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:430
+#: src/dnd_simulator/layers/entities/perception.py:426
 #, python-brace-format
 msgid "{entity} catches their breath, regaining {hp} HP"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:438
+#: src/dnd_simulator/layers/entities/perception.py:434
 msgid "You surge with energy, gaining an extra action"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:440
+#: src/dnd_simulator/layers/entities/perception.py:436
 #, python-brace-format
 msgid "{entity} surges with energy, gaining an extra action"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:457
+#: src/dnd_simulator/layers/entities/perception.py:453
 msgid "You lay hands on yourself, but you are already at full health"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:460
+#: src/dnd_simulator/layers/entities/perception.py:456
 #, python-brace-format
 msgid "You lay hands on {target}, but they are already at full health"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:463
+#: src/dnd_simulator/layers/entities/perception.py:459
 #, python-brace-format
 msgid "{entity} lays hands on you, but you are already at full health"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:465
+#: src/dnd_simulator/layers/entities/perception.py:461
 #, python-brace-format
 msgid "{entity} lays hands on {target}, but they are already at full health"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:469
+#: src/dnd_simulator/layers/entities/perception.py:465
 #, python-brace-format
 msgid "You lay hands on yourself, restoring {hp} HP (pool {before}→{after})"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:474
+#: src/dnd_simulator/layers/entities/perception.py:470
 #, python-brace-format
 msgid "You lay hands on {target}, restoring {hp} HP (pool {before}→{after})"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:479
+#: src/dnd_simulator/layers/entities/perception.py:475
 #, python-brace-format
 msgid "{entity} lays hands on you, restoring {hp} HP"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:481
+#: src/dnd_simulator/layers/entities/perception.py:477
 #, python-brace-format
 msgid "{entity} lays hands on {target}, restoring {hp} HP"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:490
+#: src/dnd_simulator/layers/entities/perception.py:486
 #, python-brace-format
 msgid "You equip {weapon}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:492
+#: src/dnd_simulator/layers/entities/perception.py:488
 #, python-brace-format
 msgid "{entity} equips {weapon}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:501
+#: src/dnd_simulator/layers/entities/perception.py:497
 #, python-brace-format
 msgid "You put away {weapon}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:503
+#: src/dnd_simulator/layers/entities/perception.py:499
 #, python-brace-format
 msgid "{entity} puts away {weapon}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:516
+#: src/dnd_simulator/layers/entities/perception.py:512
 #, python-brace-format
 msgid "You buy {item} from {merchant} for {price} gold"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:520
+#: src/dnd_simulator/layers/entities/perception.py:516
 #, python-brace-format
 msgid "{buyer} buys {item} from {merchant} for {price} gold"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:535
+#: src/dnd_simulator/layers/entities/perception.py:531
 #, python-brace-format
 msgid "You sell {item} to {merchant} for {price} gold"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:539
+#: src/dnd_simulator/layers/entities/perception.py:535
 #, python-brace-format
 msgid "{seller} sells {item} to {merchant} for {price} gold"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:556
+#: src/dnd_simulator/layers/entities/perception.py:552
 #, python-brace-format
 msgid "{gold} gold"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:557
+#: src/dnd_simulator/layers/entities/perception.py:553
 msgid "nothing"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:561
+#: src/dnd_simulator/layers/entities/perception.py:557
 #, python-brace-format
 msgid "You loot {target} ({loot})"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:563
+#: src/dnd_simulator/layers/entities/perception.py:559
 #, python-brace-format
 msgid "{actor} loots {target} ({loot})"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:571
+#: src/dnd_simulator/layers/entities/perception.py:567
 #, python-brace-format
 msgid "{name} appears — {count} creatures materialize"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:578
+#: src/dnd_simulator/layers/entities/perception.py:574
 #, python-brace-format
 msgid "{name} moves on, disappearing into the distance"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:584
+#: src/dnd_simulator/layers/entities/perception.py:580
 msgid "Something stirs nearby"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:595
+#: src/dnd_simulator/layers/entities/perception.py:591
 #, python-brace-format
 msgid "You gain {amount} XP for defeating {source}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:597
+#: src/dnd_simulator/layers/entities/perception.py:593
 #, python-brace-format
 msgid "{entity} gains {amount} XP for defeating {source}"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:609
+#: src/dnd_simulator/layers/entities/perception.py:605
 #, python-brace-format
 msgid "Your reputation with {faction} changed ({old} → {new})"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:613
+#: src/dnd_simulator/layers/entities/perception.py:609
 #, python-brace-format
 msgid "{entity}'s reputation with {faction} changed"
 msgstr ""
 
-#: src/dnd_simulator/layers/entities/perception.py:672
+#: src/dnd_simulator/layers/entities/perception.py:668
 #, python-brace-format
 msgid "Something happened ({type})"
 msgstr ""
@@ -1432,40 +1380,40 @@ msgstr ""
 msgid "Out of reach in combat: it is not on the battle map."
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:48
-#: src/dnd_simulator/rules/movement.py:61
+#: src/dnd_simulator/rules/movement.py:49
+#: src/dnd_simulator/rules/movement.py:62
 msgid "here"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:52
+#: src/dnd_simulator/rules/movement.py:53
 msgid "to the north"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:53
+#: src/dnd_simulator/rules/movement.py:54
 msgid "to the south"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:54
+#: src/dnd_simulator/rules/movement.py:55
 msgid "to the east"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:55
+#: src/dnd_simulator/rules/movement.py:56
 msgid "to the west"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:56
+#: src/dnd_simulator/rules/movement.py:57
 msgid "to the northeast"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:57
+#: src/dnd_simulator/rules/movement.py:58
 msgid "to the northwest"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:58
+#: src/dnd_simulator/rules/movement.py:59
 msgid "to the southeast"
 msgstr ""
 
-#: src/dnd_simulator/rules/movement.py:59
+#: src/dnd_simulator/rules/movement.py:60
 msgid "to the southwest"
 msgstr ""
 
@@ -1764,3 +1712,202 @@ msgstr ""
 msgid "Activation trigger '{id}' is not active"
 msgstr ""
 
+#: content/catalogs/items/boots_of_speed.yaml
+msgid "Boots of Speed"
+msgstr ""
+
+#: content/catalogs/items/breastplate.yaml
+msgid "Breastplate"
+msgstr ""
+
+#: content/catalogs/items/chain_mail.yaml
+msgid "Chain Mail"
+msgstr ""
+
+#: content/catalogs/items/chain_shirt.yaml
+msgid "Chain Shirt"
+msgstr ""
+
+#: content/catalogs/items/circlet_of_aim.yaml
+msgid "Circlet of Aim"
+msgstr ""
+
+#: content/catalogs/items/dagger.yaml
+msgid "Dagger"
+msgstr ""
+
+#: content/catalogs/items/flaming_longsword.yaml
+msgid "Flaming Longsword"
+msgstr ""
+
+#: content/catalogs/items/frost_dagger.yaml
+msgid "Frost Dagger"
+msgstr ""
+
+#: content/catalogs/items/greataxe.yaml
+msgid "Greataxe"
+msgstr ""
+
+#: content/catalogs/items/greatsword.yaml
+msgid "Greatsword"
+msgstr ""
+
+#: content/catalogs/items/half_plate.yaml
+msgid "Half Plate"
+msgstr ""
+
+#: content/catalogs/items/hand_crossbow.yaml
+msgid "Hand Crossbow"
+msgstr ""
+
+#: content/catalogs/items/health_potion.yaml
+msgid "Health Potion"
+msgstr ""
+
+#: content/catalogs/items/hide.yaml
+msgid "Hide Armor"
+msgstr ""
+
+#: content/catalogs/items/leather.yaml
+msgid "Leather Armor"
+msgstr ""
+
+#: content/catalogs/items/longbow.yaml
+msgid "Longbow"
+msgstr ""
+
+#: content/catalogs/items/longsword.yaml
+msgid "Longsword"
+msgstr ""
+
+#: content/catalogs/items/mace.yaml
+msgid "Mace"
+msgstr ""
+
+#: content/catalogs/items/padded.yaml
+msgid "Padded Armor"
+msgstr ""
+
+#: content/catalogs/items/plate.yaml
+msgid "Plate Armor"
+msgstr ""
+
+#: content/catalogs/items/quarterstaff.yaml
+msgid "Quarterstaff"
+msgstr ""
+
+#: content/catalogs/items/rapier.yaml
+msgid "Rapier"
+msgstr ""
+
+#: content/catalogs/items/ring_mail.yaml
+msgid "Ring Mail"
+msgstr ""
+
+#: content/catalogs/items/ring_of_protection.yaml
+msgid "Ring of Protection"
+msgstr ""
+
+#: content/catalogs/items/scale_mail.yaml
+msgid "Scale Mail"
+msgstr ""
+
+#: content/catalogs/items/shield.yaml
+msgid "Shield"
+msgstr ""
+
+#: content/catalogs/items/shortbow.yaml
+msgid "Shortbow"
+msgstr ""
+
+#: content/catalogs/items/shortsword.yaml
+msgid "Shortsword"
+msgstr ""
+
+#: content/catalogs/items/splint.yaml
+msgid "Splint Armor"
+msgstr ""
+
+#: content/catalogs/items/studded_leather.yaml
+msgid "Studded Leather Armor"
+msgstr ""
+
+#: content/catalogs/items/warhammer.yaml
+msgid "Warhammer"
+msgstr ""
+
+#: content/catalogs/monsters/dire_wolf.yaml content/catalogs/monsters/wolf.yaml
+msgid "bite"
+msgstr ""
+
+#: content/catalogs/items/dagger.yaml
+msgid "dagger strike"
+msgstr ""
+
+#: content/catalogs/items/flaming_longsword.yaml
+msgid "flaming slash"
+msgstr ""
+
+#: content/catalogs/items/frost_dagger.yaml
+msgid "frost stab"
+msgstr ""
+
+#: content/catalogs/monsters/orc.yaml content/catalogs/monsters/orc_war_chief.yaml
+msgid "greataxe"
+msgstr ""
+
+#: content/catalogs/items/greataxe.yaml
+msgid "greataxe chop"
+msgstr ""
+
+#: content/catalogs/items/greatsword.yaml
+msgid "greatsword slash"
+msgstr ""
+
+#: content/catalogs/items/hand_crossbow.yaml
+msgid "hand crossbow shot"
+msgstr ""
+
+#: content/catalogs/items/longbow.yaml
+msgid "longbow shot"
+msgstr ""
+
+#: content/catalogs/items/longsword.yaml
+msgid "longsword slash"
+msgstr ""
+
+#: content/catalogs/items/mace.yaml
+msgid "mace strike"
+msgstr ""
+
+#: content/catalogs/items/quarterstaff.yaml
+msgid "quarterstaff strike"
+msgstr ""
+
+#: content/catalogs/items/rapier.yaml
+msgid "rapier thrust"
+msgstr ""
+
+#: content/catalogs/monsters/goblin.yaml content/catalogs/monsters/goblin_boss.yaml
+msgid "scimitar"
+msgstr ""
+
+#: content/catalogs/items/shortbow.yaml
+msgid "shortbow shot"
+msgstr ""
+
+#: content/catalogs/monsters/bandit.yaml
+msgid "shortsword"
+msgstr ""
+
+#: content/catalogs/items/shortsword.yaml
+msgid "shortsword stab"
+msgstr ""
+
+#: content/catalogs/monsters/guard.yaml
+msgid "spear"
+msgstr ""
+
+#: content/catalogs/items/warhammer.yaml
+msgid "warhammer smash"
+msgstr ""
