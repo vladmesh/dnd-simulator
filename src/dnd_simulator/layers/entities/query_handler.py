@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from dnd_simulator.core.character import Character, Creature, Entity
 from dnd_simulator.core.models import Answer, EntityKind, Query, QueryType
+from dnd_simulator.layers.entities.event_log import mark_log_read, unread_events
 from dnd_simulator.layers.entities.models import Npc, activity_flavor
 from dnd_simulator.layers.entities.perception import perceive_event
 from dnd_simulator.rules.modifiers import effective_ac
@@ -185,10 +186,8 @@ class QueryHandler:
 
     def get_new_perceived_events(self, observer: Character) -> list[str]:
         """Get only events since this observer last checked that they can see."""
-        events = self._location_log.get(observer.location_id, [])
-        last_seen = observer._last_seen_log_index
-        new_events = events[last_seen:]
-        observer._last_seen_log_index = len(events)
+        new_events = unread_events(observer, self._location_log)
+        mark_log_read(observer, self._location_log)
         if not new_events:
             return []
         return [
@@ -199,8 +198,7 @@ class QueryHandler:
 
     def get_new_raw_events(self, observer: Character) -> list[Event]:
         """Peek at raw Event objects since observer's last seen index."""
-        events = self._location_log.get(observer.location_id, [])
-        new_events = events[observer._last_seen_log_index :]
+        new_events = unread_events(observer, self._location_log)
         if not new_events:
             return []
         return [e for e in new_events if e.observer_ids is None or observer.id in e.observer_ids]

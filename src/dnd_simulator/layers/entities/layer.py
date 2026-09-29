@@ -202,12 +202,13 @@ class EntitiesLayer(Layer):
 
     def log_round_start(self, location_id: str, round_number: int) -> None:
         """Append a ROUND_START event to the location log."""
-        self._location_log[location_id].append(
+        self._event_log.append(
+            location_id,
             Event(
                 event_type=EventType.ROUND_START,
                 source_layer="entities",
                 data=RoundStartPayload(location_id, round_number),
-            )
+            ),
         )
 
     def reset_combat_turn_state(self, creature_id: str) -> None:
