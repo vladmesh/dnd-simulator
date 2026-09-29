@@ -74,12 +74,20 @@ make test-integration   # backend + integration tests in Docker Compose
 make test-frontend-container  # production frontend image + backend, smoke tests through the nginx proxy
 make format             # auto-format and auto-fix Python code
 make setup-hooks        # install pre-commit (format) and pre-push (scope-filtered check) git hooks
-make messages           # extract translatable strings to .pot
+make messages           # extract _/ngettext/N_ strings to .pot (pybabel)
 make compile-messages   # compile .po → .mo
 make clean              # stop dev servers, wipe saves/ and logs/
 ```
 
 Frontend type checking uses `tsc -b` so that the referenced projects (app, tests, Vite config) are all checked. `tsc --noEmit` against the root `frontend/tsconfig.json` checks nothing. `cd frontend && npm run build` runs the same type check before bundling.
+
+Server strings go through gettext: `_()`, `ngettext()` for counts, and `N_()` for module-level constants translated at the point of use. After adding or changing one:
+
+1. `make messages` regenerates `src/dnd_simulator/locale/messages.pot` with `pybabel extract` (mapping in `babel.cfg`).
+2. Add the Russian translation to `src/dnd_simulator/locale/ru/LC_MESSAGES/dnd_simulator.po` by hand. Do not run `pybabel update` on it: it also holds translations for msgids built at runtime (enum values, item and race names) that extraction cannot see, and an update would make them obsolete.
+3. `make compile-messages` rebuilds the `.mo`.
+
+`tests/unit/test_i18n_catalog.py` fails in `make check` when the template is stale, a code msgid has no ru translation, or the `.mo` does not match the `.po`.
 
 ### Containerized stack
 

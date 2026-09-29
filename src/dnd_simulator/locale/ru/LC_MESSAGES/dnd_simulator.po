@@ -1481,6 +1481,213 @@ msgstr "Клетка ({}, {}) уже занята"
 msgid "No reaction prompt is pending"
 msgstr "Нет ожидающего запроса реакции"
 
+# =========================================================================
+# core/action_defs.py — action and parameter descriptions (N_ markers)
+# =========================================================================
+
+msgid "Do nothing this turn."
+msgstr "Ничего не делать в этот ход."
+
+msgid "Flavor text"
+msgstr "Описание"
+
+msgid "Say something out loud."
+msgstr "Сказать что-нибудь вслух."
+
+msgid "What to say (in character)"
+msgstr "Что сказать (от лица персонажа)"
+
+msgid "Attack a target with your equipped weapon or fists."
+msgstr "Атаковать цель экипированным оружием или кулаками."
+
+msgid "ID of the target entity"
+msgstr "ID цели"
+
+msgid "Flavor text for the attack"
+msgstr "Описание атаки"
+
+msgid "Spell slot level to spend on Divine Smite (Paladin only, adds radiant damage on hit)"
+msgstr "Уровень ячейки заклинаний для божественной кары (только паладин, добавляет урон излучением при попадании)"
+
+msgid "Take a defensive stance. Attacks against you have disadvantage until your next turn."
+msgstr "Встать в защитную стойку. До вашего следующего хода атаки по вам совершаются с помехой."
+
+msgid "Move up to your speed."
+msgstr "Переместиться на расстояние не больше вашей скорости."
+
+msgid "ID of entity to move toward"
+msgstr "ID существа, к которому двигаться"
+
+msgid "ID of entity to move away from"
+msgstr "ID существа, от которого отходить"
+
+msgid "Compass direction: north, south, east, west, etc."
+msgstr "Направление по компасу: north, south, east, west и т. д."
+
+msgid "Move to a specific position on the battle map."
+msgstr "Переместиться в указанную клетку поля боя."
+
+msgid "Target X coordinate in feet"
+msgstr "Координата X цели в футах"
+
+msgid "Target Y coordinate in feet"
+msgstr "Координата Y цели в футах"
+
+msgid "Cost variant: action or bonus_action"
+msgstr "Вариант стоимости: action (действие) или bonus_action (бонусное действие)"
+
+msgid "Your movement doesn't provoke opportunity attacks this turn."
+msgstr "В этот ход ваше перемещение не провоцирует атаки возможности."
+
+msgid "Wait for a period of time."
+msgstr "Подождать некоторое время."
+
+msgid "How many hours to wait (default: 1)"
+msgstr "Сколько часов ждать (по умолчанию: 1)"
+
+msgid "Travel to a location through the world map."
+msgstr "Отправиться в локацию по карте мира."
+
+msgid "Location ID to travel to"
+msgstr "ID локации назначения"
+
+msgid "Use a consumable item from your inventory."
+msgstr "Использовать расходуемый предмет из инвентаря."
+
+msgid "ID of the item to use"
+msgstr "ID используемого предмета"
+
+msgid "Invoke a blessing. Grants +d4 to attack rolls for several rounds."
+msgstr "Призвать благословение. Даёт +d4 к броскам атаки на несколько раундов."
+
+msgid "ID of the weapon to equip"
+msgstr "ID оружия, которое нужно взять"
+
+msgid "ID of the armor to equip"
+msgstr "ID брони, которую нужно надеть"
+
+msgid "ID of the shield to equip"
+msgstr "ID щита, который нужно взять"
+
+msgid "ID of the headgear to equip"
+msgstr "ID головного убора, который нужно надеть"
+
+msgid "ID of the footwear to equip"
+msgstr "ID обуви, которую нужно надеть"
+
+msgid "ID of the ring to equip"
+msgstr "ID кольца, которое нужно надеть"
+
+msgid "Heal yourself for 1d10 + fighter level HP. Once per short rest."
+msgstr "Восстановить себе 1d10 + уровень воина ОЗ. Один раз за короткий отдых."
+
+msgid "Gain one additional Action this turn. Once per short rest."
+msgstr "Получить одно дополнительное действие в этот ход. Один раз за короткий отдых."
+
+msgid "Buy an item from a merchant."
+msgstr "Купить предмет у торговца."
+
+msgid "ID of the merchant NPC"
+msgstr "ID NPC-торговца"
+
+msgid "ID of the item to buy"
+msgstr "ID покупаемого предмета"
+
+msgid "Sell an item to a merchant."
+msgstr "Продать предмет торговцу."
+
+msgid "ID of the item to sell"
+msgstr "ID продаваемого предмета"
+
+msgid "Lay on Hands: spend HP from your healing pool to heal a creature."
+msgstr "Возложение рук: потратить ОЗ из запаса исцеления, чтобы вылечить существо."
+
+msgid "ID of creature to heal (omit for self)"
+msgstr "ID существа для лечения (не указывать, чтобы лечить себя)"
+
+msgid "HP to spend from pool"
+msgstr "Сколько ОЗ потратить из запаса"
+
+msgid "ID of the corpse or container to loot"
+msgstr "ID трупа или контейнера для обыска"
+
+msgid "Take a long rest: heal to full, restore all resources. Takes 8 hours."
+msgstr "Продолжительный отдых: полностью восстановить здоровье и все ресурсы. Занимает 8 часов."
+
+msgid "Take a short rest: restore short-rest resources. Takes 1 hour."
+msgstr "Короткий отдых: восстановить ресурсы, обновляемые коротким отдыхом. Занимает 1 час."
+
+msgid "Make a melee attack as a reaction when a creature leaves your reach."
+msgstr "Реакцией совершить рукопашную атаку, когда существо покидает вашу досягаемость."
+
+msgid "Target creature ID"
+msgstr "ID существа-цели"
+
+msgid "End your turn."
+msgstr "Завершить ход."
+
+msgid "Skip (system use)."
+msgstr "Пропустить (служебное)."
+
+# =========================================================================
+# Validation, handlers, adapters, LLM prompts
+# =========================================================================
+
+msgid "JSON message must be an object"
+msgstr "JSON-сообщение должно быть объектом"
+
+msgid "Spectators cannot submit actions"
+msgstr "Зрители не могут отправлять действия"
+
+msgid "Unknown reaction: {}"
+msgstr "Неизвестная реакция: {}"
+
+msgid "Treasure"
+msgstr "Сокровища"
+
+msgid "A creature is {trigger_type}. You can react or skip."
+msgstr "Существо: {trigger_type}. Ты можешь отреагировать или пропустить."
+
+msgid "You are an NPC deciding whether to use your reaction."
+msgstr "Ты NPC и решаешь, использовать ли свою реакцию."
+
+msgid "Previous tool call was rejected: {reason}. Choose one of the offered tools."
+msgstr "Предыдущий вызов инструмента отклонён: {reason}. Выбери один из предложенных инструментов."
+
+msgid "Divine Smite requires Paladin level 2."
+msgstr "Божественная кара требует паладина 2-го уровня."
+
+msgid "'{action}' requires parameter '{param}'."
+msgstr "Для '{action}' нужен параметр '{param}'."
+
+msgid "Target '{id}' cannot be looted."
+msgstr "Цель '{id}' нельзя обыскать."
+
+msgid "Target is already at full HP."
+msgstr "У цели уже полные ОЗ."
+
+msgid "Cannot target yourself with '{action}'."
+msgstr "Нельзя выбрать себя целью для '{action}'."
+
+msgid "'{action}' can only target hostile creatures."
+msgstr "Целью '{action}' могут быть только враждебные существа."
+
+msgid "'{action}' can only target allies."
+msgstr "Целью '{action}' могут быть только союзники."
+
+msgid "Travel requires a destination"
+msgstr "Для путешествия нужен пункт назначения"
+
+msgid "No route to destination"
+msgstr "Нет пути к пункту назначения"
+
+msgid "Already at destination"
+msgstr "Уже в пункте назначения"
+
+msgid "Cannot rest while in combat"
+msgstr "Нельзя отдыхать во время боя"
+
+# API boundary bounds (WS message size, action params)
 msgid "Message too large (limit {} bytes)"
 msgstr "Сообщение слишком большое (предел {} байт)"
 

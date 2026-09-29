@@ -1,9 +1,9 @@
 """Translatable strings of the YAML catalogs — item names and attack names.
 
-These names are content, not code, so ``pygettext3`` never sees them, yet the player sees them
-through gettext (combat log, combat panel, inventory). This module is the one list of them:
-``make messages`` appends them to the .pot, and a unit test requires a Russian translation for
-each, so a new catalog entry cannot ship untranslated.
+These names are content, not code, so the ``pybabel extract`` step of ``make messages`` never sees
+them, yet the player sees them through gettext (combat log, combat panel, inventory). This module is
+the one list of them: ``make messages`` appends them to the .pot, and a unit test requires a Russian
+translation for each, so a new catalog entry cannot ship untranslated.
 
 Monster *names* are not here: they are ``LocalizedText`` maps in the YAML itself.
 """

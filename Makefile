@@ -57,7 +57,8 @@ serve: stop
 	uv run uvicorn dnd_simulator.adapters.api.app:app --host 0.0.0.0 --port 8001 --reload --reload-exclude 'saves/*'
 
 messages:
-	find src/dnd_simulator -name '*.py' | xargs pygettext3 --keyword=_ --output=src/dnd_simulator/locale/messages.pot
+	uv run pybabel extract -F babel.cfg --no-wrap --project=dnd_simulator --omit-header \
+		-o src/dnd_simulator/locale/messages.pot src/dnd_simulator
 	uv run python -m dnd_simulator.content_loader.catalog_messages src/dnd_simulator/locale/messages.pot content
 
 compile-messages:
