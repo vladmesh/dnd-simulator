@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useId } from "react"
 import { useTranslation } from "react-i18next"
 import { useGameStore } from "@/store/gameStore"
 import { wsClient } from "@/transport/wsClient"
@@ -10,6 +10,8 @@ import { SmiteChoice } from "./SmiteChoice"
 import { buildAttackParams } from "./attackParams"
 import { getSpellSlots } from "./spellSlots"
 import { perceivedLabels } from "./targetLabels"
+import { checkSpeech } from "./speechLimit"
+import { SpeechLengthError } from "./SpeechLengthError"
 
 export function Perception() {
   const { t } = useTranslation(["game", "common"])
@@ -20,6 +22,8 @@ export function Perception() {
   const [talkText, setTalkText] = useState("")
   const [inspectEntity, setInspectEntity] = useState<NearbyEntity | CombatEntity | null>(null)
   const [smiteTarget, setSmiteTarget] = useState<string | null>(null)
+  const talkErrorId = useId()
+  const speech = checkSpeech(talkText)
 
   if (!awareness) return null
 
@@ -37,8 +41,8 @@ export function Perception() {
   }
 
   const submitTalk = () => {
-    if (talkText.trim()) {
-      sendAction("say", { target_id: talkTarget, text: talkText.trim() })
+    if (speech.canSend) {
+      sendAction("say", { target_id: talkTarget, text: speech.payload })
       setTalkText("")
       setTalkTarget(null)
     }
@@ -113,21 +117,26 @@ export function Perception() {
                 />
               )}
               {talkTarget === entity.id && (
-                <div className="flex gap-1">
-                  <input
-                    className="h-6 flex-1 rounded border border-border bg-transparent px-1.5 text-xs placeholder:text-muted-foreground"
-                    placeholder={t("game:say_placeholder")}
-                    value={talkText}
-                    autoFocus
-                    onChange={(e) => setTalkText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") submitTalk()
-                      if (e.key === "Escape") { setTalkTarget(null); setTalkText("") }
-                    }}
-                  />
-                  <Button size="xs" variant="secondary" disabled={!talkText.trim()} onClick={submitTalk}>
-                    <Send className="size-3" />
-                  </Button>
+                <div className="space-y-0.5">
+                  <div className="flex gap-1">
+                    <input
+                      className="h-6 flex-1 rounded border border-border bg-transparent px-1.5 text-xs placeholder:text-muted-foreground"
+                      placeholder={t("game:say_placeholder")}
+                      aria-invalid={speech.tooLong || undefined}
+                      aria-describedby={speech.tooLong ? talkErrorId : undefined}
+                      value={talkText}
+                      autoFocus
+                      onChange={(e) => setTalkText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") submitTalk()
+                        if (e.key === "Escape") { setTalkTarget(null); setTalkText("") }
+                      }}
+                    />
+                    <Button size="xs" variant="secondary" disabled={!speech.canSend} onClick={submitTalk}>
+                      <Send className="size-3" />
+                    </Button>
+                  </div>
+                  <SpeechLengthError id={talkErrorId} speech={speech} />
                 </div>
               )}
             </div>
