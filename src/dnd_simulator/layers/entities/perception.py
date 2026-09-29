@@ -42,7 +42,8 @@ GetEntityFn = Callable[[str], Entity | None]
 
 # ---------------------------------------------------------------------------
 # Translatable dynamic values — listed here so pygettext3 can extract them.
-# At runtime, _() is called on the raw string from event data.
+# At runtime, _() is called on the raw string from event data. Item and attack
+# names come from the YAML catalogs instead: content_loader/catalog_messages.py.
 # ---------------------------------------------------------------------------
 # fmt: off
 _TRANSLATABLE_STRINGS = [
@@ -52,11 +53,6 @@ _TRANSLATABLE_STRINGS = [
     _("radiant"), _("necrotic"), _("force"), _("psychic"),
     # Roll labels
     _("AC"),
-    # Common item/weapon names (from YAML catalogs)
-    _("Health Potion"),
-    _("Dagger"), _("Longsword"), _("Shortsword"), _("Greataxe"), _("Handaxe"),
-    _("Shortbow"), _("Longbow"), _("Light Crossbow"),
-    _("Mace"), _("Quarterstaff"), _("Javelin"), _("Spear"),
     # Fallback labels
     _("an item"), _("a weapon"),
 ]

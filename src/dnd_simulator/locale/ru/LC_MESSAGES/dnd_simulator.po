@@ -703,6 +703,131 @@ msgstr "Дротик"
 msgid "Spear"
 msgstr "Копьё"
 
+#: content/catalogs/items — item names (checked by tests/unit/test_catalog_translations.py)
+msgid "Boots of Speed"
+msgstr "Сапоги скорости"
+
+msgid "Breastplate"
+msgstr "Кираса"
+
+msgid "Chain Mail"
+msgstr "Кольчуга"
+
+msgid "Chain Shirt"
+msgstr "Кольчужная рубаха"
+
+msgid "Circlet of Aim"
+msgstr "Обруч меткости"
+
+msgid "Flaming Longsword"
+msgstr "Пылающий длинный меч"
+
+msgid "Frost Dagger"
+msgstr "Морозный кинжал"
+
+msgid "Greatsword"
+msgstr "Двуручный меч"
+
+msgid "Half Plate"
+msgstr "Полулаты"
+
+msgid "Hand Crossbow"
+msgstr "Ручной арбалет"
+
+msgid "Hide Armor"
+msgstr "Шкурный доспех"
+
+msgid "Leather Armor"
+msgstr "Кожаный доспех"
+
+msgid "Padded Armor"
+msgstr "Стёганый доспех"
+
+msgid "Plate Armor"
+msgstr "Латы"
+
+msgid "Rapier"
+msgstr "Рапира"
+
+msgid "Ring Mail"
+msgstr "Колечный доспех"
+
+msgid "Ring of Protection"
+msgstr "Кольцо защиты"
+
+msgid "Scale Mail"
+msgstr "Чешуйчатый доспех"
+
+msgid "Shield"
+msgstr "Щит"
+
+msgid "Splint Armor"
+msgstr "Наборный доспех"
+
+msgid "Studded Leather Armor"
+msgstr "Проклёпанный кожаный доспех"
+
+msgid "Warhammer"
+msgstr "Боевой молот"
+
+#: content/catalogs — attack names (weapon attack_name, monster attacks)
+msgid "bite"
+msgstr "укус"
+
+msgid "dagger strike"
+msgstr "удар кинжалом"
+
+msgid "flaming slash"
+msgstr "пылающий рубящий удар"
+
+msgid "frost stab"
+msgstr "ледяной укол"
+
+msgid "greataxe"
+msgstr "секира"
+
+msgid "greataxe chop"
+msgstr "удар секирой"
+
+msgid "greatsword slash"
+msgstr "удар двуручным мечом"
+
+msgid "hand crossbow shot"
+msgstr "выстрел из ручного арбалета"
+
+msgid "longbow shot"
+msgstr "выстрел из длинного лука"
+
+msgid "longsword slash"
+msgstr "удар длинным мечом"
+
+msgid "mace strike"
+msgstr "удар булавой"
+
+msgid "quarterstaff strike"
+msgstr "удар боевым посохом"
+
+msgid "rapier thrust"
+msgstr "выпад рапирой"
+
+msgid "scimitar"
+msgstr "скимитар"
+
+msgid "shortbow shot"
+msgstr "выстрел из короткого лука"
+
+msgid "shortsword"
+msgstr "короткий меч"
+
+msgid "shortsword stab"
+msgstr "укол коротким мечом"
+
+msgid "spear"
+msgstr "копьё"
+
+msgid "warhammer smash"
+msgstr "удар боевым молотом"
+
 msgid "an item"
 msgstr "предмет"
 

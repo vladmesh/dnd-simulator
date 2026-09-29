@@ -173,6 +173,76 @@ describe("ActionButton — target selection", () => {
   })
 })
 
+describe("ActionButton — target labels never show internal ids", () => {
+  const attackAction = makeAction("attack", "action", [{ name: "target_id", type: "string", required: true }], { target_mode: "single", target_scope: "hostile" })
+  const talkAction = makeAction("talk", "free", [{ name: "target_id", type: "string", required: true }], { target_mode: "single", target_scope: "any" })
+
+  function menuTexts(): string[] {
+    return screen.getAllByRole("menuitem").map((el) => el.textContent ?? "")
+  }
+
+  it("attack options use the perceived description and number duplicates", () => {
+    setCombatState([attackAction], fullBudget, [
+      { id: "goblin_chieftain_5", description: "Goblin Boss", distance_ft: 5, is_hostile: true },
+      { id: "goblin_1", description: "Goblin", distance_ft: 10, is_hostile: true },
+      { id: "goblin_2", description: "Goblin", distance_ft: 15, is_hostile: true },
+    ])
+
+    render(<ActionBar />)
+    fireEvent.click(screen.getByTitle("attack desc"))
+    const texts = menuTexts()
+    expect(texts[0]).toContain("Attack Goblin Boss")
+    expect(texts[1]).toContain("Attack Goblin #1")
+    expect(texts[2]).toContain("Attack Goblin #2")
+    for (const text of texts) {
+      expect(text).not.toMatch(/goblin_/)
+    }
+  })
+
+  it("talk options name a stranger by race, not by id", () => {
+    setCombatState([talkAction], fullBudget, [
+      { id: "npc_mirabel_blacksmith", description: "Human", distance_ft: 5, is_hostile: false },
+      { id: "npc_tobin_guard", description: "Dwarf", distance_ft: 10, is_hostile: false },
+    ])
+
+    render(<ActionBar />)
+    fireEvent.click(screen.getByTitle("talk desc"))
+    const texts = menuTexts()
+    expect(texts.some((text) => text.includes("Talk to Human"))).toBe(true)
+    expect(texts.some((text) => text.includes("Talk to Dwarf"))).toBe(true)
+    expect(texts.join(" ")).not.toMatch(/npc_/)
+  })
+
+  it("directional move options use the perceived description", () => {
+    setCombatState(
+      [makeAction("dash", "action", [{ name: "toward", type: "string", required: false }])],
+      fullBudget,
+      [{ id: "goblin_chieftain_5", description: "Goblin Boss", distance_ft: 10, direction: "N" }],
+    )
+
+    const { container } = render(<ActionBar />)
+    fireEvent.click(screen.getByTitle("dash desc"))
+    const dropdown = container.querySelector(".absolute.bottom-full")
+    expect(dropdown?.textContent).toContain("Dash toward Goblin Boss")
+    expect(dropdown?.textContent).not.toContain("goblin_chieftain_5")
+  })
+
+  it("smite choice names the target by its perceived description", () => {
+    setCombatState(
+      [attackAction],
+      fullBudget,
+      [{ id: "goblin_chieftain_5", description: "Goblin Boss", distance_ft: 5, is_hostile: true }],
+      [{ id: "spell_slot_1", max_uses: 2, current_uses: 1 }],
+    )
+
+    const { container } = render(<ActionBar />)
+    fireEvent.click(screen.getByTitle("attack desc"))
+    const smitePanel = container.querySelector("[data-testid='smite-choice']")
+    expect(smitePanel?.textContent).toContain("Goblin Boss")
+    expect(smitePanel?.textContent).not.toContain("goblin_chieftain_5")
+  })
+})
+
 describe("ActionButton — target scope filtering", () => {
   it("HOSTILE scope filters to hostile targets only", () => {
     setCombatState(
