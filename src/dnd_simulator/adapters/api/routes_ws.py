@@ -28,7 +28,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from starlette.websockets import WebSocketDisconnect as _StarletteDisconnect
 
 from dnd_simulator.adapters.api.deps import get_service
-from dnd_simulator.i18n import SUPPORTED_LANGUAGES, _, language_context
+from dnd_simulator.i18n import N_, SUPPORTED_LANGUAGES, _, language_context
 from dnd_simulator.service.action_parsing import ActionParseError, parse_action
 from dnd_simulator.service.session import GameSession
 
@@ -46,6 +46,13 @@ def _parse_json_object_envelope(raw: str) -> tuple[dict[str, Any] | None, str | 
     if not isinstance(parsed, dict):
         return None, _("JSON message must be an object")
     return cast(dict[str, Any], parsed), None
+
+
+async def _send_session_error(ws: WebSocket, session: GameSession, msgid: str, *args: object) -> None:
+    """Send an ``N_()``-marked error translated to the session language, not the process default."""
+    with language_context(session.lang):
+        message = _(msgid).format(*args)
+    await ws.send_json({"type": "error", "message": message})
 
 
 # ---------------------------------------------------------------------------
@@ -135,11 +142,12 @@ async def _run_spectator(ws: WebSocket, session: GameSession, session_id: str) -
             rl_budget = min(rl_max_burst, rl_budget + (now - rl_last) * rl_per_sec)
             rl_last = now
             if rl_budget < 1.0:
-                await ws.send_json({"type": "error", "message": _("Rate limited, slow down")})
+                await _send_session_error(ws, session, N_("Rate limited, slow down"))
                 continue
             rl_budget -= 1.0
 
-            msg, parse_error = _parse_json_object_envelope(raw)
+            with language_context(session.lang):
+                msg, parse_error = _parse_json_object_envelope(raw)
             if parse_error is not None:
                 await ws.send_json({"type": "error", "message": parse_error})
                 continue
@@ -147,9 +155,9 @@ async def _run_spectator(ws: WebSocket, session: GameSession, session_id: str) -
             msg_type = msg.get("type")
 
             if msg_type in ("action", "reaction"):
-                await ws.send_json({"type": "error", "message": _("Spectators cannot submit actions")})
+                await _send_session_error(ws, session, N_("Spectators cannot submit actions"))
             else:
-                await ws.send_json({"type": "error", "message": _("Unknown message type: {}").format(msg_type)})
+                await _send_session_error(ws, session, N_("Unknown message type: {}"), msg_type)
 
     except WebSocketDisconnect:
         logger.info("ws_spectator_disconnected", session_id=session_id)
@@ -202,7 +210,7 @@ async def websocket_game(
 
     player = session.get_player(player_id)
     if player is None:
-        await ws.send_json({"type": "error", "message": _("No player in session")})
+        await _send_session_error(ws, session, N_("No player in session"))
         await ws.close(code=4004, reason="no_player")
         return
 
@@ -246,11 +254,12 @@ async def websocket_game(
             rl_budget = min(rl_max_burst, rl_budget + (now - rl_last) * rl_per_sec)
             rl_last = now
             if rl_budget < 1.0:
-                await ws.send_json({"type": "error", "message": _("Rate limited, slow down")})
+                await _send_session_error(ws, session, N_("Rate limited, slow down"))
                 continue
             rl_budget -= 1.0
 
-            msg, parse_error = _parse_json_object_envelope(raw)
+            with language_context(session.lang):
+                msg, parse_error = _parse_json_object_envelope(raw)
             if parse_error is not None:
                 await ws.send_json({"type": "error", "message": parse_error})
                 continue
@@ -261,21 +270,19 @@ async def websocket_game(
                 try:
                     action = parse_action(msg, default_name="idle")
                 except ActionParseError as err:
-                    await ws.send_json({"type": "error", "message": _("Unknown action: {}").format(err.name)})
+                    await _send_session_error(ws, session, N_("Unknown action: {}"), err.name)
                     continue
                 session.submit_player_action(action)
             elif msg_type == "reaction":
                 try:
                     action = parse_action(msg, default_name="skip")
                 except ActionParseError as err:
-                    await ws.send_json({"type": "error", "message": _("Unknown reaction: {}").format(err.name)})
+                    await _send_session_error(ws, session, N_("Unknown reaction: {}"), err.name)
                     continue
                 if not session.submit_player_reaction(action):
-                    with language_context(session.lang):
-                        message = _("No reaction prompt is pending")
-                    await ws.send_json({"type": "error", "message": message})
+                    await _send_session_error(ws, session, N_("No reaction prompt is pending"))
             else:
-                await ws.send_json({"type": "error", "message": _("Unknown message type: {}").format(msg_type)})
+                await _send_session_error(ws, session, N_("Unknown message type: {}"), msg_type)
 
     except WebSocketDisconnect:
         logger.info("ws_disconnected", session_id=session_id)

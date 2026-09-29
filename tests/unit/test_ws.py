@@ -202,3 +202,39 @@ class TestWebSocketTurnCycle:
 
             ws.send_json({"type": "action", "name": "end_turn"})
             assert ws.receive_json()["type"] == "round_result"
+
+
+def _has_cyrillic(text: str) -> bool:
+    return any("Ѐ" <= ch <= "ӿ" for ch in text)
+
+
+class TestWebSocketErrorLanguage:
+    """WS errors follow the session language, not the process default (HTTP middleware does not run for WS)."""
+
+    def test_player_socket_errors_use_session_language(self, tmp_path: object) -> None:
+        client, service = _make_client(tmp_path)
+        sid = _create_session_with_player(client)
+        service.get_session(sid).lang = "ru"
+
+        with client.websocket_connect(f"/api/ws/{sid}") as ws:
+            assert ws.receive_json()["type"] == "turn"
+            for raw in ("[]", "{not json", json.dumps({"type": "query"}), json.dumps({"type": "reaction"})):
+                ws.send_text(raw)
+                error = ws.receive_json()
+                assert error["type"] == "error"
+                assert _has_cyrillic(error["message"]), (raw, error)
+
+    def test_spectator_socket_errors_use_session_language(self, tmp_path: object) -> None:
+        client, service = _make_client(tmp_path)
+        sid = _create_session_with_player(client)
+        service.get_session(sid).lang = "ru"
+
+        with client.websocket_connect(f"/api/ws/{sid}") as player:
+            assert player.receive_json()["type"] == "turn"
+            with client.websocket_connect(f"/api/ws/{sid}?spectate=true") as spectator:
+                assert spectator.receive_json()["type"] == "turn"
+                for raw in ("[]", json.dumps({"type": "action", "name": "end_turn"}), json.dumps({"type": "x"})):
+                    spectator.send_text(raw)
+                    error = spectator.receive_json()
+                    assert error["type"] == "error"
+                    assert _has_cyrillic(error["message"]), (raw, error)
