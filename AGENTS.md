@@ -16,11 +16,11 @@ Guidance for non-Claude coding agents (Codex, etc.) working in this repo. Claude
 
 Since 2026-09-21 this repository holds no state file and no backlog file.
 
-- **Current state and what hurts** — the secretary board:
+- **Current state and what hurts** — the Ummanu board:
   `issue list --product dnd-simulator`, `sprint list --status open`,
   `task list --project dnd-simulator`. Bugs, tech debt, test gaps and feature candidates are issues
   of the `dnd-simulator` product.
-- **History, design and decisions** — knowledge of the secretary instance,
+- **History, design and decisions** — knowledge of the instance,
   `state/knowledge/projects/dnd-simulator/` (`README.md` is the entry point; `brainstorms/` — live
   design documents including `simulation-core.md`; `archive/` — implemented and cancelled documents
   plus snapshots of the former `BACKLOG.md`/`STATUS.md`/audit; `decisions/`; `sprints/`;
@@ -32,7 +32,7 @@ Since 2026-09-21 this repository holds no state file and no backlog file.
 
 ## Process
 
-Sprints run on the secretary board, not in this repo — see [docs/SPRINT_PIPELINE.md](docs/SPRINT_PIPELINE.md).
+Sprints run on the Ummanu board, not in this repo — see [docs/SPRINT_PIPELINE.md](docs/SPRINT_PIPELINE.md).
 
 ## Domain skills (executable checklists)
 

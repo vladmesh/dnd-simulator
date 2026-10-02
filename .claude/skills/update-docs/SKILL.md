@@ -40,7 +40,7 @@ Do NOT update CLAUDE.md for: minor refactors, internal renames, new tests, new c
 #### docs/ROADMAP.md update policy
 
 Since 2026-09-21 the roadmap holds **only the Planned section** plus pointers. History (Phase 1 …
-Sprint 024, sprint:1439, sprint:1440) lives in the secretary instance knowledge under
+Sprint 024, sprint:1439, sprint:1440) lives in the instance knowledge under
 `state/knowledge/projects/dnd-simulator/`, and the backlog lives on the board as issues of the
 `dnd-simulator` product. When updating:
 
@@ -86,8 +86,8 @@ When updating a docstring, match the existing style: top-level packages (`core`,
 - `docs/VISION.md` — product vision, changes only when the user rewrites it
 - `content/*.yaml` — game data, not documentation
 - `.claude/skills/*/SKILL.md` — managed by `/skill-creator`
-- Brainstorms, plans, project history and decisions — they live in the secretary instance knowledge
-  (`state/knowledge/projects/dnd-simulator/`) and are written through the `secretary knowledge` CLI,
+- Brainstorms, plans, project history and decisions — they live in the instance knowledge
+  (`state/knowledge/projects/dnd-simulator/`) and are written through `ummanu knowledge write`,
   never from this repository
 - The board (issues, sprints, cards) — this skill never touches it
 - Class-level and function-level docstrings — too granular, updated inline when code changes
