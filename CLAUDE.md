@@ -51,14 +51,14 @@ Then use the Read tool on the log file to inspect any section. If nothing change
 
 ## Process
 
-Sprints run on the secretary board, not in this repo: see [docs/SPRINT_PIPELINE.md](docs/SPRINT_PIPELINE.md).
+Sprints run on the Ummanu board, not in this repo: see [docs/SPRINT_PIPELINE.md](docs/SPRINT_PIPELINE.md).
 
 This repository holds no state file and no backlog file (since 2026-09-21):
 
 - **Current state and what hurts** — the board: `issue list --product dnd-simulator`,
   `sprint list --status open`, `task list --project dnd-simulator`. Bugs, tech debt, test gaps and
   feature candidates are issues of the `dnd-simulator` product.
-- **History, design and decisions** — knowledge of the secretary instance,
+- **History, design and decisions** — knowledge of the instance,
   `state/knowledge/projects/dnd-simulator/`: `README.md` (entry point), `brainstorms/` (live design
   documents, e.g. `simulation-core.md`), `archive/` (implemented/cancelled documents and snapshots of
   the former `BACKLOG.md`, `STATUS.md`, `audit.md`), `decisions/`, `sprints/001-024`, `e2e-reports/`.

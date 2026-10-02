@@ -34,7 +34,7 @@ Unless `--with-llm` was passed: skip section 8 entirely.
 Find the date of the last E2E report:
 
 ```bash
-ls -t /tmp/e2e-reports/*.md 2>/dev/null | head -1   # previous local run, if any; historical reports live in secretary knowledge projects/dnd-simulator/e2e-reports/
+ls -t /tmp/e2e-reports/*.md 2>/dev/null | head -1   # previous local run, if any; historical reports live in the instance knowledge projects/dnd-simulator/e2e-reports/
 ```
 
 If a previous report exists, read its date. Then check what changed since:

@@ -362,7 +362,7 @@ If nothing drifted — say so and move on. This section should be empty most of 
 ### 2. Report the findings
 
 This skill writes **no files in this repository**. There is no `docs/audit.md` and no backlog file
-here: state and findings live on the secretary board as issues of the `dnd-simulator` product, and
+here: state and findings live on the Ummanu board as issues of the `dnd-simulator` product, and
 the PO decides which findings become issues.
 
 Produce the report as your output — printed to the console when run interactively, or in the worker
