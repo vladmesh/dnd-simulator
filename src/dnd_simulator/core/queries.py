@@ -222,11 +222,6 @@ def query_faction_name(query_fn: QueryFn, faction_id: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-def query_settlement_info(query_fn: QueryFn, settlement_id: str) -> SettlementInfo:
-    answer = query_fn(_SETTLEMENTS, Query(question=QueryType.SETTLEMENT_INFO, params={"settlement_id": settlement_id}))
-    return _expect(answer.value, SettlementInfo, layer=_SETTLEMENTS, query=QueryType.SETTLEMENT_INFO)
-
-
 def query_region_settlements(query_fn: QueryFn, region_id: str) -> list[SettlementInfo]:
     answer = query_fn(_SETTLEMENTS, Query(question=QueryType.REGION_SETTLEMENTS, params={"region_id": region_id}))
     return _expect_list_of(answer.value, SettlementInfo, layer=_SETTLEMENTS, query=QueryType.REGION_SETTLEMENTS)

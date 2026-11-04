@@ -1,19 +1,9 @@
-"""Shared helpers for subjective entity-event descriptions."""
+"""Shared types for subjective entity-event descriptions."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
 
-from dnd_simulator.core.character import Character, Creature, Entity
-from dnd_simulator.i18n import _
+from dnd_simulator.core.character import Entity
 
 GetEntityFn = Callable[[str], Entity | None]
-
-
-def describe(observer: Creature, entity_id: str, get_entity: GetEntityFn) -> str:
-    entity = get_entity(entity_id)
-    if entity is None:
-        return _("someone")
-    if entity.id == observer.id:
-        return _("you")
-    return observer.perceive(entity) if isinstance(observer, Character) else entity.name
