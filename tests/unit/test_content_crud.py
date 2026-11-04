@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+import yaml
 from pydantic import ValidationError
 
 from dnd_simulator.content_loader.crud import (
@@ -16,6 +17,7 @@ from dnd_simulator.content_loader.crud import (
     get_catalog_entry,
     get_entity,
     get_registry_entry,
+    list_catalog_entries,
     list_entities,
     update_catalog_entry,
     update_entity,
@@ -368,3 +370,59 @@ class TestEdgeCases:
 
         fetched = get_entity(EntityType.SETTLEMENT, "testville", layer_dir)
         assert fetched.population == 200
+
+
+# ---------------------------------------------------------------------------
+# Subsection entities, catalog listing and catalog error paths
+# ---------------------------------------------------------------------------
+
+
+class TestMonsterTemplateSubsection:
+    def test_create_preserves_sibling_sections(self, tmp_path: Path) -> None:
+        layer_dir = _make_layer_dir(tmp_path, "ecology")
+        (layer_dir / "monsters.yaml").write_text("encounters:\n  forest: []\n", encoding="utf-8")
+
+        create_entity(EntityType.MONSTER_TEMPLATE, "wolf", {"base": "wolf", "hp": 13}, layer_dir)
+
+        raw = yaml.safe_load((layer_dir / "monsters.yaml").read_text(encoding="utf-8"))
+        assert raw["encounters"] == {"forest": []}
+        assert raw["templates"]["wolf"]["base"] == "wolf"
+        assert raw["templates"]["wolf"]["hp"] == 13
+        listed = list_entities(EntityType.MONSTER_TEMPLATE, layer_dir)
+        assert set(listed) == {"wolf"}
+
+    def test_null_templates_section_reads_as_empty(self, tmp_path: Path) -> None:
+        layer_dir = _make_layer_dir(tmp_path, "ecology")
+        (layer_dir / "monsters.yaml").write_text("templates:\n", encoding="utf-8")
+        assert list_entities(EntityType.MONSTER_TEMPLATE, layer_dir) == {}
+
+
+class TestCatalogListing:
+    def test_missing_catalog_dir_lists_empty(self, tmp_path: Path) -> None:
+        assert list_catalog_entries(EntityType.MONSTER_CATALOG, tmp_path) == {}
+
+    def test_lists_entries_sorted_by_file_stem(self, tmp_path: Path) -> None:
+        create_catalog_entry(EntityType.MONSTER_CATALOG, "orc", _make_monster_catalog_data(hp=15), tmp_path)
+        create_catalog_entry(EntityType.MONSTER_CATALOG, "goblin", _make_monster_catalog_data(hp=7), tmp_path)
+
+        listed = list_catalog_entries(EntityType.MONSTER_CATALOG, tmp_path)
+
+        assert list(listed) == ["goblin", "orc"]
+        assert all(isinstance(m, MonsterTemplateContent) for m in listed.values())
+        assert [m.hp for m in listed.values()] == [7, 15]  # type: ignore[attr-defined]
+
+
+class TestCatalogErrorPaths:
+    def test_create_duplicate_catalog_entry_raises(self, tmp_path: Path) -> None:
+        create_catalog_entry(EntityType.ITEM_CATALOG, "sword", _make_item_catalog_data(), tmp_path)
+        with pytest.raises(ValueError, match="already exists"):
+            create_catalog_entry(EntityType.ITEM_CATALOG, "sword", _make_item_catalog_data(), tmp_path)
+
+    def test_update_missing_catalog_entry_raises_without_writing(self, tmp_path: Path) -> None:
+        with pytest.raises(KeyError):
+            update_catalog_entry(EntityType.MONSTER_CATALOG, "ghost", _make_monster_catalog_data(), tmp_path)
+        assert not (tmp_path / "catalogs" / "monsters" / "ghost.yaml").exists()
+
+    def test_delete_missing_catalog_entry_raises(self, tmp_path: Path) -> None:
+        with pytest.raises(KeyError):
+            delete_catalog_entry(EntityType.MONSTER_CATALOG, "ghost", tmp_path)

@@ -1,6 +1,8 @@
-"""Tests for attack resolution through EntitiesLayer.handle_event."""
+"""Tests for attack resolution through EntitiesLayer.handle_event and its helper module."""
 
 from __future__ import annotations
+
+import random
 
 from dnd_simulator.core.character import (
     Ability,
@@ -10,10 +12,20 @@ from dnd_simulator.core.character import (
     DamageComponent,
     DamageType,
 )
-from dnd_simulator.core.combat import Position
-from dnd_simulator.core.events import AttackRequestedPayload
+from dnd_simulator.core.combat import BattleMap, CombatState, Position, Wall
+from dnd_simulator.core.events import AttackRequestedPayload, EntityMovePayload
 from dnd_simulator.core.models import ActionResult, Answer, Event, EventType, Query
+from dnd_simulator.core.modifiers import AttackModifiers, RollComponent
+from dnd_simulator.core.rolls import D20Result, DiceResult, DieRoll
 from dnd_simulator.layers.entities.layer import EntitiesLayer
+from dnd_simulator.rules.checks import CheckResult
+from dnd_simulator.rules.combat import AttackResult, DamageResult
+from dnd_simulator.rules.handlers.attack_resolution import (
+    build_attack_event,
+    build_damage_components,
+    resolve_combat_move,
+    roll_attack_dice,
+)
 
 
 def _noop_query_fn(layer: str, query: Query) -> Answer:
@@ -140,3 +152,187 @@ class TestAttackResolution:
     # cross_region, dead_target, and out_of_reach are now tested via
     # the validator in tests/test_action_dispatcher.py::TestTargetValidation
     # and TestReachValidation. CombatManager only does mechanics.
+
+
+def _mods(
+    *,
+    dice_bonuses: tuple[str, ...] = (),
+    roll_components: tuple[RollComponent, ...] = (),
+    advantage: bool = False,
+    disadvantage: bool = False,
+    target_ac: int = 12,
+) -> AttackModifiers:
+    return AttackModifiers(
+        modifier=3,
+        damage_bonus=0,
+        dice_bonuses=dice_bonuses,
+        advantage=advantage,
+        disadvantage=disadvantage,
+        force_crit=False,
+        target_ac=target_ac,
+        roll_components=roll_components,
+    )
+
+
+def _result(
+    *,
+    natural: int,
+    total: int,
+    hit: bool,
+    critical: bool = False,
+    alt: int | None = None,
+    damage: tuple[DamageResult, ...] = (),
+) -> AttackResult:
+    d20 = D20Result(die=DieRoll(sides=20, result=natural), alt=DieRoll(sides=20, result=alt) if alt else None)
+    check = CheckResult(success=hit, roll=natural, total=total, dc=12, critical=critical, d20=d20)
+    return AttackResult(
+        hit=hit,
+        critical=critical,
+        attack_check=check,
+        damage=damage,
+        total_damage=sum(d.amount for d in damage),
+    )
+
+
+class TestBuildAttackEvent:
+    def test_critical_hit_with_advantage_keeps_alt_die_and_flat_components(self) -> None:
+        mods = _mods(
+            advantage=True,
+            roll_components=(RollComponent("ability", 3), RollComponent("bless", 0, "1d4")),
+            target_ac=15,
+        )
+        rolled = [RollComponent("bless", 2, "1d4")]
+        payload = build_attack_event(
+            "a", "t", _sword(), _result(natural=20, alt=7, total=25, hit=True, critical=True), mods, rolled
+        )
+
+        assert payload.hit is True
+        assert payload.critical is True
+        assert payload.ac == 15
+        assert payload.weapon == "longsword"
+        assert payload.attack_roll.natural == 20
+        roll = payload.attack_roll
+        assert roll.advantage is True
+        assert roll.disadvantage is False
+        assert roll.d20 == {"result": 20, "sides": 20}
+        assert roll.d20_alt == {"result": 7, "sides": 20}
+        # Unrolled dice component is replaced by its rolled counterpart, flat ones are kept.
+        assert [(c.source, c.value, c.dice) for c in roll.components] == [("ability", 3, ""), ("bless", 2, "1d4")]
+
+    def test_natural_one_miss_without_alt_die(self) -> None:
+        payload = build_attack_event(
+            "a", "t", _sword(), _result(natural=1, total=4, hit=False, critical=True), _mods(), []
+        )
+
+        assert payload.hit is False
+        assert payload.attack_roll.d20 == {"result": 1, "sides": 20}
+        assert payload.attack_roll.d20_alt is None
+        assert payload.attack_roll.components == ()
+
+
+class TestBuildDamageComponents:
+    def test_rerolled_die_records_original_and_extra_components_use_primary_type(self) -> None:
+        dice = DiceResult(expression="2d6", dice=(DieRoll(6, 5, original=1), DieRoll(6, 4)), flat=0, total=9)
+        damage = (
+            DamageResult(9, DamageType.SLASHING, source="weapon", dice="2d6", dice_result=dice),
+            DamageResult(3, DamageType.FIRE, source="flame", dice="3"),
+        )
+        components = build_damage_components(
+            _result(natural=15, total=18, hit=True, damage=damage), [RollComponent("dueling", 2)]
+        )
+
+        assert components[0].dice_detail == ({"sides": 6, "result": 5, "original": 1}, {"sides": 6, "result": 4})
+        assert components[0].type == "slashing"
+        assert components[1].dice_detail == ()
+        assert components[1].type == "fire"
+        assert (components[2].source, components[2].amount, components[2].type) == ("dueling", 2, "slashing")
+
+    def test_miss_has_no_damage_and_flat_components_default_to_bludgeoning(self) -> None:
+        assert build_damage_components(_result(natural=2, total=5, hit=False), ()) == ()
+        components = build_damage_components(_result(natural=2, total=5, hit=False), (RollComponent("rage", 2),))
+        assert len(components) == 1
+        assert components[0].type == "bludgeoning"
+        assert components[0].dice == ""
+
+
+class TestRollAttackDice:
+    def test_no_dice_bonuses_rolls_nothing(self) -> None:
+        mods = _mods(roll_components=(RollComponent("ability", 3),))
+        assert roll_attack_dice(mods, rng=random.Random(1)) == ([], 0)
+
+    def test_rolls_only_dice_components_deterministically(self) -> None:
+        mods = _mods(
+            dice_bonuses=("1d4", "1d6"),
+            roll_components=(
+                RollComponent("ability", 3),
+                RollComponent("bless", 0, "1d4"),
+                RollComponent("guidance", 0, "1d6"),
+            ),
+        )
+        rolled, total = roll_attack_dice(mods, rng=random.Random(7))
+        again, again_total = roll_attack_dice(mods, rng=random.Random(7))
+
+        assert rolled == again
+        assert total == again_total == sum(rc.value for rc in rolled)
+        assert [(rc.source, rc.dice) for rc in rolled] == [("bless", "1d4"), ("guidance", "1d6")]
+        assert 1 <= rolled[0].value <= 4
+        assert 1 <= rolled[1].value <= 6
+
+
+def _move_event(entity_id: str, direction: str | None, ft: int = 5) -> Event:
+    return Event(
+        event_type=EventType.ENTITY_MOVE,
+        source_layer="entities",
+        data=EntityMovePayload(entity_id=entity_id, direction=direction, ft=ft),
+    )
+
+
+def _combat(positions: dict[str, Position], walls: list[Wall] | None = None) -> CombatState:
+    return CombatState(
+        location_id="r1",
+        battle_map=BattleMap(width=60, height=60, positions=dict(positions), walls=walls or []),
+    )
+
+
+class TestResolveCombatMove:
+    def _hero(self) -> Character:
+        return Character(id="hero", name="Hero", location_id="r1")
+
+    def test_creature_not_on_map_fails(self) -> None:
+        recorded: list[Event] = []
+        result = resolve_combat_move(self._hero(), _move_event("hero", "north"), _combat({}), recorded.append)
+        assert not result.success
+        assert result.error
+        assert recorded == []
+
+    def test_blocked_by_occupied_cell(self) -> None:
+        combat = _combat({"hero": Position(30, 30), "ogre": Position(30, 35)})
+        recorded: list[Event] = []
+        result = resolve_combat_move(self._hero(), _move_event("hero", "north"), combat, recorded.append)
+        assert not result.success
+        assert result.error
+        assert combat.battle_map.get_position("hero") == Position(30, 30)
+        assert recorded == []
+
+    def test_unknown_or_missing_direction_is_blocked(self) -> None:
+        combat = _combat({"hero": Position(30, 30)})
+        for direction in (None, "up"):
+            result = resolve_combat_move(self._hero(), _move_event("hero", direction), combat, lambda _e: None)
+            assert not result.success
+        assert combat.battle_map.get_position("hero") == Position(30, 30)
+
+    def test_successful_move_updates_position_and_records_event(self) -> None:
+        combat = _combat({"hero": Position(30, 30)})
+        recorded: list[Event] = []
+        result = resolve_combat_move(self._hero(), _move_event("hero", "east", ft=10), combat, recorded.append)
+
+        assert result.success
+        assert combat.battle_map.get_position("hero") == Position(40, 30)
+        assert len(recorded) == 1
+        event = recorded[0]
+        assert event.event_type == EventType.ENTITY_MOVE
+        data = event.payload
+        assert isinstance(data, EntityMovePayload)
+        assert (data.entity_id, data.location_id) == ("hero", "r1")
+        assert (data.from_x, data.from_y, data.to_x, data.to_y) == (30, 30, 40, 30)
+        assert data.distance_ft == 10
