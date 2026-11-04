@@ -613,13 +613,11 @@ msgid "a weapon"
 msgstr ""
 
 #: src/dnd_simulator/layers/entities/perception.py:66
-#: src/dnd_simulator/layers/entities/perception_common.py:16
 #: src/dnd_simulator/llm/brain.py:229
 msgid "someone"
 msgstr ""
 
 #: src/dnd_simulator/layers/entities/perception.py:68
-#: src/dnd_simulator/layers/entities/perception_common.py:18
 msgid "you"
 msgstr ""
 
