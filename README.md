@@ -42,7 +42,7 @@ Game content (worlds, NPCs, monsters, items) is plain YAML under [`content/`](co
 
 ## Configuration
 
-The server reads environment variables. A `.env` file in the working directory is loaded on startup.
+The server reads environment variables. A `.env` file in the repository root is loaded on startup. Set `DND_LANGUAGE`, `DND_EVICT_GRACE_SECONDS`, `DND_ROUND_STOP_TIMEOUT_SECONDS` and `CORS_ALLOWED_ORIGINS` in the shell rather than the file. They are read at import time.
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -61,12 +61,12 @@ The server reads environment variables. A `.env` file in the working directory i
 | `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated CORS origins for the REST API. |
 | `WS_ALLOWED_ORIGINS` | any | Comma-separated origins allowed to open the game WebSocket. |
 
-Saves are JSON files in `saves/`.
+Saves are JSON files in `DND_SAVES_DIR` (default `saves/`).
 
 ## Development
 
 ```bash
-make check              # backend + frontend lint, type check and unit tests (CI minus integration)
+make check              # backend + frontend lint, type check and unit tests (CI minus Docker tests)
 make check-backend      # ruff + mypy (strict) + pytest
 make check-frontend     # eslint + tsc -b + vitest
 make test               # pytest (unit tests)
@@ -94,13 +94,13 @@ Server strings go through gettext: `_()`, `ngettext()` for counts, and `N_()` fo
 `docker-compose.test.yml` runs the backend (`Dockerfile`) and, behind the `frontend` profile, the production web UI (`frontend/Dockerfile`: a Node build stage, then nginx). nginx serves the built SPA, falls back to `index.html` for client-side routes, and proxies `/api` (including the game WebSocket) and `/health` to `$BACKEND_URL` (default `http://backend:8001`), the same routes the Vite dev server proxies. `make test-integration` does not build or start the frontend. `make test-frontend-container` builds both images and runs `tests/frontend_proxy/` against the nginx container: index, hashed assets, SPA fallback, `/health`, REST and a player WebSocket session, all through the proxy. To use the stack in a browser:
 
 ```bash
-docker compose -f docker-compose.test.yml --profile frontend up --build backend frontend
+env UID="$(id -u)" GID="$(id -g)" docker compose -f docker-compose.test.yml --profile frontend up --build backend frontend
 # web UI on http://localhost:8080 (FRONTEND_PORT overrides the port)
 ```
 
 This stack uses the integration test content (`tests/integration/content`) and `DND_DICE_SEED=42`.
 
-CI (GitHub Actions) runs the backend checks, the frontend checks and the integration tests. It skips the halves a change doesn't touch.
+CI (GitHub Actions) runs the backend checks, the frontend checks, the integration tests and the frontend container smoke tests. It skips the halves a change doesn't touch. The frontend container smoke tests run for every scope except docs-only.
 
 ## Project layout
 
@@ -108,7 +108,7 @@ CI (GitHub Actions) runs the backend checks, the frontend checks and the integra
 src/dnd_simulator/
   core/            models, Layer interface, World, entity hierarchy, brains
   layers/          geography, politics, settlements, ecology, entities
-  rules/           pure D&D mechanics (combat, movement, leveling, loot, ...)
+  rules/           D&D mechanics (combat, movement, leveling, loot, ...)
   round.py         turn loop: multi-action turns with budget enforcement
   service/         GameService: sessions, commands, action dispatch
   adapters/api/    FastAPI REST + WebSocket
